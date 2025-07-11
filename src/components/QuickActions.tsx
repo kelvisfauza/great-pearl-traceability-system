@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { 
   Plus, 
   FileText, 
@@ -13,48 +14,56 @@ import {
 } from "lucide-react";
 
 const QuickActions = () => {
+  const navigate = useNavigate();
+
   const actions = [
     {
       title: "New Coffee Batch",
       description: "Record incoming coffee delivery",
       icon: Coffee,
       color: "bg-green-600 hover:bg-green-700",
-      action: "Add Batch"
+      action: "Add Batch",
+      route: "/procurement"
     },
     {
       title: "Quality Inspection",
       description: "Start quality control process",
       icon: ClipboardCheck,
       color: "bg-blue-600 hover:bg-blue-700",
-      action: "Inspect"
+      action: "Inspect",
+      route: "/quality-control"
     },
     {
       title: "Process Payment",
       description: "Pay supplier or farmer",
       icon: DollarSign,
       color: "bg-amber-600 hover:bg-amber-700",
-      action: "Pay Now"
+      action: "Pay Now",
+      route: "/finance"
     },
     {
       title: "Generate Report",
       description: "Create management report",
       icon: FileText,
       color: "bg-purple-600 hover:bg-purple-700",
-      action: "Generate"
+      action: "Generate",
+      route: "/reports"
     },
     {
       title: "Add Supplier",
       description: "Register new coffee supplier",
       icon: Users,
       color: "bg-indigo-600 hover:bg-indigo-700",
-      action: "Register"
+      action: "Register",
+      route: "/procurement"
     },
     {
       title: "Sales Entry",
       description: "Record new sales transaction",
       icon: TrendingUp,
       color: "bg-pink-600 hover:bg-pink-700",
-      action: "Record Sale"
+      action: "Record Sale",
+      route: "/sales-marketing"
     }
   ];
 
@@ -76,6 +85,7 @@ const QuickActions = () => {
               key={index}
               variant="outline"
               className="h-auto p-4 flex flex-col items-start space-y-2 hover:shadow-md transition-all"
+              onClick={() => navigate(action.route)}
             >
               <div className="flex items-center space-x-2 w-full">
                 <div className={`p-2 rounded-lg ${action.color} text-white`}>
