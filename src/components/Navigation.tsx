@@ -66,10 +66,10 @@ const Navigation = () => {
                     <Button
                       key={itemIndex}
                       variant={isActive ? "default" : "ghost"}
-                      className={`w-full justify-start ${
+                      className={`w-full justify-start transition-all duration-200 ${
                         isActive 
-                          ? "bg-green-600 hover:bg-green-700 text-white" 
-                          : "text-gray-700 hover:bg-gray-100"
+                          ? "bg-green-600 hover:bg-green-700 text-white shadow-md" 
+                          : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                       }`}
                       asChild
                     >
