@@ -40,11 +40,11 @@ const QualityControl = () => {
     comments: ''
   });
 
-  const handleSelectRecord = (record: StoreRecord) => {
+  const handleSelectRecord = async (record: StoreRecord) => {
     setSelectedRecord(record);
     // Update record status to quality_review if it was pending
     if (record.status === 'pending') {
-      updateStoreRecord(record.id, { status: 'quality_review' });
+      await updateStoreRecord(record.id, { status: 'quality_review' });
     }
     toast({
       title: "Batch Selected",
@@ -52,7 +52,7 @@ const QualityControl = () => {
     });
   };
 
-  const handleAssessmentSubmit = () => {
+  const handleAssessmentSubmit = async () => {
     if (!selectedRecord) return;
 
     // Validate form
@@ -65,72 +65,104 @@ const QualityControl = () => {
       return;
     }
 
-    const assessment = {
-      storeRecordId: selectedRecord.id,
-      batchNumber: selectedRecord.batch_number,
-      moisture: Number(assessmentForm.moisture),
-      group1Defects: Number(assessmentForm.group1Defects) || 0,
-      group2Defects: Number(assessmentForm.group2Defects) || 0,
-      below12: Number(assessmentForm.below12) || 0,
-      pods: Number(assessmentForm.pods) || 0,
-      husks: Number(assessmentForm.husks) || 0,
-      stones: Number(assessmentForm.stones) || 0,
-      suggestedPrice: Number(assessmentForm.suggestedPrice),
-      status: 'assessed' as const,
-      comments: assessmentForm.comments,
-      dateAssessed: new Date().toISOString().split('T')[0],
-      assessedBy: 'Quality Officer'
-    };
+    try {
+      const assessment = {
+        store_record_id: selectedRecord.id,
+        batch_number: selectedRecord.batch_number,
+        moisture: Number(assessmentForm.moisture),
+        group1_defects: Number(assessmentForm.group1Defects) || 0,
+        group2_defects: Number(assessmentForm.group2Defects) || 0,
+        below12: Number(assessmentForm.below12) || 0,
+        pods: Number(assessmentForm.pods) || 0,
+        husks: Number(assessmentForm.husks) || 0,
+        stones: Number(assessmentForm.stones) || 0,
+        suggested_price: Number(assessmentForm.suggestedPrice),
+        status: 'assessed' as const,
+        comments: assessmentForm.comments,
+        date_assessed: new Date().toISOString().split('T')[0],
+        assessed_by: 'Quality Officer'
+      };
 
-    addQualityAssessment(assessment);
-    
-    // Update store record status
-    updateStoreRecord(selectedRecord.id, { status: 'pricing' });
+      await addQualityAssessment(assessment);
+      
+      // Update store record status
+      await updateStoreRecord(selectedRecord.id, { status: 'pricing' });
 
-    // Reset form
-    setAssessmentForm({
-      moisture: '',
-      group1Defects: '',
-      group2Defects: '',
-      below12: '',
-      pods: '',
-      husks: '',
-      stones: '',
-      suggestedPrice: '',
-      comments: ''
-    });
-    setSelectedRecord(null);
+      // Reset form
+      setAssessmentForm({
+        moisture: '',
+        group1Defects: '',
+        group2Defects: '',
+        below12: '',
+        pods: '',
+        husks: '',
+        stones: '',
+        suggestedPrice: '',
+        comments: ''
+      });
+      setSelectedRecord(null);
 
-    toast({
-      title: "Assessment Complete",
-      description: `Quality assessment for batch ${assessment.batchNumber} has been saved`,
-    });
+      toast({
+        title: "Assessment Complete",
+        description: `Quality assessment for batch ${assessment.batch_number} has been saved to database`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save assessment. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleSubmitToFinance = (assessmentId: string) => {
-    updateQualityAssessment(assessmentId, { status: 'submitted_to_finance' });
-    toast({
-      title: "Submitted to Finance",
-      description: "Assessment has been sent to finance department for pricing approval",
-    });
+  const handleSubmitToFinance = async (assessmentId: string) => {
+    try {
+      await updateQualityAssessment(assessmentId, { status: 'submitted_to_finance' });
+      toast({
+        title: "Submitted to Finance",
+        description: "Assessment has been sent to finance department for pricing approval",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit to finance. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleRequestPriceApproval = (assessmentId: string) => {
-    updateQualityAssessment(assessmentId, { status: 'price_requested' });
-    toast({
-      title: "Price Approval Requested",
-      description: "Price approval request sent to supervisor and operations manager",
-    });
+  const handleRequestPriceApproval = async (assessmentId: string) => {
+    try {
+      await updateQualityAssessment(assessmentId, { status: 'price_requested' });
+      toast({
+        title: "Price Approval Requested",
+        description: "Price approval request sent to supervisor and operations manager",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to request price approval. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleDispatchToDryer = (batchNumber: string) => {
+  const handleDispatchToDryer = async (batchNumber: string) => {
     const record = storeRecords.find(r => r.batch_number === batchNumber);
     if (record) {
-      updateStoreRecord(record.id, { status: 'drying' });
-      toast({
-        title: "Dispatched to Dryer",
-        description: `Batch ${batchNumber} has been sent to the dryer`,
-      });
+      try {
+        await updateStoreRecord(record.id, { status: 'drying' });
+        toast({
+          title: "Dispatched to Dryer",
+          description: `Batch ${batchNumber} has been sent to the dryer`,
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to dispatch to dryer. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -186,7 +218,7 @@ const QualityControl = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Assessed Today</p>
-                  <p className="text-2xl font-bold">{qualityAssessments.length}</p>
+                  <p className="text-2xl font-bold">{qualityAssessments.filter(a => a.date_assessed === new Date().toISOString().split('T')[0]).length}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
@@ -471,11 +503,11 @@ const QualityControl = () => {
                     <TableBody>
                       {qualityAssessments.map((assessment) => (
                         <TableRow key={assessment.id}>
-                          <TableCell className="font-mono">{assessment.batchNumber}</TableCell>
+                          <TableCell className="font-mono">{assessment.batch_number}</TableCell>
                           <TableCell>{assessment.moisture}%</TableCell>
-                          <TableCell>{assessment.group1Defects}%</TableCell>
-                          <TableCell>{assessment.group2Defects}%</TableCell>
-                          <TableCell>UGX {assessment.suggestedPrice.toLocaleString()}</TableCell>
+                          <TableCell>{assessment.group1_defects}%</TableCell>
+                          <TableCell>{assessment.group2_defects}%</TableCell>
+                          <TableCell>UGX {assessment.suggested_price.toLocaleString()}</TableCell>
                           <TableCell>
                             <Badge variant={getStatusBadge(assessment.status).variant}>
                               {getStatusBadge(assessment.status).label}

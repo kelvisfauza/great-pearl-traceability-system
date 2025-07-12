@@ -244,6 +244,74 @@ export type Database = {
         }
         Relationships: []
       }
+      quality_assessments: {
+        Row: {
+          assessed_by: string
+          batch_number: string
+          below12: number | null
+          comments: string | null
+          created_at: string
+          date_assessed: string
+          group1_defects: number | null
+          group2_defects: number | null
+          husks: number | null
+          id: string
+          moisture: number
+          pods: number | null
+          status: string
+          stones: number | null
+          store_record_id: string | null
+          suggested_price: number
+          updated_at: string
+        }
+        Insert: {
+          assessed_by: string
+          batch_number: string
+          below12?: number | null
+          comments?: string | null
+          created_at?: string
+          date_assessed?: string
+          group1_defects?: number | null
+          group2_defects?: number | null
+          husks?: number | null
+          id?: string
+          moisture: number
+          pods?: number | null
+          status?: string
+          stones?: number | null
+          store_record_id?: string | null
+          suggested_price: number
+          updated_at?: string
+        }
+        Update: {
+          assessed_by?: string
+          batch_number?: string
+          below12?: number | null
+          comments?: string | null
+          created_at?: string
+          date_assessed?: string
+          group1_defects?: number | null
+          group2_defects?: number | null
+          husks?: number | null
+          id?: string
+          moisture?: number
+          pods?: number | null
+          status?: string
+          stones?: number | null
+          store_record_id?: string | null
+          suggested_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_assessments_store_record_id_fkey"
+            columns: ["store_record_id"]
+            isOneToOne: false
+            referencedRelation: "coffee_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
           category: string
