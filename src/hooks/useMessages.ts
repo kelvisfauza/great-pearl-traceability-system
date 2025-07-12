@@ -38,30 +38,40 @@ export const useMessages = (conversationId?: string) => {
       const enhancedConversations = await Promise.all(
         uniqueConversations.map(async (conv) => {
           if (conv.type === "direct" && !conv.name) {
-            // Get the other participant through user_profiles -> employees
-            const { data: otherParticipant } = await supabase
-              .from("conversation_participants")
-              .select(`
-                user_id,
-                user_profiles!inner (
-                  employee_id,
-                  employees!inner (
-                    name,
-                    position
-                  )
-                )
-              `)
-              .eq("conversation_id", conv.id)
-              .neq("user_id", user.id)
-              .single();
+            try {
+              // Get the other participant through user_profiles -> employees
+              const { data: otherParticipant } = await supabase
+                .from("conversation_participants")
+                .select(`
+                  user_id
+                `)
+                .eq("conversation_id", conv.id)
+                .neq("user_id", user.id)
+                .single();
 
-            if (otherParticipant?.user_profiles?.employees) {
-              const employeeData = otherParticipant.user_profiles.employees;
-              return {
-                ...conv,
-                name: employeeData.name,
-                participant_info: employeeData
-              };
+              if (otherParticipant?.user_id) {
+                // Now get the employee info through user_profiles
+                const { data: userProfile } = await supabase
+                  .from("user_profiles")
+                  .select(`
+                    employees!inner (
+                      name,
+                      position
+                    )
+                  `)
+                  .eq("user_id", otherParticipant.user_id)
+                  .single();
+
+                if (userProfile?.employees) {
+                  return {
+                    ...conv,
+                    name: userProfile.employees.name,
+                    participant_info: userProfile.employees
+                  };
+                }
+              }
+            } catch (error) {
+              console.error("Error fetching participant info:", error);
             }
           }
           return conv;
@@ -82,32 +92,45 @@ export const useMessages = (conversationId?: string) => {
       const { data, error } = await supabase
         .from("messages")
         .select(`
-          *,
-          sender:user_profiles!messages_sender_id_fkey (
-            employees!inner (
-              id,
-              name,
-              email
-            )
-          )
+          *
         `)
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
 
       if (error) {
         console.error("Error fetching messages:", error);
-        // Fallback query without sender info if join fails
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("conversation_id", conversationId)
-          .order("created_at", { ascending: true });
-        
-        if (fallbackError) throw fallbackError;
-        return fallbackData || [];
+        throw error;
       }
       
-      return data || [];
+      // Enhance messages with sender info
+      const enhancedMessages = await Promise.all(
+        (data || []).map(async (message) => {
+          try {
+            // Get sender info through user_profiles
+            const { data: senderProfile } = await supabase
+              .from("user_profiles")
+              .select(`
+                employees!inner (
+                  id,
+                  name,
+                  email
+                )
+              `)
+              .eq("user_id", message.sender_id)
+              .single();
+
+            return {
+              ...message,
+              sender: senderProfile?.employees || null
+            };
+          } catch (error) {
+            console.error("Error fetching sender info:", error);
+            return message;
+          }
+        })
+      );
+      
+      return enhancedMessages;
     },
     enabled: !!conversationId,
   });

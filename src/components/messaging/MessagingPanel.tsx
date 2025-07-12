@@ -22,6 +22,7 @@ import { usePresence } from "@/hooks/usePresence";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -42,17 +43,38 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
   };
 
   const handleCreateDirectMessage = async (employeeId: string) => {
-    const conversation = await createConversation.mutateAsync({
-      participants: [employeeId],
-      type: "direct"
-    });
-    setSelectedConversation(conversation.id);
-    setShowNewChat(false);
+    try {
+      // First, get the user_id for this employee
+      const { data: userProfile } = await supabase
+        .from("user_profiles")
+        .select("user_id")
+        .eq("employee_id", employeeId)
+        .single();
+
+      if (!userProfile?.user_id) {
+        console.error("No user profile found for employee:", employeeId);
+        return;
+      }
+
+      const conversation = await createConversation.mutateAsync({
+        participants: [userProfile.user_id],
+        type: "direct"
+      });
+      setSelectedConversation(conversation.id);
+      setShowNewChat(false);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+    }
   };
 
-  const getPresenceStatus = (userId: string) => {
-    const presence = userPresences?.find(p => p.user_id === userId);
-    return presence?.status || "offline";
+  const getPresenceStatus = (employeeId: string) => {
+    // Find user profile for this employee
+    const userProfile = userPresences?.find(p => {
+      // This would need to be enhanced to properly map employee to user
+      // For now, return a default status
+      return false;
+    });
+    return userProfile?.status || "offline";
   };
 
   const getPresenceColor = (status: string) => {
@@ -66,11 +88,10 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
 
   const getConversationDisplayName = (conversation: any) => {
     if (conversation.name) return conversation.name;
+    if (conversation.participant_info?.name) return conversation.participant_info.name;
     
-    // For direct messages, find the other participant
+    // For direct messages without participant info
     if (conversation.type === "direct") {
-      // This would need to be enhanced to fetch participant details
-      // For now, return a default name
       return "Direct Message";
     }
     
@@ -87,8 +108,8 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
   };
 
   const filteredEmployees = employees?.filter(emp => 
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    emp.id !== user?.id // Don't show current user
+    emp.name.toLowerCase().includes(searchTerm.toLowerCase())
+    // Don't filter out current user here since we need to match by employee record
   );
 
   return (
