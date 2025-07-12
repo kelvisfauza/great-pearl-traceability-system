@@ -169,6 +169,72 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          date: string
+          description: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      finance_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          description: string
+          id: string
+          time: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date: string
+          description: string
+          id?: string
+          time: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          time?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       metrics: {
         Row: {
           category: string | null
@@ -207,6 +273,53 @@ export type Database = {
           value?: string
         }
         Relationships: []
+      }
+      payment_records: {
+        Row: {
+          amount: number
+          batch_number: string | null
+          created_at: string
+          date: string
+          id: string
+          method: string
+          quality_assessment_id: string | null
+          status: string
+          supplier: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          batch_number?: string | null
+          created_at?: string
+          date: string
+          id?: string
+          method?: string
+          quality_assessment_id?: string | null
+          status?: string
+          supplier: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          batch_number?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          method?: string
+          quality_assessment_id?: string | null
+          status?: string
+          supplier?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_records_quality_assessment_id_fkey"
+            columns: ["quality_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "quality_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       performance_data: {
         Row: {
