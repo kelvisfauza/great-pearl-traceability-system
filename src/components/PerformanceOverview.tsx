@@ -7,16 +7,16 @@ import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 
 const PerformanceOverview = () => {
   const { employees } = useEmployees();
-  const { payments } = useSalaryPayments();
+  const { paymentRequests } = useSalaryPayments();
   const { requests } = useApprovalRequests();
 
   // Calculate quality score based on employee performance
   const activeEmployees = employees.filter(emp => emp.status === 'Active').length;
   const qualityScore = activeEmployees > 0 ? Math.min(94 + (activeEmployees / 10), 98) : 94;
 
-  // Calculate on-time delivery based on processed payments
-  const processedPayments = payments.filter(payment => payment.status === 'Processed').length;
-  const onTimeDelivery = payments.length > 0 ? Math.min(95 + (processedPayments / payments.length) * 5, 99) : 98;
+  // Calculate on-time delivery based on approved payment requests
+  const approvedPayments = paymentRequests.filter(req => req.status === 'Approved').length;
+  const onTimeDelivery = paymentRequests.length > 0 ? Math.min(95 + (approvedPayments / paymentRequests.length) * 5, 99) : 98;
 
   // Calculate efficiency based on approval requests completion
   const totalRequests = requests.length;

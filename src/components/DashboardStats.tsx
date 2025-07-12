@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Users, Package, DollarSign } from "lucide-react";
 import { useEmployees } from "@/hooks/useEmployees";
@@ -6,7 +5,7 @@ import { useSalaryPayments } from "@/hooks/useSalaryPayments";
 
 const DashboardStats = () => {
   const { employees, loading: employeesLoading } = useEmployees();
-  const { payments, loading: paymentsLoading } = useSalaryPayments();
+  const { paymentRequests, loading: paymentsLoading } = useSalaryPayments();
 
   // Calculate total salary from employees
   const totalSalary = employees.reduce((sum, emp) => sum + Number(emp.salary), 0);
@@ -14,10 +13,13 @@ const DashboardStats = () => {
   // Calculate active employees
   const activeEmployees = employees.filter(emp => emp.status === 'Active').length;
   
-  // Calculate total payments this month
+  // Calculate approved payment requests for current month
   const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-  const currentMonthPayments = payments.filter(payment => payment.month === currentMonth);
-  const totalPayments = currentMonthPayments.reduce((sum, payment) => sum + Number(payment.total_pay), 0);
+  const approvedPayments = paymentRequests.filter(req => req.status === 'Approved');
+  const totalApprovedAmount = approvedPayments.reduce((sum, req) => {
+    const amount = req.amount.replace(/[^\d]/g, ''); // Remove non-digits
+    return sum + Number(amount);
+  }, 0);
 
   const stats = [
     {
@@ -35,9 +37,9 @@ const DashboardStats = () => {
       trend: "+8.2%"
     },
     {
-      title: "This Month Payments",
-      value: paymentsLoading ? "Loading..." : `UGX ${(totalPayments / 1000000).toFixed(1)}M`,
-      description: "Payments processed",
+      title: "Approved Payments",
+      value: paymentsLoading ? "Loading..." : `UGX ${(totalApprovedAmount / 1000000).toFixed(1)}M`,
+      description: "Payments approved",
       icon: TrendingUp,
       trend: "+12.3%"
     },

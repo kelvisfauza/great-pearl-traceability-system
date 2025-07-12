@@ -8,9 +8,9 @@ import { format } from "date-fns";
 
 const RecentActivity = () => {
   const { employees } = useEmployees();
-  const { payments } = useSalaryPayments();
+  const { paymentRequests } = useSalaryPayments();
 
-  // Combine recent activities from employees and payments
+  // Combine recent activities from employees and payment requests
   const recentActivities = [
     // Recent employee additions
     ...employees
@@ -27,18 +27,18 @@ const RecentActivity = () => {
         status: "completed"
       })),
     
-    // Recent salary payments
-    ...payments
+    // Recent salary payment requests
+    ...paymentRequests
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 3)
-      .map(payment => ({
-        id: `payment-${payment.id}`,
+      .map(request => ({
+        id: `payment-${request.id}`,
         type: "payment",
-        title: "Salary Payment Processed",
-        description: `${payment.month} - UGX ${(Number(payment.total_pay) / 1000000).toFixed(1)}M for ${payment.employee_count} employees`,
-        time: format(new Date(payment.created_at), "MMM dd, yyyy"),
+        title: "Salary Payment Request",
+        description: `${request.title} - ${request.amount} for ${request.details?.employee_count || 0} employees`,
+        time: format(new Date(request.created_at), "MMM dd, yyyy"),
         icon: DollarSign,
-        status: payment.status.toLowerCase()
+        status: request.status.toLowerCase()
       }))
   ]
   .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
@@ -47,11 +47,11 @@ const RecentActivity = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-      case 'processed':
+      case 'approved':
         return 'default';
       case 'pending':
         return 'secondary';
-      case 'failed':
+      case 'rejected':
         return 'destructive';
       default:
         return 'secondary';

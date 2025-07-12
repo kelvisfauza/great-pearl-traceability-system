@@ -11,6 +11,7 @@ import { useFinanceData } from "@/hooks/useFinanceData";
 import { useDailyTasks } from "@/hooks/useDailyTasks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
+import { useToast } from "@/hooks/use-toast";
 
 const Finance = () => {
   const {
@@ -27,6 +28,7 @@ const Finance = () => {
   const { tasks: dailyTasks, loading: tasksLoading } = useDailyTasks();
   const { requests: approvalRequests, updateRequestStatus } = useApprovalRequests();
   const { employee, hasRole } = useAuth();
+  const { toast } = useToast();
 
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseDescription, setExpenseDescription] = useState("");

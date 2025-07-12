@@ -34,7 +34,13 @@ export const useSalaryPayments = () => {
 
       if (error) throw error
       
-      setPaymentRequests(data || [])
+      // Convert the generic database records to typed payment requests
+      const typedData: SalaryPaymentRequest[] = (data || []).map(item => ({
+        ...item,
+        status: (item.status as 'Pending' | 'Approved' | 'Rejected') || 'Pending'
+      }))
+      
+      setPaymentRequests(typedData)
     } catch (error) {
       console.error('Error fetching salary payment requests:', error)
       toast({
@@ -57,12 +63,18 @@ export const useSalaryPayments = () => {
 
       if (error) throw error
 
-      setPaymentRequests(prev => [data, ...prev])
+      // Convert the response to typed format
+      const typedData: SalaryPaymentRequest = {
+        ...data,
+        status: (data.status as 'Pending' | 'Approved' | 'Rejected') || 'Pending'
+      }
+
+      setPaymentRequests(prev => [typedData, ...prev])
       toast({
         title: "Success", 
         description: "Salary payment request submitted to Finance for approval"
       })
-      return data
+      return typedData
     } catch (error) {
       console.error('Error submitting salary payment request:', error)
       toast({
