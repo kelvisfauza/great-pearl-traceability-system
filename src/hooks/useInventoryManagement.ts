@@ -36,23 +36,23 @@ export const useInventoryManagement = () => {
       coffeeRecords
         .filter(record => record.status === 'inventory')
         .forEach(record => {
-          const key = record.coffeeType;
+          const key = record.coffee_type;
           
           if (inventoryMap.has(key)) {
             const existing = inventoryMap.get(key)!;
             existing.totalBags += record.bags;
-            existing.totalKilograms += record.kilograms;
-            existing.batchNumbers.push(record.batchNumber || '');
+            existing.totalKilograms += Number(record.kilograms);
+            existing.batchNumbers.push(record.batch_number || '');
           } else {
             inventoryMap.set(key, {
               id: `inv-${key.toLowerCase()}`,
               coffeeType: key,
               totalBags: record.bags,
-              totalKilograms: record.kilograms,
+              totalKilograms: Number(record.kilograms),
               location: 'Main Warehouse',
               lastUpdated: record.date,
               status: record.bags < 10 ? 'low_stock' : 'available',
-              batchNumbers: [record.batchNumber || '']
+              batchNumbers: [record.batch_number || '']
             });
           }
         });
