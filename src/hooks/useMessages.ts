@@ -38,25 +38,29 @@ export const useMessages = (conversationId?: string) => {
       const enhancedConversations = await Promise.all(
         uniqueConversations.map(async (conv) => {
           if (conv.type === "direct" && !conv.name) {
-            // Get the other participant
-            const { data: participants } = await supabase
+            // Get the other participant through user_profiles -> employees
+            const { data: otherParticipant } = await supabase
               .from("conversation_participants")
               .select(`
                 user_id,
-                employees!inner (
-                  name,
-                  position
+                user_profiles!inner (
+                  employee_id,
+                  employees!inner (
+                    name,
+                    position
+                  )
                 )
               `)
               .eq("conversation_id", conv.id)
-              .neq("user_id", user.id);
+              .neq("user_id", user.id)
+              .single();
 
-            if (participants && participants.length > 0) {
-              const otherParticipant = participants[0].employees;
+            if (otherParticipant?.user_profiles?.employees) {
+              const employeeData = otherParticipant.user_profiles.employees;
               return {
                 ...conv,
-                name: otherParticipant.name,
-                participant_info: otherParticipant
+                name: employeeData.name,
+                participant_info: employeeData
               };
             }
           }
@@ -79,10 +83,12 @@ export const useMessages = (conversationId?: string) => {
         .from("messages")
         .select(`
           *,
-          sender:employees!messages_sender_id_fkey (
-            id,
-            name,
-            email
+          sender:user_profiles!messages_sender_id_fkey (
+            employees!inner (
+              id,
+              name,
+              email
+            )
           )
         `)
         .eq("conversation_id", conversationId)
