@@ -1,3 +1,4 @@
+
 import { ReactNode, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RoleBasedNavigation from "./RoleBasedNavigation";
@@ -36,7 +37,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
   ];
   const { updatePresence } = usePresence();
 
-  const handle BellClick = () => {
+  const handleBellClick = () => {
     setIsNotificationOpen(!isNotificationOpen);
   };
 
