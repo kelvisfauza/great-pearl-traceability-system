@@ -112,6 +112,45 @@ export type Database = {
           },
         ]
       }
+      daily_tasks: {
+        Row: {
+          amount: number | null
+          batch_number: string | null
+          completed_at: string
+          completed_by: string
+          created_at: string
+          date: string
+          department: string
+          description: string
+          id: string
+          task_type: string
+        }
+        Insert: {
+          amount?: number | null
+          batch_number?: string | null
+          completed_at?: string
+          completed_by: string
+          created_at?: string
+          date?: string
+          department?: string
+          description: string
+          id?: string
+          task_type: string
+        }
+        Update: {
+          amount?: number | null
+          batch_number?: string | null
+          completed_at?: string
+          completed_by?: string
+          created_at?: string
+          date?: string
+          department?: string
+          description?: string
+          id?: string
+          task_type?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           address: string | null

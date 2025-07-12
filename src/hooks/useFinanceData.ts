@@ -56,6 +56,27 @@ export const useFinanceData = () => {
   });
   const { toast } = useToast();
 
+  const recordDailyTask = async (taskType: string, description: string, amount?: number, batchNumber?: string, completedBy: string = 'Finance Team') => {
+    try {
+      const { error } = await supabase
+        .from('daily_tasks')
+        .insert({
+          task_type: taskType,
+          description,
+          amount,
+          batch_number: batchNumber,
+          completed_by: completedBy,
+          department: 'Finance'
+        });
+
+      if (error) {
+        console.error('Error recording daily task:', error);
+      }
+    } catch (error) {
+      console.error('Error recording daily task:', error);
+    }
+  };
+
   const fetchFinanceData = async () => {
     try {
       setLoading(true);
@@ -261,6 +282,14 @@ export const useFinanceData = () => {
           if (error) throw error;
         }
 
+        // Record daily task for approval request
+        await recordDailyTask(
+          'Payment Request',
+          `Bank transfer approval requested for ${payment.supplier} - UGX ${payment.amount.toLocaleString()}`,
+          payment.amount,
+          payment.batchNumber
+        );
+
         toast({
           title: "Approval Request Created",
           description: `Bank transfer of UGX ${payment.amount.toLocaleString()} has been submitted for manager approval`
@@ -333,6 +362,14 @@ export const useFinanceData = () => {
           if (transactionError) throw transactionError;
         }
 
+        // Record daily task for cash payment
+        await recordDailyTask(
+          'Payment',
+          `Cash payment to ${payment.supplier} - UGX ${payment.amount.toLocaleString()}`,
+          payment.amount,
+          payment.batchNumber
+        );
+
         toast({
           title: "Success",
           description: `Cash payment of UGX ${payment.amount.toLocaleString()} processed successfully`
@@ -365,6 +402,13 @@ export const useFinanceData = () => {
 
       if (error) throw error;
 
+      // Record daily task
+      await recordDailyTask(
+        transaction.type,
+        transaction.description,
+        transaction.amount
+      );
+
       toast({
         title: "Success",
         description: `${transaction.type} recorded successfully`
@@ -395,6 +439,13 @@ export const useFinanceData = () => {
         });
 
       if (error) throw error;
+
+      // Record daily task
+      await recordDailyTask(
+        'Expense',
+        `${expense.description} - ${expense.category}`,
+        expense.amount
+      );
 
       toast({
         title: "Success",
