@@ -7,7 +7,6 @@ import {
   CheckCircle, 
   XCircle, 
   Clock, 
-  AlertTriangle, 
   DollarSign, 
   Package, 
   Users, 
@@ -17,122 +16,12 @@ import {
   Coffee,
   TrendingUp
 } from "lucide-react";
+import { useApprovalRequests } from "@/hooks/useApprovalRequests";
+import { useToast } from "@/hooks/use-toast";
 
 const ApprovalRequests = () => {
-  // Sample approval requests from different departments
-  const approvalRequests = [
-    {
-      id: "APR-2024-001",
-      department: "Procurement",
-      type: "High Price Exception",
-      title: "Ntungamo Growers Union - Wugar Premium",
-      description: "Price approval for Wugar at UGX 8,200/bag (15% above reference)",
-      amount: "UGX 4,100,000",
-      requestedBy: "Sarah Nakato",
-      dateRequested: "2024-01-12",
-      priority: "High",
-      status: "Pending",
-      details: {
-        supplier: "Ntungamo Growers Union",
-        quantity: "500 bags",
-        referencePrice: "UGX 7,200",
-        requestedPrice: "UGX 8,200",
-        reason: "Premium quality lot with exceptional cupping scores"
-      }
-    },
-    {
-      id: "APR-2024-002",
-      department: "Human Resources",
-      type: "Staff Overtime",
-      title: "Processing Team Overtime Authorization",
-      description: "Overtime approval for weekend processing to meet export deadline",
-      amount: "UGX 1,850,000",
-      requestedBy: "James Mugisha",
-      dateRequested: "2024-01-11",
-      priority: "High",
-      status: "Pending",
-      details: {
-        staff: "12 processing team members",
-        hours: "16 hours overtime each",
-        rate: "UGX 9,650/hour",
-        deadline: "Export shipment on Jan 15"
-      }
-    },
-    {
-      id: "APR-2024-003",
-      department: "Finance",
-      type: "Budget Variance",
-      title: "Equipment Maintenance Budget Increase",
-      description: "Additional budget for critical roaster maintenance",
-      amount: "UGX 2,500,000",
-      requestedBy: "Rose Namuli",
-      dateRequested: "2024-01-10",
-      priority: "Medium",
-      status: "Pending",
-      details: {
-        originalBudget: "UGX 5,000,000",
-        additionalAmount: "UGX 2,500,000",
-        equipment: "Primary roasting machine",
-        urgency: "Preventive maintenance to avoid breakdown"
-      }
-    },
-    {
-      id: "APR-2024-004",
-      department: "Quality Control",
-      type: "Batch Rejection",
-      title: "Reject 150 bags - Moisture Content Issue",
-      description: "Approval to reject coffee batch due to high moisture content",
-      amount: "UGX 1,080,000",
-      requestedBy: "Peter Ssali",
-      dateRequested: "2024-01-09",
-      priority: "High",
-      status: "Approved",
-      details: {
-        supplier: "Mbarara Coffee Cooperative",
-        quantity: "150 bags",
-        moistureContent: "14.5%",
-        standard: "Max 12.5%",
-        action: "Return to supplier for re-drying"
-      }
-    },
-    {
-      id: "APR-2024-005",
-      department: "Sales & Marketing",
-      type: "Price Discount",
-      title: "Bulk Order Discount - European Client",
-      description: "Special pricing for 500-bag order from German buyer",
-      amount: "UGX 15,000,000",
-      requestedBy: "Grace Apio",
-      dateRequested: "2024-01-08",
-      priority: "Medium",
-      status: "Approved",
-      details: {
-        client: "Hamburg Coffee Roasters",
-        standardPrice: "UGX 32,000/bag",
-        discountedPrice: "UGX 30,000/bag",
-        discount: "6.25%",
-        totalOrder: "500 bags"
-      }
-    },
-    {
-      id: "APR-2024-006",
-      department: "Logistics",
-      type: "Transport Emergency",
-      title: "Emergency Transport for Export Deadline",
-      description: "Additional truck hire for urgent export shipment",
-      amount: "UGX 800,000",
-      requestedBy: "David Okello",
-      dateRequested: "2024-01-07",
-      priority: "High",
-      status: "Pending",
-      details: {
-        destination: "Mombasa Port",
-        quantity: "20 tonnes",
-        deadline: "January 15, 2024",
-        reason: "Regular transporter unavailable"
-      }
-    }
-  ];
+  const { requests, loading, updateRequestStatus } = useApprovalRequests();
+  const { toast } = useToast();
 
   const getDepartmentIcon = (department: string) => {
     switch (department) {
@@ -165,8 +54,61 @@ const ApprovalRequests = () => {
     }
   };
 
-  const pendingRequests = approvalRequests.filter(req => req.status === "Pending");
-  const completedRequests = approvalRequests.filter(req => req.status !== "Pending");
+  const handleApprove = async (requestId: string) => {
+    const success = await updateRequestStatus(requestId, 'Approved');
+    if (success) {
+      toast({
+        title: "Request Approved",
+        description: "The approval request has been approved successfully.",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to approve the request. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReject = async (requestId: string) => {
+    const success = await updateRequestStatus(requestId, 'Rejected');
+    if (success) {
+      toast({
+        title: "Request Rejected",
+        description: "The approval request has been rejected.",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to reject the request. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const pendingRequests = requests.filter(req => req.status === "Pending");
+  const completedRequests = requests.filter(req => req.status !== "Pending");
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+            Approval Requests
+          </CardTitle>
+          <CardDescription>
+            Centralized approval system for all departments
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-gray-500">
+            <p>Loading approval requests...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -221,18 +163,25 @@ const ApprovalRequests = () => {
                             <span>•</span>
                             <span>By {request.requestedBy}</span>
                             <span>•</span>
-                            <span>{request.dateRequested}</span>
+                            <span>{new Date(request.dateRequested).toLocaleDateString()}</span>
                             <span>•</span>
                             <span className="font-medium text-gray-700">{request.amount}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleReject(request.id)}
+                        >
                           <XCircle className="h-4 w-4 mr-1" />
                           Reject
                         </Button>
-                        <Button size="sm">
+                        <Button 
+                          size="sm"
+                          onClick={() => handleApprove(request.id)}
+                        >
                           <CheckCircle className="h-4 w-4 mr-1" />
                           Approve
                         </Button>
@@ -247,7 +196,7 @@ const ApprovalRequests = () => {
                               <span className="text-gray-500 capitalize">
                                 {key.replace(/([A-Z])/g, ' $1').toLowerCase()}:
                               </span>
-                              <span className="ml-1 font-medium">{value}</span>
+                              <span className="ml-1 font-medium">{String(value)}</span>
                             </div>
                           ))}
                         </div>
@@ -260,45 +209,52 @@ const ApprovalRequests = () => {
           </TabsContent>
 
           <TabsContent value="completed" className="space-y-4">
-            {completedRequests.map((request) => {
-              const DepartmentIcon = getDepartmentIcon(request.department);
-              return (
-                <div key={request.id} className="border rounded-lg p-4 opacity-75">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-3">
-                      <div className="p-2 bg-gray-50 rounded-lg">
-                        <DepartmentIcon className="h-5 w-5 text-gray-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold">{request.title}</h4>
-                          <Badge variant={getStatusColor(request.status)}>
-                            {request.status}
-                          </Badge>
+            {completedRequests.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>No completed approvals</p>
+              </div>
+            ) : (
+              completedRequests.map((request) => {
+                const DepartmentIcon = getDepartmentIcon(request.department);
+                return (
+                  <div key={request.id} className="border rounded-lg p-4 opacity-75">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-3">
+                        <div className="p-2 bg-gray-50 rounded-lg">
+                          <DepartmentIcon className="h-5 w-5 text-gray-600" />
                         </div>
-                        <p className="text-sm text-gray-600 mb-2">{request.description}</p>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <span>{request.department}</span>
-                          <span>•</span>
-                          <span>{request.requestedBy}</span>
-                          <span>•</span>
-                          <span>{request.dateRequested}</span>
-                          <span>•</span>
-                          <span className="font-medium">{request.amount}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold">{request.title}</h4>
+                            <Badge variant={getStatusColor(request.status)}>
+                              {request.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">{request.description}</p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span>{request.department}</span>
+                            <span>•</span>
+                            <span>{request.requestedBy}</span>
+                            <span>•</span>
+                            <span>{new Date(request.dateRequested).toLocaleDateString()}</span>
+                            <span>•</span>
+                            <span className="font-medium">{request.amount}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center">
-                      {request.status === "Approved" ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-600" />
-                      )}
+                      <div className="flex items-center">
+                        {request.status === "Approved" ? (
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-red-600" />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>
