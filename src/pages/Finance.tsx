@@ -1,3 +1,4 @@
+
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,9 +8,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, Users, FileText, Receipt, Banknote, Calculator, PlusCircle, Eye, CheckCircle, Clock } from "lucide-react";
 import { useState } from "react";
-import { toast } from "@/hooks/use-toast";
+import { useFinanceData } from "@/hooks/useFinanceData";
 
 const Finance = () => {
+  const {
+    transactions,
+    expenses,
+    payments,
+    stats,
+    loading,
+    addTransaction,
+    addExpense,
+    processPayment
+  } = useFinanceData();
+
   const [selectedPayment, setSelectedPayment] = useState<number | null>(null);
   const [cashAmount, setCashAmount] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
@@ -18,66 +30,35 @@ const Finance = () => {
   const [receiptAmount, setReceiptAmount] = useState("");
   const [receiptDescription, setReceiptDescription] = useState("");
 
-  const payments = [
-    { id: 1, supplier: "Bushenyi Cooperative", amount: "UGX 2,450,000", status: "Paid", date: "Today", method: "Bank Transfer" },
-    { id: 2, supplier: "Masaka Traders", amount: "UGX 1,800,000", status: "Pending", date: "Yesterday", method: "Cash" },
-    { id: 3, supplier: "Ntungamo Union", amount: "UGX 950,000", status: "Processing", date: "2 days ago", method: "Bank Transfer" },
-  ];
-
+  // Sample priced coffee data - in real app, this would come from quality control
   const pricedCoffee = [
-    { id: 1, batchId: "BATCH-001", supplier: "Bushenyi Cooperative", kilograms: 500, price: "UGX 4,900/kg", totalAmount: "UGX 2,450,000", status: "Pending Payment", paymentMethod: "Bank", qualityScore: 94.2 },
-    { id: 2, batchId: "BATCH-002", supplier: "Masaka Traders", kilograms: 360, price: "UGX 5,000/kg", totalAmount: "UGX 1,800,000", status: "Ready for Cash", paymentMethod: "Cash", qualityScore: 92.1 },
-    { id: 3, batchId: "BATCH-003", supplier: "Ntungamo Union", kilograms: 190, price: "UGX 5,000/kg", totalAmount: "UGX 950,000", status: "Payment Issued", paymentMethod: "Bank", qualityScore: 95.3 },
-  ];
-
-  const dailyTransactions = [
-    { id: 1, type: "Receipt", description: "Coffee Sale - Premium Grade", amount: "+UGX 3,200,000", time: "09:30 AM" },
-    { id: 2, type: "Payment", description: "Supplier Payment - Bushenyi Coop", amount: "-UGX 2,450,000", time: "10:15 AM" },
-    { id: 3, type: "Expense", description: "Transport Costs", amount: "-UGX 150,000", time: "11:00 AM" },
-    { id: 4, type: "Float", description: "Daily Float Received", amount: "+UGX 500,000", time: "08:00 AM" },
-  ];
-
-  const expenses = [
-    { id: 1, description: "Transport & Logistics", amount: "UGX 450,000", date: "Today", category: "Operations", status: "Approved" },
-    { id: 2, description: "Equipment Maintenance", amount: "UGX 200,000", date: "Yesterday", category: "Maintenance", status: "Pending" },
-    { id: 3, description: "Office Supplies", amount: "UGX 75,000", date: "2 days ago", category: "Admin", status: "Approved" },
+    { id: 1, batchId: "BATCH-001", supplier: "Bushenyi Cooperative", kilograms: 500, price: "UGX 4,900/kg", totalAmount: 2450000, status: "Pending Payment", paymentMethod: "Bank", qualityScore: 94.2 },
+    { id: 2, batchId: "BATCH-002", supplier: "Masaka Traders", kilograms: 360, price: "UGX 5,000/kg", totalAmount: 1800000, status: "Ready for Cash", paymentMethod: "Cash", qualityScore: 92.1 },
+    { id: 3, batchId: "BATCH-003", supplier: "Ntungamo Union", kilograms: 190, price: "UGX 5,000/kg", totalAmount: 950000, status: "Payment Issued", paymentMethod: "Bank", qualityScore: 95.3 },
   ];
 
   const handleBankPayment = (paymentId: number) => {
-    toast({
-      title: "Bank Payment Requested",
-      description: "Payment request has been sent to managers for approval",
-    });
+    processPayment(paymentId.toString(), "Bank Transfer");
   };
 
   const handleCashPayment = (paymentId: number) => {
     if (!cashAmount) {
-      toast({
-        title: "Error",
-        description: "Please enter cash amount",
-        variant: "destructive",
-      });
       return;
     }
-    toast({
-      title: "Cash Payment Issued",
-      description: `Cash payment of ${cashAmount} has been processed`,
-    });
+    processPayment(paymentId.toString(), "Cash", parseInt(cashAmount));
     setCashAmount("");
   };
 
   const handleExpenseSubmit = () => {
     if (!expenseAmount || !expenseDescription) {
-      toast({
-        title: "Error",
-        description: "Please fill in all expense details",
-        variant: "destructive",
-      });
       return;
     }
-    toast({
-      title: "Expense Recorded",
-      description: "Expense has been added to the system",
+    addExpense({
+      description: expenseDescription,
+      amount: parseInt(expenseAmount),
+      date: new Date().toLocaleDateString(),
+      category: "Operations",
+      status: "Pending"
     });
     setExpenseAmount("");
     setExpenseDescription("");
@@ -85,36 +66,44 @@ const Finance = () => {
 
   const handleFloatSubmit = () => {
     if (!floatAmount) {
-      toast({
-        title: "Error",
-        description: "Please enter float amount",
-        variant: "destructive",
-      });
       return;
     }
-    toast({
-      title: "Float Recorded",
-      description: `Daily float of ${floatAmount} has been recorded`,
+    addTransaction({
+      type: "Float",
+      description: "Daily Float Received",
+      amount: parseInt(floatAmount),
+      time: new Date().toLocaleTimeString(),
+      date: new Date().toLocaleDateString()
     });
     setFloatAmount("");
   };
 
   const handleReceiptIssue = () => {
     if (!receiptAmount || !receiptDescription) {
-      toast({
-        title: "Error",
-        description: "Please fill in receipt details",
-        variant: "destructive",
-      });
       return;
     }
-    toast({
-      title: "Receipt Issued",
-      description: "Receipt has been generated successfully",
+    addTransaction({
+      type: "Receipt",
+      description: receiptDescription,
+      amount: parseInt(receiptAmount),
+      time: new Date().toLocaleTimeString(),
+      date: new Date().toLocaleDateString()
     });
     setReceiptAmount("");
     setReceiptDescription("");
   };
+
+  const formatCurrency = (amount: number) => {
+    return `UGX ${amount.toLocaleString()}`;
+  };
+
+  if (loading) {
+    return (
+      <Layout title="Finance Management" subtitle="Loading...">
+        <div>Loading finance data...</div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout 
@@ -129,7 +118,7 @@ const Finance = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
-                  <p className="text-2xl font-bold">UGX 847M</p>
+                  <p className="text-2xl font-bold">{formatCurrency(stats.monthlyRevenue)}</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-green-600" />
               </div>
@@ -140,7 +129,7 @@ const Finance = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Pending Payments</p>
-                  <p className="text-2xl font-bold">UGX 45M</p>
+                  <p className="text-2xl font-bold">{formatCurrency(stats.pendingPayments)}</p>
                 </div>
                 <CreditCard className="h-8 w-8 text-amber-600" />
               </div>
@@ -151,7 +140,7 @@ const Finance = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Operating Costs</p>
-                  <p className="text-2xl font-bold">UGX 234M</p>
+                  <p className="text-2xl font-bold">{formatCurrency(stats.operatingCosts)}</p>
                 </div>
                 <TrendingDown className="h-8 w-8 text-red-600" />
               </div>
@@ -162,7 +151,7 @@ const Finance = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Cash on Hand</p>
-                  <p className="text-2xl font-bold">UGX 12M</p>
+                  <p className="text-2xl font-bold">{formatCurrency(stats.cashOnHand)}</p>
                 </div>
                 <Banknote className="h-8 w-8 text-blue-600" />
               </div>
@@ -206,7 +195,7 @@ const Finance = () => {
                         <TableCell>{coffee.supplier}</TableCell>
                         <TableCell>{coffee.kilograms} kg</TableCell>
                         <TableCell>{coffee.price}</TableCell>
-                        <TableCell className="font-bold">{coffee.totalAmount}</TableCell>
+                        <TableCell className="font-bold">{formatCurrency(coffee.totalAmount)}</TableCell>
                         <TableCell>
                           <Badge variant={coffee.paymentMethod === "Bank" ? "default" : "secondary"}>
                             {coffee.paymentMethod}
@@ -256,25 +245,29 @@ const Finance = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {dailyTransactions.map((transaction) => (
-                      <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          {transaction.type === "Receipt" && <Receipt className="h-5 w-5 text-green-600" />}
-                          {transaction.type === "Payment" && <CreditCard className="h-5 w-5 text-red-600" />}
-                          {transaction.type === "Expense" && <FileText className="h-5 w-5 text-orange-600" />}
-                          {transaction.type === "Float" && <Banknote className="h-5 w-5 text-blue-600" />}
-                          <div>
-                            <p className="font-medium">{transaction.description}</p>
-                            <p className="text-sm text-gray-500">{transaction.time}</p>
+                    {transactions.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">No transactions recorded today</p>
+                    ) : (
+                      transactions.map((transaction) => (
+                        <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            {transaction.type === "Receipt" && <Receipt className="h-5 w-5 text-green-600" />}
+                            {transaction.type === "Payment" && <CreditCard className="h-5 w-5 text-red-600" />}
+                            {transaction.type === "Expense" && <FileText className="h-5 w-5 text-orange-600" />}
+                            {transaction.type === "Float" && <Banknote className="h-5 w-5 text-blue-600" />}
+                            <div>
+                              <p className="font-medium">{transaction.description}</p>
+                              <p className="text-sm text-gray-500">{transaction.time}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-bold ${transaction.type === 'Receipt' || transaction.type === 'Float' ? 'text-green-600' : 'text-red-600'}`}>
+                              {transaction.type === 'Receipt' || transaction.type === 'Float' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                            </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className={`font-bold ${transaction.amount.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                            {transaction.amount}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -288,15 +281,15 @@ const Finance = () => {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
                       <span className="font-medium">Total Receipts</span>
-                      <span className="text-xl font-bold text-green-600">UGX 3,700,000</span>
+                      <span className="text-xl font-bold text-green-600">{formatCurrency(stats.totalReceipts)}</span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
                       <span className="font-medium">Total Payments</span>
-                      <span className="text-xl font-bold text-red-600">UGX 2,600,000</span>
+                      <span className="text-xl font-bold text-red-600">{formatCurrency(stats.totalPayments)}</span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
                       <span className="font-medium">Net Cash Flow</span>
-                      <span className="text-xl font-bold text-blue-600">UGX 1,100,000</span>
+                      <span className="text-xl font-bold text-blue-600">{formatCurrency(stats.netCashFlow)}</span>
                     </div>
                     <Button className="w-full">
                       <FileText className="h-4 w-4 mr-2" />
@@ -329,7 +322,7 @@ const Finance = () => {
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600">Current Float Balance</p>
-                    <p className="text-2xl font-bold">UGX 500,000</p>
+                    <p className="text-2xl font-bold">{formatCurrency(stats.currentFloat)}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -391,20 +384,24 @@ const Finance = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {expenses.map((expense) => (
-                      <div key={expense.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{expense.description}</p>
-                          <p className="text-sm text-gray-500">{expense.category} • {expense.date}</p>
+                    {expenses.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">No expenses recorded</p>
+                    ) : (
+                      expenses.map((expense) => (
+                        <div key={expense.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{expense.description}</p>
+                            <p className="text-sm text-gray-500">{expense.category} • {expense.date}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold">{formatCurrency(expense.amount)}</p>
+                            <Badge variant={expense.status === "Approved" ? "default" : "secondary"}>
+                              {expense.status}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold">{expense.amount}</p>
-                          <Badge variant={expense.status === "Approved" ? "default" : "secondary"}>
-                            {expense.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -429,23 +426,27 @@ const Finance = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {payments.map((payment) => (
-                      <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{payment.supplier}</p>
-                          <p className="text-sm text-gray-500">{payment.method} • {payment.date}</p>
+                    {payments.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">No payments recorded</p>
+                    ) : (
+                      payments.map((payment) => (
+                        <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{payment.supplier}</p>
+                            <p className="text-sm text-gray-500">{payment.method} • {payment.date}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold">{formatCurrency(payment.amount)}</p>
+                            <Badge variant={
+                              payment.status === "Paid" ? "default" : 
+                              payment.status === "Pending" ? "destructive" : "secondary"
+                            }>
+                              {payment.status}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold">{payment.amount}</p>
-                          <Badge variant={
-                            payment.status === "Paid" ? "default" : 
-                            payment.status === "Pending" ? "destructive" : "secondary"
-                          }>
-                            {payment.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -460,19 +461,21 @@ const Finance = () => {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
                       <span className="font-medium">Total Revenue</span>
-                      <span className="text-xl font-bold text-green-600">UGX 847M</span>
+                      <span className="text-xl font-bold text-green-600">{formatCurrency(stats.monthlyRevenue)}</span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
                       <span className="font-medium">Total Expenses</span>
-                      <span className="text-xl font-bold text-red-600">UGX 623M</span>
+                      <span className="text-xl font-bold text-red-600">{formatCurrency(stats.operatingCosts)}</span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
                       <span className="font-medium">Net Profit</span>
-                      <span className="text-xl font-bold text-blue-600">UGX 224M</span>
+                      <span className="text-xl font-bold text-blue-600">{formatCurrency(stats.monthlyRevenue - stats.operatingCosts)}</span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                       <span className="font-medium">Profit Margin</span>
-                      <span className="text-xl font-bold text-gray-600">26.4%</span>
+                      <span className="text-xl font-bold text-gray-600">
+                        {stats.monthlyRevenue > 0 ? ((stats.monthlyRevenue - stats.operatingCosts) / stats.monthlyRevenue * 100).toFixed(1) : 0}%
+                      </span>
                     </div>
                   </div>
                 </CardContent>
