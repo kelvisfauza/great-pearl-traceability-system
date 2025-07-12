@@ -53,7 +53,7 @@ const AgentActions = ({ agent, onExpenseSubmit, onOvertimeRequest, onCoffeePurch
     }
   });
 
-  const onExpenseSubmit = (data: any) => {
+  const handleExpenseSubmit = (data: any) => {
     onExpenseSubmit(agent.id, data);
     setShowExpenseDialog(false);
     expenseForm.reset();
@@ -63,7 +63,7 @@ const AgentActions = ({ agent, onExpenseSubmit, onOvertimeRequest, onCoffeePurch
     });
   };
 
-  const onOvertimeSubmit = (data: any) => {
+  const handleOvertimeSubmit = (data: any) => {
     onOvertimeRequest(agent.id, data);
     setShowOvertimeDialog(false);
     overtimeForm.reset();
@@ -73,7 +73,7 @@ const AgentActions = ({ agent, onExpenseSubmit, onOvertimeRequest, onCoffeePurch
     });
   };
 
-  const onPurchaseSubmit = (data: any) => {
+  const handlePurchaseSubmit = (data: any) => {
     onCoffeePurchase(agent.id, {
       ...data,
       totalAmount: data.bags * data.pricePerBag,
@@ -102,7 +102,7 @@ const AgentActions = ({ agent, onExpenseSubmit, onOvertimeRequest, onCoffeePurch
             <DialogTitle>Submit Expense - {agent.name}</DialogTitle>
           </DialogHeader>
           <Form {...expenseForm}>
-            <form onSubmit={expenseForm.handleSubmit(onExpenseSubmit)} className="space-y-4">
+            <form onSubmit={expenseForm.handleSubmit(handleExpenseSubmit)} className="space-y-4">
               <FormField
                 control={expenseForm.control}
                 name="description"
@@ -188,7 +188,7 @@ const AgentActions = ({ agent, onExpenseSubmit, onOvertimeRequest, onCoffeePurch
             <DialogTitle>Request Overtime - {agent.name}</DialogTitle>
           </DialogHeader>
           <Form {...overtimeForm}>
-            <form onSubmit={overtimeForm.handleSubmit(onOvertimeSubmit)} className="space-y-4">
+            <form onSubmit={overtimeForm.handleSubmit(handleOvertimeSubmit)} className="space-y-4">
               <FormField
                 control={overtimeForm.control}
                 name="hours"
@@ -250,7 +250,7 @@ const AgentActions = ({ agent, onExpenseSubmit, onOvertimeRequest, onCoffeePurch
             <DialogTitle>Record Coffee Purchase - {agent.name}</DialogTitle>
           </DialogHeader>
           <Form {...purchaseForm}>
-            <form onSubmit={purchaseForm.handleSubmit(onPurchaseSubmit)} className="space-y-4">
+            <form onSubmit={purchaseForm.handleSubmit(handlePurchaseSubmit)} className="space-y-4">
               <FormField
                 control={purchaseForm.control}
                 name="farmerName"
@@ -346,7 +346,7 @@ export default function FieldAgentManagement() {
   const { fieldAgents, addFieldAgent } = useFieldOperations();
   const { toast } = useToast();
 
-  const handleExpenseSubmit = async (agentId: string, expense: any) => {
+  const handleExpenseSubmitRequest = async (agentId: string, expense: any) => {
     // This would integrate with the approval system
     console.log("Expense submitted:", { agentId, expense });
   };
@@ -405,7 +405,7 @@ export default function FieldAgentManagement() {
               <div className="flex justify-end">
                 <AgentActions 
                   agent={agent}
-                  onExpenseSubmit={handleExpenseSubmit}
+                  onExpenseSubmit={handleExpenseSubmitRequest}
                   onOvertimeRequest={handleOvertimeRequest}
                   onCoffeePurchase={handleCoffeePurchase}
                 />
