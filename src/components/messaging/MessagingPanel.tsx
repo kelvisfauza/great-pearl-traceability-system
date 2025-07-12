@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,7 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
 
   const { conversations, messages, sendMessage, createConversation } = useMessages(selectedConversation || undefined);
   const { userPresences } = usePresence();
-  const { data: employees } = useEmployees();
+  const { employees } = useEmployees();
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
