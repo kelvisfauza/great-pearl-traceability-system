@@ -100,10 +100,22 @@ export const useUpdateReportDownloads = () => {
 
   return useMutation({
     mutationFn: async (reportId: string) => {
+      // First get the current downloads count
+      const { data: report, error: fetchError } = await supabase
+        .from("reports")
+        .select("downloads")
+        .eq("id", reportId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Increment the downloads count
+      const newDownloads = (report.downloads || 0) + 1;
+
       const { error } = await supabase
         .from("reports")
         .update({ 
-          downloads: supabase.sql`downloads + 1`,
+          downloads: newDownloads,
           updated_at: new Date().toISOString()
         })
         .eq("id", reportId);
