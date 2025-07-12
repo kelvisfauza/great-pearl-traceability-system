@@ -8,7 +8,7 @@ export const useMessages = (conversationId?: string) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch conversations for current user
+  // Fetch conversations for current user with participant details
   const { data: conversations } = useQuery({
     queryKey: ["conversations"],
     queryFn: async () => {
@@ -30,7 +30,41 @@ export const useMessages = (conversationId?: string) => {
         .eq("user_id", user.id);
 
       if (error) throw error;
-      return data?.map(item => item.conversations) || [];
+      
+      // Get unique conversations and enhance with participant info
+      const uniqueConversations = data?.map(item => item.conversations) || [];
+      
+      // For direct messages, fetch the other participant's name
+      const enhancedConversations = await Promise.all(
+        uniqueConversations.map(async (conv) => {
+          if (conv.type === "direct" && !conv.name) {
+            // Get the other participant
+            const { data: participants } = await supabase
+              .from("conversation_participants")
+              .select(`
+                user_id,
+                employees!inner (
+                  name,
+                  position
+                )
+              `)
+              .eq("conversation_id", conv.id)
+              .neq("user_id", user.id);
+
+            if (participants && participants.length > 0) {
+              const otherParticipant = participants[0].employees;
+              return {
+                ...conv,
+                name: otherParticipant.name,
+                participant_info: otherParticipant
+              };
+            }
+          }
+          return conv;
+        })
+      );
+      
+      return enhancedConversations;
     },
     enabled: !!user,
   });
@@ -45,19 +79,53 @@ export const useMessages = (conversationId?: string) => {
         .from("messages")
         .select(`
           *,
-          sender:sender_id (
+          sender:employees!messages_sender_id_fkey (
             id,
+            name,
             email
           )
         `)
         .eq("conversation_id", conversationId)
         .order("created_at", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching messages:", error);
+        // Fallback query without sender info if join fails
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("conversation_id", conversationId)
+          .order("created_at", { ascending: true });
+        
+        if (fallbackError) throw fallbackError;
+        return fallbackData || [];
+      }
+      
       return data || [];
     },
     enabled: !!conversationId,
   });
+
+  // Mark messages as read when viewing a conversation
+  useEffect(() => {
+    if (!conversationId || !user) return;
+
+    const markAsRead = async () => {
+      const { error } = await supabase
+        .from("conversation_participants")
+        .update({ last_read_at: new Date().toISOString() })
+        .eq("conversation_id", conversationId)
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Error marking messages as read:", error);
+      }
+    };
+
+    // Mark as read after a short delay
+    const timeout = setTimeout(markAsRead, 1000);
+    return () => clearTimeout(timeout);
+  }, [conversationId, user, messages]);
 
   // Real-time subscription for messages
   useEffect(() => {
@@ -78,6 +146,9 @@ export const useMessages = (conversationId?: string) => {
             ...(old || []),
             payload.new,
           ]);
+          
+          // Invalidate unread count
+          queryClient.invalidateQueries({ queryKey: ["unread-messages"] });
         }
       )
       .subscribe();
@@ -106,6 +177,10 @@ export const useMessages = (conversationId?: string) => {
       if (error) throw error;
       return data;
     },
+    onSuccess: () => {
+      // Invalidate unread count after sending
+      queryClient.invalidateQueries({ queryKey: ["unread-messages"] });
+    }
   });
 
   // Create conversation mutation
@@ -117,6 +192,41 @@ export const useMessages = (conversationId?: string) => {
     }) => {
       if (!user) throw new Error("User not authenticated");
 
+      // Check if direct conversation already exists
+      if (type === "direct" && participants.length === 1) {
+        const { data: existingConv } = await supabase
+          .from("conversation_participants")
+          .select(`
+            conversation_id,
+            conversations!inner (
+              id,
+              type
+            )
+          `)
+          .eq("user_id", user.id);
+
+        if (existingConv) {
+          for (const convParticipant of existingConv) {
+            if (convParticipant.conversations.type === "direct") {
+              // Check if this conversation has the target participant
+              const { data: otherParticipants } = await supabase
+                .from("conversation_participants")
+                .select("user_id")
+                .eq("conversation_id", convParticipant.conversation_id)
+                .neq("user_id", user.id);
+
+              if (otherParticipants && 
+                  otherParticipants.length === 1 && 
+                  otherParticipants[0].user_id === participants[0]) {
+                // Conversation already exists
+                return convParticipant.conversations;
+              }
+            }
+          }
+        }
+      }
+
+      // Create new conversation
       const { data: conversation, error: convError } = await supabase
         .from("conversations")
         .insert({

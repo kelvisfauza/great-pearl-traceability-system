@@ -7,9 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Bell, CircleUserRound, ChevronsUpDown } from "lucide-react";
+import { Bell, CircleUserRound, ChevronsUpDown, X } from "lucide-react";
 import MessageButton from "./messaging/MessageButton";
 import { usePresence } from "@/hooks/usePresence";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface LayoutProps {
   children: ReactNode;
@@ -20,21 +24,65 @@ interface LayoutProps {
 const Layout = ({ children, title, subtitle }: LayoutProps) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const notifications = [
-    {
-      id: "1",
-      title: "New message from John",
-      description: "Check your inbox",
-      time: "5 minutes ago",
-    },
-    {
-      id: "2",
-      title: "Report ready to download",
-      description: "Sales report for Q3 is ready",
-      time: "1 hour ago",
-    },
-  ];
   const { updatePresence } = usePresence();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch notifications from database
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["notifications", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      // For now, we'll fetch from approval_requests as notifications
+      // You can create a dedicated notifications table later
+      const { data, error } = await supabase
+        .from("approval_requests")
+        .select("*")
+        .eq("status", "Pending")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      
+      return data?.map(request => ({
+        id: request.id,
+        title: request.title,
+        description: `${request.type} - ${request.department}`,
+        time: new Date(request.created_at).toLocaleString(),
+        type: "approval_request"
+      })) || [];
+    },
+    enabled: !!user,
+  });
+
+  // Clear notification mutation
+  const clearNotification = useMutation({
+    mutationFn: async (notificationId: string) => {
+      // For approval requests, we'll mark them as "Reviewed" instead of deleting
+      const { error } = await supabase
+        .from("approval_requests")
+        .update({ status: "Reviewed" })
+        .eq("id", notificationId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      toast({
+        title: "Notification cleared",
+        description: "The notification has been cleared successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to clear notification. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleBellClick = () => {
     setIsNotificationOpen(!isNotificationOpen);
@@ -42,6 +90,10 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
 
   const handleUserMenuClick = () => {
     setIsUserMenuOpen(!isUserMenuOpen);
+  };
+
+  const handleClearNotification = (notificationId: string) => {
+    clearNotification.mutate(notificationId);
   };
 
   return (
@@ -79,12 +131,14 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
                     >
                       <Bell className="h-4 w-4 mr-2" />
                       Notifications
-                      <Badge
-                        variant="destructive"
-                        className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-                      >
-                        {notifications.length > 9 ? "9+" : notifications.length}
-                      </Badge>
+                      {notifications.length > 0 && (
+                        <Badge
+                          variant="destructive"
+                          className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                        >
+                          {notifications.length > 9 ? "9+" : notifications.length}
+                        </Badge>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-96 p-0" align="end">
@@ -94,24 +148,46 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
                       </CardHeader>
                       <CardContent className="p-0">
                         <ScrollArea className="h-80">
-                          <div className="divide-y divide-border">
-                            {notifications.map((notification) => (
-                              <div
-                                key={notification.id}
-                                className="px-4 py-3 hover:bg-secondary cursor-pointer"
-                              >
-                                <div className="flex justify-between">
-                                  <p className="text-sm font-medium">{notification.title}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {notification.time}
-                                  </p>
+                          {notifications.length === 0 ? (
+                            <div className="px-4 py-8 text-center text-gray-500">
+                              <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>No notifications</p>
+                            </div>
+                          ) : (
+                            <div className="divide-y divide-border">
+                              {notifications.map((notification) => (
+                                <div
+                                  key={notification.id}
+                                  className="px-4 py-3 hover:bg-secondary cursor-pointer group"
+                                >
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex justify-between items-start mb-1">
+                                        <p className="text-sm font-medium truncate">{notification.title}</p>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleClearNotification(notification.id);
+                                          }}
+                                          className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                      <p className="text-sm text-muted-foreground truncate">
+                                        {notification.description}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        {notification.time}
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
-                                <p className="text-sm text-muted-foreground">
-                                  {notification.description}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          )}
                         </ScrollArea>
                       </CardContent>
                     </Card>
