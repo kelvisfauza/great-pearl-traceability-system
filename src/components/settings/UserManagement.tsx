@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,19 +97,39 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
 
       if (error) {
         console.error('Edge function error:', error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to create user",
-          variant: "destructive"
-        });
+        
+        // Handle specific error cases
+        if (error.message?.includes('non-2xx status code')) {
+          // Try to get more specific error information
+          const errorMessage = "Failed to create user. The email may already be registered or there was a server error.";
+          toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: error.message || "Failed to create user",
+            variant: "destructive"
+          });
+        }
         return;
       }
 
       if (!data?.success) {
         console.error('Edge function returned unsuccessful:', data);
+        
+        // Handle specific error messages from the edge function
+        let errorMessage = data?.error || "Failed to create user";
+        
+        if (errorMessage.includes('email_exists') || errorMessage.includes('email address has already been registered')) {
+          errorMessage = `A user with the email "${values.email}" already exists. Please use a different email address.`;
+        }
+        
         toast({
           title: "Error", 
-          description: data?.error || "Failed to create user",
+          description: errorMessage,
           variant: "destructive"
         });
         return;
@@ -129,7 +150,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
       console.error('Error creating user:', error);
       toast({
         title: "Error",
-        description: "Failed to create user",
+        description: "Failed to create user. Please try again.",
         variant: "destructive"
       });
     } finally {
