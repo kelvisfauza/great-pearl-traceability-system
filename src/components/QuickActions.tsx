@@ -76,8 +76,8 @@ const QuickActions = () => {
       icon: Users,
       color: "bg-indigo-600 hover:bg-indigo-700",
       action: "Register",
-      route: "/procurement",
-      permissions: ["Procurement"],
+      route: "/store?tab=suppliers",
+      permissions: ["Store Management", "Procurement"],
       roles: []
     },
     {
