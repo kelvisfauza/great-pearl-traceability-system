@@ -54,6 +54,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const { toast } = useToast();
+  const { refetch } = useEmployees();
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
@@ -113,8 +114,9 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         return;
       }
 
-      // Refresh the employees list by calling the parent's callback
-      await onEmployeeAdded(data.employee);
+      // Refresh the employees list instead of trying to add the employee again
+      // since the edge function already created it
+      await refetch();
       
       form.reset();
       setIsAddModalOpen(false);
