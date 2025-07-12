@@ -11,7 +11,8 @@ import {
   Package, 
   Users,
   DollarSign,
-  Coffee
+  Coffee,
+  ShoppingCart
 } from "lucide-react";
 
 const QuickActions = () => {
@@ -19,6 +20,16 @@ const QuickActions = () => {
   const { hasPermission, hasRole } = useAuth();
 
   const allActions = [
+    {
+      title: "Purchase Coffee",
+      description: "Record new coffee delivery",
+      icon: ShoppingCart,
+      color: "bg-orange-600 hover:bg-orange-700",
+      action: "Record Purchase",
+      route: "/store?tab=records",
+      permissions: ["Store Management"],
+      roles: []
+    },
     {
       title: "New Coffee Batch",
       description: "Record incoming coffee delivery",

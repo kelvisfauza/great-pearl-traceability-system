@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +15,9 @@ import { useSuppliers } from "@/hooks/useSuppliers";
 import { toast } from "sonner";
 
 const Store = () => {
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'suppliers';
+  
   const {
     coffeeRecords,
     loading: storeLoading,
@@ -49,7 +53,16 @@ const Store = () => {
   const [submittingSupplier, setSubmittingSupplier] = useState(false);
   const [submittingRecord, setSubmittingRecord] = useState(false);
 
+  const [activeTab, setActiveTab] = useState(initialTab);
+
   const loading = storeLoading || suppliersLoading;
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['suppliers', 'records', 'operations'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   const handleSaveSupplier = async () => {
     if (!newSupplier.name || !newSupplier.origin) {
@@ -139,7 +152,7 @@ const Store = () => {
       subtitle="Manage suppliers and coffee inventory records"
     >
       <div className="space-y-6">
-        <Tabs defaultValue="suppliers" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="suppliers">
               <Users className="h-4 w-4 mr-2" />
