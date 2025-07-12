@@ -96,9 +96,18 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
 
   const getConversationDisplayName = (conversation: any) => {
     if (!conversation) return "Unknown";
-    if (conversation.name) return conversation.name;
     
-    // For direct messages without participant info
+    // Use participantName if available for direct messages
+    if (conversation.participantName) {
+      return conversation.participantName;
+    }
+    
+    // Use conversation name if set
+    if (conversation.name && conversation.name !== "Direct Message") {
+      return conversation.name;
+    }
+    
+    // For direct messages without participant info, show generic name
     if (conversation.type === "direct") {
       return "Direct Message";
     }

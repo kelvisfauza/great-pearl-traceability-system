@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,16 +33,43 @@ export const useMessages = (conversationId?: string) => {
       // Get unique conversations
       const uniqueConversations = data?.map(item => item.conversations) || [];
       
-      // For direct messages without names, we'll just use a default name
-      const enhancedConversations = uniqueConversations.map(conv => {
-        if (conv.type === "direct" && !conv.name) {
-          return {
-            ...conv,
-            name: "Direct Message"
-          };
-        }
-        return conv;
-      });
+      // For each conversation, get participant details
+      const enhancedConversations = await Promise.all(
+        uniqueConversations.map(async (conv) => {
+          if (conv.type === "direct" && !conv.name) {
+            // Get the other participant for direct messages
+            const { data: participants } = await supabase
+              .from("conversation_participants")
+              .select("user_id")
+              .eq("conversation_id", conv.id)
+              .neq("user_id", user.id);
+
+            if (participants && participants.length > 0) {
+              // Get employee details for the other participant
+              const { data: employee } = await supabase
+                .from("employees")
+                .select("name")
+                .eq("id", participants[0].user_id)
+                .single();
+
+              if (employee) {
+                return {
+                  ...conv,
+                  name: employee.name,
+                  participantName: employee.name
+                };
+              }
+            }
+            
+            return {
+              ...conv,
+              name: "Direct Message",
+              participantName: null
+            };
+          }
+          return conv;
+        })
+      );
       
       return enhancedConversations;
     },
