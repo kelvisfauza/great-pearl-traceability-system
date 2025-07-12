@@ -17,6 +17,7 @@ interface Employee {
   join_date?: string;
   status?: string;
   salary?: number;
+  id: string;
 }
 
 interface AuthContextType {
@@ -29,6 +30,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
+  fetchEmployeeData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (data) {
         console.log('Setting employee data:', {
+          id: data.id,
           employee_id: data.employee_id || data.id,
           name: data.name,
           email: data.email,
@@ -90,6 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         
         setEmployee({
+          id: data.id,
           employee_id: data.employee_id || data.id,
           name: data.name,
           email: data.email,
@@ -230,6 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut,
     hasPermission,
     hasRole,
+    fetchEmployeeData,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

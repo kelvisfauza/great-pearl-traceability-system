@@ -9,13 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Key } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const UserProfile = () => {
-  const { employee } = useAuth();
+  const { employee, fetchEmployeeData } = useAuth();
   const { toast } = useToast();
   
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     name: employee?.name || '',
@@ -31,19 +34,50 @@ const UserProfile = () => {
   });
 
   const handleSaveProfile = async () => {
+    if (!employee?.id) {
+      toast({
+        title: "Error",
+        description: "Employee ID not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSaving(true);
     try {
-      // Here you would update the employee profile
+      const { error } = await supabase
+        .from('employees')
+        .update({
+          name: formData.name,
+          phone: formData.phone,
+          address: formData.address,
+          emergency_contact: formData.emergency_contact,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', employee.id);
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        throw error;
+      }
+
+      // Refresh employee data to get updated information
+      await fetchEmployeeData();
+      
       toast({
         title: "Success",
         description: "Profile updated successfully"
       });
       setIsEditing(false);
     } catch (error) {
+      console.error('Error updating profile:', error);
       toast({
         title: "Error",
         description: "Failed to update profile",
         variant: "destructive"
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -57,8 +91,26 @@ const UserProfile = () => {
       return;
     }
 
+    if (passwordData.newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
     try {
-      // Here you would update the password
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
+
+      if (error) {
+        console.error('Error changing password:', error);
+        throw error;
+      }
+
       toast({
         title: "Success",
         description: "Password changed successfully"
@@ -66,13 +118,28 @@ const UserProfile = () => {
       setShowPasswordForm(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
+      console.error('Error changing password:', error);
       toast({
         title: "Error",
         description: "Failed to change password",
         variant: "destructive"
       });
+    } finally {
+      setIsChangingPassword(false);
     }
   };
+
+  // Update form data when employee data changes
+  useState(() => {
+    if (employee) {
+      setFormData({
+        name: employee.name || '',
+        phone: employee.phone || '',
+        address: employee.address || '',
+        emergency_contact: employee.emergency_contact || ''
+      });
+    }
+  }, [employee]);
 
   if (!employee) return null;
 
@@ -143,6 +210,7 @@ const UserProfile = () => {
           <Button 
             variant={isEditing ? "outline" : "default"} 
             onClick={() => isEditing ? setIsEditing(false) : setIsEditing(true)}
+            disabled={isSaving}
           >
             {isEditing ? "Cancel" : "Edit"}
           </Button>
@@ -189,8 +257,10 @@ const UserProfile = () => {
           
           {isEditing && (
             <div className="flex gap-2 pt-4">
-              <Button onClick={handleSaveProfile}>Save Changes</Button>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
+              <Button onClick={handleSaveProfile} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+              <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
                 Cancel
               </Button>
             </div>
@@ -208,6 +278,7 @@ const UserProfile = () => {
           <Button 
             variant={showPasswordForm ? "outline" : "default"}
             onClick={() => setShowPasswordForm(!showPasswordForm)}
+            disabled={isChangingPassword}
           >
             <Key className="h-4 w-4 mr-2" />
             {showPasswordForm ? "Cancel" : "Change Password"}
@@ -223,6 +294,7 @@ const UserProfile = () => {
                 type="password"
                 value={passwordData.currentPassword}
                 onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                disabled={isChangingPassword}
               />
             </div>
             <div>
@@ -232,6 +304,7 @@ const UserProfile = () => {
                 type="password"
                 value={passwordData.newPassword}
                 onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                disabled={isChangingPassword}
               />
             </div>
             <div>
@@ -241,12 +314,15 @@ const UserProfile = () => {
                 type="password"
                 value={passwordData.confirmPassword}
                 onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                disabled={isChangingPassword}
               />
             </div>
             
             <div className="flex gap-2 pt-4">
-              <Button onClick={handleChangePassword}>Update Password</Button>
-              <Button variant="outline" onClick={() => setShowPasswordForm(false)}>
+              <Button onClick={handleChangePassword} disabled={isChangingPassword}>
+                {isChangingPassword ? "Updating..." : "Update Password"}
+              </Button>
+              <Button variant="outline" onClick={() => setShowPasswordForm(false)} disabled={isChangingPassword}>
                 Cancel
               </Button>
             </div>
