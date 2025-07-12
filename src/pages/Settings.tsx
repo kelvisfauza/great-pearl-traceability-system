@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,10 +9,11 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import UserManagement from "@/components/settings/UserManagement";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("general");
-  const { employees, loading: employeesLoading } = useEmployees();
+  const { employees, loading: employeesLoading, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
   const { requests } = useApprovalRequests();
   const { toast } = useToast();
   
@@ -148,45 +148,12 @@ const Settings = () => {
   );
 
   const renderUserSettings = () => (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>User Management</CardTitle>
-            <CardDescription>System users and their roles</CardDescription>
-          </div>
-          <Badge variant="outline">{totalEmployees} Total Users</Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {employeesLoading ? (
-          <p className="text-center text-gray-500">Loading users...</p>
-        ) : (
-          <div className="space-y-4">
-            {employees.slice(0, 10).map((user) => (
-              <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <p className="font-medium">{user.name}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
-                  <p className="text-xs text-gray-400">{user.position} • {user.department}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="outline">{user.role}</Badge>
-                  <Badge variant={user.status === "Active" ? "default" : "secondary"}>
-                    {user.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-            {employees.length > 10 && (
-              <p className="text-sm text-gray-500 text-center">
-                Showing 10 of {employees.length} users
-              </p>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <UserManagement
+      employees={employees}
+      onEmployeeAdded={addEmployee}
+      onEmployeeUpdated={updateEmployee}
+      onEmployeeDeleted={deleteEmployee}
+    />
   );
 
   const renderSecuritySettings = () => (
