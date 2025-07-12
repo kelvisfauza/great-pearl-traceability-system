@@ -74,7 +74,10 @@ const HumanResources = () => {
   };
 
   const handleUpdateEmployee = async (employeeData: any) => {
-    await updateEmployee(employeeData);
+    if (employeeData.id) {
+      const { id, ...updates } = employeeData;
+      await updateEmployee(id, updates);
+    }
   };
 
   const handleProcessPayment = async (paymentData: any) => {
