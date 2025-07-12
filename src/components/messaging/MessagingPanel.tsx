@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,7 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
   };
 
   const getConversationDisplayName = (conversation: any) => {
+    if (!conversation) return "Unknown";
     if (conversation.name) return conversation.name;
     
     // For direct messages without participant info
@@ -105,17 +107,21 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
   };
 
   const getConversationAvatar = (conversation: any) => {
+    if (!conversation) return "?";
     const name = getConversationDisplayName(conversation);
     return name.charAt(0).toUpperCase();
   };
 
   const getCurrentConversation = () => {
-    return conversations?.find(conv => conv.id === selectedConversation);
+    if (!conversations || !selectedConversation) return null;
+    return conversations.find(conv => conv.id === selectedConversation) || null;
   };
 
   const filteredEmployees = employees?.filter(emp => 
     emp.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const currentConversation = getCurrentConversation();
 
   return (
     <Card className="fixed bottom-4 right-4 w-96 h-[600px] flex flex-col shadow-xl z-50">
@@ -221,23 +227,23 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
                 )}
               </ScrollArea>
             </div>
-          ) : selectedConversation ? (
-            /* Chat Interface */
+          ) : selectedConversation && currentConversation ? (
+            /* Chat Interface - only render if we have a valid conversation */
             <>
               {/* Chat Header */}
               <div className="p-3 border-b flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>
-                      {getConversationAvatar(getCurrentConversation())}
+                      {getConversationAvatar(currentConversation)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
                     <p className="text-sm font-medium">
-                      {getConversationDisplayName(getCurrentConversation())}
+                      {getConversationDisplayName(currentConversation)}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {getCurrentConversation()?.type === "direct" ? "Direct Message" : "Group Chat"}
+                      {currentConversation.type === "direct" ? "Direct Message" : "Group Chat"}
                     </p>
                   </div>
                 </div>
