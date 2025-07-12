@@ -48,12 +48,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!session?.user) return;
     
     try {
-      const { data, error } = await supabase.rpc('get_current_employee');
+      // Query the employees table directly using the user's email
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('email', session.user.email)
+        .maybeSingle();
       
       if (error) throw error;
       
-      if (data && data.length > 0) {
-        setEmployee(data[0] as Employee);
+      if (data) {
+        setEmployee({
+          employee_id: data.employee_id || '',
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          position: data.position,
+          department: data.department,
+          role: data.role,
+          permissions: data.permissions
+        });
       }
     } catch (error) {
       console.error('Error fetching employee data:', error);
