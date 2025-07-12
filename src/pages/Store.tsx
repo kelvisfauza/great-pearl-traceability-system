@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart } from "lucide-react";
 import { useStoreManagement } from "@/hooks/useStoreManagement";
+import { toast } from "sonner";
 
 const Store = () => {
   const {
@@ -20,7 +21,6 @@ const Store = () => {
     addSupplier,
     addCoffeeRecord,
     updateCoffeeRecordStatus,
-    generateSupplierCode,
     todaysSummary,
     pendingActions
   } = useStoreManagement();
@@ -29,33 +29,69 @@ const Store = () => {
     name: '',
     phone: '',
     origin: '',
-    openingBalance: 0
+    opening_balance: 0
   });
 
   const [newRecord, setNewRecord] = useState({
-    coffeeType: '',
+    coffee_type: '',
     date: new Date().toISOString().split('T')[0],
     kilograms: 0,
     bags: 0,
-    supplier: ''
+    supplier_name: ''
   });
 
-  const handleSaveSupplier = () => {
-    if (!newSupplier.name || !newSupplier.origin) return;
+  const [submittingSupplier, setSubmittingSupplier] = useState(false);
+  const [submittingRecord, setSubmittingRecord] = useState(false);
 
-    addSupplier(newSupplier);
-    setNewSupplier({ name: '', phone: '', origin: '', openingBalance: 0 });
+  const handleSaveSupplier = async () => {
+    if (!newSupplier.name || !newSupplier.origin) {
+      toast.error("Please fill in required fields");
+      return;
+    }
+
+    setSubmittingSupplier(true);
+    try {
+      await addSupplier(newSupplier);
+      setNewSupplier({ name: '', phone: '', origin: '', opening_balance: 0 });
+      toast.success("Supplier registered successfully");
+    } catch (error) {
+      toast.error("Failed to register supplier");
+    } finally {
+      setSubmittingSupplier(false);
+    }
   };
 
-  const handleSubmitRecord = () => {
-    if (!newRecord.coffeeType || !newRecord.supplier || newRecord.kilograms <= 0 || newRecord.bags <= 0) return;
+  const handleSubmitRecord = async () => {
+    if (!newRecord.coffee_type || !newRecord.supplier_name || newRecord.kilograms <= 0 || newRecord.bags <= 0) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
 
-    addCoffeeRecord(newRecord);
-    setNewRecord({ coffeeType: '', date: new Date().toISOString().split('T')[0], kilograms: 0, bags: 0, supplier: '' });
+    setSubmittingRecord(true);
+    try {
+      await addCoffeeRecord(newRecord);
+      setNewRecord({ 
+        coffee_type: '', 
+        date: new Date().toISOString().split('T')[0], 
+        kilograms: 0, 
+        bags: 0, 
+        supplier_name: '' 
+      });
+      toast.success("Coffee record submitted successfully");
+    } catch (error) {
+      toast.error("Failed to submit coffee record");
+    } finally {
+      setSubmittingRecord(false);
+    }
   };
 
-  const handleStatusUpdate = (recordId: string, newStatus: any) => {
-    updateCoffeeRecordStatus(recordId, newStatus);
+  const handleStatusUpdate = async (recordId: string, newStatus: any) => {
+    try {
+      await updateCoffeeRecordStatus(recordId, newStatus);
+      toast.success("Status updated successfully");
+    } catch (error) {
+      toast.error("Failed to update status");
+    }
   };
 
   const getStatusBadge = (status: any) => {
@@ -125,15 +161,6 @@ const Store = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="supplier-code">Supplier Code (Auto)</Label>
-                    <Input
-                      id="supplier-code"
-                      value={generateSupplierCode()}
-                      disabled
-                      className="bg-gray-100"
-                    />
-                  </div>
-                  <div>
                     <Label htmlFor="supplier-phone">Phone Number (Optional)</Label>
                     <Input
                       id="supplier-phone"
@@ -156,15 +183,19 @@ const Store = () => {
                     <Input
                       id="opening-balance"
                       type="number"
-                      value={newSupplier.openingBalance}
-                      onChange={(e) => setNewSupplier({...newSupplier, openingBalance: Number(e.target.value)})}
+                      value={newSupplier.opening_balance}
+                      onChange={(e) => setNewSupplier({...newSupplier, opening_balance: Number(e.target.value)})}
                       placeholder="0"
                     />
                   </div>
                 </div>
-                <Button onClick={handleSaveSupplier} className="w-full md:w-auto">
+                <Button 
+                  onClick={handleSaveSupplier} 
+                  className="w-full md:w-auto"
+                  disabled={submittingSupplier}
+                >
                   <Plus className="h-4 w-4 mr-2" />
-                  Save Supplier
+                  {submittingSupplier ? "Saving..." : "Save Supplier"}
                 </Button>
               </CardContent>
             </Card>
@@ -200,8 +231,8 @@ const Store = () => {
                           <TableCell className="font-medium">{supplier.name}</TableCell>
                           <TableCell>{supplier.origin}</TableCell>
                           <TableCell>{supplier.phone || 'N/A'}</TableCell>
-                          <TableCell>UGX {supplier.openingBalance.toLocaleString()}</TableCell>
-                          <TableCell>{supplier.dateRegistered}</TableCell>
+                          <TableCell>UGX {Number(supplier.opening_balance).toLocaleString()}</TableCell>
+                          <TableCell>{supplier.date_registered}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -228,7 +259,7 @@ const Store = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="coffee-type">Coffee Type *</Label>
-                    <Select value={newRecord.coffeeType} onValueChange={(value) => setNewRecord({...newRecord, coffeeType: value})}>
+                    <Select value={newRecord.coffee_type} onValueChange={(value) => setNewRecord({...newRecord, coffee_type: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select coffee type" />
                       </SelectTrigger>
@@ -270,7 +301,7 @@ const Store = () => {
                   </div>
                   <div>
                     <Label htmlFor="record-supplier">Select Supplier *</Label>
-                    <Select value={newRecord.supplier} onValueChange={(value) => setNewRecord({...newRecord, supplier: value})}>
+                    <Select value={newRecord.supplier_name} onValueChange={(value) => setNewRecord({...newRecord, supplier_name: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select supplier" />
                       </SelectTrigger>
@@ -291,10 +322,10 @@ const Store = () => {
                 <Button 
                   onClick={handleSubmitRecord} 
                   className="w-full md:w-auto"
-                  disabled={suppliers.length === 0}
+                  disabled={suppliers.length === 0 || submittingRecord}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Submit Record
+                  {submittingRecord ? "Submitting..." : "Submit Record"}
                 </Button>
                 {suppliers.length === 0 && (
                   <p className="text-sm text-amber-600">Please register a supplier first before recording deliveries.</p>
@@ -331,11 +362,11 @@ const Store = () => {
                     <TableBody>
                       {coffeeRecords.map((record) => (
                         <TableRow key={record.id}>
-                          <TableCell className="font-mono">{record.batchNumber}</TableCell>
+                          <TableCell className="font-mono">{record.batch_number}</TableCell>
                           <TableCell>{record.date}</TableCell>
-                          <TableCell>{record.coffeeType}</TableCell>
-                          <TableCell>{record.supplier}</TableCell>
-                          <TableCell>{record.kilograms.toLocaleString()} kg</TableCell>
+                          <TableCell>{record.coffee_type}</TableCell>
+                          <TableCell>{record.supplier_name}</TableCell>
+                          <TableCell>{Number(record.kilograms).toLocaleString()} kg</TableCell>
                           <TableCell>{record.bags}</TableCell>
                           <TableCell>
                             <Badge variant={getStatusBadge(record.status).variant}>

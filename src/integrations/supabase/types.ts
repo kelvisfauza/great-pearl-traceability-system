@@ -62,6 +62,56 @@ export type Database = {
         }
         Relationships: []
       }
+      coffee_records: {
+        Row: {
+          bags: number
+          batch_number: string
+          coffee_type: string
+          created_at: string
+          date: string
+          id: string
+          kilograms: number
+          status: string
+          supplier_id: string | null
+          supplier_name: string
+          updated_at: string
+        }
+        Insert: {
+          bags: number
+          batch_number: string
+          coffee_type: string
+          created_at?: string
+          date: string
+          id?: string
+          kilograms: number
+          status?: string
+          supplier_id?: string | null
+          supplier_name: string
+          updated_at?: string
+        }
+        Update: {
+          bags?: number
+          batch_number?: string
+          coffee_type?: string
+          created_at?: string
+          date?: string
+          id?: string
+          kilograms?: number
+          status?: string
+          supplier_id?: string | null
+          supplier_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coffee_records_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           address: string | null
@@ -284,6 +334,42 @@ export type Database = {
           processed_date?: string
           status?: string
           total_pay?: number
+        }
+        Relationships: []
+      }
+      suppliers: {
+        Row: {
+          code: string
+          created_at: string
+          date_registered: string
+          id: string
+          name: string
+          opening_balance: number
+          origin: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          date_registered?: string
+          id?: string
+          name: string
+          opening_balance?: number
+          origin: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          date_registered?: string
+          id?: string
+          name?: string
+          opening_balance?: number
+          origin?: string
+          phone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
