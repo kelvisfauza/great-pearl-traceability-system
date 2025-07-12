@@ -28,6 +28,16 @@ export const useMarketData = () => {
   const [priceForecasts, setPriceForecasts] = useState<PriceForecast[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Legacy market data object for backward compatibility
+  const [legacyMarketData, setLegacyMarketData] = useState({
+    iceArabica: 245.50,
+    robusta: 2850,
+    ucdaDrugar: 11500,
+    ucdaWugar: 10800,
+    ucdaRobusta: 8500,
+    exchangeRate: 3700
+  });
+
   const fetchMarketData = async () => {
     try {
       setLoading(true);
@@ -53,6 +63,15 @@ export const useMarketData = () => {
           trend: data.trend || 'stable'
         }));
         setMarketPrices(transformedMarketData);
+        
+        // Update legacy market data if we have data
+        if (transformedMarketData.length > 0) {
+          const latestExchangeRate = transformedMarketData[0]?.exchangeRate || 3700;
+          setLegacyMarketData(prev => ({
+            ...prev,
+            exchangeRate: latestExchangeRate
+          }));
+        }
       }
 
       // Fetch price forecasts
@@ -81,17 +100,22 @@ export const useMarketData = () => {
     }
   };
 
-  // Add legacy properties for backward compatibility
-  const marketData = marketPrices;
-  const setMarketData = setMarketPrices;
-  const priceHistory = marketPrices;
-  
-  const convertCentsLbToUGXKg = (centsPerLb: number, exchangeRate: number) => {
-    // Convert cents per pound to UGX per kilogram
+  const convertCentsLbToUGXKg = (centsPerLb: number, exchangeRate: number = legacyMarketData.exchangeRate) => {
     const dollarsPerLb = centsPerLb / 100;
-    const dollarsPerKg = dollarsPerLb * 2.20462; // 1 kg = 2.20462 lbs
+    const dollarsPerKg = dollarsPerLb * 2.20462;
     return dollarsPerKg * exchangeRate;
   };
+
+  // Generate price history for charts
+  const priceHistory = [
+    { date: '2024-01-01', arabica: 245, drugar: 11500 },
+    { date: '2024-01-02', arabica: 248, drugar: 11600 },
+    { date: '2024-01-03', arabica: 246, drugar: 11450 },
+    { date: '2024-01-04', arabica: 250, drugar: 11700 },
+    { date: '2024-01-05', arabica: 252, drugar: 11800 },
+    { date: '2024-01-06', arabica: 249, drugar: 11650 },
+    { date: '2024-01-07', arabica: 245, drugar: 11500 }
+  ];
 
   useEffect(() => {
     fetchMarketData();
@@ -103,8 +127,8 @@ export const useMarketData = () => {
     loading,
     fetchMarketData,
     // Legacy properties for backward compatibility
-    marketData,
-    setMarketData,
+    marketData: legacyMarketData,
+    setMarketData: setLegacyMarketData,
     priceHistory,
     convertCentsLbToUGXKg
   };

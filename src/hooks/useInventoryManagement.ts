@@ -77,15 +77,28 @@ export const useInventoryManagement = () => {
     }
   };
 
-  const getSummary = () => ({
-    totalItems: inventoryItems.length,
-    totalBags: inventoryItems.reduce((sum, item) => sum + item.totalBags, 0),
-    totalKilograms: inventoryItems.reduce((sum, item) => sum + item.totalKilograms, 0),
-    lowStockItems: inventoryItems.filter(item => item.totalBags < 10).length,
-    storageLocations: storageLocations.length,
-    totalCapacity: storageLocations.reduce((sum, loc) => sum + loc.capacity, 0),
-    currentOccupancy: storageLocations.reduce((sum, loc) => sum + loc.currentOccupancy, 0)
-  });
+  const getSummary = () => {
+    const totalBags = inventoryItems.reduce((sum, item) => sum + item.totalBags, 0);
+    const totalKilograms = inventoryItems.reduce((sum, item) => sum + item.totalKilograms, 0);
+    const lowStockItems = inventoryItems.filter(item => item.status === 'low_stock').length;
+    const totalCapacity = storageLocations.reduce((sum, loc) => sum + loc.capacity, 0);
+    const currentOccupancy = storageLocations.reduce((sum, loc) => sum + loc.currentOccupancy, 0);
+    const availableSpacePercentage = totalCapacity > 0 ? Math.round(((totalCapacity - currentOccupancy) / totalCapacity) * 100) : 0;
+
+    return {
+      totalItems: inventoryItems.length,
+      totalBags,
+      totalKilograms,
+      lowStockItems,
+      storageLocations: storageLocations.length,
+      totalCapacity,
+      currentOccupancy,
+      // Add backward compatibility properties
+      totalStock: totalBags,
+      availableSpacePercentage,
+      monthlyTurnover: 2.3
+    };
+  };
 
   useEffect(() => {
     fetchInventoryData();

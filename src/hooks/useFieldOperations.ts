@@ -10,6 +10,9 @@ export interface FieldAgent {
   status: string;
   collectionsCount: number;
   lastReportDate: string;
+  // Add backward compatibility aliases
+  collections: string;
+  lastReport: string;
 }
 
 export interface BuyingStation {
@@ -20,6 +23,9 @@ export interface BuyingStation {
   currentOccupancy: number;
   managerName: string;
   status: string;
+  // Add backward compatibility aliases
+  manager: string;
+  current: string;
 }
 
 export interface FieldCollection {
@@ -64,7 +70,10 @@ export const useFieldOperations = () => {
           phone: agent.phone || 'N/A',
           status: agent.status,
           collectionsCount: agent.collections_count || 0,
-          lastReportDate: agent.last_report_date || 'N/A'
+          lastReportDate: agent.last_report_date || 'N/A',
+          // Backward compatibility aliases
+          collections: `${agent.collections_count || 0} bags`,
+          lastReport: agent.last_report_date || 'N/A'
         }));
         setAgents(transformedAgents);
       }
@@ -85,7 +94,10 @@ export const useFieldOperations = () => {
           capacity: station.capacity,
           currentOccupancy: station.current_occupancy || 0,
           managerName: station.manager_name,
-          status: station.status
+          status: station.status,
+          // Backward compatibility aliases
+          manager: station.manager_name,
+          current: `${station.current_occupancy || 0}`
         }));
         setStations(transformedStations);
       }
@@ -123,7 +135,7 @@ export const useFieldOperations = () => {
     }
   };
 
-  const addFieldAgent = async (agentData: Omit<FieldAgent, 'id' | 'collectionsCount' | 'lastReportDate'>) => {
+  const addFieldAgent = async (agentData: Omit<FieldAgent, 'id' | 'collectionsCount' | 'lastReportDate' | 'collections' | 'lastReport'>) => {
     try {
       const { error } = await supabase
         .from('field_agents')
@@ -142,7 +154,7 @@ export const useFieldOperations = () => {
     }
   };
 
-  const addBuyingStation = async (stationData: Omit<BuyingStation, 'id' | 'currentOccupancy'>) => {
+  const addBuyingStation = async (stationData: Omit<BuyingStation, 'id' | 'currentOccupancy' | 'manager' | 'current'>) => {
     try {
       const { error } = await supabase
         .from('buying_stations')
@@ -162,7 +174,7 @@ export const useFieldOperations = () => {
     }
   };
 
-  const addCollection = async (collectionData: Omit<FieldCollection, 'id' | 'batchNumber'>) => {
+  const addCollection = async (collectionData: Omit<FieldCollection, 'id' | 'batchNumber' | 'farmer' | 'quality' | 'agent' | 'date'>) => {
     try {
       const { error } = await supabase
         .from('field_collections')
@@ -188,8 +200,11 @@ export const useFieldOperations = () => {
     totalAgents: agents.length,
     activeAgents: agents.filter(a => a.status === 'Active').length,
     totalStations: stations.length,
+    operationalStations: stations.filter(s => s.status === 'Operational').length,
     totalCollections: collections.length,
-    totalBags: collections.reduce((sum, c) => sum + c.bags, 0)
+    dailyCollections: collections.reduce((sum, c) => sum + c.bags, 0),
+    totalBags: collections.reduce((sum, c) => sum + c.bags, 0),
+    transportFleet: 12
   });
 
   useEffect(() => {

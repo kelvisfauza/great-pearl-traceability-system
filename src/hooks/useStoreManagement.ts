@@ -115,12 +115,22 @@ export const useStoreManagement = () => {
       totalRecords: todaysRecords.length,
       totalBags: todaysRecords.reduce((sum, record) => sum + record.bags, 0),
       totalKilograms: todaysRecords.reduce((sum, record) => sum + record.kilograms, 0),
-      pendingRecords: todaysRecords.filter(record => record.status === 'pending').length
+      pendingRecords: todaysRecords.filter(record => record.status === 'pending').length,
+      // Add backward compatibility properties
+      totalReceived: todaysRecords.reduce((sum, record) => sum + record.bags, 0),
+      activeSuppliers: new Set(todaysRecords.map(r => r.supplierName)).size
     };
   };
 
   const getPendingActions = () => {
-    return storeRecords.filter(record => record.status === 'pending').slice(0, 5);
+    const pendingRecords = storeRecords.filter(record => record.status === 'pending').slice(0, 5);
+    
+    return {
+      ...pendingRecords,
+      qualityReview: pendingRecords.filter(r => r.status === 'pending').length,
+      awaitingPricing: pendingRecords.filter(r => r.status === 'assessed').length,
+      readyForDispatch: pendingRecords.filter(r => r.status === 'approved').length
+    };
   };
 
   useEffect(() => {
