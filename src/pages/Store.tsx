@@ -7,57 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart } from "lucide-react";
-
-interface Supplier {
-  id: string;
-  name: string;
-  code: string;
-  phone?: string;
-  origin: string;
-  openingBalance: number;
-  dateRegistered: string;
-}
-
-interface CoffeeRecord {
-  id: string;
-  coffeeType: string;
-  date: string;
-  kilograms: number;
-  bags: number;
-  supplier: string;
-  status: 'pending' | 'quality_review' | 'pricing' | 'batched' | 'drying' | 'sales' | 'inventory';
-  batchNumber?: string;
-}
+import { useStoreManagement } from "@/hooks/useStoreManagement";
 
 const Store = () => {
-  const [suppliers, setSuppliers] = useState<Supplier[]>([
-    {
-      id: '1',
-      name: 'Mbale Coffee Growers',
-      code: 'GPCS0001',
-      phone: '+256701234567',
-      origin: 'Mount Elgon',
-      openingBalance: 2500,
-      dateRegistered: '2024-01-15'
-    }
-  ]);
-
-  const [coffeeRecords, setCoffeeRecords] = useState<CoffeeRecord[]>([
-    {
-      id: '1',
-      coffeeType: 'Drugar',
-      date: '2024-07-12',
-      kilograms: 500,
-      bags: 10,
-      supplier: 'Mbale Coffee Growers',
-      status: 'quality_review',
-      batchNumber: 'B2024071201'
-    }
-  ]);
+  const {
+    suppliers,
+    coffeeRecords,
+    loading,
+    addSupplier,
+    addCoffeeRecord,
+    updateCoffeeRecordStatus,
+    generateSupplierCode,
+    todaysSummary,
+    pendingActions
+  } = useStoreManagement();
 
   const [newSupplier, setNewSupplier] = useState({
     name: '',
@@ -74,53 +40,25 @@ const Store = () => {
     supplier: ''
   });
 
-  const generateSupplierCode = () => {
-    const nextNumber = suppliers.length + 1;
-    return `GPCS${nextNumber.toString().padStart(4, '0')}`;
-  };
-
   const handleSaveSupplier = () => {
     if (!newSupplier.name || !newSupplier.origin) return;
 
-    const supplier: Supplier = {
-      id: Date.now().toString(),
-      name: newSupplier.name,
-      code: generateSupplierCode(),
-      phone: newSupplier.phone || undefined,
-      origin: newSupplier.origin,
-      openingBalance: newSupplier.openingBalance,
-      dateRegistered: new Date().toISOString().split('T')[0]
-    };
-
-    setSuppliers([...suppliers, supplier]);
+    addSupplier(newSupplier);
     setNewSupplier({ name: '', phone: '', origin: '', openingBalance: 0 });
   };
 
   const handleSubmitRecord = () => {
     if (!newRecord.coffeeType || !newRecord.supplier || newRecord.kilograms <= 0 || newRecord.bags <= 0) return;
 
-    const record: CoffeeRecord = {
-      id: Date.now().toString(),
-      coffeeType: newRecord.coffeeType,
-      date: newRecord.date,
-      kilograms: newRecord.kilograms,
-      bags: newRecord.bags,
-      supplier: newRecord.supplier,
-      status: 'pending',
-      batchNumber: `B${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}${(coffeeRecords.length + 1).toString().padStart(2, '0')}`
-    };
-
-    setCoffeeRecords([...coffeeRecords, record]);
+    addCoffeeRecord(newRecord);
     setNewRecord({ coffeeType: '', date: new Date().toISOString().split('T')[0], kilograms: 0, bags: 0, supplier: '' });
   };
 
-  const handleStatusUpdate = (recordId: string, newStatus: CoffeeRecord['status']) => {
-    setCoffeeRecords(coffeeRecords.map(record => 
-      record.id === recordId ? { ...record, status: newStatus } : record
-    ));
+  const handleStatusUpdate = (recordId: string, newStatus: any) => {
+    updateCoffeeRecordStatus(recordId, newStatus);
   };
 
-  const getStatusBadge = (status: CoffeeRecord['status']) => {
+  const getStatusBadge = (status: any) => {
     const statusConfig = {
       pending: { label: 'Pending', variant: 'secondary' as const },
       quality_review: { label: 'Quality Review', variant: 'default' as const },
@@ -130,8 +68,21 @@ const Store = () => {
       sales: { label: 'Sales Ready', variant: 'default' as const },
       inventory: { label: 'In Inventory', variant: 'default' as const }
     };
-    return statusConfig[status];
+    return statusConfig[status] || statusConfig.pending;
   };
+
+  if (loading) {
+    return (
+      <Layout title="Store Management" subtitle="Manage suppliers and coffee inventory records">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading store data...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout 
@@ -222,33 +173,46 @@ const Store = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Registered Suppliers</CardTitle>
-                <CardDescription>All suppliers registered in the system</CardDescription>
+                <CardDescription>
+                  {suppliers.length > 0 
+                    ? `${suppliers.length} suppliers registered in the system` 
+                    : "No suppliers registered yet. Add your first supplier above."
+                  }
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Supplier Code</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Origin</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Opening Balance</TableHead>
-                      <TableHead>Date Registered</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {suppliers.map((supplier) => (
-                      <TableRow key={supplier.id}>
-                        <TableCell className="font-mono">{supplier.code}</TableCell>
-                        <TableCell className="font-medium">{supplier.name}</TableCell>
-                        <TableCell>{supplier.origin}</TableCell>
-                        <TableCell>{supplier.phone || 'N/A'}</TableCell>
-                        <TableCell>UGX {supplier.openingBalance.toLocaleString()}</TableCell>
-                        <TableCell>{supplier.dateRegistered}</TableCell>
+                {suppliers.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Supplier Code</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Origin</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Opening Balance</TableHead>
+                        <TableHead>Date Registered</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {suppliers.map((supplier) => (
+                        <TableRow key={supplier.id}>
+                          <TableCell className="font-mono">{supplier.code}</TableCell>
+                          <TableCell className="font-medium">{supplier.name}</TableCell>
+                          <TableCell>{supplier.origin}</TableCell>
+                          <TableCell>{supplier.phone || 'N/A'}</TableCell>
+                          <TableCell>UGX {supplier.openingBalance.toLocaleString()}</TableCell>
+                          <TableCell>{supplier.dateRegistered}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No suppliers registered yet</p>
+                    <p className="text-sm">Add your first supplier using the form above</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -311,19 +275,30 @@ const Store = () => {
                         <SelectValue placeholder="Select supplier" />
                       </SelectTrigger>
                       <SelectContent>
-                        {suppliers.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.name}>
-                            {supplier.name} ({supplier.code})
-                          </SelectItem>
-                        ))}
+                        {suppliers.length > 0 ? (
+                          suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.name}>
+                              {supplier.name} ({supplier.code})
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="" disabled>No suppliers available</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <Button onClick={handleSubmitRecord} className="w-full md:w-auto">
+                <Button 
+                  onClick={handleSubmitRecord} 
+                  className="w-full md:w-auto"
+                  disabled={suppliers.length === 0}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Submit Record
                 </Button>
+                {suppliers.length === 0 && (
+                  <p className="text-sm text-amber-600">Please register a supplier first before recording deliveries.</p>
+                )}
               </CardContent>
             </Card>
 
@@ -331,53 +306,66 @@ const Store = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Coffee Records</CardTitle>
-                <CardDescription>All coffee deliveries and their processing status</CardDescription>
+                <CardDescription>
+                  {coffeeRecords.length > 0 
+                    ? `${coffeeRecords.length} coffee delivery records` 
+                    : "No coffee records yet. Record your first delivery above."
+                  }
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Batch #</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Kilograms</TableHead>
-                      <TableHead>Bags</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {coffeeRecords.map((record) => (
-                      <TableRow key={record.id}>
-                        <TableCell className="font-mono">{record.batchNumber}</TableCell>
-                        <TableCell>{record.date}</TableCell>
-                        <TableCell>{record.coffeeType}</TableCell>
-                        <TableCell>{record.supplier}</TableCell>
-                        <TableCell>{record.kilograms.toLocaleString()} kg</TableCell>
-                        <TableCell>{record.bags}</TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusBadge(record.status).variant}>
-                            {getStatusBadge(record.status).label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            {record.status === 'pending' && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleStatusUpdate(record.id, 'quality_review')}
-                              >
-                                <Send className="h-3 w-3 mr-1" />
-                                To Quality
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+                {coffeeRecords.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Batch #</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Kilograms</TableHead>
+                        <TableHead>Bags</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {coffeeRecords.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell className="font-mono">{record.batchNumber}</TableCell>
+                          <TableCell>{record.date}</TableCell>
+                          <TableCell>{record.coffeeType}</TableCell>
+                          <TableCell>{record.supplier}</TableCell>
+                          <TableCell>{record.kilograms.toLocaleString()} kg</TableCell>
+                          <TableCell>{record.bags}</TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusBadge(record.status).variant}>
+                              {getStatusBadge(record.status).label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {record.status === 'pending' && (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleStatusUpdate(record.id, 'quality_review')}
+                                >
+                                  <Send className="h-3 w-3 mr-1" />
+                                  To Quality
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No coffee records yet</p>
+                    <p className="text-sm">Record your first delivery using the form above</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -414,21 +402,21 @@ const Store = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Total Received:</span>
-                      <span className="font-medium">500 kg</span>
+                      <span className="font-medium">{todaysSummary.totalReceived} kg</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Total Bags:</span>
-                      <span className="font-medium">10</span>
+                      <span className="font-medium">{todaysSummary.totalBags}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Active Suppliers:</span>
-                      <span className="font-medium">1</span>
+                      <span className="font-medium">{todaysSummary.activeSuppliers}</span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Pending Actions */}
+              {/* Pending Actions */}    
               <Card>
                 <CardHeader>
                   <CardTitle>Pending Actions</CardTitle>
@@ -437,15 +425,15 @@ const Store = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Quality Review:</span>
-                      <Badge variant="secondary">1</Badge>
+                      <Badge variant="secondary">{pendingActions.qualityReview}</Badge>
                     </div>
                     <div className="flex justify-between">
                       <span>Awaiting Pricing:</span>
-                      <Badge variant="secondary">0</Badge>
+                      <Badge variant="secondary">{pendingActions.awaitingPricing}</Badge>
                     </div>
                     <div className="flex justify-between">
                       <span>Ready for Dispatch:</span>
-                      <Badge variant="secondary">0</Badge>
+                      <Badge variant="secondary">{pendingActions.readyForDispatch}</Badge>
                     </div>
                   </div>
                 </CardContent>
