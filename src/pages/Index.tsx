@@ -5,6 +5,7 @@ import RecentActivity from "@/components/RecentActivity";
 import QuickActions from "@/components/QuickActions";
 import ApprovalRequests from "@/components/ApprovalRequests";
 import PerformanceOverview from "@/components/PerformanceOverview";
+import PriceTicker from "@/components/PriceTicker";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,9 @@ const Index = () => {
       subtitle="Your coffee factory management dashboard - track operations, manage tasks, and stay connected."
     >
       <div className="space-y-8">
+        {/* Live Market Prices - Repositioned to top */}
+        <PriceTicker />
+
         {/* Welcome Section with Role-Based Greeting */}
         <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
           <CardContent className="p-6">

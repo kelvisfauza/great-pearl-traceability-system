@@ -2,7 +2,6 @@
 import { ReactNode, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RoleBasedNavigation from "./RoleBasedNavigation";
-import PriceTicker from "./PriceTicker";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -66,9 +65,6 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
               </div>
               
               <div className="flex items-center gap-4">
-                {/* Price Ticker */}
-                <PriceTicker />
-                
                 {/* Messages Button */}
                 <MessageButton />
                 
