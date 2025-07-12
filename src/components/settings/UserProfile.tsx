@@ -121,11 +121,11 @@ const UserProfile = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>Joined {new Date(employee.join_date).toLocaleDateString()}</span>
+                  <span>Joined {employee.join_date ? new Date(employee.join_date).toLocaleDateString() : 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-muted-foreground" />
-                  <span>{employee.status}</span>
+                  <span>{employee.status || 'Active'}</span>
                 </div>
               </div>
             </div>

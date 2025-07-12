@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +12,11 @@ interface Employee {
   department: string;
   role: string;
   permissions: string[];
+  address?: string;
+  emergency_contact?: string;
+  join_date?: string;
+  status?: string;
+  salary?: number;
 }
 
 interface AuthContextType {
@@ -77,7 +81,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           position: data.position,
           department: data.department,
           role: data.role,
-          permissions: data.permissions
+          permissions: data.permissions,
+          address: data.address,
+          emergency_contact: data.emergency_contact,
+          join_date: data.join_date,
+          status: data.status,
+          salary: data.salary
         });
         
         setEmployee({
@@ -88,7 +97,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           position: data.position,
           department: data.department,
           role: data.role,
-          permissions: data.permissions
+          permissions: data.permissions,
+          address: data.address,
+          emergency_contact: data.emergency_contact,
+          join_date: data.join_date,
+          status: data.status,
+          salary: data.salary
         });
       } else {
         console.log('No employee record found for email:', session.user.email);
