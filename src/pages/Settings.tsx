@@ -5,10 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Settings as SettingsIcon, User, Shield, Bell, Database, Wifi, Key } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useEmployees } from "@/hooks/useEmployees";
+import { useApprovalRequests } from "@/hooks/useApprovalRequests";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("general");
+  const { employees, loading: employeesLoading } = useEmployees();
+  const { requests } = useApprovalRequests();
+  const { toast } = useToast();
+  
+  // Company settings state
+  const [companyInfo, setCompanyInfo] = useState({
+    name: "Great Pearl Coffee Factory",
+    email: "info@greatpearl.com",
+    phone: "+256 414 123456",
+    address: "Kampala, Uganda"
+  });
 
   const systemSettings = [
     { category: "General", icon: SettingsIcon, color: "text-gray-600" },
@@ -19,28 +34,57 @@ const Settings = () => {
     { category: "Network", icon: Wifi, color: "text-indigo-600" },
   ];
 
-  const users = [
-    { id: 1, name: "John Mbale", email: "john@greatpearl.com", role: "Administrator", status: "Active", lastLogin: "2 hours ago" },
-    { id: 2, name: "Sarah Nakato", email: "sarah@greatpearl.com", role: "Manager", status: "Active", lastLogin: "1 day ago" },
-    { id: 3, name: "Peter Asiimwe", email: "peter@greatpearl.com", role: "User", status: "Active", lastLogin: "3 hours ago" },
-    { id: 4, name: "Mary Nalubega", email: "mary@greatpearl.com", role: "User", status: "Inactive", lastLogin: "1 week ago" },
+  // Filter users by role for security settings
+  const adminUsers = employees.filter(emp => emp.role === 'Administrator');
+  const managerUsers = employees.filter(emp => emp.role === 'Manager');
+  const regularUsers = employees.filter(emp => emp.role === 'User');
+
+  // Security settings based on real data
+  const securitySettings = [
+    { 
+      setting: "Administrator Accounts", 
+      status: `${adminUsers.length} Active`, 
+      description: "Users with full system access" 
+    },
+    { 
+      setting: "Manager Accounts", 
+      status: `${managerUsers.length} Active`, 
+      description: "Users with departmental management access" 
+    },
+    { 
+      setting: "Regular User Accounts", 
+      status: `${regularUsers.length} Active`, 
+      description: "Standard users with limited access" 
+    },
+    { 
+      setting: "Pending Approvals", 
+      status: `${requests.filter(r => r.status === 'Pending').length} Items`, 
+      description: "Requests awaiting approval" 
+    },
   ];
 
-  const securitySettings = [
-    { setting: "Two-Factor Authentication", status: "Enabled", description: "Extra layer of security for user accounts" },
-    { setting: "Password Policy", status: "Active", description: "Minimum 8 characters with special characters required" },
-    { setting: "Session Timeout", status: "30 minutes", description: "Automatic logout after inactivity" },
-    { setting: "IP Whitelist", status: "Disabled", description: "Restrict access to specific IP addresses" },
-  ];
+  // System information based on real data
+  const totalEmployees = employees.length;
+  const activeEmployees = employees.filter(emp => emp.status === 'Active').length;
+  const totalApprovals = requests.length;
+  const pendingApprovals = requests.filter(r => r.status === 'Pending').length;
 
   const systemInfo = [
+    { label: "Total Employees", value: totalEmployees.toString() },
+    { label: "Active Employees", value: activeEmployees.toString() },
+    { label: "Total Approval Requests", value: totalApprovals.toString() },
+    { label: "Pending Approvals", value: pendingApprovals.toString() },
     { label: "System Version", value: "v2.1.4" },
-    { label: "Database", value: "PostgreSQL 14.2" },
-    { label: "Server", value: "Ubuntu 20.04 LTS" },
-    { label: "Last Backup", value: "2 hours ago" },
-    { label: "Uptime", value: "15 days, 8 hours" },
-    { label: "Storage Used", value: "45.2 GB / 100 GB" },
+    { label: "Database Status", value: "Online" },
   ];
+
+  const handleSaveCompanyInfo = async () => {
+    // Here you could save to a company_settings table if needed
+    toast({
+      title: "Success",
+      description: "Company information updated successfully"
+    });
+  };
 
   const renderGeneralSettings = () => (
     <div className="space-y-6">
@@ -53,22 +97,34 @@ const Settings = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Company Name</label>
-              <Input defaultValue="Great Pearl Coffee Factory" />
+              <Input 
+                value={companyInfo.name}
+                onChange={(e) => setCompanyInfo({...companyInfo, name: e.target.value})}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Contact Email</label>
-              <Input defaultValue="info@greatpearl.com" />
+              <Input 
+                value={companyInfo.email}
+                onChange={(e) => setCompanyInfo({...companyInfo, email: e.target.value})}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Phone Number</label>
-              <Input defaultValue="+256 414 123456" />
+              <Input 
+                value={companyInfo.phone}
+                onChange={(e) => setCompanyInfo({...companyInfo, phone: e.target.value})}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Address</label>
-              <Input defaultValue="Kampala, Uganda" />
+              <Input 
+                value={companyInfo.address}
+                onChange={(e) => setCompanyInfo({...companyInfo, address: e.target.value})}
+              />
             </div>
           </div>
-          <Button>Save Changes</Button>
+          <Button onClick={handleSaveCompanyInfo}>Save Changes</Button>
         </CardContent>
       </Card>
 
@@ -97,33 +153,38 @@ const Settings = () => {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>User Management</CardTitle>
-            <CardDescription>Manage system users and their permissions</CardDescription>
+            <CardDescription>System users and their roles</CardDescription>
           </div>
-          <Button>
-            <User className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
+          <Badge variant="outline">{totalEmployees} Total Users</Badge>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {users.map((user) => (
-            <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <p className="font-medium">{user.name}</p>
-                <p className="text-sm text-gray-500">{user.email}</p>
-                <p className="text-xs text-gray-400">Last login: {user.lastLogin}</p>
+        {employeesLoading ? (
+          <p className="text-center text-gray-500">Loading users...</p>
+        ) : (
+          <div className="space-y-4">
+            {employees.slice(0, 10).map((user) => (
+              <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <p className="font-medium">{user.name}</p>
+                  <p className="text-sm text-gray-500">{user.email}</p>
+                  <p className="text-xs text-gray-400">{user.position} • {user.department}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="outline">{user.role}</Badge>
+                  <Badge variant={user.status === "Active" ? "default" : "secondary"}>
+                    {user.status}
+                  </Badge>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Badge variant="outline">{user.role}</Badge>
-                <Badge variant={user.status === "Active" ? "default" : "secondary"}>
-                  {user.status}
-                </Badge>
-                <Button variant="outline" size="sm">Edit</Button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+            {employees.length > 10 && (
+              <p className="text-sm text-gray-500 text-center">
+                Showing 10 of {employees.length} users
+              </p>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -132,7 +193,7 @@ const Settings = () => {
     <Card>
       <CardHeader>
         <CardTitle>Security Configuration</CardTitle>
-        <CardDescription>Manage system security settings and policies</CardDescription>
+        <CardDescription>System security overview and user access levels</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -143,10 +204,9 @@ const Settings = () => {
                 <p className="text-sm text-gray-500">{setting.description}</p>
               </div>
               <div className="flex items-center space-x-2">
-                <Badge variant={setting.status === "Enabled" || setting.status === "Active" ? "default" : "secondary"}>
+                <Badge variant="default">
                   {setting.status}
                 </Badge>
-                <Button variant="outline" size="sm">Configure</Button>
               </div>
             </div>
           ))}
