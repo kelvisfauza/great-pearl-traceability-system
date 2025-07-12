@@ -8,6 +8,7 @@ import RoleBasedNavigation from "./RoleBasedNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useToast } from "@/hooks/use-toast";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,15 +23,23 @@ interface Notification {
   message: string;
   timestamp: string;
   from: string;
+  isRead?: boolean;
 }
 
 const Layout = ({ children, title, subtitle }: LayoutProps) => {
   const { employee, signOut } = useAuth();
+  const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadNotifications();
+    // Load read notifications from localStorage
+    const saved = localStorage.getItem('readNotifications');
+    if (saved) {
+      setReadNotifications(new Set(JSON.parse(saved)));
+    }
   }, []);
 
   const loadNotifications = async () => {
@@ -40,19 +49,23 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
       // Get recent quality assessments with pricing
       const { data: qualityData } = await supabase
         .from('quality_assessments')
-        .select('*')
+        .select(`
+          *,
+          coffee_records!inner(supplier_name, coffee_type, kilograms)
+        `)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
 
       if (qualityData) {
         qualityData.forEach(assessment => {
+          const record = assessment.coffee_records;
           notifications.push({
             id: `quality-${assessment.id}`,
             type: 'quality_assessment',
             title: 'Quality Assessment Complete',
-            message: `Batch ${assessment.batch_number} has been priced at UGX ${assessment.suggested_price?.toLocaleString()} by Quality team`,
+            message: `${record.supplier_name}'s ${record.coffee_type} batch ${assessment.batch_number} (${record.kilograms}kg) has been priced at UGX ${assessment.suggested_price?.toLocaleString()}/kg by ${assessment.assessed_by}`,
             timestamp: assessment.created_at,
-            from: assessment.assessed_by
+            from: assessment.assessed_by || 'Quality Team'
           });
         });
       }
@@ -62,50 +75,65 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
         .from('market_data')
         .select('*')
         .order('date_recorded', { ascending: false })
-        .limit(3);
+        .limit(5);
 
       if (marketData) {
         marketData.forEach(data => {
           notifications.push({
             id: `price-${data.id}`,
             type: 'price_update',
-            title: 'Price Update',
-            message: `Today's reference price: ${data.coffee_type} - UGX ${data.price_ugx?.toLocaleString()}/kg`,
+            title: 'Market Price Update',
+            message: `Today's reference price: ${data.coffee_type} - UGX ${data.price_ugx?.toLocaleString()}/kg (Source: ${data.market_source})`,
             timestamp: data.created_at,
             from: 'Data Analyst'
           });
         });
       }
 
-      // Add sample manager announcements (in a real app, these would come from a database)
-      const managerAnnouncements = [
-        {
-          id: 'announce-1',
-          type: 'announcement' as const,
-          title: 'Daily Operations Update',
-          message: 'All department heads please submit daily reports by 5 PM',
-          timestamp: new Date().toISOString(),
-          from: 'Operations Manager'
-        },
-        {
-          id: 'announce-2',
-          type: 'announcement' as const,
-          title: 'Quality Standards Reminder',
-          message: 'Moisture content must not exceed 12% for all batches',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          from: 'Quality Manager'
-        }
-      ];
+      // Add manager announcements based on recent activities
+      const { data: recentRecords } = await supabase
+        .from('coffee_records')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(3);
 
-      notifications.push(...managerAnnouncements);
+      if (recentRecords && recentRecords.length > 0) {
+        const managerAnnouncements = [
+          {
+            id: 'announce-daily-ops',
+            type: 'announcement' as const,
+            title: 'Daily Operations Update',
+            message: `${recentRecords.length} new coffee batches received today. All department heads please ensure quality assessments are completed by 5 PM`,
+            timestamp: new Date().toISOString(),
+            from: 'Operations Manager'
+          },
+          {
+            id: 'announce-quality-standards',
+            type: 'announcement' as const,
+            title: 'Quality Standards Reminder',
+            message: 'Moisture content must not exceed 12% for all batches. Any batch exceeding this limit should be flagged for drying',
+            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            from: 'Quality Manager'
+          }
+        ];
+        notifications.push(...managerAnnouncements);
+      }
 
       // Sort by timestamp (most recent first)
       notifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-      setNotifications(notifications.slice(0, 10));
-      setUnreadCount(notifications.length);
+      setNotifications(notifications.slice(0, 15));
+      
+      // Update unread count
+      const unreadNotifications = notifications.filter(n => !readNotifications.has(n.id));
+      setUnreadCount(unreadNotifications.length);
     } catch (error) {
       console.error('Error loading notifications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load notifications",
+        variant: "destructive",
+      });
     }
   };
 
@@ -140,8 +168,40 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
     await signOut();
   };
 
-  const clearNotifications = () => {
+  const markAllAsRead = () => {
+    const allNotificationIds = notifications.map(n => n.id);
+    const newReadNotifications = new Set([...readNotifications, ...allNotificationIds]);
+    setReadNotifications(newReadNotifications);
     setUnreadCount(0);
+    
+    // Save to localStorage
+    localStorage.setItem('readNotifications', JSON.stringify([...newReadNotifications]));
+    
+    toast({
+      title: "Notifications cleared",
+      description: "All notifications have been marked as read",
+    });
+  };
+
+  const markAsRead = (notificationId: string) => {
+    const newReadNotifications = new Set([...readNotifications, notificationId]);
+    setReadNotifications(newReadNotifications);
+    setUnreadCount(prev => Math.max(0, prev - 1));
+    
+    // Save to localStorage
+    localStorage.setItem('readNotifications', JSON.stringify([...newReadNotifications]));
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    setUnreadCount(0);
+    setReadNotifications(new Set());
+    localStorage.removeItem('readNotifications');
+    
+    toast({
+      title: "Notifications cleared",
+      description: "All notifications have been removed",
+    });
   };
 
   return (
@@ -169,7 +229,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
               
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" onClick={clearNotifications}>
+                  <Button variant="outline" size="sm">
                     <Bell className="h-4 w-4 mr-2" />
                     Notifications
                     {unreadCount > 0 && (
@@ -181,34 +241,69 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
                 </PopoverTrigger>
                 <PopoverContent className="w-96 max-h-96 overflow-y-auto" align="end">
                   <div className="space-y-1">
-                    <h3 className="font-semibold text-sm mb-3">Recent Notifications</h3>
-                    {notifications.length > 0 ? (
-                      notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className="p-3 border-b border-gray-100 hover:bg-gray-50 rounded-md"
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-sm">Notifications</h3>
+                      <div className="flex gap-2">
+                        {unreadCount > 0 && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={markAllAsRead}
+                            className="text-xs"
+                          >
+                            Mark all read
+                          </Button>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={clearAllNotifications}
+                          className="text-xs text-red-600 hover:text-red-700"
                         >
-                          <div className="flex items-start space-x-3">
-                            <span className="text-lg">{getNotificationIcon(notification.type)}</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm font-medium text-gray-900 truncate">
-                                  {notification.title}
+                          Clear all
+                        </Button>
+                      </div>
+                    </div>
+                    {notifications.length > 0 ? (
+                      notifications.map((notification) => {
+                        const isRead = readNotifications.has(notification.id);
+                        return (
+                          <div
+                            key={notification.id}
+                            className={`p-3 border-b border-gray-100 hover:bg-gray-50 rounded-md cursor-pointer ${
+                              !isRead ? 'bg-blue-50' : ''
+                            }`}
+                            onClick={() => !isRead && markAsRead(notification.id)}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <span className="text-lg">{getNotificationIcon(notification.type)}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <p className={`text-sm font-medium text-gray-900 truncate ${
+                                    !isRead ? 'font-semibold' : ''
+                                  }`}>
+                                    {notification.title}
+                                  </p>
+                                  <span className="text-xs text-gray-500">
+                                    {formatTimestamp(notification.timestamp)}
+                                  </span>
+                                </div>
+                                <p className={`text-sm text-gray-600 mt-1 ${
+                                  !isRead ? 'font-medium' : ''
+                                }`}>
+                                  {notification.message}
                                 </p>
-                                <span className="text-xs text-gray-500">
-                                  {formatTimestamp(notification.timestamp)}
-                                </span>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  From: {notification.from}
+                                </p>
+                                {!isRead && (
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1"></div>
+                                )}
                               </div>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {notification.message}
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">
-                                From: {notification.from}
-                              </p>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <p className="text-sm text-gray-500 text-center py-4">
                         No notifications available
