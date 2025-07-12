@@ -1,45 +1,36 @@
-
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { TrendingUp, Users, DollarSign, Package, Plus, Search, Eye, Edit, Trash2, Send, Target, BarChart3 } from "lucide-react";
+import { TrendingUp, Users, DollarSign, Target, Plus, Search, Eye, Edit, Send } from "lucide-react";
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useSalesMarketing } from "@/hooks/useSalesMarketing";
 
 const SalesMarketing = () => {
-  const { toast } = useToast();
+  const {
+    customers,
+    campaigns,
+    contracts,
+    loading,
+    addCustomer,
+    addCampaign,
+    addContract,
+    updateContractStatus,
+    getStats
+  } = useSalesMarketing();
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [isAddCampaignOpen, setIsAddCampaignOpen] = useState(false);
   const [isContractOpen, setIsContractOpen] = useState(false);
 
-  const [customers, setCustomers] = useState([
-    { id: 1, name: "Global Coffee Imports Ltd", country: "Germany", status: "Active", orders: 24, value: "€450,000", email: "contact@globalcoffee.de", phone: "+49 123 456789" },
-    { id: 2, name: "American Bean Co.", country: "USA", status: "Active", orders: 18, value: "$320,000", email: "orders@americanbean.com", phone: "+1 555 123456" },
-    { id: 3, name: "Tokyo Coffee House", country: "Japan", status: "Pending", orders: 8, value: "¥2,800,000", email: "info@tokyocoffee.jp", phone: "+81 3 1234 5678" },
-    { id: 4, name: "London Roasters", country: "UK", status: "Active", orders: 15, value: "£180,000", email: "hello@londonroasters.co.uk", phone: "+44 20 1234 5678" },
-  ]);
-
-  const [campaigns, setCampaigns] = useState([
-    { id: 1, name: "European Market Expansion", status: "Active", budget: "$25,000", roi: "+18%", startDate: "2024-01-15", endDate: "2024-06-15" },
-    { id: 2, name: "Premium Coffee Launch", status: "Planning", budget: "$40,000", roi: "Projected +25%", startDate: "2024-03-01", endDate: "2024-08-01" },
-    { id: 3, name: "Trade Show Participation", status: "Completed", budget: "$15,000", roi: "+12%", startDate: "2023-11-01", endDate: "2023-11-30" },
-  ]);
-
-  const [contracts, setContracts] = useState([
-    { id: 1, customerId: 1, customerName: "Global Coffee Imports Ltd", quantity: "500 bags", price: "€180/bag", deliveryDate: "2024-02-15", status: "Signed" },
-    { id: 2, customerId: 2, customerName: "American Bean Co.", quantity: "300 bags", price: "$175/bag", deliveryDate: "2024-02-20", status: "Pending" },
-    { id: 3, customerId: 4, customerName: "London Roasters", quantity: "200 bags", price: "£120/bag", deliveryDate: "2024-02-25", status: "Draft" },
-  ]);
+  const stats = getStats();
 
   const salesData = [
     { month: "Jan", domestic: 120, export: 280, target: 350 },
@@ -54,71 +45,46 @@ const SalesMarketing = () => {
   );
 
   const handleAddCustomer = (formData: FormData) => {
-    const newCustomer = {
-      id: customers.length + 1,
+    addCustomer({
       name: formData.get('name') as string,
       country: formData.get('country') as string,
       email: formData.get('email') as string,
       phone: formData.get('phone') as string,
-      status: "Active",
-      orders: 0,
-      value: "$0"
-    };
-    setCustomers([...customers, newCustomer]);
-    setIsAddCustomerOpen(false);
-    toast({
-      title: "Customer Added",
-      description: "New customer has been successfully added to the system.",
     });
+    setIsAddCustomerOpen(false);
   };
 
   const handleAddCampaign = (formData: FormData) => {
-    const newCampaign = {
-      id: campaigns.length + 1,
+    addCampaign({
       name: formData.get('name') as string,
       budget: formData.get('budget') as string,
       startDate: formData.get('startDate') as string,
       endDate: formData.get('endDate') as string,
-      status: "Planning",
-      roi: "Projected +0%"
-    };
-    setCampaigns([...campaigns, newCampaign]);
-    setIsAddCampaignOpen(false);
-    toast({
-      title: "Campaign Created",
-      description: "New marketing campaign has been created.",
     });
+    setIsAddCampaignOpen(false);
   };
 
   const handleCreateContract = (formData: FormData) => {
-    const newContract = {
-      id: contracts.length + 1,
+    addContract({
       customerId: parseInt(formData.get('customerId') as string),
-      customerName: customers.find(c => c.id === parseInt(formData.get('customerId') as string))?.name || "",
       quantity: formData.get('quantity') as string,
       price: formData.get('price') as string,
       deliveryDate: formData.get('deliveryDate') as string,
-      status: "Draft"
-    };
-    setContracts([...contracts, newContract]);
-    setIsContractOpen(false);
-    toast({
-      title: "Contract Created",
-      description: "New sales contract has been created.",
     });
+    setIsContractOpen(false);
   };
 
   const handleSendContract = (contractId: number) => {
-    setContracts(contracts.map(contract => 
-      contract.id === contractId 
-        ? { ...contract, status: "Pending" }
-        : contract
-    ));
-    toast({
-      title: "Contract Sent",
-      description: "Contract has been sent to customer for review.",
-    });
+    updateContractStatus(contractId, "Pending");
   };
+
+  if (loading) {
+    return (
+      <Layout title="Sales & Marketing" subtitle="Loading...">
+        <div>Loading sales and marketing data...</div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout 
@@ -133,7 +99,7 @@ const SalesMarketing = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Monthly Sales</p>
-                  <p className="text-2xl font-bold">$847K</p>
+                  <p className="text-2xl font-bold">{stats.monthlySales}</p>
                   <p className="text-xs text-green-600">+12% from last month</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-green-600" />
@@ -145,7 +111,7 @@ const SalesMarketing = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Customers</p>
-                  <p className="text-2xl font-bold">{customers.filter(c => c.status === "Active").length}</p>
+                  <p className="text-2xl font-bold">{stats.activeCustomers}</p>
                   <p className="text-xs text-blue-600">+{customers.length - 3} new this month</p>
                 </div>
                 <Users className="h-8 w-8 text-blue-600" />
@@ -157,7 +123,7 @@ const SalesMarketing = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Export Revenue</p>
-                  <p className="text-2xl font-bold">$623K</p>
+                  <p className="text-2xl font-bold">{stats.exportRevenue}</p>
                   <p className="text-xs text-purple-600">73% of total sales</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-purple-600" />
@@ -169,8 +135,8 @@ const SalesMarketing = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Campaigns</p>
-                  <p className="text-2xl font-bold">{campaigns.filter(c => c.status === "Active").length}</p>
-                  <p className="text-xs text-amber-600">ROI: +{campaigns.filter(c => c.status === "Active").length * 15}%</p>
+                  <p className="text-2xl font-bold">{stats.activeCampaigns}</p>
+                  <p className="text-xs text-amber-600">ROI: +{stats.activeCampaigns * 15}%</p>
                 </div>
                 <Target className="h-8 w-8 text-amber-600" />
               </div>
