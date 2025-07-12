@@ -31,52 +31,19 @@ export const useMessages = (conversationId?: string) => {
 
       if (error) throw error;
       
-      // Get unique conversations and enhance with participant info
+      // Get unique conversations
       const uniqueConversations = data?.map(item => item.conversations) || [];
       
-      // For direct messages, fetch the other participant's name
-      const enhancedConversations = await Promise.all(
-        uniqueConversations.map(async (conv) => {
-          if (conv.type === "direct" && !conv.name) {
-            try {
-              // Get the other participant through user_profiles -> employees
-              const { data: otherParticipant } = await supabase
-                .from("conversation_participants")
-                .select(`
-                  user_id
-                `)
-                .eq("conversation_id", conv.id)
-                .neq("user_id", user.id)
-                .single();
-
-              if (otherParticipant?.user_id) {
-                // Now get the employee info through user_profiles
-                const { data: userProfile } = await supabase
-                  .from("user_profiles")
-                  .select(`
-                    employees!inner (
-                      name,
-                      position
-                    )
-                  `)
-                  .eq("user_id", otherParticipant.user_id)
-                  .single();
-
-                if (userProfile?.employees) {
-                  return {
-                    ...conv,
-                    name: userProfile.employees.name,
-                    participant_info: userProfile.employees
-                  };
-                }
-              }
-            } catch (error) {
-              console.error("Error fetching participant info:", error);
-            }
-          }
-          return conv;
-        })
-      );
+      // For direct messages without names, we'll just use a default name
+      const enhancedConversations = uniqueConversations.map(conv => {
+        if (conv.type === "direct" && !conv.name) {
+          return {
+            ...conv,
+            name: "Direct Message"
+          };
+        }
+        return conv;
+      });
       
       return enhancedConversations;
     },
@@ -102,35 +69,7 @@ export const useMessages = (conversationId?: string) => {
         throw error;
       }
       
-      // Enhance messages with sender info
-      const enhancedMessages = await Promise.all(
-        (data || []).map(async (message) => {
-          try {
-            // Get sender info through user_profiles
-            const { data: senderProfile } = await supabase
-              .from("user_profiles")
-              .select(`
-                employees!inner (
-                  id,
-                  name,
-                  email
-                )
-              `)
-              .eq("user_id", message.sender_id)
-              .single();
-
-            return {
-              ...message,
-              sender: senderProfile?.employees || null
-            };
-          } catch (error) {
-            console.error("Error fetching sender info:", error);
-            return message;
-          }
-        })
-      );
-      
-      return enhancedMessages;
+      return data || [];
     },
     enabled: !!conversationId,
   });
@@ -214,15 +153,15 @@ export const useMessages = (conversationId?: string) => {
 
   // Create conversation mutation
   const createConversation = useMutation({
-    mutationFn: async ({ participants, name, type = "direct" }: {
-      participants: string[];
+    mutationFn: async ({ participantUserIds, name, type = "direct" }: {
+      participantUserIds: string[];
       name?: string;
       type?: string;
     }) => {
       if (!user) throw new Error("User not authenticated");
 
       // Check if direct conversation already exists
-      if (type === "direct" && participants.length === 1) {
+      if (type === "direct" && participantUserIds.length === 1) {
         const { data: existingConv } = await supabase
           .from("conversation_participants")
           .select(`
@@ -246,7 +185,7 @@ export const useMessages = (conversationId?: string) => {
 
               if (otherParticipants && 
                   otherParticipants.length === 1 && 
-                  otherParticipants[0].user_id === participants[0]) {
+                  otherParticipants[0].user_id === participantUserIds[0]) {
                 // Conversation already exists
                 return convParticipant.conversations;
               }
@@ -269,7 +208,7 @@ export const useMessages = (conversationId?: string) => {
       if (convError) throw convError;
 
       // Add participants
-      const participantData = [user.id, ...participants].map(userId => ({
+      const participantData = [user.id, ...participantUserIds].map(userId => ({
         conversation_id: conversation.id,
         user_id: userId,
       }));
