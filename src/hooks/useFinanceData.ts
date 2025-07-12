@@ -207,51 +207,137 @@ export const useFinanceData = () => {
       const payment = payments.find(p => p.id === paymentId);
       if (!payment) throw new Error('Payment record not found');
 
-      // If it's a quality assessment payment, create payment record and update assessment
-      if (payment.qualityAssessmentId) {
-        // Create payment record in database
-        const { error: paymentError } = await supabase
-          .from('payment_records')
+      // If it's a bank transfer, create approval request instead of processing directly
+      if (method === 'Bank Transfer') {
+        const { error: approvalError } = await supabase
+          .from('approval_requests')
           .insert({
-            supplier: payment.supplier,
-            amount: payment.amount,
-            status: 'Paid',
-            date: new Date().toISOString().split('T')[0],
-            method,
-            quality_assessment_id: payment.qualityAssessmentId,
-            batch_number: payment.batchNumber
+            type: 'Payment',
+            title: `Bank Transfer to ${payment.supplier}`,
+            description: `Payment for batch ${payment.batchNumber || 'N/A'} - ${payment.kilograms}kg at ${payment.pricePerKg}/kg`,
+            amount: payment.amount.toString(),
+            department: 'Finance',
+            requestedby: 'Finance Team',
+            daterequested: new Date().toLocaleDateString(),
+            priority: 'High',
+            status: 'Pending',
+            details: {
+              paymentId: payment.id,
+              supplier: payment.supplier,
+              amount: payment.amount,
+              method,
+              batchNumber: payment.batchNumber,
+              qualityAssessmentId: payment.qualityAssessmentId
+            }
           });
 
-        if (paymentError) throw paymentError;
+        if (approvalError) throw approvalError;
 
-        // Update the quality assessment status
-        const { error: qualityError } = await supabase
-          .from('quality_assessments')
-          .update({ 
-            status: 'approved',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', payment.qualityAssessmentId);
+        // Update payment status to Processing (awaiting approval)
+        if (payment.qualityAssessmentId) {
+          const { error: paymentError } = await supabase
+            .from('payment_records')
+            .insert({
+              supplier: payment.supplier,
+              amount: payment.amount,
+              status: 'Processing',
+              date: new Date().toISOString().split('T')[0],
+              method,
+              quality_assessment_id: payment.qualityAssessmentId,
+              batch_number: payment.batchNumber
+            });
 
-        if (qualityError) throw qualityError;
+          if (paymentError) throw paymentError;
+        } else {
+          const { error } = await supabase
+            .from('payment_records')
+            .update({ 
+              status: 'Processing',
+              method,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', paymentId);
+
+          if (error) throw error;
+        }
+
+        toast({
+          title: "Approval Request Created",
+          description: `Bank transfer of UGX ${payment.amount.toLocaleString()} has been submitted for manager approval`
+        });
       } else {
-        // Update existing payment record
-        const { error } = await supabase
-          .from('payment_records')
-          .update({ 
-            status: 'Paid',
-            method,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', paymentId);
+        // Cash payments can be processed immediately
+        if (payment.qualityAssessmentId) {
+          // Create payment record in database
+          const { error: paymentError } = await supabase
+            .from('payment_records')
+            .insert({
+              supplier: payment.supplier,
+              amount: payment.amount,
+              status: 'Paid',
+              date: new Date().toISOString().split('T')[0],
+              method,
+              quality_assessment_id: payment.qualityAssessmentId,
+              batch_number: payment.batchNumber
+            });
 
-        if (error) throw error;
+          if (paymentError) throw paymentError;
+
+          // Update the quality assessment status
+          const { error: qualityError } = await supabase
+            .from('quality_assessments')
+            .update({ 
+              status: 'approved',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', payment.qualityAssessmentId);
+
+          if (qualityError) throw qualityError;
+
+          // Record transaction
+          const { error: transactionError } = await supabase
+            .from('finance_transactions')
+            .insert({
+              type: 'Payment',
+              description: `Cash payment to ${payment.supplier} for batch ${payment.batchNumber}`,
+              amount: payment.amount,
+              time: new Date().toLocaleTimeString(),
+              date: new Date().toISOString().split('T')[0]
+            });
+
+          if (transactionError) throw transactionError;
+        } else {
+          // Update existing payment record
+          const { error } = await supabase
+            .from('payment_records')
+            .update({ 
+              status: 'Paid',
+              method,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', paymentId);
+
+          if (error) throw error;
+
+          // Record transaction
+          const { error: transactionError } = await supabase
+            .from('finance_transactions')
+            .insert({
+              type: 'Payment',
+              description: `Cash payment to ${payment.supplier}`,
+              amount: payment.amount,
+              time: new Date().toLocaleTimeString(),
+              date: new Date().toISOString().split('T')[0]
+            });
+
+          if (transactionError) throw transactionError;
+        }
+
+        toast({
+          title: "Success",
+          description: `Cash payment of UGX ${payment.amount.toLocaleString()} processed successfully`
+        });
       }
-
-      toast({
-        title: "Success",
-        description: `Payment of UGX ${payment.amount.toLocaleString()} processed via ${method}`
-      });
 
       // Refresh data to update display
       fetchFinanceData();

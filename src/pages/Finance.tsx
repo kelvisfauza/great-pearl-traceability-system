@@ -1,3 +1,4 @@
+
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle, CheckCircle2, Scale } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle, CheckCircle2, Scale, Clock } from "lucide-react";
 import { useState } from "react";
 import { useFinanceData } from "@/hooks/useFinanceData";
 
@@ -201,7 +202,14 @@ const Finance = () => {
                               payment.status === "Paid" ? "default" :
                               payment.status === "Processing" ? "secondary" : "destructive"
                             }>
-                              {payment.status}
+                              {payment.status === "Processing" ? (
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Awaiting Approval
+                                </div>
+                              ) : (
+                                payment.status
+                              )}
                             </Badge>
                           </TableCell>
                           <TableCell>{payment.date}</TableCell>
@@ -211,6 +219,11 @@ const Finance = () => {
                                 <CheckCircle2 className="h-3 w-3" />
                                 Processed
                               </Badge>
+                            ) : payment.status === "Processing" ? (
+                              <Badge variant="secondary" className="gap-1">
+                                <Clock className="h-3 w-3" />
+                                Pending Approval
+                              </Badge>
                             ) : (
                               <div className="flex gap-2">
                                 <Button 
@@ -218,6 +231,7 @@ const Finance = () => {
                                   onClick={() => handleProcessPayment(payment.id, 'Bank Transfer')}
                                 >
                                   Bank Transfer
+                                  <span className="text-xs ml-1">(Requires Approval)</span>
                                 </Button>
                                 <Button 
                                   size="sm" 
