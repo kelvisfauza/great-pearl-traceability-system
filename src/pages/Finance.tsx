@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Users, FileText, Receipt, Banknote, Calculator, PlusCircle, Eye, CheckCircle, Clock } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { useFinanceData } from "@/hooks/useFinanceData";
 
@@ -18,36 +18,14 @@ const Finance = () => {
     stats,
     loading,
     addTransaction,
-    addExpense,
-    processPayment
+    addExpense
   } = useFinanceData();
 
-  const [selectedPayment, setSelectedPayment] = useState<number | null>(null);
-  const [cashAmount, setCashAmount] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseDescription, setExpenseDescription] = useState("");
   const [floatAmount, setFloatAmount] = useState("");
   const [receiptAmount, setReceiptAmount] = useState("");
   const [receiptDescription, setReceiptDescription] = useState("");
-
-  // Sample priced coffee data - in real app, this would come from quality control
-  const pricedCoffee = [
-    { id: 1, batchId: "BATCH-001", supplier: "Bushenyi Cooperative", kilograms: 500, price: "UGX 4,900/kg", totalAmount: 2450000, status: "Pending Payment", paymentMethod: "Bank", qualityScore: 94.2 },
-    { id: 2, batchId: "BATCH-002", supplier: "Masaka Traders", kilograms: 360, price: "UGX 5,000/kg", totalAmount: 1800000, status: "Ready for Cash", paymentMethod: "Cash", qualityScore: 92.1 },
-    { id: 3, batchId: "BATCH-003", supplier: "Ntungamo Union", kilograms: 190, price: "UGX 5,000/kg", totalAmount: 950000, status: "Payment Issued", paymentMethod: "Bank", qualityScore: 95.3 },
-  ];
-
-  const handleBankPayment = (paymentId: number) => {
-    processPayment(paymentId.toString(), "Bank Transfer");
-  };
-
-  const handleCashPayment = (paymentId: number) => {
-    if (!cashAmount) {
-      return;
-    }
-    processPayment(paymentId.toString(), "Cash", parseInt(cashAmount));
-    setCashAmount("");
-  };
 
   const handleExpenseSubmit = () => {
     if (!expenseAmount || !expenseDescription) {
@@ -171,67 +149,57 @@ const Finance = () => {
           <TabsContent value="payments" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Priced Coffee - Payment Processing</CardTitle>
-                <CardDescription>Process payments for coffee batches received from quality control</CardDescription>
+                <CardTitle>Payment Processing</CardTitle>
+                <CardDescription>Process supplier payments and manage payment records</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Batch ID</TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Kilograms</TableHead>
-                      <TableHead>Price/kg</TableHead>
-                      <TableHead>Total Amount</TableHead>
-                      <TableHead>Payment Method</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pricedCoffee.map((coffee) => (
-                      <TableRow key={coffee.id}>
-                        <TableCell className="font-medium">{coffee.batchId}</TableCell>
-                        <TableCell>{coffee.supplier}</TableCell>
-                        <TableCell>{coffee.kilograms} kg</TableCell>
-                        <TableCell>{coffee.price}</TableCell>
-                        <TableCell className="font-bold">{formatCurrency(coffee.totalAmount)}</TableCell>
-                        <TableCell>
-                          <Badge variant={coffee.paymentMethod === "Bank" ? "default" : "secondary"}>
-                            {coffee.paymentMethod}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            coffee.status === "Payment Issued" ? "default" :
-                            coffee.status === "Pending Payment" ? "destructive" : "secondary"
-                          }>
-                            {coffee.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {coffee.paymentMethod === "Bank" ? (
-                            <Button size="sm" onClick={() => handleBankPayment(coffee.id)}>
-                              Request Bank Payment
-                            </Button>
-                          ) : (
-                            <div className="flex items-center space-x-2">
-                              <Input
-                                placeholder="Cash amount"
-                                value={cashAmount}
-                                onChange={(e) => setCashAmount(e.target.value)}
-                                className="w-32"
-                              />
-                              <Button size="sm" onClick={() => handleCashPayment(coffee.id)}>
-                                Issue Cash
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
+                {payments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No payments to process</p>
+                    <p className="text-sm text-gray-400 mt-2">Payment records will appear here when added</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Payment Method</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Action</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {payments.map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell className="font-medium">{payment.supplier}</TableCell>
+                          <TableCell className="font-bold">{formatCurrency(payment.amount)}</TableCell>
+                          <TableCell>
+                            <Badge variant={payment.method === "Bank Transfer" ? "default" : "secondary"}>
+                              {payment.method}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              payment.status === "Paid" ? "default" :
+                              payment.status === "Pending" ? "destructive" : "secondary"
+                            }>
+                              {payment.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{payment.date}</TableCell>
+                          <TableCell>
+                            <Button size="sm" disabled={payment.status === "Paid"}>
+                              {payment.status === "Paid" ? "Processed" : "Process Payment"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
