@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,9 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle, CheckCircle2, Scale, Clock } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle, CheckCircle2, Scale, Clock, Shield, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { useFinanceData } from "@/hooks/useFinanceData";
+import { useDailyTasks } from "@/hooks/useDailyTasks";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Finance = () => {
   const {
@@ -22,11 +23,17 @@ const Finance = () => {
     processPayment
   } = useFinanceData();
 
+  const { tasks: dailyTasks, loading: tasksLoading } = useDailyTasks();
+  const { employee, hasRole } = useAuth();
+
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseDescription, setExpenseDescription] = useState("");
   const [floatAmount, setFloatAmount] = useState("");
   const [receiptAmount, setReceiptAmount] = useState("");
   const [receiptDescription, setReceiptDescription] = useState("");
+
+  // Check if user can manage float (supervisor or operations manager)
+  const canManageFloat = hasRole('Supervisor') || hasRole('Operations Manager') || employee?.position === 'Supervisor' || employee?.position === 'Operations Manager';
 
   const handleExpenseSubmit = () => {
     if (!expenseAmount || !expenseDescription) {
@@ -290,31 +297,79 @@ const Finance = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Daily Balance</CardTitle>
-                  <CardDescription>Cash flow summary for today</CardDescription>
+                  <CardTitle>Daily Tasks Completed</CardTitle>
+                  <CardDescription>All tasks completed today</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
-                      <span className="font-medium">Total Receipts</span>
-                      <span className="text-xl font-bold text-green-600">{formatCurrency(stats.totalReceipts)}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
-                      <span className="font-medium">Total Payments</span>
-                      <span className="text-xl font-bold text-red-600">{formatCurrency(stats.totalPayments)}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
-                      <span className="font-medium">Net Cash Flow</span>
-                      <span className="text-xl font-bold text-blue-600">{formatCurrency(stats.netCashFlow)}</span>
-                    </div>
-                    <Button className="w-full">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Generate Daily Report
-                    </Button>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {tasksLoading ? (
+                      <p className="text-gray-500 text-center py-4">Loading tasks...</p>
+                    ) : dailyTasks.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">No tasks completed today</p>
+                    ) : (
+                      dailyTasks.map((task) => (
+                        <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            {task.task_type === "Payment" && <CreditCard className="h-4 w-4 text-red-600" />}
+                            {task.task_type === "Receipt" && <Receipt className="h-4 w-4 text-green-600" />}
+                            {task.task_type === "Float" && <Banknote className="h-4 w-4 text-blue-600" />}
+                            {task.task_type === "Expense" && <FileText className="h-4 w-4 text-orange-600" />}
+                            {task.task_type === "Quality Assessment" && <CheckCircle2 className="h-4 w-4 text-purple-600" />}
+                            {task.task_type === "Employee Payment" && <DollarSign className="h-4 w-4 text-indigo-600" />}
+                            <div>
+                              <p className="font-medium text-sm">{task.description}</p>
+                              <p className="text-xs text-gray-500">
+                                {task.completed_by} • {task.completed_at}
+                                {task.batch_number && ` • Batch: ${task.batch_number}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {task.amount && (
+                              <p className="font-bold text-sm">{formatCurrency(task.amount)}</p>
+                            )}
+                            <Badge variant="outline" className="text-xs">
+                              {task.task_type}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Balance</CardTitle>
+                <CardDescription>Cash flow summary for today</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
+                    <span className="font-medium">Total Receipts</span>
+                    <span className="text-xl font-bold text-green-600">{formatCurrency(stats.totalReceipts)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
+                    <span className="font-medium">Total Payments</span>
+                    <span className="text-xl font-bold text-red-600">{formatCurrency(stats.totalPayments)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
+                    <span className="font-medium">Net Cash Flow</span>
+                    <span className="text-xl font-bold text-blue-600">{formatCurrency(stats.netCashFlow)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <span className="font-medium">Tasks Completed</span>
+                    <span className="text-xl font-bold text-gray-600">{dailyTasks.length}</span>
+                  </div>
+                  <Button className="w-full">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Generate Daily Report
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="cash" className="space-y-4">
@@ -322,24 +377,48 @@ const Finance = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Daily Float Management</CardTitle>
-                  <CardDescription>Record daily money received as float</CardDescription>
+                  <CardDescription>
+                    Record daily money received as float
+                    {!canManageFloat && (
+                      <div className="flex items-center gap-2 mt-2 text-amber-600">
+                        <Shield className="h-4 w-4" />
+                        <span className="text-sm">Restricted to Supervisors and Operations Managers</span>
+                      </div>
+                    )}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="Float amount (UGX)"
-                      value={floatAmount}
-                      onChange={(e) => setFloatAmount(e.target.value)}
-                    />
-                    <Button onClick={handleFloatSubmit}>
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      Record Float
-                    </Button>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">Current Float Balance</p>
-                    <p className="text-2xl font-bold">{formatCurrency(stats.currentFloat)}</p>
-                  </div>
+                  {canManageFloat ? (
+                    <>
+                      <div className="flex space-x-2">
+                        <Input
+                          placeholder="Float amount (UGX)"
+                          value={floatAmount}
+                          onChange={(e) => setFloatAmount(e.target.value)}
+                        />
+                        <Button onClick={handleFloatSubmit}>
+                          <PlusCircle className="h-4 w-4 mr-2" />
+                          Record Float
+                        </Button>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600">Current Float Balance</p>
+                        <p className="text-2xl font-bold">{formatCurrency(stats.currentFloat)}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto mb-4" />
+                      <p className="text-gray-500">Access Restricted</p>
+                      <p className="text-sm text-gray-400 mt-2">
+                        Only Supervisors and Operations Managers can manage float
+                      </p>
+                      <div className="p-4 bg-gray-50 rounded-lg mt-4">
+                        <p className="text-sm text-gray-600">Current Float Balance</p>
+                        <p className="text-2xl font-bold">{formatCurrency(stats.currentFloat)}</p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -426,7 +505,6 @@ const Finance = () => {
 
           <TabsContent value="overview" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Payments */}
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -467,11 +545,10 @@ const Finance = () => {
                 </CardContent>
               </Card>
 
-              {/* Monthly Summary */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Monthly Summary</CardTitle>
-                  <CardDescription>Financial overview for this month</CardDescription>
+                  <CardTitle>Enhanced Monthly Summary</CardTitle>
+                  <CardDescription>Comprehensive financial overview for this month</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -486,6 +563,16 @@ const Finance = () => {
                     <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
                       <span className="font-medium">Net Profit</span>
                       <span className="text-xl font-bold text-blue-600">{formatCurrency(stats.monthlyRevenue - stats.operatingCosts)}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-4 bg-purple-50 rounded-lg">
+                      <span className="font-medium">Pending Approvals</span>
+                      <span className="text-xl font-bold text-purple-600">
+                        {payments.filter(p => p.status === 'Processing').length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-4 bg-amber-50 rounded-lg">
+                      <span className="font-medium">Daily Tasks Today</span>
+                      <span className="text-xl font-bold text-amber-600">{dailyTasks.length}</span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                       <span className="font-medium">Profit Margin</span>
