@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
@@ -14,7 +13,8 @@ import {
   BarChart3,
   DollarSign,
   ClipboardCheck,
-  MapPin
+  MapPin,
+  LineChart
 } from "lucide-react";
 
 const Navigation = () => {
@@ -39,6 +39,7 @@ const Navigation = () => {
         { name: "Finance", icon: DollarSign, path: "/finance" },
         { name: "Field Operations", icon: MapPin, path: "/field-operations" },
         { name: "Human Resources", icon: Users, path: "/human-resources" },
+        { name: "Data Analyst", icon: LineChart, path: "/data-analyst" },
       ]
     },
     {
