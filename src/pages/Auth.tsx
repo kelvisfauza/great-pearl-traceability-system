@@ -9,11 +9,10 @@ import { Coffee, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,11 +26,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        await signIn(email, password);
-      } else {
-        await signUp(email, password);
-      }
+      await signIn(email, password);
     } catch (error) {
       console.error('Auth error:', error);
     } finally {
@@ -48,7 +43,7 @@ const Auth = () => {
           </div>
           <CardTitle className="text-2xl">Great Pearl Coffee Factory</CardTitle>
           <CardDescription>
-            {isLogin ? 'Sign in to your account' : 'Create a new account'}
+            Sign in to your account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -77,19 +72,12 @@ const Auth = () => {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLogin ? 'Sign In' : 'Sign Up'}
+              Sign In
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <Button
-              variant="ghost"
-              onClick={() => setIsLogin(!isLogin)}
-              disabled={loading}
-            >
-              {isLogin
-                ? "Don't have an account? Sign up"
-                : 'Already have an account? Sign in'}
-            </Button>
+          <div className="mt-4 text-center text-sm text-gray-600">
+            <p>Accounts are managed by administrators.</p>
+            <p>Contact your admin if you need access.</p>
           </div>
         </CardContent>
       </Card>
