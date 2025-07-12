@@ -33,11 +33,13 @@ const Store = () => {
   });
 
   const [newRecord, setNewRecord] = useState({
-    coffee_type: '',
+    coffeeType: '',
     date: new Date().toISOString().split('T')[0],
     kilograms: 0,
     bags: 0,
-    supplier_name: ''
+    supplierName: '',
+    batchNumber: `BATCH${Date.now()}`,
+    status: 'pending'
   });
 
   const [submittingSupplier, setSubmittingSupplier] = useState(false);
@@ -62,20 +64,25 @@ const Store = () => {
   };
 
   const handleSubmitRecord = async () => {
-    if (!newRecord.coffee_type || !newRecord.supplier_name || newRecord.kilograms <= 0 || newRecord.bags <= 0) {
+    if (!newRecord.coffeeType || !newRecord.supplierName || newRecord.kilograms <= 0 || newRecord.bags <= 0) {
       toast.error("Please fill in all required fields");
       return;
     }
 
     setSubmittingRecord(true);
     try {
-      await addCoffeeRecord(newRecord);
+      await addCoffeeRecord({
+        ...newRecord,
+        batchNumber: `BATCH${Date.now()}`
+      });
       setNewRecord({ 
-        coffee_type: '', 
+        coffeeType: '', 
         date: new Date().toISOString().split('T')[0], 
         kilograms: 0, 
         bags: 0, 
-        supplier_name: '' 
+        supplierName: '',
+        batchNumber: '',
+        status: 'pending'
       });
       toast.success("Coffee record submitted successfully");
     } catch (error) {
@@ -259,7 +266,7 @@ const Store = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="coffee-type">Coffee Type *</Label>
-                    <Select value={newRecord.coffee_type} onValueChange={(value) => setNewRecord({...newRecord, coffee_type: value})}>
+                    <Select value={newRecord.coffeeType} onValueChange={(value) => setNewRecord({...newRecord, coffeeType: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select coffee type" />
                       </SelectTrigger>
@@ -301,7 +308,7 @@ const Store = () => {
                   </div>
                   <div>
                     <Label htmlFor="record-supplier">Select Supplier *</Label>
-                    <Select value={newRecord.supplier_name} onValueChange={(value) => setNewRecord({...newRecord, supplier_name: value})}>
+                    <Select value={newRecord.supplierName} onValueChange={(value) => setNewRecord({...newRecord, supplierName: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select supplier" />
                       </SelectTrigger>
@@ -362,10 +369,10 @@ const Store = () => {
                     <TableBody>
                       {coffeeRecords.map((record) => (
                         <TableRow key={record.id}>
-                          <TableCell className="font-mono">{record.batch_number}</TableCell>
+                          <TableCell className="font-mono">{record.batchNumber}</TableCell>
                           <TableCell>{record.date}</TableCell>
-                          <TableCell>{record.coffee_type}</TableCell>
-                          <TableCell>{record.supplier_name}</TableCell>
+                          <TableCell>{record.coffeeType}</TableCell>
+                          <TableCell>{record.supplierName}</TableCell>
                           <TableCell>{Number(record.kilograms).toLocaleString()} kg</TableCell>
                           <TableCell>{record.bags}</TableCell>
                           <TableCell>

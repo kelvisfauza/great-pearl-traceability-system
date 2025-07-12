@@ -33,9 +33,7 @@ const FieldOperations = () => {
       name: "New Agent",
       region: "New Region",
       phone: "+256 700 000000",
-      status: "Active",
-      collections: "0 bags",
-      lastReport: "Just added"
+      status: "Active"
     });
   };
 
@@ -44,9 +42,8 @@ const FieldOperations = () => {
     addBuyingStation({
       name: "New Station",
       location: "New Location",
-      capacity: "500 bags",
-      current: "0 bags",
-      manager: "New Manager",
+      capacity: 500,
+      managerName: "New Manager",
       status: "Operational"
     });
   };
@@ -54,12 +51,12 @@ const FieldOperations = () => {
   const handleAddCollection = () => {
     // This would open a modal or form to add a new collection
     addCollection({
-      farmer: "New Farmer",
+      farmerName: "New Farmer",
       location: "New Location",
-      bags: 0,
-      quality: "Grade A",
-      agent: "Agent Name",
-      date: "Today",
+      bags: 10,
+      qualityGrade: "Grade A",
+      agentName: "Agent Name",
+      collectionDate: new Date().toISOString().split('T')[0],
       status: "Collected"
     });
   };
@@ -226,13 +223,13 @@ const FieldOperations = () => {
                       <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                         <div 
                           className={`h-2 rounded-full ${
-                            parseInt(station.current) / parseInt(station.capacity) > 0.8 
+                            station.currentOccupancy / station.capacity > 0.8 
                               ? 'bg-red-500' 
-                              : parseInt(station.current) / parseInt(station.capacity) > 0.6 
+                              : station.currentOccupancy / station.capacity > 0.6 
                               ? 'bg-amber-500' 
                               : 'bg-green-500'
                           }`}
-                          style={{ width: `${(parseInt(station.current) / parseInt(station.capacity)) * 100}%` }}
+                          style={{ width: `${(station.currentOccupancy / station.capacity) * 100}%` }}
                         ></div>
                       </div>
                     </div>

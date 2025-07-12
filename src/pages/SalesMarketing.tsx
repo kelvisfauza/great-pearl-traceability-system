@@ -50,6 +50,7 @@ const SalesMarketing = () => {
       country: formData.get('country') as string,
       email: formData.get('email') as string,
       phone: formData.get('phone') as string,
+      status: 'Active'
     });
     setIsAddCustomerOpen(false);
   };
@@ -57,24 +58,26 @@ const SalesMarketing = () => {
   const handleAddCampaign = (formData: FormData) => {
     addCampaign({
       name: formData.get('name') as string,
-      budget: formData.get('budget') as string,
+      budget: parseInt(formData.get('budget') as string),
       startDate: formData.get('startDate') as string,
       endDate: formData.get('endDate') as string,
+      status: 'Planning'
     });
     setIsAddCampaignOpen(false);
   };
 
   const handleCreateContract = (formData: FormData) => {
     addContract({
-      customerId: parseInt(formData.get('customerId') as string),
+      customerName: customers.find(c => c.id === formData.get('customerId'))?.name || '',
       quantity: formData.get('quantity') as string,
-      price: formData.get('price') as string,
+      price: parseInt(formData.get('price') as string),
       deliveryDate: formData.get('deliveryDate') as string,
+      status: 'Draft'
     });
     setIsContractOpen(false);
   };
 
-  const handleSendContract = (contractId: number) => {
+  const handleSendContract = (contractId: string) => {
     updateContractStatus(contractId, "Pending");
   };
 
@@ -295,7 +298,7 @@ const SalesMarketing = () => {
                         </div>
                         <div>
                           <Label htmlFor="price">Price per Unit</Label>
-                          <Input id="price" name="price" placeholder="e.g., $180/bag" required />
+                          <Input id="price" name="price" placeholder="e.g., 180" required />
                         </div>
                         <div>
                           <Label htmlFor="deliveryDate">Delivery Date</Label>
@@ -384,7 +387,7 @@ const SalesMarketing = () => {
                         </div>
                         <div>
                           <Label htmlFor="budget">Budget</Label>
-                          <Input id="budget" name="budget" placeholder="e.g., $25,000" required />
+                          <Input id="budget" name="budget" placeholder="e.g., 25000" required />
                         </div>
                         <div>
                           <Label htmlFor="startDate">Start Date</Label>
@@ -420,10 +423,10 @@ const SalesMarketing = () => {
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
                         <div>
-                          <span className="font-medium">Budget:</span> {campaign.budget}
+                          <span className="font-medium">Budget:</span> ${campaign.budget.toLocaleString()}
                         </div>
                         <div className="text-green-600 font-medium">
-                          <span className="text-gray-600 font-normal">ROI:</span> {campaign.roi}
+                          <span className="text-gray-600 font-normal">ROI:</span> {campaign.roi}%
                         </div>
                         <div>
                           <span className="font-medium">Start:</span> {campaign.startDate}
