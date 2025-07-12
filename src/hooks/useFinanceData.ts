@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +30,8 @@ export interface PaymentRecord {
   method: 'Bank Transfer' | 'Cash';
   qualityAssessmentId?: string;
   batchNumber?: string;
+  kilograms?: number;
+  pricePerKg?: number;
 }
 
 export interface QualityAssessmentForPayment extends Tables<'quality_assessments'> {
@@ -95,27 +96,7 @@ export const useFinanceData = () => {
       }));
       setExpenses(formattedExpenses);
 
-      // Fetch payment records from database
-      const { data: paymentData, error: paymentError } = await supabase
-        .from('payment_records')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (paymentError) throw paymentError;
-
-      const formattedPayments: PaymentRecord[] = (paymentData || []).map(p => ({
-        id: p.id,
-        supplier: p.supplier,
-        amount: Number(p.amount),
-        status: p.status as PaymentRecord['status'],
-        date: p.date,
-        method: p.method as PaymentRecord['method'],
-        qualityAssessmentId: p.quality_assessment_id || undefined,
-        batchNumber: p.batch_number || undefined
-      }));
-      setPayments(formattedPayments);
-      
-      // Fetch quality assessments that are ready for payment processing
+      // Fetch quality assessments that need payment processing
       const { data: qualityData, error: qualityError } = await supabase
         .from('quality_assessments')
         .select(`
@@ -128,6 +109,50 @@ export const useFinanceData = () => {
       if (qualityError) throw qualityError;
       setQualityAssessments(qualityData || []);
 
+      // Fetch existing payment records from database
+      const { data: paymentData, error: paymentError } = await supabase
+        .from('payment_records')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (paymentError) throw paymentError;
+
+      // Combine quality assessments and existing payment records
+      const qualityPayments: PaymentRecord[] = (qualityData || []).map(q => ({
+        id: q.id,
+        supplier: q.coffee_record?.supplier_name || 'Unknown Supplier',
+        amount: q.suggested_price * (q.coffee_record?.kilograms || 0),
+        status: 'Pending' as const,
+        date: q.date_assessed,
+        method: 'Bank Transfer' as const,
+        qualityAssessmentId: q.id,
+        batchNumber: q.batch_number,
+        kilograms: q.coffee_record?.kilograms || 0,
+        pricePerKg: q.suggested_price
+      }));
+
+      const existingPayments: PaymentRecord[] = (paymentData || []).map(p => ({
+        id: p.id,
+        supplier: p.supplier,
+        amount: Number(p.amount),
+        status: p.status as PaymentRecord['status'],
+        date: p.date,
+        method: p.method as PaymentRecord['method'],
+        qualityAssessmentId: p.quality_assessment_id || undefined,
+        batchNumber: p.batch_number || undefined
+      }));
+
+      // Filter out quality payments that already have payment records
+      const existingQualityIds = existingPayments
+        .filter(p => p.qualityAssessmentId)
+        .map(p => p.qualityAssessmentId);
+      
+      const filteredQualityPayments = qualityPayments.filter(
+        qp => !existingQualityIds.includes(qp.qualityAssessmentId)
+      );
+
+      setPayments([...existingPayments, ...filteredQualityPayments]);
+
       // Fetch salary payments data for stats
       const { data: salaryData } = await supabase
         .from('salary_payments')
@@ -139,9 +164,7 @@ export const useFinanceData = () => {
           .filter(p => p.status === 'Pending')
           .reduce((sum, payment) => sum + Number(payment.total_pay), 0);
 
-        const totalQualityPayments = (qualityData || [])
-          .filter(q => q.status !== 'approved')
-          .reduce((sum, assessment) => sum + assessment.suggested_price, 0);
+        const totalQualityPayments = qualityPayments.reduce((sum, payment) => sum + payment.amount, 0);
         
         const totalReceipts = formattedTransactions
           .filter(t => t.type === 'Receipt' || t.type === 'Float')
@@ -178,41 +201,56 @@ export const useFinanceData = () => {
     }
   };
 
-  const processQualityPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash') => {
+  const processPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash') => {
     try {
-      // Find the quality assessment
-      const qualityAssessment = qualityAssessments.find(q => q.id === paymentId);
-      if (!qualityAssessment) throw new Error('Quality assessment not found');
+      // Find the payment record
+      const payment = payments.find(p => p.id === paymentId);
+      if (!payment) throw new Error('Payment record not found');
 
-      // Create payment record in database
-      const { error: paymentError } = await supabase
-        .from('payment_records')
-        .insert({
-          supplier: qualityAssessment.coffee_record?.supplier_name || 'Unknown Supplier',
-          amount: qualityAssessment.suggested_price,
-          status: 'Paid',
-          date: new Date().toISOString().split('T')[0],
-          method,
-          quality_assessment_id: paymentId,
-          batch_number: qualityAssessment.batch_number
-        });
+      // If it's a quality assessment payment, create payment record and update assessment
+      if (payment.qualityAssessmentId) {
+        // Create payment record in database
+        const { error: paymentError } = await supabase
+          .from('payment_records')
+          .insert({
+            supplier: payment.supplier,
+            amount: payment.amount,
+            status: 'Paid',
+            date: new Date().toISOString().split('T')[0],
+            method,
+            quality_assessment_id: payment.qualityAssessmentId,
+            batch_number: payment.batchNumber
+          });
 
-      if (paymentError) throw paymentError;
+        if (paymentError) throw paymentError;
 
-      // Update the quality assessment status
-      const { error } = await supabase
-        .from('quality_assessments')
-        .update({ 
-          status: 'approved',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', paymentId);
+        // Update the quality assessment status
+        const { error: qualityError } = await supabase
+          .from('quality_assessments')
+          .update({ 
+            status: 'approved',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', payment.qualityAssessmentId);
 
-      if (error) throw error;
+        if (qualityError) throw qualityError;
+      } else {
+        // Update existing payment record
+        const { error } = await supabase
+          .from('payment_records')
+          .update({ 
+            status: 'Paid',
+            method,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', paymentId);
+
+        if (error) throw error;
+      }
 
       toast({
         title: "Success",
-        description: `Payment processed via ${method} and quality assessment approved`
+        description: `Payment of UGX ${payment.amount.toLocaleString()} processed via ${method}`
       });
 
       // Refresh data to update display
@@ -302,7 +340,7 @@ export const useFinanceData = () => {
     loading,
     addTransaction,
     addExpense,
-    processPayment: processQualityPayment,
+    processPayment,
     refetch: fetchFinanceData
   };
 };
