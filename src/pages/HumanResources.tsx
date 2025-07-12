@@ -4,112 +4,99 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Users, UserCheck, DollarSign, Calendar, Plus, Search, Eye, CreditCard, UserCog, FileText, TrendingUp, Loader2 } from "lucide-react";
+import { 
+  Users, 
+  UserPlus, 
+  Search, 
+  Filter,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2,
+  DollarSign
+} from "lucide-react";
 import { useState } from "react";
-import AddEmployeeModal from "@/components/hr/AddEmployeeModal";
-import SalaryPaymentModal from "@/components/hr/SalaryPaymentModal";
-import EmployeeDetailsModal from "@/components/hr/EmployeeDetailsModal";
-import EmptyState from "@/components/hr/EmptyState";
-import { useToast } from "@/hooks/use-toast";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useSalaryPayments } from "@/hooks/useSalaryPayments";
+import AddEmployeeModal from "@/components/hr/AddEmployeeModal";
+import EmployeeDetailsModal from "@/components/hr/EmployeeDetailsModal";
+import SalaryPaymentModal from "@/components/hr/SalaryPaymentModal";
+import EmptyState from "@/components/hr/EmptyState";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const HumanResources = () => {
+  const { employees, loading: employeesLoading, deleteEmployee } = useEmployees();
+  const { payments, loading: paymentsLoading } = useSalaryPayments();
+  
   const [searchTerm, setSearchTerm] = useState("");
-  const [showAddEmployee, setShowAddEmployee] = useState(false);
-  const [showSalaryPayment, setShowSalaryPayment] = useState(false);
-  const [showEmployeeDetails, setShowEmployeeDetails] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const { toast } = useToast();
+  const [selectedDepartment, setSelectedDepartment] = useState("All");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
 
-  const { employees, loading: employeesLoading, addEmployee, updateEmployee } = useEmployees();
-  const { payments, addPayment } = useSalaryPayments();
+  // Filter employees based on search and department
+  const filteredEmployees = employees.filter(emp => {
+    const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         emp.position.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDepartment = selectedDepartment === "All" || emp.department === selectedDepartment;
+    return matchesSearch && matchesDepartment;
+  });
 
-  const departments = [
-    { name: "Operations", employees: employees.filter(e => e.department === "Operations").length, avgSalary: "UGX 2,450,000", budget: "UGX 19,600,000" },
-    { name: "Quality Control", employees: employees.filter(e => e.department === "Quality Control").length, avgSalary: "UGX 2,100,000", budget: "UGX 10,500,000" },
-    { name: "Production", employees: employees.filter(e => e.department === "Production").length, avgSalary: "UGX 1,850,000", budget: "UGX 22,200,000" },
-    { name: "Administration", employees: employees.filter(e => e.department === "Administration").length, avgSalary: "UGX 2,800,000", budget: "UGX 11,200,000" },
-  ];
+  // Get unique departments
+  const departments = ["All", ...new Set(employees.map(emp => emp.department))];
 
-  const upcomingEvents = [
-    { id: 1, title: "Annual Performance Reviews", date: "Jan 15-30, 2025", type: "Review", participants: "All Staff" },
-    { id: 2, title: "Safety Training Workshop", date: "Jan 20, 2025", type: "Training", participants: "Production Team" },
-    { id: 3, title: "New Employee Orientation", date: "Jan 25, 2025", type: "Orientation", participants: "New Hires" },
-  ];
-
-  const filteredEmployees = employees.filter(employee =>
-    employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.department.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleAddEmployee = async (newEmployeeData: any) => {
-    try {
-      await addEmployee(newEmployeeData);
-      setShowAddEmployee(false);
-    } catch (error) {
-      console.error('Failed to add employee:', error);
-    }
-  };
-
-  const handleEmployeeUpdate = async (updatedEmployee: any) => {
-    try {
-      await updateEmployee(updatedEmployee.id, updatedEmployee);
-    } catch (error) {
-      console.error('Failed to update employee:', error);
-    }
-  };
-
-  const handlePaymentProcessed = async (paymentData: any) => {
-    try {
-      await addPayment(paymentData);
-      setShowSalaryPayment(false);
-    } catch (error) {
-      console.error('Failed to process payment:', error);
-    }
-  };
+  // Calculate statistics
+  const activeEmployees = employees.filter(emp => emp.status === 'Active').length;
+  const totalSalary = employees.reduce((sum, emp) => sum + Number(emp.salary), 0);
+  const avgSalary = employees.length > 0 ? totalSalary / employees.length : 0;
 
   const handleViewEmployee = (employee: any) => {
     setSelectedEmployee(employee);
-    setShowEmployeeDetails(true);
+    setIsDetailsModalOpen(true);
   };
 
-  const generatePayslips = () => {
-    if (employees.length === 0) {
-      toast({
-        title: "No Employees",
-        description: "Add employees first to generate payslips",
-        variant: "destructive"
-      });
-      return;
+  const handleDeleteEmployee = async (employeeId: string) => {
+    if (window.confirm('Are you sure you want to delete this employee?')) {
+      await deleteEmployee(employeeId);
     }
-    toast({
-      title: "Success",
-      description: "Payslips generated and sent to employees"
-    });
   };
 
-  const activeEmployees = employees.filter(e => e.status === "Active");
-  const totalMonthlyPayroll = employees.reduce((sum, emp) => sum + emp.salary, 0);
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'Administrator':
+        return 'destructive';
+      case 'Manager':
+        return 'default';
+      case 'Supervisor':
+        return 'secondary';
+      default:
+        return 'outline';
+    }
+  };
 
   if (employeesLoading) {
     return (
-      <Layout title="Human Resources" subtitle="Manage staff, payroll, and organizational structure">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
+      <Layout title="Human Resources" subtitle="Manage employees and payroll">
+        <div className="space-y-6">
+          <div className="text-center py-8">
+            <p>Loading employees...</p>
+          </div>
         </div>
       </Layout>
     );
   }
 
   return (
-    <Layout 
-      title="Human Resources" 
-      subtitle="Manage staff, payroll, and organizational structure"
-    >
+    <Layout title="Human Resources" subtitle="Manage employees and payroll">
       <div className="space-y-6">
-        {/* Stats Cards */}
+        {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
@@ -117,105 +104,75 @@ const HumanResources = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Employees</p>
                   <p className="text-2xl font-bold">{employees.length}</p>
-                  <p className="text-xs text-green-600">
-                    {employees.length === 0 ? "No employees yet" : `${employees.filter(e => new Date(e.created_at) > new Date(Date.now() - 30*24*60*60*1000)).length} new hires this month`}
-                  </p>
+                </div>
+                <Users className="h-8 w-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Active</p>
+                  <p className="text-2xl font-bold">{activeEmployees}</p>
                 </div>
                 <Users className="h-8 w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
+          
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Today</p>
-                  <p className="text-2xl font-bold">{activeEmployees.length}</p>
-                  <p className="text-xs text-blue-600">
-                    {employees.length === 0 ? "No active employees" : `${((activeEmployees.length / employees.length) * 100).toFixed(1)}% active`}
-                  </p>
+                  <p className="text-sm font-medium text-gray-600">Total Payroll</p>
+                  <p className="text-2xl font-bold">UGX {(totalSalary / 1000000).toFixed(1)}M</p>
                 </div>
-                <UserCheck className="h-8 w-8 text-blue-600" />
+                <DollarSign className="h-8 w-8 text-yellow-600" />
               </div>
             </CardContent>
           </Card>
+          
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Monthly Payroll</p>
-                  <p className="text-2xl font-bold">
-                    {totalMonthlyPayroll === 0 ? "UGX 0" : `UGX ${(totalMonthlyPayroll / 1000000).toFixed(1)}M`}
-                  </p>
-                  <p className="text-xs text-purple-600">
-                    {employees.length === 0 ? "No payroll yet" : "Total across all employees"}
-                  </p>
+                  <p className="text-sm font-medium text-gray-600">Avg Salary</p>
+                  <p className="text-2xl font-bold">UGX {(avgSalary / 1000).toFixed(0)}K</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Processed Payments</p>
-                  <p className="text-2xl font-bold">{payments.length}</p>
-                  <p className="text-xs text-amber-600">
-                    {payments.length === 0 ? "No payments yet" : "This year"}
-                  </p>
-                </div>
-                <Calendar className="h-8 w-8 text-amber-600" />
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common HR tasks and operations</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Button onClick={() => setShowAddEmployee(true)} className="h-16 flex-col">
-                <UserCog className="h-6 w-6 mb-2" />
-                Add Employee
-              </Button>
-              <Button 
-                onClick={() => setShowSalaryPayment(true)} 
-                variant="outline" 
-                className="h-16 flex-col"
-                disabled={employees.length === 0}
-              >
-                <CreditCard className="h-6 w-6 mb-2" />
-                Process Payroll
-              </Button>
-              <Button onClick={generatePayslips} variant="outline" className="h-16 flex-col">
-                <FileText className="h-6 w-6 mb-2" />
-                Generate Payslips
-              </Button>
-              <Button variant="outline" className="h-16 flex-col">
-                <TrendingUp className="h-6 w-6 mb-2" />
-                HR Analytics
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Employee Management */}
-          <Card>
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Employee List */}
+          <Card className="lg:col-span-2">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Employee Directory</CardTitle>
-                  <CardDescription>Manage staff information and records</CardDescription>
+                  <CardDescription>Manage your workforce</CardDescription>
+                </div>
+                <div className="flex space-x-2">
+                  <Button onClick={() => setIsPaymentModalOpen(true)}>
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Process Salary
+                  </Button>
+                  <Button onClick={() => setIsAddModalOpen(true)}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Employee
+                  </Button>
                 </div>
               </div>
-              {employees.length > 0 && (
-                <div className="relative">
+            </CardHeader>
+            <CardContent>
+              {/* Search and Filter */}
+              <div className="flex space-x-4 mb-6">
+                <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
                     placeholder="Search employees..."
@@ -224,162 +181,124 @@ const HumanResources = () => {
                     className="pl-10"
                   />
                 </div>
-              )}
-            </CardHeader>
-            <CardContent>
-              {employees.length === 0 ? (
-                <EmptyState 
-                  type="employees" 
-                  onAction={() => setShowAddEmployee(true)}
-                  actionLabel="Add First Employee"
-                />
-              ) : (
-                <div className="space-y-4 max-h-96 overflow-y-auto">
+                <select
+                  value={selectedDepartment}
+                  onChange={(e) => setSelectedDepartment(e.target.value)}
+                  className="px-3 py-2 border rounded-md"
+                >
+                  {departments.map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Employee List */}
+              {filteredEmployees.length > 0 ? (
+                <div className="space-y-4">
                   {filteredEmployees.map((employee) => (
                     <div key={employee.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                      <div>
-                        <p className="font-medium">{employee.name}</p>
-                        <p className="text-sm text-gray-500">{employee.position}</p>
-                        <p className="text-xs text-gray-400">
-                          {employee.department} • Joined {new Date(employee.join_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                        </p>
+                      <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium">
+                            {employee.name.split(' ').map((n: string) => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">{employee.name}</p>
+                          <p className="text-sm text-gray-500">{employee.position}</p>
+                          <p className="text-xs text-gray-400">{employee.department}</p>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={employee.status === "Active" ? "default" : "secondary"}>
+                      
+                      <div className="flex items-center space-x-3">
+                        <Badge variant={getRoleColor(employee.role)}>
+                          {employee.role}
+                        </Badge>
+                        <Badge variant={employee.status === 'Active' ? 'default' : 'secondary'}>
                           {employee.status}
                         </Badge>
-                        <Button variant="outline" size="sm" onClick={() => handleViewEmployee(employee)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <span className="text-sm font-medium">
+                          UGX {(Number(employee.salary) / 1000).toFixed(0)}K
+                        </span>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuItem onClick={() => handleViewEmployee(employee)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteEmployee(employee.id)}>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   ))}
                 </div>
+              ) : (
+                <EmptyState />
               )}
             </CardContent>
           </Card>
 
-          {/* Department Overview */}
+          {/* Recent Payments */}
           <Card>
             <CardHeader>
-              <CardTitle>Department Overview</CardTitle>
-              <CardDescription>Staff distribution and budget allocation</CardDescription>
+              <CardTitle>Recent Salary Payments</CardTitle>
+              <CardDescription>Latest payroll transactions</CardDescription>
             </CardHeader>
             <CardContent>
-              {employees.length === 0 ? (
-                <EmptyState 
-                  type="departments" 
-                  onAction={() => setShowAddEmployee(true)}
-                  actionLabel="Add Employee"
-                />
-              ) : (
-                <div className="space-y-4">
-                  {departments.map((dept, index) => (
-                    <div key={index} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">{dept.name}</h4>
-                        <Badge variant="outline">{dept.employees} staff</Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                        <div>
-                          <p>Avg Salary: {dept.avgSalary}</p>
-                        </div>
-                        <div>
-                          <p>Budget: {dept.budget}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Payroll History */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Payroll History</CardTitle>
-              <CardDescription>Recent payroll processing records</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {payments.length === 0 ? (
-                <EmptyState 
-                  type="payments" 
-                  onAction={() => employees.length > 0 && setShowSalaryPayment(true)}
-                  actionLabel="Process First Payroll"
-                />
-              ) : (
+              {paymentsLoading ? (
+                <p className="text-center text-gray-500">Loading payments...</p>
+              ) : payments.length > 0 ? (
                 <div className="space-y-4">
                   {payments.slice(0, 5).map((payment) => (
-                    <div key={payment.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">{payment.month}</h4>
-                        <Badge variant={payment.status === "Processed" ? "default" : "outline"}>
+                    <div key={payment.id} className="p-3 border rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-medium">{payment.month}</span>
+                        <Badge variant={payment.status === 'Processed' ? 'default' : 'secondary'}>
                           {payment.status}
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                        <div>
-                          <p>Total Pay: UGX {payment.total_pay.toLocaleString()}</p>
-                          <p>Employees: {payment.employee_count}</p>
-                        </div>
-                        <div>
-                          <p>Bonuses: UGX {payment.bonuses.toLocaleString()}</p>
-                          <p>Method: {payment.payment_method}</p>
-                        </div>
-                      </div>
+                      <p className="text-sm text-gray-600">
+                        UGX {(Number(payment.total_pay) / 1000000).toFixed(1)}M
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {payment.employee_count} employees
+                      </p>
                     </div>
                   ))}
                 </div>
+              ) : (
+                <p className="text-center text-gray-500">No payments recorded</p>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Upcoming Events */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming HR Events</CardTitle>
-              <CardDescription>Scheduled activities and deadlines</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {upcomingEvents.map((event) => (
-                  <div key={event.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{event.title}</h4>
-                      <Badge variant="outline">{event.type}</Badge>
-                    </div>
-                    <p className="text-sm text-gray-600">{event.date}</p>
-                    <p className="text-xs text-gray-500">Participants: {event.participants}</p>
-                  </div>
-                ))}
-              </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
       {/* Modals */}
-      <AddEmployeeModal
-        open={showAddEmployee}
-        onOpenChange={setShowAddEmployee}
-        onEmployeeAdded={handleAddEmployee}
-      />
-      
-      <SalaryPaymentModal
-        open={showSalaryPayment}
-        onOpenChange={setShowSalaryPayment}
-        employees={activeEmployees}
-        onPaymentProcessed={handlePaymentProcessed}
+      <AddEmployeeModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
       />
       
       <EmployeeDetailsModal
-        open={showEmployeeDetails}
-        onOpenChange={setShowEmployeeDetails}
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
         employee={selectedEmployee}
-        onEmployeeUpdated={handleEmployeeUpdate}
+      />
+      
+      <SalaryPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
       />
     </Layout>
   );

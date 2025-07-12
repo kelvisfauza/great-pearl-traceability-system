@@ -1,93 +1,73 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Package, 
-  DollarSign, 
-  Users, 
-  Coffee 
-} from "lucide-react";
+import { TrendingUp, Users, Package, DollarSign } from "lucide-react";
+import { useEmployees } from "@/hooks/useEmployees";
+import { useSalaryPayments } from "@/hooks/useSalaryPayments";
 
 const DashboardStats = () => {
+  const { employees, loading: employeesLoading } = useEmployees();
+  const { payments, loading: paymentsLoading } = useSalaryPayments();
+
+  // Calculate total salary from employees
+  const totalSalary = employees.reduce((sum, emp) => sum + Number(emp.salary), 0);
+  
+  // Calculate active employees
+  const activeEmployees = employees.filter(emp => emp.status === 'Active').length;
+  
+  // Calculate total payments this month
+  const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+  const currentMonthPayments = payments.filter(payment => payment.month === currentMonth);
+  const totalPayments = currentMonthPayments.reduce((sum, payment) => sum + Number(payment.total_pay), 0);
+
   const stats = [
     {
-      title: "Total Coffee Processed",
-      value: "2,847",
-      unit: "bags",
-      change: "+12.5%",
-      trend: "up",
-      icon: Coffee,
-      color: "text-green-600",
-      bgColor: "bg-green-50"
-    },
-    {
-      title: "Revenue This Month",
-      value: "UGX 847M",
-      unit: "",
-      change: "+8.2%",
-      trend: "up", 
-      icon: DollarSign,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50"
-    },
-    {
-      title: "Quality Score",
-      value: "94.2%",
-      unit: "",
-      change: "+2.1%",
-      trend: "up",
-      icon: Package,
-      color: "text-amber-600",
-      bgColor: "bg-amber-50"
-    },
-    {
-      title: "Active Suppliers",
-      value: "124",
-      unit: "farmers",
-      change: "-3.0%",
-      trend: "down",
+      title: "Total Employees",
+      value: employeesLoading ? "Loading..." : activeEmployees.toString(),
+      description: "Active workforce",
       icon: Users,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50"
+      trend: "+2.5%"
+    },
+    {
+      title: "Monthly Salary Budget",
+      value: employeesLoading ? "Loading..." : `UGX ${(totalSalary / 1000000).toFixed(1)}M`,
+      description: "Total monthly payroll",
+      icon: DollarSign,
+      trend: "+8.2%"
+    },
+    {
+      title: "This Month Payments",
+      value: paymentsLoading ? "Loading..." : `UGX ${(totalPayments / 1000000).toFixed(1)}M`,
+      description: "Payments processed",
+      icon: TrendingUp,
+      trend: "+12.3%"
+    },
+    {
+      title: "Departments",
+      value: employeesLoading ? "Loading..." : new Set(employees.map(emp => emp.department)).size.toString(),
+      description: "Active departments",
+      icon: Package,
+      trend: "Stable"
     }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat, index) => (
-        <Card key={index} className="hover:shadow-lg transition-shadow">
+        <Card key={index}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium">
               {stat.title}
             </CardTitle>
-            <div className={`h-8 w-8 rounded-full ${stat.bgColor} flex items-center justify-center`}>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </div>
+            <stat.icon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">
-              {stat.value}
-              {stat.unit && <span className="text-sm font-normal text-gray-500 ml-1">{stat.unit}</span>}
-            </div>
-            <div className="flex items-center mt-2">
-              <Badge 
-                variant={stat.trend === "up" ? "default" : "destructive"}
-                className={`mr-2 ${
-                  stat.trend === "up" 
-                    ? "bg-green-100 text-green-800 hover:bg-green-100" 
-                    : "bg-red-100 text-red-800 hover:bg-red-100"
-                }`}
-              >
-                {stat.trend === "up" ? (
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                ) : (
-                  <TrendingDown className="h-3 w-3 mr-1" />
-                )}
-                {stat.change}
-              </Badge>
-              <span className="text-xs text-gray-500">vs last month</span>
+            <div className="text-2xl font-bold">{stat.value}</div>
+            <p className="text-xs text-muted-foreground">
+              {stat.description}
+            </p>
+            <div className="flex items-center pt-1">
+              <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
+              <span className="text-xs text-green-500">{stat.trend}</span>
             </div>
           </CardContent>
         </Card>
