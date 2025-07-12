@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,18 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { DollarSign, Calendar, User } from "lucide-react";
+import { DollarSign, Calendar, User, Send } from "lucide-react";
 
 interface SalaryPaymentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employees: any[];
-  onPaymentProcessed: (payment: any) => void;
+  onPaymentRequestSubmitted: (request: any) => void;
 }
 
-const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed }: SalaryPaymentModalProps) => {
+const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentRequestSubmitted }: SalaryPaymentModalProps) => {
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
-  const [paymentData, setPaymentData] = useState({
+  const [requestData, setRequestData] = useState({
     month: new Date().toISOString().slice(0, 7),
     bonuses: "",
     deductions: "",
@@ -59,38 +58,57 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
     }
 
     const totalBaseSalary = calculateTotalSalary();
-    const bonuses = parseInt(paymentData.bonuses) || 0;
-    const deductions = parseInt(paymentData.deductions) || 0;
+    const bonuses = parseInt(requestData.bonuses) || 0;
+    const deductions = parseInt(requestData.deductions) || 0;
     const totalPayment = totalBaseSalary + bonuses - deductions;
 
-    const payment = {
-      month: paymentData.month,
-      employee_count: selectedEmployees.length,
-      total_pay: totalPayment,
-      bonuses: bonuses,
-      deductions: deductions,
-      status: "Processed",
-      processed_by: "System Admin",
-      processed_date: new Date().toISOString(),
-      payment_method: paymentData.paymentMethod,
-      notes: paymentData.notes,
-      employee_details: selectedEmployees.map(empId => {
-        const employee = employees.find(e => e.id === empId);
-        return {
-          id: employee?.id,
-          name: employee?.name,
-          salary: employee?.salary,
-          department: employee?.department
-        };
-      })
+    const paymentRequest = {
+      department: "Human Resources",
+      type: "Salary Payment",
+      title: `Salary Payment - ${requestData.month}`,
+      description: `Monthly salary payment for ${selectedEmployees.length} employees`,
+      amount: `UGX ${totalPayment.toLocaleString()}`,
+      requestedby: "HR Manager", // This should come from auth context
+      daterequested: new Date().toISOString().split('T')[0],
+      priority: "High",
+      status: "Pending",
+      details: {
+        month: requestData.month,
+        employee_count: selectedEmployees.length,
+        total_salary: totalBaseSalary,
+        bonuses: bonuses,
+        deductions: deductions,
+        total_amount: totalPayment,
+        payment_method: requestData.paymentMethod,
+        notes: requestData.notes,
+        employee_details: selectedEmployees.map(empId => {
+          const employee = employees.find(e => e.id === empId);
+          return {
+            id: employee?.id,
+            name: employee?.name,
+            salary: employee?.salary,
+            department: employee?.department,
+            position: employee?.position
+          };
+        })
+      }
     };
 
-    onPaymentProcessed(payment);
+    onPaymentRequestSubmitted(paymentRequest);
     
+    // Reset form
     setSelectedEmployees([]);
-    setPaymentData({
+    setRequestData({
       month: new Date().toISOString().slice(0, 7),
-      bonuses: "", deductions: "", notes: "", paymentMethod: "Bank Transfer"
+      bonuses: "", 
+      deductions: "", 
+      notes: "", 
+      paymentMethod: "Bank Transfer"
+    });
+
+    toast({
+      title: "Payment Request Submitted",
+      description: "Your salary payment request has been sent to Finance for approval",
     });
   };
 
@@ -98,8 +116,13 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Process Salary Payment</DialogTitle>
-          <DialogDescription>Select employees and process monthly salary payments</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <Send className="h-5 w-5" />
+            Submit Salary Payment Request
+          </DialogTitle>
+          <DialogDescription>
+            Prepare salary payment request for Finance approval and processing
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -109,13 +132,13 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
               <Input
                 id="month"
                 type="month"
-                value={paymentData.month}
-                onChange={(e) => setPaymentData(prev => ({ ...prev, month: e.target.value }))}
+                value={requestData.month}
+                onChange={(e) => setRequestData(prev => ({ ...prev, month: e.target.value }))}
               />
             </div>
             <div>
               <Label htmlFor="paymentMethod">Payment Method</Label>
-              <Select value={paymentData.paymentMethod} onValueChange={(value) => setPaymentData(prev => ({ ...prev, paymentMethod: value }))}>
+              <Select value={requestData.paymentMethod} onValueChange={(value) => setRequestData(prev => ({ ...prev, paymentMethod: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -167,8 +190,8 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
               <Input
                 id="bonuses"
                 type="number"
-                value={paymentData.bonuses}
-                onChange={(e) => setPaymentData(prev => ({ ...prev, bonuses: e.target.value }))}
+                value={requestData.bonuses}
+                onChange={(e) => setRequestData(prev => ({ ...prev, bonuses: e.target.value }))}
                 placeholder="0"
               />
             </div>
@@ -177,27 +200,27 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
               <Input
                 id="deductions"
                 type="number"
-                value={paymentData.deductions}
-                onChange={(e) => setPaymentData(prev => ({ ...prev, deductions: e.target.value }))}
+                value={requestData.deductions}
+                onChange={(e) => setRequestData(prev => ({ ...prev, deductions: e.target.value }))}
                 placeholder="0"
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="notes">Payment Notes</Label>
+            <Label htmlFor="notes">Request Notes</Label>
             <Textarea
               id="notes"
-              value={paymentData.notes}
-              onChange={(e) => setPaymentData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Additional notes for this payment batch"
+              value={requestData.notes}
+              onChange={(e) => setRequestData(prev => ({ ...prev, notes: e.target.value }))}
+              placeholder="Additional notes for Finance team regarding this payroll request"
               rows={3}
             />
           </div>
 
           {selectedEmployees.length > 0 && (
             <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">Payment Summary</h4>
+              <h4 className="font-medium mb-2">Payment Request Summary</h4>
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4 text-blue-600" />
@@ -209,8 +232,14 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
                 </div>
                 <div className="flex items-center space-x-2">
                   <Calendar className="h-4 w-4 text-purple-600" />
-                  <span>Total: UGX {(calculateTotalSalary() + parseInt(paymentData.bonuses || "0") - parseInt(paymentData.deductions || "0")).toLocaleString()}</span>
+                  <span>Total Request: UGX {(calculateTotalSalary() + parseInt(requestData.bonuses || "0") - parseInt(requestData.deductions || "0")).toLocaleString()}</span>
                 </div>
+              </div>
+              <div className="mt-3 p-3 bg-amber-50 rounded border-l-4 border-amber-400">
+                <p className="text-sm text-amber-800">
+                  <strong>Note:</strong> This request will be sent to Finance for review and approval. 
+                  You'll be notified once it's processed.
+                </p>
               </div>
             </div>
           )}
@@ -220,7 +249,8 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
               Cancel
             </Button>
             <Button type="submit" disabled={selectedEmployees.length === 0}>
-              Process Payment
+              <Send className="h-4 w-4 mr-2" />
+              Submit Request to Finance
             </Button>
           </div>
         </form>

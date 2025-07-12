@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle, CheckCircle2, Scale, Clock, Shield, AlertTriangle } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle, CheckCircle2, Scale, Clock, Shield, AlertTriangle, Users, XCircle, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useDailyTasks } from "@/hooks/useDailyTasks";
 import { useAuth } from "@/contexts/AuthContext";
+import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 
 const Finance = () => {
   const {
@@ -24,6 +25,7 @@ const Finance = () => {
   } = useFinanceData();
 
   const { tasks: dailyTasks, loading: tasksLoading } = useDailyTasks();
+  const { requests: approvalRequests, updateRequestStatus } = useApprovalRequests();
   const { employee, hasRole } = useAuth();
 
   const [expenseAmount, setExpenseAmount] = useState("");
@@ -95,6 +97,31 @@ const Finance = () => {
     );
   }
 
+  // Filter for salary payment requests
+  const salaryPaymentRequests = approvalRequests.filter(req => req.type === 'Salary Payment');
+  const pendingSalaryRequests = salaryPaymentRequests.filter(req => req.status === 'Pending');
+
+  const handleApproveSalaryPayment = async (requestId: string) => {
+    const success = await updateRequestStatus(requestId, 'Approved');
+    if (success) {
+      toast({
+        title: "Salary Payment Approved",
+        description: "The salary payment request has been approved and will be processed.",
+      });
+      // Here you could also create the actual payment record
+    }
+  };
+
+  const handleRejectSalaryPayment = async (requestId: string) => {
+    const success = await updateRequestStatus(requestId, 'Rejected');
+    if (success) {
+      toast({
+        title: "Salary Payment Rejected",
+        description: "The salary payment request has been rejected.",
+      });
+    }
+  };
+
   return (
     <Layout 
       title="Finance Management" 
@@ -150,8 +177,9 @@ const Finance = () => {
         </div>
 
         <Tabs defaultValue="payments" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="payments">Payment Processing</TabsTrigger>
+            <TabsTrigger value="salary-requests">HR Salary Requests</TabsTrigger>
             <TabsTrigger value="daily">Daily Reports</TabsTrigger>
             <TabsTrigger value="cash">Cash Management</TabsTrigger>
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
@@ -254,6 +282,135 @@ const Finance = () => {
                       ))}
                     </TableBody>
                   </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="salary-requests" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  HR Salary Payment Requests
+                </CardTitle>
+                <CardDescription>
+                  Review and approve salary payment requests from HR department
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingSalaryRequests.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No pending salary payment requests</p>
+                    <p className="text-sm text-gray-400 mt-2">HR salary requests will appear here for approval</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingSalaryRequests.map((request) => (
+                      <div key={request.id} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-semibold">{request.title}</h4>
+                              <Badge variant="secondary">{request.priority}</Badge>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-3">{request.description}</p>
+                            
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-500">Requested by:</span>
+                                <span className="ml-2 font-medium">{request.requestedby}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Date:</span>
+                                <span className="ml-2 font-medium">{new Date(request.daterequested).toLocaleDateString()}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Amount:</span>
+                                <span className="ml-2 font-medium text-green-600">{request.amount}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Employees:</span>
+                                <span className="ml-2 font-medium">{request.details?.employee_count || 0}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 ml-4">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleRejectSalaryPayment(request.id)}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
+                            <Button 
+                              size="sm"
+                              onClick={() => handleApproveSalaryPayment(request.id)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {request.details && (
+                          <div className="bg-gray-50 rounded p-3">
+                            <h5 className="font-medium text-sm mb-2">Payment Details:</h5>
+                            <div className="grid grid-cols-3 gap-3 text-xs">
+                              <div>
+                                <span className="text-gray-500">Month:</span>
+                                <span className="ml-1 font-medium">{request.details.month}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Base Salary:</span>  
+                                <span className="ml-1 font-medium">UGX {request.details.total_salary?.toLocaleString()}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Payment Method:</span>
+                                <span className="ml-1 font-medium">{request.details.payment_method}</span>
+                              </div>
+                              {request.details.bonuses > 0 && (
+                                <div>
+                                  <span className="text-gray-500">Bonuses:</span>
+                                  <span className="ml-1 font-medium text-green-600">+UGX {request.details.bonuses.toLocaleString()}</span>
+                                </div>
+                              )}
+                              {request.details.deductions > 0 && (
+                                <div>
+                                  <span className="text-gray-500">Deductions:</span>
+                                  <span className="ml-1 font-medium text-red-600">-UGX {request.details.deductions.toLocaleString()}</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {request.details.employee_details && request.details.employee_details.length > 0 && (
+                              <div className="mt-3">
+                                <h6 className="font-medium text-xs mb-2">Employees ({request.details.employee_details.length}):</h6>
+                                <div className="max-h-32 overflow-y-auto space-y-1">
+                                  {request.details.employee_details.map((emp: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between text-xs bg-white p-2 rounded">
+                                      <span>{emp.name} - {emp.position}</span>
+                                      <span className="font-medium">UGX {emp.salary?.toLocaleString()}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {request.details.notes && (
+                              <div className="mt-3">
+                                <span className="text-gray-500 text-xs">Notes:</span>
+                                <p className="text-xs mt-1">{request.details.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>

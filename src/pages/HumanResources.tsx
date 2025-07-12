@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,7 @@ import {
 
 const HumanResources = () => {
   const { employees, loading: employeesLoading, deleteEmployee, addEmployee, updateEmployee } = useEmployees();
-  const { payments, loading: paymentsLoading, addPayment } = useSalaryPayments();
+  const { paymentRequests, loading: paymentsLoading, submitPaymentRequest } = useSalaryPayments();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("All");
@@ -91,8 +90,8 @@ const HumanResources = () => {
     }
   };
 
-  const handleProcessPayment = async (paymentData: any) => {
-    await addPayment(paymentData);
+  const handleSubmitPaymentRequest = async (requestData: any) => {
+    await submitPaymentRequest(requestData);
     setIsPaymentModalOpen(false);
   };
 
@@ -130,7 +129,7 @@ const HumanResources = () => {
                 <div className="flex space-x-2">
                   <Button onClick={() => setIsPaymentModalOpen(true)} variant="outline">
                     <DollarSign className="h-4 w-4 mr-2" />
-                    Process Salary
+                    Request Salary Payment
                   </Button>
                   <Button onClick={() => setIsAddModalOpen(true)}>
                     <UserPlus className="h-4 w-4 mr-2" />
@@ -186,12 +185,88 @@ const HumanResources = () => {
             </CardContent>
           </Card>
 
-          {/* Payment History */}
-          <PaymentHistory 
-            payments={payments} 
-            loading={paymentsLoading}
-            onProcessPayment={() => setIsPaymentModalOpen(true)}
-          />
+          {/* Payment Request History */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Payment Requests
+                  </CardTitle>
+                  <CardDescription>Salary payment request status</CardDescription>
+                </div>
+                <Button onClick={() => setIsPaymentModalOpen(true)} size="sm">
+                  New Request
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {paymentsLoading ? (
+                <p className="text-center text-gray-500">Loading requests...</p>
+              ) : paymentRequests.length > 0 ? (
+                <div className="space-y-3">
+                  {paymentRequests.slice(0, 5).map((request) => (
+                    <div key={request.id} className="p-3 border rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-medium text-gray-900">{request.title}</p>
+                          <p className="text-sm text-gray-600">{request.description}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>{new Date(request.daterequested).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        <Badge variant={
+                          request.status === 'Approved' ? 'default' : 
+                          request.status === 'Rejected' ? 'destructive' : 'secondary'
+                        }>
+                          {request.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {request.amount}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {request.details?.employee_count || 0} employees
+                        </p>
+                      </div>
+                      
+                      {request.status === 'Approved' && (
+                        <div className="mt-2 p-2 bg-green-50 rounded border-l-4 border-green-400">
+                          <p className="text-xs text-green-800">
+                            Approved - Finance will process payment
+                          </p>
+                        </div>
+                      )}
+                      
+                      {request.status === 'Rejected' && (
+                        <div className="mt-2 p-2 bg-red-50 rounded border-l-4 border-red-400">
+                          <p className="text-xs text-red-800">
+                            Request rejected - Contact Finance for details
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No payment requests</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-2"
+                    onClick={() => setIsPaymentModalOpen(true)}
+                  >
+                    Submit First Request
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -213,7 +288,7 @@ const HumanResources = () => {
         open={isPaymentModalOpen}
         onOpenChange={setIsPaymentModalOpen}
         employees={employees}
-        onPaymentProcessed={handleProcessPayment}
+        onPaymentRequestSubmitted={handleSubmitPaymentRequest}
       />
     </Layout>
   );

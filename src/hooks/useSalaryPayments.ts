@@ -2,50 +2,44 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
-import type { Tables } from '@/integrations/supabase/types'
 
-export interface SalaryPayment {
+export interface SalaryPaymentRequest {
   id: string
-  month: string
-  total_pay: number
-  bonuses: number
-  deductions: number
-  employee_count: number
-  status: string
-  processed_by: string
-  processed_date: string
-  payment_method: string
-  notes?: string | null
-  employee_details: any
+  department: string
+  type: string
+  title: string
+  description: string
+  amount: string
+  requestedby: string
+  daterequested: string
+  priority: string
+  status: 'Pending' | 'Approved' | 'Rejected'
+  details: any
   created_at: string
+  updated_at: string
 }
 
 export const useSalaryPayments = () => {
-  const [payments, setPayments] = useState<SalaryPayment[]>([])
+  const [paymentRequests, setPaymentRequests] = useState<SalaryPaymentRequest[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
-  const fetchPayments = async () => {
+  const fetchPaymentRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from('salary_payments')
+        .from('approval_requests')
         .select('*')
+        .eq('type', 'Salary Payment')
         .order('created_at', { ascending: false })
 
       if (error) throw error
       
-      // Transform the data to match our interface
-      const transformedData = (data || []).map(payment => ({
-        ...payment,
-        employee_details: payment.employee_details || []
-      }))
-      
-      setPayments(transformedData)
+      setPaymentRequests(data || [])
     } catch (error) {
-      console.error('Error fetching salary payments:', error)
+      console.error('Error fetching salary payment requests:', error)
       toast({
         title: "Error",
-        description: "Failed to fetch salary payments",
+        description: "Failed to fetch salary payment requests",
         variant: "destructive"
       })
     } finally {
@@ -53,32 +47,27 @@ export const useSalaryPayments = () => {
     }
   }
 
-  const addPayment = async (paymentData: Omit<SalaryPayment, 'id' | 'created_at'>) => {
+  const submitPaymentRequest = async (requestData: Omit<SalaryPaymentRequest, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
-        .from('salary_payments')
-        .insert([paymentData])
+        .from('approval_requests')
+        .insert([requestData])
         .select()
         .single()
 
       if (error) throw error
 
-      const transformedPayment = {
-        ...data,
-        employee_details: data.employee_details || []
-      }
-
-      setPayments(prev => [transformedPayment, ...prev])
+      setPaymentRequests(prev => [data, ...prev])
       toast({
-        title: "Success",
-        description: "Salary payment processed successfully"
+        title: "Success", 
+        description: "Salary payment request submitted to Finance for approval"
       })
-      return transformedPayment
+      return data
     } catch (error) {
-      console.error('Error processing salary payment:', error)
+      console.error('Error submitting salary payment request:', error)
       toast({
         title: "Error",
-        description: "Failed to process salary payment",
+        description: "Failed to submit salary payment request",
         variant: "destructive"
       })
       throw error
@@ -86,13 +75,13 @@ export const useSalaryPayments = () => {
   }
 
   useEffect(() => {
-    fetchPayments()
+    fetchPaymentRequests()
   }, [])
 
   return {
-    payments,
+    paymentRequests,
     loading,
-    addPayment,
-    refetch: fetchPayments
+    submitPaymentRequest,
+    refetch: fetchPaymentRequests
   }
 }
