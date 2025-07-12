@@ -3,16 +3,15 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Supplier {
-  id: string; // Changed from number to string to match UUID
+  id: string;
   name: string;
-  location: string;
-  contact: string;
-  coffeeTypes: string;
-  rating: number;
-  status: string;
-  lastDelivery: string;
-  totalBags: number;
-  averagePrice: number;
+  code: string;
+  phone: string | null;
+  origin: string;
+  opening_balance: number;
+  date_registered: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export const useSuppliers = () => {
@@ -33,20 +32,7 @@ export const useSuppliers = () => {
         return;
       }
 
-      const transformedSuppliers: Supplier[] = data.map(supplier => ({
-        id: supplier.id,
-        name: supplier.name,
-        location: supplier.origin,
-        contact: supplier.phone || 'N/A',
-        coffeeTypes: 'Arabica, Robusta', // Default value
-        rating: 4.5, // Default rating
-        status: 'Active',
-        lastDelivery: supplier.date_registered,
-        totalBags: 0, // Will be calculated from actual deliveries
-        averagePrice: supplier.opening_balance || 0
-      }));
-
-      setSuppliers(transformedSuppliers);
+      setSuppliers(data || []);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       setSuppliers([]);
@@ -55,16 +41,21 @@ export const useSuppliers = () => {
     }
   };
 
-  const addSupplier = async (supplierData: Omit<Supplier, 'id'>) => {
+  const addSupplier = async (supplierData: {
+    name: string;
+    phone: string;
+    origin: string;
+    opening_balance: number;
+  }) => {
     try {
       const { data, error } = await supabase
         .from('suppliers')
         .insert([{
           name: supplierData.name,
-          origin: supplierData.location,
-          phone: supplierData.contact,
+          origin: supplierData.origin,
+          phone: supplierData.phone,
           code: `SUP${Date.now()}`,
-          opening_balance: supplierData.averagePrice || 0
+          opening_balance: supplierData.opening_balance || 0
         }])
         .select()
         .single();
