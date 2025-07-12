@@ -1,6 +1,7 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
+import PriceTicker from "@/components/PriceTicker";
+import PricingGuidance from "@/components/PricingGuidance";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -208,6 +209,9 @@ const QualityControl = () => {
       subtitle="Monitor and maintain coffee quality standards"
     >
       <div className="space-y-6">
+        {/* Price Ticker */}
+        <PriceTicker />
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -453,6 +457,14 @@ const QualityControl = () => {
                       className="mt-1"
                     />
                   </div>
+
+                  {/* Pricing Guidance */}
+                  {assessmentForm.suggestedPrice && (
+                    <PricingGuidance 
+                      coffeeType={selectedRecord.coffeeType}
+                      suggestedPrice={Number(assessmentForm.suggestedPrice)}
+                    />
+                  )}
 
                   <div className="flex gap-4">
                     <Button onClick={handleAssessmentSubmit} className="flex-1">
