@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,7 @@ import { usePresence } from "@/hooks/usePresence";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
@@ -33,25 +33,49 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
   const { userPresences } = usePresence();
   const { employees } = useEmployees();
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
     
-    await sendMessage.mutateAsync({ content: newMessage });
-    setNewMessage("");
+    try {
+      await sendMessage.mutateAsync({ content: newMessage });
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCreateDirectMessage = async (employeeId: string) => {
     try {
-      // For now, we'll create conversations using employee IDs directly
-      // This is a simplified approach since we don't have user_profiles properly set up yet
       console.log("Creating conversation for employee:", employeeId);
       
-      // We'll need to implement a way to map employees to user IDs
-      // For now, just close the new chat dialog
+      // Create a direct conversation with the selected employee
+      const conversation = await createConversation.mutateAsync({
+        participantUserIds: [employeeId], // This will need to be mapped to actual user IDs
+        type: "direct"
+      });
+      
+      // Select the new conversation
+      setSelectedConversation(conversation.id);
       setShowNewChat(false);
+      
+      toast({
+        title: "Success",
+        description: "Conversation created successfully",
+      });
     } catch (error) {
       console.error("Error creating conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create conversation. Make sure the employee has a user account.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -275,7 +299,7 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
                   <Button 
                     onClick={handleSendMessage} 
                     size="sm"
-                    disabled={!newMessage.trim()}
+                    disabled={!newMessage.trim() || sendMessage.isPending}
                   >
                     <Send className="h-4 w-4" />
                   </Button>
