@@ -77,6 +77,16 @@ export const useInventoryManagement = () => {
     }
   };
 
+  const getSummary = () => ({
+    totalItems: inventoryItems.length,
+    totalBags: inventoryItems.reduce((sum, item) => sum + item.totalBags, 0),
+    totalKilograms: inventoryItems.reduce((sum, item) => sum + item.totalKilograms, 0),
+    lowStockItems: inventoryItems.filter(item => item.totalBags < 10).length,
+    storageLocations: storageLocations.length,
+    totalCapacity: storageLocations.reduce((sum, loc) => sum + loc.capacity, 0),
+    currentOccupancy: storageLocations.reduce((sum, loc) => sum + loc.currentOccupancy, 0)
+  });
+
   useEffect(() => {
     fetchInventoryData();
   }, []);
@@ -85,6 +95,7 @@ export const useInventoryManagement = () => {
     inventoryItems,
     storageLocations,
     loading,
-    fetchInventoryData
+    fetchInventoryData,
+    summary: getSummary()
   };
 };

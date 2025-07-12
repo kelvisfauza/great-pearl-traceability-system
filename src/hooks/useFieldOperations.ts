@@ -25,11 +25,15 @@ export interface BuyingStation {
 export interface FieldCollection {
   id: string;
   farmerName: string;
+  farmer: string; // Add alias for backward compatibility
   location: string;
   bags: number;
   qualityGrade: string;
+  quality: string; // Add alias for backward compatibility
   agentName: string;
+  agent: string; // Add alias for backward compatibility
   collectionDate: string;
+  date: string; // Add alias for backward compatibility
   status: string;
   batchNumber: string;
 }
@@ -98,11 +102,15 @@ export const useFieldOperations = () => {
         const transformedCollections: FieldCollection[] = collectionsData.map(collection => ({
           id: collection.id,
           farmerName: collection.farmer_name,
+          farmer: collection.farmer_name, // Alias for backward compatibility
           location: collection.location,
           bags: collection.bags,
           qualityGrade: collection.quality_grade,
+          quality: collection.quality_grade, // Alias for backward compatibility  
           agentName: collection.agent_name,
+          agent: collection.agent_name, // Alias for backward compatibility
           collectionDate: collection.collection_date,
+          date: collection.collection_date, // Alias for backward compatibility
           status: collection.status,
           batchNumber: collection.batch_number || `FC${collection.id.slice(0, 8)}`
         }));
@@ -115,6 +123,75 @@ export const useFieldOperations = () => {
     }
   };
 
+  const addFieldAgent = async (agentData: Omit<FieldAgent, 'id' | 'collectionsCount' | 'lastReportDate'>) => {
+    try {
+      const { error } = await supabase
+        .from('field_agents')
+        .insert([{
+          name: agentData.name,
+          region: agentData.region,
+          phone: agentData.phone,
+          status: agentData.status
+        }]);
+
+      if (error) throw error;
+      await fetchFieldData();
+    } catch (error) {
+      console.error('Error adding field agent:', error);
+      throw error;
+    }
+  };
+
+  const addBuyingStation = async (stationData: Omit<BuyingStation, 'id' | 'currentOccupancy'>) => {
+    try {
+      const { error } = await supabase
+        .from('buying_stations')
+        .insert([{
+          name: stationData.name,
+          location: stationData.location,
+          capacity: stationData.capacity,
+          manager_name: stationData.managerName,
+          status: stationData.status
+        }]);
+
+      if (error) throw error;
+      await fetchFieldData();
+    } catch (error) {
+      console.error('Error adding buying station:', error);
+      throw error;
+    }
+  };
+
+  const addCollection = async (collectionData: Omit<FieldCollection, 'id' | 'batchNumber'>) => {
+    try {
+      const { error } = await supabase
+        .from('field_collections')
+        .insert([{
+          farmer_name: collectionData.farmerName,
+          location: collectionData.location,
+          bags: collectionData.bags,
+          quality_grade: collectionData.qualityGrade,
+          agent_name: collectionData.agentName,
+          collection_date: collectionData.collectionDate,
+          status: collectionData.status
+        }]);
+
+      if (error) throw error;
+      await fetchFieldData();
+    } catch (error) {
+      console.error('Error adding collection:', error);
+      throw error;
+    }
+  };
+
+  const getStats = () => ({
+    totalAgents: agents.length,
+    activeAgents: agents.filter(a => a.status === 'Active').length,
+    totalStations: stations.length,
+    totalCollections: collections.length,
+    totalBags: collections.reduce((sum, c) => sum + c.bags, 0)
+  });
+
   useEffect(() => {
     fetchFieldData();
   }, []);
@@ -124,6 +201,13 @@ export const useFieldOperations = () => {
     stations,
     collections,
     loading,
-    fetchFieldData
+    fetchFieldData,
+    // Legacy aliases for backward compatibility
+    fieldAgents: agents,
+    buyingStations: stations,
+    stats: getStats(),
+    addFieldAgent,
+    addBuyingStation,
+    addCollection
   };
 };

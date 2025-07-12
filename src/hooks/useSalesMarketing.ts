@@ -10,7 +10,9 @@ export interface Customer {
   phone: string;
   status: string;
   totalOrders: number;
+  orders: number; // Alias for backward compatibility
   totalValue: number;
+  value: number; // Alias for backward compatibility
 }
 
 export interface MarketingCampaign {
@@ -21,6 +23,7 @@ export interface MarketingCampaign {
   endDate: string;
   status: string;
   roiPercentage: number;
+  roi: number; // Alias for backward compatibility
 }
 
 export interface SalesContract {
@@ -60,7 +63,9 @@ export const useSalesMarketing = () => {
           phone: customer.phone || 'N/A',
           status: customer.status,
           totalOrders: customer.total_orders || 0,
-          totalValue: customer.total_value || 0
+          orders: customer.total_orders || 0, // Alias
+          totalValue: customer.total_value || 0,
+          value: customer.total_value || 0 // Alias
         }));
         setCustomers(transformedCustomers);
       }
@@ -81,7 +86,8 @@ export const useSalesMarketing = () => {
           startDate: campaign.start_date,
           endDate: campaign.end_date,
           status: campaign.status,
-          roiPercentage: campaign.roi_percentage || 0
+          roiPercentage: campaign.roi_percentage || 0,
+          roi: campaign.roi_percentage || 0 // Alias
         }));
         setCampaigns(transformedCampaigns);
       }
@@ -113,6 +119,90 @@ export const useSalesMarketing = () => {
     }
   };
 
+  const addCustomer = async (customerData: Omit<Customer, 'id' | 'totalOrders' | 'orders' | 'totalValue' | 'value'>) => {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .insert([{
+          name: customerData.name,
+          country: customerData.country,
+          email: customerData.email,
+          phone: customerData.phone,
+          status: customerData.status
+        }]);
+
+      if (error) throw error;
+      await fetchSalesMarketingData();
+    } catch (error) {
+      console.error('Error adding customer:', error);
+      throw error;
+    }
+  };
+
+  const addCampaign = async (campaignData: Omit<MarketingCampaign, 'id' | 'roiPercentage' | 'roi'>) => {
+    try {
+      const { error } = await supabase
+        .from('marketing_campaigns')
+        .insert([{
+          name: campaignData.name,
+          budget: campaignData.budget,
+          start_date: campaignData.startDate,
+          end_date: campaignData.endDate,
+          status: campaignData.status
+        }]);
+
+      if (error) throw error;
+      await fetchSalesMarketingData();
+    } catch (error) {
+      console.error('Error adding campaign:', error);
+      throw error;
+    }
+  };
+
+  const addContract = async (contractData: Omit<SalesContract, 'id' | 'contractDate'>) => {
+    try {
+      const { error } = await supabase
+        .from('sales_contracts')
+        .insert([{
+          customer_name: contractData.customerName,
+          quantity: contractData.quantity,
+          price: contractData.price,
+          delivery_date: contractData.deliveryDate,
+          status: contractData.status
+        }]);
+
+      if (error) throw error;
+      await fetchSalesMarketingData();
+    } catch (error) {
+      console.error('Error adding contract:', error);
+      throw error;
+    }
+  };
+
+  const updateContractStatus = async (contractId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('sales_contracts')
+        .update({ status })
+        .eq('id', contractId);
+
+      if (error) throw error;
+      await fetchSalesMarketingData();
+    } catch (error) {
+      console.error('Error updating contract status:', error);
+      throw error;
+    }
+  };
+
+  const getStats = () => ({
+    totalCustomers: customers.length,
+    activeCustomers: customers.filter(c => c.status === 'Active').length,
+    totalCampaigns: campaigns.length,
+    activeCampaigns: campaigns.filter(c => c.status === 'Active').length,
+    totalContracts: contracts.length,
+    totalValue: contracts.reduce((sum, c) => sum + c.price, 0)
+  });
+
   useEffect(() => {
     fetchSalesMarketingData();
   }, []);
@@ -122,6 +212,11 @@ export const useSalesMarketing = () => {
     campaigns,
     contracts,
     loading,
-    fetchSalesMarketingData
+    fetchSalesMarketingData,
+    addCustomer,
+    addCampaign,
+    addContract,
+    updateContractStatus,
+    getStats
   };
 };

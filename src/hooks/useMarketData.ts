@@ -81,6 +81,18 @@ export const useMarketData = () => {
     }
   };
 
+  // Add legacy properties for backward compatibility
+  const marketData = marketPrices;
+  const setMarketData = setMarketPrices;
+  const priceHistory = marketPrices;
+  
+  const convertCentsLbToUGXKg = (centsPerLb: number, exchangeRate: number) => {
+    // Convert cents per pound to UGX per kilogram
+    const dollarsPerLb = centsPerLb / 100;
+    const dollarsPerKg = dollarsPerLb * 2.20462; // 1 kg = 2.20462 lbs
+    return dollarsPerKg * exchangeRate;
+  };
+
   useEffect(() => {
     fetchMarketData();
   }, []);
@@ -89,6 +101,11 @@ export const useMarketData = () => {
     marketPrices,
     priceForecasts,
     loading,
-    fetchMarketData
+    fetchMarketData,
+    // Legacy properties for backward compatibility
+    marketData,
+    setMarketData,
+    priceHistory,
+    convertCentsLbToUGXKg
   };
 };

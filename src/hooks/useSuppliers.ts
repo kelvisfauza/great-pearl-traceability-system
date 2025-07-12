@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Supplier {
-  id: number;
+  id: string; // Changed from number to string to match UUID
   name: string;
   location: string;
   contact: string;
@@ -55,6 +55,29 @@ export const useSuppliers = () => {
     }
   };
 
+  const addSupplier = async (supplierData: Omit<Supplier, 'id'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .insert([{
+          name: supplierData.name,
+          origin: supplierData.location,
+          phone: supplierData.contact,
+          code: `SUP${Date.now()}`,
+          opening_balance: supplierData.averagePrice || 0
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      await fetchSuppliers(); // Refresh the list
+    } catch (error) {
+      console.error('Error adding supplier:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchSuppliers();
   }, []);
@@ -62,6 +85,7 @@ export const useSuppliers = () => {
   return {
     suppliers,
     loading,
-    fetchSuppliers
+    fetchSuppliers,
+    addSupplier
   };
 };
