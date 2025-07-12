@@ -48,6 +48,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!session?.user) return;
     
     try {
+      console.log('Fetching employee data for email:', session.user.email);
+      
       // Query the employees table directly using the user's email
       const { data, error } = await supabase
         .from('employees')
@@ -55,7 +57,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('email', session.user.email)
         .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching employee data:', error);
+        throw error;
+      }
+      
+      console.log('Employee data found:', data);
       
       if (data) {
         setEmployee({
@@ -68,6 +75,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: data.role,
           permissions: data.permissions
         });
+      } else {
+        console.log('No employee record found for email:', session.user.email);
       }
     } catch (error) {
       console.error('Error fetching employee data:', error);
@@ -78,6 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -95,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -108,17 +119,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log('Attempting to sign in with email:', email);
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
     if (error) {
+      console.error('Sign in error:', error);
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
+    } else {
+      console.log('Sign in successful');
     }
     
     return { error };
