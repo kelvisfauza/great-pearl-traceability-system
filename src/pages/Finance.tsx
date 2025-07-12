@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { useFinanceData } from "@/hooks/useFinanceData";
 
@@ -15,10 +14,12 @@ const Finance = () => {
     transactions,
     expenses,
     payments,
+    qualityAssessments,
     stats,
     loading,
     addTransaction,
-    addExpense
+    addExpense,
+    processPayment
   } = useFinanceData();
 
   const [expenseAmount, setExpenseAmount] = useState("");
@@ -69,6 +70,10 @@ const Finance = () => {
     });
     setReceiptAmount("");
     setReceiptDescription("");
+  };
+
+  const handleProcessPayment = (paymentId: string, method: 'Bank Transfer' | 'Cash') => {
+    processPayment(paymentId, method);
   };
 
   const formatCurrency = (amount: number) => {
@@ -138,8 +143,9 @@ const Finance = () => {
         </div>
 
         <Tabs defaultValue="payments" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="payments">Payment Processing</TabsTrigger>
+            <TabsTrigger value="quality">Quality Payments</TabsTrigger>
             <TabsTrigger value="daily">Daily Reports</TabsTrigger>
             <TabsTrigger value="cash">Cash Management</TabsTrigger>
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
@@ -150,22 +156,22 @@ const Finance = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Payment Processing</CardTitle>
-                <CardDescription>Process supplier payments and manage payment records</CardDescription>
+                <CardDescription>Process supplier payments from quality assessments</CardDescription>
               </CardHeader>
               <CardContent>
                 {payments.length === 0 ? (
                   <div className="text-center py-8">
                     <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No payments to process</p>
-                    <p className="text-sm text-gray-400 mt-2">Payment records will appear here when added</p>
+                    <p className="text-sm text-gray-400 mt-2">Quality assessed batches will appear here for payment</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Batch Number</TableHead>
                         <TableHead>Supplier</TableHead>
                         <TableHead>Amount</TableHead>
-                        <TableHead>Payment Method</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Action</TableHead>
@@ -174,27 +180,91 @@ const Finance = () => {
                     <TableBody>
                       {payments.map((payment) => (
                         <TableRow key={payment.id}>
-                          <TableCell className="font-medium">{payment.supplier}</TableCell>
+                          <TableCell className="font-medium">{payment.batchNumber}</TableCell>
+                          <TableCell>{payment.supplier}</TableCell>
                           <TableCell className="font-bold">{formatCurrency(payment.amount)}</TableCell>
-                          <TableCell>
-                            <Badge variant={payment.method === "Bank Transfer" ? "default" : "secondary"}>
-                              {payment.method}
-                            </Badge>
-                          </TableCell>
                           <TableCell>
                             <Badge variant={
                               payment.status === "Paid" ? "default" :
-                              payment.status === "Pending" ? "destructive" : "secondary"
+                              payment.status === "Processing" ? "secondary" : "destructive"
                             }>
                               {payment.status}
                             </Badge>
                           </TableCell>
                           <TableCell>{payment.date}</TableCell>
                           <TableCell>
-                            <Button size="sm" disabled={payment.status === "Paid"}>
-                              {payment.status === "Paid" ? "Processed" : "Process Payment"}
-                            </Button>
+                            {payment.status === "Paid" ? (
+                              <Badge variant="default" className="gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Processed
+                              </Badge>
+                            ) : (
+                              <div className="flex gap-2">
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleProcessPayment(payment.id, 'Bank Transfer')}
+                                >
+                                  Bank Transfer
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleProcessPayment(payment.id, 'Cash')}
+                                >
+                                  Cash
+                                </Button>
+                              </div>
+                            )}
                           </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="quality" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quality Assessment Payments</CardTitle>
+                <CardDescription>Track quality assessments and their payment status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {qualityAssessments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No quality assessments pending payment</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Batch Number</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Suggested Price</TableHead>
+                        <TableHead>Quality Status</TableHead>
+                        <TableHead>Assessed By</TableHead>
+                        <TableHead>Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {qualityAssessments.map((assessment) => (
+                        <TableRow key={assessment.id}>
+                          <TableCell className="font-medium">{assessment.batch_number}</TableCell>
+                          <TableCell>{assessment.coffee_record?.supplier_name || 'Unknown'}</TableCell>
+                          <TableCell className="font-bold">{formatCurrency(assessment.suggested_price)}</TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              assessment.status === "approved" ? "default" :
+                              assessment.status === "submitted_to_finance" ? "secondary" : "destructive"
+                            }>
+                              {assessment.status.replace('_', ' ').toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{assessment.assessed_by}</TableCell>
+                          <TableCell>{assessment.date_assessed}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

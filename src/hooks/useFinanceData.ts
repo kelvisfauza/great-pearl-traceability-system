@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Tables } from '@/integrations/supabase/types';
 
 export interface FinanceTransaction {
   id: string;
@@ -28,12 +29,19 @@ export interface PaymentRecord {
   status: 'Paid' | 'Pending' | 'Processing';
   date: string;
   method: 'Bank Transfer' | 'Cash';
+  qualityAssessmentId?: string;
+  batchNumber?: string;
+}
+
+export interface QualityAssessmentForPayment extends Tables<'quality_assessments'> {
+  coffee_record?: Tables<'coffee_records'>;
 }
 
 export const useFinanceData = () => {
   const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
   const [expenses, setExpenses] = useState<FinanceExpense[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [qualityAssessments, setQualityAssessments] = useState<QualityAssessmentForPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     monthlyRevenue: 0,
@@ -49,27 +57,55 @@ export const useFinanceData = () => {
 
   const fetchFinanceData = async () => {
     try {
-      // For now, we'll use sample data since we don't have specific finance tables
-      // In a real implementation, you would fetch from actual finance tables
-      setTransactions([]);
-      setExpenses([]);
-      setPayments([]);
+      setLoading(true);
       
-      // Calculate stats from salary payments and other data
+      // Fetch quality assessments that are ready for payment processing
+      const { data: qualityData, error: qualityError } = await supabase
+        .from('quality_assessments')
+        .select(`
+          *,
+          coffee_record:coffee_records(*)
+        `)
+        .in('status', ['assessed', 'submitted_to_finance', 'price_requested'])
+        .order('created_at', { ascending: false });
+
+      if (qualityError) throw qualityError;
+      setQualityAssessments(qualityData || []);
+
+      // Convert quality assessments to payment records
+      const qualityPayments: PaymentRecord[] = (qualityData || []).map(assessment => ({
+        id: assessment.id,
+        supplier: assessment.coffee_record?.supplier_name || 'Unknown Supplier',
+        amount: assessment.suggested_price,
+        status: assessment.status === 'submitted_to_finance' ? 'Processing' as const : 'Pending' as const,
+        date: assessment.date_assessed,
+        method: 'Bank Transfer' as const,
+        qualityAssessmentId: assessment.id,
+        batchNumber: assessment.batch_number
+      }));
+
+      // Fetch salary payments data
       const { data: salaryData } = await supabase
         .from('salary_payments')
         .select('*');
 
       if (salaryData) {
         const totalSalaryPayments = salaryData.reduce((sum, payment) => sum + Number(payment.total_pay), 0);
+        const pendingSalaryPayments = salaryData
+          .filter(p => p.status === 'Pending')
+          .reduce((sum, payment) => sum + Number(payment.total_pay), 0);
+
+        const totalQualityPayments = qualityPayments.reduce((sum, payment) => sum + payment.amount, 0);
+        
         setStats(prev => ({
           ...prev,
           operatingCosts: totalSalaryPayments,
-          pendingPayments: salaryData
-            .filter(p => p.status === 'Pending')
-            .reduce((sum, payment) => sum + Number(payment.total_pay), 0)
+          pendingPayments: pendingSalaryPayments + totalQualityPayments
         }));
       }
+
+      setPayments(qualityPayments);
+      
     } catch (error) {
       console.error('Error fetching finance data:', error);
       toast({
@@ -79,6 +115,54 @@ export const useFinanceData = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const processQualityPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash') => {
+    try {
+      // Update the quality assessment status
+      const { error } = await supabase
+        .from('quality_assessments')
+        .update({ 
+          status: 'approved',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', paymentId);
+
+      if (error) throw error;
+
+      // Update local state
+      setPayments(prev =>
+        prev.map(payment =>
+          payment.id === paymentId
+            ? { ...payment, status: 'Paid' as const, method }
+            : payment
+        )
+      );
+
+      // Update quality assessments state
+      setQualityAssessments(prev =>
+        prev.map(assessment =>
+          assessment.id === paymentId
+            ? { ...assessment, status: 'approved' }
+            : assessment
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: `Payment processed via ${method} and quality assessment approved`
+      });
+
+      // Refresh data to update stats
+      fetchFinanceData();
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process payment",
+        variant: "destructive"
+      });
     }
   };
 
@@ -127,20 +211,6 @@ export const useFinanceData = () => {
     });
   };
 
-  const processPayment = (paymentId: string, method: 'Bank Transfer' | 'Cash', amount?: number) => {
-    setPayments(prev =>
-      prev.map(payment =>
-        payment.id === paymentId
-          ? { ...payment, status: 'Paid' as const, method }
-          : payment
-      )
-    );
-    toast({
-      title: "Success",
-      description: `Payment processed via ${method}`
-    });
-  };
-
   useEffect(() => {
     fetchFinanceData();
   }, []);
@@ -149,11 +219,12 @@ export const useFinanceData = () => {
     transactions,
     expenses,
     payments,
+    qualityAssessments,
     stats,
     loading,
     addTransaction,
     addExpense,
-    processPayment,
+    processPayment: processQualityPayment,
     refetch: fetchFinanceData
   };
 };
