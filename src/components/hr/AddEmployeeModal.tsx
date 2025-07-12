@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 
 interface AddEmployeeModalProps {
   open: boolean;
@@ -22,14 +21,13 @@ const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeMo
     position: "",
     department: "",
     salary: "",
-    startDate: "",
-    employeeId: "",
+    join_date: "",
+    employee_id: "",
     address: "",
-    emergencyContact: "",
+    emergency_contact: "",
     role: "User",
     permissions: [] as string[]
   });
-  const { toast } = useToast();
 
   const departments = ["Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR"];
   const roles = ["Administrator", "Manager", "Supervisor", "User", "Guest"];
@@ -39,41 +37,27 @@ const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeMo
     "Human Resources", "Reports", "Settings", "Data Analytics", "Logistics"
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.email || !formData.department || !formData.position) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
       return;
     }
 
     const newEmployee = {
-      id: Date.now(),
       ...formData,
-      salary: `UGX ${parseInt(formData.salary).toLocaleString()}`,
+      salary: parseInt(formData.salary) || 0,
       status: "Active",
-      joinDate: new Date(formData.startDate).toLocaleDateString('en-US', { 
-        month: 'short', 
-        year: 'numeric' 
-      })
+      join_date: formData.join_date || new Date().toISOString()
     };
 
-    onEmployeeAdded(newEmployee);
-    toast({
-      title: "Success",
-      description: "Employee added successfully"
-    });
+    await onEmployeeAdded(newEmployee);
     
     setFormData({
       name: "", email: "", phone: "", position: "", department: "", salary: "",
-      startDate: "", employeeId: "", address: "", emergencyContact: "",
+      join_date: "", employee_id: "", address: "", emergency_contact: "",
       role: "User", permissions: []
     });
-    onOpenChange(false);
   };
 
   const handlePermissionChange = (permission: string, checked: boolean) => {
@@ -102,14 +86,15 @@ const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeMo
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="John Doe"
+                required
               />
             </div>
             <div>
-              <Label htmlFor="employeeId">Employee ID</Label>
+              <Label htmlFor="employee_id">Employee ID</Label>
               <Input
-                id="employeeId"
-                value={formData.employeeId}
-                onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value }))}
+                id="employee_id"
+                value={formData.employee_id}
+                onChange={(e) => setFormData(prev => ({ ...prev, employee_id: e.target.value }))}
                 placeholder="EMP001"
               />
             </div>
@@ -124,6 +109,7 @@ const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeMo
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="john@greatpearl.com"
+                required
               />
             </div>
             <div>
@@ -158,6 +144,7 @@ const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeMo
                 value={formData.position}
                 onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
                 placeholder="Manager"
+                required
               />
             </div>
           </div>
@@ -174,12 +161,12 @@ const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeMo
               />
             </div>
             <div>
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="join_date">Start Date</Label>
               <Input
-                id="startDate"
+                id="join_date"
                 type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                value={formData.join_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, join_date: e.target.value }))}
               />
             </div>
           </div>
@@ -196,11 +183,11 @@ const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeMo
           </div>
 
           <div>
-            <Label htmlFor="emergencyContact">Emergency Contact</Label>
+            <Label htmlFor="emergency_contact">Emergency Contact</Label>
             <Input
-              id="emergencyContact"
-              value={formData.emergencyContact}
-              onChange={(e) => setFormData(prev => ({ ...prev, emergencyContact: e.target.value }))}
+              id="emergency_contact"
+              value={formData.emergency_contact}
+              onChange={(e) => setFormData(prev => ({ ...prev, emergency_contact: e.target.value }))}
               placeholder="Contact person and phone number"
             />
           </div>
