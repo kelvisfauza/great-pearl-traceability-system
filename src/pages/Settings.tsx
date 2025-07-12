@@ -1,3 +1,4 @@
+
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,34 @@ const Settings = () => {
     });
   };
 
+  // Wrapper functions to match UserManagement expected signatures
+  const handleEmployeeAdded = async (employeeData: any) => {
+    try {
+      await addEmployee(employeeData);
+    } catch (error) {
+      // Error handling is already done in the hook
+      throw error;
+    }
+  };
+
+  const handleEmployeeUpdated = async (employeeData: any) => {
+    try {
+      await updateEmployee(employeeData.id, employeeData);
+    } catch (error) {
+      // Error handling is already done in the hook
+      throw error;
+    }
+  };
+
+  const handleEmployeeDeleted = async (id: string) => {
+    try {
+      await deleteEmployee(id);
+    } catch (error) {
+      // Error handling is already done in the hook
+      throw error;
+    }
+  };
+
   const renderGeneralSettings = () => (
     <div className="space-y-6">
       <Card>
@@ -150,9 +179,9 @@ const Settings = () => {
   const renderUserSettings = () => (
     <UserManagement
       employees={employees}
-      onEmployeeAdded={addEmployee}
-      onEmployeeUpdated={updateEmployee}
-      onEmployeeDeleted={deleteEmployee}
+      onEmployeeAdded={handleEmployeeAdded}
+      onEmployeeUpdated={handleEmployeeUpdated}
+      onEmployeeDeleted={handleEmployeeDeleted}
     />
   );
 
