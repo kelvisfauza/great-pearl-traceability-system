@@ -1,0 +1,327 @@
+
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { User, Briefcase, Settings, Clock } from "lucide-react";
+
+interface EmployeeDetailsModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  employee: any;
+  onEmployeeUpdated: (employee: any) => void;
+}
+
+const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated }: EmployeeDetailsModalProps) => {
+  const [formData, setFormData] = useState({
+    name: "", email: "", phone: "", position: "", department: "", salary: "",
+    address: "", emergencyContact: "", role: "", permissions: [] as string[],
+    status: "Active"
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const { toast } = useToast();
+
+  const departments = ["Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR"];
+  const roles = ["Administrator", "Manager", "Supervisor", "User", "Guest"];
+  const systemPermissions = [
+    "Procurement Access", "Quality Control", "Processing", "Inventory Management",
+    "Store Management", "Sales & Marketing", "Finance", "Field Operations",
+    "Human Resources", "Reports", "Settings", "Data Analytics", "Logistics"
+  ];
+
+  useEffect(() => {
+    if (employee) {
+      setFormData({
+        name: employee.name || "",
+        email: employee.email || "",
+        phone: employee.phone || "",
+        position: employee.position || "",
+        department: employee.department || "",
+        salary: employee.salary?.replace(/[^\d]/g, '') || "",
+        address: employee.address || "",
+        emergencyContact: employee.emergencyContact || "",
+        role: employee.role || "User",
+        permissions: employee.permissions || [],
+        status: employee.status || "Active"
+      });
+    }
+  }, [employee]);
+
+  const handleSave = () => {
+    const updatedEmployee = {
+      ...employee,
+      ...formData,
+      salary: `UGX ${parseInt(formData.salary).toLocaleString()}`
+    };
+
+    onEmployeeUpdated(updatedEmployee);
+    setIsEditing(false);
+    toast({
+      title: "Success",
+      description: "Employee details updated successfully"
+    });
+  };
+
+  const handlePermissionChange = (permission: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      permissions: checked 
+        ? [...prev.permissions, permission]
+        : prev.permissions.filter(p => p !== permission)
+    }));
+  };
+
+  if (!employee) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>Employee Details</DialogTitle>
+              <DialogDescription>View and manage employee information</DialogDescription>
+            </div>
+            <div className="flex space-x-2">
+              {isEditing ? (
+                <>
+                  <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                  <Button onClick={handleSave}>Save Changes</Button>
+                </>
+              ) : (
+                <Button onClick={() => setIsEditing(true)}>Edit</Button>
+              )}
+            </div>
+          </div>
+        </DialogHeader>
+        
+        <Tabs defaultValue="personal" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="personal">
+              <User className="h-4 w-4 mr-2" />
+              Personal
+            </TabsTrigger>
+            <TabsTrigger value="employment">
+              <Briefcase className="h-4 w-4 mr-2" />
+              Employment
+            </TabsTrigger>
+            <TabsTrigger value="permissions">
+              <Settings className="h-4 w-4 mr-2" />
+              Permissions
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <Clock className="h-4 w-4 mr-2" />
+              History
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="personal" className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Full Name</Label>
+                {isEditing ? (
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                ) : (
+                  <p className="p-2 bg-gray-50 rounded">{employee.name}</p>
+                )}
+              </div>
+              <div>
+                <Label>Employee ID</Label>
+                <p className="p-2 bg-gray-50 rounded">{employee.employeeId || "Not Set"}</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Email</Label>
+                {isEditing ? (
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  />
+                ) : (
+                  <p className="p-2 bg-gray-50 rounded">{employee.email || "Not provided"}</p>
+                )}
+              </div>
+              <div>
+                <Label>Phone</Label>
+                {isEditing ? (
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  />
+                ) : (
+                  <p className="p-2 bg-gray-50 rounded">{employee.phone || "Not provided"}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label>Address</Label>
+              {isEditing ? (
+                <Textarea
+                  value={formData.address}
+                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                  rows={2}
+                />
+              ) : (
+                <p className="p-2 bg-gray-50 rounded min-h-[60px]">{employee.address || "Not provided"}</p>
+              )}
+            </div>
+
+            <div>
+              <Label>Emergency Contact</Label>
+              {isEditing ? (
+                <Input
+                  value={formData.emergencyContact}
+                  onChange={(e) => setFormData(prev => ({ ...prev, emergencyContact: e.target.value }))}
+                />
+              ) : (
+                <p className="p-2 bg-gray-50 rounded">{employee.emergencyContact || "Not provided"}</p>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="employment" className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Department</Label>
+                {isEditing ? (
+                  <Select value={formData.department} onValueChange={(value) => setFormData(prev => ({ ...prev, department: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map(dept => (
+                        <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="p-2 bg-gray-50 rounded">{employee.department}</p>
+                )}
+              </div>
+              <div>
+                <Label>Position</Label>
+                {isEditing ? (
+                  <Input
+                    value={formData.position}
+                    onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
+                  />
+                ) : (
+                  <p className="p-2 bg-gray-50 rounded">{employee.position}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Monthly Salary (UGX)</Label>
+                {isEditing ? (
+                  <Input
+                    type="number"
+                    value={formData.salary}
+                    onChange={(e) => setFormData(prev => ({ ...prev, salary: e.target.value }))}
+                  />
+                ) : (
+                  <p className="p-2 bg-gray-50 rounded">{employee.salary}</p>
+                )}
+              </div>
+              <div>
+                <Label>Status</Label>
+                {isEditing ? (
+                  <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="On Leave">On Leave</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                      <SelectItem value="Terminated">Terminated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Badge variant={employee.status === "Active" ? "default" : "secondary"}>
+                    {employee.status}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label>Join Date</Label>
+              <p className="p-2 bg-gray-50 rounded">{employee.joinDate}</p>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="permissions" className="space-y-4">
+            <div>
+              <Label>System Role</Label>
+              {isEditing ? (
+                <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map(role => (
+                      <SelectItem key={role} value={role}>{role}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Badge variant="outline">{employee.role || "User"}</Badge>
+              )}
+            </div>
+
+            <div>
+              <Label>System Permissions</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2 max-h-32 overflow-y-auto border rounded p-2">
+                {systemPermissions.map(permission => (
+                  <label key={permission} className="flex items-center space-x-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={formData.permissions.includes(permission)}
+                      onChange={(e) => isEditing && handlePermissionChange(permission, e.target.checked)}
+                      disabled={!isEditing}
+                    />
+                    <span>{permission}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="history" className="space-y-4">
+            <div className="space-y-3">
+              <div className="p-3 border rounded">
+                <p className="font-medium">Employee Added</p>
+                <p className="text-sm text-gray-500">Joined on {employee.joinDate}</p>
+              </div>
+              <div className="p-3 border rounded">
+                <p className="font-medium">Last Login</p>
+                <p className="text-sm text-gray-500">2 hours ago</p>
+              </div>
+              <div className="p-3 border rounded">
+                <p className="font-medium">Performance Reviews</p>
+                <p className="text-sm text-gray-500">Last review: October 2024 - Excellent</p>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default EmployeeDetailsModal;

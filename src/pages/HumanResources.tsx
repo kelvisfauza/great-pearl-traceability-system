@@ -1,28 +1,36 @@
-
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Users, UserCheck, DollarSign, Calendar, Plus, Search, Eye } from "lucide-react";
+import { Users, UserCheck, DollarSign, Calendar, Plus, Search, Eye, CreditCard, UserCog, FileText, TrendingUp } from "lucide-react";
 import { useState } from "react";
+import AddEmployeeModal from "@/components/hr/AddEmployeeModal";
+import SalaryPaymentModal from "@/components/hr/SalaryPaymentModal";
+import EmployeeDetailsModal from "@/components/hr/EmployeeDetailsModal";
+import { useToast } from "@/hooks/use-toast";
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [showSalaryPayment, setShowSalaryPayment] = useState(false);
+  const [showEmployeeDetails, setShowEmployeeDetails] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const { toast } = useToast();
 
-  const employees = [
-    { id: 1, name: "John Mbale", position: "Operations Manager", department: "Operations", salary: "UGX 3,500,000", status: "Active", joinDate: "Jan 2020" },
-    { id: 2, name: "Sarah Nakato", position: "Quality Control Supervisor", department: "Quality", salary: "UGX 2,800,000", status: "Active", joinDate: "Mar 2021" },
-    { id: 3, name: "Peter Asiimwe", position: "Finance Officer", department: "Finance", salary: "UGX 2,500,000", status: "Active", joinDate: "Aug 2019" },
-    { id: 4, name: "Mary Nalubega", position: "HR Coordinator", department: "HR", salary: "UGX 2,200,000", status: "On Leave", joinDate: "Feb 2022" },
-    { id: 5, name: "David Tumwine", position: "Production Supervisor", department: "Production", salary: "UGX 2,600,000", status: "Active", joinDate: "Nov 2020" },
-  ];
+  const [employees, setEmployees] = useState([
+    { id: 1, name: "John Mbale", position: "Operations Manager", department: "Operations", salary: "UGX 3,500,000", status: "Active", joinDate: "Jan 2020", email: "john@greatpearl.com", role: "Manager", permissions: ["Operations", "Reports"] },
+    { id: 2, name: "Sarah Nakato", position: "Quality Control Supervisor", department: "Quality Control", salary: "UGX 2,800,000", status: "Active", joinDate: "Mar 2021", email: "sarah@greatpearl.com", role: "Supervisor", permissions: ["Quality Control"] },
+    { id: 3, name: "Peter Asiimwe", position: "Finance Officer", department: "Finance", salary: "UGX 2,500,000", status: "Active", joinDate: "Aug 2019", email: "peter@greatpearl.com", role: "User", permissions: ["Finance"] },
+    { id: 4, name: "Mary Nalubega", position: "HR Coordinator", department: "HR", salary: "UGX 2,200,000", status: "On Leave", joinDate: "Feb 2022", email: "mary@greatpearl.com", role: "User", permissions: ["Human Resources"] },
+    { id: 5, name: "David Tumwine", position: "Production Supervisor", department: "Production", salary: "UGX 2,600,000", status: "Active", joinDate: "Nov 2020", email: "david@greatpearl.com", role: "Supervisor", permissions: ["Production"] },
+  ]);
 
-  const payrollData = [
-    { month: "December 2024", totalPay: "UGX 45,600,000", employees: 28, bonuses: "UGX 8,200,000", status: "Processed" },
-    { month: "November 2024", totalPay: "UGX 43,200,000", employees: 27, bonuses: "UGX 5,100,000", status: "Completed" },
-    { month: "October 2024", totalPay: "UGX 44,800,000", employees: 28, bonuses: "UGX 6,700,000", status: "Completed" },
-  ];
+  const [payrollHistory, setPayrollHistory] = useState([
+    { id: 1, month: "December 2024", totalPay: "UGX 45,600,000", employees: 28, bonuses: "UGX 8,200,000", status: "Processed" },
+    { id: 2, month: "November 2024", totalPay: "UGX 43,200,000", employees: 27, bonuses: "UGX 5,100,000", status: "Completed" },
+    { id: 3, month: "October 2024", totalPay: "UGX 44,800,000", employees: 28, bonuses: "UGX 6,700,000", status: "Completed" },
+  ]);
 
   const departments = [
     { name: "Operations", employees: 8, avgSalary: "UGX 2,450,000", budget: "UGX 19,600,000" },
@@ -43,6 +51,32 @@ const HumanResources = () => {
     employee.department.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleAddEmployee = (newEmployee: any) => {
+    setEmployees(prev => [...prev, newEmployee]);
+  };
+
+  const handleEmployeeUpdate = (updatedEmployee: any) => {
+    setEmployees(prev => 
+      prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
+    );
+  };
+
+  const handlePaymentProcessed = (payment: any) => {
+    setPayrollHistory(prev => [payment, ...prev]);
+  };
+
+  const handleViewEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
+    setShowEmployeeDetails(true);
+  };
+
+  const generatePayslips = () => {
+    toast({
+      title: "Success",
+      description: "Payslips generated and sent to employees"
+    });
+  };
+
   return (
     <Layout 
       title="Human Resources" 
@@ -56,7 +90,7 @@ const HumanResources = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Employees</p>
-                  <p className="text-2xl font-bold">29</p>
+                  <p className="text-2xl font-bold">{employees.length}</p>
                   <p className="text-xs text-green-600">2 new hires this month</p>
                 </div>
                 <Users className="h-8 w-8 text-green-600" />
@@ -68,7 +102,7 @@ const HumanResources = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Present Today</p>
-                  <p className="text-2xl font-bold">26</p>
+                  <p className="text-2xl font-bold">{employees.filter(e => e.status === "Active").length}</p>
                   <p className="text-xs text-blue-600">89.7% attendance</p>
                 </div>
                 <UserCheck className="h-8 w-8 text-blue-600" />
@@ -101,6 +135,34 @@ const HumanResources = () => {
           </Card>
         </div>
 
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Common HR tasks and operations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Button onClick={() => setShowAddEmployee(true)} className="h-16 flex-col">
+                <UserCog className="h-6 w-6 mb-2" />
+                Add Employee
+              </Button>
+              <Button onClick={() => setShowSalaryPayment(true)} variant="outline" className="h-16 flex-col">
+                <CreditCard className="h-6 w-6 mb-2" />
+                Process Payroll
+              </Button>
+              <Button onClick={generatePayslips} variant="outline" className="h-16 flex-col">
+                <FileText className="h-6 w-6 mb-2" />
+                Generate Payslips
+              </Button>
+              <Button variant="outline" className="h-16 flex-col">
+                <TrendingUp className="h-6 w-6 mb-2" />
+                HR Analytics
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Employee Management */}
           <Card>
@@ -110,10 +172,6 @@ const HumanResources = () => {
                   <CardTitle>Employee Directory</CardTitle>
                   <CardDescription>Manage staff information and records</CardDescription>
                 </div>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Employee
-                </Button>
               </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -138,7 +196,7 @@ const HumanResources = () => {
                       <Badge variant={employee.status === "Active" ? "default" : "secondary"}>
                         {employee.status}
                       </Badge>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleViewEmployee(employee)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                     </div>
@@ -186,8 +244,8 @@ const HumanResources = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {payrollData.map((payroll, index) => (
-                  <div key={index} className="p-4 border rounded-lg">
+                {payrollHistory.map((payroll) => (
+                  <div key={payroll.id} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-medium">{payroll.month}</h4>
                       <Badge variant={payroll.status === "Processed" ? "default" : "outline"}>
@@ -232,6 +290,27 @@ const HumanResources = () => {
           </Card>
         </div>
       </div>
+
+      {/* Modals */}
+      <AddEmployeeModal
+        open={showAddEmployee}
+        onOpenChange={setShowAddEmployee}
+        onEmployeeAdded={handleAddEmployee}
+      />
+      
+      <SalaryPaymentModal
+        open={showSalaryPayment}
+        onOpenChange={setShowSalaryPayment}
+        employees={employees.filter(e => e.status === "Active")}
+        onPaymentProcessed={handlePaymentProcessed}
+      />
+      
+      <EmployeeDetailsModal
+        open={showEmployeeDetails}
+        onOpenChange={setShowEmployeeDetails}
+        employee={selectedEmployee}
+        onEmployeeUpdated={handleEmployeeUpdate}
+      />
     </Layout>
   );
 };
