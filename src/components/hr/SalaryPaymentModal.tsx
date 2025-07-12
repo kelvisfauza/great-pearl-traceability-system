@@ -38,10 +38,9 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
 
   const calculateTotalSalary = () => {
     return selectedEmployees.reduce((total, empId) => {
-      const employee = employees.find(e => e.id === parseInt(empId));
+      const employee = employees.find(e => e.id === empId);
       if (employee) {
-        const salary = parseInt(employee.salary.replace(/[^\d]/g, ''));
-        return total + salary;
+        return total + employee.salary;
       }
       return total;
     }, 0);
@@ -65,19 +64,18 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
     const totalPayment = totalBaseSalary + bonuses - deductions;
 
     const payment = {
-      id: Date.now(),
       month: paymentData.month,
-      employees: selectedEmployees.length,
-      totalPay: `UGX ${totalPayment.toLocaleString()}`,
-      bonuses: `UGX ${bonuses.toLocaleString()}`,
-      deductions: `UGX ${deductions.toLocaleString()}`,
+      employee_count: selectedEmployees.length,
+      total_pay: totalPayment,
+      bonuses: bonuses,
+      deductions: deductions,
       status: "Processed",
-      processedBy: "John Mbale",
-      processedDate: new Date().toLocaleDateString(),
-      paymentMethod: paymentData.paymentMethod,
+      processed_by: "System Admin",
+      processed_date: new Date().toISOString(),
+      payment_method: paymentData.paymentMethod,
       notes: paymentData.notes,
-      employeeDetails: selectedEmployees.map(empId => {
-        const employee = employees.find(e => e.id === parseInt(empId));
+      employee_details: selectedEmployees.map(empId => {
+        const employee = employees.find(e => e.id === empId);
         return {
           id: employee?.id,
           name: employee?.name,
@@ -88,17 +86,12 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
     };
 
     onPaymentProcessed(payment);
-    toast({
-      title: "Success",
-      description: `Salary payment processed for ${selectedEmployees.length} employees`
-    });
     
     setSelectedEmployees([]);
     setPaymentData({
       month: new Date().toISOString().slice(0, 7),
       bonuses: "", deductions: "", notes: "", paymentMethod: "Bank Transfer"
     });
-    onOpenChange(false);
   };
 
   return (
@@ -146,8 +139,8 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
                       <input
                         type="checkbox"
                         id={`emp-${employee.id}`}
-                        checked={selectedEmployees.includes(employee.id.toString())}
-                        onChange={() => handleEmployeeToggle(employee.id.toString())}
+                        checked={selectedEmployees.includes(employee.id)}
+                        onChange={() => handleEmployeeToggle(employee.id)}
                       />
                       <label htmlFor={`emp-${employee.id}`} className="flex items-center space-x-3 cursor-pointer">
                         <div>
@@ -157,7 +150,7 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentProcessed 
                       </label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Badge variant="outline">{employee.salary}</Badge>
+                      <Badge variant="outline">UGX {employee.salary.toLocaleString()}</Badge>
                       <Badge variant={employee.status === "Active" ? "default" : "secondary"}>
                         {employee.status}
                       </Badge>

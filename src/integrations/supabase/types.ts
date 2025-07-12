@@ -14,7 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      employees: {
+        Row: {
+          address: string | null
+          created_at: string
+          department: string
+          email: string
+          emergency_contact: string | null
+          employee_id: string | null
+          id: string
+          join_date: string
+          name: string
+          permissions: string[]
+          phone: string | null
+          position: string
+          role: string
+          salary: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          department: string
+          email: string
+          emergency_contact?: string | null
+          employee_id?: string | null
+          id?: string
+          join_date?: string
+          name: string
+          permissions?: string[]
+          phone?: string | null
+          position: string
+          role?: string
+          salary?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          department?: string
+          email?: string
+          emergency_contact?: string | null
+          employee_id?: string | null
+          id?: string
+          join_date?: string
+          name?: string
+          permissions?: string[]
+          phone?: string | null
+          position?: string
+          role?: string
+          salary?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      salary_payments: {
+        Row: {
+          bonuses: number
+          created_at: string
+          deductions: number
+          employee_count: number
+          employee_details: Json
+          id: string
+          month: string
+          notes: string | null
+          payment_method: string
+          processed_by: string
+          processed_date: string
+          status: string
+          total_pay: number
+        }
+        Insert: {
+          bonuses?: number
+          created_at?: string
+          deductions?: number
+          employee_count?: number
+          employee_details?: Json
+          id?: string
+          month: string
+          notes?: string | null
+          payment_method?: string
+          processed_by: string
+          processed_date?: string
+          status?: string
+          total_pay?: number
+        }
+        Update: {
+          bonuses?: number
+          created_at?: string
+          deductions?: number
+          employee_count?: number
+          employee_details?: Json
+          id?: string
+          month?: string
+          notes?: string | null
+          payment_method?: string
+          processed_by?: string
+          processed_date?: string
+          status?: string
+          total_pay?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

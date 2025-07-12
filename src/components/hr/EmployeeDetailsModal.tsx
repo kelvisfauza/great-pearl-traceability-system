@@ -21,7 +21,7 @@ interface EmployeeDetailsModalProps {
 const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated }: EmployeeDetailsModalProps) => {
   const [formData, setFormData] = useState({
     name: "", email: "", phone: "", position: "", department: "", salary: "",
-    address: "", emergencyContact: "", role: "", permissions: [] as string[],
+    address: "", emergency_contact: "", role: "", permissions: [] as string[],
     status: "Active"
   });
   const [isEditing, setIsEditing] = useState(false);
@@ -43,9 +43,9 @@ const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated 
         phone: employee.phone || "",
         position: employee.position || "",
         department: employee.department || "",
-        salary: employee.salary?.replace(/[^\d]/g, '') || "",
+        salary: employee.salary?.toString() || "",
         address: employee.address || "",
-        emergencyContact: employee.emergencyContact || "",
+        emergency_contact: employee.emergency_contact || "",
         role: employee.role || "User",
         permissions: employee.permissions || [],
         status: employee.status || "Active"
@@ -57,7 +57,7 @@ const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated 
     const updatedEmployee = {
       ...employee,
       ...formData,
-      salary: `UGX ${parseInt(formData.salary).toLocaleString()}`
+      salary: parseInt(formData.salary) || 0
     };
 
     onEmployeeUpdated(updatedEmployee);
@@ -136,7 +136,7 @@ const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated 
               </div>
               <div>
                 <Label>Employee ID</Label>
-                <p className="p-2 bg-gray-50 rounded">{employee.employeeId || "Not Set"}</p>
+                <p className="p-2 bg-gray-50 rounded">{employee.employee_id || "Not Set"}</p>
               </div>
             </div>
             
@@ -183,11 +183,11 @@ const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated 
               <Label>Emergency Contact</Label>
               {isEditing ? (
                 <Input
-                  value={formData.emergencyContact}
-                  onChange={(e) => setFormData(prev => ({ ...prev, emergencyContact: e.target.value }))}
+                  value={formData.emergency_contact}
+                  onChange={(e) => setFormData(prev => ({ ...prev, emergency_contact: e.target.value }))}
                 />
               ) : (
-                <p className="p-2 bg-gray-50 rounded">{employee.emergencyContact || "Not provided"}</p>
+                <p className="p-2 bg-gray-50 rounded">{employee.emergency_contact || "Not provided"}</p>
               )}
             </div>
           </TabsContent>
@@ -234,7 +234,7 @@ const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated 
                     onChange={(e) => setFormData(prev => ({ ...prev, salary: e.target.value }))}
                   />
                 ) : (
-                  <p className="p-2 bg-gray-50 rounded">{employee.salary}</p>
+                  <p className="p-2 bg-gray-50 rounded">UGX {employee.salary?.toLocaleString()}</p>
                 )}
               </div>
               <div>
@@ -261,7 +261,7 @@ const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated 
 
             <div>
               <Label>Join Date</Label>
-              <p className="p-2 bg-gray-50 rounded">{employee.joinDate}</p>
+              <p className="p-2 bg-gray-50 rounded">{new Date(employee.join_date).toLocaleDateString()}</p>
             </div>
           </TabsContent>
           
@@ -306,15 +306,15 @@ const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated 
             <div className="space-y-3">
               <div className="p-3 border rounded">
                 <p className="font-medium">Employee Added</p>
-                <p className="text-sm text-gray-500">Joined on {employee.joinDate}</p>
+                <p className="text-sm text-gray-500">Joined on {new Date(employee.join_date).toLocaleDateString()}</p>
               </div>
               <div className="p-3 border rounded">
-                <p className="font-medium">Last Login</p>
-                <p className="text-sm text-gray-500">2 hours ago</p>
+                <p className="font-medium">Last Updated</p>
+                <p className="text-sm text-gray-500">{new Date(employee.updated_at).toLocaleDateString()}</p>
               </div>
               <div className="p-3 border rounded">
                 <p className="font-medium">Performance Reviews</p>
-                <p className="text-sm text-gray-500">Last review: October 2024 - Excellent</p>
+                <p className="text-sm text-gray-500">No reviews recorded yet</p>
               </div>
             </div>
           </TabsContent>
