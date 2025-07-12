@@ -48,7 +48,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!session?.user) return;
     
     try {
-      const { data, error } = await supabase.rpc('get_current_employee');
+      const { data, error } = await supabase.rpc('get_current_employee') as {
+        data: Employee[] | null;
+        error: any;
+      };
+      
       if (error) throw error;
       
       if (data && data.length > 0) {
