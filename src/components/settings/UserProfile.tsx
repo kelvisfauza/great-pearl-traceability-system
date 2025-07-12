@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,7 +130,7 @@ const UserProfile = () => {
   };
 
   // Update form data when employee data changes
-  useState(() => {
+  useEffect(() => {
     if (employee) {
       setFormData({
         name: employee.name || '',
