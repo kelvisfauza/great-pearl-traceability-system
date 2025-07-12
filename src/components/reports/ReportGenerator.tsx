@@ -5,20 +5,21 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Calendar, Filter, Download } from 'lucide-react';
+import { useGenerateReport } from '@/hooks/useReports';
 
 interface ReportType {
   id: string;
   name: string;
   description: string;
   category: string;
-  lastGenerated: string;
   frequency: string;
   format: string[];
 }
 
 const ReportGenerator = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedFormat, setSelectedFormat] = useState<string>('pdf');
+  const [selectedFormat, setSelectedFormat] = useState<string>('PDF');
+  const generateReportMutation = useGenerateReport();
 
   const reportTypes: ReportType[] = [
     { 
@@ -26,7 +27,6 @@ const ReportGenerator = () => {
       name: 'Production Report', 
       description: 'Daily production volumes and efficiency metrics',
       category: 'Operations',
-      lastGenerated: '2 hours ago',
       frequency: 'Daily',
       format: ['PDF', 'Excel']
     },
@@ -35,7 +35,6 @@ const ReportGenerator = () => {
       name: 'Quality Analysis', 
       description: 'Coffee quality scores and defect rates',
       category: 'Quality',
-      lastGenerated: '1 day ago',
       frequency: 'Weekly',
       format: ['PDF', 'Excel']
     },
@@ -44,7 +43,6 @@ const ReportGenerator = () => {
       name: 'Financial Summary', 
       description: 'Revenue, expenses, and profit analysis',
       category: 'Finance',
-      lastGenerated: '3 hours ago',
       frequency: 'Monthly',
       format: ['PDF', 'Excel', 'CSV']
     },
@@ -53,7 +51,6 @@ const ReportGenerator = () => {
       name: 'Supplier Performance', 
       description: 'Supplier delivery times and quality metrics',
       category: 'Procurement',
-      lastGenerated: '5 hours ago',
       frequency: 'Weekly',
       format: ['PDF', 'Excel']
     },
@@ -62,7 +59,6 @@ const ReportGenerator = () => {
       name: 'Inventory Status', 
       description: 'Stock levels and turnover analysis',
       category: 'Inventory',
-      lastGenerated: '1 hour ago',
       frequency: 'Daily',
       format: ['PDF', 'Excel', 'CSV']
     },
@@ -71,7 +67,6 @@ const ReportGenerator = () => {
       name: 'Sales Performance', 
       description: 'Sales trends and customer analysis',
       category: 'Sales',
-      lastGenerated: '4 hours ago',
       frequency: 'Weekly',
       format: ['PDF', 'Excel']
     }
@@ -83,9 +78,13 @@ const ReportGenerator = () => {
     ? reportTypes 
     : reportTypes.filter(report => report.category === selectedCategory);
 
-  const handleGenerateReport = (reportId: string, format: string) => {
-    console.log(`Generating report ${reportId} in ${format} format`);
-    // Here you would typically call an API to generate the report
+  const handleGenerateReport = (reportType: ReportType) => {
+    generateReportMutation.mutate({
+      name: `${reportType.name} - ${new Date().toLocaleDateString()}`,
+      type: reportType.name,
+      category: reportType.category,
+      format: selectedFormat
+    });
   };
 
   return (
@@ -117,9 +116,9 @@ const ReportGenerator = () => {
                 <SelectValue placeholder="Format" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pdf">PDF</SelectItem>
-                <SelectItem value="excel">Excel</SelectItem>
-                <SelectItem value="csv">CSV</SelectItem>
+                <SelectItem value="PDF">PDF</SelectItem>
+                <SelectItem value="Excel">Excel</SelectItem>
+                <SelectItem value="CSV">CSV</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -142,9 +141,6 @@ const ReportGenerator = () => {
                       <span className="text-xs text-muted-foreground">
                         Frequency: {report.frequency}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        Last: {report.lastGenerated}
-                      </span>
                       <div className="flex gap-1">
                         {report.format.map((fmt) => (
                           <Badge key={fmt} variant="outline" className="text-xs">
@@ -158,11 +154,12 @@ const ReportGenerator = () => {
               </div>
               <Button 
                 size="sm" 
-                onClick={() => handleGenerateReport(report.id, selectedFormat)}
+                onClick={() => handleGenerateReport(report)}
                 className="ml-4"
+                disabled={generateReportMutation.isPending}
               >
                 <Download className="h-4 w-4 mr-2" />
-                Generate
+                {generateReportMutation.isPending ? 'Generating...' : 'Generate'}
               </Button>
             </div>
           ))}

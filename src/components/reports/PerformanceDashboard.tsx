@@ -6,20 +6,11 @@ import { Progress } from '@/components/ui/progress';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, TrendingDown, Target, Award } from 'lucide-react';
+import { usePerformanceData } from '@/hooks/usePerformanceData';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const PerformanceDashboard = () => {
-  const performanceData = [
-    { category: "Production", value: 2847, target: 3000, percentage: 94.9, trend: "up", change: "+5.2%" },
-    { category: "Quality", value: 94.2, target: 95, percentage: 99.2, trend: "up", change: "+1.8%" },
-    { category: "Sales", value: 847, target: 900, percentage: 94.1, trend: "up", change: "+8.3%" },
-    { category: "Efficiency", value: 87.3, target: 90, percentage: 97.0, trend: "down", change: "-2.1%" },
-  ];
-
-  const monthlyTrends = [
-    { month: 'Jan', production: 2650, quality: 92.1, sales: 780, efficiency: 89.5 },
-    { month: 'Feb', production: 2720, quality: 93.2, sales: 820, efficiency: 88.7 },
-    { month: 'Mar', production: 2800, quality: 94.2, sales: 847, efficiency: 87.3 },
-  ];
+  const { data: performanceData = [], isLoading, error } = usePerformanceData();
 
   const chartConfig = {
     production: { label: "Production", color: "hsl(var(--chart-1))" },
@@ -28,12 +19,47 @@ const PerformanceDashboard = () => {
     efficiency: { label: "Efficiency", color: "hsl(var(--chart-4))" },
   };
 
+  // Mock monthly trends data (you can extend this to be database-driven)
+  const monthlyTrends = [
+    { month: 'Jan', production: 2650, quality: 92.1, sales: 780, efficiency: 89.5 },
+    { month: 'Feb', production: 2720, quality: 93.2, sales: 820, efficiency: 88.7 },
+    { month: 'Mar', production: 2800, quality: 94.2, sales: 847, efficiency: 87.3 },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, index) => (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <Skeleton className="h-4 w-20 mb-4" />
+                <Skeleton className="h-8 w-24 mb-2" />
+                <Skeleton className="h-4 w-32 mb-2" />
+                <Skeleton className="h-2 w-full mb-2" />
+                <Skeleton className="h-4 w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-8 text-muted-foreground">
+        <p>Failed to load performance data. Please try again.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {performanceData.map((item, index) => (
-          <Card key={index}>
+        {performanceData.map((item) => (
+          <Card key={item.id}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-medium text-sm">{item.category}</h3>
@@ -45,24 +71,24 @@ const PerformanceDashboard = () => {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold">{item.value.toLocaleString()}</span>
+                  <span className="text-2xl font-bold">{Number(item.value).toLocaleString()}</span>
                   <span className={`text-sm ${item.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                    {item.change}
+                    {item.change_percentage || 'N/A'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Target className="h-3 w-3" />
-                  <span>Target: {item.target.toLocaleString()}</span>
+                  <span>Target: {Number(item.target).toLocaleString()}</span>
                 </div>
-                <Progress value={item.percentage} className="h-2" />
+                <Progress value={Number(item.percentage)} className="h-2" />
                 <div className="flex justify-between text-xs">
-                  <span>{item.percentage.toFixed(1)}% of target</span>
+                  <span>{Number(item.percentage).toFixed(1)}% of target</span>
                   <Badge variant={
-                    item.percentage >= 95 ? "default" :
-                    item.percentage >= 80 ? "secondary" : "destructive"
+                    Number(item.percentage) >= 95 ? "default" :
+                    Number(item.percentage) >= 80 ? "secondary" : "destructive"
                   }>
-                    {item.percentage >= 95 ? "Excellent" :
-                     item.percentage >= 80 ? "Good" : "Attention"}
+                    {Number(item.percentage) >= 95 ? "Excellent" :
+                     Number(item.percentage) >= 80 ? "Good" : "Attention"}
                   </Badge>
                 </div>
               </div>
@@ -82,7 +108,10 @@ const PerformanceDashboard = () => {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig}>
-              <BarChart data={performanceData} height={300}>
+              <BarChart data={performanceData.map(item => ({ 
+                category: item.category, 
+                percentage: Number(item.percentage) 
+              }))} height={300}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="category" />
                 <YAxis />

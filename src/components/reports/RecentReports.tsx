@@ -6,85 +6,18 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, Download, Search, Eye, Trash2, RefreshCw } from 'lucide-react';
-
-interface Report {
-  id: string;
-  name: string;
-  type: string;
-  date: string;
-  size: string;
-  status: 'Ready' | 'Processing' | 'Failed';
-  downloads: number;
-  format: string;
-}
+import { useReports, useDeleteReport, useUpdateReportDownloads } from '@/hooks/useReports';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
 
 const RecentReports = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  const reports: Report[] = [
-    { 
-      id: '1',
-      name: 'December Production Summary', 
-      type: 'Production', 
-      date: 'Jan 2, 2025', 
-      size: '2.3 MB', 
-      status: 'Ready',
-      downloads: 12,
-      format: 'PDF'
-    },
-    { 
-      id: '2',
-      name: 'Q4 Financial Report', 
-      type: 'Finance', 
-      date: 'Jan 1, 2025', 
-      size: '1.8 MB', 
-      status: 'Ready',
-      downloads: 8,
-      format: 'Excel'
-    },
-    { 
-      id: '3',
-      name: 'Weekly Quality Report - W52', 
-      type: 'Quality', 
-      date: 'Dec 30, 2024', 
-      size: '945 KB', 
-      status: 'Ready',
-      downloads: 15,
-      format: 'PDF'
-    },
-    { 
-      id: '4',
-      name: 'Supplier Performance - December', 
-      type: 'Procurement', 
-      date: 'Dec 29, 2024', 
-      size: '1.2 MB', 
-      status: 'Processing',
-      downloads: 0,
-      format: 'Excel'
-    },
-    { 
-      id: '5',
-      name: 'Inventory Analysis Report', 
-      type: 'Inventory', 
-      date: 'Dec 28, 2024', 
-      size: '856 KB', 
-      status: 'Failed',
-      downloads: 0,
-      format: 'PDF'
-    },
-    { 
-      id: '6',
-      name: 'Sales Performance - November', 
-      type: 'Sales', 
-      date: 'Dec 1, 2024', 
-      size: '1.5 MB', 
-      status: 'Ready',
-      downloads: 22,
-      format: 'Excel'
-    }
-  ];
+  const { data: reports = [], isLoading, error } = useReports();
+  const deleteReportMutation = useDeleteReport();
+  const updateDownloadsMutation = useUpdateReportDownloads();
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,8 +38,9 @@ const RecentReports = () => {
   };
 
   const handleDownload = (reportId: string) => {
+    updateDownloadsMutation.mutate(reportId);
+    // Here you would implement actual file download logic
     console.log(`Downloading report ${reportId}`);
-    // Implement download logic
   };
 
   const handlePreview = (reportId: string) => {
@@ -115,14 +49,64 @@ const RecentReports = () => {
   };
 
   const handleDelete = (reportId: string) => {
-    console.log(`Deleting report ${reportId}`);
-    // Implement delete logic
+    deleteReportMutation.mutate(reportId);
   };
 
   const handleRegenerate = (reportId: string) => {
     console.log(`Regenerating report ${reportId}`);
     // Implement regenerate logic
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Recent Reports
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {[...Array(6)].map((_, index) => (
+              <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <Skeleton className="h-8 w-8" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-48 mb-2" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-8 w-8" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Recent Reports
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Failed to load reports. Please try again.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -182,9 +166,9 @@ const RecentReports = () => {
                     <Badge variant="outline">{report.format}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {report.type} • {report.date} • {report.size}
+                    {report.type} • {format(new Date(report.created_at), 'MMM d, yyyy')} • {report.file_size || 'N/A'}
                   </p>
-                  {report.downloads > 0 && (
+                  {report.downloads && report.downloads > 0 && (
                     <p className="text-xs text-muted-foreground">
                       Downloaded {report.downloads} times
                     </p>
@@ -211,7 +195,12 @@ const RecentReports = () => {
                       <RefreshCw className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button variant="outline" size="sm" onClick={() => handleDelete(report.id)}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleDelete(report.id)}
+                    disabled={deleteReportMutation.isPending}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

@@ -119,6 +119,126 @@ export type Database = {
         }
         Relationships: []
       }
+      metrics: {
+        Row: {
+          category: string | null
+          change_percentage: number | null
+          color: string | null
+          created_at: string
+          date_recorded: string
+          icon: string | null
+          id: string
+          label: string
+          trend: string
+          value: string
+        }
+        Insert: {
+          category?: string | null
+          change_percentage?: number | null
+          color?: string | null
+          created_at?: string
+          date_recorded?: string
+          icon?: string | null
+          id?: string
+          label: string
+          trend: string
+          value: string
+        }
+        Update: {
+          category?: string | null
+          change_percentage?: number | null
+          color?: string | null
+          created_at?: string
+          date_recorded?: string
+          icon?: string | null
+          id?: string
+          label?: string
+          trend?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      performance_data: {
+        Row: {
+          category: string
+          change_percentage: string | null
+          created_at: string
+          id: string
+          month: string | null
+          percentage: number
+          target: number
+          trend: string
+          value: number
+        }
+        Insert: {
+          category: string
+          change_percentage?: string | null
+          created_at?: string
+          id?: string
+          month?: string | null
+          percentage: number
+          target: number
+          trend: string
+          value: number
+        }
+        Update: {
+          category?: string
+          change_percentage?: string | null
+          created_at?: string
+          id?: string
+          month?: string | null
+          percentage?: number
+          target?: number
+          trend?: string
+          value?: number
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          downloads: number | null
+          file_size: string | null
+          format: string
+          generated_by: string | null
+          id: string
+          name: string
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          downloads?: number | null
+          file_size?: string | null
+          format?: string
+          generated_by?: string | null
+          id?: string
+          name: string
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          downloads?: number | null
+          file_size?: string | null
+          format?: string
+          generated_by?: string | null
+          id?: string
+          name?: string
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       salary_payments: {
         Row: {
           bonuses: number
