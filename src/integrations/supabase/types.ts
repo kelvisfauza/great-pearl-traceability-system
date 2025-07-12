@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      approval_requests: {
+        Row: {
+          amount: string
+          created_at: string
+          daterequested: string
+          department: string
+          description: string
+          details: Json | null
+          id: string
+          priority: string
+          requestedby: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: string
+          created_at?: string
+          daterequested: string
+          department: string
+          description: string
+          details?: Json | null
+          id?: string
+          priority?: string
+          requestedby: string
+          status?: string
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: string
+          created_at?: string
+          daterequested?: string
+          department?: string
+          description?: string
+          details?: Json | null
+          id?: string
+          priority?: string
+          requestedby?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           address: string | null

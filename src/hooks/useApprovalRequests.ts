@@ -9,8 +9,8 @@ export interface ApprovalRequest {
   title: string;
   description: string;
   amount: string;
-  requestedBy: string;
-  dateRequested: string;
+  requestedby: string;
+  daterequested: string;
   priority: string;
   status: string;
   details?: any;

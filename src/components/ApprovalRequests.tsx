@@ -161,9 +161,9 @@ const ApprovalRequests = () => {
                           <div className="flex items-center gap-4 text-xs text-gray-500">
                             <span>{request.department}</span>
                             <span>•</span>
-                            <span>By {request.requestedBy}</span>
+                            <span>By {request.requestedby}</span>
                             <span>•</span>
-                            <span>{new Date(request.dateRequested).toLocaleDateString()}</span>
+                            <span>{new Date(request.daterequested).toLocaleDateString()}</span>
                             <span>•</span>
                             <span className="font-medium text-gray-700">{request.amount}</span>
                           </div>
@@ -235,9 +235,9 @@ const ApprovalRequests = () => {
                           <div className="flex items-center gap-4 text-xs text-gray-500">
                             <span>{request.department}</span>
                             <span>•</span>
-                            <span>{request.requestedBy}</span>
+                            <span>{request.requestedby}</span>
                             <span>•</span>
-                            <span>{new Date(request.dateRequested).toLocaleDateString()}</span>
+                            <span>{new Date(request.daterequested).toLocaleDateString()}</span>
                             <span>•</span>
                             <span className="font-medium">{request.amount}</span>
                           </div>
