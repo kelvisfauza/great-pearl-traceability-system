@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Layout from "@/components/Layout";
 import PriceTicker from "@/components/PriceTicker";
 import PricingGuidance from "@/components/PricingGuidance";
@@ -13,62 +13,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ClipboardCheck, AlertTriangle, CheckCircle, Clock, DollarSign, Send, Eye, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface StoreRecord {
-  id: string;
-  batchNumber: string;
-  coffeeType: string;
-  date: string;
-  kilograms: number;
-  bags: number;
-  supplier: string;
-  status: 'pending' | 'quality_review' | 'pricing' | 'batched' | 'drying' | 'sales' | 'inventory';
-}
-
-interface QualityAssessment {
-  id: string;
-  storeRecordId: string;
-  batchNumber: string;
-  moisture: number;
-  group1Defects: number;
-  group2Defects: number;
-  below12: number;
-  pods: number;
-  husks: number;
-  stones: number;
-  suggestedPrice: number;
-  status: 'assessed' | 'submitted_to_finance' | 'price_requested' | 'approved' | 'dispatched';
-  comments?: string;
-  dateAssessed: string;
-  assessedBy: string;
-}
+import { useQualityControl, StoreRecord } from "@/hooks/useQualityControl";
 
 const QualityControl = () => {
   const { toast } = useToast();
-  const [storeRecords, setStoreRecords] = useState<StoreRecord[]>([
-    {
-      id: '1',
-      batchNumber: 'B2024071201',
-      coffeeType: 'Drugar',
-      date: '2024-07-12',
-      kilograms: 500,
-      bags: 10,
-      supplier: 'Mbale Coffee Growers',
-      status: 'pending'
-    },
-    {
-      id: '2',
-      batchNumber: 'B2024071202',
-      coffeeType: 'Wugar',
-      date: '2024-07-12',
-      kilograms: 300,
-      bags: 6,
-      supplier: 'Bushenyi Cooperative',
-      status: 'pending'
-    }
-  ]);
+  const {
+    storeRecords,
+    qualityAssessments,
+    pendingRecords,
+    loading,
+    updateStoreRecord,
+    addQualityAssessment,
+    updateQualityAssessment,
+  } = useQualityControl();
 
-  const [qualityAssessments, setQualityAssessments] = useState<QualityAssessment[]>([]);
   const [selectedRecord, setSelectedRecord] = useState<StoreRecord | null>(null);
   const [assessmentForm, setAssessmentForm] = useState({
     moisture: '',
@@ -82,17 +40,11 @@ const QualityControl = () => {
     comments: ''
   });
 
-  const pendingRecords = storeRecords.filter(record => 
-    record.status === 'pending' || record.status === 'quality_review'
-  );
-
   const handleSelectRecord = (record: StoreRecord) => {
     setSelectedRecord(record);
     // Update record status to quality_review if it was pending
     if (record.status === 'pending') {
-      setStoreRecords(prev => 
-        prev.map(r => r.id === record.id ? { ...r, status: 'quality_review' } : r)
-      );
+      updateStoreRecord(record.id, { status: 'quality_review' });
     }
     toast({
       title: "Batch Selected",
@@ -113,8 +65,7 @@ const QualityControl = () => {
       return;
     }
 
-    const assessment: QualityAssessment = {
-      id: Date.now().toString(),
+    const assessment = {
       storeRecordId: selectedRecord.id,
       batchNumber: selectedRecord.batchNumber,
       moisture: Number(assessmentForm.moisture),
@@ -125,18 +76,16 @@ const QualityControl = () => {
       husks: Number(assessmentForm.husks) || 0,
       stones: Number(assessmentForm.stones) || 0,
       suggestedPrice: Number(assessmentForm.suggestedPrice),
-      status: 'assessed',
+      status: 'assessed' as const,
       comments: assessmentForm.comments,
       dateAssessed: new Date().toISOString().split('T')[0],
       assessedBy: 'Quality Officer'
     };
 
-    setQualityAssessments([...qualityAssessments, assessment]);
+    addQualityAssessment(assessment);
     
     // Update store record status
-    setStoreRecords(prev => 
-      prev.map(r => r.id === selectedRecord.id ? { ...r, status: 'pricing' } : r)
-    );
+    updateStoreRecord(selectedRecord.id, { status: 'pricing' });
 
     // Reset form
     setAssessmentForm({
@@ -159,9 +108,7 @@ const QualityControl = () => {
   };
 
   const handleSubmitToFinance = (assessmentId: string) => {
-    setQualityAssessments(prev =>
-      prev.map(a => a.id === assessmentId ? { ...a, status: 'submitted_to_finance' } : a)
-    );
+    updateQualityAssessment(assessmentId, { status: 'submitted_to_finance' });
     toast({
       title: "Submitted to Finance",
       description: "Assessment has been sent to finance department for pricing approval",
@@ -169,9 +116,7 @@ const QualityControl = () => {
   };
 
   const handleRequestPriceApproval = (assessmentId: string) => {
-    setQualityAssessments(prev =>
-      prev.map(a => a.id === assessmentId ? { ...a, status: 'price_requested' } : a)
-    );
+    updateQualityAssessment(assessmentId, { status: 'price_requested' });
     toast({
       title: "Price Approval Requested",
       description: "Price approval request sent to supervisor and operations manager",
@@ -179,13 +124,14 @@ const QualityControl = () => {
   };
 
   const handleDispatchToDryer = (batchNumber: string) => {
-    setStoreRecords(prev => 
-      prev.map(r => r.batchNumber === batchNumber ? { ...r, status: 'drying' } : r)
-    );
-    toast({
-      title: "Dispatched to Dryer",
-      description: `Batch ${batchNumber} has been sent to the dryer`,
-    });
+    const record = storeRecords.find(r => r.batchNumber === batchNumber);
+    if (record) {
+      updateStoreRecord(record.id, { status: 'drying' });
+      toast({
+        title: "Dispatched to Dryer",
+        description: `Batch ${batchNumber} has been sent to the dryer`,
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -202,6 +148,16 @@ const QualityControl = () => {
     };
     return statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'secondary' as const };
   };
+
+  if (loading) {
+    return (
+      <Layout title="Quality Control" subtitle="Monitor and maintain coffee quality standards">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Loading...</div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout 
@@ -289,7 +245,7 @@ const QualityControl = () => {
               <CardContent>
                 {pendingRecords.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-gray-500">No pending records found</p>
+                    <p className="text-gray-500">No pending records found. Records from Store Management will appear here.</p>
                   </div>
                 ) : (
                   <Table>
@@ -564,44 +520,50 @@ const QualityControl = () => {
                 <CardDescription>Manage batch dispatch to dryers or other destinations</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Batch</TableHead>
-                      <TableHead>Coffee Type</TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Kilograms</TableHead>
-                      <TableHead>Current Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {storeRecords.filter(r => r.status === 'pricing' || r.status === 'batched').map((record) => (
-                      <TableRow key={record.id}>
-                        <TableCell className="font-mono">{record.batchNumber}</TableCell>
-                        <TableCell>{record.coffeeType}</TableCell>
-                        <TableCell>{record.supplier}</TableCell>
-                        <TableCell>{record.kilograms} kg</TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusBadge(record.status).variant}>
-                            {getStatusBadge(record.status).label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleDispatchToDryer(record.batchNumber)}
-                            >
-                              <Truck className="h-3 w-3 mr-1" />
-                              To Dryer
-                            </Button>
-                          </div>
-                        </TableCell>
+                {storeRecords.filter(r => r.status === 'pricing' || r.status === 'batched').length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No batches ready for dispatch</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Batch</TableHead>
+                        <TableHead>Coffee Type</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Kilograms</TableHead>
+                        <TableHead>Current Status</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {storeRecords.filter(r => r.status === 'pricing' || r.status === 'batched').map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell className="font-mono">{record.batchNumber}</TableCell>
+                          <TableCell>{record.coffeeType}</TableCell>
+                          <TableCell>{record.supplier}</TableCell>
+                          <TableCell>{record.kilograms} kg</TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusBadge(record.status).variant}>
+                              {getStatusBadge(record.status).label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleDispatchToDryer(record.batchNumber)}
+                              >
+                                <Truck className="h-3 w-3 mr-1" />
+                                To Dryer
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
