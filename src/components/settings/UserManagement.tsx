@@ -52,6 +52,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<UserFormValues>({
@@ -74,38 +75,46 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
   });
 
   const handleAddUser = async (values: UserFormValues) => {
+    if (isCreatingUser) return;
+    
+    setIsCreatingUser(true);
     try {
-      // First create the authentication user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: values.email,
-        password: values.password,
-        email_confirm: true
+      console.log('Calling create-user edge function with:', values);
+      
+      // Call the edge function to create user and employee
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: { 
+          employeeData: {
+            ...values,
+            password: values.password // Include password for auth creation
+          }
+        }
       });
 
-      if (authError) {
+      console.log('Edge function response:', { data, error });
+
+      if (error) {
+        console.error('Edge function error:', error);
         toast({
-          title: "Authentication Error",
-          description: authError.message,
+          title: "Error",
+          description: error.message || "Failed to create user",
           variant: "destructive"
         });
         return;
       }
 
-      // Then create the employee record
-      const employeeData = {
-        name: values.name,
-        email: values.email,
-        phone: values.phone || "",
-        position: values.position,
-        department: values.department,
-        role: values.role,
-        salary: values.salary,
-        permissions: values.permissions || [],
-        status: "Active",
-        join_date: new Date().toISOString(),
-      };
+      if (!data?.success) {
+        console.error('Edge function returned unsuccessful:', data);
+        toast({
+          title: "Error", 
+          description: data?.error || "Failed to create user",
+          variant: "destructive"
+        });
+        return;
+      }
 
-      await onEmployeeAdded(employeeData);
+      // Refresh the employees list by calling the parent's callback
+      await onEmployeeAdded(data.employee);
       
       form.reset();
       setIsAddModalOpen(false);
@@ -121,6 +130,8 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         description: "Failed to create user",
         variant: "destructive"
       });
+    } finally {
+      setIsCreatingUser(false);
     }
   };
 
@@ -401,9 +412,9 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
                     <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit">
+                    <Button type="submit" disabled={isCreatingUser}>
                       <Key className="h-4 w-4 mr-2" />
-                      Create User & Login
+                      {isCreatingUser ? "Creating..." : "Create User & Login"}
                     </Button>
                   </div>
                 </form>
