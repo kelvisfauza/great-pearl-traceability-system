@@ -320,7 +320,7 @@ const Store = () => {
                             </SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="" disabled>No suppliers available</SelectItem>
+                          <SelectItem value="no-suppliers" disabled>No suppliers available</SelectItem>
                         )}
                       </SelectContent>
                     </Select>
