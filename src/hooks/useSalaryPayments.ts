@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import type { Tables } from '@/integrations/supabase/types'
 
 export interface SalaryPayment {
   id: string
@@ -14,8 +15,8 @@ export interface SalaryPayment {
   processed_by: string
   processed_date: string
   payment_method: string
-  notes?: string
-  employee_details: any[]
+  notes?: string | null
+  employee_details: any
   created_at: string
 }
 
@@ -32,7 +33,14 @@ export const useSalaryPayments = () => {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setPayments(data || [])
+      
+      // Transform the data to match our interface
+      const transformedData = (data || []).map(payment => ({
+        ...payment,
+        employee_details: payment.employee_details || []
+      }))
+      
+      setPayments(transformedData)
     } catch (error) {
       console.error('Error fetching salary payments:', error)
       toast({
@@ -55,12 +63,17 @@ export const useSalaryPayments = () => {
 
       if (error) throw error
 
-      setPayments(prev => [data, ...prev])
+      const transformedPayment = {
+        ...data,
+        employee_details: data.employee_details || []
+      }
+
+      setPayments(prev => [transformedPayment, ...prev])
       toast({
         title: "Success",
         description: "Salary payment processed successfully"
       })
-      return data
+      return transformedPayment
     } catch (error) {
       console.error('Error processing salary payment:', error)
       toast({
