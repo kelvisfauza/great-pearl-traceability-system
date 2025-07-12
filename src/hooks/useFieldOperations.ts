@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -196,6 +195,133 @@ export const useFieldOperations = () => {
     }
   };
 
+  // New function to submit expense for approval
+  const submitExpense = async (agentId: string, expenseData: {
+    description: string;
+    amount: number;
+    category: string;
+    date: string;
+  }) => {
+    try {
+      const { error } = await supabase
+        .from('approval_requests')
+        .insert([{
+          type: 'Field Expense',
+          title: `Expense Request - ${expenseData.description}`,
+          description: `${expenseData.category}: ${expenseData.description}`,
+          amount: expenseData.amount.toString(),
+          department: 'Field Operations',
+          requestedby: `Agent ${agentId}`,
+          daterequested: expenseData.date,
+          priority: 'Medium',
+          status: 'Pending',
+          details: {
+            agentId,
+            category: expenseData.category,
+            originalDate: expenseData.date
+          }
+        }]);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error submitting expense:', error);
+      throw error;
+    }
+  };
+
+  // New function to submit overtime request
+  const submitOvertimeRequest = async (agentId: string, overtimeData: {
+    hours: number;
+    date: string;
+    reason: string;
+  }) => {
+    try {
+      const { error } = await supabase
+        .from('approval_requests')
+        .insert([{
+          type: 'Overtime Request',
+          title: `Overtime Request - ${overtimeData.hours} hours`,
+          description: `Reason: ${overtimeData.reason}`,
+          amount: (overtimeData.hours * 5000).toString(), // Assuming hourly rate
+          department: 'Field Operations',
+          requestedby: `Agent ${agentId}`,
+          daterequested: overtimeData.date,
+          priority: 'Medium',
+          status: 'Pending',
+          details: {
+            agentId,
+            hours: overtimeData.hours,
+            reason: overtimeData.reason,
+            hourlyRate: 5000
+          }
+        }]);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error submitting overtime request:', error);
+      throw error;
+    }
+  };
+
+  // New function to record coffee purchase and request payment approval
+  const recordCoffeePurchase = async (agentId: string, purchaseData: {
+    farmerName: string;
+    location: string;
+    bags: number;
+    pricePerBag: number;
+    qualityGrade: string;
+    totalAmount: number;
+    agentName: string;
+  }) => {
+    try {
+      // First, record the collection
+      const { error: collectionError } = await supabase
+        .from('field_collections')
+        .insert([{
+          farmer_name: purchaseData.farmerName,
+          location: purchaseData.location,
+          bags: purchaseData.bags,
+          quality_grade: purchaseData.qualityGrade,
+          agent_name: purchaseData.agentName,
+          collection_date: new Date().toISOString().split('T')[0],
+          status: 'Awaiting Payment'
+        }]);
+
+      if (collectionError) throw collectionError;
+
+      // Then, submit payment request for approval
+      const { error: approvalError } = await supabase
+        .from('approval_requests')
+        .insert([{
+          type: 'Coffee Payment',
+          title: `Payment to ${purchaseData.farmerName} - ${purchaseData.bags} bags`,
+          description: `Coffee purchase: ${purchaseData.bags} bags at UGX ${purchaseData.pricePerBag}/bag from ${purchaseData.farmerName}`,
+          amount: purchaseData.totalAmount.toString(),
+          department: 'Field Operations',
+          requestedby: purchaseData.agentName,
+          daterequested: new Date().toLocaleDateString(),
+          priority: 'High',
+          status: 'Pending',
+          details: {
+            agentId,
+            farmerName: purchaseData.farmerName,
+            location: purchaseData.location,
+            bags: purchaseData.bags,
+            pricePerBag: purchaseData.pricePerBag,
+            qualityGrade: purchaseData.qualityGrade,
+            purchaseType: 'coffee'
+          }
+        }]);
+
+      if (approvalError) throw approvalError;
+
+      await fetchFieldData();
+    } catch (error) {
+      console.error('Error recording coffee purchase:', error);
+      throw error;
+    }
+  };
+
   const getStats = () => ({
     totalAgents: agents.length,
     activeAgents: agents.filter(a => a.status === 'Active').length,
@@ -223,6 +349,10 @@ export const useFieldOperations = () => {
     stats: getStats(),
     addFieldAgent,
     addBuyingStation,
-    addCollection
+    addCollection,
+    // New functions for enhanced functionality
+    submitExpense,
+    submitOvertimeRequest,
+    recordCoffeePurchase
   };
 };

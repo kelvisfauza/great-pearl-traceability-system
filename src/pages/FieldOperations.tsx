@@ -4,13 +4,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Users, Truck, Coffee, Plus, Search, Phone } from "lucide-react";
 import { useState } from "react";
 import { useFieldOperations } from "@/hooks/useFieldOperations";
+import { useAuth } from "@/contexts/AuthContext";
 import EmptyFieldState from "@/components/field/EmptyFieldState";
+import SupervisorDashboard from "@/components/field/SupervisorDashboard";
+import FieldAgentManagement from "@/components/field/FieldAgentManagement";
 
 const FieldOperations = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const { employee, hasPermission, hasRole } = useAuth();
   const { 
     fieldAgents, 
     buyingStations, 
@@ -27,18 +32,24 @@ const FieldOperations = () => {
     agent.region.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Determine user role for field operations
+  const isSupervisor = hasRole("Manager") || hasRole("Administrator") || 
+                     hasPermission("Field Operations") || 
+                     employee?.position?.toLowerCase().includes("supervisor");
+  
+  const isFieldAgent = employee?.position?.toLowerCase().includes("field agent") ||
+                      employee?.department === "Field Operations";
+
   const handleAddAgent = () => {
-    // This would open a modal or form to add a new agent
     addFieldAgent({
       name: "New Agent",
-      region: "New Region",
+      region: "New Region", 
       phone: "+256 700 000000",
       status: "Active"
     });
   };
 
   const handleAddStation = () => {
-    // This would open a modal or form to add a new station
     addBuyingStation({
       name: "New Station",
       location: "New Location",
@@ -49,7 +60,6 @@ const FieldOperations = () => {
   };
 
   const handleAddCollection = () => {
-    // This would open a modal or form to add a new collection
     addCollection({
       farmerName: "New Farmer",
       location: "New Location",
@@ -77,6 +87,70 @@ const FieldOperations = () => {
     );
   }
 
+  // Supervisor view with full dashboard
+  if (isSupervisor) {
+    return (
+      <Layout 
+        title="Field Operations - Supervisor Dashboard" 
+        subtitle="Manage field agents, buying stations, and approve operations"
+      >
+        <SupervisorDashboard />
+      </Layout>
+    );
+  }
+
+  // Field agent view with agent-specific functions
+  if (isFieldAgent) {
+    return (
+      <Layout 
+        title="Field Operations - Agent Dashboard" 
+        subtitle="Manage your collections, expenses, and station operations"
+      >
+        <div className="space-y-6">
+          {/* Agent stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">My Collections</p>
+                    <p className="text-2xl font-bold">{stats.dailyCollections}</p>
+                  </div>
+                  <Coffee className="h-8 w-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Pending Payments</p>
+                    <p className="text-2xl font-bold">5</p>
+                  </div>
+                  <MapPin className="h-8 w-8 text-amber-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Station Capacity</p>
+                    <p className="text-2xl font-bold">75%</p>
+                  </div>
+                  <Truck className="h-8 w-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <FieldAgentManagement />
+        </div>
+      </Layout>
+    );
+  }
+
+  // Default view for other users
   return (
     <Layout 
       title="Field Operations" 
