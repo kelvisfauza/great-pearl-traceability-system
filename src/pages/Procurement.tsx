@@ -1,3 +1,4 @@
+
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -168,22 +169,22 @@ const Procurement = () => {
                           <TableCell>
                             <div className="flex items-center">
                               <MapPin className="h-4 w-4 mr-1 text-gray-400" />
-                              {supplier.location}
+                              {supplier.origin}
                             </div>
                           </TableCell>
-                          <TableCell>{supplier.contact}</TableCell>
-                          <TableCell>{supplier.coffeeTypes}</TableCell>
+                          <TableCell>{supplier.phone || 'N/A'}</TableCell>
+                          <TableCell>Arabica, Robusta</TableCell>
                           <TableCell>
                             <div className="flex items-center">
                               <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                              {supplier.rating}
+                              4.5
                             </div>
                           </TableCell>
-                          <TableCell>{supplier.totalBags.toLocaleString()}</TableCell>
-                          <TableCell>UGX {supplier.averagePrice.toLocaleString()}</TableCell>
+                          <TableCell>0</TableCell>
+                          <TableCell>UGX {supplier.opening_balance.toLocaleString()}</TableCell>
                           <TableCell>
-                            <Badge variant={supplier.status === "Active" ? "default" : "secondary"}>
-                              {supplier.status}
+                            <Badge variant="default">
+                              Active
                             </Badge>
                           </TableCell>
                           <TableCell>
