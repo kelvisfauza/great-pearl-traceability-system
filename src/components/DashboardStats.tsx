@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coffee, TrendingUp, Package, DollarSign, Users, Shield } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Coffee, TrendingUp, Package, DollarSign, Users, Shield, Building, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useSalaryPayments } from "@/hooks/useSalaryPayments";
@@ -83,32 +84,44 @@ const DashboardStats = () => {
     if (hasPermission("Store Management")) {
       return [
         {
-          title: "Total Coffee (KG)",
-          value: `${(coffeeData.totalKgs / 1000).toFixed(1)}K`,
-          change: `${coffeeData.totalBatches} batches`,
+          title: "Coffee Inventory",
+          value: `${(coffeeData.totalKgs / 1000).toFixed(1)}K kg`,
+          change: `${coffeeData.totalBags} bags stored`,
           icon: Coffee,
-          color: "text-blue-600"
+          color: "text-green-600",
+          bgColor: "bg-green-50",
+          borderColor: "border-green-200",
+          trend: "positive"
         },
         {
-          title: "Total Bags",
-          value: coffeeData.totalBags.toLocaleString(),
-          change: "in storage",
+          title: "Active Batches",
+          value: coffeeData.totalBatches.toString(),
+          change: "processing & stored",
           icon: Package,
-          color: "text-green-600"
+          color: "text-blue-600",
+          bgColor: "bg-blue-50",
+          borderColor: "border-blue-200",
+          trend: "stable"
         },
         {
-          title: "Active Suppliers",
+          title: "Suppliers",
           value: supplierCount.toString(),
-          change: "registered",
-          icon: Users,
-          color: "text-amber-600"
+          change: "registered partners",
+          icon: Building,
+          color: "text-purple-600",
+          bgColor: "bg-purple-50",
+          borderColor: "border-purple-200",
+          trend: "positive"
         },
         {
-          title: "Your Department",
-          value: employee?.department || "N/A",
-          change: "current role",
+          title: "Your Role",
+          value: employee?.position?.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || "N/A",
+          change: employee?.department || "Department",
           icon: Shield,
-          color: "text-purple-600"
+          color: "text-amber-600",
+          bgColor: "bg-amber-50",
+          borderColor: "border-amber-200",
+          trend: "stable"
         }
       ];
     }
@@ -124,62 +137,85 @@ const DashboardStats = () => {
           value: `UGX ${(financeData.totalRevenue / 1000000).toFixed(1)}M`,
           change: "this period",
           icon: DollarSign,
-          color: "text-green-600"
+          color: "text-green-600",
+          bgColor: "bg-green-50",
+          borderColor: "border-green-200",
+          trend: "positive"
         },
         {
           title: "Coffee Processed",
           value: `${(coffeeData.totalKgs / 1000).toFixed(1)}K kg`,
-          change: `${coffeeData.totalBatches} batches`,
+          change: `${coffeeData.totalBatches} batches total`,
           icon: Coffee,
-          color: "text-blue-600"
+          color: "text-blue-600",
+          bgColor: "bg-blue-50",
+          borderColor: "border-blue-200",
+          trend: "positive"
         },
         {
           title: "Pending Approvals",
           value: pendingApprovals.toString(),
-          change: "requires action",
-          icon: TrendingUp,
-          color: "text-amber-600"
+          change: "require attention",
+          icon: AlertTriangle,
+          color: pendingApprovals > 0 ? "text-red-600" : "text-green-600",
+          bgColor: pendingApprovals > 0 ? "bg-red-50" : "bg-green-50",
+          borderColor: pendingApprovals > 0 ? "border-red-200" : "border-green-200",
+          trend: pendingApprovals > 0 ? "attention" : "positive"
         },
         {
-          title: "Active Employees",
+          title: "Active Staff",
           value: employees.filter(emp => emp.status === 'Active').length.toString(),
-          change: `UGX ${(totalSalaryRequests / 1000000).toFixed(1)}M payroll`,
+          change: `UGX ${(totalSalaryRequests / 1000000).toFixed(1)}M monthly`,
           icon: Users,
-          color: "text-purple-600"
+          color: "text-purple-600",
+          bgColor: "bg-purple-50",
+          borderColor: "border-purple-200",
+          trend: "stable"
         }
       ];
     }
 
     // Default stats for other roles
-    const userTasks = coffeeData.totalBatches; // Could be enhanced with actual task data
     return [
       {
         title: "Coffee Batches",
         value: coffeeData.totalBatches.toString(),
-        change: "processed",
-        icon: Coffee,
-        color: "text-blue-600"
-      },
-      {
-        title: "Total Storage",
-        value: `${coffeeData.totalBags} bags`,
-        change: `${(coffeeData.totalKgs / 1000).toFixed(1)}K kg`,
-        icon: Package,
-        color: "text-green-600"
-      },
-      {
-        title: "Your Department",
-        value: employee?.department || "N/A",
-        change: employee?.position || "N/A",
-        icon: Shield,
-        color: "text-amber-600"
-      },
-      {
-        title: "Active Suppliers",
-        value: supplierCount.toString(),
         change: "in system",
-        icon: Users,
-        color: "text-purple-600"
+        icon: Coffee,
+        color: "text-green-600",
+        bgColor: "bg-green-50",
+        borderColor: "border-green-200",
+        trend: "stable"
+      },
+      {
+        title: "Inventory",
+        value: `${coffeeData.totalBags} bags`,
+        change: `${(coffeeData.totalKgs / 1000).toFixed(1)}K kg total`,
+        icon: Package,
+        color: "text-blue-600",
+        bgColor: "bg-blue-50",
+        borderColor: "border-blue-200",
+        trend: "stable"
+      },
+      {
+        title: "Department",
+        value: employee?.department || "N/A",
+        change: employee?.position || "Position",
+        icon: Shield,
+        color: "text-purple-600",
+        bgColor: "bg-purple-50",
+        borderColor: "border-purple-200",
+        trend: "stable"
+      },
+      {
+        title: "Suppliers",
+        value: supplierCount.toString(),
+        change: "active partners",
+        icon: Building,
+        color: "text-amber-600",
+        bgColor: "bg-amber-50",
+        borderColor: "border-amber-200",
+        trend: "positive"
       }
     ];
   };
@@ -189,18 +225,28 @@ const DashboardStats = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {stats.map((stat, index) => (
-        <Card key={index}>
+        <Card key={index} className={`${stat.borderColor} ${stat.bgColor} hover:shadow-md transition-all duration-200 hover:scale-105`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-gray-700">
               {stat.title}
             </CardTitle>
-            <stat.icon className={`h-4 w-4 ${stat.color}`} />
+            <div className={`p-2 rounded-lg bg-white shadow-sm`}>
+              <stat.icon className={`h-4 w-4 ${stat.color}`} />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {stat.change}
-            </p>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-600">{stat.change}</p>
+                <Badge 
+                  variant={stat.trend === 'positive' ? 'default' : stat.trend === 'attention' ? 'destructive' : 'secondary'}
+                  className="text-xs"
+                >
+                  {stat.trend === 'positive' ? '↗ Good' : stat.trend === 'attention' ? '⚠ Action' : '→ Stable'}
+                </Badge>
+              </div>
+            </div>
           </CardContent>
         </Card>
       ))}
