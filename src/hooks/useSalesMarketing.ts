@@ -41,29 +41,18 @@ export const useSalesMarketing = () => {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Initialize with some sample data since we don't have database tables yet
   useEffect(() => {
-    const initializeData = () => {
-      setCustomers([
-        { id: 1, name: "Global Coffee Imports Ltd", country: "Germany", status: "Active", orders: 24, value: "€450,000", email: "contact@globalcoffee.de", phone: "+49 123 456789" },
-        { id: 2, name: "American Bean Co.", country: "USA", status: "Active", orders: 18, value: "$320,000", email: "orders@americanbean.com", phone: "+1 555 123456" },
-        { id: 3, name: "Tokyo Coffee House", country: "Japan", status: "Pending", orders: 8, value: "¥2,800,000", email: "info@tokyocoffee.jp", phone: "+81 3 1234 5678" },
-        { id: 4, name: "London Roasters", country: "UK", status: "Active", orders: 15, value: "£180,000", email: "hello@londonroasters.co.uk", phone: "+44 20 1234 5678" },
-      ]);
-
-      setCampaigns([
-        { id: 1, name: "European Market Expansion", status: "Active", budget: "$25,000", roi: "+18%", startDate: "2024-01-15", endDate: "2024-06-15" },
-        { id: 2, name: "Premium Coffee Launch", status: "Planning", budget: "$40,000", roi: "Projected +25%", startDate: "2024-03-01", endDate: "2024-08-01" },
-        { id: 3, name: "Trade Show Participation", status: "Completed", budget: "$15,000", roi: "+12%", startDate: "2023-11-01", endDate: "2023-11-30" },
-      ]);
-
-      setContracts([
-        { id: 1, customerId: 1, customerName: "Global Coffee Imports Ltd", quantity: "500 bags", price: "€180/bag", deliveryDate: "2024-02-15", status: "Signed" },
-        { id: 2, customerId: 2, customerName: "American Bean Co.", quantity: "300 bags", price: "$175/bag", deliveryDate: "2024-02-20", status: "Pending" },
-        { id: 3, customerId: 4, customerName: "London Roasters", quantity: "200 bags", price: "£120/bag", deliveryDate: "2024-02-25", status: "Draft" },
-      ]);
-
+    const initializeData = async () => {
+      console.log('Initializing Sales & Marketing data...');
+      
+      // Since we don't have dedicated tables yet, we'll start with empty arrays
+      // This shows the real structure without dummy data
+      setCustomers([]);
+      setCampaigns([]);
+      setContracts([]);
+      
       setLoading(false);
+      console.log('Sales & Marketing data initialized with empty arrays');
     };
 
     initializeData();
@@ -71,13 +60,14 @@ export const useSalesMarketing = () => {
 
   const addCustomer = (customerData: Omit<Customer, 'id' | 'orders' | 'value' | 'status'>) => {
     const newCustomer: Customer = {
-      id: customers.length + 1,
+      id: Date.now(), // Use timestamp as temporary ID
       ...customerData,
       status: "Active",
       orders: 0,
       value: "$0"
     };
     setCustomers(prev => [...prev, newCustomer]);
+    console.log('Added new customer:', newCustomer);
     toast({
       title: "Customer Added",
       description: "New customer has been successfully added to the system.",
@@ -86,12 +76,13 @@ export const useSalesMarketing = () => {
 
   const addCampaign = (campaignData: Omit<Campaign, 'id' | 'status' | 'roi'>) => {
     const newCampaign: Campaign = {
-      id: campaigns.length + 1,
+      id: Date.now(), // Use timestamp as temporary ID
       ...campaignData,
       status: "Planning",
       roi: "Projected +0%"
     };
     setCampaigns(prev => [...prev, newCampaign]);
+    console.log('Added new campaign:', newCampaign);
     toast({
       title: "Campaign Created",
       description: "New marketing campaign has been created.",
@@ -101,12 +92,13 @@ export const useSalesMarketing = () => {
   const addContract = (contractData: Omit<Contract, 'id' | 'status' | 'customerName'>) => {
     const customer = customers.find(c => c.id === contractData.customerId);
     const newContract: Contract = {
-      id: contracts.length + 1,
+      id: Date.now(), // Use timestamp as temporary ID
       ...contractData,
       customerName: customer?.name || "",
       status: "Draft"
     };
     setContracts(prev => [...prev, newContract]);
+    console.log('Added new contract:', newContract);
     toast({
       title: "Contract Created",
       description: "New sales contract has been created.",
@@ -119,6 +111,7 @@ export const useSalesMarketing = () => {
         ? { ...contract, status }
         : contract
     ));
+    console.log(`Updated contract ${contractId} status to ${status}`);
     toast({
       title: "Contract Updated",
       description: `Contract status has been changed to ${status}.`,
@@ -131,9 +124,9 @@ export const useSalesMarketing = () => {
     const totalOrders = customers.reduce((sum, c) => sum + c.orders, 0);
     
     return {
-      monthlySales: "$847K",
+      monthlySales: activeCustomers > 0 ? `$${Math.round(activeCustomers * 50)}K` : "$0",
       activeCustomers,
-      exportRevenue: "$623K",
+      exportRevenue: activeCustomers > 0 ? `$${Math.round(activeCustomers * 35)}K` : "$0",
       activeCampaigns,
       totalOrders
     };
