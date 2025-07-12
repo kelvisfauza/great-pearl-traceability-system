@@ -28,7 +28,8 @@ const Navigation = () => {
         { name: "Procurement", icon: Package, path: "/procurement" },
         { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control" },
         { name: "Processing", icon: Coffee, path: "/processing" },
-        { name: "Inventory", icon: Shield, path: "/inventory" },
+        { name: "Store Management", icon: Shield, path: "/store" },
+        { name: "Inventory", icon: Package, path: "/inventory" },
       ]
     },
     {
