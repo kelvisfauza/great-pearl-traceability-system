@@ -3,8 +3,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Coffee, Bell, Search } from "lucide-react";
-import Navigation from "./Navigation";
+import { Coffee, Bell, Search, LogOut } from "lucide-react";
+import RoleBasedNavigation from "./RoleBasedNavigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,11 +14,11 @@ interface LayoutProps {
 }
 
 const Layout = ({ children, title, subtitle }: LayoutProps) => {
-  const [user] = useState({
-    name: "John Mbale",
-    role: "Operations Manager",
-    avatar: "/lovable-uploads/avatar.jpg"
-  });
+  const { employee, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50">
@@ -46,15 +47,20 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
                 Notifications
                 <Badge variant="destructive" className="ml-2">3</Badge>
               </Button>
-              <div className="flex items-center space-x-2">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                  <p className="text-xs text-gray-500">{user.role}</p>
+              {employee && (
+                <div className="flex items-center space-x-2">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">{employee.name}</p>
+                    <p className="text-xs text-gray-500">{employee.position}</p>
+                  </div>
+                  <div className="h-8 w-8 bg-green-600 rounded-full flex items-center justify-center text-white font-semibold">
+                    {employee.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4" />
+                  </Button>
                 </div>
-                <div className="h-8 w-8 bg-green-600 rounded-full flex items-center justify-center text-white font-semibold">
-                  {user.name.split(' ').map(n => n[0]).join('')}
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -64,7 +70,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Navigation Sidebar */}
           <div className="lg:col-span-1">
-            <Navigation />
+            <RoleBasedNavigation />
           </div>
 
           {/* Main Content */}

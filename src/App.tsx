@@ -1,10 +1,14 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PriceProvider } from "@/contexts/PriceContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Procurement from "./pages/Procurement";
 import QualityControl from "./pages/QualityControl";
@@ -24,31 +28,90 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <PriceProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/procurement" element={<Procurement />} />
-            <Route path="/quality-control" element={<QualityControl />} />
-            <Route path="/processing" element={<Processing />} />
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/store" element={<Store />} />
-            <Route path="/sales-marketing" element={<SalesMarketing />} />
-            <Route path="/finance" element={<Finance />} />
-            <Route path="/field-operations" element={<FieldOperations />} />
-            <Route path="/human-resources" element={<HumanResources />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/logistics" element={<Logistics />} />
-            <Route path="/data-analyst" element={<DataAnalyst />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </PriceProvider>
+    <AuthProvider>
+      <PriceProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              <Route path="/procurement" element={
+                <ProtectedRoute requiredPermissions={["Procurement"]}>
+                  <Procurement />
+                </ProtectedRoute>
+              } />
+              <Route path="/quality-control" element={
+                <ProtectedRoute requiredPermissions={["Quality Control"]}>
+                  <QualityControl />
+                </ProtectedRoute>
+              } />
+              <Route path="/processing" element={
+                <ProtectedRoute requiredPermissions={["Processing"]}>
+                  <Processing />
+                </ProtectedRoute>
+              } />
+              <Route path="/inventory" element={
+                <ProtectedRoute requiredPermissions={["Inventory"]}>
+                  <Inventory />
+                </ProtectedRoute>
+              } />
+              <Route path="/store" element={
+                <ProtectedRoute requiredPermissions={["Store Management"]}>
+                  <Store />
+                </ProtectedRoute>
+              } />
+              <Route path="/sales-marketing" element={
+                <ProtectedRoute requiredPermissions={["Sales & Marketing"]}>
+                  <SalesMarketing />
+                </ProtectedRoute>
+              } />
+              <Route path="/finance" element={
+                <ProtectedRoute requiredPermissions={["Finance"]}>
+                  <Finance />
+                </ProtectedRoute>
+              } />
+              <Route path="/field-operations" element={
+                <ProtectedRoute requiredPermissions={["Field Operations"]}>
+                  <FieldOperations />
+                </ProtectedRoute>
+              } />
+              <Route path="/human-resources" element={
+                <ProtectedRoute requiredPermissions={["Human Resources"]}>
+                  <HumanResources />
+                </ProtectedRoute>
+              } />
+              <Route path="/data-analyst" element={
+                <ProtectedRoute requiredPermissions={["Data Analysis"]}>
+                  <DataAnalyst />
+                </ProtectedRoute>
+              } />
+              <Route path="/reports" element={
+                <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <Reports />
+                </ProtectedRoute>
+              } />
+              <Route path="/logistics" element={
+                <ProtectedRoute requiredPermissions={["Logistics"]}>
+                  <Logistics />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </PriceProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
