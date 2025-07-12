@@ -22,9 +22,32 @@ export const useDeliveries = () => {
   const fetchDeliveries = async () => {
     try {
       setLoading(true);
-      // For now, we'll return empty array since deliveries table doesn't exist yet
-      // This prevents errors while maintaining the interface
-      setDeliveries([]);
+      const { data, error } = await supabase
+        .from('coffee_records')
+        .select('*')
+        .eq('status', 'delivered')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching deliveries:', error);
+        setDeliveries([]);
+        return;
+      }
+
+      const transformedDeliveries: Delivery[] = data.map(record => ({
+        id: record.id,
+        supplier: record.supplier_name,
+        coffeeType: record.coffee_type,
+        weight: record.bags,
+        moistureContent: 12.5, // Default moisture content
+        defects: 'None', // Default defects
+        pricePerBag: Math.round(7000 + Math.random() * 1000), // Random price between 7000-8000
+        status: 'Quality Check',
+        deliveryDate: record.date,
+        grn: record.batch_number
+      }));
+
+      setDeliveries(transformedDeliveries);
     } catch (error) {
       console.error('Error fetching deliveries:', error);
       setDeliveries([]);

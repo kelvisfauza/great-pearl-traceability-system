@@ -1,64 +1,94 @@
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
-export interface MarketData {
-  iceArabica: number;
-  robusta: number;
-  ucdaDrugar: number;
-  ucdaWugar: number;
-  ucdaRobusta: number;
+export interface MarketPrice {
+  id: string;
+  coffeeType: string;
+  priceUsd: number;
+  priceUgx: number;
   exchangeRate: number;
+  marketSource: string;
+  dateRecorded: string;
+  changePercentage: number;
+  trend: string;
 }
 
-export interface PriceHistory {
-  date: string;
-  arabica: number;
-  robusta: number;
-  drugar: number;
+export interface PriceForecast {
+  id: string;
+  coffeeType: string;
+  predictedPrice: number;
+  forecastDate: string;
+  confidenceLevel: number;
+  modelUsed: string;
 }
 
 export const useMarketData = () => {
-  const [marketData, setMarketData] = useState<MarketData>({
-    iceArabica: 155.50,
-    robusta: 2450,
-    ucdaDrugar: 8500,
-    ucdaWugar: 7800,
-    ucdaRobusta: 6200,
-    exchangeRate: 3750
-  });
+  const [marketPrices, setMarketPrices] = useState<MarketPrice[]>([]);
+  const [priceForecasts, setPriceForecasts] = useState<PriceForecast[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([
-    { date: '2025-01-01', arabica: 150, robusta: 2400, drugar: 8200 },
-    { date: '2025-01-02', arabica: 152, robusta: 2420, drugar: 8300 },
-    { date: '2025-01-03', arabica: 155, robusta: 2450, drugar: 8500 },
-    { date: '2025-01-04', arabica: 154, robusta: 2430, drugar: 8400 },
-    { date: '2025-01-05', arabica: 156, robusta: 2470, drugar: 8600 },
-    { date: '2025-01-06', arabica: 153, robusta: 2440, drugar: 8350 },
-    { date: '2025-01-07', arabica: 157, robusta: 2480, drugar: 8700 }
-  ]);
+  const fetchMarketData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch market data
+      const { data: marketData, error: marketError } = await supabase
+        .from('market_data')
+        .select('*')
+        .order('date_recorded', { ascending: false });
 
-  // Simulate real-time price updates
+      if (marketError) {
+        console.error('Error fetching market data:', marketError);
+      } else {
+        const transformedMarketData: MarketPrice[] = marketData.map(data => ({
+          id: data.id,
+          coffeeType: data.coffee_type,
+          priceUsd: data.price_usd,
+          priceUgx: data.price_ugx,
+          exchangeRate: data.exchange_rate,
+          marketSource: data.market_source,
+          dateRecorded: data.date_recorded,
+          changePercentage: data.change_percentage || 0,
+          trend: data.trend || 'stable'
+        }));
+        setMarketPrices(transformedMarketData);
+      }
+
+      // Fetch price forecasts
+      const { data: forecastData, error: forecastError } = await supabase
+        .from('price_forecasts')
+        .select('*')
+        .order('forecast_date', { ascending: false });
+
+      if (forecastError) {
+        console.error('Error fetching price forecasts:', forecastError);
+      } else {
+        const transformedForecasts: PriceForecast[] = forecastData.map(forecast => ({
+          id: forecast.id,
+          coffeeType: forecast.coffee_type,
+          predictedPrice: forecast.predicted_price,
+          forecastDate: forecast.forecast_date,
+          confidenceLevel: forecast.confidence_level,
+          modelUsed: forecast.model_used
+        }));
+        setPriceForecasts(transformedForecasts);
+      }
+    } catch (error) {
+      console.error('Error fetching market data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setMarketData(prev => ({
-        ...prev,
-        iceArabica: prev.iceArabica + (Math.random() - 0.5) * 2,
-        robusta: prev.robusta + (Math.random() - 0.5) * 50,
-        ucdaDrugar: prev.ucdaDrugar + (Math.random() - 0.5) * 100
-      }));
-    }, 30000); // Update every 30 seconds
-
-    return () => clearInterval(interval);
+    fetchMarketData();
   }, []);
 
-  const convertUSDToUGX = (usdPrice: number) => Math.round(usdPrice * marketData.exchangeRate);
-  const convertCentsLbToUGXKg = (centsPerLb: number) => Math.round((centsPerLb / 100) * 2.20462 * marketData.exchangeRate);
-
   return {
-    marketData,
-    setMarketData,
-    priceHistory,
-    convertUSDToUGX,
-    convertCentsLbToUGXKg
+    marketPrices,
+    priceForecasts,
+    loading,
+    fetchMarketData
   };
 };

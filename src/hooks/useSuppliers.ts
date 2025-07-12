@@ -22,9 +22,31 @@ export const useSuppliers = () => {
   const fetchSuppliers = async () => {
     try {
       setLoading(true);
-      // For now, we'll return empty array since suppliers table doesn't exist yet
-      // This prevents errors while maintaining the interface
-      setSuppliers([]);
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching suppliers:', error);
+        setSuppliers([]);
+        return;
+      }
+
+      const transformedSuppliers: Supplier[] = data.map(supplier => ({
+        id: supplier.id,
+        name: supplier.name,
+        location: supplier.origin,
+        contact: supplier.phone || 'N/A',
+        coffeeTypes: 'Arabica, Robusta', // Default value
+        rating: 4.5, // Default rating
+        status: 'Active',
+        lastDelivery: supplier.date_registered,
+        totalBags: 0, // Will be calculated from actual deliveries
+        averagePrice: supplier.opening_balance || 0
+      }));
+
+      setSuppliers(transformedSuppliers);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       setSuppliers([]);

@@ -1,182 +1,129 @@
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/integrations/supabase/client'
-import { useToast } from '@/hooks/use-toast'
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface FieldAgent {
-  id: string
-  name: string
-  region: string
-  phone: string
-  status: 'Active' | 'Offline'
-  collections: string
-  lastReport: string
-  created_at: string
+  id: string;
+  name: string;
+  region: string;
+  phone: string;
+  status: string;
+  collectionsCount: number;
+  lastReportDate: string;
 }
 
 export interface BuyingStation {
-  id: string
-  name: string
-  location: string
-  capacity: string
-  current: string
-  manager: string
-  status: 'Operational' | 'Near Capacity' | 'Maintenance'
-  created_at: string
+  id: string;
+  name: string;
+  location: string;
+  capacity: number;
+  currentOccupancy: number;
+  managerName: string;
+  status: string;
 }
 
-export interface Collection {
-  id: string
-  farmer: string
-  location: string
-  bags: number
-  quality: 'Grade A' | 'Grade B' | 'Grade C'
-  agent: string
-  date: string
-  status: 'Collected' | 'In Transit' | 'Delivered'
-  created_at: string
+export interface FieldCollection {
+  id: string;
+  farmerName: string;
+  location: string;
+  bags: number;
+  qualityGrade: string;
+  agentName: string;
+  collectionDate: string;
+  status: string;
+  batchNumber: string;
 }
 
 export const useFieldOperations = () => {
-  const [fieldAgents, setFieldAgents] = useState<FieldAgent[]>([])
-  const [buyingStations, setBuyingStations] = useState<BuyingStation[]>([])
-  const [collections, setCollections] = useState<Collection[]>([])
-  const [loading, setLoading] = useState(true)
-  const { toast } = useToast()
+  const [agents, setAgents] = useState<FieldAgent[]>([]);
+  const [stations, setStations] = useState<BuyingStation[]>([]);
+  const [collections, setCollections] = useState<FieldCollection[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const fetchFieldAgents = async () => {
+  const fetchFieldData = async () => {
     try {
-      // For now, return empty array - in a real implementation, 
-      // this would fetch from a field_agents table
-      setFieldAgents([])
-    } catch (error) {
-      console.error('Error fetching field agents:', error)
-      toast({
-        title: "Error",
-        description: "Failed to fetch field agents",
-        variant: "destructive"
-      })
-    }
-  }
+      setLoading(true);
+      
+      // Fetch field agents
+      const { data: agentsData, error: agentsError } = await supabase
+        .from('field_agents')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  const fetchBuyingStations = async () => {
-    try {
-      // For now, return empty array - in a real implementation,
-      // this would fetch from a buying_stations table
-      setBuyingStations([])
-    } catch (error) {
-      console.error('Error fetching buying stations:', error)
-      toast({
-        title: "Error",
-        description: "Failed to fetch buying stations",
-        variant: "destructive"
-      })
-    }
-  }
+      if (agentsError) {
+        console.error('Error fetching field agents:', agentsError);
+      } else {
+        const transformedAgents: FieldAgent[] = agentsData.map(agent => ({
+          id: agent.id,
+          name: agent.name,
+          region: agent.region,
+          phone: agent.phone || 'N/A',
+          status: agent.status,
+          collectionsCount: agent.collections_count || 0,
+          lastReportDate: agent.last_report_date || 'N/A'
+        }));
+        setAgents(transformedAgents);
+      }
 
-  const fetchCollections = async () => {
-    try {
-      // For now, return empty array - in a real implementation,
-      // this would fetch from a collections table
-      setCollections([])
-    } catch (error) {
-      console.error('Error fetching collections:', error)
-      toast({
-        title: "Error",
-        description: "Failed to fetch collections",
-        variant: "destructive"
-      })
-    }
-  }
+      // Fetch buying stations
+      const { data: stationsData, error: stationsError } = await supabase
+        .from('buying_stations')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  const addFieldAgent = async (agentData: Omit<FieldAgent, 'id' | 'created_at'>) => {
-    try {
-      // Placeholder for adding field agent
-      // In a real implementation, this would insert into field_agents table
-      toast({
-        title: "Info",
-        description: "Field agent functionality not yet implemented",
-      })
-    } catch (error) {
-      console.error('Error adding field agent:', error)
-      toast({
-        title: "Error",
-        description: "Failed to add field agent",
-        variant: "destructive"
-      })
-    }
-  }
+      if (stationsError) {
+        console.error('Error fetching buying stations:', stationsError);
+      } else {
+        const transformedStations: BuyingStation[] = stationsData.map(station => ({
+          id: station.id,
+          name: station.name,
+          location: station.location,
+          capacity: station.capacity,
+          currentOccupancy: station.current_occupancy || 0,
+          managerName: station.manager_name,
+          status: station.status
+        }));
+        setStations(transformedStations);
+      }
 
-  const addBuyingStation = async (stationData: Omit<BuyingStation, 'id' | 'created_at'>) => {
-    try {
-      // Placeholder for adding buying station
-      toast({
-        title: "Info",
-        description: "Buying station functionality not yet implemented",
-      })
-    } catch (error) {
-      console.error('Error adding buying station:', error)
-      toast({
-        title: "Error",
-        description: "Failed to add buying station",
-        variant: "destructive"
-      })
-    }
-  }
+      // Fetch field collections
+      const { data: collectionsData, error: collectionsError } = await supabase
+        .from('field_collections')
+        .select('*')
+        .order('collection_date', { ascending: false });
 
-  const addCollection = async (collectionData: Omit<Collection, 'id' | 'created_at'>) => {
-    try {
-      // Placeholder for adding collection
-      toast({
-        title: "Info",
-        description: "Collection functionality not yet implemented",
-      })
+      if (collectionsError) {
+        console.error('Error fetching field collections:', collectionsError);
+      } else {
+        const transformedCollections: FieldCollection[] = collectionsData.map(collection => ({
+          id: collection.id,
+          farmerName: collection.farmer_name,
+          location: collection.location,
+          bags: collection.bags,
+          qualityGrade: collection.quality_grade,
+          agentName: collection.agent_name,
+          collectionDate: collection.collection_date,
+          status: collection.status,
+          batchNumber: collection.batch_number || `FC${collection.id.slice(0, 8)}`
+        }));
+        setCollections(transformedCollections);
+      }
     } catch (error) {
-      console.error('Error adding collection:', error)
-      toast({
-        title: "Error",
-        description: "Failed to add collection",
-        variant: "destructive"
-      })
+      console.error('Error fetching field operations data:', error);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true)
-      await Promise.all([
-        fetchFieldAgents(),
-        fetchBuyingStations(),
-        fetchCollections()
-      ])
-      setLoading(false)
-    }
-
-    fetchData()
-  }, [])
-
-  // Calculate stats from real data
-  const stats = {
-    activeAgents: fieldAgents.filter(agent => agent.status === 'Active').length,
-    totalStations: buyingStations.length,
-    operationalStations: buyingStations.filter(station => station.status === 'Operational').length,
-    dailyCollections: collections.filter(collection => collection.date === 'Today').reduce((sum, collection) => sum + collection.bags, 0),
-    transportFleet: 6 // This could be fetched from a separate table
-  }
+    fetchFieldData();
+  }, []);
 
   return {
-    fieldAgents,
-    buyingStations,
+    agents,
+    stations,
     collections,
     loading,
-    stats,
-    addFieldAgent,
-    addBuyingStation,
-    addCollection,
-    refetch: () => {
-      fetchFieldAgents()
-      fetchBuyingStations()
-      fetchCollections()
-    }
-  }
-}
+    fetchFieldData
+  };
+};

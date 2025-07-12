@@ -62,6 +62,42 @@ export type Database = {
         }
         Relationships: []
       }
+      buying_stations: {
+        Row: {
+          capacity: number
+          created_at: string
+          current_occupancy: number | null
+          id: string
+          location: string
+          manager_name: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          capacity: number
+          created_at?: string
+          current_occupancy?: number | null
+          id?: string
+          location: string
+          manager_name: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          current_occupancy?: number | null
+          id?: string
+          location?: string
+          manager_name?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coffee_records: {
         Row: {
           bags: number
@@ -111,6 +147,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      customers: {
+        Row: {
+          country: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          status: string
+          total_orders: number | null
+          total_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          country: string
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
+          status?: string
+          total_orders?: number | null
+          total_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          status?: string
+          total_orders?: number | null
+          total_value?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       daily_tasks: {
         Row: {
@@ -208,6 +283,95 @@ export type Database = {
         }
         Relationships: []
       }
+      field_agents: {
+        Row: {
+          collections_count: number | null
+          created_at: string
+          id: string
+          last_report_date: string | null
+          name: string
+          phone: string | null
+          region: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          collections_count?: number | null
+          created_at?: string
+          id?: string
+          last_report_date?: string | null
+          name: string
+          phone?: string | null
+          region: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          collections_count?: number | null
+          created_at?: string
+          id?: string
+          last_report_date?: string | null
+          name?: string
+          phone?: string | null
+          region?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      field_collections: {
+        Row: {
+          agent_id: string | null
+          agent_name: string
+          bags: number
+          batch_number: string | null
+          collection_date: string
+          created_at: string
+          farmer_name: string
+          id: string
+          location: string
+          quality_grade: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name: string
+          bags: number
+          batch_number?: string | null
+          collection_date?: string
+          created_at?: string
+          farmer_name: string
+          id?: string
+          location: string
+          quality_grade: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string
+          bags?: number
+          batch_number?: string | null
+          collection_date?: string
+          created_at?: string
+          farmer_name?: string
+          id?: string
+          location?: string
+          quality_grade?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_collections_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "field_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_expenses: {
         Row: {
           amount: number
@@ -270,6 +434,120 @@ export type Database = {
           id?: string
           time?: string
           type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      inventory_items: {
+        Row: {
+          batch_numbers: string[] | null
+          coffee_type: string
+          created_at: string
+          id: string
+          last_updated: string
+          location: string
+          status: string
+          total_bags: number
+          total_kilograms: number
+          updated_at: string
+        }
+        Insert: {
+          batch_numbers?: string[] | null
+          coffee_type: string
+          created_at?: string
+          id?: string
+          last_updated?: string
+          location?: string
+          status?: string
+          total_bags?: number
+          total_kilograms?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_numbers?: string[] | null
+          coffee_type?: string
+          created_at?: string
+          id?: string
+          last_updated?: string
+          location?: string
+          status?: string
+          total_bags?: number
+          total_kilograms?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      market_data: {
+        Row: {
+          change_percentage: number | null
+          coffee_type: string
+          created_at: string
+          date_recorded: string
+          exchange_rate: number
+          id: string
+          market_source: string
+          price_ugx: number
+          price_usd: number
+          trend: string | null
+        }
+        Insert: {
+          change_percentage?: number | null
+          coffee_type: string
+          created_at?: string
+          date_recorded?: string
+          exchange_rate: number
+          id?: string
+          market_source: string
+          price_ugx: number
+          price_usd: number
+          trend?: string | null
+        }
+        Update: {
+          change_percentage?: number | null
+          coffee_type?: string
+          created_at?: string
+          date_recorded?: string
+          exchange_rate?: number
+          id?: string
+          market_source?: string
+          price_ugx?: number
+          price_usd?: number
+          trend?: string | null
+        }
+        Relationships: []
+      }
+      marketing_campaigns: {
+        Row: {
+          budget: number
+          created_at: string
+          end_date: string
+          id: string
+          name: string
+          roi_percentage: number | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          budget: number
+          created_at?: string
+          end_date: string
+          id?: string
+          name: string
+          roi_percentage?: number | null
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          budget?: number
+          created_at?: string
+          end_date?: string
+          id?: string
+          name?: string
+          roi_percentage?: number | null
+          start_date?: string
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -395,6 +673,95 @@ export type Database = {
           value?: number
         }
         Relationships: []
+      }
+      price_forecasts: {
+        Row: {
+          coffee_type: string
+          confidence_level: number
+          created_at: string
+          forecast_date: string
+          id: string
+          model_used: string
+          predicted_price: number
+        }
+        Insert: {
+          coffee_type: string
+          confidence_level: number
+          created_at?: string
+          forecast_date: string
+          id?: string
+          model_used: string
+          predicted_price: number
+        }
+        Update: {
+          coffee_type?: string
+          confidence_level?: number
+          created_at?: string
+          forecast_date?: string
+          id?: string
+          model_used?: string
+          predicted_price?: number
+        }
+        Relationships: []
+      }
+      purchase_orders: {
+        Row: {
+          coffee_type: string
+          created_at: string
+          delivery_date: string
+          id: string
+          notes: string | null
+          order_date: string
+          quantity: number
+          received: number | null
+          status: string
+          supplier_id: string | null
+          supplier_name: string
+          total_amount: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          coffee_type: string
+          created_at?: string
+          delivery_date: string
+          id?: string
+          notes?: string | null
+          order_date?: string
+          quantity: number
+          received?: number | null
+          status?: string
+          supplier_id?: string | null
+          supplier_name: string
+          total_amount: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          coffee_type?: string
+          created_at?: string
+          delivery_date?: string
+          id?: string
+          notes?: string | null
+          order_date?: string
+          quantity?: number
+          received?: number | null
+          status?: string
+          supplier_id?: string | null
+          supplier_name?: string
+          total_amount?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quality_assessments: {
         Row: {
@@ -554,6 +921,83 @@ export type Database = {
           processed_date?: string
           status?: string
           total_pay?: number
+        }
+        Relationships: []
+      }
+      sales_contracts: {
+        Row: {
+          contract_date: string
+          created_at: string
+          customer_id: string | null
+          customer_name: string
+          delivery_date: string
+          id: string
+          price: number
+          quantity: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contract_date?: string
+          created_at?: string
+          customer_id?: string | null
+          customer_name: string
+          delivery_date: string
+          id?: string
+          price: number
+          quantity: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contract_date?: string
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string
+          delivery_date?: string
+          id?: string
+          price?: number
+          quantity?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_contracts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      storage_locations: {
+        Row: {
+          capacity: number
+          created_at: string
+          current_occupancy: number | null
+          id: string
+          name: string
+          occupancy_percentage: number | null
+          updated_at: string
+        }
+        Insert: {
+          capacity: number
+          created_at?: string
+          current_occupancy?: number | null
+          id?: string
+          name: string
+          occupancy_percentage?: number | null
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          current_occupancy?: number | null
+          id?: string
+          name?: string
+          occupancy_percentage?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
