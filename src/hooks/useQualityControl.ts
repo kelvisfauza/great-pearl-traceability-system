@@ -1,17 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
 
-export interface StoreRecord {
-  id: string;
-  batchNumber: string;
-  coffeeType: string;
-  date: string;
-  kilograms: number;
-  bags: number;
-  supplier: string;
-  status: 'pending' | 'quality_review' | 'pricing' | 'batched' | 'drying' | 'sales' | 'inventory';
-}
+export interface StoreRecord extends Tables<'coffee_records'> {}
 
 export interface QualityAssessment {
   id: string;
@@ -36,27 +28,57 @@ export const useQualityControl = () => {
   const [qualityAssessments, setQualityAssessments] = useState<QualityAssessment[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // For now, we'll use local state since we don't have database tables yet
-  // This will be replaced with actual database calls once tables are created
+  // Load data from database
   useEffect(() => {
-    // Simulate loading from database
-    setLoading(false);
+    loadStoreRecords();
   }, []);
 
-  const addStoreRecord = (record: Omit<StoreRecord, 'id'>) => {
-    const newRecord: StoreRecord = {
-      ...record,
-      id: Date.now().toString(),
-    };
-    setStoreRecords([...storeRecords, newRecord]);
+  const loadStoreRecords = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('coffee_records')
+        .select('*')
+        .in('status', ['pending', 'quality_review', 'pricing', 'batched', 'drying'])
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setStoreRecords(data || []);
+    } catch (error) {
+      console.error('Error loading store records:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateStoreRecord = (id: string, updates: Partial<StoreRecord>) => {
-    setStoreRecords(records => 
-      records.map(record => 
-        record.id === id ? { ...record, ...updates } : record
-      )
-    );
+  const addStoreRecord = (record: Omit<StoreRecord, 'id'>) => {
+    // This method is kept for compatibility but data should be added through Store Management
+    console.log('Store records should be added through Store Management');
+  };
+
+  const updateStoreRecord = async (id: string, updates: Partial<StoreRecord>) => {
+    try {
+      const { data, error } = await supabase
+        .from('coffee_records')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStoreRecords(records => 
+        records.map(record => 
+          record.id === id ? data : record
+        )
+      );
+    } catch (error) {
+      console.error('Error updating store record:', error);
+      throw error;
+    }
   };
 
   const addQualityAssessment = (assessment: Omit<QualityAssessment, 'id'>) => {
@@ -88,5 +110,6 @@ export const useQualityControl = () => {
     updateStoreRecord,
     addQualityAssessment,
     updateQualityAssessment,
+    refreshData: loadStoreRecords,
   };
 };

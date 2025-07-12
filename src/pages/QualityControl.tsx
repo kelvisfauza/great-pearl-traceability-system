@@ -48,7 +48,7 @@ const QualityControl = () => {
     }
     toast({
       title: "Batch Selected",
-      description: `Selected batch ${record.batchNumber} for quality assessment`,
+      description: `Selected batch ${record.batch_number} for quality assessment`,
     });
   };
 
@@ -67,7 +67,7 @@ const QualityControl = () => {
 
     const assessment = {
       storeRecordId: selectedRecord.id,
-      batchNumber: selectedRecord.batchNumber,
+      batchNumber: selectedRecord.batch_number,
       moisture: Number(assessmentForm.moisture),
       group1Defects: Number(assessmentForm.group1Defects) || 0,
       group2Defects: Number(assessmentForm.group2Defects) || 0,
@@ -124,7 +124,7 @@ const QualityControl = () => {
   };
 
   const handleDispatchToDryer = (batchNumber: string) => {
-    const record = storeRecords.find(r => r.batchNumber === batchNumber);
+    const record = storeRecords.find(r => r.batch_number === batchNumber);
     if (record) {
       updateStoreRecord(record.id, { status: 'drying' });
       toast({
@@ -264,9 +264,9 @@ const QualityControl = () => {
                     <TableBody>
                       {pendingRecords.map((record) => (
                         <TableRow key={record.id}>
-                          <TableCell className="font-mono">{record.batchNumber}</TableCell>
-                          <TableCell>{record.coffeeType}</TableCell>
-                          <TableCell>{record.supplier}</TableCell>
+                          <TableCell className="font-mono">{record.batch_number}</TableCell>
+                          <TableCell>{record.coffee_type}</TableCell>
+                          <TableCell>{record.supplier_name}</TableCell>
                           <TableCell>{record.date}</TableCell>
                           <TableCell>{record.kilograms} kg</TableCell>
                           <TableCell>{record.bags}</TableCell>
@@ -298,9 +298,9 @@ const QualityControl = () => {
             {selectedRecord ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Quality Assessment - Batch {selectedRecord.batchNumber}</CardTitle>
+                  <CardTitle>Quality Assessment - Batch {selectedRecord.batch_number}</CardTitle>
                   <CardDescription>
-                    {selectedRecord.coffeeType} from {selectedRecord.supplier} - {selectedRecord.kilograms} kg ({selectedRecord.bags} bags)
+                    {selectedRecord.coffee_type} from {selectedRecord.supplier_name} - {selectedRecord.kilograms} kg ({selectedRecord.bags} bags)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -417,7 +417,7 @@ const QualityControl = () => {
                   {/* Pricing Guidance */}
                   {assessmentForm.suggestedPrice && (
                     <PricingGuidance 
-                      coffeeType={selectedRecord.coffeeType}
+                      coffeeType={selectedRecord.coffee_type}
                       suggestedPrice={Number(assessmentForm.suggestedPrice)}
                     />
                   )}
@@ -539,9 +539,9 @@ const QualityControl = () => {
                     <TableBody>
                       {storeRecords.filter(r => r.status === 'pricing' || r.status === 'batched').map((record) => (
                         <TableRow key={record.id}>
-                          <TableCell className="font-mono">{record.batchNumber}</TableCell>
-                          <TableCell>{record.coffeeType}</TableCell>
-                          <TableCell>{record.supplier}</TableCell>
+                          <TableCell className="font-mono">{record.batch_number}</TableCell>
+                          <TableCell>{record.coffee_type}</TableCell>
+                          <TableCell>{record.supplier_name}</TableCell>
                           <TableCell>{record.kilograms} kg</TableCell>
                           <TableCell>
                             <Badge variant={getStatusBadge(record.status).variant}>
@@ -552,7 +552,7 @@ const QualityControl = () => {
                             <div className="flex gap-2">
                               <Button 
                                 size="sm" 
-                                onClick={() => handleDispatchToDryer(record.batchNumber)}
+                                onClick={() => handleDispatchToDryer(record.batch_number)}
                               >
                                 <Truck className="h-3 w-3 mr-1" />
                                 To Dryer
