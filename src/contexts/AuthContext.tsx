@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,15 +47,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!session?.user) return;
     
     try {
-      const { data, error } = await supabase.rpc('get_current_employee') as {
-        data: Employee[] | null;
-        error: any;
-      };
+      const { data, error } = await supabase.rpc('get_current_employee');
       
       if (error) throw error;
       
-      if (data && data.length > 0) {
-        setEmployee(data[0]);
+      if (data && Array.isArray(data) && data.length > 0) {
+        setEmployee(data[0] as Employee);
       }
     } catch (error) {
       console.error('Error fetching employee data:', error);
