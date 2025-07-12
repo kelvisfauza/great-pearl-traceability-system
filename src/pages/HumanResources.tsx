@@ -30,8 +30,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const HumanResources = () => {
-  const { employees, loading: employeesLoading, deleteEmployee } = useEmployees();
-  const { payments, loading: paymentsLoading } = useSalaryPayments();
+  const { employees, loading: employeesLoading, deleteEmployee, addEmployee, updateEmployee } = useEmployees();
+  const { payments, loading: paymentsLoading, addPayment } = useSalaryPayments();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("All");
@@ -66,6 +66,20 @@ const HumanResources = () => {
     if (window.confirm('Are you sure you want to delete this employee?')) {
       await deleteEmployee(employeeId);
     }
+  };
+
+  const handleAddEmployee = async (employeeData: any) => {
+    await addEmployee(employeeData);
+    setIsAddModalOpen(false);
+  };
+
+  const handleUpdateEmployee = async (employeeData: any) => {
+    await updateEmployee(employeeData);
+  };
+
+  const handleProcessPayment = async (paymentData: any) => {
+    await addPayment(paymentData);
+    setIsPaymentModalOpen(false);
   };
 
   const getRoleColor = (role: string) => {
@@ -243,7 +257,11 @@ const HumanResources = () => {
                   ))}
                 </div>
               ) : (
-                <EmptyState />
+                <EmptyState 
+                  type="employees"
+                  onAction={() => setIsAddModalOpen(true)}
+                  actionLabel="Add First Employee"
+                />
               )}
             </CardContent>
           </Card>
@@ -277,7 +295,11 @@ const HumanResources = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-gray-500">No payments recorded</p>
+                <EmptyState 
+                  type="payments"
+                  onAction={() => setIsPaymentModalOpen(true)}
+                  actionLabel="Process First Payroll"
+                />
               )}
             </CardContent>
           </Card>
@@ -286,19 +308,23 @@ const HumanResources = () => {
 
       {/* Modals */}
       <AddEmployeeModal 
-        isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
+        open={isAddModalOpen} 
+        onOpenChange={setIsAddModalOpen}
+        onEmployeeAdded={handleAddEmployee}
       />
       
       <EmployeeDetailsModal
-        isOpen={isDetailsModalOpen}
-        onClose={() => setIsDetailsModalOpen(false)}
+        open={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
         employee={selectedEmployee}
+        onEmployeeUpdated={handleUpdateEmployee}
       />
       
       <SalaryPaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
+        open={isPaymentModalOpen}
+        onOpenChange={setIsPaymentModalOpen}
+        employees={employees}
+        onPaymentProcessed={handleProcessPayment}
       />
     </Layout>
   );
