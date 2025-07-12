@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,19 +10,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart } from "lucide-react";
 import { useStoreManagement } from "@/hooks/useStoreManagement";
+import { useSuppliers } from "@/hooks/useSuppliers";
 import { toast } from "sonner";
 
 const Store = () => {
   const {
-    suppliers,
     coffeeRecords,
-    loading,
-    addSupplier,
+    loading: storeLoading,
     addCoffeeRecord,
     updateCoffeeRecordStatus,
     todaysSummary,
     pendingActions
   } = useStoreManagement();
+
+  const {
+    suppliers,
+    loading: suppliersLoading,
+    addSupplier
+  } = useSuppliers();
 
   const [newSupplier, setNewSupplier] = useState({
     name: '',
@@ -44,6 +48,8 @@ const Store = () => {
 
   const [submittingSupplier, setSubmittingSupplier] = useState(false);
   const [submittingRecord, setSubmittingRecord] = useState(false);
+
+  const loading = storeLoading || suppliersLoading;
 
   const handleSaveSupplier = async () => {
     if (!newSupplier.name || !newSupplier.origin) {
