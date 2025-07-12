@@ -45,7 +45,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   const fetchEmployeeData = async () => {
-    if (!session?.user) return;
+    if (!session?.user) {
+      console.log('No session user available for employee fetch');
+      setEmployee(null);
+      return;
+    }
     
     try {
       console.log('Fetching employee data for email:', session.user.email);
@@ -62,11 +66,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
-      console.log('Employee data found:', data);
+      console.log('Employee data query result:', data);
       
       if (data) {
+        console.log('Setting employee data:', {
+          employee_id: data.employee_id || data.id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          position: data.position,
+          department: data.department,
+          role: data.role,
+          permissions: data.permissions
+        });
+        
         setEmployee({
-          employee_id: data.employee_id || '',
+          employee_id: data.employee_id || data.id,
           name: data.name,
           email: data.email,
           phone: data.phone,
@@ -77,9 +92,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       } else {
         console.log('No employee record found for email:', session.user.email);
+        setEmployee(null);
       }
     } catch (error) {
       console.error('Error fetching employee data:', error);
+      setEmployee(null);
     }
   };
 
@@ -92,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Use setTimeout to avoid blocking the auth state change
           setTimeout(() => {
             fetchEmployeeData();
           }, 0);
@@ -117,6 +135,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Add effect to refetch employee data when session changes
+  useEffect(() => {
+    if (session?.user && !employee) {
+      console.log('Session exists but no employee data, refetching...');
+      fetchEmployeeData();
+    }
+  }, [session, employee]);
 
   const signIn = async (email: string, password: string) => {
     console.log('Attempting to sign in with email:', email);
