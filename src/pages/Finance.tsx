@@ -18,11 +18,13 @@ const Finance = () => {
     transactions,
     expenses,
     payments,
+    qualityAssessments,
     stats,
     loading,
     addTransaction,
     addExpense,
-    processPayment
+    processPayment,
+    createPaymentFromQualityAssessment
   } = useFinanceData();
 
   const { tasks: dailyTasks, loading: tasksLoading } = useDailyTasks();
@@ -87,6 +89,10 @@ const Finance = () => {
     processPayment(paymentId, method);
   };
 
+  const handleCreatePayment = (assessmentId: string) => {
+    createPaymentFromQualityAssessment(assessmentId);
+  };
+
   const formatCurrency = (amount: number) => {
     return `UGX ${amount.toLocaleString()}`;
   };
@@ -110,7 +116,6 @@ const Finance = () => {
         title: "Salary Payment Approved",
         description: "The salary payment request has been approved and will be processed.",
       });
-      // Here you could also create the actual payment record
     }
   };
 
@@ -178,8 +183,9 @@ const Finance = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="payments" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
+        <Tabs defaultValue="quality-assessments" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="quality-assessments">Quality Assessments</TabsTrigger>
             <TabsTrigger value="payments">Payment Processing</TabsTrigger>
             <TabsTrigger value="salary-requests">HR Salary Requests</TabsTrigger>
             <TabsTrigger value="daily">Daily Reports</TabsTrigger>
@@ -187,6 +193,63 @@ const Finance = () => {
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
             <TabsTrigger value="overview">Overview</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="quality-assessments" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quality Assessments Ready for Payment</CardTitle>
+                <CardDescription>Quality assessments submitted to finance for payment processing</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {qualityAssessments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No quality assessments pending payment</p>
+                    <p className="text-sm text-gray-400 mt-2">Quality assessed batches will appear here for payment processing</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Batch Number</TableHead>
+                        <TableHead>Assessed By</TableHead>
+                        <TableHead>Date Assessed</TableHead>
+                        <TableHead>Suggested Price/Kg</TableHead>
+                        <TableHead>Moisture %</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {qualityAssessments.map((assessment) => (
+                        <TableRow key={assessment.id}>
+                          <TableCell className="font-medium">{assessment.batch_number}</TableCell>
+                          <TableCell>{assessment.assessed_by}</TableCell>
+                          <TableCell>{assessment.date_assessed}</TableCell>
+                          <TableCell className="font-bold">{formatCurrency(assessment.suggested_price)}</TableCell>
+                          <TableCell>{assessment.moisture}%</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {assessment.status.replace('_', ' ').toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleCreatePayment(assessment.id)}
+                            >
+                              <PlusCircle className="h-4 w-4 mr-1" />
+                              Create Payment
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="payments" className="space-y-4">
             <Card>

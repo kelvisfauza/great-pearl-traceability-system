@@ -84,153 +84,115 @@ export const useFinanceData = () => {
       
       // Fetch transactions from Firebase
       console.log('Fetching finance transactions from Firebase...');
-      try {
-        const transactionsQuery = query(collection(db, 'finance_transactions'), orderBy('created_at', 'desc'));
-        const transactionsSnapshot = await getDocs(transactionsQuery);
-        const transactionsData = transactionsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as FinanceTransaction[];
-        console.log('Finance transactions loaded:', transactionsData.length, 'records');
-        setTransactions(transactionsData);
-      } catch (transactionError) {
-        console.error('Error fetching transactions:', transactionError);
-        setTransactions([]);
-      }
+      const transactionsQuery = query(collection(db, 'finance_transactions'), orderBy('created_at', 'desc'));
+      const transactionsSnapshot = await getDocs(transactionsQuery);
+      const transactionsData = transactionsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FinanceTransaction[];
+      console.log('Finance transactions loaded:', transactionsData.length, 'records');
+      setTransactions(transactionsData);
 
       // Fetch expenses from Firebase
       console.log('Fetching finance expenses from Firebase...');
-      try {
-        const expensesQuery = query(collection(db, 'finance_expenses'), orderBy('created_at', 'desc'));
-        const expensesSnapshot = await getDocs(expensesQuery);
-        const expensesData = expensesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as FinanceExpense[];
-        console.log('Finance expenses loaded:', expensesData.length, 'records');
-        setExpenses(expensesData);
-      } catch (expenseError) {
-        console.error('Error fetching expenses:', expenseError);
-        setExpenses([]);
-      }
+      const expensesQuery = query(collection(db, 'finance_expenses'), orderBy('created_at', 'desc'));
+      const expensesSnapshot = await getDocs(expensesQuery);
+      const expensesData = expensesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FinanceExpense[];
+      console.log('Finance expenses loaded:', expensesData.length, 'records');
+      setExpenses(expensesData);
 
       // Fetch payment records from Firebase
       console.log('Fetching payment records from Firebase...');
-      try {
-        const paymentsQuery = query(collection(db, 'payment_records'), orderBy('created_at', 'desc'));
-        const paymentsSnapshot = await getDocs(paymentsQuery);
-        const paymentsData = paymentsSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            supplier: data.supplier || '',
-            amount: Number(data.amount) || 0,
-            status: data.status || 'Pending',
-            date: data.date || new Date().toISOString().split('T')[0],
-            method: data.method || 'Bank Transfer',
-            qualityAssessmentId: data.quality_assessment_id,
-            batchNumber: data.batch_number,
-            kilograms: data.kilograms ? Number(data.kilograms) : undefined,
-            pricePerKg: data.price_per_kg ? Number(data.price_per_kg) : undefined
-          };
-        }) as PaymentRecord[];
-        console.log('Payment records loaded:', paymentsData.length, 'records');
-        setPayments(paymentsData);
-      } catch (paymentError) {
-        console.error('Error fetching payment records:', paymentError);
-        setPayments([]);
-      }
+      const paymentsQuery = query(collection(db, 'payment_records'), orderBy('created_at', 'desc'));
+      const paymentsSnapshot = await getDocs(paymentsQuery);
+      const paymentsData = paymentsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          supplier: data.supplier || '',
+          amount: Number(data.amount) || 0,
+          status: data.status || 'Pending',
+          date: data.date || new Date().toISOString().split('T')[0],
+          method: data.method || 'Bank Transfer',
+          qualityAssessmentId: data.quality_assessment_id,
+          batchNumber: data.batch_number,
+          kilograms: data.kilograms ? Number(data.kilograms) : undefined,
+          pricePerKg: data.price_per_kg ? Number(data.price_per_kg) : undefined
+        };
+      }) as PaymentRecord[];
+      console.log('Payment records loaded:', paymentsData.length, 'records');
+      setPayments(paymentsData);
 
-      // Fetch quality assessments from Firebase - with better error handling
+      // Fetch quality assessments from Firebase
       console.log('Fetching quality assessments for finance from Firebase...');
-      try {
-        const assessmentsQuery = query(collection(db, 'quality_assessments'), orderBy('created_at', 'desc'));
-        const assessmentsSnapshot = await getDocs(assessmentsQuery);
-        
-        if (assessmentsSnapshot.empty) {
-          console.log('No quality assessments found');
-          setQualityAssessments([]);
-        } else {
-          const allAssessments = assessmentsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            console.log('Processing assessment:', doc.id, data);
-            return {
-              id: doc.id,
-              store_record_id: data.store_record_id || null,
-              batch_number: data.batch_number || '',
-              moisture: Number(data.moisture) || 0,
-              group1_defects: Number(data.group1_defects) || 0,
-              group2_defects: Number(data.group2_defects) || 0,
-              below12: Number(data.below12) || 0,
-              pods: Number(data.pods) || 0,
-              husks: Number(data.husks) || 0,
-              stones: Number(data.stones) || 0,
-              suggested_price: Number(data.suggested_price) || 0,
-              status: data.status || 'assessed',
-              comments: data.comments || null,
-              date_assessed: data.date_assessed || new Date().toISOString().split('T')[0],
-              assessed_by: data.assessed_by || 'Quality Officer',
-              created_at: data.created_at || new Date().toISOString(),
-              updated_at: data.updated_at || new Date().toISOString()
-            };
-          }) as QualityAssessmentForPayment[];
-          
-          // Filter for assessments relevant to finance
-          const relevantAssessments = allAssessments.filter(assessment => {
-            const isRelevant = assessment.status && 
-              ['submitted_to_finance', 'price_requested', 'approved'].includes(assessment.status);
-            console.log(`Assessment ${assessment.id} (${assessment.status}) is relevant:`, isRelevant);
-            return isRelevant;
-          });
-          
-          console.log('Quality assessments for finance loaded:', relevantAssessments.length, 'relevant out of', allAssessments.length, 'total');
-          setQualityAssessments(relevantAssessments);
-        }
-      } catch (assessmentError) {
-        console.error('Error fetching quality assessments:', assessmentError);
-        setQualityAssessments([]);
-      }
+      const assessmentsQuery = query(collection(db, 'quality_assessments'), orderBy('created_at', 'desc'));
+      const assessmentsSnapshot = await getDocs(assessmentsQuery);
       
-      // Update stats with better error handling
-      try {
-        const currentTransactions = transactions.length > 0 ? transactions : [];
-        const currentPayments = payments.length > 0 ? payments : [];
-        const currentExpenses = expenses.length > 0 ? expenses : [];
+      const allAssessments = assessmentsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          store_record_id: data.store_record_id || null,
+          batch_number: data.batch_number || '',
+          moisture: Number(data.moisture) || 0,
+          group1_defects: Number(data.group1_defects) || 0,
+          group2_defects: Number(data.group2_defects) || 0,
+          below12: Number(data.below12) || 0,
+          pods: Number(data.pods) || 0,
+          husks: Number(data.husks) || 0,
+          stones: Number(data.stones) || 0,
+          suggested_price: Number(data.suggested_price) || 0,
+          status: data.status || 'assessed',
+          comments: data.comments || null,
+          date_assessed: data.date_assessed || new Date().toISOString().split('T')[0],
+          assessed_by: data.assessed_by || 'Quality Officer',
+          created_at: data.created_at || new Date().toISOString(),
+          updated_at: data.updated_at || new Date().toISOString()
+        };
+      }) as QualityAssessmentForPayment[];
+      
+      // Filter for assessments relevant to finance (only those submitted to finance)
+      const relevantAssessments = allAssessments.filter(assessment => 
+        assessment.status === 'submitted_to_finance' || 
+        assessment.status === 'price_requested' || 
+        assessment.status === 'approved'
+      );
+      
+      console.log('Quality assessments for finance loaded:', relevantAssessments.length, 'relevant out of', allAssessments.length, 'total');
+      setQualityAssessments(relevantAssessments);
+      
+      // Update stats
+      const totalReceipts = transactionsData
+        .filter(t => t.type === 'Receipt' || t.type === 'Float')
+        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
         
-        const totalReceipts = currentTransactions
-          .filter(t => t.type === 'Receipt' || t.type === 'Float')
-          .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-          
-        const totalPayments = currentTransactions
-          .filter(t => t.type === 'Payment' || t.type === 'Expense')
-          .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      const totalPayments = transactionsData
+        .filter(t => t.type === 'Payment' || t.type === 'Expense')
+        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-        const pendingPayments = currentPayments
-          .filter(p => p.status === 'Pending')
-          .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-          
-        const operatingCosts = currentExpenses
-          .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-
-        setStats(prev => ({
-          ...prev,
-          totalReceipts,
-          totalPayments,
-          netCashFlow: totalReceipts - totalPayments,
-          pendingPayments,
-          operatingCosts
-        }));
+      const pendingPayments = paymentsData
+        .filter(p => p.status === 'Pending')
+        .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
         
-        console.log('Finance stats updated:', {
-          totalReceipts,
-          totalPayments,
-          netCashFlow: totalReceipts - totalPayments,
-          pendingPayments,
-          operatingCosts
-        });
-      } catch (statsError) {
-        console.error('Error updating stats:', statsError);
-      }
+      const operatingCosts = expensesData
+        .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+      const newStats = {
+        monthlyRevenue: totalReceipts,
+        totalReceipts,
+        totalPayments,
+        netCashFlow: totalReceipts - totalPayments,
+        pendingPayments,
+        operatingCosts,
+        cashOnHand: totalReceipts - totalPayments,
+        currentFloat: 500000
+      };
+      
+      setStats(newStats);
+      console.log('Finance stats updated:', newStats);
       
     } catch (error) {
       console.error('Error fetching finance data:', error);
