@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useRoleBasedData } from "@/hooks/useRoleBasedData";
 import { 
   Plus, 
   FileText, 
@@ -17,7 +17,9 @@ import {
 
 const QuickActions = () => {
   const navigate = useNavigate();
-  const { hasPermission, hasRole } = useAuth();
+  const dataFilters = useRoleBasedData();
+
+  if (!dataFilters) return null;
 
   const allActions = [
     {
@@ -27,8 +29,7 @@ const QuickActions = () => {
       color: "bg-orange-600 hover:bg-orange-700",
       action: "Record Purchase",
       route: "/store?tab=records",
-      permissions: ["Store Management"],
-      roles: []
+      access: dataFilters.canViewInventory
     },
     {
       title: "New Coffee Batch",
@@ -37,8 +38,7 @@ const QuickActions = () => {
       color: "bg-green-600 hover:bg-green-700",
       action: "Add Batch",
       route: "/procurement",
-      permissions: ["Procurement"],
-      roles: []
+      access: dataFilters.canViewProcurement
     },
     {
       title: "Quality Inspection",
@@ -47,8 +47,7 @@ const QuickActions = () => {
       color: "bg-blue-600 hover:bg-blue-700",
       action: "Inspect",
       route: "/quality-control",
-      permissions: ["Quality Control"],
-      roles: []
+      access: dataFilters.canViewQualityControl
     },
     {
       title: "Process Payment",
@@ -57,8 +56,7 @@ const QuickActions = () => {
       color: "bg-amber-600 hover:bg-amber-700",
       action: "Pay Now",
       route: "/finance",
-      permissions: ["Finance"],
-      roles: ["Administrator", "Manager"]
+      access: dataFilters.canViewFinancialData
     },
     {
       title: "Generate Report",
@@ -67,8 +65,7 @@ const QuickActions = () => {
       color: "bg-purple-600 hover:bg-purple-700",
       action: "Generate",
       route: "/reports",
-      permissions: ["Reports"],
-      roles: ["Administrator", "Manager", "Operations Manager"]
+      access: dataFilters.canViewReports
     },
     {
       title: "Add Supplier",
@@ -77,8 +74,7 @@ const QuickActions = () => {
       color: "bg-indigo-600 hover:bg-indigo-700",
       action: "Register",
       route: "/store?tab=suppliers",
-      permissions: ["Store Management", "Procurement"],
-      roles: []
+      access: dataFilters.canViewProcurement || dataFilters.canViewInventory
     },
     {
       title: "Sales Entry",
@@ -87,24 +83,12 @@ const QuickActions = () => {
       color: "bg-pink-600 hover:bg-pink-700",
       action: "Record Sale",
       route: "/sales-marketing",
-      permissions: ["Sales & Marketing"],
-      roles: []
+      access: dataFilters.canViewAnalytics || dataFilters.userDepartment === 'Sales'
     }
   ];
 
-  // Filter actions based on user permissions and roles
-  const availableActions = allActions.filter(action => {
-    // Check if user has required permissions
-    const hasRequiredPermission = action.permissions.length === 0 || 
-      action.permissions.some(permission => hasPermission(permission));
-    
-    // Check if user has required roles
-    const hasRequiredRole = action.roles.length === 0 || 
-      action.roles.some(role => hasRole(role));
-    
-    // Show action if user has permission OR required role
-    return hasRequiredPermission || hasRequiredRole;
-  });
+  // Filter actions based on user access
+  const availableActions = allActions.filter(action => action.access);
 
   return (
     <Card>
@@ -114,7 +98,7 @@ const QuickActions = () => {
           Quick Actions
         </CardTitle>
         <CardDescription>
-          Available actions based on your role
+          Available actions for {dataFilters.userRole} in {dataFilters.userDepartment}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -148,7 +132,12 @@ const QuickActions = () => {
             <div className="text-gray-400 mb-2">
               <Package className="h-12 w-12 mx-auto" />
             </div>
-            <p className="text-sm text-gray-500">No quick actions available for your role</p>
+            <p className="text-sm text-gray-500">
+              No quick actions available for {dataFilters.userRole} role
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Contact your administrator if you need additional access
+            </p>
           </div>
         )}
       </CardContent>

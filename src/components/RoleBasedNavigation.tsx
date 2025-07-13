@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRoleBasedData } from "@/hooks/useRoleBasedData";
 import { 
   Coffee,
   Users,
@@ -21,56 +22,117 @@ import {
 
 const RoleBasedNavigation = () => {
   const location = useLocation();
-  const { employee, hasPermission, hasRole } = useAuth();
+  const { employee } = useAuth();
+  const dataFilters = useRoleBasedData();
   
-  if (!employee) return null;
+  if (!employee || !dataFilters) return null;
 
   const allNavigationItems = [
     {
       title: "Operations",
       items: [
-        { name: "Dashboard", icon: BarChart3, path: "/", permissions: [] },
-        { name: "Procurement", icon: Package, path: "/procurement", permissions: ["Procurement"] },
-        { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permissions: ["Quality Control"] },
-        { name: "Processing", icon: Coffee, path: "/processing", permissions: ["Processing"] },
-        { name: "Store Management", icon: Shield, path: "/store", permissions: ["Store Management"] },
-        { name: "Inventory", icon: Package, path: "/inventory", permissions: ["Inventory"] },
+        { 
+          name: "Dashboard", 
+          icon: BarChart3, 
+          path: "/", 
+          access: true // Everyone gets dashboard access
+        },
+        { 
+          name: "Procurement", 
+          icon: Package, 
+          path: "/procurement", 
+          access: dataFilters.canViewProcurement
+        },
+        { 
+          name: "Quality Control", 
+          icon: ClipboardCheck, 
+          path: "/quality-control", 
+          access: dataFilters.canViewQualityControl
+        },
+        { 
+          name: "Processing", 
+          icon: Coffee, 
+          path: "/processing", 
+          access: dataFilters.canViewProcessing
+        },
+        { 
+          name: "Store Management", 
+          icon: Shield, 
+          path: "/store", 
+          access: dataFilters.canViewInventory
+        },
+        { 
+          name: "Inventory", 
+          icon: Package, 
+          path: "/inventory", 
+          access: dataFilters.canViewInventory
+        },
       ]
     },
     {
       title: "Management",
       items: [
-        { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permissions: ["Sales & Marketing"] },
-        { name: "Finance", icon: DollarSign, path: "/finance", permissions: ["Finance"] },
-        { name: "Field Operations", icon: MapPin, path: "/field-operations", permissions: ["Field Operations"] },
-        { name: "Human Resources", icon: Users, path: "/human-resources", permissions: ["Human Resources"] },
-        { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permissions: ["Data Analysis"] },
+        { 
+          name: "Sales & Marketing", 
+          icon: TrendingUp, 
+          path: "/sales-marketing", 
+          access: dataFilters.canViewAnalytics || employee.department === 'Sales'
+        },
+        { 
+          name: "Finance", 
+          icon: DollarSign, 
+          path: "/finance", 
+          access: dataFilters.canViewFinancialData
+        },
+        { 
+          name: "Field Operations", 
+          icon: MapPin, 
+          path: "/field-operations", 
+          access: dataFilters.canViewDashboard || employee.department === 'Field Operations'
+        },
+        { 
+          name: "Human Resources", 
+          icon: Users, 
+          path: "/human-resources", 
+          access: dataFilters.canViewEmployeeData
+        },
+        { 
+          name: "Data Analyst", 
+          icon: LineChart, 
+          path: "/data-analyst", 
+          access: dataFilters.canViewAnalytics
+        },
       ]
     },
     {
       title: "System",
       items: [
-        { name: "Reports", icon: FileText, path: "/reports", permissions: ["Reports"] },
-        { name: "Settings", icon: Settings, path: "/settings", permissions: [] },
-        { name: "Logistics", icon: Truck, path: "/logistics", permissions: ["Logistics"] },
+        { 
+          name: "Reports", 
+          icon: FileText, 
+          path: "/reports", 
+          access: dataFilters.canViewReports
+        },
+        { 
+          name: "Settings", 
+          icon: Settings, 
+          path: "/settings", 
+          access: true // Everyone gets settings access
+        },
+        { 
+          name: "Logistics", 
+          icon: Truck, 
+          path: "/logistics", 
+          access: dataFilters.canViewDashboard || employee.department === 'Operations'
+        },
       ]
     }
   ];
 
-  // Filter navigation items based on user permissions
+  // Filter navigation items based on access control
   const filteredNavigationItems = allNavigationItems.map(section => ({
     ...section,
-    items: section.items.filter(item => {
-      // Dashboard and Settings are accessible to everyone
-      if (item.path === "/" || item.path === "/settings") return true;
-      
-      // Administrator and Manager roles can see everything
-      if (hasRole("Administrator") || hasRole("Manager")) return true;
-      
-      // Check if user has any of the required permissions
-      if (item.permissions.length === 0) return true;
-      return item.permissions.some(permission => hasPermission(permission));
-    })
+    items: section.items.filter(item => item.access)
   })).filter(section => section.items.length > 0);
 
   return (
@@ -80,6 +142,7 @@ const RoleBasedNavigation = () => {
           <p className="text-sm font-medium text-green-800">{employee.name}</p>
           <p className="text-xs text-green-600">{employee.position}</p>
           <p className="text-xs text-green-600">{employee.department}</p>
+          <p className="text-xs text-green-500 mt-1">Role: {employee.role}</p>
         </div>
         
         <nav className="space-y-6">

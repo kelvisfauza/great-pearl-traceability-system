@@ -8,12 +8,14 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredPermissions?: string[];
   requiredRoles?: string[];
+  fallbackRoute?: string;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredPermissions = [],
-  requiredRoles = []
+  requiredRoles = [],
+  fallbackRoute = "/"
 }) => {
   const { user, employee, loading, hasPermission, hasRole } = useAuth();
 
@@ -21,6 +23,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   console.log('ProtectedRoute - Employee:', employee ? employee.name : 'No employee');
   console.log('ProtectedRoute - Loading:', loading);
   console.log('ProtectedRoute - Required permissions:', requiredPermissions);
+  console.log('ProtectedRoute - Required roles:', requiredRoles);
 
   if (loading) {
     return (
@@ -54,16 +57,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     console.log('ProtectedRoute - Has required permission:', hasRequiredPermission);
     
     if (!hasRequiredPermission) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
-            <p className="text-gray-600">You don't have permission to access this area.</p>
-            <p className="text-sm text-gray-500 mt-2">Required: {requiredPermissions.join(', ')}</p>
-            <p className="text-sm text-gray-500">Your permissions: {employee.permissions?.join(', ') || 'None'}</p>
-          </div>
-        </div>
-      );
+      console.log('ProtectedRoute - Access denied - insufficient permissions');
+      return <Navigate to={fallbackRoute} replace />;
     }
   }
 
@@ -73,16 +68,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     console.log('ProtectedRoute - Has required role:', hasRequiredRole);
     
     if (!hasRequiredRole) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
-            <p className="text-gray-600">You don't have the required role to access this area.</p>
-            <p className="text-sm text-gray-500 mt-2">Required: {requiredRoles.join(', ')}</p>
-            <p className="text-sm text-gray-500">Your role: {employee.role}</p>
-          </div>
-        </div>
-      );
+      console.log('ProtectedRoute - Access denied - insufficient role');
+      return <Navigate to={fallbackRoute} replace />;
     }
   }
 
