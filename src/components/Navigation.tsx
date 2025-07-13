@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
@@ -53,12 +54,16 @@ const Navigation = () => {
   ];
 
   return (
-    <Card>
-      <CardContent className="p-4">
-        <nav className="space-y-6">
+    <div className="h-full w-full">
+      <div className="p-4 border-b border-gray-200">
+        <h2 className="font-semibold text-lg text-gray-800">Coffee ERP</h2>
+      </div>
+      
+      <div className="p-3">
+        <nav className="space-y-4">
           {navigationItems.map((section, sectionIndex) => (
             <div key={sectionIndex}>
-              <h3 className="font-semibold text-sm text-gray-500 uppercase tracking-wider mb-3">
+              <h3 className="font-medium text-xs text-gray-500 uppercase tracking-wider mb-2 px-2">
                 {section.title}
               </h3>
               <div className="space-y-1">
@@ -68,16 +73,17 @@ const Navigation = () => {
                     <Button
                       key={itemIndex}
                       variant={isActive ? "default" : "ghost"}
-                      className={`w-full justify-start transition-all duration-200 ${
+                      size="sm"
+                      className={`w-full justify-start text-sm h-9 ${
                         isActive 
-                          ? "bg-green-600 hover:bg-green-700 text-white shadow-md" 
+                          ? "bg-green-600 hover:bg-green-700 text-white shadow-sm" 
                           : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                       }`}
                       asChild
                     >
                       <Link to={item.path}>
-                        <item.icon className="h-4 w-4 mr-3" />
-                        {item.name}
+                        <item.icon className="h-4 w-4 mr-2 flex-shrink-0" />
+                        <span className="truncate">{item.name}</span>
                       </Link>
                     </Button>
                   );
@@ -86,8 +92,8 @@ const Navigation = () => {
             </div>
           ))}
         </nav>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

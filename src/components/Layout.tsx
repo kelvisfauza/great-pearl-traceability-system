@@ -19,17 +19,21 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Navigation />
+      <aside className="fixed left-0 top-0 h-full w-64 z-30 bg-white border-r border-gray-200 overflow-y-auto">
+        <Navigation />
+      </aside>
       
-      <main className="flex-1 ml-64">
-        <div className="p-8">
+      <main className="flex-1 ml-64 min-w-0">
+        <div className="p-6 max-w-full">
           {title && (
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-              {subtitle && <p className="text-gray-600 mt-2">{subtitle}</p>}
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+              {subtitle && <p className="text-gray-600 mt-1 text-sm">{subtitle}</p>}
             </div>
           )}
-          {children}
+          <div className="w-full">
+            {children}
+          </div>
         </div>
       </main>
 
