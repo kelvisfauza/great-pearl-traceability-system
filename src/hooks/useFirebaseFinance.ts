@@ -133,10 +133,20 @@ export const useFirebaseFinance = () => {
       // Fetch existing payment records
       const paymentsQuery = query(collection(db, 'payment_records'), orderBy('created_at', 'desc'));
       const paymentsSnapshot = await getDocs(paymentsQuery);
-      const existingPayments = paymentsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as PaymentRecord[];
+      const existingPayments = paymentsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          supplier: data.supplier || '',
+          amount: data.amount || 0,
+          status: data.status || 'Pending',
+          method: data.method || 'Bank Transfer',
+          date: data.date || new Date().toLocaleDateString(),
+          batchNumber: data.batchNumber || data.batch_number || '', // Handle both field names
+          qualityAssessmentId: data.qualityAssessmentId || data.quality_assessment_id || null,
+          ...data
+        } as PaymentRecord;
+      });
       
       console.log('Existing payment records:', existingPayments.length);
 
@@ -182,7 +192,7 @@ export const useFirebaseFinance = () => {
             status: 'Pending',
             method: 'Bank Transfer',
             date: new Date().toLocaleDateString(),
-            batchNumber: assessment.batch_number,
+            batchNumber: assessment.batch_number || '',
             qualityAssessmentId: assessment.id
           };
 
@@ -279,7 +289,7 @@ export const useFirebaseFinance = () => {
           department: 'Finance',
           type: 'Bank Transfer',
           title: 'Bank Transfer Approval Required',
-          description: `Bank transfer payment request for payment ID: ${paymentId}`,
+          description: `Bank transfer payment request for batch: ${payment?.batchNumber || 'Unknown'}`,
           amount: payment?.amount?.toLocaleString() || 'Pending Review',
           requestedby: 'Finance Department',
           daterequested: new Date().toISOString(),

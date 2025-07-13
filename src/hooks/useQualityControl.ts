@@ -171,7 +171,7 @@ export const useQualityControl = () => {
         husks: assessment.husks || 0,
         stones: assessment.stones || 0,
         suggested_price: assessment.suggested_price,
-        status: assessment.status,
+        status: 'assessed',
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed,
         assessed_by: assessment.assessed_by,
@@ -182,12 +182,28 @@ export const useQualityControl = () => {
       const docRef = await addDoc(collection(db, 'quality_assessments'), assessmentToAdd);
       console.log('Quality assessment added successfully with ID:', docRef.id);
       
+      // Automatically create a payment record in Finance
+      console.log('Creating payment record for assessment:', docRef.id);
+      await addDoc(collection(db, 'payment_records'), {
+        supplier: assessment.batch_number || 'Unknown Supplier',
+        amount: assessment.suggested_price || 0,
+        status: 'Pending',
+        method: 'Bank Transfer',
+        date: new Date().toLocaleDateString(),
+        batchNumber: assessment.batch_number,
+        qualityAssessmentId: docRef.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      
+      console.log('Payment record created successfully');
+      
       // Refresh assessments to get the new one with ID
       await loadQualityAssessments();
       
       toast({
         title: "Success",
-        description: "Quality assessment saved to database successfully"
+        description: "Quality assessment saved and sent to finance for payment processing"
       });
       
       return { id: docRef.id, ...assessmentToAdd };
@@ -247,6 +263,35 @@ export const useQualityControl = () => {
       await updateQualityAssessment(assessmentId, { 
         status: 'submitted_to_finance' as any 
       });
+      
+      // Find the assessment to get details for payment record
+      const assessment = qualityAssessments.find(a => a.id === assessmentId);
+      
+      if (assessment) {
+        // Check if payment record already exists
+        const existingPaymentsQuery = query(
+          collection(db, 'payment_records'),
+          where('qualityAssessmentId', '==', assessmentId)
+        );
+        const existingPaymentsSnapshot = await getDocs(existingPaymentsQuery);
+        
+        if (existingPaymentsSnapshot.empty) {
+          // Create payment record
+          console.log('Creating payment record for submitted assessment');
+          await addDoc(collection(db, 'payment_records'), {
+            supplier: assessment.batch_number || 'Unknown Supplier',
+            amount: assessment.suggested_price || 0,
+            status: 'Pending',
+            method: 'Bank Transfer',
+            date: new Date().toLocaleDateString(),
+            batchNumber: assessment.batch_number,
+            qualityAssessmentId: assessmentId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          console.log('Payment record created for submitted assessment');
+        }
+      }
       
       console.log('Assessment submitted to finance successfully');
       
