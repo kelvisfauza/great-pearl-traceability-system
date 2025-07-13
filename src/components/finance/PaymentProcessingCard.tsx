@@ -1,0 +1,194 @@
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CreditCard, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+
+interface PaymentProcessingCardProps {
+  pendingPayments: any[];
+  processingPayments: any[];
+  completedPayments: any[];
+  onProcessPayment: (paymentId: string, method: 'Bank Transfer' | 'Cash') => void;
+  formatCurrency: (amount: number) => string;
+}
+
+const PaymentProcessingCard = ({ 
+  pendingPayments, 
+  processingPayments, 
+  completedPayments, 
+  onProcessPayment, 
+  formatCurrency 
+}: PaymentProcessingCardProps) => {
+  return (
+    <div className="space-y-6">
+      {/* Pending Payments */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                Pending Payments
+              </CardTitle>
+              <CardDescription>Payments requiring immediate attention</CardDescription>
+            </div>
+            <Badge variant="destructive">{pendingPayments.length} pending</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {pendingPayments.length === 0 ? (
+            <div className="text-center py-12">
+              <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">All Caught Up!</h3>
+              <p className="text-gray-500">No pending payments to process</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Batch</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingPayments.map((payment) => (
+                    <TableRow key={payment.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">{payment.supplier}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{payment.batchNumber || 'N/A'}</Badge>
+                      </TableCell>
+                      <TableCell className="font-bold text-green-600">
+                        {formatCurrency(payment.amount)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="destructive">{payment.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-500">{payment.date}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            onClick={() => onProcessPayment(payment.id, 'Bank Transfer')}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            Bank Transfer
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => onProcessPayment(payment.id, 'Cash')}
+                          >
+                            Cash Payment
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Processing Payments */}
+      {processingPayments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-500" />
+              Awaiting Approval
+            </CardTitle>
+            <CardDescription>Payments pending manager approval</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Batch</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {processingPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">{payment.supplier}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{payment.batchNumber || 'N/A'}</Badge>
+                      </TableCell>
+                      <TableCell className="font-bold">{formatCurrency(payment.amount)}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="gap-1">
+                          <Clock className="h-3 w-3" />
+                          Processing
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-500">{payment.date}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Completed Payments */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+            Recent Completions
+          </CardTitle>
+          <CardDescription>Successfully processed payments</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {completedPayments.length === 0 ? (
+            <div className="text-center py-8">
+              <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No completed payments today</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {completedPayments.slice(0, 5).map((payment) => (
+                <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg bg-green-50">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 bg-green-500 rounded-full flex items-center justify-center">
+                      <CheckCircle2 className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{payment.supplier}</p>
+                      <p className="text-sm text-gray-500">
+                        {payment.method} • {payment.date}
+                        {payment.batchNumber && ` • ${payment.batchNumber}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-green-600">{formatCurrency(payment.amount)}</p>
+                    <Badge variant="default" className="gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Completed
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default PaymentProcessingCard;
