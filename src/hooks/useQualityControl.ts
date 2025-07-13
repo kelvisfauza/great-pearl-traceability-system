@@ -242,7 +242,13 @@ export const useQualityControl = () => {
   const submitToFinance = async (assessmentId: string) => {
     try {
       console.log('Submitting assessment to finance:', assessmentId);
-      await updateQualityAssessment(assessmentId, { status: 'submitted_to_finance' });
+      
+      // Update the assessment status to submitted_to_finance
+      await updateQualityAssessment(assessmentId, { 
+        status: 'submitted_to_finance' as any 
+      });
+      
+      console.log('Assessment submitted to finance successfully');
       
       toast({
         title: "Submitted to Finance",

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,6 +30,7 @@ export interface PaymentRecord {
   method: string;
   date: string;
   batchNumber?: string;
+  qualityAssessmentId?: string;
 }
 
 interface FinanceStats {
@@ -95,20 +96,8 @@ export const useFirebaseFinance = () => {
         setExpenses([]);
       }
 
-      // Fetch payment records
-      try {
-        const paymentsQuery = query(collection(db, 'payment_records'), orderBy('created_at', 'desc'));
-        const paymentsSnapshot = await getDocs(paymentsQuery);
-        const paymentsData = paymentsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as PaymentRecord[];
-        console.log('Payment records fetched:', paymentsData.length);
-        setPayments(paymentsData);
-      } catch (error) {
-        console.error('Error fetching payment records:', error);
-        setPayments([]);
-      }
+      // Fetch payment records AND quality assessments to create payment records
+      await fetchPaymentRecords();
 
       // Calculate stats (using sample data if collections are empty)
       const sampleStats: FinanceStats = {
@@ -134,6 +123,85 @@ export const useFirebaseFinance = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPaymentRecords = async () => {
+    try {
+      console.log('Fetching payment records and quality assessments...');
+      
+      // Fetch existing payment records
+      const paymentsQuery = query(collection(db, 'payment_records'), orderBy('created_at', 'desc'));
+      const paymentsSnapshot = await getDocs(paymentsQuery);
+      const existingPayments = paymentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as PaymentRecord[];
+      
+      console.log('Existing payment records:', existingPayments.length);
+
+      // Fetch quality assessments that are ready for payment but don't have payment records yet
+      const qualityQuery = query(
+        collection(db, 'quality_assessments'),
+        where('status', 'in', ['assessed', 'submitted_to_finance']),
+        orderBy('created_at', 'desc')
+      );
+      const qualitySnapshot = await getDocs(qualityQuery);
+      const qualityAssessments = qualitySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      console.log('Quality assessments ready for payment:', qualityAssessments.length);
+
+      // Create payment records for quality assessments that don't have them yet
+      const newPayments: PaymentRecord[] = [];
+      
+      for (const assessment of qualityAssessments) {
+        // Check if payment record already exists for this assessment
+        const existingPayment = existingPayments.find(p => p.qualityAssessmentId === assessment.id);
+        
+        if (!existingPayment) {
+          console.log('Creating payment record for assessment:', assessment.id);
+          
+          // Create new payment record
+          const paymentRecord = {
+            supplier: assessment.batch_number || 'Unknown Supplier',
+            amount: assessment.suggested_price || 0,
+            status: 'Pending',
+            method: 'Bank Transfer',
+            date: new Date().toLocaleDateString(),
+            batchNumber: assessment.batch_number,
+            qualityAssessmentId: assessment.id
+          };
+
+          try {
+            const docRef = await addDoc(collection(db, 'payment_records'), {
+              ...paymentRecord,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+
+            newPayments.push({
+              id: docRef.id,
+              ...paymentRecord
+            });
+
+            console.log('Created payment record:', docRef.id);
+          } catch (error) {
+            console.error('Error creating payment record:', error);
+          }
+        }
+      }
+
+      // Combine existing and new payment records
+      const allPayments = [...existingPayments, ...newPayments];
+      console.log('Total payment records:', allPayments.length);
+      setPayments(allPayments);
+
+    } catch (error) {
+      console.error('Error fetching payment records:', error);
+      setPayments([]);
     }
   };
 
@@ -191,6 +259,9 @@ export const useFirebaseFinance = () => {
     try {
       console.log('Processing payment:', paymentId, method);
       
+      // Find the payment record to get quality assessment ID
+      const payment = payments.find(p => p.id === paymentId);
+      
       if (method === 'Bank Transfer') {
         // For bank transfers, create approval request
         await addDoc(collection(db, 'approval_requests'), {
@@ -198,14 +269,17 @@ export const useFirebaseFinance = () => {
           type: 'Bank Transfer',
           title: 'Bank Transfer Approval Required',
           description: `Bank transfer payment request for payment ID: ${paymentId}`,
-          amount: 'Pending Review',
+          amount: payment?.amount?.toLocaleString() || 'Pending Review',
           requestedby: 'Finance Department',
           daterequested: new Date().toISOString(),
           priority: 'High',
           status: 'Pending',
           details: {
             paymentId,
-            method: 'Bank Transfer'
+            method: 'Bank Transfer',
+            supplier: payment?.supplier,
+            amount: payment?.amount,
+            batchNumber: payment?.batchNumber
           },
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -234,6 +308,20 @@ export const useFirebaseFinance = () => {
           title: "Success",
           description: "Cash payment processed successfully",
         });
+      }
+
+      // Update quality assessment status to "sent_to_finance" if we have the assessment ID
+      if (payment?.qualityAssessmentId) {
+        console.log('Updating quality assessment status to sent_to_finance:', payment.qualityAssessmentId);
+        try {
+          await updateDoc(doc(db, 'quality_assessments', payment.qualityAssessmentId), {
+            status: 'sent_to_finance',
+            updated_at: new Date().toISOString()
+          });
+          console.log('Quality assessment status updated successfully');
+        } catch (error) {
+          console.error('Error updating quality assessment status:', error);
+        }
       }
       
       await fetchFinanceData();
