@@ -23,21 +23,20 @@ export interface Employee {
   updated_at: string
 }
 
-// Simplified security audit logging function
 const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
   try {
     const { data: session } = await supabase.auth.getSession();
     if (session.session?.user) {
-      // Log to console for now since security_audit_log table types aren't loaded
-      console.log('Security Event:', {
-        user_id: session.session.user.id,
-        action,
-        table_name: tableName,
-        record_id: recordId,
-        old_values: oldValues,
-        new_values: newValues,
-        timestamp: new Date().toISOString()
-      });
+      await supabase
+        .from('security_audit_log')
+        .insert({
+          user_id: session.session.user.id,
+          action,
+          table_name: tableName,
+          record_id: recordId,
+          old_values: oldValues,
+          new_values: newValues
+        });
     }
   } catch (error) {
     console.error('Security logging error:', error);
@@ -100,18 +99,15 @@ export const useSecureEmployees = () => {
     if (!employeeData.department?.trim()) errors.push('Department is required')
     if (!employeeData.role?.trim()) errors.push('Role is required')
     
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (employeeData.email && !emailRegex.test(employeeData.email)) {
       errors.push('Invalid email format')
     }
     
-    // Salary validation
     if (employeeData.salary < 0) {
       errors.push('Salary must be a positive number')
     }
     
-    // Role validation
     const validRoles = ['Administrator', 'Manager', 'Supervisor', 'User']
     if (employeeData.role && !validRoles.includes(employeeData.role)) {
       errors.push('Invalid role selected')
@@ -130,7 +126,6 @@ export const useSecureEmployees = () => {
       throw new Error("Access denied")
     }
 
-    // Validate input data
     const validationErrors = validateEmployeeData(employeeData)
     if (validationErrors.length > 0) {
       toast({
@@ -141,7 +136,6 @@ export const useSecureEmployees = () => {
       throw new Error("Validation failed")
     }
 
-    // Security check for admin role creation
     if (employeeData.role === 'Administrator' && !isAdmin()) {
       toast({
         title: "Access Denied",
@@ -222,7 +216,6 @@ export const useSecureEmployees = () => {
       throw new Error("Access denied")
     }
 
-    // Security check for admin role updates
     if (updates.role === 'Administrator' && !isAdmin()) {
       toast({
         title: "Access Denied",
@@ -233,7 +226,6 @@ export const useSecureEmployees = () => {
     }
 
     try {
-      // Get current employee data for audit log
       const { data: currentEmployee } = await supabase
         .from('employees')
         .select('*')
@@ -306,7 +298,6 @@ export const useSecureEmployees = () => {
     }
 
     try {
-      // Get employee data for audit log before deletion
       const { data: employeeToDelete } = await supabase
         .from('employees')
         .select('*')

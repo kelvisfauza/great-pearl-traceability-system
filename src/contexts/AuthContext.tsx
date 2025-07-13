@@ -45,41 +45,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Simplified security audit logging function (using employees table for now)
   const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
     try {
       if (!user) return;
       
-      // Log to console for now since security_audit_log table types aren't loaded
-      console.log('Security Event:', {
-        user_id: user.id,
-        action,
-        table_name: tableName,
-        record_id: recordId,
-        old_values: oldValues,
-        new_values: newValues,
-        timestamp: new Date().toISOString()
-      });
+      await supabase
+        .from('security_audit_log')
+        .insert({
+          user_id: user.id,
+          action,
+          table_name: tableName,
+          record_id: recordId,
+          old_values: oldValues,
+          new_values: newValues
+        });
     } catch (error) {
       console.error('Security logging error:', error);
     }
   };
 
   const fetchEmployeeData = async () => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      // Direct employee lookup by email (simplified for now)
-      const { data: employeeData, error: employeeError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('email', user.email)
-        .maybeSingle();
+      // First check if user profile exists and get linked employee
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select(`
+          employee_id,
+          employees (*)
+        `)
+        .eq('user_id', user.id)
+        .single();
 
-      if (employeeError) {
-        console.error('Error fetching employee by email:', employeeError);
-      } else if (employeeData) {
-        setEmployee(employeeData as Employee);
+      if (profileError) {
+        // If no profile exists, try to find employee by email and create link
+        const { data: employeeData, error: employeeError } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('email', user.email)
+          .maybeSingle();
+
+        if (employeeError) {
+          console.error('Error fetching employee by email:', employeeError);
+          return;
+        }
+
+        if (employeeData) {
+          // Create user profile link
+          const { error: linkError } = await supabase
+            .from('user_profiles')
+            .insert({
+              user_id: user.id,
+              employee_id: employeeData.id
+            });
+
+          if (linkError) {
+            console.error('Error creating user profile link:', linkError);
+          } else {
+            setEmployee(employeeData as Employee);
+          }
+        }
+      } else if (profileData?.employees) {
+        setEmployee(profileData.employees as Employee);
       }
     } catch (error) {
       console.error('Error in fetchEmployeeData:', error);
