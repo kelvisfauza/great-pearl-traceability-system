@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, addDoc, query, orderBy, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Tables } from '@/integrations/supabase/types';
 
@@ -60,7 +61,17 @@ export const useFinanceData = () => {
   const recordDailyTask = async (taskType: string, description: string, amount?: number, batchNumber?: string, completedBy: string = 'Finance Team') => {
     try {
       console.log('Recording daily task:', { taskType, description, amount, batchNumber, completedBy });
-      // Mock implementation during Firebase migration
+      await addDoc(collection(db, 'daily_tasks'), {
+        task_type: taskType,
+        description,
+        amount,
+        batch_number: batchNumber,
+        completed_by: completedBy,
+        completed_at: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0],
+        department: 'Finance',
+        created_at: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error recording daily task:', error);
     }
@@ -70,62 +81,60 @@ export const useFinanceData = () => {
     try {
       setLoading(true);
       
-      // Mock data during Firebase migration
-      const mockTransactions: FinanceTransaction[] = [
-        {
-          id: '1',
-          type: 'Receipt',
-          description: 'Coffee sale to export customer',
-          amount: 250000,
-          time: '10:30 AM',
-          date: new Date().toISOString().split('T')[0]
-        },
-        {
-          id: '2',
-          type: 'Payment',
-          description: 'Payment to supplier John Doe',
-          amount: 150000,
-          time: '2:15 PM',
-          date: new Date().toISOString().split('T')[0]
-        }
-      ];
-      
-      const mockExpenses: FinanceExpense[] = [
-        {
-          id: '1',
-          description: 'Office supplies',
-          amount: 25000,
-          date: new Date().toISOString().split('T')[0],
-          category: 'Operations',
-          status: 'Approved'
-        }
-      ];
-      
-      const mockPayments: PaymentRecord[] = [
-        {
-          id: '1',
-          supplier: 'John Doe Coffee Farm',
-          amount: 180000,
-          status: 'Pending',
-          date: new Date().toISOString().split('T')[0],
-          method: 'Bank Transfer',
-          batchNumber: 'BATCH001',
-          kilograms: 100,
-          pricePerKg: 1800
-        }
-      ];
+      // Fetch transactions from Firebase
+      console.log('Fetching finance transactions from Firebase...');
+      const transactionsQuery = query(collection(db, 'finance_transactions'), orderBy('created_at', 'desc'));
+      const transactionsSnapshot = await getDocs(transactionsQuery);
+      const transactionsData = transactionsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FinanceTransaction[];
+      console.log('Finance transactions loaded:', transactionsData);
+      setTransactions(transactionsData);
 
-      setTransactions(mockTransactions);
-      setExpenses(mockExpenses);
-      setPayments(mockPayments);
-      setQualityAssessments([]);
+      // Fetch expenses from Firebase
+      console.log('Fetching finance expenses from Firebase...');
+      const expensesQuery = query(collection(db, 'finance_expenses'), orderBy('created_at', 'desc'));
+      const expensesSnapshot = await getDocs(expensesQuery);
+      const expensesData = expensesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as FinanceExpense[];
+      console.log('Finance expenses loaded:', expensesData);
+      setExpenses(expensesData);
+
+      // Fetch payment records from Firebase
+      console.log('Fetching payment records from Firebase...');
+      const paymentsQuery = query(collection(db, 'payment_records'), orderBy('created_at', 'desc'));
+      const paymentsSnapshot = await getDocs(paymentsQuery);
+      const paymentsData = paymentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as PaymentRecord[];
+      console.log('Payment records loaded:', paymentsData);
+      setPayments(paymentsData);
+
+      // Fetch quality assessments from Firebase for payment processing
+      console.log('Fetching quality assessments for finance from Firebase...');
+      const assessmentsQuery = query(
+        collection(db, 'quality_assessments'), 
+        where('status', 'in', ['submitted_to_finance', 'price_requested', 'approved']),
+        orderBy('created_at', 'desc')
+      );
+      const assessmentsSnapshot = await getDocs(assessmentsQuery);
+      const assessmentsData = assessmentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as QualityAssessmentForPayment[];
+      console.log('Quality assessments for finance loaded:', assessmentsData);
+      setQualityAssessments(assessmentsData);
       
-      // Update stats with mock data
-      const totalReceipts = mockTransactions
+      // Update stats
+      const totalReceipts = transactionsData
         .filter(t => t.type === 'Receipt' || t.type === 'Float')
         .reduce((sum, t) => sum + t.amount, 0);
         
-      const totalPayments = mockTransactions
+      const totalPayments = transactionsData
         .filter(t => t.type === 'Payment' || t.type === 'Expense')
         .reduce((sum, t) => sum + t.amount, 0);
 
@@ -134,8 +143,8 @@ export const useFinanceData = () => {
         totalReceipts,
         totalPayments,
         netCashFlow: totalReceipts - totalPayments,
-        pendingPayments: mockPayments.reduce((sum, p) => sum + p.amount, 0),
-        operatingCosts: mockExpenses.reduce((sum, e) => sum + e.amount, 0)
+        pendingPayments: paymentsData.filter(p => p.status === 'Pending').reduce((sum, p) => sum + p.amount, 0),
+        operatingCosts: expensesData.reduce((sum, e) => sum + e.amount, 0)
       }));
       
     } catch (error) {
@@ -150,14 +159,91 @@ export const useFinanceData = () => {
     }
   };
 
+  const createPaymentFromQualityAssessment = async (assessmentId: string) => {
+    try {
+      console.log('Creating payment record from quality assessment:', assessmentId);
+      
+      const assessment = qualityAssessments.find(a => a.id === assessmentId);
+      if (!assessment) {
+        throw new Error('Quality assessment not found');
+      }
+
+      // Fetch the coffee record to get supplier and quantity info
+      const coffeeRecordsQuery = query(
+        collection(db, 'coffee_records'),
+        where('batch_number', '==', assessment.batch_number)
+      );
+      const coffeeRecordsSnapshot = await getDocs(coffeeRecordsQuery);
+      
+      if (coffeeRecordsSnapshot.empty) {
+        throw new Error('Coffee record not found for batch');
+      }
+
+      const coffeeRecord = coffeeRecordsSnapshot.docs[0].data();
+      const totalAmount = assessment.suggested_price * coffeeRecord.kilograms;
+
+      const paymentRecord = {
+        supplier: coffeeRecord.supplier_name,
+        amount: totalAmount,
+        status: 'Pending',
+        date: new Date().toISOString().split('T')[0],
+        method: 'Bank Transfer',
+        quality_assessment_id: assessmentId,
+        batch_number: assessment.batch_number,
+        kilograms: coffeeRecord.kilograms,
+        price_per_kg: assessment.suggested_price,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      await addDoc(collection(db, 'payment_records'), paymentRecord);
+      
+      toast({
+        title: "Payment Record Created",
+        description: `Payment record created for ${coffeeRecord.supplier_name} - UGX ${totalAmount.toLocaleString()}`
+      });
+
+      // Refresh data
+      await fetchFinanceData();
+      
+    } catch (error) {
+      console.error('Error creating payment from quality assessment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create payment record",
+        variant: "destructive"
+      });
+    }
+  };
+
   const processPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash') => {
     try {
+      console.log('Processing payment:', paymentId, method);
+      
       const payment = payments.find(p => p.id === paymentId);
       if (!payment) throw new Error('Payment record not found');
 
       if (method === 'Bank Transfer') {
-        // Mock approval request creation
-        console.log('Creating approval request for bank transfer:', payment);
+        // Create approval request in Firebase
+        await addDoc(collection(db, 'approval_requests'), {
+          type: 'Bank Transfer',
+          title: `Bank transfer to ${payment.supplier}`,
+          description: `Payment to ${payment.supplier} - UGX ${payment.amount.toLocaleString()}`,
+          amount: payment.amount.toString(),
+          department: 'Finance',
+          requestedby: 'Finance Team',
+          daterequested: new Date().toLocaleDateString(),
+          priority: 'High',
+          status: 'Pending',
+          details: {
+            paymentId,
+            supplier: payment.supplier,
+            amount: payment.amount,
+            batchNumber: payment.batchNumber
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
         
         await recordDailyTask(
           'Payment Request',
@@ -171,9 +257,6 @@ export const useFinanceData = () => {
           description: `Bank transfer of UGX ${payment.amount.toLocaleString()} has been submitted for manager approval`
         });
       } else {
-        // Mock cash payment processing
-        console.log('Processing cash payment:', payment);
-        
         await recordDailyTask(
           'Payment',
           `Cash payment to ${payment.supplier} - UGX ${payment.amount.toLocaleString()}`,
@@ -187,7 +270,7 @@ export const useFinanceData = () => {
         });
       }
 
-      fetchFinanceData();
+      await fetchFinanceData();
     } catch (error) {
       console.error('Error processing payment:', error);
       toast({
@@ -200,7 +283,13 @@ export const useFinanceData = () => {
 
   const addTransaction = async (transaction: Omit<FinanceTransaction, 'id'>) => {
     try {
-      console.log('Adding transaction:', transaction);
+      console.log('Adding transaction to Firebase:', transaction);
+      
+      await addDoc(collection(db, 'finance_transactions'), {
+        ...transaction,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
       
       await recordDailyTask(
         transaction.type,
@@ -213,7 +302,7 @@ export const useFinanceData = () => {
         description: `${transaction.type} recorded successfully`
       });
 
-      fetchFinanceData();
+      await fetchFinanceData();
     } catch (error) {
       console.error('Error adding transaction:', error);
       toast({
@@ -226,7 +315,13 @@ export const useFinanceData = () => {
 
   const addExpense = async (expense: Omit<FinanceExpense, 'id'>) => {
     try {
-      console.log('Adding expense:', expense);
+      console.log('Adding expense to Firebase:', expense);
+      
+      await addDoc(collection(db, 'finance_expenses'), {
+        ...expense,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
       
       await recordDailyTask(
         'Expense',
@@ -239,7 +334,7 @@ export const useFinanceData = () => {
         description: "Expense recorded successfully"
       });
 
-      fetchFinanceData();
+      await fetchFinanceData();
     } catch (error) {
       console.error('Error adding expense:', error);
       toast({
@@ -264,6 +359,7 @@ export const useFinanceData = () => {
     addTransaction,
     addExpense,
     processPayment,
+    createPaymentFromQualityAssessment,
     refetch: fetchFinanceData
   };
 };

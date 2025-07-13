@@ -15,8 +15,19 @@ export interface StoreRecord {
   status: string;
 }
 
+export interface Supplier {
+  id: string;
+  name: string;
+  origin: string;
+  phone: string;
+  code: string;
+  opening_balance: number;
+  date_registered: string;
+}
+
 export const useStoreManagement = () => {
   const [storeRecords, setStoreRecords] = useState<StoreRecord[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -38,8 +49,8 @@ export const useStoreManagement = () => {
           id: doc.id,
           supplierName: data.supplier_name || '',
           coffeeType: data.coffee_type || '',
-          bags: data.bags || 0,
-          kilograms: data.kilograms || 0,
+          bags: Number(data.bags) || 0,
+          kilograms: Number(data.kilograms) || 0,
           date: data.date || '',
           batchNumber: data.batch_number || '',
           status: data.status || 'pending'
@@ -61,8 +72,42 @@ export const useStoreManagement = () => {
     }
   };
 
+  const fetchSuppliers = async () => {
+    try {
+      console.log('Fetching suppliers from Firebase...');
+      
+      const suppliersQuery = query(collection(db, 'suppliers'), orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(suppliersQuery);
+      
+      const transformedSuppliers: Supplier[] = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || '',
+          origin: data.origin || '',
+          phone: data.phone || '',
+          code: data.code || '',
+          opening_balance: Number(data.opening_balance) || 0,
+          date_registered: data.date_registered || ''
+        };
+      });
+
+      console.log('Suppliers loaded:', transformedSuppliers);
+      setSuppliers(transformedSuppliers);
+    } catch (error) {
+      console.error('Error fetching suppliers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch suppliers",
+        variant: "destructive"
+      });
+    }
+  };
+
   const addSupplier = async (supplierData: any) => {
     try {
+      console.log('Adding supplier to Firebase:', supplierData);
+      
       const supplierDoc = {
         name: supplierData.name,
         origin: supplierData.location,
@@ -74,17 +119,21 @@ export const useStoreManagement = () => {
         updated_at: new Date().toISOString()
       };
 
-      await addDoc(collection(db, 'suppliers'), supplierDoc);
+      const docRef = await addDoc(collection(db, 'suppliers'), supplierDoc);
+      console.log('Supplier added with ID:', docRef.id);
       
       toast({
         title: "Success",
-        description: "Supplier added successfully"
+        description: "Supplier added successfully to database"
       });
+      
+      // Refresh suppliers list
+      await fetchSuppliers();
     } catch (error) {
       console.error('Error adding supplier:', error);
       toast({
         title: "Error",
-        description: "Failed to add supplier",
+        description: "Failed to add supplier to database",
         variant: "destructive"
       });
       throw error;
@@ -93,6 +142,8 @@ export const useStoreManagement = () => {
 
   const addCoffeeRecord = async (recordData: Omit<StoreRecord, 'id'>) => {
     try {
+      console.log('Adding coffee record to Firebase:', recordData);
+      
       const coffeeDoc = {
         supplier_name: recordData.supplierName,
         coffee_type: recordData.coffeeType,
@@ -105,18 +156,20 @@ export const useStoreManagement = () => {
         updated_at: new Date().toISOString()
       };
 
-      await addDoc(collection(db, 'coffee_records'), coffeeDoc);
+      const docRef = await addDoc(collection(db, 'coffee_records'), coffeeDoc);
+      console.log('Coffee record added with ID:', docRef.id);
+      
       await fetchStoreData();
       
       toast({
         title: "Success",
-        description: "Coffee record added successfully"
+        description: "Coffee record added successfully to database"
       });
     } catch (error) {
       console.error('Error adding coffee record:', error);
       toast({
         title: "Error",
-        description: "Failed to add coffee record",
+        description: "Failed to add coffee record to database",
         variant: "destructive"
       });
       throw error;
@@ -125,7 +178,10 @@ export const useStoreManagement = () => {
 
   const updateCoffeeRecordStatus = async (recordId: string, status: string) => {
     try {
-      await updateDoc(doc(db, 'coffee_records', recordId), {
+      console.log('Updating coffee record status in Firebase:', recordId, status);
+      
+      const docRef = doc(db, 'coffee_records', recordId);
+      await updateDoc(docRef, {
         status,
         updated_at: new Date().toISOString()
       });
@@ -174,13 +230,14 @@ export const useStoreManagement = () => {
 
   useEffect(() => {
     fetchStoreData();
+    fetchSuppliers();
   }, []);
 
   return {
     storeRecords,
     loading,
     fetchStoreData,
-    suppliers: [],
+    suppliers,
     coffeeRecords: storeRecords,
     addSupplier,
     addCoffeeRecord,
