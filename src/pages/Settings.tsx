@@ -31,6 +31,15 @@ const Settings = () => {
     await deleteEmployee(id);
   };
 
+  // Determine how many tabs are available
+  const availableTabs = [];
+  availableTabs.push("profile");
+  if (canAccessUserManagement) availableTabs.push("users");
+  if (canAccessSecurityMonitor) availableTabs.push("security");
+
+  const gridCols = availableTabs.length === 1 ? "grid-cols-1" : 
+                   availableTabs.length === 2 ? "grid-cols-2" : "grid-cols-3";
+
   return (
     <Layout 
       title="Settings" 
@@ -38,31 +47,31 @@ const Settings = () => {
     >
       <div className="max-w-4xl mx-auto space-y-6">
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className={`grid w-full ${gridCols}`}>
             <TabsTrigger value="profile">My Profile</TabsTrigger>
-            <TabsTrigger 
-              value="users" 
-              disabled={!canAccessUserManagement}
-              className={!canAccessUserManagement ? "opacity-50 cursor-not-allowed" : ""}
-            >
-              User Management
-              {canAccessUserManagement && <Shield className="ml-2 h-4 w-4" />}
-            </TabsTrigger>
-            <TabsTrigger 
-              value="security" 
-              disabled={!canAccessSecurityMonitor}
-              className={!canAccessSecurityMonitor ? "opacity-50 cursor-not-allowed" : ""}
-            >
-              Security Monitor
-              {canAccessSecurityMonitor && <Eye className="ml-2 h-4 w-4" />}
-            </TabsTrigger>
+            {canAccessUserManagement && (
+              <TabsTrigger value="users">
+                <div className="flex items-center gap-2">
+                  User Management
+                  <Shield className="h-4 w-4" />
+                </div>
+              </TabsTrigger>
+            )}
+            {canAccessSecurityMonitor && (
+              <TabsTrigger value="security">
+                <div className="flex items-center gap-2">
+                  Security Monitor
+                  <Eye className="h-4 w-4" />
+                </div>
+              </TabsTrigger>
+            )}
           </TabsList>
           
           <TabsContent value="profile">
             <UserProfile />
           </TabsContent>
           
-          {canAccessUserManagement ? (
+          {canAccessUserManagement && (
             <TabsContent value="users">
               <UserManagement 
                 employees={employees}
@@ -71,7 +80,16 @@ const Settings = () => {
                 onEmployeeDeleted={handleEmployeeDeleted}
               />
             </TabsContent>
-          ) : (
+          )}
+
+          {canAccessSecurityMonitor && (
+            <TabsContent value="security">
+              <SecurityMonitor />
+            </TabsContent>
+          )}
+          
+          {/* Show access denied messages only if user tries to access restricted content */}
+          {!canAccessUserManagement && (
             <TabsContent value="users">
               <Card>
                 <CardHeader>
@@ -101,11 +119,7 @@ const Settings = () => {
             </TabsContent>
           )}
 
-          {canAccessSecurityMonitor ? (
-            <TabsContent value="security">
-              <SecurityMonitor />
-            </TabsContent>
-          ) : (
+          {!canAccessSecurityMonitor && (
             <TabsContent value="security">
               <Card>
                 <CardHeader>
