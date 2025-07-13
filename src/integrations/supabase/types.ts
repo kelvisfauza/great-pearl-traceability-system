@@ -1163,7 +1163,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      user_can_access_conversation: {
+      "great pearl": {
         Args: { conversation_id: string }
         Returns: boolean
       }

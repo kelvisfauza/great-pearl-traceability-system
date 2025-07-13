@@ -32,6 +32,8 @@ interface AuthContextType {
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   fetchEmployeeData: () => Promise<void>;
+  isAdmin: () => boolean;
+  canManageEmployees: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,42 +63,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Fetching employee data for user:', session.user.id);
       
-      // Try to find employee by email first (fallback method)
+      // Use the new secure function to get employee data
       const { data: employeeData, error: employeeError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('email', session.user.email)
-        .maybeSingle();
+        .rpc('get_current_user_employee');
       
       if (employeeError) {
         console.error('Error fetching employee data:', employeeError);
+        // Show user-friendly error message
+        toast({
+          title: "Access Error",
+          description: "Unable to load your employee profile. Please contact your administrator.",
+          variant: "destructive"
+        });
         setEmployee(null);
         return;
       }
       
-      if (employeeData) {
+      if (employeeData && employeeData.length > 0) {
+        const empData = employeeData[0];
         setEmployee({
-          id: employeeData.id,
-          employee_id: employeeData.employee_id || employeeData.id,
-          name: employeeData.name,
-          email: employeeData.email,
-          phone: employeeData.phone,
-          position: employeeData.position,
-          department: employeeData.department,
-          role: employeeData.role,
-          permissions: employeeData.permissions,
-          address: employeeData.address,
-          emergency_contact: employeeData.emergency_contact,
-          join_date: employeeData.join_date,
-          status: employeeData.status,
-          salary: employeeData.salary
+          id: empData.employee_id,
+          employee_id: empData.employee_id,
+          name: session.user.email?.split('@')[0] || 'User', // Fallback name
+          email: session.user.email || '',
+          role: empData.role,
+          permissions: empData.permissions || [],
+          department: empData.department,
+          position: 'Employee', // Default position
         });
       } else {
-        console.log('No employee record found for email:', session.user.email);
+        console.log('No employee record found for user:', session.user.email);
+        toast({
+          title: "Account Setup Required",
+          description: "Your account is not linked to an employee record. Please contact your administrator.",
+          variant: "destructive"
+        });
         setEmployee(null);
       }
     } catch (error) {
       console.error('Error fetching employee data:', error);
+      toast({
+        title: "System Error",
+        description: "A system error occurred. Please try again later.",
+        variant: "destructive"
+      });
       setEmployee(null);
     }
   };
@@ -146,32 +156,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [session, employee]);
 
   const signIn = async (email: string, password: string) => {
+    // Input validation
+    if (!email || !password) {
+      const error = { message: "Email and password are required" };
+      toast({
+        title: "Validation Error",
+        description: error.message,
+        variant: "destructive"
+      });
+      return { error };
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      const error = { message: "Please enter a valid email address" };
+      toast({
+        title: "Validation Error",
+        description: error.message,
+        variant: "destructive"
+      });
+      return { error };
+    }
+
     console.log('Attempting to sign in with email:', email);
     
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.toLowerCase().trim(), // Normalize email
       password,
     });
     
     if (error) {
       console.error('Sign in error:', error);
+      // Provide user-friendly error messages
+      let errorMessage = error.message;
+      if (error.message.includes('Invalid login credentials')) {
+        errorMessage = "Invalid email or password. Please check your credentials.";
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = "Please check your email and click the confirmation link.";
+      }
+      
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Sign In Error",
+        description: errorMessage,
         variant: "destructive"
       });
     } else {
       console.log('Sign in successful');
+      toast({
+        title: "Welcome back!",
+        description: "You have been signed in successfully."
+      });
     }
     
     return { error };
   };
 
   const signUp = async (email: string, password: string) => {
+    // Input validation
+    if (!email || !password) {
+      const error = { message: "Email and password are required" };
+      toast({
+        title: "Validation Error",
+        description: error.message,
+        variant: "destructive"
+      });
+      return { error };
+    }
+
+    // Password strength validation
+    if (password.length < 8) {
+      const error = { message: "Password must be at least 8 characters long" };
+      toast({
+        title: "Validation Error",
+        description: error.message,
+        variant: "destructive"
+      });
+      return { error };
+    }
+
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
-      email,
+      email: email.toLowerCase().trim(),
       password,
       options: {
         emailRedirectTo: redirectUrl
@@ -179,15 +246,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     
     if (error) {
+      let errorMessage = error.message;
+      if (error.message.includes('User already registered')) {
+        errorMessage = "An account with this email already exists. Please sign in instead.";
+      }
+      
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Sign Up Error",
+        description: errorMessage,
         variant: "destructive"
       });
     } else {
       toast({
-        title: "Success",
-        description: "Please check your email to confirm your account"
+        title: "Account Created",
+        description: "Please check your email to confirm your account. You may need to contact your administrator to link your account to an employee record."
       });
     }
     
@@ -195,16 +267,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setEmployee(null);
+    try {
+      await supabase.auth.signOut();
+      setEmployee(null);
+      toast({
+        title: "Signed Out",
+        description: "You have been signed out successfully."
+      });
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast({
+        title: "Error",
+        description: "There was an error signing out. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const hasPermission = (permission: string): boolean => {
-    return employee?.permissions?.includes(permission) || false;
+    if (!employee) return false;
+    return employee.permissions?.includes(permission) || 
+           employee.role === 'Administrator' || 
+           employee.role === 'Manager';
   };
 
   const hasRole = (role: string): boolean => {
-    return employee?.role === role || false;
+    if (!employee) return false;
+    return employee.role === role;
+  };
+
+  const isAdmin = (): boolean => {
+    return hasRole('Administrator');
+  };
+
+  const canManageEmployees = (): boolean => {
+    return isAdmin() || hasPermission('Human Resources');
   };
 
   const value = {
@@ -218,6 +315,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hasPermission,
     hasRole,
     fetchEmployeeData,
+    isAdmin,
+    canManageEmployees,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
