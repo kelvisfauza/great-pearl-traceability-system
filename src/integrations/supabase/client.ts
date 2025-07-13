@@ -14,10 +14,12 @@ const createChainableQuery = (mockData: any) => {
     in: (column: any, values: any[]) => chainable,
     single: () => Promise.resolve({ data: null, error: null }),
     maybeSingle: () => Promise.resolve({ data: null, error: null }),
+    // Add data and error properties for immediate access
+    data: mockData.data || [],
+    error: mockData.error || null
   };
   
-  // Make the chainable object itself a promise
-  return Object.assign(Promise.resolve(mockData), chainable);
+  return chainable;
 };
 
 export const supabase = {
