@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import { collection, getDocs, addDoc, query, orderBy, where } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 
 export interface SalaryPaymentRequest {
@@ -26,21 +27,36 @@ export const useSalaryPayments = () => {
 
   const fetchPaymentRequests = async () => {
     try {
-      const { data, error } = await supabase
-        .from('approval_requests')
-        .select('*')
-        .eq('type', 'Salary Payment')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
+      console.log('Fetching salary payment requests from Firebase...')
       
-      // Convert the generic database records to typed payment requests
-      const typedData: SalaryPaymentRequest[] = (data || []).map(item => ({
-        ...item,
-        status: (item.status as 'Pending' | 'Approved' | 'Rejected') || 'Pending'
-      }))
+      const approvalRequestsQuery = query(
+        collection(db, 'approval_requests'),
+        where('type', '==', 'Salary Payment'),
+        orderBy('created_at', 'desc')
+      )
       
-      setPaymentRequests(typedData)
+      const snapshot = await getDocs(approvalRequestsQuery)
+      const requests = snapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          department: data.department || 'HR',
+          type: data.type || 'Salary Payment',
+          title: data.title || '',
+          description: data.description || '',
+          amount: data.amount || '0',
+          requestedby: data.requestedby || '',
+          daterequested: data.daterequested || new Date().toISOString(),
+          priority: data.priority || 'Medium',
+          status: data.status as 'Pending' | 'Approved' | 'Rejected' || 'Pending',
+          details: data.details || {},
+          created_at: data.created_at || new Date().toISOString(),
+          updated_at: data.updated_at || new Date().toISOString()
+        } as SalaryPaymentRequest
+      })
+      
+      console.log('Salary payment requests fetched:', requests.length)
+      setPaymentRequests(requests)
     } catch (error) {
       console.error('Error fetching salary payment requests:', error)
       toast({
@@ -48,6 +64,8 @@ export const useSalaryPayments = () => {
         description: "Failed to fetch salary payment requests",
         variant: "destructive"
       })
+      // Set empty array on error to prevent UI issues
+      setPaymentRequests([])
     } finally {
       setLoading(false)
     }
@@ -55,26 +73,27 @@ export const useSalaryPayments = () => {
 
   const submitPaymentRequest = async (requestData: Omit<SalaryPaymentRequest, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const { data, error } = await supabase
-        .from('approval_requests')
-        .insert([requestData])
-        .select()
-        .single()
+      console.log('Submitting salary payment request:', requestData)
+      
+      const docRef = await addDoc(collection(db, 'approval_requests'), {
+        ...requestData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
 
-      if (error) throw error
-
-      // Convert the response to typed format
-      const typedData: SalaryPaymentRequest = {
-        ...data,
-        status: (data.status as 'Pending' | 'Approved' | 'Rejected') || 'Pending'
+      const newRequest: SalaryPaymentRequest = {
+        id: docRef.id,
+        ...requestData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
 
-      setPaymentRequests(prev => [typedData, ...prev])
+      setPaymentRequests(prev => [newRequest, ...prev])
       toast({
         title: "Success", 
         description: "Salary payment request submitted to Finance for approval"
       })
-      return typedData
+      return newRequest
     } catch (error) {
       console.error('Error submitting salary payment request:', error)
       toast({
