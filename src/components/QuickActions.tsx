@@ -119,23 +119,23 @@ const QuickActions = () => {
       </CardHeader>
       <CardContent>
         {availableActions.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {availableActions.map((action, index) => (
               <Button
                 key={index}
                 variant="outline"
-                className="h-auto p-4 flex flex-col items-start space-y-2 hover:shadow-md transition-all"
+                className="h-auto p-4 flex flex-col items-start space-y-3 hover:shadow-md transition-all text-left"
                 onClick={() => navigate(action.route)}
               >
-                <div className="flex items-center space-x-2 w-full">
-                  <div className={`p-2 rounded-lg ${action.color} text-white`}>
-                    <action.icon className="h-4 w-4" />
+                <div className="flex items-center space-x-3 w-full">
+                  <div className={`p-2 rounded-lg ${action.color} text-white flex-shrink-0`}>
+                    <action.icon className="h-5 w-5" />
                   </div>
-                  <div className="text-left flex-1">
-                    <div className="font-medium text-sm text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-gray-900 truncate">
                       {action.title}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-gray-500 mt-1 line-clamp-2">
                       {action.description}
                     </div>
                   </div>
