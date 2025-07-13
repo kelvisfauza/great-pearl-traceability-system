@@ -15,11 +15,14 @@ import {
   DollarSign,
   ClipboardCheck,
   MapPin,
-  LineChart
+  LineChart,
+  LogOut
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navigation = () => {
   const location = useLocation();
+  const { signOut, employee } = useAuth();
   
   const navigationItems = [
     {
@@ -53,13 +56,21 @@ const Navigation = () => {
     }
   ];
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <h2 className="font-semibold text-lg text-gray-800">Coffee ERP</h2>
       </div>
       
-      <div className="p-3">
+      <div className="flex-1 p-3">
         <nav className="space-y-4">
           {navigationItems.map((section, sectionIndex) => (
             <div key={sectionIndex}>
@@ -92,6 +103,25 @@ const Navigation = () => {
             </div>
           ))}
         </nav>
+      </div>
+
+      {/* User info and logout section */}
+      <div className="p-3 border-t border-gray-200">
+        {employee && (
+          <div className="mb-3">
+            <p className="text-sm font-medium text-gray-800 truncate">{employee.name}</p>
+            <p className="text-xs text-gray-500 truncate">{employee.position}</p>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-sm h-9 text-red-600 hover:text-red-700 hover:bg-red-50"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4 mr-2 flex-shrink-0" />
+          <span>Sign Out</span>
+        </Button>
       </div>
     </div>
   );
