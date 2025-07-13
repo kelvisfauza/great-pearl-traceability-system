@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
@@ -24,6 +23,8 @@ interface Employee {
   permissions: string[];
   status: string;
   join_date: string;
+  address?: string;
+  emergency_contact?: string;
 }
 
 interface AuthContextType {
