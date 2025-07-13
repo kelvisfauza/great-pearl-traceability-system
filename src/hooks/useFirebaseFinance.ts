@@ -141,13 +141,46 @@ export const useFirebaseFinance = () => {
           status: data.status || 'Pending',
           method: data.method || 'Bank Transfer',
           date: data.date || new Date().toLocaleDateString(),
-          batchNumber: data.batchNumber || data.batch_number || '', // Handle both field names
+          batchNumber: data.batchNumber || data.batch_number || '',
           qualityAssessmentId: data.qualityAssessmentId || data.quality_assessment_id || null,
           ...data
         } as PaymentRecord;
       });
       
       console.log('Existing payment records:', existingPayments.length);
+
+      // Check for approved bank transfer requests and update payment status
+      const approvalQuery = query(
+        collection(db, 'approval_requests'),
+        where('type', '==', 'Bank Transfer'),
+        where('status', '==', 'Approved')
+      );
+      const approvalSnapshot = await getDocs(approvalQuery);
+      const approvedRequests = approvalSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Update payment records based on approved requests
+      for (const request of approvedRequests) {
+        if (request.details?.paymentId) {
+          const paymentToUpdate = existingPayments.find(p => p.id === request.details.paymentId);
+          if (paymentToUpdate && paymentToUpdate.status === 'Processing') {
+            try {
+              await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
+                status: 'Paid',
+                updated_at: new Date().toISOString()
+              });
+              
+              // Update local state
+              paymentToUpdate.status = 'Paid';
+              console.log('Updated payment status to Paid for:', request.details.paymentId);
+            } catch (error) {
+              console.error('Error updating payment status:', error);
+            }
+          }
+        }
+      }
 
       // Fetch quality assessments that are ready for payment
       const qualityQuery = query(

@@ -102,6 +102,11 @@ const Finance = () => {
     );
   }
 
+  // Filter payments for different sections
+  const pendingPayments = payments.filter(payment => payment.status === 'Pending');
+  const processingPayments = payments.filter(payment => payment.status === 'Processing');
+  const completedPayments = payments.filter(payment => payment.status === 'Paid');
+
   // Filter for salary payment requests
   const salaryPaymentRequests = approvalRequests.filter(req => req.type === 'Salary Payment');
   const pendingSalaryRequests = salaryPaymentRequests.filter(req => req.status === 'Pending');
@@ -194,14 +199,14 @@ const Finance = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Payment Processing</CardTitle>
-                <CardDescription>Process supplier payments and track payment status</CardDescription>
+                <CardDescription>Process pending supplier payments</CardDescription>
               </CardHeader>
               <CardContent>
-                {payments.length === 0 ? (
+                {pendingPayments.length === 0 ? (
                   <div className="text-center py-8">
                     <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No payments to process</p>
-                    <p className="text-sm text-gray-400 mt-2">Payment records will appear here for processing</p>
+                    <p className="text-gray-500">No pending payments to process</p>
+                    <p className="text-sm text-gray-400 mt-2">All payments have been processed or are awaiting approval</p>
                   </div>
                 ) : (
                   <Table>
@@ -216,66 +221,72 @@ const Finance = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {payments.map((payment) => (
+                      {pendingPayments.map((payment) => (
                         <TableRow key={payment.id}>
                           <TableCell className="font-medium">{payment.batchNumber || 'N/A'}</TableCell>
                           <TableCell>{payment.supplier}</TableCell>
                           <TableCell className="font-bold">{formatCurrency(payment.amount)}</TableCell>
                           <TableCell>
-                            <Badge variant={
-                              payment.status === "Paid" ? "default" :
-                              payment.status === "Processing" ? "secondary" : "destructive"
-                            }>
-                              {payment.status === "Processing" ? (
-                                <div className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  Submitted for Approval
-                                </div>
-                              ) : payment.status === "Paid" ? (
-                                <div className="flex items-center gap-1">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  {payment.method === 'Cash' ? 'Cash Paid' : 'Bank Transfer Completed'}
-                                </div>
-                              ) : (
-                                payment.status
-                              )}
+                            <Badge variant="destructive">
+                              {payment.status}
                             </Badge>
                           </TableCell>
                           <TableCell>{payment.date}</TableCell>
                           <TableCell>
-                            {payment.status === "Paid" ? (
-                              <Badge variant="default" className="gap-1">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Completed
-                              </Badge>
-                            ) : payment.status === "Processing" ? (
-                              <Badge variant="secondary" className="gap-1">
-                                <Clock className="h-3 w-3" />
-                                Awaiting Manager Approval
-                              </Badge>
-                            ) : (
-                              <div className="flex gap-2">
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => handleProcessPayment(payment.id, 'Bank Transfer')}
-                                >
-                                  Bank Transfer
-                                  <span className="text-xs ml-1">(Requires Approval)</span>
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => handleProcessPayment(payment.id, 'Cash')}
-                                >
-                                  Cash Payment
-                                </Button>
-                              </div>
-                            )}
+                            <div className="flex gap-2">
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleProcessPayment(payment.id, 'Bank Transfer')}
+                              >
+                                Bank Transfer
+                                <span className="text-xs ml-1">(Requires Approval)</span>
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleProcessPayment(payment.id, 'Cash')}
+                              >
+                                Cash Payment
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                )}
+                
+                {processingPayments.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold mb-4">Awaiting Manager Approval</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Batch Number</TableHead>
+                          <TableHead>Supplier</TableHead>
+                          <TableHead>Total Amount</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {processingPayments.map((payment) => (
+                          <TableRow key={payment.id}>
+                            <TableCell className="font-medium">{payment.batchNumber || 'N/A'}</TableCell>
+                            <TableCell>{payment.supplier}</TableCell>
+                            <TableCell className="font-bold">{formatCurrency(payment.amount)}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="gap-1">
+                                <Clock className="h-3 w-3" />
+                                Awaiting Manager Approval
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{payment.date}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -410,7 +421,6 @@ const Finance = () => {
             </Card>
           </TabsContent>
 
-          
           <TabsContent value="daily" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
@@ -661,29 +671,30 @@ const Finance = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>Recent Payments</CardTitle>
-                      <CardDescription>Latest supplier payments</CardDescription>
+                      <CardTitle>Completed Payments Today</CardTitle>
+                      <CardDescription>Successfully processed payments</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {payments.length === 0 ? (
-                      <p className="text-gray-500 text-center py-4">No payments recorded</p>
+                    {completedPayments.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">No payments completed today</p>
                     ) : (
-                      payments.slice(0, 5).map((payment) => (
-                        <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      completedPayments.slice(0, 10).map((payment) => (
+                        <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg bg-green-50">
                           <div>
                             <p className="font-medium">{payment.supplier}</p>
-                            <p className="text-sm text-gray-500">{payment.method} • {payment.date}</p>
+                            <p className="text-sm text-gray-500">
+                              {payment.method} • {payment.date}
+                              {payment.batchNumber && ` • Batch: ${payment.batchNumber}`}
+                            </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold">{formatCurrency(payment.amount)}</p>
-                            <Badge variant={
-                              payment.status === "Paid" ? "default" : 
-                              payment.status === "Pending" ? "destructive" : "secondary"
-                            }>
-                              {payment.status}
+                            <p className="font-bold text-green-600">{formatCurrency(payment.amount)}</p>
+                            <Badge variant="default" className="gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              {payment.method === 'Cash' ? 'Cash Paid' : 'Transfer Completed'}
                             </Badge>
                           </div>
                         </div>
@@ -713,9 +724,9 @@ const Finance = () => {
                       <span className="text-xl font-bold text-blue-600">{formatCurrency(stats.monthlyRevenue - stats.operatingCosts)}</span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-purple-50 rounded-lg">
-                      <span className="font-medium">Pending Approvals</span>
+                      <span className="font-medium">Payments Completed</span>
                       <span className="text-xl font-bold text-purple-600">
-                        {payments.filter(p => p.status === 'Processing').length}
+                        {completedPayments.length}
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-4 bg-amber-50 rounded-lg">
