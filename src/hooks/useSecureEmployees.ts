@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -27,7 +26,8 @@ const logSecurityEvent = async (action: string, tableName: string, recordId?: st
   try {
     const { data: session } = await supabase.auth.getSession();
     if (session.session?.user) {
-      await supabase
+      // Use any to bypass TypeScript type checking for the new table
+      await (supabase as any)
         .from('security_audit_log')
         .insert({
           user_id: session.session.user.id,

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,7 +48,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) return;
       
-      await supabase
+      // Use any to bypass TypeScript type checking for the new table
+      await (supabase as any)
         .from('security_audit_log')
         .insert({
           user_id: user.id,
@@ -69,16 +69,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       // First check if user profile exists and get linked employee
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await (supabase as any)
         .from('user_profiles')
         .select(`
           employee_id,
           employees (*)
         `)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        
         // If no profile exists, try to find employee by email and create link
         const { data: employeeData, error: employeeError } = await supabase
           .from('employees')
@@ -93,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (employeeData) {
           // Create user profile link
-          const { error: linkError } = await supabase
+          const { error: linkError } = await (supabase as any)
             .from('user_profiles')
             .insert({
               user_id: user.id,

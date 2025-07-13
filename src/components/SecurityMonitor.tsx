@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +32,8 @@ const SecurityMonitor = () => {
       setLoading(true);
       setError(null);
       
-      const { data, error: fetchError } = await supabase
+      // Use any to bypass TypeScript type checking for the new table
+      const { data, error: fetchError } = await (supabase as any)
         .from('security_audit_log')
         .select('*')
         .order('created_at', { ascending: false })
