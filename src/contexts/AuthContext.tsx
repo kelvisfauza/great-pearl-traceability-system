@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,24 +51,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
 
   const fetchEmployeeData = async () => {
-    if (!session?.user) {
+    const currentSession = await supabase.auth.getSession();
+    if (!currentSession.data.session?.user) {
       console.log('No session user available for employee fetch');
       setEmployee(null);
       return;
     }
     
     try {
-      console.log('Fetching employee data for user:', session.user.id);
+      console.log('Fetching employee data for user:', currentSession.data.session.user.id);
       
       // First, try to find employee by email
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
         .select('*')
-        .eq('email', session.user.email)
-        .single();
+        .eq('email', currentSession.data.session.user.email)
+        .maybeSingle();
       
       if (employeeError) {
         console.error('Error fetching employee data:', employeeError);
@@ -81,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       if (employeeData) {
+        console.log('Employee data found:', employeeData.name);
         setEmployee({
           id: employeeData.id,
           employee_id: employeeData.employee_id || employeeData.id,
@@ -98,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           salary: employeeData.salary,
         });
       } else {
-        console.log('No employee record found for user:', session.user.email);
+        console.log('No employee record found for user:', currentSession.data.session.user.email);
         toast({
           title: "Account Setup Required",
           description: "Your account is not linked to an employee record. Please contact your administrator.",
@@ -118,48 +122,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let mounted = true;
+    
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          console.log('Initial session check:', initialSession?.user?.email || 'No session');
+          setSession(initialSession);
+          setUser(initialSession?.user ?? null);
+          
+          if (initialSession?.user) {
+            await fetchEmployeeData();
+          }
+          
+          setIsInitialized(true);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setLoading(false);
+          setIsInitialized(true);
+        }
+      }
+    };
+
+    initializeAuth();
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
+      async (event, newSession) => {
+        if (!mounted || !isInitialized) return;
         
-        if (session?.user) {
-          // Use setTimeout to avoid blocking the auth state change
-          setTimeout(() => {
-            fetchEmployeeData();
-          }, 0);
-        } else {
+        console.log('Auth state changed:', event, newSession?.user?.email || 'No session');
+        
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        
+        if (newSession?.user && event !== 'TOKEN_REFRESHED') {
+          await fetchEmployeeData();
+        } else if (!newSession?.user) {
           setEmployee(null);
         }
-        
-        setLoading(false);
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchEmployeeData();
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
-
-  // Add effect to refetch employee data when session changes
-  useEffect(() => {
-    if (session?.user && !employee) {
-      console.log('Session exists but no employee data, refetching...');
-      fetchEmployeeData();
-    }
-  }, [session, employee]);
 
   const signIn = async (email: string, password: string) => {
     // Input validation
@@ -188,13 +203,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('Attempting to sign in with email:', email);
     
     const { error } = await supabase.auth.signInWithPassword({
-      email: email.toLowerCase().trim(), // Normalize email
+      email: email.toLowerCase().trim(),
       password,
     });
     
     if (error) {
       console.error('Sign in error:', error);
-      // Provide user-friendly error messages
       let errorMessage = error.message;
       if (error.message.includes('Invalid login credentials')) {
         errorMessage = "Invalid email or password. Please check your credentials.";
