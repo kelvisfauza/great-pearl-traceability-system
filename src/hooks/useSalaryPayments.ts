@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react'
-import { collection, getDocs, addDoc, query, orderBy, where } from 'firebase/firestore'
+import { collection, getDocs, addDoc, query, orderBy, where, updateDoc, doc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 
@@ -55,7 +55,7 @@ export const useSalaryPayments = () => {
         } as SalaryPaymentRequest
       })
       
-      console.log('Salary payment requests fetched:', requests.length)
+      console.log('Salary payment requests fetched successfully:', requests.length)
       setPaymentRequests(requests)
     } catch (error) {
       console.error('Error fetching salary payment requests:', error)
@@ -64,7 +64,6 @@ export const useSalaryPayments = () => {
         description: "Failed to fetch salary payment requests",
         variant: "destructive"
       })
-      // Set empty array on error to prevent UI issues
       setPaymentRequests([])
     } finally {
       setLoading(false)
@@ -73,7 +72,7 @@ export const useSalaryPayments = () => {
 
   const submitPaymentRequest = async (requestData: Omit<SalaryPaymentRequest, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      console.log('Submitting salary payment request:', requestData)
+      console.log('Submitting salary payment request to Firebase:', requestData)
       
       const docRef = await addDoc(collection(db, 'approval_requests'), {
         ...requestData,
@@ -89,6 +88,7 @@ export const useSalaryPayments = () => {
       }
 
       setPaymentRequests(prev => [newRequest, ...prev])
+      console.log('Salary payment request submitted successfully')
       toast({
         title: "Success", 
         description: "Salary payment request submitted to Finance for approval"
@@ -105,6 +105,36 @@ export const useSalaryPayments = () => {
     }
   }
 
+  const updatePaymentRequestStatus = async (id: string, status: 'Approved' | 'Rejected') => {
+    try {
+      console.log('Updating payment request status:', id, status);
+      
+      await updateDoc(doc(db, 'approval_requests', id), {
+        status,
+        updated_at: new Date().toISOString()
+      });
+
+      setPaymentRequests(prev => 
+        prev.map(req => 
+          req.id === id ? { ...req, status, updated_at: new Date().toISOString() } : req
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: `Payment request ${status.toLowerCase()} successfully`
+      });
+    } catch (error) {
+      console.error('Error updating payment request status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update payment request status",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchPaymentRequests()
   }, [])
@@ -113,6 +143,7 @@ export const useSalaryPayments = () => {
     paymentRequests,
     loading,
     submitPaymentRequest,
+    updatePaymentRequestStatus,
     refetch: fetchPaymentRequests
   }
 }

@@ -1,70 +1,54 @@
+
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, UserPlus, DollarSign, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { Users, UserPlus, DollarSign, Clock, TrendingUp, Send } from 'lucide-react';
 import { useState } from 'react';
-import { useFirebaseEmployees, type Employee } from '@/hooks/useFirebaseEmployees';
+import { useSecureEmployees } from '@/hooks/useSecureEmployees';
 import { useSalaryPayments } from '@/hooks/useSalaryPayments';
+import AddEmployeeModal from '@/components/hr/AddEmployeeModal';
+import SalaryPaymentModal from '@/components/hr/SalaryPaymentModal';
+import EmployeeDetailsModal from '@/components/hr/EmployeeDetailsModal';
 
 const HumanResources = () => {
-  const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useFirebaseEmployees();
+  const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useSecureEmployees();
   const { paymentRequests, submitPaymentRequest } = useSalaryPayments();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [newEmployee, setNewEmployee] = useState<Partial<Employee>>({
-    name: '',
-    email: '',
-    phone: '',
-    position: '',
-    department: '',
-    salary: 0,
-    role: 'User',
-    permissions: [],
-    status: 'Active',
-    address: '',
-    emergency_contact: ''
-  });
+  const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, field: string) => {
-    setNewEmployee(prev => ({ ...prev, [field]: e.target.value }));
-  };
-
-  const handleSelectChange = (value: string, field: string) => {
-    setNewEmployee(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleAddEmployee = async () => {
+  const handleAddEmployee = async (employeeData: any) => {
     try {
-      await addEmployee({
-        ...newEmployee,
-        join_date: new Date().toISOString(),
-      } as Omit<Employee, 'id' | 'created_at' | 'updated_at'>);
-      
-      setNewEmployee({
-        name: '',
-        email: '',
-        phone: '',
-        position: '',
-        department: '',
-        salary: 0,
-        role: 'User',
-        permissions: [],
-        status: 'Active',
-        address: '',
-        emergency_contact: ''
-      });
+      console.log('HR: Adding new employee:', employeeData);
+      await addEmployee(employeeData);
       setIsAddDialogOpen(false);
     } catch (error) {
-      console.error('Error adding employee:', error);
+      console.error('HR: Error adding employee:', error);
+    }
+  };
+
+  const handleEmployeeUpdated = async (updatedEmployee: any) => {
+    try {
+      console.log('HR: Updating employee:', updatedEmployee);
+      await updateEmployee(updatedEmployee.id, updatedEmployee);
+    } catch (error) {
+      console.error('HR: Error updating employee:', error);
+    }
+  };
+
+  const handleSalaryPaymentRequest = async (requestData: any) => {
+    try {
+      console.log('HR: Submitting salary payment request:', requestData);
+      await submitPaymentRequest(requestData);
+      setIsSalaryModalOpen(false);
+    } catch (error) {
+      console.error('HR: Error submitting salary payment request:', error);
     }
   };
 
@@ -84,162 +68,16 @@ const HumanResources = () => {
             <p className="text-muted-foreground">Manage employees, payroll, and HR operations</p>
           </div>
           
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Add Employee
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Add New Employee</DialogTitle>
-                <DialogDescription>
-                  Enter the details for the new employee
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={newEmployee.name}
-                    onChange={(e) => handleInputChange(e, 'name')}
-                    placeholder="John Doe"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newEmployee.email}
-                    onChange={(e) => handleInputChange(e, 'email')}
-                    placeholder="john@example.com"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={newEmployee.phone}
-                    onChange={(e) => handleInputChange(e, 'phone')}
-                    placeholder="+256 700 000 000"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="position">Position</Label>
-                  <Input
-                    id="position"
-                    value={newEmployee.position}
-                    onChange={(e) => handleInputChange(e, 'position')}
-                    placeholder="Coffee Quality Specialist"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Select
-                    value={newEmployee.department}
-                    onValueChange={(value) => handleSelectChange(value, 'department')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Finance">Finance</SelectItem>
-                      <SelectItem value="Quality Control">Quality Control</SelectItem>
-                      <SelectItem value="Processing">Processing</SelectItem>
-                      <SelectItem value="Field Operations">Field Operations</SelectItem>
-                      <SelectItem value="Store Management">Store Management</SelectItem>
-                      <SelectItem value="Sales & Marketing">Sales & Marketing</SelectItem>
-                      <SelectItem value="Human Resources">Human Resources</SelectItem>
-                      <SelectItem value="Administration">Administration</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="salary">Monthly Salary (UGX)</Label>
-                  <Input
-                    id="salary"
-                    type="number"
-                    value={String(newEmployee.salary)}
-                    onChange={(e) => setNewEmployee(prev => ({ ...prev, salary: Number(e.target.value) }))}
-                    placeholder="800000"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select
-                    value={newEmployee.role}
-                    onValueChange={(value) => handleSelectChange(value, 'role')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="User">User</SelectItem>
-                      <SelectItem value="Supervisor">Supervisor</SelectItem>
-                      <SelectItem value="Manager">Manager</SelectItem>
-                      <SelectItem value="Administrator">Administrator</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={newEmployee.status}
-                    onValueChange={(value) => handleSelectChange(value, 'status')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Inactive">Inactive</SelectItem>
-                      <SelectItem value="On Leave">On Leave</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea
-                    id="address"
-                    value={newEmployee.address}
-                    onChange={(e) => handleInputChange(e, 'address')}
-                    placeholder="Enter full address"
-                  />
-                </div>
-                
-                <div className="col-span-2 space-y-2">
-                  <Label htmlFor="emergency_contact">Emergency Contact</Label>
-                  <Input
-                    id="emergency_contact"
-                    value={newEmployee.emergency_contact}
-                    onChange={(e) => handleInputChange(e, 'emergency_contact')}
-                    placeholder="Emergency contact details"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddEmployee}>
-                  Add Employee
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <div className="flex space-x-2">
+            <Button onClick={() => setIsSalaryModalOpen(true)} variant="outline">
+              <Send className="mr-2 h-4 w-4" />
+              Submit Salary Request
+            </Button>
+            <Button onClick={() => setIsAddDialogOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Employee
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -345,7 +183,16 @@ const HumanResources = () => {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="sm">Edit</Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedEmployee(employee);
+                                setIsDetailsModalOpen(true);
+                              }}
+                            >
+                              View Details
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -381,9 +228,9 @@ const HumanResources = () => {
                       <TableRow key={request.id}>
                         <TableCell className="font-mono text-sm">{request.id.slice(0, 8)}</TableCell>
                         <TableCell>{request.title}</TableCell>
-                        <TableCell>UGX {Number(request.amount).toLocaleString()}</TableCell>
+                        <TableCell>{request.amount}</TableCell>
                         <TableCell>{request.requestedby}</TableCell>
-                        <TableCell>{request.daterequested}</TableCell>
+                        <TableCell>{new Date(request.daterequested).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <Badge variant={
                             request.status === 'Approved' ? 'default' : 
@@ -400,6 +247,28 @@ const HumanResources = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <AddEmployeeModal
+          open={isAddDialogOpen}
+          onOpenChange={setIsAddDialogOpen}
+          onEmployeeAdded={handleAddEmployee}
+        />
+
+        <SalaryPaymentModal
+          open={isSalaryModalOpen}
+          onOpenChange={setIsSalaryModalOpen}
+          employees={employees}
+          onPaymentRequestSubmitted={handleSalaryPaymentRequest}
+        />
+
+        {selectedEmployee && (
+          <EmployeeDetailsModal
+            open={isDetailsModalOpen}
+            onOpenChange={setIsDetailsModalOpen}
+            employee={selectedEmployee}
+            onEmployeeUpdated={handleEmployeeUpdated}
+          />
+        )}
       </div>
     </Layout>
   );

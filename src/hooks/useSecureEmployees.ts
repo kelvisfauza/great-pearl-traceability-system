@@ -26,6 +26,7 @@ export interface Employee {
 
 const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
   try {
+    console.log('Logging security event:', { action, tableName, recordId });
     await addDoc(collection(db, 'security_audit_log'), {
       action,
       table_name: tableName,
@@ -47,6 +48,7 @@ export const useSecureEmployees = () => {
 
   const fetchEmployees = async () => {
     try {
+      console.log('Fetching employees from Firebase...');
       setLoading(true)
       const employeesQuery = query(collection(db, 'employees'), orderBy('created_at', 'desc'));
       const querySnapshot = await getDocs(employeesQuery);
@@ -56,6 +58,7 @@ export const useSecureEmployees = () => {
         ...doc.data()
       })) as Employee[];
       
+      console.log('Employees fetched successfully:', employeesData.length);
       setEmployees(employeesData);
     } catch (error) {
       console.error('Error fetching employees:', error)
@@ -126,6 +129,8 @@ export const useSecureEmployees = () => {
     }
 
     try {
+      console.log('Adding employee to Firebase:', employeeData);
+      
       const sanitizedData = {
         ...employeeData,
         name: employeeData.name.trim(),
@@ -134,12 +139,15 @@ export const useSecureEmployees = () => {
         department: employeeData.department.trim(),
         join_date: employeeData.join_date || new Date().toISOString(),
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        permissions: employeeData.permissions || [],
+        status: employeeData.status || 'Active'
       }
 
       const docRef = await addDoc(collection(db, 'employees'), sanitizedData);
       const newEmployee = { id: docRef.id, ...sanitizedData };
 
+      console.log('Employee added successfully:', newEmployee);
       setEmployees(prev => [newEmployee, ...prev])
       await logSecurityEvent('employee_created', 'employees', docRef.id, null, newEmployee);
       
@@ -152,7 +160,7 @@ export const useSecureEmployees = () => {
       console.error('Error adding employee:', error)
       toast({
         title: "Error",
-        description: "Failed to add employee",
+        description: "Failed to add employee. Please try again.",
         variant: "destructive"
       })
       throw error
@@ -170,6 +178,8 @@ export const useSecureEmployees = () => {
     }
 
     try {
+      console.log('Updating employee in Firebase:', id, updates);
+      
       const sanitizedUpdates = {
         ...updates,
         ...(updates.name && { name: updates.name.trim() }),
@@ -187,6 +197,7 @@ export const useSecureEmployees = () => {
       
       await logSecurityEvent('employee_updated', 'employees', id, null, sanitizedUpdates);
       
+      console.log('Employee updated successfully');
       toast({
         title: "Success",
         description: "Employee updated successfully"
@@ -195,7 +206,7 @@ export const useSecureEmployees = () => {
       console.error('Error updating employee:', error)
       toast({
         title: "Error",
-        description: "Failed to update employee",
+        description: "Failed to update employee. Please try again.",
         variant: "destructive"
       })
       throw error
@@ -213,11 +224,14 @@ export const useSecureEmployees = () => {
     }
 
     try {
+      console.log('Deleting employee from Firebase:', id);
+      
       await deleteDoc(doc(db, 'employees', id));
       
       setEmployees(prev => prev.filter(emp => emp.id !== id));
       await logSecurityEvent('employee_deleted', 'employees', id, null, null);
       
+      console.log('Employee deleted successfully');
       toast({
         title: "Success",
         description: "Employee deleted successfully"
@@ -226,7 +240,7 @@ export const useSecureEmployees = () => {
       console.error('Error deleting employee:', error)
       toast({
         title: "Error",
-        description: "Failed to delete employee",
+        description: "Failed to delete employee. Please try again.",
         variant: "destructive"
       })
       throw error
