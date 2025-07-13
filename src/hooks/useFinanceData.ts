@@ -220,6 +220,8 @@ export const useFinanceData = () => {
           updated_at: new Date().toISOString()
         };
 
+        console.log('Approval request data to be saved:', approvalRequestData);
+
         // Save to Firebase
         console.log('Saving approval request to Firebase...');
         const firebaseDoc = await addDoc(collection(db, 'approval_requests'), approvalRequestData);
@@ -246,10 +248,9 @@ export const useFinanceData = () => {
 
         if (supabaseError) {
           console.error('Error saving approval request to Supabase:', supabaseError);
-          throw supabaseError;
+        } else {
+          console.log('Supabase approval request created:', supabaseData);
         }
-
-        console.log('Supabase approval request created:', supabaseData);
 
         // Update payment status to Processing in Firebase
         console.log('Updating payment status to Processing in Firebase...');
@@ -341,6 +342,11 @@ export const useFinanceData = () => {
 
         console.log('Cash payment processed successfully');
       }
+
+      // Refresh data after processing
+      setTimeout(() => {
+        fetchFinanceData();
+      }, 1000);
 
     } catch (error) {
       console.error('Error processing payment:', error);

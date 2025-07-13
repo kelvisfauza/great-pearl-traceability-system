@@ -5,10 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock, DollarSign, AlertTriangle, Users, Building2 } from "lucide-react";
+import { CheckCircle, XCircle, Clock, DollarSign, AlertTriangle, Users, Building2, RefreshCw } from "lucide-react";
 
 const ApprovalRequests = () => {
-  const { requests, loading, updateRequestStatus } = useApprovalRequests();
+  const { requests, loading, updateRequestStatus, fetchRequests } = useApprovalRequests();
   const { employee, hasRole } = useAuth();
   const { toast } = useToast();
 
@@ -17,13 +17,21 @@ const ApprovalRequests = () => {
     hasRole('Administrator') || employee?.position === 'Supervisor' || 
     employee?.position === 'Operations Manager';
 
+  console.log('ApprovalRequests - Can approve:', canApproveRequests);
+  console.log('ApprovalRequests - Employee role:', employee?.role);
+  console.log('ApprovalRequests - Employee position:', employee?.position);
+  console.log('ApprovalRequests - Total requests:', requests.length);
+
   const handleApprove = async (requestId: string, requestTitle: string) => {
+    console.log('Approving request:', requestId, requestTitle);
     const success = await updateRequestStatus(requestId, 'Approved');
     if (success) {
       toast({
         title: "Request Approved",
         description: `${requestTitle} has been approved successfully`,
       });
+      // Refresh the list after approval
+      setTimeout(() => fetchRequests(), 1000);
     } else {
       toast({
         title: "Error",
@@ -34,12 +42,15 @@ const ApprovalRequests = () => {
   };
 
   const handleReject = async (requestId: string, requestTitle: string) => {
+    console.log('Rejecting request:', requestId, requestTitle);
     const success = await updateRequestStatus(requestId, 'Rejected');
     if (success) {
       toast({
         title: "Request Rejected", 
         description: `${requestTitle} has been rejected`,
       });
+      // Refresh the list after rejection
+      setTimeout(() => fetchRequests(), 1000);
     } else {
       toast({
         title: "Error",
@@ -47,6 +58,11 @@ const ApprovalRequests = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleRefresh = () => {
+    console.log('Manually refreshing approval requests');
+    fetchRequests();
   };
 
   if (loading) {
@@ -65,8 +81,6 @@ const ApprovalRequests = () => {
     );
   }
 
-  const pendingRequests = requests.filter(req => req.status === 'Pending');
-
   if (!canApproveRequests) {
     return (
       <Card>
@@ -78,10 +92,16 @@ const ApprovalRequests = () => {
         </CardHeader>
         <CardContent>
           <p className="text-gray-500">You don't have permission to view approval requests.</p>
+          <p className="text-sm text-gray-400 mt-2">
+            Current role: {employee?.role} | Position: {employee?.position}
+          </p>
         </CardContent>
       </Card>
     );
   }
+
+  const pendingRequests = requests.filter(req => req.status === 'Pending');
+  console.log('Pending requests for display:', pendingRequests.length);
 
   if (pendingRequests.length === 0) {
     return (
@@ -90,6 +110,15 @@ const ApprovalRequests = () => {
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
             Approval Requests
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              className="ml-auto"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Refresh
+            </Button>
           </CardTitle>
           <CardDescription>All caught up! No pending approval requests.</CardDescription>
         </CardHeader>
@@ -97,6 +126,7 @@ const ApprovalRequests = () => {
           <div className="text-center py-8">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
             <p className="text-gray-500">No pending approval requests</p>
+            <p className="text-sm text-gray-400 mt-2">Total requests found: {requests.length}</p>
           </div>
         </CardContent>
       </Card>
@@ -110,6 +140,15 @@ const ApprovalRequests = () => {
           <AlertTriangle className="h-5 w-5 text-amber-600" />
           Pending Approval Requests
           <Badge variant="destructive">{pendingRequests.length}</Badge>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            className="ml-auto"
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Refresh
+          </Button>
         </CardTitle>
         <CardDescription>
           Review and approve requests from various departments
@@ -118,7 +157,7 @@ const ApprovalRequests = () => {
       <CardContent>
         <div className="space-y-4">
           {pendingRequests.map((request) => (
-            <div key={request.id} className="border rounded-lg p-4 space-y-3">
+            <div key={request.id} className="border rounded-lg p-4 space-y-3 bg-amber-50">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
@@ -144,7 +183,7 @@ const ApprovalRequests = () => {
                     </div>
                     <div>
                       <span className="text-gray-500">Amount:</span>
-                      <span className="ml-2 font-medium text-green-600">{request.amount}</span>
+                      <span className="ml-2 font-medium text-green-600">UGX {request.amount}</span>
                     </div>
                     <div>
                       <span className="text-gray-500">Date:</span>
@@ -174,7 +213,7 @@ const ApprovalRequests = () => {
               
               {/* Show additional details for bank transfers */}
               {request.type === 'Bank Transfer' && request.details && (
-                <div className="bg-gray-50 rounded p-3">
+                <div className="bg-white rounded p-3 border">
                   <h5 className="font-medium text-sm mb-2">Payment Details:</h5>
                   <div className="grid grid-cols-3 gap-3 text-xs">
                     <div>
