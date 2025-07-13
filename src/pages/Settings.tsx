@@ -25,6 +25,20 @@ const Settings = () => {
                          employee.role === 'Manager' || 
                          employee.permissions?.includes('Human Resources');
 
+  // Wrapper functions to match UserManagement component expectations
+  const handleEmployeeAdded = async (employeeData: any): Promise<void> => {
+    await addEmployee(employeeData);
+  };
+
+  const handleEmployeeUpdated = async (employeeData: any): Promise<void> => {
+    const { id, ...updates } = employeeData;
+    await updateEmployee(id, updates);
+  };
+
+  const handleEmployeeDeleted = async (id: string): Promise<void> => {
+    await deleteEmployee(id);
+  };
+
   return (
     <Layout 
       title="Settings" 
@@ -46,9 +60,9 @@ const Settings = () => {
           <TabsContent value="users">
             <UserManagement 
               employees={employees}
-              onEmployeeAdded={addEmployee}
-              onEmployeeUpdated={updateEmployee}
-              onEmployeeDeleted={deleteEmployee}
+              onEmployeeAdded={handleEmployeeAdded}
+              onEmployeeUpdated={handleEmployeeUpdated}
+              onEmployeeDeleted={handleEmployeeDeleted}
             />
           </TabsContent>
         )}
