@@ -114,20 +114,28 @@ export const useFinanceData = () => {
       console.log('Payment records loaded:', paymentsData);
       setPayments(paymentsData);
 
-      // Fetch quality assessments from Firebase for payment processing
+      // Fetch quality assessments from Firebase - simplified query to avoid index requirement
       console.log('Fetching quality assessments for finance from Firebase...');
-      const assessmentsQuery = query(
-        collection(db, 'quality_assessments'), 
-        where('status', 'in', ['submitted_to_finance', 'price_requested', 'approved']),
-        orderBy('created_at', 'desc')
-      );
-      const assessmentsSnapshot = await getDocs(assessmentsQuery);
-      const assessmentsData = assessmentsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as QualityAssessmentForPayment[];
-      console.log('Quality assessments for finance loaded:', assessmentsData);
-      setQualityAssessments(assessmentsData);
+      try {
+        // First, get all quality assessments
+        const assessmentsQuery = query(collection(db, 'quality_assessments'), orderBy('created_at', 'desc'));
+        const assessmentsSnapshot = await getDocs(assessmentsQuery);
+        const allAssessments = assessmentsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as QualityAssessmentForPayment[];
+        
+        // Filter client-side to avoid composite index requirement
+        const relevantAssessments = allAssessments.filter(assessment => 
+          assessment.status && ['submitted_to_finance', 'price_requested', 'approved'].includes(assessment.status)
+        );
+        
+        console.log('Quality assessments for finance loaded:', relevantAssessments);
+        setQualityAssessments(relevantAssessments);
+      } catch (assessmentError) {
+        console.error('Error fetching quality assessments, continuing without them:', assessmentError);
+        setQualityAssessments([]);
+      }
       
       // Update stats
       const totalReceipts = transactionsData
