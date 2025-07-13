@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -41,6 +42,22 @@ interface FinanceStats {
   totalReceipts: number;  
   totalPayments: number;
   netCashFlow: number;
+}
+
+interface ApprovalRequestDetails {
+  paymentId?: string;
+  method?: string;
+  supplier?: string;
+  amount?: number;
+  batchNumber?: string;
+}
+
+interface ApprovalRequestData {
+  id: string;
+  type: string;
+  status: string;
+  details?: ApprovalRequestDetails;
+  [key: string]: any;
 }
 
 export const useFirebaseFinance = () => {
@@ -156,15 +173,21 @@ export const useFirebaseFinance = () => {
         where('status', '==', 'Approved')
       );
       const approvalSnapshot = await getDocs(approvalQuery);
-      const approvedRequests = approvalSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const approvedRequests = approvalSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          type: data.type || '',
+          status: data.status || '',
+          details: data.details || {},
+          ...data
+        } as ApprovalRequestData;
+      });
 
       // Update payment records based on approved requests
       for (const request of approvedRequests) {
         if (request.details?.paymentId) {
-          const paymentToUpdate = existingPayments.find(p => p.id === request.details.paymentId);
+          const paymentToUpdate = existingPayments.find(p => p.id === request.details?.paymentId);
           if (paymentToUpdate && paymentToUpdate.status === 'Processing') {
             try {
               await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
