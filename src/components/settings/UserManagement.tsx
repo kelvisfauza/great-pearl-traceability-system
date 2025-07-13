@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -156,12 +155,11 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     
     setIsUpdatingUser(true);
     try {
-      console.log('Starting user update for:', selectedEmployee.id);
-      console.log('Update values:', values);
+      console.log('Starting user update for employee:', selectedEmployee.id);
+      console.log('Form values:', values);
       
-      // Create the update object with proper structure
+      // Prepare the update data with proper validation and structure
       const updateData = {
-        id: selectedEmployee.id,
         name: values.name.trim(),
         email: values.email.toLowerCase().trim(),
         phone: values.phone?.trim() || "",
@@ -169,18 +167,17 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         department: values.department.trim(),
         role: values.role,
         salary: Number(values.salary),
-        permissions: values.permissions || [],
-        // Preserve existing fields
-        status: selectedEmployee.status || 'Active',
-        join_date: selectedEmployee.join_date,
-        created_at: selectedEmployee.created_at,
-        updated_at: new Date().toISOString()
+        permissions: Array.isArray(values.permissions) ? values.permissions : [],
       };
 
-      console.log('Calling onEmployeeUpdated with:', updateData);
-      await onEmployeeUpdated(updateData);
+      console.log('Calling updateEmployee with ID:', selectedEmployee.id, 'Data:', updateData);
       
-      console.log('Update successful, closing modal');
+      // Call the update function directly with the employee ID and update data
+      await onEmployeeUpdated(selectedEmployee.id, updateData);
+      
+      console.log('Update completed successfully');
+      
+      // Close modal and reset form
       setIsEditModalOpen(false);
       setSelectedEmployee(null);
       editForm.reset();
@@ -209,7 +206,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     console.log('Opening edit modal for employee:', employee);
     setSelectedEmployee(employee);
     
-    // Reset form with proper values
+    // Reset form with current employee data
     editForm.reset({
       name: employee.name || "",
       email: employee.email || "",

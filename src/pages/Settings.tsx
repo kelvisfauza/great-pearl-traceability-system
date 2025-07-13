@@ -22,8 +22,8 @@ const Settings = () => {
     await addEmployee(employeeData);
   };
 
-  const handleEmployeeUpdated = async (employeeData: any): Promise<void> => {
-    const { id, ...updates } = employeeData;
+  const handleEmployeeUpdated = async (id: string, updates: any): Promise<void> => {
+    console.log('Settings handleEmployeeUpdated called with:', { id, updates });
     await updateEmployee(id, updates);
   };
 
