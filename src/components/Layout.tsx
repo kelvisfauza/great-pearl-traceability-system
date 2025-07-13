@@ -7,13 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Bell, CircleUserRound, ChevronsUpDown, X } from "lucide-react";
+import { Bell, CircleUserRound, ChevronsUpDown, X, LogOut } from "lucide-react";
 import MessageButton from "./messaging/MessageButton";
 import { usePresence } from "@/hooks/usePresence";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 interface LayoutProps {
   children: ReactNode;
@@ -25,7 +26,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { updatePresence } = usePresence();
-  const { user } = useAuth();
+  const { user, employee, signOut } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -94,6 +95,22 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
 
   const handleClearNotification = (notificationId: string) => {
     clearNotification.mutate(notificationId);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -203,23 +220,36 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
                       onClick={handleUserMenuClick}
                     >
                       <CircleUserRound className="h-4 w-4 mr-2" />
-                      User Menu
+                      {employee ? employee.name : user?.email || 'User'}
                       <ChevronsUpDown className="h-4 w-4 ml-2" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64 p-0" align="end">
                     <div className="p-4">
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Your Name</p>
-                        <p className="text-xs text-muted-foreground">
-                          your.email@example.com
-                        </p>
+                        {employee ? (
+                          <>
+                            <p className="text-sm font-medium">{employee.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {employee.position} • {employee.department}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {employee.email}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-medium">User</p>
+                            <p className="text-xs text-muted-foreground">
+                              {user?.email}
+                            </p>
+                          </>
+                        )}
                         <Separator />
-                        <Button variant="ghost" className="w-full justify-start">
-                          Profile
-                        </Button>
-                        <Button variant="ghost" className="w-full justify-start">
-                          Settings
+                        <Button variant="ghost" className="w-full justify-start" asChild>
+                          <Link to="/settings">
+                            Settings
+                          </Link>
                         </Button>
                         <Separator />
                         
@@ -261,6 +291,16 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
                             </Button>
                           </div>
                         </div>
+                        
+                        <Separator />
+                        <Button 
+                          variant="ghost" 
+                          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={handleSignOut}
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sign Out
+                        </Button>
                       </div>
                     </div>
                   </PopoverContent>
