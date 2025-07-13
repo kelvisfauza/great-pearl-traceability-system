@@ -1,295 +1,406 @@
-import Layout from "@/components/Layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { 
-  Users, 
-  UserPlus, 
-  Search, 
-  Filter,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  DollarSign,
-  Calendar,
-  Building,
-  Mail,
-  Phone
-} from "lucide-react";
-import { useState } from "react";
-import { useEmployees } from "@/hooks/useEmployees";
-import { useSalaryPayments } from "@/hooks/useSalaryPayments";
-import AddEmployeeModal from "@/components/hr/AddEmployeeModal";
-import EmployeeDetailsModal from "@/components/hr/EmployeeDetailsModal";
-import SalaryPaymentModal from "@/components/hr/SalaryPaymentModal";
-import EmptyState from "@/components/hr/EmptyState";
-import EmployeeStatsCards from "@/components/hr/EmployeeStatsCards";
-import EmployeeFilters from "@/components/hr/EmployeeFilters";
-import EmployeeList from "@/components/hr/EmployeeList";
-import PaymentHistory from "@/components/hr/PaymentHistory";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import Layout from '@/components/Layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, UserPlus, DollarSign, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { useFirebaseEmployees, type Employee } from '@/hooks/useFirebaseEmployees';
+import { useSalaryPayments } from '@/hooks/useSalaryPayments';
 
 const HumanResources = () => {
-  const { employees, loading: employeesLoading, deleteEmployee, addEmployee, updateEmployee } = useEmployees();
-  const { paymentRequests, loading: paymentsLoading, submitPaymentRequest } = useSalaryPayments();
+  const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useFirebaseEmployees();
+  const { paymentRequests, submitPaymentRequest } = useSalaryPayments();
   
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDepartment, setSelectedDepartment] = useState("All");
-  const [selectedStatus, setSelectedStatus] = useState("All");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
-
-  // Filter employees based on search, department, and status
-  const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         emp.position.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = selectedDepartment === "All" || emp.department === selectedDepartment;
-    const matchesStatus = selectedStatus === "All" || emp.status === selectedStatus;
-    return matchesSearch && matchesDepartment && matchesStatus;
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [newEmployee, setNewEmployee] = useState<Partial<Employee>>({
+    name: '',
+    email: '',
+    phone: '',
+    position: '',
+    department: '',
+    salary: 0,
+    role: 'User',
+    permissions: [],
+    status: 'Active',
+    address: '',
+    emergency_contact: ''
   });
 
-  // Get unique departments and statuses
-  const departments = ["All", ...new Set(employees.map(emp => emp.department))];
-  const statuses = ["All", ...new Set(employees.map(emp => emp.status))];
-
-  const handleViewEmployee = (employee: any) => {
-    setSelectedEmployee(employee);
-    setIsDetailsModalOpen(true);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, field: string) => {
+    setNewEmployee(prev => ({ ...prev, [field]: e.target.value }));
   };
 
-  const handleEditEmployee = (employee: any) => {
-    setSelectedEmployee(employee);
-    setIsDetailsModalOpen(true);
+  const handleSelectChange = (value: string, field: string) => {
+    setNewEmployee(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleDeleteEmployee = async (employeeId: string) => {
-    if (window.confirm('Are you sure you want to delete this employee?')) {
-      await deleteEmployee(employeeId);
+  const handleAddEmployee = async () => {
+    try {
+      await addEmployee({
+        ...newEmployee,
+        join_date: new Date().toISOString(),
+      } as Omit<Employee, 'id' | 'created_at' | 'updated_at'>);
+      
+      setNewEmployee({
+        name: '',
+        email: '',
+        phone: '',
+        position: '',
+        department: '',
+        salary: 0,
+        role: 'User',
+        permissions: [],
+        status: 'Active',
+        address: '',
+        emergency_contact: ''
+      });
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      console.error('Error adding employee:', error);
     }
   };
 
-  const handleAddEmployee = async (employeeData: any) => {
-    await addEmployee(employeeData);
-    setIsAddModalOpen(false);
+  const stats = {
+    totalEmployees: employees.length,
+    activeEmployees: employees.filter(e => e.status === 'Active').length,
+    pendingRequests: paymentRequests.filter(r => r.status === 'Pending').length,
+    avgSalary: employees.length > 0 ? Math.round(employees.reduce((sum, e) => sum + e.salary, 0) / employees.length) : 0
   };
-
-  const handleUpdateEmployee = async (employeeData: any) => {
-    if (employeeData.id) {
-      const { id, ...updates } = employeeData;
-      await updateEmployee(id, updates);
-    }
-  };
-
-  const handleSubmitPaymentRequest = async (requestData: any) => {
-    await submitPaymentRequest(requestData);
-    setIsPaymentModalOpen(false);
-  };
-
-  if (employeesLoading) {
-    return (
-      <Layout title="Human Resources" subtitle="Manage employees and payroll">
-        <div className="space-y-6">
-          <div className="text-center py-8">
-            <p>Loading employees...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
-    <Layout title="Human Resources" subtitle="Manage employees and payroll">
+    <Layout>
       <div className="space-y-6">
-        {/* Statistics Cards */}
-        <EmployeeStatsCards employees={employees} />
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Employee Management */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Employee Directory
-                  </CardTitle>
-                  <CardDescription>Manage your workforce</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Human Resources</h1>
+            <p className="text-muted-foreground">Manage employees, payroll, and HR operations</p>
+          </div>
+          
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add Employee
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Add New Employee</DialogTitle>
+                <DialogDescription>
+                  Enter the details for the new employee
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    value={newEmployee.name}
+                    onChange={(e) => handleInputChange(e, 'name')}
+                    placeholder="John Doe"
+                  />
                 </div>
-                <div className="flex space-x-2">
-                  <Button onClick={() => setIsPaymentModalOpen(true)} variant="outline">
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Request Salary Payment
-                  </Button>
-                  <Button onClick={() => setIsAddModalOpen(true)}>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Employee
-                  </Button>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newEmployee.email}
+                    onChange={(e) => handleInputChange(e, 'email')}
+                    placeholder="john@example.com"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={newEmployee.phone}
+                    onChange={(e) => handleInputChange(e, 'phone')}
+                    placeholder="+256 700 000 000"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="position">Position</Label>
+                  <Input
+                    id="position"
+                    value={newEmployee.position}
+                    onChange={(e) => handleInputChange(e, 'position')}
+                    placeholder="Coffee Quality Specialist"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Select
+                    value={newEmployee.department}
+                    onValueChange={(value) => handleSelectChange(value, 'department')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Finance">Finance</SelectItem>
+                      <SelectItem value="Quality Control">Quality Control</SelectItem>
+                      <SelectItem value="Processing">Processing</SelectItem>
+                      <SelectItem value="Field Operations">Field Operations</SelectItem>
+                      <SelectItem value="Store Management">Store Management</SelectItem>
+                      <SelectItem value="Sales & Marketing">Sales & Marketing</SelectItem>
+                      <SelectItem value="Human Resources">Human Resources</SelectItem>
+                      <SelectItem value="Administration">Administration</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="salary">Monthly Salary (UGX)</Label>
+                  <Input
+                    id="salary"
+                    type="number"
+                    value={String(newEmployee.salary)}
+                    onChange={(e) => setNewEmployee(prev => ({ ...prev, salary: Number(e.target.value) }))}
+                    placeholder="800000"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select
+                    value={newEmployee.role}
+                    onValueChange={(value) => handleSelectChange(value, 'role')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="User">User</SelectItem>
+                      <SelectItem value="Supervisor">Supervisor</SelectItem>
+                      <SelectItem value="Manager">Manager</SelectItem>
+                      <SelectItem value="Administrator">Administrator</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={newEmployee.status}
+                    onValueChange={(value) => handleSelectChange(value, 'status')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                      <SelectItem value="On Leave">On Leave</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea
+                    id="address"
+                    value={newEmployee.address}
+                    onChange={(e) => handleInputChange(e, 'address')}
+                    placeholder="Enter full address"
+                  />
+                </div>
+                
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="emergency_contact">Emergency Contact</Label>
+                  <Input
+                    id="emergency_contact"
+                    value={newEmployee.emergency_contact}
+                    onChange={(e) => handleInputChange(e, 'emergency_contact')}
+                    placeholder="Emergency contact details"
+                  />
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              {/* Enhanced Search and Filters */}
-              <EmployeeFilters
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                selectedDepartment={selectedDepartment}
-                onDepartmentChange={setSelectedDepartment}
-                selectedStatus={selectedStatus}
-                onStatusChange={setSelectedStatus}
-                departments={departments}
-                statuses={statuses}
-              />
-
-              {/* Employee List */}
-              {filteredEmployees.length > 0 ? (
-                <EmployeeList
-                  employees={filteredEmployees}
-                  onViewEmployee={handleViewEmployee}
-                  onEditEmployee={handleEditEmployee}
-                  onDeleteEmployee={handleDeleteEmployee}
-                />
-              ) : employees.length > 0 ? (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No employees match your filters</p>
-                  <Button 
-                    variant="outline" 
-                    className="mt-2"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSelectedDepartment("All");
-                      setSelectedStatus("All");
-                    }}
-                  >
-                    Clear Filters
-                  </Button>
-                </div>
-              ) : (
-                <EmptyState 
-                  type="employees"
-                  onAction={() => setIsAddModalOpen(true)}
-                  actionLabel="Add First Employee"
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Payment Request History */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" />
-                    Payment Requests
-                  </CardTitle>
-                  <CardDescription>Salary payment request status</CardDescription>
-                </div>
-                <Button onClick={() => setIsPaymentModalOpen(true)} size="sm">
-                  New Request
+              
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddEmployee}>
+                  Add Employee
                 </Button>
               </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {paymentsLoading ? (
-                <p className="text-center text-gray-500">Loading requests...</p>
-              ) : paymentRequests.length > 0 ? (
-                <div className="space-y-3">
-                  {paymentRequests.slice(0, 5).map((request) => (
-                    <div key={request.id} className="p-3 border rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="font-medium text-gray-900">{request.title}</p>
-                          <p className="text-sm text-gray-600">{request.description}</p>
-                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>{new Date(request.daterequested).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                        <Badge variant={
-                          request.status === 'Approved' ? 'default' : 
-                          request.status === 'Rejected' ? 'destructive' : 'secondary'
-                        }>
-                          {request.status}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {request.amount}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {request.details?.employee_count || 0} employees
-                        </p>
-                      </div>
-                      
-                      {request.status === 'Approved' && (
-                        <div className="mt-2 p-2 bg-green-50 rounded border-l-4 border-green-400">
-                          <p className="text-xs text-green-800">
-                            Approved - Finance will process payment
-                          </p>
-                        </div>
-                      )}
-                      
-                      {request.status === 'Rejected' && (
-                        <div className="mt-2 p-2 bg-red-50 rounded border-l-4 border-red-400">
-                          <p className="text-xs text-red-800">
-                            Request rejected - Contact Finance for details
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No payment requests</p>
-                  <Button 
-                    variant="outline" 
-                    className="mt-2"
-                    onClick={() => setIsPaymentModalOpen(true)}
-                  >
-                    Submit First Request
-                  </Button>
-                </div>
-              )}
+              <div className="text-2xl font-bold">{stats.totalEmployees}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.activeEmployees} active
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Average Salary</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">UGX {stats.avgSalary.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                Monthly average
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pendingRequests}</div>
+              <p className="text-xs text-muted-foreground">
+                Salary payment requests
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Department Count</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {new Set(employees.map(e => e.department)).size}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Active departments
+              </p>
             </CardContent>
           </Card>
         </div>
-      </div>
 
-      {/* Modals */}
-      <AddEmployeeModal 
-        open={isAddModalOpen} 
-        onOpenChange={setIsAddModalOpen}
-        onEmployeeAdded={handleAddEmployee}
-      />
-      
-      <EmployeeDetailsModal
-        open={isDetailsModalOpen}
-        onOpenChange={setIsDetailsModalOpen}
-        employee={selectedEmployee}
-        onEmployeeUpdated={handleUpdateEmployee}
-      />
-      
-      <SalaryPaymentModal
-        open={isPaymentModalOpen}
-        onOpenChange={setIsPaymentModalOpen}
-        employees={employees}
-        onPaymentRequestSubmitted={handleSubmitPaymentRequest}
-      />
+        <Tabs defaultValue="employees" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="employees">Employees</TabsTrigger>
+            <TabsTrigger value="payroll">Payroll</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="employees" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Employee Directory</CardTitle>
+                <CardDescription>
+                  Manage employee information and access controls
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-4">Loading employees...</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Position</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Salary</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {employees.map((employee) => (
+                        <TableRow key={employee.id}>
+                          <TableCell className="font-medium">{employee.name}</TableCell>
+                          <TableCell>{employee.position}</TableCell>
+                          <TableCell>{employee.department}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{employee.role}</Badge>
+                          </TableCell>
+                          <TableCell>UGX {employee.salary.toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Badge variant={employee.status === 'Active' ? 'default' : 'secondary'}>
+                              {employee.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm">Edit</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="payroll" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Salary Payment Requests</CardTitle>
+                <CardDescription>
+                  Review and process salary payment requests
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Request ID</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Requested By</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paymentRequests.map((request) => (
+                      <TableRow key={request.id}>
+                        <TableCell className="font-mono text-sm">{request.id.slice(0, 8)}</TableCell>
+                        <TableCell>{request.title}</TableCell>
+                        <TableCell>UGX {Number(request.amount).toLocaleString()}</TableCell>
+                        <TableCell>{request.requestedby}</TableCell>
+                        <TableCell>{request.daterequested}</TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            request.status === 'Approved' ? 'default' : 
+                            request.status === 'Rejected' ? 'destructive' : 'secondary'
+                          }>
+                            {request.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </Layout>
   );
 };
