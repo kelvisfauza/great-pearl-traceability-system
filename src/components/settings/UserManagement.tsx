@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -155,26 +156,31 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     
     setIsUpdatingUser(true);
     try {
-      console.log('Updating user:', selectedEmployee.id, values);
+      console.log('Starting user update for:', selectedEmployee.id);
+      console.log('Update values:', values);
       
-      const updatedData = {
+      // Create the update object with proper structure
+      const updateData = {
         id: selectedEmployee.id,
-        name: values.name,
-        email: values.email,
-        phone: values.phone || "",
-        position: values.position,
-        department: values.department,
+        name: values.name.trim(),
+        email: values.email.toLowerCase().trim(),
+        phone: values.phone?.trim() || "",
+        position: values.position.trim(),
+        department: values.department.trim(),
         role: values.role,
-        salary: values.salary,
+        salary: Number(values.salary),
         permissions: values.permissions || [],
-        // Keep existing fields that shouldn't change
-        status: selectedEmployee.status,
+        // Preserve existing fields
+        status: selectedEmployee.status || 'Active',
         join_date: selectedEmployee.join_date,
         created_at: selectedEmployee.created_at,
+        updated_at: new Date().toISOString()
       };
 
-      await onEmployeeUpdated(updatedData);
+      console.log('Calling onEmployeeUpdated with:', updateData);
+      await onEmployeeUpdated(updateData);
       
+      console.log('Update successful, closing modal');
       setIsEditModalOpen(false);
       setSelectedEmployee(null);
       editForm.reset();
@@ -183,11 +189,15 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         title: "Success",
         description: `User ${values.name} updated successfully`
       });
-    } catch (error) {
+
+      // Refresh the data
+      await refetch();
+      
+    } catch (error: any) {
       console.error('Error updating user:', error);
       toast({
         title: "Error",
-        description: "Failed to update user. Please try again.",
+        description: error.message || "Failed to update user. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -198,16 +208,19 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
   const openEditModal = (employee: Employee) => {
     console.log('Opening edit modal for employee:', employee);
     setSelectedEmployee(employee);
+    
+    // Reset form with proper values
     editForm.reset({
       name: employee.name || "",
       email: employee.email || "",
       phone: employee.phone || "",
       position: employee.position || "",
       department: employee.department || "",
-      role: employee.role as any || "User",
-      salary: employee.salary || 0,
-      permissions: employee.permissions || [],
+      role: (employee.role as any) || "User",
+      salary: Number(employee.salary) || 0,
+      permissions: Array.isArray(employee.permissions) ? employee.permissions : [],
     });
+    
     setIsEditModalOpen(true);
   };
 
@@ -219,7 +232,9 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
           title: "Success",
           description: "User deleted successfully"
         });
+        await refetch();
       } catch (error) {
+        console.error('Delete error:', error);
         toast({
           title: "Error",
           description: "Failed to delete user",
@@ -624,7 +639,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
                         <Input
                           type="number"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          onChange={(e) => field.onChange(Number(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormMessage />
