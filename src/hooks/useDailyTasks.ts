@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,20 +29,10 @@ export const useDailyTasks = () => {
       const targetDate = date || new Date().toISOString().split('T')[0];
       console.log('Target date:', targetDate);
       
-      // First try to get all tasks to see what's available
-      const allTasksQuery = query(collection(db, 'daily_tasks'));
-      const allSnapshot = await getDocs(allTasksQuery);
-      console.log('Total daily tasks in database:', allSnapshot.docs.length);
-      
-      if (allSnapshot.docs.length > 0) {
-        console.log('Sample task data:', allSnapshot.docs[0].data());
-      }
-      
-      // Now try to get tasks for the specific date
+      // Use a simpler query to avoid composite index requirement
       const tasksQuery = query(
         collection(db, 'daily_tasks'),
-        where('date', '==', targetDate),
-        orderBy('completed_at', 'desc')
+        where('date', '==', targetDate)
       );
       
       const snapshot = await getDocs(tasksQuery);
@@ -69,7 +59,14 @@ export const useDailyTasks = () => {
         };
       }) as DailyTask[];
 
-      console.log('Processed daily tasks:', tasksData);
+      // Sort client-side by completed_at to avoid composite index
+      tasksData.sort((a, b) => {
+        const timeA = new Date(`${a.date} ${a.completed_at}`).getTime();
+        const timeB = new Date(`${b.date} ${b.completed_at}`).getTime();
+        return timeB - timeA; // Descending order (newest first)
+      });
+
+      console.log('Processed and sorted daily tasks:', tasksData);
       setTasks(tasksData);
     } catch (error) {
       console.error('Error fetching daily tasks:', error);
