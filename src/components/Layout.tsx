@@ -34,10 +34,7 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation 
-        onToggleMessaging={() => setShowMessaging(!showMessaging)}
-        unreadCount={unreadCount}
-      />
+      <Navigation />
       <main className="container mx-auto px-4 py-6">
         <SecurityAlert />
         <Outlet />

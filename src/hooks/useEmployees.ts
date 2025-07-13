@@ -25,19 +25,15 @@ export interface Employee {
 // Simplified security audit logging function
 const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
   try {
-    const { data: session } = await supabase.auth.getSession();
-    if (session.session?.user) {
-      // Log to console for now since security_audit_log table types aren't loaded
-      console.log('Security Event:', {
-        user_id: session.session.user.id,
-        action,
-        table_name: tableName,
-        record_id: recordId,
-        old_values: oldValues,
-        new_values: newValues,
-        timestamp: new Date().toISOString()
-      });
-    }
+    // Log to console for now since we're using Firebase
+    console.log('Security Event:', {
+      action,
+      table_name: tableName,
+      record_id: recordId,
+      old_values: oldValues,
+      new_values: newValues,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
     console.error('Security logging error:', error);
   }
@@ -50,19 +46,13 @@ export const useEmployees = () => {
 
   const fetchEmployees = async () => {
     try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setEmployees(data || [])
+      // For now, return empty array as we're migrating to Firebase
+      setEmployees([])
     } catch (error) {
       console.error('Error fetching employees:', error)
       toast({
-        title: "Error",
-        description: "Failed to fetch employees. You may not have permission to view employee data.",
-        variant: "destructive"
+        title: "Info",
+        description: "Employee data will be available once Firebase migration is complete.",
       })
     } finally {
       setLoading(false)
@@ -70,28 +60,9 @@ export const useEmployees = () => {
   }
 
   const validateRoleAssignment = async (employeeData: any) => {
-    // Get current user for validation
-    const { data: currentUser } = await supabase.auth.getUser();
-    
-    if (currentUser.user) {
-      // Get current user's employee record
-      const { data: currentEmployee } = await supabase
-        .from('employees')
-        .select('role, permissions')
-        .eq('email', currentUser.user.email)
-        .maybeSingle();
-      
-      // Validate sensitive role assignments
-      if (employeeData.role === 'Administrator' || employeeData.permissions?.includes('Human Resources') || employeeData.permissions?.includes('Finance')) {
-        if (!currentEmployee?.role || currentEmployee.role !== 'Administrator') {
-          toast({
-            title: "Access Denied",
-            description: "Only administrators can assign administrator roles or sensitive permissions.",
-            variant: "destructive"
-          });
-          throw new Error('Insufficient privileges for role assignment');
-        }
-      }
+    // Simplified validation for now
+    if (employeeData.role === 'Administrator' || employeeData.permissions?.includes('Human Resources') || employeeData.permissions?.includes('Finance')) {
+      console.log('Admin role assignment detected');
     }
   };
 
@@ -99,37 +70,29 @@ export const useEmployees = () => {
     try {
       await validateRoleAssignment(employeeData);
 
-      const { data, error } = await supabase
-        .from('employees')
-        .insert([{
-          ...employeeData,
-          join_date: employeeData.join_date || new Date().toISOString()
-        }])
-        .select()
-        .single()
+      // For now, just add to local state as placeholder
+      const newEmployee = {
+        ...employeeData,
+        id: `emp-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        join_date: employeeData.join_date || new Date().toISOString()
+      };
 
-      if (error) throw error
-
-      setEmployees(prev => [data, ...prev])
+      setEmployees(prev => [newEmployee, ...prev])
       
-      await logSecurityEvent('employee_created', 'employees', data.id, null, data);
+      await logSecurityEvent('employee_created', 'employees', newEmployee.id, null, newEmployee);
       
       toast({
         title: "Success",
-        description: "Employee added successfully"
+        description: "Employee added successfully (demo mode)"
       })
-      return data
+      return newEmployee
     } catch (error) {
       console.error('Error adding employee:', error)
-      
-      if (error instanceof Error && error.message === 'Insufficient privileges for role assignment') {
-        // Error already handled above
-        throw error;
-      }
-      
       toast({
         title: "Error",
-        description: "Failed to add employee. You may not have permission to create employees.",
+        description: "Failed to add employee.",
         variant: "destructive"
       })
       throw error
@@ -138,44 +101,23 @@ export const useEmployees = () => {
 
   const updateEmployee = async (id: string, updates: Partial<Employee>) => {
     try {
-      // Get current employee data for audit log
-      const { data: currentEmployee } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('id', id)
-        .single();
+      await validateRoleAssignment({ ...updates });
 
-      await validateRoleAssignment({ ...currentEmployee, ...updates });
-
-      const { data, error } = await supabase
-        .from('employees')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-
-      setEmployees(prev => prev.map(emp => emp.id === id ? data : emp))
+      setEmployees(prev => prev.map(emp => 
+        emp.id === id ? { ...emp, ...updates, updated_at: new Date().toISOString() } : emp
+      ));
       
-      await logSecurityEvent('employee_updated', 'employees', id, currentEmployee, data);
+      await logSecurityEvent('employee_updated', 'employees', id, null, updates);
       
       toast({
         title: "Success",
-        description: "Employee updated successfully"
+        description: "Employee updated successfully (demo mode)"
       })
-      return data
     } catch (error) {
       console.error('Error updating employee:', error)
-      
-      if (error instanceof Error && error.message === 'Insufficient privileges for role assignment') {
-        // Error already handled above
-        throw error;
-      }
-      
       toast({
         title: "Error",
-        description: "Failed to update employee. You may not have permission to modify employee data.",
+        description: "Failed to update employee.",
         variant: "destructive"
       })
       throw error
@@ -184,19 +126,7 @@ export const useEmployees = () => {
 
   const deleteEmployee = async (id: string) => {
     try {
-      // Get employee data for audit log before deletion
-      const { data: employeeToDelete } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      const { error } = await supabase
-        .from('employees')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
+      const employeeToDelete = employees.find(emp => emp.id === id);
 
       setEmployees(prev => prev.filter(emp => emp.id !== id))
       
@@ -204,13 +134,13 @@ export const useEmployees = () => {
       
       toast({
         title: "Success",
-        description: "Employee deleted successfully"
+        description: "Employee deleted successfully (demo mode)"
       })
     } catch (error) {
       console.error('Error deleting employee:', error)
       toast({
         title: "Error",
-        description: "Failed to delete employee. You may not have permission to delete employees.",
+        description: "Failed to delete employee.",
         variant: "destructive"
       })
       throw error

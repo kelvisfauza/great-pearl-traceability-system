@@ -5,7 +5,6 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { useSalaryPayments } from "@/hooks/useSalaryPayments";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 const PerformanceOverview = () => {
   const { employees } = useEmployees();
@@ -16,48 +15,19 @@ const PerformanceOverview = () => {
   const [qualityData, setQualityData] = useState({ assessments: 0, avgScore: 0 });
 
   useEffect(() => {
-    const fetchCoffeeData = async () => {
+    const fetchData = async () => {
       try {
-        const { data: records, error: recordsError } = await supabase
-          .from('coffee_records')
-          .select('status, kilograms');
-        
-        if (recordsError) throw recordsError;
-        
-        const processed = records?.filter(r => r.status === 'processed' || r.status === 'shipped').length || 0;
-        const total = records?.length || 0;
-        
-        setCoffeeData({ processed, total });
+        // Mock data for now during Firebase migration
+        setCoffeeData({ processed: 18, total: 25 });
+        setQualityData({ assessments: 15, avgScore: 87.5 });
       } catch (error) {
-        console.error('Error fetching coffee data:', error);
+        console.error('Error fetching performance data:', error);
+        setCoffeeData({ processed: 18, total: 25 });
+        setQualityData({ assessments: 15, avgScore: 87.5 });
       }
     };
 
-    const fetchQualityData = async () => {
-      try {
-        const { data: assessments, error } = await supabase
-          .from('quality_assessments')
-          .select('suggested_price, moisture');
-        
-        if (error) throw error;
-        
-        const avgScore = assessments?.length > 0 
-          ? assessments.reduce((sum, a) => {
-              // Calculate quality score based on moisture content (lower is better)
-              const moistureScore = Math.max(0, 100 - (Number(a.moisture) - 10) * 10);
-              return sum + Math.min(100, Math.max(0, moistureScore));
-            }, 0) / assessments.length
-          : 85;
-        
-        setQualityData({ assessments: assessments?.length || 0, avgScore });
-      } catch (error) {
-        console.error('Error fetching quality data:', error);
-        setQualityData({ assessments: 0, avgScore: 85 });
-      }
-    };
-
-    fetchCoffeeData();
-    fetchQualityData();
+    fetchData();
   }, []);
 
   // Calculate performance metrics based on real data

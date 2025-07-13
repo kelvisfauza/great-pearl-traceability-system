@@ -7,7 +7,6 @@ import { useEmployees } from "@/hooks/useEmployees";
 import { useSalaryPayments } from "@/hooks/useSalaryPayments";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 const DashboardStats = () => {
   const { hasRole, hasPermission, employee } = useAuth();
@@ -20,62 +19,18 @@ const DashboardStats = () => {
   const [supplierCount, setSupplierCount] = useState(0);
 
   useEffect(() => {
-    const fetchCoffeeData = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase
-          .from('coffee_records')
-          .select('kilograms, bags');
-        
-        if (error) throw error;
-        
-        const totalKgs = data?.reduce((sum, record) => sum + Number(record.kilograms), 0) || 0;
-        const totalBags = data?.reduce((sum, record) => sum + Number(record.bags), 0) || 0;
-        const totalBatches = data?.length || 0;
-        
-        setCoffeeData({ totalKgs, totalBags, totalBatches });
+        // Mock data for now during Firebase migration
+        setCoffeeData({ totalKgs: 15000, totalBags: 300, totalBatches: 25 });
+        setFinanceData({ totalRevenue: 850000, totalExpenses: 320000 });
+        setSupplierCount(12);
       } catch (error) {
-        console.error('Error fetching coffee data:', error);
+        console.error('Error fetching dashboard data:', error);
       }
     };
 
-    const fetchFinanceData = async () => {
-      try {
-        const { data: transactions, error: transError } = await supabase
-          .from('finance_transactions')
-          .select('amount, type');
-        
-        const { data: expenses, error: expError } = await supabase
-          .from('finance_expenses')
-          .select('amount');
-
-        if (transError) throw transError;
-        if (expError) throw expError;
-        
-        const revenue = transactions?.filter(t => t.type === 'Income').reduce((sum, t) => sum + Number(t.amount), 0) || 0;
-        const totalExpenses = expenses?.reduce((sum, exp) => sum + Number(exp.amount), 0) || 0;
-        
-        setFinanceData({ totalRevenue: revenue, totalExpenses });
-      } catch (error) {
-        console.error('Error fetching finance data:', error);
-      }
-    };
-
-    const fetchSupplierCount = async () => {
-      try {
-        const { count, error } = await supabase
-          .from('suppliers')
-          .select('*', { count: 'exact', head: true });
-        
-        if (error) throw error;
-        setSupplierCount(count || 0);
-      } catch (error) {
-        console.error('Error fetching supplier count:', error);
-      }
-    };
-
-    fetchCoffeeData();
-    fetchFinanceData();
-    fetchSupplierCount();
+    fetchData();
   }, []);
 
   // Different stats based on role
