@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -150,7 +149,7 @@ export const useFirebaseFinance = () => {
       
       console.log('Existing payment records:', existingPayments.length);
 
-      // Fetch quality assessments that are ready for payment - simplified query without orderBy
+      // Fetch quality assessments that are ready for payment
       const qualityQuery = query(
         collection(db, 'quality_assessments'),
         where('status', 'in', ['assessed', 'submitted_to_finance'])
@@ -164,6 +163,7 @@ export const useFirebaseFinance = () => {
           suggested_price: data.suggested_price || 0,
           status: data.status || 'assessed',
           created_at: data.created_at || new Date().toISOString(),
+          store_record_id: data.store_record_id || null,
           ...data
         };
       });
@@ -175,6 +175,14 @@ export const useFirebaseFinance = () => {
       
       console.log('Quality assessments ready for payment:', qualityAssessments.length);
 
+      // Fetch coffee records to get supplier names
+      const coffeeRecordsQuery = query(collection(db, 'coffee_records'));
+      const coffeeRecordsSnapshot = await getDocs(coffeeRecordsQuery);
+      const coffeeRecords = coffeeRecordsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
       // Create payment records for quality assessments that don't have them yet
       const newPayments: PaymentRecord[] = [];
       
@@ -185,9 +193,17 @@ export const useFirebaseFinance = () => {
         if (!existingPayment) {
           console.log('Creating payment record for assessment:', assessment.id);
           
+          // Find the corresponding coffee record to get supplier name
+          const coffeeRecord = coffeeRecords.find(record => 
+            record.id === assessment.store_record_id || 
+            record.batch_number === assessment.batch_number
+          );
+          
+          const supplierName = coffeeRecord?.supplier_name || `Supplier for Batch ${assessment.batch_number}`;
+          
           // Create new payment record
           const paymentRecord = {
-            supplier: assessment.batch_number || 'Unknown Supplier',
+            supplier: supplierName, // Use actual supplier name, not batch number
             amount: assessment.suggested_price || 0,
             status: 'Pending',
             method: 'Bank Transfer',
