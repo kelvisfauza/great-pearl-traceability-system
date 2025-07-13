@@ -260,12 +260,12 @@ export const useFirebaseFinance = () => {
             record.batch_number === assessment.batch_number
           );
           
-          const supplierName = coffeeRecord?.supplier_name || `Supplier for Batch ${assessment.batch_number}`;
+          const supplierName = coffeeRecord?.supplier_name || `Unknown Supplier`;
           
-          // Create new payment record
+          // Create new payment record with correct supplier name and amount
           const paymentRecord = {
-            supplier: supplierName, // Use actual supplier name, not batch number
-            amount: assessment.suggested_price || 0,
+            supplier: supplierName, // Use actual supplier name from coffee record
+            amount: assessment.suggested_price || 0, // Use suggested price from quality assessment
             status: 'Pending',
             method: 'Bank Transfer',
             date: new Date().toLocaleDateString(),
@@ -285,7 +285,7 @@ export const useFirebaseFinance = () => {
               ...paymentRecord
             });
 
-            console.log('Created payment record:', docRef.id);
+            console.log('Created payment record with supplier:', supplierName, 'amount:', assessment.suggested_price);
           } catch (error) {
             console.error('Error creating payment record:', error);
           }
