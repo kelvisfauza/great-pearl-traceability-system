@@ -23,6 +23,29 @@ export interface Employee {
   updated_at: string
 }
 
+// Security audit logging function
+const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    if (session.session?.user) {
+      const { error } = await supabase.from('security_audit_log').insert({
+        user_id: session.session.user.id,
+        action,
+        table_name: tableName,
+        record_id: recordId,
+        old_values: oldValues,
+        new_values: newValues
+      });
+      
+      if (error) {
+        console.error('Failed to log security event:', error);
+      }
+    }
+  } catch (error) {
+    console.error('Security logging error:', error);
+  }
+};
+
 export const useSecureEmployees = () => {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
@@ -171,6 +194,8 @@ export const useSecureEmployees = () => {
       }
 
       setEmployees(prev => [data, ...prev])
+      await logSecurityEvent('employee_created', 'employees', data.id, null, data);
+      
       toast({
         title: "Success",
         description: `Employee ${data.name} added successfully`
@@ -210,6 +235,13 @@ export const useSecureEmployees = () => {
     }
 
     try {
+      // Get current employee data for audit log
+      const { data: currentEmployee } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       const sanitizedUpdates = {
         ...updates,
         ...(updates.name && { name: updates.name.trim() }),
@@ -245,6 +277,8 @@ export const useSecureEmployees = () => {
       }
 
       setEmployees(prev => prev.map(emp => emp.id === id ? data : emp))
+      await logSecurityEvent('employee_updated', 'employees', id, currentEmployee, data);
+      
       toast({
         title: "Success",
         description: `Employee ${data.name} updated successfully`
@@ -274,6 +308,13 @@ export const useSecureEmployees = () => {
     }
 
     try {
+      // Get employee data for audit log before deletion
+      const { data: employeeToDelete } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       const { error } = await supabase
         .from('employees')
         .delete()
@@ -298,6 +339,8 @@ export const useSecureEmployees = () => {
       }
 
       setEmployees(prev => prev.filter(emp => emp.id !== id))
+      await logSecurityEvent('employee_deleted', 'employees', id, employeeToDelete, null);
+      
       toast({
         title: "Success",
         description: "Employee deleted successfully"

@@ -1,395 +1,263 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface Employee {
-  employee_id: string;
+  id: string;
   name: string;
   email: string;
   phone?: string;
   position: string;
   department: string;
-  role: string;
-  permissions: string[];
+  salary: number;
+  employee_id?: string;
   address?: string;
   emergency_contact?: string;
-  join_date?: string;
-  status?: string;
-  salary?: number;
-  id: string;
+  role: string;
+  permissions: string[];
+  status: string;
+  join_date: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   employee: Employee | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, userData: any) => Promise<void>;
   signOut: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
-  fetchEmployeeData: () => Promise<void>;
-  isAdmin: () => boolean;
   canManageEmployees: () => boolean;
+  isAdmin: () => boolean;
+  fetchEmployeeData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-// Security audit logging function - temporarily disabled until types are updated
-const logSecurityEvent = async (action: string, details?: any) => {
-  try {
-    console.log('Security Event:', action, details);
-    // TODO: Re-enable when security_audit_log table is in TypeScript definitions
-    // const { data: session } = await supabase.auth.getSession();
-    // if (session.session?.user) {
-    //   await supabase.from('security_audit_log').insert({
-    //     user_id: session.session.user.id,
-    //     action,
-    //     table_name: 'auth_events',
-    //     new_values: details
-    //   });
-    // }
-  } catch (error) {
-    console.error('Failed to log security event:', error);
-  }
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
 
-  const fetchEmployeeData = async () => {
-    const currentSession = await supabase.auth.getSession();
-    if (!currentSession.data.session?.user) {
-      console.log('No session user available for employee fetch');
-      setEmployee(null);
-      return;
-    }
-    
+  // Security audit logging function
+  const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
     try {
-      console.log('Fetching employee data for user:', currentSession.data.session.user.id);
+      const { error } = await supabase.from('security_audit_log').insert({
+        user_id: user?.id,
+        action,
+        table_name: tableName,
+        record_id: recordId,
+        old_values: oldValues,
+        new_values: newValues
+      });
       
-      // Direct employee lookup by email for now until user_profiles table is in types
-      const { data: employeeData, error: employeeError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('email', currentSession.data.session.user.email)
-        .maybeSingle();
-      
-      if (employeeError) {
-        console.error('Error fetching employee data:', employeeError);
-        toast({
-          title: "Access Error",
-          description: "Unable to load your employee profile. Please contact your administrator.",
-          variant: "destructive"
-        });
-        setEmployee(null);
-        return;
-      }
-      
-      if (employeeData) {
-        console.log('Employee data found:', employeeData.name);
-        setEmployee({
-          id: employeeData.id,
-          employee_id: employeeData.employee_id || employeeData.id,
-          name: employeeData.name,
-          email: employeeData.email,
-          role: employeeData.role,
-          permissions: employeeData.permissions || [],
-          department: employeeData.department,
-          position: employeeData.position,
-          phone: employeeData.phone,
-          address: employeeData.address,
-          emergency_contact: employeeData.emergency_contact,
-          join_date: employeeData.join_date,
-          status: employeeData.status,
-          salary: employeeData.salary,
-        });
-
-        await logSecurityEvent('employee_data_loaded', { employee_id: employeeData.id });
-      } else {
-        console.log('No employee record found for user:', currentSession.data.session.user.email);
-        toast({
-          title: "Account Setup Required",
-          description: "Your account is not linked to an employee record. Please contact your administrator.",
-          variant: "destructive"
-        });
-        setEmployee(null);
+      if (error) {
+        console.error('Failed to log security event:', error);
       }
     } catch (error) {
-      console.error('Error fetching employee data:', error);
-      toast({
-        title: "System Error",
-        description: "A system error occurred. Please try again later.",
-        variant: "destructive"
-      });
-      setEmployee(null);
+      console.error('Security logging error:', error);
     }
   };
 
-  useEffect(() => {
-    let mounted = true;
-    
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        
-        if (mounted) {
-          console.log('Initial session check:', initialSession?.user?.email || 'No session');
-          setSession(initialSession);
-          setUser(initialSession?.user ?? null);
+  const fetchEmployeeData = async () => {
+    if (!user?.email) return;
+
+    try {
+      // First try to get employee data through user_profiles
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select(`
+          employee_id,
+          employees (
+            id, name, email, phone, position, department, salary, 
+            employee_id, address, emergency_contact, role, permissions, 
+            status, join_date, created_at, updated_at
+          )
+        `)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+      }
+
+      if (profileData?.employees) {
+        setEmployee(profileData.employees as Employee);
+      } else {
+        // Fallback: try to find employee by email (for migration period)
+        const { data: employeeData, error: employeeError } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('email', user.email)
+          .maybeSingle();
+
+        if (employeeError) {
+          console.error('Error fetching employee by email:', employeeError);
+        } else if (employeeData) {
+          setEmployee(employeeData as Employee);
           
-          if (initialSession?.user) {
-            await fetchEmployeeData();
+          // Auto-create user profile link if it doesn't exist
+          const { error: linkError } = await supabase
+            .from('user_profiles')
+            .insert({
+              user_id: user.id,
+              employee_id: employeeData.id
+            })
+            .select()
+            .maybeSingle();
+
+          if (linkError && !linkError.message.includes('duplicate key')) {
+            console.error('Error creating user profile link:', linkError);
           }
-          
-          setIsInitialized(true);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        if (mounted) {
-          setLoading(false);
-          setIsInitialized(true);
         }
       }
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        if (!mounted || !isInitialized) return;
-        
-        console.log('Auth state changed:', event, newSession?.user?.email || 'No session');
-        
-        // Log security events
-        if (event === 'SIGNED_IN') {
-          await logSecurityEvent('user_signed_in', { email: newSession?.user?.email });
-        } else if (event === 'SIGNED_OUT') {
-          await logSecurityEvent('user_signed_out');
-        }
-        
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        
-        if (newSession?.user && event !== 'TOKEN_REFRESHED') {
-          await fetchEmployeeData();
-        } else if (!newSession?.user) {
-          setEmployee(null);
-        }
-      }
-    );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // Enhanced password validation
-  const validatePassword = (password: string): { isValid: boolean; message?: string } => {
-    if (password.length < 8) {
-      return { isValid: false, message: "Password must be at least 8 characters long" };
+    } catch (error) {
+      console.error('Error in fetchEmployeeData:', error);
     }
-    if (!/(?=.*[a-z])/.test(password)) {
-      return { isValid: false, message: "Password must contain at least one lowercase letter" };
-    }
-    if (!/(?=.*[A-Z])/.test(password)) {
-      return { isValid: false, message: "Password must contain at least one uppercase letter" };
-    }
-    if (!/(?=.*\d)/.test(password)) {
-      return { isValid: false, message: "Password must contain at least one number" };
-    }
-    if (!/(?=.*[@$!%*?&])/.test(password)) {
-      return { isValid: false, message: "Password must contain at least one special character (@$!%*?&)" };
-    }
-    return { isValid: true };
   };
 
   const signIn = async (email: string, password: string) => {
-    // Input validation
-    if (!email || !password) {
-      const error = { message: "Email and password are required" };
-      toast({
-        title: "Validation Error",
-        description: error.message,
-        variant: "destructive"
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      return { error };
-    }
 
-    // Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      const error = { message: "Please enter a valid email address" };
-      toast({
-        title: "Validation Error",
-        description: error.message,
-        variant: "destructive"
-      });
-      return { error };
-    }
+      if (error) throw error;
 
-    console.log('Attempting to sign in with email:', email);
-    
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.toLowerCase().trim(),
-      password,
-    });
-    
-    if (error) {
-      console.error('Sign in error:', error);
-      
-      // Log failed sign in attempt
-      await logSecurityEvent('failed_sign_in_attempt', { 
-        email: email.toLowerCase().trim(),
-        error: error.message 
-      });
-      
-      let errorMessage = error.message;
-      if (error.message.includes('Invalid login credentials')) {
-        errorMessage = "Invalid email or password. Please check your credentials.";
-      } else if (error.message.includes('Email not confirmed')) {
-        errorMessage = "Please check your email and click the confirmation link.";
-      } else if (error.message.includes('Too many requests')) {
-        errorMessage = "Too many failed attempts. Please wait before trying again.";
+      if (data.user) {
+        setUser(data.user);
+        await logSecurityEvent('user_login', 'auth', data.user.id);
       }
-      
+
       toast({
-        title: "Sign In Error",
-        description: errorMessage,
+        title: "Success",
+        description: "Signed in successfully"
+      });
+    } catch (error: any) {
+      await logSecurityEvent('failed_login', 'auth', undefined, { email });
+      console.error('Sign in error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to sign in",
         variant: "destructive"
       });
-    } else {
-      console.log('Sign in successful');
-      toast({
-        title: "Welcome back!",
-        description: "You have been signed in successfully."
-      });
+      throw error;
+    } finally {
+      setLoading(false);
     }
-    
-    return { error };
   };
 
-  const signUp = async (email: string, password: string) => {
-    // Input validation
-    if (!email || !password) {
-      const error = { message: "Email and password are required" };
-      toast({
-        title: "Validation Error",
-        description: error.message,
-        variant: "destructive"
+  const signUp = async (email: string, password: string, userData: any) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: userData
+        }
       });
-      return { error };
-    }
 
-    // Enhanced password validation
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.isValid) {
-      const error = { message: passwordValidation.message };
-      toast({
-        title: "Password Requirements",
-        description: error.message,
-        variant: "destructive"
-      });
-      return { error };
-    }
+      if (error) throw error;
 
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email: email.toLowerCase().trim(),
-      password,
-      options: {
-        emailRedirectTo: redirectUrl
+      if (data.user) {
+        await logSecurityEvent('user_signup', 'auth', data.user.id, null, { email });
       }
-    });
-    
-    if (error) {
-      await logSecurityEvent('failed_sign_up_attempt', { 
-        email: email.toLowerCase().trim(),
-        error: error.message 
-      });
-      
-      let errorMessage = error.message;
-      if (error.message.includes('User already registered')) {
-        errorMessage = "An account with this email already exists. Please sign in instead.";
-      }
-      
+
       toast({
-        title: "Sign Up Error",
-        description: errorMessage,
+        title: "Success",
+        description: "Account created successfully"
+      });
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create account",
         variant: "destructive"
       });
-    } else {
-      await logSecurityEvent('user_signed_up', { email: email.toLowerCase().trim() });
-      
-      toast({
-        title: "Account Created",
-        description: "Please check your email to confirm your account. You may need to contact your administrator to link your account to an employee record."
-      });
+      throw error;
+    } finally {
+      setLoading(false);
     }
-    
-    return { error };
   };
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await logSecurityEvent('user_logout', 'auth', user?.id);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      setUser(null);
       setEmployee(null);
+
       toast({
-        title: "Signed Out",
-        description: "You have been signed out successfully."
+        title: "Success",
+        description: "Signed out successfully"
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sign out error:', error);
       toast({
         title: "Error",
-        description: "There was an error signing out. Please try again.",
+        description: error.message || "Failed to sign out",
         variant: "destructive"
       });
     }
   };
 
   const hasPermission = (permission: string): boolean => {
-    if (!employee) return false;
-    return employee.permissions?.includes(permission) || 
-           employee.role === 'Administrator' || 
-           employee.role === 'Manager';
+    return employee?.permissions?.includes(permission) || false;
   };
 
   const hasRole = (role: string): boolean => {
-    if (!employee) return false;
-    return employee.role === role;
+    return employee?.role === role || false;
+  };
+
+  const canManageEmployees = (): boolean => {
+    return hasRole('Administrator') || hasPermission('Human Resources');
   };
 
   const isAdmin = (): boolean => {
     return hasRole('Administrator');
   };
 
-  const canManageEmployees = (): boolean => {
-    return isAdmin() || hasPermission('Human Resources');
-  };
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null);
+        setLoading(false);
+        
+        if (event === 'SIGNED_OUT') {
+          setEmployee(null);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user && !loading) {
+      fetchEmployeeData();
+    }
+  }, [user, loading]);
 
   const value = {
     user,
-    session,
     employee,
     loading,
     signIn,
@@ -397,10 +265,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut,
     hasPermission,
     hasRole,
-    fetchEmployeeData,
-    isAdmin,
     canManageEmployees,
+    isAdmin,
+    fetchEmployeeData
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

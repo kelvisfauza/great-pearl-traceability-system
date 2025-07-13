@@ -22,24 +22,26 @@ export interface Employee {
   updated_at: string
 }
 
-// Security audit logging function - temporarily disabled until types are updated
+// Security audit logging function
 const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
   try {
-    console.log('Security Event:', action, tableName, recordId);
-    // TODO: Re-enable when security_audit_log table is in TypeScript definitions
-    // const { data: session } = await supabase.auth.getSession();
-    // if (session.session?.user) {
-    //   await supabase.from('security_audit_log').insert({
-    //     user_id: session.session.user.id,
-    //     action,
-    //     table_name: tableName,
-    //     record_id: recordId,
-    //     old_values: oldValues,
-    //     new_values: newValues
-    //   });
-    // }
+    const { data: session } = await supabase.auth.getSession();
+    if (session.session?.user) {
+      const { error } = await supabase.from('security_audit_log').insert({
+        user_id: session.session.user.id,
+        action,
+        table_name: tableName,
+        record_id: recordId,
+        old_values: oldValues,
+        new_values: newValues
+      });
+      
+      if (error) {
+        console.error('Failed to log security event:', error);
+      }
+    }
   } catch (error) {
-    console.error('Failed to log security event:', error);
+    console.error('Security logging error:', error);
   }
 };
 
@@ -76,11 +78,15 @@ export const useEmployees = () => {
       
       // Basic role validation - check current user has employee record
       if (currentUser.user) {
-        const { data: currentEmployee } = await supabase
-          .from('employees')
-          .select('role')
-          .eq('email', currentUser.user.email)
+        const { data: currentUserProfile } = await supabase
+          .from('user_profiles')
+          .select(`
+            employees (role, permissions)
+          `)
+          .eq('user_id', currentUser.user.id)
           .maybeSingle();
+        
+        const currentEmployee = currentUserProfile?.employees as any;
         
         // Validate sensitive role assignments
         if (employeeData.role === 'Administrator' || employeeData.permissions?.includes('Human Resources') || employeeData.permissions?.includes('Finance')) {
@@ -146,11 +152,15 @@ export const useEmployees = () => {
       
       // Basic role validation - check current user has employee record
       if (currentUser.user) {
-        const { data: currentUserEmployee } = await supabase
-          .from('employees')
-          .select('role')
-          .eq('email', currentUser.user.email)
+        const { data: currentUserProfile } = await supabase
+          .from('user_profiles')
+          .select(`
+            employees (role, permissions)
+          `)
+          .eq('user_id', currentUser.user.id)
           .maybeSingle();
+        
+        const currentUserEmployee = currentUserProfile?.employees as any;
         
         // Validate sensitive updates
         if (updates.role === 'Administrator' || updates.permissions?.includes('Human Resources') || updates.permissions?.includes('Finance')) {

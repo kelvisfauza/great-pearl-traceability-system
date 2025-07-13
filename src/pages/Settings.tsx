@@ -3,17 +3,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Layout from "@/components/Layout";
 import UserProfile from "@/components/settings/UserProfile";
 import UserManagement from "@/components/settings/UserManagement";
+import SecurityMonitor from "@/components/SecurityMonitor";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSecureEmployees } from "@/hooks/useSecureEmployees";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, AlertTriangle } from "lucide-react";
+import { Shield, AlertTriangle, Eye } from "lucide-react";
 
 const Settings = () => {
-  const { employee, canManageEmployees } = useAuth();
+  const { employee, canManageEmployees, isAdmin } = useAuth();
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useSecureEmployees();
 
   // Security check - only show user management to authorized users
   const canAccessUserManagement = canManageEmployees();
+  const canAccessSecurityMonitor = isAdmin();
 
   // Wrapper functions to match UserManagement component expectations
   const handleEmployeeAdded = async (employeeData: any): Promise<void> => {
@@ -36,7 +38,7 @@ const Settings = () => {
     >
       <div className="max-w-4xl mx-auto space-y-6">
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile">My Profile</TabsTrigger>
             <TabsTrigger 
               value="users" 
@@ -45,6 +47,14 @@ const Settings = () => {
             >
               User Management
               {canAccessUserManagement && <Shield className="ml-2 h-4 w-4" />}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="security" 
+              disabled={!canAccessSecurityMonitor}
+              className={!canAccessSecurityMonitor ? "opacity-50 cursor-not-allowed" : ""}
+            >
+              Security Monitor
+              {canAccessSecurityMonitor && <Eye className="ml-2 h-4 w-4" />}
             </TabsTrigger>
           </TabsList>
           
@@ -84,6 +94,40 @@ const Settings = () => {
                     </p>
                     <p className="text-sm text-blue-800">
                       <strong>Your department:</strong> {employee?.department || 'Unknown'}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {canAccessSecurityMonitor ? (
+            <TabsContent value="security">
+              <SecurityMonitor />
+            </TabsContent>
+          ) : (
+            <TabsContent value="security">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-500" />
+                    Access Restricted
+                  </CardTitle>
+                  <CardDescription>
+                    Security monitoring is only available to administrators.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">
+                    Security monitoring features are restricted to administrators only.
+                    If you need access to these features, please contact your administrator.
+                  </p>
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Your current role:</strong> {employee?.role || 'Unknown'}
+                    </p>
+                    <p className="text-sm text-blue-800">
+                      <strong>Required role:</strong> Administrator
                     </p>
                   </div>
                 </CardContent>
