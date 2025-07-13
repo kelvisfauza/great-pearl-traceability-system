@@ -1,8 +1,8 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Layout from "@/components/Layout";
-import { UserProfile } from "@/components/settings/UserProfile";
-import { UserManagement } from "@/components/settings/UserManagement";
+import UserProfile from "@/components/settings/UserProfile";
+import UserManagement from "@/components/settings/UserManagement";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSecureEmployees } from "@/hooks/useSecureEmployees";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

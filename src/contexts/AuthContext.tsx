@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,13 +62,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Fetching employee data for user:', session.user.id);
       
-      // Use the new secure function to get employee data
+      // First, try to find employee by email
       const { data: employeeData, error: employeeError } = await supabase
-        .rpc('get_current_user_employee');
+        .from('employees')
+        .select('*')
+        .eq('email', session.user.email)
+        .single();
       
       if (employeeError) {
         console.error('Error fetching employee data:', employeeError);
-        // Show user-friendly error message
         toast({
           title: "Access Error",
           description: "Unable to load your employee profile. Please contact your administrator.",
@@ -79,17 +80,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
-      if (employeeData && employeeData.length > 0) {
-        const empData = employeeData[0];
+      if (employeeData) {
         setEmployee({
-          id: empData.employee_id,
-          employee_id: empData.employee_id,
-          name: session.user.email?.split('@')[0] || 'User', // Fallback name
-          email: session.user.email || '',
-          role: empData.role,
-          permissions: empData.permissions || [],
-          department: empData.department,
-          position: 'Employee', // Default position
+          id: employeeData.id,
+          employee_id: employeeData.employee_id || employeeData.id,
+          name: employeeData.name,
+          email: employeeData.email,
+          role: employeeData.role,
+          permissions: employeeData.permissions || [],
+          department: employeeData.department,
+          position: employeeData.position,
+          phone: employeeData.phone,
+          address: employeeData.address,
+          emergency_contact: employeeData.emergency_contact,
+          join_date: employeeData.join_date,
+          status: employeeData.status,
+          salary: employeeData.salary,
         });
       } else {
         console.log('No employee record found for user:', session.user.email);
