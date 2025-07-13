@@ -1,16 +1,19 @@
 
-import MarketMonitor from "@/components/analyst/MarketMonitor";
-import ProcurementAdvisory from "@/components/analyst/ProcurementAdvisory";
-import OutturnSimulator from "@/components/analyst/OutturnSimulator";
-import { Layout } from "@/components/Layout";
+import React from 'react';
+import Layout from '@/components/Layout';
+import MarketMonitor from '@/components/analyst/MarketMonitor';
+import ProcurementAdvisory from '@/components/analyst/ProcurementAdvisory';
+import OutturnSimulator from '@/components/analyst/OutturnSimulator';
 
 const DataAnalyst = () => {
   return (
-    <Layout title="Data Analyst Dashboard" subtitle="Market analysis and procurement insights">
-      <div className="space-y-8">
+    <Layout title="Data Analytics" subtitle="Market insights and procurement guidance">
+      <div className="space-y-6">
         <MarketMonitor />
-        <ProcurementAdvisory />
-        <OutturnSimulator />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ProcurementAdvisory />
+          <OutturnSimulator />
+        </div>
       </div>
     </Layout>
   );
