@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -179,6 +178,32 @@ export const useFirebaseFinance = () => {
       });
       
       console.log('Existing payment records:', existingPayments.length);
+
+      // Fix existing payment records that have batch numbers as supplier names
+      for (const payment of existingPayments) {
+        if (payment.supplier.startsWith('BATCH') && payment.batchNumber) {
+          // Find the corresponding coffee record
+          const coffeeRecord = coffeeRecords.find(record => 
+            record.batch_number === payment.batchNumber
+          );
+          
+          if (coffeeRecord && coffeeRecord.supplier_name) {
+            console.log('Updating payment record supplier from', payment.supplier, 'to', coffeeRecord.supplier_name);
+            
+            try {
+              await updateDoc(doc(db, 'payment_records', payment.id), {
+                supplier: coffeeRecord.supplier_name,
+                updated_at: new Date().toISOString()
+              });
+              
+              // Update local state
+              payment.supplier = coffeeRecord.supplier_name;
+            } catch (error) {
+              console.error('Error updating payment record supplier:', error);
+            }
+          }
+        }
+      }
 
       // Check for approved bank transfer requests and update payment status
       const approvalQuery = query(
