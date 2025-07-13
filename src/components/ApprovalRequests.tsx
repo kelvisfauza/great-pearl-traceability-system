@@ -1,253 +1,164 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useApprovalRequests } from "@/hooks/useApprovalRequests";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock, DollarSign, AlertTriangle, Users, Building2, RefreshCw } from "lucide-react";
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign } from 'lucide-react';
+import { useApprovalRequests } from '@/hooks/useApprovalRequests';
+import { useToast } from '@/hooks/use-toast';
 
-const ApprovalRequests = () => {
+export const ApprovalRequests = () => {
   const { requests, loading, updateRequestStatus, fetchRequests } = useApprovalRequests();
-  const { employee, hasRole } = useAuth();
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Check if user can approve requests (supervisors, operations managers, administrators)
-  const canApproveRequests = hasRole('Supervisor') || hasRole('Operations Manager') || 
-    hasRole('Administrator') || employee?.position === 'Supervisor' || 
-    employee?.position === 'Operations Manager';
-
-  console.log('ApprovalRequests - Can approve:', canApproveRequests);
-  console.log('ApprovalRequests - Employee role:', employee?.role);
-  console.log('ApprovalRequests - Employee position:', employee?.position);
-  console.log('ApprovalRequests - Total requests:', requests.length);
-
-  const handleApprove = async (requestId: string, requestTitle: string) => {
-    console.log('Approving request:', requestId, requestTitle);
-    const success = await updateRequestStatus(requestId, 'Approved');
-    if (success) {
+  const handleApproval = async (id: string, status: 'Approved' | 'Rejected') => {
+    setProcessingId(id);
+    try {
+      const success = await updateRequestStatus(id, status);
+      if (success) {
+        toast({
+          title: `Request ${status}`,
+          description: `The approval request has been ${status.toLowerCase()} successfully.`,
+          variant: status === 'Approved' ? 'default' : 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error('Error processing approval:', error);
       toast({
-        title: "Request Approved",
-        description: `${requestTitle} has been approved successfully`,
+        title: 'Error',
+        description: 'Failed to process the approval request.',
+        variant: 'destructive'
       });
-      // Refresh the list after approval
-      setTimeout(() => fetchRequests(), 1000);
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to approve request",
-        variant: "destructive"
-      });
+    } finally {
+      setProcessingId(null);
     }
   };
 
-  const handleReject = async (requestId: string, requestTitle: string) => {
-    console.log('Rejecting request:', requestId, requestTitle);
-    const success = await updateRequestStatus(requestId, 'Rejected');
-    if (success) {
-      toast({
-        title: "Request Rejected", 
-        description: `${requestTitle} has been rejected`,
-      });
-      // Refresh the list after rejection
-      setTimeout(() => fetchRequests(), 1000);
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to reject request",
-        variant: "destructive"
-      });
-    }
+  const handleRefresh = async () => {
+    await fetchRequests();
+    toast({
+      title: "Refreshed",
+      description: "Approval requests have been refreshed"
+    });
   };
 
-  const handleRefresh = () => {
-    console.log('Manually refreshing approval requests');
-    fetchRequests();
+  const getPriorityColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'high': return 'bg-red-100 text-red-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Approval Requests
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-4">Loading approval requests...</div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!canApproveRequests) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
-            Access Restricted
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-500">You don't have permission to view approval requests.</p>
-          <p className="text-sm text-gray-400 mt-2">
-            Current role: {employee?.role} | Position: {employee?.position}
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Only show pending requests
-  const pendingRequests = requests.filter(req => req.status === 'Pending');
-  console.log('Pending requests for display:', pendingRequests.length);
-
-  if (pendingRequests.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            Approval Requests
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRefresh}
-              className="ml-auto"
-            >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Refresh
-            </Button>
-          </CardTitle>
-          <CardDescription>All caught up! No pending approval requests.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <p className="text-gray-500">No pending approval requests</p>
-            <p className="text-sm text-gray-400 mt-2">Total requests found: {requests.length}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-amber-600" />
-          Pending Approval Requests
-          <Badge variant="destructive">{pendingRequests.length}</Badge>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh}
-            className="ml-auto"
-          >
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Refresh
-          </Button>
-        </CardTitle>
-        <CardDescription>
-          Review and approve requests from various departments
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {pendingRequests.map((request) => (
-            <div key={request.id} className="border rounded-lg p-4 space-y-3 bg-amber-50">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    {request.type === 'Bank Transfer' && <DollarSign className="h-4 w-4 text-green-600" />}
-                    {request.type === 'Salary Payment' && <Users className="h-4 w-4 text-blue-600" />}
-                    {request.department === 'Finance' && <Building2 className="h-4 w-4 text-purple-600" />}
-                    
-                    <h4 className="font-semibold">{request.title}</h4>
-                    <Badge variant="secondary">{request.priority}</Badge>
-                    <Badge variant="outline">{request.type}</Badge>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Approval Requests</h2>
+          <p className="text-muted-foreground">
+            Review and approve pending requests from various departments
+          </p>
+        </div>
+        <Button onClick={handleRefresh} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
+
+      {requests.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Pending Requests</h3>
+            <p className="text-muted-foreground">All approval requests have been processed.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {requests.map((request) => (
+            <Card key={request.id} className="transition-all hover:shadow-md">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg">{request.title}</CardTitle>
+                    <CardDescription>{request.description}</CardDescription>
                   </div>
-                  
-                  <p className="text-sm text-gray-600 mb-3">{request.description}</p>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <Badge className={getPriorityColor(request.priority)}>
+                    {request.priority}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <span className="text-gray-500">Department:</span>
-                      <span className="ml-2 font-medium">{request.department}</span>
+                      <p className="text-sm font-medium">{request.requestedby}</p>
+                      <p className="text-xs text-muted-foreground">{request.department}</p>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <span className="text-gray-500">Requested by:</span>
-                      <span className="ml-2 font-medium">{request.requestedby}</span>
+                      <p className="text-sm font-medium">{request.daterequested}</p>
+                      <p className="text-xs text-muted-foreground">Requested</p>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <span className="text-gray-500">Amount:</span>
-                      <span className="ml-2 font-medium text-green-600">UGX {request.amount}</span>
+                      <p className="text-sm font-medium">UGX {Number(request.amount).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Amount</p>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <span className="text-gray-500">Date:</span>
-                      <span className="ml-2 font-medium">{new Date(request.daterequested).toLocaleDateString()}</span>
+                      <p className="text-sm font-medium">{request.type}</p>
+                      <p className="text-xs text-muted-foreground">Type</p>
                     </div>
                   </div>
                 </div>
-                
-                <div className="flex gap-2 ml-4">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleReject(request.id, request.title)}
+
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={() => handleApproval(request.id, 'Approved')}
+                    disabled={processingId === request.id}
+                    className="bg-green-600 hover:bg-green-700"
                   >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Reject
-                  </Button>
-                  <Button 
-                    size="sm"
-                    onClick={() => handleApprove(request.id, request.title)}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
+                    <CheckCircle className="h-4 w-4 mr-2" />
                     Approve
                   </Button>
-                </div>
-              </div>
-              
-              {/* Show additional details for bank transfers */}
-              {request.type === 'Bank Transfer' && request.details && (
-                <div className="bg-white rounded p-3 border">
-                  <h5 className="font-medium text-sm mb-2">Payment Details:</h5>
-                  <div className="grid grid-cols-3 gap-3 text-xs">
-                    <div>
-                      <span className="text-gray-500">Supplier:</span>
-                      <span className="ml-1 font-medium">{request.details.supplier}</span>
+                  <Button
+                    onClick={() => handleApproval(request.id, 'Rejected')}
+                    disabled={processingId === request.id}
+                    variant="destructive"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reject
+                  </Button>
+                  {processingId === request.id && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      Processing...
                     </div>
-                    {request.details.batchNumber && (
-                      <div>
-                        <span className="text-gray-500">Batch:</span>
-                        <span className="ml-1 font-medium">{request.details.batchNumber}</span>
-                      </div>
-                    )}
-                    {request.details.kilograms && (
-                      <div>
-                        <span className="text-gray-500">Quantity:</span>
-                        <span className="ml-1 font-medium">{request.details.kilograms} kg</span>
-                      </div>
-                    )}
-                    {request.details.pricePerKg && (
-                      <div>
-                        <span className="text-gray-500">Price/Kg:</span>
-                        <span className="ml-1 font-medium">UGX {request.details.pricePerKg.toLocaleString()}</span>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 };
-
-export default ApprovalRequests;

@@ -36,7 +36,10 @@ export const useApprovalRequests = () => {
       })) as ApprovalRequest[];
       
       console.log('Firebase approval requests:', firebaseRequests.length);
-      setRequests(firebaseRequests);
+      
+      // Only show pending requests
+      const pendingRequests = firebaseRequests.filter(req => req.status === 'Pending');
+      setRequests(pendingRequests);
     } catch (error) {
       console.error('Error fetching approval requests:', error);
       setRequests([]);
@@ -98,12 +101,8 @@ export const useApprovalRequests = () => {
         });
       }
 
-      // Update local state
-      setRequests(prev => 
-        prev.map(req => 
-          req.id === id ? { ...req, status } : req
-        )
-      );
+      // Remove from local state since it's no longer pending
+      setRequests(prev => prev.filter(req => req.id !== id));
       
       return true;
     } catch (error) {
@@ -120,6 +119,7 @@ export const useApprovalRequests = () => {
     requests,
     loading,
     updateRequestStatus,
-    refetch: fetchRequests
+    refetch: fetchRequests,
+    fetchRequests // Add this for compatibility
   };
 };
