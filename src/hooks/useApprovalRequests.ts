@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -83,7 +83,15 @@ export const useApprovalRequests = () => {
     try {
       console.log('Updating approval request status:', id, status);
       
+      // Find the request to get its details
+      const request = requests.find(req => req.id === id);
+      if (!request) {
+        console.error('Request not found:', id);
+        return false;
+      }
+
       // Update in Firebase
+      console.log('Updating Firebase approval request...');
       const firebaseDoc = doc(db, 'approval_requests', id);
       await updateDoc(firebaseDoc, {
         status,
@@ -102,6 +110,58 @@ export const useApprovalRequests = () => {
         console.error('Error updating in Supabase:', error);
       } else {
         console.log('Supabase approval request updated');
+      }
+
+      // If approved and it's a bank transfer, update the payment record
+      if (status === 'Approved' && request.type === 'Bank Transfer' && request.details?.paymentId) {
+        console.log('Updating payment record status for approved bank transfer...');
+        
+        // Update payment record in Firebase
+        const paymentQuery = query(collection(db, 'payment_records'));
+        const paymentSnapshot = await getDocs(paymentQuery);
+        const paymentDoc = paymentSnapshot.docs.find(doc => 
+          doc.data().supplier === request.details.supplier &&
+          doc.data().amount === request.details.amount
+        );
+        
+        if (paymentDoc) {
+          await updateDoc(doc(db, 'payment_records', paymentDoc.id), {
+            status: 'Paid',
+            method: 'Bank Transfer',
+            updated_at: new Date().toISOString()
+          });
+          console.log('Payment record updated to Paid in Firebase');
+        }
+
+        // Update payment record in Supabase
+        const { error: paymentError } = await supabase
+          .from('payment_records')
+          .update({ 
+            status: 'Paid',
+            method: 'Bank Transfer',
+            updated_at: new Date().toISOString()
+          })
+          .eq('supplier', request.details.supplier)
+          .eq('amount', request.details.amount);
+
+        if (paymentError) {
+          console.error('Error updating payment record in Supabase:', paymentError);
+        } else {
+          console.log('Payment record updated to Paid in Supabase');
+        }
+
+        // Record daily task
+        await addDoc(collection(db, 'daily_tasks'), {
+          task_type: 'Payment Approved',
+          description: `Bank transfer approved: ${request.details.supplier} - UGX ${request.details.amount.toLocaleString()}`,
+          amount: request.details.amount,
+          batch_number: request.details.batchNumber,
+          completed_by: 'Operations Manager',
+          completed_at: new Date().toISOString(),
+          date: new Date().toISOString().split('T')[0],
+          department: 'Finance',
+          created_at: new Date().toISOString()
+        });
       }
 
       // Update local state

@@ -100,6 +100,7 @@ const ApprovalRequests = () => {
     );
   }
 
+  // Only show pending requests
   const pendingRequests = requests.filter(req => req.status === 'Pending');
   console.log('Pending requests for display:', pendingRequests.length);
 
