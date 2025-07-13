@@ -24,8 +24,21 @@ export const useDailyTasks = () => {
   const fetchDailyTasks = async (date?: string) => {
     try {
       setLoading(true);
-      const targetDate = date || new Date().toISOString().split('T')[0];
+      console.log('Fetching daily tasks from Firebase...');
       
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      console.log('Target date:', targetDate);
+      
+      // First try to get all tasks to see what's available
+      const allTasksQuery = query(collection(db, 'daily_tasks'));
+      const allSnapshot = await getDocs(allTasksQuery);
+      console.log('Total daily tasks in database:', allSnapshot.docs.length);
+      
+      if (allSnapshot.docs.length > 0) {
+        console.log('Sample task data:', allSnapshot.docs[0].data());
+      }
+      
+      // Now try to get tasks for the specific date
       const tasksQuery = query(
         collection(db, 'daily_tasks'),
         where('date', '==', targetDate),
@@ -33,20 +46,47 @@ export const useDailyTasks = () => {
       );
       
       const snapshot = await getDocs(tasksQuery);
-      const tasksData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        completed_at: new Date(doc.data().completed_at).toLocaleTimeString(),
-      })) as DailyTask[];
+      console.log('Daily tasks found for date:', snapshot.docs.length);
+      
+      const tasksData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('Processing task:', data);
+        
+        return {
+          id: doc.id,
+          task_type: data.task_type || 'Unknown',
+          description: data.description || 'No description',
+          amount: data.amount || undefined,
+          batch_number: data.batch_number || undefined,
+          completed_at: data.completed_at ? 
+            (typeof data.completed_at === 'string' ? 
+              data.completed_at : 
+              new Date(data.completed_at.seconds * 1000).toLocaleTimeString()
+            ) : new Date().toLocaleTimeString(),
+          completed_by: data.completed_by || 'Unknown',
+          date: data.date || targetDate,
+          department: data.department || 'General'
+        };
+      }) as DailyTask[];
 
+      console.log('Processed daily tasks:', tasksData);
       setTasks(tasksData);
     } catch (error) {
       console.error('Error fetching daily tasks:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as any)?.code,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
       toast({
         title: "Error",
-        description: "Failed to fetch daily tasks",
+        description: `Failed to fetch daily tasks: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
+      
+      // Set empty array on error
+      setTasks([]);
     } finally {
       setLoading(false);
     }
