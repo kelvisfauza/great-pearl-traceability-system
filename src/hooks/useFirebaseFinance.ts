@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -147,10 +146,16 @@ export const useFirebaseFinance = () => {
         orderBy('created_at', 'desc')
       );
       const qualitySnapshot = await getDocs(qualityQuery);
-      const qualityAssessments = qualitySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const qualityAssessments = qualitySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          batch_number: data.batch_number || '',
+          suggested_price: data.suggested_price || 0,
+          status: data.status || 'assessed',
+          ...data
+        };
+      });
       
       console.log('Quality assessments ready for payment:', qualityAssessments.length);
 
