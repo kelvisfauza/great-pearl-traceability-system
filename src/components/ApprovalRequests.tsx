@@ -7,7 +7,7 @@ import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign } fr
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
 import { useToast } from '@/hooks/use-toast';
 
-export const ApprovalRequests = () => {
+const ApprovalRequests = () => {
   const { requests, loading, updateRequestStatus, fetchRequests } = useApprovalRequests();
   const [processingId, setProcessingId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -162,3 +162,5 @@ export const ApprovalRequests = () => {
     </div>
   );
 };
+
+export default ApprovalRequests;

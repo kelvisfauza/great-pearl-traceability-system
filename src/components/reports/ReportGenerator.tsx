@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { FileText, Calendar, Filter, Download } from 'lucide-react';
-import { useGenerateReport } from '@/hooks/useReports';
+import { useReports } from '@/hooks/useReports';
 
 interface ReportType {
   id: string;
@@ -19,7 +19,7 @@ interface ReportType {
 const ReportGenerator = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedFormat, setSelectedFormat] = useState<string>('PDF');
-  const generateReportMutation = useGenerateReport();
+  const { generateReport } = useReports();
 
   const reportTypes: ReportType[] = [
     { 
@@ -79,7 +79,7 @@ const ReportGenerator = () => {
     : reportTypes.filter(report => report.category === selectedCategory);
 
   const handleGenerateReport = (reportType: ReportType) => {
-    generateReportMutation.mutate({
+    generateReport.mutate({
       name: `${reportType.name} - ${new Date().toLocaleDateString()}`,
       type: reportType.name,
       category: reportType.category,
@@ -156,10 +156,10 @@ const ReportGenerator = () => {
                 size="sm" 
                 onClick={() => handleGenerateReport(report)}
                 className="ml-4"
-                disabled={generateReportMutation.isPending}
+                disabled={generateReport.isLoading}
               >
                 <Download className="h-4 w-4 mr-2" />
-                {generateReportMutation.isPending ? 'Generating...' : 'Generate'}
+                {generateReport.isLoading ? 'Generating...' : 'Generate'}
               </Button>
             </div>
           ))}

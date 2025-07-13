@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, Download, Search, Eye, Trash2, RefreshCw } from 'lucide-react';
-import { useReports, useDeleteReport, useUpdateReportDownloads } from '@/hooks/useReports';
+import { useReports } from '@/hooks/useReports';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 
@@ -15,9 +15,7 @@ const RecentReports = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  const { data: reports = [], isLoading, error } = useReports();
-  const deleteReportMutation = useDeleteReport();
-  const updateDownloadsMutation = useUpdateReportDownloads();
+  const { reports, loading } = useReports();
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -38,9 +36,8 @@ const RecentReports = () => {
   };
 
   const handleDownload = (reportId: string) => {
-    updateDownloadsMutation.mutate(reportId);
-    // Here you would implement actual file download logic
     console.log(`Downloading report ${reportId}`);
+    // Here you would implement actual file download logic
   };
 
   const handlePreview = (reportId: string) => {
@@ -48,8 +45,9 @@ const RecentReports = () => {
     // Implement preview logic
   };
 
-  const handleDelete = (reportId: string) => {
-    deleteReportMutation.mutate(reportId);
+  const handleDelete = async (reportId: string) => {
+    console.log(`Deleting report ${reportId}`);
+    // Implement delete logic using Firebase
   };
 
   const handleRegenerate = (reportId: string) => {
@@ -57,7 +55,7 @@ const RecentReports = () => {
     // Implement regenerate logic
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <Card>
         <CardHeader>
@@ -84,24 +82,6 @@ const RecentReports = () => {
                 </div>
               </div>
             ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Recent Reports
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <p>Failed to load reports. Please try again.</p>
           </div>
         </CardContent>
       </Card>
@@ -199,7 +179,6 @@ const RecentReports = () => {
                     variant="outline" 
                     size="sm" 
                     onClick={() => handleDelete(report.id)}
-                    disabled={deleteReportMutation.isPending}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
