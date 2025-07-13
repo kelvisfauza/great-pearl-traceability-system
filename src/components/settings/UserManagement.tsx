@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,7 +58,7 @@ const departments = [
 interface UserManagementProps {
   employees: Employee[];
   onEmployeeAdded: (employee: any) => Promise<void>;
-  onEmployeeUpdated: (employee: any) => Promise<void>;
+  onEmployeeUpdated: (id: string, updates: any) => Promise<void>;
   onEmployeeDeleted: (id: string) => Promise<void>;
 }
 
@@ -172,7 +173,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
 
       console.log('Calling updateEmployee with ID:', selectedEmployee.id, 'Data:', updateData);
       
-      // Call the update function directly with the employee ID and update data
+      // Call the update function with the correct signature
       await onEmployeeUpdated(selectedEmployee.id, updateData);
       
       console.log('Update completed successfully');
