@@ -1,318 +1,227 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { MessageCircle, Send, X, Users, Search } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { X, Send, Users, MessageSquare } from "lucide-react";
+import { useMessages } from "@/hooks/useMessages";
 
-interface Message {
-  id: string;
-  content: string;
-  senderId: string;
-  senderName: string;
-  timestamp: string;
-  conversationId: string;
+interface MessagingPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 interface Conversation {
   id: string;
   name: string;
   participants: string[];
-  lastMessage?: Message;
+  lastMessage?: {
+    content: string;
+    timestamp: string;
+    sender: string;
+  };
   unreadCount: number;
 }
 
-interface MessagingPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
-  currentUserId: string;
+interface Message {
+  id: string;
+  content: string;
+  sender: string;
+  timestamp: string;
+  conversationId: string;
 }
 
-const MessagingPanel: React.FC<MessagingPanelProps> = ({
-  isOpen,
-  onClose,
-  currentUserId
-}) => {
+const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [newMessage, setNewMessage] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { messages: hookMessages, sendMessage } = useMessages();
 
-  // Mock data for demonstration
+  // Mock conversations for demonstration
   useEffect(() => {
-    if (isOpen) {
-      const mockConversations: Conversation[] = [
-        {
-          id: '1',
-          name: 'General Discussion',
-          participants: ['current-user', 'user-2', 'user-3'],
-          unreadCount: 2,
-          lastMessage: {
-            id: 'msg-1',
-            content: 'Welcome to the team chat!',
-            senderId: 'user-2',
-            senderName: 'John Doe',
-            timestamp: new Date().toISOString(),
-            conversationId: '1'
-          }
+    setConversations([
+      {
+        id: "1",
+        name: "General Discussion",
+        participants: ["Admin", "Manager", "User"],
+        lastMessage: {
+          content: "Let's discuss the quarterly reports",
+          timestamp: "10:30 AM",
+          sender: "Manager"
         },
-        {
-          id: '2',
-          name: 'Quality Control Team',
-          participants: ['current-user', 'user-4'],
-          unreadCount: 0,
-          lastMessage: {
-            id: 'msg-2',
-            content: 'Quality assessment completed for Batch #234',
-            senderId: 'user-4',
-            senderName: 'Jane Smith',
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            conversationId: '2'
-          }
-        }
-      ];
-      
-      setConversations(mockConversations);
-    }
-  }, [isOpen]);
-
-  const handleConversationSelect = (conversation: Conversation) => {
-    setActiveConversation(conversation);
-    
-    // Mock messages for the selected conversation
-    const mockMessages: Message[] = [
-      {
-        id: 'm1',
-        content: 'Hello team!',
-        senderId: 'user-2',
-        senderName: 'John Doe',
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-        conversationId: conversation.id
+        unreadCount: 2
       },
       {
-        id: 'm2',
-        content: 'Hi John, how are the quality assessments going?',
-        senderId: currentUserId,
-        senderName: 'You',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        conversationId: conversation.id
-      },
-      {
-        id: 'm3',
-        content: conversation.lastMessage?.content || 'Latest message',
-        senderId: conversation.lastMessage?.senderId || 'user-2',
-        senderName: conversation.lastMessage?.senderName || 'Team Member',
-        timestamp: conversation.lastMessage?.timestamp || new Date().toISOString(),
-        conversationId: conversation.id
+        id: "2", 
+        name: "Quality Control Team",
+        participants: ["QC Lead", "Inspector", "Analyst"],
+        lastMessage: {
+          content: "New batch needs inspection",
+          timestamp: "9:15 AM",
+          sender: "QC Lead"
+        },
+        unreadCount: 0
       }
-    ];
-    
-    setMessages(mockMessages);
-    
-    // Mark conversation as read
-    setConversations(prev => 
-      prev.map(conv => 
-        conv.id === conversation.id 
-          ? { ...conv, unreadCount: 0 }
-          : conv
-      )
-    );
-  };
+    ]);
+  }, []);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !activeConversation) return;
+    if (!newMessage.trim() || !selectedConversation) return;
 
-    const message: Message = {
-      id: `msg-${Date.now()}`,
-      content: newMessage,
-      senderId: currentUserId,
-      senderName: 'You',
-      timestamp: new Date().toISOString(),
-      conversationId: activeConversation.id
-    };
-
-    setMessages(prev => [...prev, message]);
-    setNewMessage('');
-
-    // Update conversation's last message
-    setConversations(prev =>
-      prev.map(conv =>
-        conv.id === activeConversation.id
-          ? { ...conv, lastMessage: message }
-          : conv
-      )
-    );
+    try {
+      await sendMessage(selectedConversation.id, newMessage);
+      setNewMessage("");
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    }
   };
 
-  const filteredConversations = conversations.filter(conv =>
-    conv.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+  const handleSelectConversation = (conversation: Conversation) => {
+    setSelectedConversation(conversation);
+    // Mock messages for the selected conversation
+    setMessages([
+      {
+        id: "1",
+        content: "Hello everyone!",
+        sender: "Admin",
+        timestamp: "9:00 AM",
+        conversationId: conversation.id
+      },
+      {
+        id: "2",
+        content: "Good morning, ready for the meeting?",
+        sender: "Manager", 
+        timestamp: "9:05 AM",
+        conversationId: conversation.id
+      }
+    ]);
   };
+
+  if (!isOpen) return null;
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-full sm:w-[600px] p-0">
-        <div className="flex h-full">
-          {/* Conversations List */}
-          <div className="w-1/3 border-r border-gray-200 flex flex-col">
-            <SheetHeader className="p-4 border-b">
-              <SheetTitle className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" />
-                Messages
-              </SheetTitle>
-            </SheetHeader>
-            
-            <div className="p-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search conversations..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+    <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-xl z-40 flex flex-col">
+      <div className="flex items-center justify-between p-4 border-b">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          Messages
+        </h2>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="flex-1 flex">
+        {!selectedConversation ? (
+          <div className="w-full">
+            <div className="p-4 border-b">
+              <h3 className="font-medium text-sm text-gray-600 uppercase tracking-wider">
+                Conversations
+              </h3>
+            </div>
+            <ScrollArea className="flex-1">
+              <div className="p-2">
+                {conversations.map((conversation) => (
+                  <Card 
+                    key={conversation.id}
+                    className="mb-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => handleSelectConversation(conversation)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-medium text-sm">{conversation.name}</h4>
+                        {conversation.unreadCount > 0 && (
+                          <Badge variant="default" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                            {conversation.unreadCount}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 mb-2">
+                        <Users className="h-3 w-3 text-gray-400" />
+                        <span className="text-xs text-gray-500">
+                          {conversation.participants.length} participants
+                        </span>
+                      </div>
+                      {conversation.lastMessage && (
+                        <div>
+                          <p className="text-xs text-gray-600 truncate">
+                            <span className="font-medium">{conversation.lastMessage.sender}:</span>{" "}
+                            {conversation.lastMessage.content}
+                          </p>
+                          <span className="text-xs text-gray-400">
+                            {conversation.lastMessage.timestamp}
+                          </span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        ) : (
+          <div className="w-full flex flex-col">
+            <div className="p-4 border-b">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSelectedConversation(null)}
+                className="mb-2"
+              >
+                ← Back to conversations
+              </Button>
+              <h3 className="font-medium">{selectedConversation.name}</h3>
+              <div className="flex items-center gap-1 mt-1">
+                <Users className="h-3 w-3 text-gray-400" />
+                <span className="text-xs text-gray-500">
+                  {selectedConversation.participants.join(", ")}
+                </span>
               </div>
             </div>
 
-            <ScrollArea className="flex-1">
-              <div className="space-y-2 p-4">
-                {filteredConversations.map((conversation) => (
-                  <div
-                    key={conversation.id}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                      activeConversation?.id === conversation.id
-                        ? 'bg-blue-50 border-blue-200 border'
-                        : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => handleConversationSelect(conversation)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs">
-                            {conversation.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {conversation.name}
-                          </p>
-                          {conversation.lastMessage && (
-                            <p className="text-xs text-gray-500 truncate">
-                              {conversation.lastMessage.content}
-                            </p>
-                          )}
-                        </div>
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-4">
+                {messages.map((message) => (
+                  <div key={message.id} className="flex gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="text-xs">
+                        {message.sender.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm">{message.sender}</span>
+                        <span className="text-xs text-gray-500">{message.timestamp}</span>
                       </div>
-                      {conversation.unreadCount > 0 && (
-                        <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
-                          {conversation.unreadCount}
-                        </Badge>
-                      )}
+                      <p className="text-sm text-gray-700">{message.content}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </ScrollArea>
-          </div>
 
-          {/* Chat Area */}
-          <div className="flex-1 flex flex-col">
-            {activeConversation ? (
-              <>
-                {/* Chat Header */}
-                <div className="p-4 border-b bg-white">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback>
-                          {activeConversation.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-medium">{activeConversation.name}</h3>
-                        <p className="text-sm text-gray-500">
-                          {activeConversation.participants.length} members
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-4">
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${
-                          message.senderId === currentUserId ? 'justify-end' : 'justify-start'
-                        }`}
-                      >
-                        <div
-                          className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
-                            message.senderId === currentUserId
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 text-gray-900'
-                          }`}
-                        >
-                          {message.senderId !== currentUserId && (
-                            <p className="text-xs font-medium mb-1">
-                              {message.senderName}
-                            </p>
-                          )}
-                          <p className="text-sm">{message.content}</p>
-                          <p className={`text-xs mt-1 ${
-                            message.senderId === currentUserId ? 'text-blue-100' : 'text-gray-500'
-                          }`}>
-                            {formatTime(message.timestamp)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-
-                {/* Message Input */}
-                <div className="p-4 border-t bg-white">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Type a message..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      className="flex-1"
-                    />
-                    <Button onClick={handleSendMessage} size="sm">
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
-                <div className="text-center">
-                  <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Select a conversation to start messaging</p>
-                </div>
+            <div className="p-4 border-t">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Type your message..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                  className="flex-1"
+                />
+                <Button onClick={handleSendMessage} size="sm">
+                  <Send className="h-4 w-4" />
+                </Button>
               </div>
-            )}
+            </div>
           </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+        )}
+      </div>
+    </div>
   );
 };
 

@@ -1,51 +1,32 @@
-import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
-import { MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import MessagingPanel from "./MessagingPanel";
-import { useMessages } from "@/hooks/useMessages";
-import { useAuth } from "@/contexts/AuthContext";
+import { MessageSquare } from "lucide-react";
 
-const MessageButton = () => {
-  const { user } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
-  
-  // Use Firebase User.uid instead of .id
-  const { unreadCount } = useMessages(user?.uid);
+interface MessageButtonProps {
+  onToggleMessaging: () => void;
+  unreadCount: number;
+}
 
-  const handleClick = () => {
-    setIsOpen(true);
-  };
-
-  if (!user) return null;
-
+const MessageButton = ({ onToggleMessaging, unreadCount }: MessageButtonProps) => {
   return (
-    <>
+    <div className="fixed bottom-6 right-6 z-50">
       <Button
-        variant="outline"
-        size="sm"
-        onClick={handleClick}
-        className="relative"
+        onClick={onToggleMessaging}
+        size="lg"
+        className="relative rounded-full h-14 w-14 shadow-lg"
       >
-        <MessageCircle className="h-4 w-4" />
+        <MessageSquare className="h-6 w-6" />
         {unreadCount > 0 && (
           <Badge 
             variant="destructive" 
-            className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+            className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 flex items-center justify-center"
           >
-            {unreadCount}
+            {unreadCount > 99 ? '99+' : unreadCount}
           </Badge>
         )}
       </Button>
-      
-      {isOpen && (
-        <MessagingPanel 
-          isOpen={isOpen}
-          onClose={() => setIsOpen(false)}
-          currentUserId={user.uid}
-        />
-      )}
-    </>
+    </div>
   );
 };
 

@@ -5,18 +5,19 @@
 const createChainableQuery = (mockData: any) => {
   const chainable = {
     select: (columns?: string) => chainable,
-    insert: (data: any) => Promise.resolve({ data: null, error: null }),
+    insert: (data: any) => chainable,
     update: (data: any) => chainable,
     delete: () => chainable,
     eq: (column: any, value: any) => chainable,
     order: (column: any, options?: any) => chainable,
     limit: (count: any) => chainable,
+    in: (column: any, values: any[]) => chainable,
     single: () => Promise.resolve({ data: null, error: null }),
     maybeSingle: () => Promise.resolve({ data: null, error: null }),
-    in: (column: any, values: any[]) => chainable,
-    then: (resolve: any) => resolve(mockData)
   };
-  return chainable;
+  
+  // Make the chainable object itself a promise
+  return Object.assign(Promise.resolve(mockData), chainable);
 };
 
 export const supabase = {

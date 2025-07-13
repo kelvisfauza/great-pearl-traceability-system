@@ -1,8 +1,8 @@
 
 import { useState } from "react";
-import { Navigation } from "./Navigation";
-import { MessagingPanel } from "./messaging/MessagingPanel";
-import { MessageButton } from "./messaging/MessageButton";
+import Navigation from "./Navigation";
+import MessagingPanel from "./messaging/MessagingPanel";
+import MessageButton from "./messaging/MessageButton";
 import { useMessages } from "@/hooks/useMessages";
 
 interface LayoutProps {
@@ -11,7 +11,7 @@ interface LayoutProps {
   subtitle?: string;
 }
 
-export const Layout = ({ children, title, subtitle }: LayoutProps) => {
+const Layout = ({ children, title, subtitle }: LayoutProps) => {
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const { unreadCount } = useMessages();
 
@@ -45,3 +45,5 @@ export const Layout = ({ children, title, subtitle }: LayoutProps) => {
     </div>
   );
 };
+
+export default Layout;
