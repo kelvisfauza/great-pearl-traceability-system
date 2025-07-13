@@ -1,5 +1,7 @@
+
 import { useState, useEffect } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -24,20 +26,14 @@ export interface Employee {
 
 const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
   try {
-    const { data: session } = await supabase.auth.getSession();
-    if (session.session?.user) {
-      // Use any to bypass TypeScript type checking for the new table
-      await (supabase as any)
-        .from('security_audit_log')
-        .insert({
-          user_id: session.session.user.id,
-          action,
-          table_name: tableName,
-          record_id: recordId,
-          old_values: oldValues,
-          new_values: newValues
-        });
-    }
+    await addDoc(collection(db, 'security_audit_log'), {
+      action,
+      table_name: tableName,
+      record_id: recordId,
+      old_values: oldValues,
+      new_values: newValues,
+      created_at: new Date().toISOString()
+    });
   } catch (error) {
     console.error('Security logging error:', error);
   }
@@ -52,36 +48,20 @@ export const useSecureEmployees = () => {
   const fetchEmployees = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching employees:', error)
-        if (error.message.includes('row-level security')) {
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to view employee records",
-            variant: "destructive"
-          })
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to fetch employees",
-            variant: "destructive"
-          })
-        }
-        setEmployees([])
-        return
-      }
+      const employeesQuery = query(collection(db, 'employees'), orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(employeesQuery);
       
-      setEmployees(data || [])
+      const employeesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Employee[];
+      
+      setEmployees(employeesData);
     } catch (error) {
       console.error('Error fetching employees:', error)
       toast({
-        title: "System Error",
-        description: "A system error occurred while fetching employees",
+        title: "Error",
+        description: "Failed to fetch employees",
         variant: "destructive"
       })
       setEmployees([])
@@ -152,56 +132,29 @@ export const useSecureEmployees = () => {
         email: employeeData.email.toLowerCase().trim(),
         position: employeeData.position.trim(),
         department: employeeData.department.trim(),
-        join_date: employeeData.join_date || new Date().toISOString()
+        join_date: employeeData.join_date || new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
 
-      const { data, error } = await supabase
-        .from('employees')
-        .insert([sanitizedData])
-        .select()
-        .single()
+      const docRef = await addDoc(collection(db, 'employees'), sanitizedData);
+      const newEmployee = { id: docRef.id, ...sanitizedData };
 
-      if (error) {
-        console.error('Error adding employee:', error)
-        if (error.message.includes('duplicate key')) {
-          toast({
-            title: "Error",
-            description: "An employee with this email already exists",
-            variant: "destructive"
-          })
-        } else if (error.message.includes('row-level security')) {
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to add employees",
-            variant: "destructive"
-          })
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to add employee",
-            variant: "destructive"
-          })
-        }
-        throw error
-      }
-
-      setEmployees(prev => [data, ...prev])
-      await logSecurityEvent('employee_created', 'employees', data.id, null, data);
+      setEmployees(prev => [newEmployee, ...prev])
+      await logSecurityEvent('employee_created', 'employees', docRef.id, null, newEmployee);
       
       toast({
         title: "Success",
-        description: `Employee ${data.name} added successfully`
+        description: `Employee ${newEmployee.name} added successfully`
       })
-      return data
+      return newEmployee
     } catch (error) {
-      if (error instanceof Error && error.message !== "Access denied" && error.message !== "Validation failed") {
-        console.error('Error adding employee:', error)
-        toast({
-          title: "System Error",
-          description: "A system error occurred while adding the employee",
-          variant: "destructive"
-        })
-      }
+      console.error('Error adding employee:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add employee",
+        variant: "destructive"
+      })
       throw error
     }
   }
@@ -216,22 +169,7 @@ export const useSecureEmployees = () => {
       throw new Error("Access denied")
     }
 
-    if (updates.role === 'Administrator' && !isAdmin()) {
-      toast({
-        title: "Access Denied",
-        description: "Only administrators can assign admin roles",
-        variant: "destructive"
-      })
-      throw new Error("Insufficient privileges")
-    }
-
     try {
-      const { data: currentEmployee } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('id', id)
-        .single();
-
       const sanitizedUpdates = {
         ...updates,
         ...(updates.name && { name: updates.name.trim() }),
@@ -241,48 +179,25 @@ export const useSecureEmployees = () => {
         updated_at: new Date().toISOString()
       }
 
-      const { data, error } = await supabase
-        .from('employees')
-        .update(sanitizedUpdates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error updating employee:', error)
-        if (error.message.includes('row-level security')) {
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to update this employee",
-            variant: "destructive"
-          })
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to update employee",
-            variant: "destructive"
-          })
-        }
-        throw error
-      }
-
-      setEmployees(prev => prev.map(emp => emp.id === id ? data : emp))
-      await logSecurityEvent('employee_updated', 'employees', id, currentEmployee, data);
+      await updateDoc(doc(db, 'employees', id), sanitizedUpdates);
+      
+      setEmployees(prev => prev.map(emp => 
+        emp.id === id ? { ...emp, ...sanitizedUpdates } : emp
+      ));
+      
+      await logSecurityEvent('employee_updated', 'employees', id, null, sanitizedUpdates);
       
       toast({
         title: "Success",
-        description: `Employee ${data.name} updated successfully`
+        description: "Employee updated successfully"
       })
-      return data
     } catch (error) {
-      if (error instanceof Error && error.message !== "Access denied") {
-        console.error('Error updating employee:', error)
-        toast({
-          title: "System Error",
-          description: "A system error occurred while updating the employee",
-          variant: "destructive"
-        })
-      }
+      console.error('Error updating employee:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update employee",
+        variant: "destructive"
+      })
       throw error
     }
   }
@@ -298,51 +213,22 @@ export const useSecureEmployees = () => {
     }
 
     try {
-      const { data: employeeToDelete } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      const { error } = await supabase
-        .from('employees')
-        .delete()
-        .eq('id', id)
-
-      if (error) {
-        console.error('Error deleting employee:', error)
-        if (error.message.includes('row-level security')) {
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to delete employees",
-            variant: "destructive"
-          })
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to delete employee",
-            variant: "destructive"
-          })
-        }
-        throw error
-      }
-
-      setEmployees(prev => prev.filter(emp => emp.id !== id))
-      await logSecurityEvent('employee_deleted', 'employees', id, employeeToDelete, null);
+      await deleteDoc(doc(db, 'employees', id));
+      
+      setEmployees(prev => prev.filter(emp => emp.id !== id));
+      await logSecurityEvent('employee_deleted', 'employees', id, null, null);
       
       toast({
         title: "Success",
         description: "Employee deleted successfully"
       })
     } catch (error) {
-      if (error instanceof Error && error.message !== "Access denied") {
-        console.error('Error deleting employee:', error)
-        toast({
-          title: "System Error",
-          description: "A system error occurred while deleting the employee",
-          variant: "destructive"
-        })
-      }
+      console.error('Error deleting employee:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete employee",
+        variant: "destructive"
+      })
       throw error
     }
   }

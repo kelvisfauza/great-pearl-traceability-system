@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, AlertTriangle, Eye, Clock, Users, Activity } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 interface SecurityEvent {
@@ -16,8 +17,6 @@ interface SecurityEvent {
   record_id?: string;
   old_values?: any;
   new_values?: any;
-  ip_address?: string;
-  user_agent?: string;
   created_at: string;
 }
 
@@ -32,24 +31,19 @@ const SecurityMonitor = () => {
       setLoading(true);
       setError(null);
       
-      // Use any to bypass TypeScript type checking for the new table
-      const { data, error: fetchError } = await (supabase as any)
-        .from('security_audit_log')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const securityQuery = query(
+        collection(db, 'security_audit_log'),
+        orderBy('created_at', 'desc'),
+        limit(100)
+      );
+      
+      const querySnapshot = await getDocs(securityQuery);
+      const events = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as SecurityEvent[];
 
-      if (fetchError) {
-        if (fetchError.message.includes('row-level security')) {
-          setError('Access denied: Only administrators can view security logs');
-        } else {
-          setError('Failed to fetch security events');
-        }
-        console.error('Error fetching security events:', fetchError);
-        return;
-      }
-
-      setSecurityEvents(data || []);
+      setSecurityEvents(events);
     } catch (err) {
       console.error('Error in fetchSecurityEvents:', err);
       setError('A system error occurred while fetching security events');
@@ -125,7 +119,7 @@ const SecurityMonitor = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
-            Security Monitor - Access Restricted
+            Security Monitor - Error
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -153,7 +147,7 @@ const SecurityMonitor = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Security Monitor
+            Security Monitor (Firebase)
           </CardTitle>
           <CardDescription>
             Real-time security event monitoring and audit trail
@@ -253,7 +247,7 @@ const SecurityMonitor = () => {
                           <span className="text-sm text-gray-600">{event.table_name}</span>
                         </div>
                         <p className="text-sm text-gray-500 mt-1">
-                          User ID: {event.user_id.slice(0, 8)}...
+                          User ID: {event.user_id?.slice(0, 8)}...
                         </p>
                       </div>
                     </div>
@@ -377,7 +371,7 @@ const SecurityMonitor = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-green-500" />
-              <span className="text-sm font-medium">Security Status: Active</span>
+              <span className="text-sm font-medium">Security Status: Active (Firebase)</span>
             </div>
             <Button onClick={fetchSecurityEvents} variant="outline" size="sm">
               <Activity className="h-4 w-4 mr-2" />

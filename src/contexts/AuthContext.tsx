@@ -1,6 +1,14 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { 
+  User, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged
+} from 'firebase/auth';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 interface Employee {
@@ -48,68 +56,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) return;
       
-      // Use any to bypass TypeScript type checking for the new table
-      await (supabase as any)
-        .from('security_audit_log')
-        .insert({
-          user_id: user.id,
-          action,
-          table_name: tableName,
-          record_id: recordId,
-          old_values: oldValues,
-          new_values: newValues
-        });
+      await setDoc(doc(collection(db, 'security_audit_log')), {
+        user_id: user.uid,
+        action,
+        table_name: tableName,
+        record_id: recordId,
+        old_values: oldValues,
+        new_values: newValues,
+        created_at: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Security logging error:', error);
     }
   };
 
   const fetchEmployeeData = async () => {
-    if (!user?.id) return;
+    if (!user?.uid) return;
 
     try {
       // First check if user profile exists and get linked employee
-      const { data: profileData, error: profileError } = await (supabase as any)
-        .from('user_profiles')
-        .select(`
-          employee_id,
-          employees (*)
-        `)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error('Error fetching user profile:', profileError);
-        
-        // If no profile exists, try to find employee by email and create link
-        const { data: employeeData, error: employeeError } = await supabase
-          .from('employees')
-          .select('*')
-          .eq('email', user.email)
-          .maybeSingle();
-
-        if (employeeError) {
-          console.error('Error fetching employee by email:', employeeError);
-          return;
-        }
-
-        if (employeeData) {
-          // Create user profile link
-          const { error: linkError } = await (supabase as any)
-            .from('user_profiles')
-            .insert({
-              user_id: user.id,
-              employee_id: employeeData.id
-            });
-
-          if (linkError) {
-            console.error('Error creating user profile link:', linkError);
-          } else {
-            setEmployee(employeeData as Employee);
+      const userProfileDoc = await getDoc(doc(db, 'user_profiles', user.uid));
+      
+      if (userProfileDoc.exists()) {
+        const profileData = userProfileDoc.data();
+        if (profileData.employee_id) {
+          const employeeDoc = await getDoc(doc(db, 'employees', profileData.employee_id));
+          if (employeeDoc.exists()) {
+            setEmployee({ id: employeeDoc.id, ...employeeDoc.data() } as Employee);
           }
         }
-      } else if (profileData?.employees) {
-        setEmployee(profileData.employees as Employee);
+      } else {
+        // If no profile exists, try to find employee by email and create link
+        const employeesQuery = query(
+          collection(db, 'employees'), 
+          where('email', '==', user.email)
+        );
+        const employeeSnapshot = await getDocs(employeesQuery);
+
+        if (!employeeSnapshot.empty) {
+          const employeeDoc = employeeSnapshot.docs[0];
+          const employeeData = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
+
+          // Create user profile link
+          await setDoc(doc(db, 'user_profiles', user.uid), {
+            user_id: user.uid,
+            employee_id: employeeDoc.id,
+            created_at: new Date().toISOString()
+          });
+
+          setEmployee(employeeData);
+        }
       }
     } catch (error) {
       console.error('Error in fetchEmployeeData:', error);
@@ -119,16 +115,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      if (error) throw error;
-
-      if (data.user) {
-        setUser(data.user);
-        await logSecurityEvent('user_login', 'auth', data.user.id);
+      if (userCredential.user) {
+        await logSecurityEvent('user_login', 'auth', userCredential.user.uid);
       }
 
       toast({
@@ -152,19 +142,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, userData: any) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: userData,
-          emailRedirectTo: `${window.location.origin}/`
-        }
-      });
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
-      if (error) throw error;
-
-      if (data.user) {
-        await logSecurityEvent('user_signup', 'auth', data.user.id, null, { email });
+      if (userCredential.user) {
+        await logSecurityEvent('user_signup', 'auth', userCredential.user.uid, null, { email });
       }
 
       toast({
@@ -186,9 +167,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      await logSecurityEvent('user_logout', 'auth', user?.id);
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await logSecurityEvent('user_logout', 'auth', user?.uid);
+      await firebaseSignOut(auth);
 
       setUser(null);
       setEmployee(null);
@@ -224,25 +204,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
       setLoading(false);
+      
+      if (!user) {
+        setEmployee(null);
+      }
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
-        if (event === 'SIGNED_OUT') {
-          setEmployee(null);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
