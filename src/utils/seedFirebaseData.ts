@@ -4,18 +4,12 @@ import { db } from '@/lib/firebase';
 
 export const seedFirebaseData = async () => {
   try {
-    console.log('Starting seed data check...');
-    
     // Check if employees already exist
     const employeesSnapshot = await getDocs(collection(db, 'employees'));
-    console.log('Existing employees count:', employeesSnapshot.size);
     
     if (!employeesSnapshot.empty) {
-      console.log('Data already exists, skipping seed');
       return;
     }
-
-    console.log('Seeding Firebase with sample data...');
 
     // Sample employees
     const employees = [
@@ -78,10 +72,8 @@ export const seedFirebaseData = async () => {
     ];
 
     // Add employees
-    console.log('Adding employees...');
     for (const employee of employees) {
-      const docRef = await addDoc(collection(db, 'employees'), employee);
-      console.log('Added employee:', employee.name, 'with ID:', docRef.id);
+      await addDoc(collection(db, 'employees'), employee);
     }
 
     // Sample finance transactions
@@ -115,10 +107,8 @@ export const seedFirebaseData = async () => {
       }
     ];
 
-    console.log('Adding finance transactions...');
     for (const transaction of transactions) {
-      const docRef = await addDoc(collection(db, 'finance_transactions'), transaction);
-      console.log('Added transaction:', transaction.description, 'with ID:', docRef.id);
+      await addDoc(collection(db, 'finance_transactions'), transaction);
     }
 
     // Sample expenses
@@ -143,10 +133,8 @@ export const seedFirebaseData = async () => {
       }
     ];
 
-    console.log('Adding expenses...');
     for (const expense of expenses) {
-      const docRef = await addDoc(collection(db, 'finance_expenses'), expense);
-      console.log('Added expense:', expense.description, 'with ID:', docRef.id);
+      await addDoc(collection(db, 'finance_expenses'), expense);
     }
 
     // Sample approval requests
@@ -179,13 +167,9 @@ export const seedFirebaseData = async () => {
       }
     ];
 
-    console.log('Adding approval requests...');
     for (const approval of approvals) {
-      const docRef = await addDoc(collection(db, 'approval_requests'), approval);
-      console.log('Added approval request:', approval.title, 'with ID:', docRef.id);
+      await addDoc(collection(db, 'approval_requests'), approval);
     }
-
-    console.log('Sample data seeded successfully!');
   } catch (error) {
     console.error('Error seeding data:', error);
   }

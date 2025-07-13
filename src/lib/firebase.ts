@@ -13,11 +13,6 @@ const firebaseConfig = {
   measurementId: "G-Q1SJ4LRDSM"
 };
 
-console.log('Initializing Firebase with config:', { 
-  projectId: firebaseConfig.projectId,
-  authDomain: firebaseConfig.authDomain 
-});
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
@@ -26,7 +21,5 @@ export const auth = getAuth(app);
 
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
-
-console.log('Firebase initialized successfully');
 
 export default app;
