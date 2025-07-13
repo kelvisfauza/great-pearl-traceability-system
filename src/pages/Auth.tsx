@@ -47,7 +47,7 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -57,6 +57,9 @@ const Auth = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
+                autoComplete="off"
+                data-1p-ignore
+                data-lpignore="true"
               />
             </div>
             <div className="space-y-2">
@@ -68,6 +71,9 @@ const Auth = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
+                autoComplete="new-password"
+                data-1p-ignore
+                data-lpignore="true"
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
@@ -78,6 +84,11 @@ const Auth = () => {
           <div className="mt-4 text-center text-sm text-gray-600">
             <p>Accounts are managed by administrators.</p>
             <p>Contact your admin if you need access.</p>
+            <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
+              <p className="text-amber-800">
+                <strong>Security Notice:</strong> Sessions automatically expire after 5 minutes of inactivity
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

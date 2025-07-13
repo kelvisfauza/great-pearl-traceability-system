@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { 
   User, 
   signInWithEmailAndPassword, 
@@ -43,11 +43,70 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Auto logout after 5 minutes of inactivity
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Refs for inactivity tracking
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
+
+  // Reset inactivity timer
+  const resetInactivityTimer = useCallback(() => {
+    lastActivityRef.current = Date.now();
+    
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    if (user) {
+      timeoutRef.current = setTimeout(() => {
+        console.log('Auto logout due to inactivity');
+        toast({
+          title: "Session Expired",
+          description: "You have been logged out due to inactivity",
+          variant: "destructive"
+        });
+        signOut();
+      }, INACTIVITY_TIMEOUT);
+    }
+  }, [user, toast]);
+
+  // Track user activity
+  useEffect(() => {
+    if (!user) return;
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    const activity = () => {
+      resetInactivityTimer();
+    };
+
+    // Add event listeners
+    events.forEach(event => {
+      document.addEventListener(event, activity, true);
+    });
+
+    // Set initial timer
+    resetInactivityTimer();
+
+    return () => {
+      // Clean up event listeners
+      events.forEach(event => {
+        document.removeEventListener(event, activity, true);
+      });
+      
+      // Clear timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [user, resetInactivityTimer]);
 
   const createDefaultEmployee = async (user: User): Promise<Employee> => {
     const defaultEmployee: Employee = {
@@ -199,6 +258,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      // Clear inactivity timer
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      
       await firebaseSignOut(auth);
       setUser(null);
       setEmployee(null);
@@ -242,6 +307,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (!user) {
         setEmployee(null);
+        // Clear timer when user logs out
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
       }
     });
 
