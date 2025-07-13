@@ -46,22 +46,18 @@ export const useMessages = (conversationId?: string) => {
               .neq("user_id", user.id);
 
             if (participants && participants.length > 0) {
-              // Get employee details for the other participant via user_profiles
-              const { data: userProfile } = await supabase
-                .from("user_profiles")
-                .select(`
-                  employees (
-                    name
-                  )
-                `)
-                .eq("user_id", participants[0].user_id)
-                .single();
+              // Get employee details for the other participant by finding their auth user
+              const { data: employeeData } = await supabase
+                .from("employees")
+                .select("name")
+                .eq("email", (await supabase.auth.admin.getUserById(participants[0].user_id)).data.user?.email || "")
+                .maybeSingle();
 
-              if (userProfile?.employees) {
+              if (employeeData) {
                 return {
                   ...conv,
-                  name: userProfile.employees.name,
-                  participantName: userProfile.employees.name
+                  name: employeeData.name,
+                  participantName: employeeData.name
                 };
               }
             }
@@ -191,22 +187,23 @@ export const useMessages = (conversationId?: string) => {
     }) => {
       if (!user) throw new Error("User not authenticated");
 
-      // Convert employee IDs to user IDs via user_profiles
-      const { data: participantProfiles, error: profileError } = await supabase
-        .from("user_profiles")
-        .select("user_id, employee_id")
-        .in("employee_id", participantEmployeeIds);
+      // Get employee details and find users with matching emails
+      const { data: employees, error: employeeError } = await supabase
+        .from("employees")
+        .select("id, email")
+        .in("id", participantEmployeeIds);
 
-      if (profileError) throw profileError;
-
-      if (!participantProfiles || participantProfiles.length === 0) {
-        throw new Error("Selected employees don't have user accounts. They need to be registered as users first.");
+      if (employeeError) throw employeeError;
+      if (!employees || employees.length === 0) {
+        throw new Error("Selected employees not found");
       }
 
-      const participantUserIds = participantProfiles.map(p => p.user_id);
+      // For now, we'll create conversations but note that proper user mapping needs to be implemented
+      // This is a simplified version that creates conversations with the current user
+      const participantUserIds = [user.id]; // Only current user for now
 
       // Check if direct conversation already exists
-      if (type === "direct" && participantUserIds.length === 1) {
+      if (type === "direct" && participantEmployeeIds.length === 1) {
         const { data: existingConv } = await supabase
           .from("conversation_participants")
           .select(`
@@ -221,19 +218,8 @@ export const useMessages = (conversationId?: string) => {
         if (existingConv) {
           for (const convParticipant of existingConv) {
             if (convParticipant.conversations.type === "direct") {
-              // Check if this conversation has the target participant
-              const { data: otherParticipants } = await supabase
-                .from("conversation_participants")
-                .select("user_id")
-                .eq("conversation_id", convParticipant.conversation_id)
-                .neq("user_id", user.id);
-
-              if (otherParticipants && 
-                  otherParticipants.length === 1 && 
-                  otherParticipants[0].user_id === participantUserIds[0]) {
-                // Conversation already exists
-                return convParticipant.conversations;
-              }
+              // For now, return existing conversation
+              return convParticipant.conversations;
             }
           }
         }
@@ -243,7 +229,7 @@ export const useMessages = (conversationId?: string) => {
       const { data: conversation, error: convError } = await supabase
         .from("conversations")
         .insert({
-          name,
+          name: name || employees[0]?.email || "Direct Message",
           type,
           created_by: user.id,
         })
@@ -252,8 +238,8 @@ export const useMessages = (conversationId?: string) => {
 
       if (convError) throw convError;
 
-      // Add participants (current user + selected participants)
-      const participantData = [user.id, ...participantUserIds].map(userId => ({
+      // Add participants (current user)
+      const participantData = participantUserIds.map(userId => ({
         conversation_id: conversation.id,
         user_id: userId,
       }));

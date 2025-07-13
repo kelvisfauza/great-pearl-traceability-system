@@ -61,68 +61,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Fetching employee data for user:', session.user.id);
       
-      // Use the new function to get current employee data
-      const { data, error } = await supabase.rpc('get_current_employee');
+      // Try to find employee by email first (fallback method)
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('email', session.user.email)
+        .maybeSingle();
       
-      if (error) {
-        console.error('Error fetching employee data:', error);
-        
-        // Fallback: try to find employee by email if the profile link doesn't exist yet
-        const { data: employeeData, error: employeeError } = await supabase
-          .from('employees')
-          .select('*')
-          .eq('email', session.user.email)
-          .maybeSingle();
-        
-        if (employeeError) {
-          console.error('Fallback employee fetch error:', employeeError);
-          setEmployee(null);
-          return;
-        }
-        
-        if (employeeData) {
-          // Try to create the profile link
-          const { error: linkError } = await supabase
-            .from('user_profiles')
-            .insert({
-              user_id: session.user.id,
-              employee_id: employeeData.id
-            });
-          
-          if (linkError) {
-            console.error('Error creating user profile link:', linkError);
-          }
-          
-          setEmployee({
-            id: employeeData.id,
-            employee_id: employeeData.employee_id || employeeData.id,
-            name: employeeData.name,
-            email: employeeData.email,
-            phone: employeeData.phone,
-            position: employeeData.position,
-            department: employeeData.department,
-            role: employeeData.role,
-            permissions: employeeData.permissions,
-            address: employeeData.address,
-            emergency_contact: employeeData.emergency_contact,
-            join_date: employeeData.join_date,
-            status: employeeData.status,
-            salary: employeeData.salary
-          });
-        } else {
-          console.log('No employee record found for email:', session.user.email);
-          setEmployee(null);
-        }
+      if (employeeError) {
+        console.error('Error fetching employee data:', employeeError);
+        setEmployee(null);
         return;
       }
       
-      console.log('Employee data from function:', data);
-      
-      if (data && data.length > 0) {
-        const employeeData = data[0];
+      if (employeeData) {
         setEmployee({
-          id: employeeData.employee_id,
-          employee_id: employeeData.employee_id,
+          id: employeeData.id,
+          employee_id: employeeData.employee_id || employeeData.id,
           name: employeeData.name,
           email: employeeData.email,
           phone: employeeData.phone,
@@ -137,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           salary: employeeData.salary
         });
       } else {
-        console.log('No employee profile found for user:', session.user.id);
+        console.log('No employee record found for email:', session.user.email);
         setEmployee(null);
       }
     } catch (error) {

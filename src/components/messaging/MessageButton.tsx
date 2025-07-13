@@ -14,7 +14,7 @@ const MessageButton = () => {
   const { conversations } = useMessages();
   const { user } = useAuth();
 
-  // Calculate unread messages count using proper user mapping
+  // Calculate unread messages count
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["unread-messages", user?.id],
     queryFn: async () => {
@@ -28,7 +28,7 @@ const MessageButton = () => {
           .from("conversation_participants")
           .select("last_read_at")
           .eq("conversation_id", conversation.id)
-          .eq("user_id", user.id) // Now using actual user ID
+          .eq("user_id", user.id)
           .single();
 
         if (participant) {
