@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Tables } from '@/integrations/supabase/types';
 
@@ -60,6 +61,8 @@ export const useFinanceData = () => {
   const recordDailyTask = async (taskType: string, description: string, amount?: number, batchNumber?: string, completedBy: string = 'Finance Team') => {
     try {
       console.log('Recording daily task:', { taskType, description, amount, batchNumber, completedBy });
+      
+      // Save to Firebase
       await addDoc(collection(db, 'daily_tasks'), {
         task_type: taskType,
         description,
@@ -71,7 +74,20 @@ export const useFinanceData = () => {
         department: 'Finance',
         created_at: new Date().toISOString()
       });
-      console.log('Daily task recorded successfully');
+
+      // Save to Supabase
+      await supabase.from('daily_tasks').insert({
+        task_type: taskType,
+        description,
+        amount,
+        batch_number: batchNumber,
+        completed_by: completedBy,
+        completed_at: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0],
+        department: 'Finance'
+      });
+
+      console.log('Daily task recorded successfully to both databases');
     } catch (error) {
       console.error('Error recording daily task:', error);
     }
@@ -253,8 +269,29 @@ export const useFinanceData = () => {
       };
 
       console.log('Creating payment record:', paymentRecord);
+      
+      // Save to Firebase
       const docRef = await addDoc(collection(db, 'payment_records'), paymentRecord);
-      console.log('Payment record created with ID:', docRef.id);
+      console.log('Payment record created in Firebase with ID:', docRef.id);
+
+      // Save to Supabase
+      const { data: supabaseData, error: supabaseError } = await supabase
+        .from('payment_records')
+        .insert({
+          supplier: paymentRecord.supplier,
+          amount: paymentRecord.amount,
+          status: paymentRecord.status,
+          date: paymentRecord.date,
+          method: paymentRecord.method,
+          quality_assessment_id: assessmentId,
+          batch_number: paymentRecord.batch_number
+        });
+
+      if (supabaseError) {
+        console.error('Error saving to Supabase:', supabaseError);
+      } else {
+        console.log('Payment record created in Supabase:', supabaseData);
+      }
       
       await recordDailyTask(
         'Payment Record Created',
@@ -309,6 +346,25 @@ export const useFinanceData = () => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
+
+        // Create approval request in Supabase
+        await supabase.from('approval_requests').insert({
+          type: 'Bank Transfer',
+          title: `Bank transfer to ${payment.supplier}`,
+          description: `Payment to ${payment.supplier} - UGX ${payment.amount.toLocaleString()}`,
+          amount: payment.amount.toString(),
+          department: 'Finance',
+          requestedby: 'Finance Team',
+          daterequested: new Date().toLocaleDateString(),
+          priority: 'High',
+          status: 'Pending',
+          details: {
+            paymentId,
+            supplier: payment.supplier,
+            amount: payment.amount,
+            batchNumber: payment.batchNumber
+          }
+        });
         
         await recordDailyTask(
           'Payment Request',
@@ -348,12 +404,22 @@ export const useFinanceData = () => {
 
   const addTransaction = async (transaction: Omit<FinanceTransaction, 'id'>) => {
     try {
-      console.log('Adding transaction to Firebase:', transaction);
+      console.log('Adding transaction to both databases:', transaction);
       
+      // Save to Firebase
       await addDoc(collection(db, 'finance_transactions'), {
         ...transaction,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
+      });
+
+      // Save to Supabase
+      await supabase.from('finance_transactions').insert({
+        type: transaction.type,
+        description: transaction.description,
+        amount: transaction.amount,
+        time: transaction.time,
+        date: transaction.date
       });
       
       await recordDailyTask(
@@ -380,12 +446,22 @@ export const useFinanceData = () => {
 
   const addExpense = async (expense: Omit<FinanceExpense, 'id'>) => {
     try {
-      console.log('Adding expense to Firebase:', expense);
+      console.log('Adding expense to both databases:', expense);
       
+      // Save to Firebase
       await addDoc(collection(db, 'finance_expenses'), {
         ...expense,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
+      });
+
+      // Save to Supabase
+      await supabase.from('finance_expenses').insert({
+        description: expense.description,
+        amount: expense.amount,
+        date: expense.date,
+        category: expense.category,
+        status: expense.status
       });
       
       await recordDailyTask(
