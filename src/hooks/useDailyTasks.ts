@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 export interface DailyTask {
@@ -25,29 +26,20 @@ export const useDailyTasks = () => {
       setLoading(true);
       const targetDate = date || new Date().toISOString().split('T')[0];
       
-      // Fetch from daily_tasks table
-      const { data: dailyTasksData, error: dailyTasksError } = await supabase
-        .from('daily_tasks')
-        .select('*')
-        .eq('date', targetDate)
-        .order('completed_at', { ascending: false });
+      const tasksQuery = query(
+        collection(db, 'daily_tasks'),
+        where('date', '==', targetDate),
+        orderBy('completed_at', 'desc')
+      );
+      
+      const snapshot = await getDocs(tasksQuery);
+      const tasksData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        completed_at: new Date(doc.data().completed_at).toLocaleTimeString(),
+      })) as DailyTask[];
 
-      if (dailyTasksError) throw dailyTasksError;
-
-      // Convert to DailyTask format
-      const compiledTasks: DailyTask[] = (dailyTasksData || []).map(task => ({
-        id: task.id,
-        task_type: task.task_type,
-        description: task.description,
-        amount: task.amount ? Number(task.amount) : undefined,
-        batch_number: task.batch_number || undefined,
-        completed_at: new Date(task.completed_at).toLocaleTimeString(),
-        completed_by: task.completed_by,
-        date: task.date,
-        department: task.department
-      }));
-
-      setTasks(compiledTasks);
+      setTasks(tasksData);
     } catch (error) {
       console.error('Error fetching daily tasks:', error);
       toast({

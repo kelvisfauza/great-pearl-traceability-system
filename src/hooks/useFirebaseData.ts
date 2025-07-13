@@ -1,10 +1,9 @@
 
 import { useFirebaseEmployees } from './useFirebaseEmployees';
 import { useFirebaseFinance } from './useFirebaseFinance';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Migration wrapper that provides the same interface as Supabase hooks
+// Main data hooks using Firebase only
 export const useEmployees = useFirebaseEmployees;
 export const useFinanceData = useFirebaseFinance;
-
-// Re-export other hooks that will be migrated
-export { useAuth } from '@/contexts/AuthContext';
+export { useAuth };

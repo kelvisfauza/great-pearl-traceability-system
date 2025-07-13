@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, query, orderBy, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,7 +29,6 @@ export interface PaymentRecord {
   status: 'Paid' | 'Pending' | 'Processing';
   date: string;
   method: 'Bank Transfer' | 'Cash';
-  qualityAssessmentId?: string;
   batchNumber?: string;
   kilograms?: number;
   pricePerKg?: number;
@@ -136,8 +135,11 @@ export const useFirebaseFinance = () => {
       const payment = payments.find(p => p.id === paymentId);
       if (!payment) throw new Error('Payment record not found');
 
+      console.log('Processing payment:', payment.supplier, method);
+
       if (method === 'Bank Transfer') {
         // Create approval request
+        console.log('Creating bank transfer approval request...');
         await addDoc(collection(db, 'approval_requests'), {
           type: 'Bank Transfer',
           title: `Bank transfer to ${payment.supplier}`,
@@ -262,7 +264,6 @@ export const useFirebaseFinance = () => {
     transactions,
     expenses,
     payments,
-    qualityAssessments: [], // Empty for now during migration
     stats,
     loading,
     addTransaction,

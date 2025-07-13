@@ -1,6 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { firebaseClient } from '@/lib/firebaseClient';
+import { collection, getDocs, addDoc, query, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Supplier {
   id: string;
@@ -17,39 +19,23 @@ export interface Supplier {
 export const useSuppliers = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const fetchSuppliers = async () => {
     try {
       setLoading(true);
       console.log('Fetching suppliers from Firebase...');
       
-      const { data, error } = await firebaseClient
-        .from('suppliers')
-        .select()
-        .order('created_at', { ascending: false })
-        .get();
-
-      if (error) {
-        console.error('Error fetching suppliers:', error);
-        setSuppliers([]);
-        return;
-      }
-
-      console.log('Raw Firebase suppliers:', data);
-      const transformedSuppliers = (data || []).map((supplier: any) => ({
-        id: supplier.id,
-        name: supplier.name,
-        code: supplier.code,
-        phone: supplier.phone,
-        origin: supplier.origin,
-        opening_balance: supplier.opening_balance || 0,
-        date_registered: supplier.date_registered || supplier.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-        created_at: supplier.created_at,
-        updated_at: supplier.updated_at
-      }));
+      const suppliersQuery = query(collection(db, 'suppliers'), orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(suppliersQuery);
       
-      console.log('Transformed suppliers:', transformedSuppliers);
-      setSuppliers(transformedSuppliers);
+      const suppliersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Supplier[];
+      
+      console.log('Firebase suppliers:', suppliersData);
+      setSuppliers(suppliersData);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       setSuppliers([]);
@@ -73,24 +59,29 @@ export const useSuppliers = () => {
         phone: supplierData.phone || null,
         code: `SUP${Date.now()}`,
         opening_balance: supplierData.opening_balance || 0,
-        date_registered: new Date().toISOString().split('T')[0]
+        date_registered: new Date().toISOString().split('T')[0],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       console.log('Supplier object to add:', supplierToAdd);
 
-      const { data, error } = await firebaseClient
-        .from('suppliers')
-        .insert(supplierToAdd);
-
-      if (error) {
-        console.error('Firebase insert error:', error);
-        throw error;
-      }
+      await addDoc(collection(db, 'suppliers'), supplierToAdd);
       
-      console.log('Supplier added successfully:', data);
+      console.log('Supplier added successfully');
+      toast({
+        title: "Success",
+        description: "Supplier added successfully"
+      });
+      
       await fetchSuppliers(); // Refresh the list
     } catch (error) {
       console.error('Error adding supplier:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add supplier",
+        variant: "destructive"
+      });
       throw error;
     }
   };
