@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -58,58 +59,85 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     try {
-      console.log('Fetching employee data for email:', session.user.email);
+      console.log('Fetching employee data for user:', session.user.id);
       
-      // Query the employees table directly using the user's email
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('email', session.user.email)
-        .maybeSingle();
+      // Use the new function to get current employee data
+      const { data, error } = await supabase.rpc('get_current_employee');
       
       if (error) {
         console.error('Error fetching employee data:', error);
-        throw error;
+        
+        // Fallback: try to find employee by email if the profile link doesn't exist yet
+        const { data: employeeData, error: employeeError } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('email', session.user.email)
+          .maybeSingle();
+        
+        if (employeeError) {
+          console.error('Fallback employee fetch error:', employeeError);
+          setEmployee(null);
+          return;
+        }
+        
+        if (employeeData) {
+          // Try to create the profile link
+          const { error: linkError } = await supabase
+            .from('user_profiles')
+            .insert({
+              user_id: session.user.id,
+              employee_id: employeeData.id
+            });
+          
+          if (linkError) {
+            console.error('Error creating user profile link:', linkError);
+          }
+          
+          setEmployee({
+            id: employeeData.id,
+            employee_id: employeeData.employee_id || employeeData.id,
+            name: employeeData.name,
+            email: employeeData.email,
+            phone: employeeData.phone,
+            position: employeeData.position,
+            department: employeeData.department,
+            role: employeeData.role,
+            permissions: employeeData.permissions,
+            address: employeeData.address,
+            emergency_contact: employeeData.emergency_contact,
+            join_date: employeeData.join_date,
+            status: employeeData.status,
+            salary: employeeData.salary
+          });
+        } else {
+          console.log('No employee record found for email:', session.user.email);
+          setEmployee(null);
+        }
+        return;
       }
       
-      console.log('Employee data query result:', data);
+      console.log('Employee data from function:', data);
       
-      if (data) {
-        console.log('Setting employee data:', {
-          id: data.id,
-          employee_id: data.employee_id || data.id,
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          position: data.position,
-          department: data.department,
-          role: data.role,
-          permissions: data.permissions,
-          address: data.address,
-          emergency_contact: data.emergency_contact,
-          join_date: data.join_date,
-          status: data.status,
-          salary: data.salary
-        });
-        
+      if (data && data.length > 0) {
+        const employeeData = data[0];
         setEmployee({
-          id: data.id,
-          employee_id: data.employee_id || data.id,
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          position: data.position,
-          department: data.department,
-          role: data.role,
-          permissions: data.permissions,
-          address: data.address,
-          emergency_contact: data.emergency_contact,
-          join_date: data.join_date,
-          status: data.status,
-          salary: data.salary
+          id: employeeData.employee_id,
+          employee_id: employeeData.employee_id,
+          name: employeeData.name,
+          email: employeeData.email,
+          phone: employeeData.phone,
+          position: employeeData.position,
+          department: employeeData.department,
+          role: employeeData.role,
+          permissions: employeeData.permissions,
+          address: employeeData.address,
+          emergency_contact: employeeData.emergency_contact,
+          join_date: employeeData.join_date,
+          status: employeeData.status,
+          salary: employeeData.salary
         });
       } else {
-        console.log('No employee record found for email:', session.user.email);
+        console.log('No employee profile found for user:', session.user.id);
         setEmployee(null);
       }
     } catch (error) {

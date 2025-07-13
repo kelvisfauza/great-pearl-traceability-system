@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,18 +46,22 @@ export const useMessages = (conversationId?: string) => {
               .neq("user_id", user.id);
 
             if (participants && participants.length > 0) {
-              // Get employee details for the other participant
-              const { data: employee } = await supabase
-                .from("employees")
-                .select("name")
-                .eq("id", participants[0].user_id)
+              // Get employee details for the other participant via user_profiles
+              const { data: userProfile } = await supabase
+                .from("user_profiles")
+                .select(`
+                  employees (
+                    name
+                  )
+                `)
+                .eq("user_id", participants[0].user_id)
                 .single();
 
-              if (employee) {
+              if (userProfile?.employees) {
                 return {
                   ...conv,
-                  name: employee.name,
-                  participantName: employee.name
+                  name: userProfile.employees.name,
+                  participantName: userProfile.employees.name
                 };
               }
             }
@@ -179,12 +184,26 @@ export const useMessages = (conversationId?: string) => {
 
   // Create conversation mutation
   const createConversation = useMutation({
-    mutationFn: async ({ participantUserIds, name, type = "direct" }: {
-      participantUserIds: string[];
+    mutationFn: async ({ participantEmployeeIds, name, type = "direct" }: {
+      participantEmployeeIds: string[];
       name?: string;
       type?: string;
     }) => {
       if (!user) throw new Error("User not authenticated");
+
+      // Convert employee IDs to user IDs via user_profiles
+      const { data: participantProfiles, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("user_id, employee_id")
+        .in("employee_id", participantEmployeeIds);
+
+      if (profileError) throw profileError;
+
+      if (!participantProfiles || participantProfiles.length === 0) {
+        throw new Error("Selected employees don't have user accounts. They need to be registered as users first.");
+      }
+
+      const participantUserIds = participantProfiles.map(p => p.user_id);
 
       // Check if direct conversation already exists
       if (type === "direct" && participantUserIds.length === 1) {
@@ -233,7 +252,7 @@ export const useMessages = (conversationId?: string) => {
 
       if (convError) throw convError;
 
-      // Add participants
+      // Add participants (current user + selected participants)
       const participantData = [user.id, ...participantUserIds].map(userId => ({
         conversation_id: conversation.id,
         user_id: userId,

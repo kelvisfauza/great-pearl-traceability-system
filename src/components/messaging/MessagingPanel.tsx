@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,9 +55,9 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
     try {
       console.log("Creating conversation for employee:", employeeId);
       
-      // Create a direct conversation with the selected employee
+      // Create a direct conversation with the selected employee using their employee ID
       const conversation = await createConversation.mutateAsync({
-        participantUserIds: [employeeId], // This will need to be mapped to actual user IDs
+        participantEmployeeIds: [employeeId], // Pass employee ID, not user ID
         type: "direct"
       });
       
@@ -74,7 +73,7 @@ const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
       console.error("Error creating conversation:", error);
       toast({
         title: "Error",
-        description: "Failed to create conversation. Make sure the employee has a user account.",
+        description: error instanceof Error ? error.message : "Failed to create conversation",
         variant: "destructive"
       });
     }
