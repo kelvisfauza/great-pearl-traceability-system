@@ -4,14 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Coffee, TrendingUp, Package, DollarSign, Users, Shield, Building, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmployees } from "@/hooks/useEmployees";
-import { useSalaryPayments } from "@/hooks/useSalaryPayments";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useState, useEffect } from "react";
 
 const DashboardStats = () => {
   const { hasRole, hasPermission, employee } = useAuth();
   const { employees } = useEmployees();
-  const { paymentRequests } = useSalaryPayments();
   const { requests } = useApprovalRequests();
 
   const [coffeeData, setCoffeeData] = useState({ totalKgs: 0, totalBags: 0, totalBatches: 0 });
@@ -83,8 +81,12 @@ const DashboardStats = () => {
 
     // Management roles see financial and operational stats
     if (hasRole("Administrator") || hasRole("Manager") || hasRole("Operations Manager")) {
-      const totalSalaryRequests = paymentRequests.reduce((sum, req) => sum + parseFloat(req.amount.replace(/[^\d.]/g, '')), 0);
       const pendingApprovals = requests.filter(req => req.status === 'Pending').length;
+      const salaryRequests = requests.filter(req => req.type === 'Salary Payment');
+      const totalSalaryRequests = salaryRequests.reduce((sum, req) => {
+        const amount = typeof req.amount === 'string' ? parseFloat(req.amount.replace(/[^\d.]/g, '')) : 0;
+        return sum + amount;
+      }, 0);
       
       return [
         {
