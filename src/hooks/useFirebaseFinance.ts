@@ -146,6 +146,20 @@ export const useFirebaseFinance = () => {
     try {
       console.log('Fetching payment records and quality assessments...');
       
+      // First, fetch coffee records to get supplier names
+      const coffeeRecordsQuery = query(collection(db, 'coffee_records'));
+      const coffeeRecordsSnapshot = await getDocs(coffeeRecordsQuery);
+      const coffeeRecords = coffeeRecordsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          batch_number: data.batch_number || '',
+          supplier_name: data.supplier_name || '',
+          ...data
+        };
+      });
+      console.log('Coffee records fetched:', coffeeRecords.length);
+
       // Fetch existing payment records
       const paymentsQuery = query(collection(db, 'payment_records'), orderBy('created_at', 'desc'));
       const paymentsSnapshot = await getDocs(paymentsQuery);
@@ -231,19 +245,6 @@ export const useFirebaseFinance = () => {
       
       console.log('Quality assessments ready for payment:', qualityAssessments.length);
 
-      // Fetch coffee records to get supplier names
-      const coffeeRecordsQuery = query(collection(db, 'coffee_records'));
-      const coffeeRecordsSnapshot = await getDocs(coffeeRecordsQuery);
-      const coffeeRecords = coffeeRecordsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          batch_number: data.batch_number || '',
-          supplier_name: data.supplier_name || '',
-          ...data
-        };
-      });
-
       // Create payment records for quality assessments that don't have them yet
       const newPayments: PaymentRecord[] = [];
       
@@ -252,7 +253,7 @@ export const useFirebaseFinance = () => {
         const existingPayment = existingPayments.find(p => p.qualityAssessmentId === assessment.id);
         
         if (!existingPayment) {
-          console.log('Creating payment record for assessment:', assessment.id);
+          console.log('Creating payment record for assessment:', assessment.id, 'batch:', assessment.batch_number);
           
           // Find the corresponding coffee record to get supplier name
           const coffeeRecord = coffeeRecords.find(record => 
@@ -260,12 +261,15 @@ export const useFirebaseFinance = () => {
             record.batch_number === assessment.batch_number
           );
           
-          const supplierName = coffeeRecord?.supplier_name || `Unknown Supplier`;
+          const supplierName = coffeeRecord?.supplier_name || 'Unknown Supplier';
+          
+          console.log('Found coffee record for batch', assessment.batch_number, ':', coffeeRecord);
+          console.log('Using supplier name:', supplierName);
           
           // Create new payment record with correct supplier name and amount
           const paymentRecord = {
-            supplier: supplierName, // Use actual supplier name from coffee record
-            amount: assessment.suggested_price || 0, // Use suggested price from quality assessment
+            supplier: supplierName,
+            amount: assessment.suggested_price || 0,
             status: 'Pending',
             method: 'Bank Transfer',
             date: new Date().toLocaleDateString(),
@@ -285,7 +289,7 @@ export const useFirebaseFinance = () => {
               ...paymentRecord
             });
 
-            console.log('Created payment record with supplier:', supplierName, 'amount:', assessment.suggested_price);
+            console.log('Created payment record with supplier:', supplierName, 'amount:', assessment.suggested_price, 'batch:', assessment.batch_number);
           } catch (error) {
             console.error('Error creating payment record:', error);
           }
@@ -295,6 +299,18 @@ export const useFirebaseFinance = () => {
       // Combine existing and new payment records
       const allPayments = [...existingPayments, ...newPayments];
       console.log('Total payment records:', allPayments.length);
+      
+      // Log each payment record for debugging
+      allPayments.forEach(payment => {
+        console.log('Payment record:', {
+          id: payment.id,
+          supplier: payment.supplier,
+          amount: payment.amount,
+          batchNumber: payment.batchNumber,
+          status: payment.status
+        });
+      });
+      
       setPayments(allPayments);
 
     } catch (error) {
