@@ -1,55 +1,47 @@
 
-import { useState, useEffect } from "react";
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import Navigation from "./Navigation";
-import SecurityAlert from "./SecurityAlert";
-import MessagingPanel from "./messaging/MessagingPanel";
-import { useAuth } from "@/contexts/AuthContext";
-import { usePresence } from "@/hooks/usePresence";
+import { useState } from "react";
+import { Navigation } from "./Navigation";
+import { MessagingPanel } from "./messaging/MessagingPanel";
+import { MessageButton } from "./messaging/MessageButton";
 import { useMessages } from "@/hooks/useMessages";
 
-const Layout = () => {
-  const { user, employee } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [showMessaging, setShowMessaging] = useState(false);
+interface LayoutProps {
+  children: React.ReactNode;
+  title?: string;
+  subtitle?: string;
+}
 
-  // Use Firebase User.uid instead of .id
-  usePresence(user?.uid);
-  const { unreadCount } = useMessages(user?.uid);
+export const Layout = ({ children, title, subtitle }: LayoutProps) => {
+  const [isMessagingOpen, setIsMessagingOpen] = useState(false);
+  const { unreadCount } = useMessages();
 
-  useEffect(() => {
-    if (!user && location.pathname !== '/auth') {
-      navigate('/auth');
-    } else if (user && location.pathname === '/auth') {
-      navigate('/');
-    }
-  }, [user, navigate, location]);
-
-  if (!user) {
-    return null;
-  }
+  const toggleMessaging = () => setIsMessagingOpen(!isMessagingOpen);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50 flex">
       <Navigation />
-      <main className="container mx-auto px-4 py-6">
-        <SecurityAlert />
-        <Outlet />
+      
+      <main className="flex-1 ml-64">
+        <div className="p-8">
+          {title && (
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+              {subtitle && <p className="text-gray-600 mt-2">{subtitle}</p>}
+            </div>
+          )}
+          {children}
+        </div>
       </main>
-      {showMessaging && (
-        <MessagingPanel 
-          isOpen={showMessaging}
-          onClose={() => setShowMessaging(false)}
-          currentUserId={user.uid}
-        />
-      )}
-      <Toaster />
-      <Sonner />
+
+      <MessageButton 
+        onToggleMessaging={toggleMessaging}
+        unreadCount={unreadCount}
+      />
+      
+      <MessagingPanel 
+        isOpen={isMessagingOpen}
+        onClose={() => setIsMessagingOpen(false)}
+      />
     </div>
   );
 };
-
-export default Layout;
