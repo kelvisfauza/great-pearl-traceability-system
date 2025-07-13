@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -140,6 +139,57 @@ export const useStoreManagement = () => {
     }
   };
 
+  const updateCoffeeRecord = async (recordId: string, recordData: Partial<Omit<StoreRecord, 'id'>>) => {
+    try {
+      console.log('Updating coffee record in Firebase:', recordId, recordData);
+      
+      const docRef = doc(db, 'coffee_records', recordId);
+      await updateDoc(docRef, {
+        ...recordData,
+        updated_at: new Date().toISOString()
+      });
+
+      await fetchStoreData();
+      
+      toast({
+        title: "Success",
+        description: "Coffee record updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating coffee record:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update coffee record",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const deleteCoffeeRecord = async (recordId: string) => {
+    try {
+      console.log('Deleting coffee record from Firebase:', recordId);
+      
+      const docRef = doc(db, 'coffee_records', recordId);
+      await deleteDoc(docRef);
+
+      await fetchStoreData();
+      
+      toast({
+        title: "Success",
+        description: "Coffee record deleted successfully"
+      });
+    } catch (error) {
+      console.error('Error deleting coffee record:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete coffee record",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   const addCoffeeRecord = async (recordData: Omit<StoreRecord, 'id'>) => {
     try {
       console.log('Adding coffee record to Firebase:', recordData);
@@ -241,6 +291,8 @@ export const useStoreManagement = () => {
     coffeeRecords: storeRecords,
     addSupplier,
     addCoffeeRecord,
+    updateCoffeeRecord,
+    deleteCoffeeRecord,
     updateCoffeeRecordStatus,
     todaysSummary: getTodaysSummary(),
     pendingActions: getPendingActions()

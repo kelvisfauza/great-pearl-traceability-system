@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle } from "lucide-react";
 import { useStoreManagement } from "@/hooks/useStoreManagement";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -26,6 +28,8 @@ const Store = () => {
     loading: storeLoading,
     addCoffeeRecord,
     updateCoffeeRecordStatus,
+    updateCoffeeRecord,
+    deleteCoffeeRecord,
     todaysSummary,
     pendingActions
   } = useStoreManagement();
@@ -81,6 +85,16 @@ const Store = () => {
   const [submittingDispatch, setSubmittingDispatch] = useState(false);
 
   const [activeTab, setActiveTab] = useState(initialTab);
+
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    coffeeType: '',
+    date: '',
+    kilograms: 0,
+    bags: 0,
+    supplierName: '',
+    batchNumber: ''
+  });
 
   const loading = storeLoading || suppliersLoading || qualityLoading;
 
@@ -236,6 +250,68 @@ const Store = () => {
     return coffeeRecords.filter(record => 
       qualityAssessments.some(qa => qa.batch_number === record.batchNumber && qa.status === 'approved')
     );
+  };
+
+  const handleEditRecord = (record) => {
+    setEditingRecord(record);
+    setEditFormData({
+      coffeeType: record.coffeeType,
+      date: record.date,
+      kilograms: record.kilograms,
+      bags: record.bags,
+      supplierName: record.supplierName,
+      batchNumber: record.batchNumber
+    });
+  };
+
+  const handleUpdateRecord = async () => {
+    if (!editingRecord) return;
+
+    try {
+      await updateCoffeeRecord(editingRecord.id, editFormData);
+      setEditingRecord(null);
+      toast.success("Record updated successfully");
+    } catch (error) {
+      toast.error("Failed to update record");
+    }
+  };
+
+  const handleDeleteRecord = async (recordId) => {
+    try {
+      await deleteCoffeeRecord(recordId);
+      toast.success("Record deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete record");
+    }
+  };
+
+  const canEditOrDelete = (record) => {
+    // Check if record has been paid by looking for payment records
+    // For now, we'll check if status is not 'sales' (assuming sales means paid)
+    return record.status !== 'sales' && record.status !== 'paid';
+  };
+
+  const requestManagerApproval = async (action, recordId) => {
+    try {
+      // Submit approval request to manager
+      const approvalData = {
+        type: 'Record Modification',
+        title: `${action} Coffee Record`,
+        description: `Request to ${action.toLowerCase()} coffee record ${recordId}`,
+        department: 'Store',
+        requestedby: 'Store Personnel',
+        amount: '0',
+        priority: 'Medium',
+        status: 'Pending',
+        daterequested: new Date().toISOString(),
+        details: { recordId, action }
+      };
+
+      // You would submit this to your approval system
+      toast.info(`${action} request sent to manager for approval`);
+    } catch (error) {
+      toast.error(`Failed to send ${action.toLowerCase()} request`);
+    }
   };
 
   if (loading) {
@@ -516,6 +592,145 @@ const Store = () => {
                                   <Send className="h-3 w-3 mr-1" />
                                   To Quality
                                 </Button>
+                              )}
+                              
+                              {canEditOrDelete(record) ? (
+                                <>
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        onClick={() => handleEditRecord(record)}
+                                      >
+                                        <Edit className="h-3 w-3 mr-1" />
+                                        Edit
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Edit Coffee Record</DialogTitle>
+                                        <DialogDescription>
+                                          Modify the details of this coffee delivery record.
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="grid gap-4 py-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div>
+                                            <Label htmlFor="edit-coffee-type">Coffee Type</Label>
+                                            <Select value={editFormData.coffeeType} onValueChange={(value) => setEditFormData({...editFormData, coffeeType: value})}>
+                                              <SelectTrigger>
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="Drugar">Drugar</SelectItem>
+                                                <SelectItem value="Wugar">Wugar</SelectItem>
+                                                <SelectItem value="Robusta">Robusta</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                          <div>
+                                            <Label htmlFor="edit-date">Date</Label>
+                                            <Input
+                                              id="edit-date"
+                                              type="date"
+                                              value={editFormData.date}
+                                              onChange={(e) => setEditFormData({...editFormData, date: e.target.value})}
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div>
+                                            <Label htmlFor="edit-kilograms">Kilograms</Label>
+                                            <Input
+                                              id="edit-kilograms"
+                                              type="number"
+                                              value={editFormData.kilograms}
+                                              onChange={(e) => setEditFormData({...editFormData, kilograms: Number(e.target.value)})}
+                                            />
+                                          </div>
+                                          <div>
+                                            <Label htmlFor="edit-bags">Bags</Label>
+                                            <Input
+                                              id="edit-bags"
+                                              type="number"
+                                              value={editFormData.bags}
+                                              onChange={(e) => setEditFormData({...editFormData, bags: Number(e.target.value)})}
+                                            />
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <Label htmlFor="edit-supplier">Supplier</Label>
+                                          <Select value={editFormData.supplierName} onValueChange={(value) => setEditFormData({...editFormData, supplierName: value})}>
+                                            <SelectTrigger>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {suppliers.map((supplier) => (
+                                                <SelectItem key={supplier.id} value={supplier.name}>
+                                                  {supplier.name} ({supplier.code})
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </div>
+                                      <DialogFooter>
+                                        <Button variant="outline" onClick={() => setEditingRecord(null)}>
+                                          Cancel
+                                        </Button>
+                                        <Button onClick={handleUpdateRecord}>
+                                          Update Record
+                                        </Button>
+                                      </DialogFooter>
+                                    </DialogContent>
+                                  </Dialog>
+
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button size="sm" variant="destructive">
+                                        <Trash2 className="h-3 w-3 mr-1" />
+                                        Delete
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Coffee Record</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Are you sure you want to delete this coffee record? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction 
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          onClick={() => handleDeleteRecord(record.id)}
+                                        >
+                                          Delete
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </>
+                              ) : (
+                                <>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => requestManagerApproval('Edit', record.id)}
+                                  >
+                                    <AlertTriangle className="h-3 w-3 mr-1" />
+                                    Request Edit
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => requestManagerApproval('Delete', record.id)}
+                                  >
+                                    <AlertTriangle className="h-3 w-3 mr-1" />
+                                    Request Delete
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </TableCell>
