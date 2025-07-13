@@ -1,338 +1,368 @@
-import { useState } from "react";
-import { Card } from "@/components/ui/card";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { 
-  MessageCircle, 
-  Phone, 
-  Video, 
-  Search, 
-  Plus,
-  X,
-  Send,
-  Circle
-} from "lucide-react";
-import { useMessages } from "@/hooks/useMessages";
-import { usePresence } from "@/hooks/usePresence";
-import { useEmployees } from "@/hooks/useEmployees";
-import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { Send, Plus, Trash2, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast';
+import { useMessages } from '@/hooks/useMessages';
+import { useAuth } from '@/contexts/AuthContext';
 
-const MessagingPanel = ({ onClose }: { onClose: () => void }) => {
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
-  const [newMessage, setNewMessage] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showNewChat, setShowNewChat] = useState(false);
+interface Message {
+  id: string;
+  content: string;
+  senderId: string;
+  timestamp: string;
+}
 
-  const { conversations, messages, sendMessage, createConversation } = useMessages(selectedConversation || undefined);
-  const { userPresences } = usePresence();
-  const { employees } = useEmployees();
-  const { user } = useAuth();
+interface Conversation {
+  id: string;
+  name: string;
+  participants: string[];
+  lastMessage?: Message;
+}
+
+interface MessagingPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  currentUserId: string;
+}
+
+const MessagingPanel = ({ isOpen, onClose, currentUserId }: MessagingPanelProps) => {
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const [newConversationName, setNewConversationName] = useState('');
+  const [showNewConversationInput, setShowNewConversationInput] = useState(false);
+  const [isDeletingConversation, setIsDeletingConversation] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   const { toast } = useToast();
+  const { 
+    conversations, 
+    messages, 
+    loading, 
+    loadingMessages,
+    fetchConversations, 
+    fetchMessages, 
+    sendMessage,
+    createConversation,
+    deleteConversation
+  } = useMessages(currentUserId);
+  const { user } = useAuth();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return;
-    
-    try {
-      await sendMessage.mutateAsync({ content: newMessage });
-      setNewMessage("");
-    } catch (error) {
-      console.error("Error sending message:", error);
+  useEffect(() => {
+    if (isOpen && currentUserId) {
+      fetchConversations();
+    }
+  }, [isOpen, currentUserId, fetchConversations]);
+
+  useEffect(() => {
+    if (selectedConversation) {
+      fetchMessages(selectedConversation.id);
+    }
+  }, [selectedConversation, fetchMessages]);
+
+  useEffect(() => {
+    // Scroll to bottom when messages change
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages]);
+
+  const handleConversationSelect = (conversation: Conversation) => {
+    setSelectedConversation(conversation);
+  };
+
+  const handleNewConversationClick = () => {
+    setShowNewConversationInput(true);
+  };
+
+  const handleCreateConversation = async () => {
+    if (!newConversationName.trim()) {
       toast({
         title: "Error",
-        description: "Failed to send message",
+        description: "Conversation name is required",
         variant: "destructive"
       });
+      return;
+    }
+
+    setIsCreatingConversation(true);
+    try {
+      const newConversation = await createConversation({
+        name: newConversationName,
+        type: 'direct',
+        participantIds: [currentUserId]
+      });
+
+      if (newConversation) {
+        fetchConversations();
+        setSelectedConversation(newConversation);
+        setNewConversationName('');
+        setShowNewConversationInput(false);
+        toast({
+          title: "Success",
+          description: "Conversation created successfully"
+        });
+      }
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create conversation",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingConversation(false);
     }
   };
 
-  const handleCreateDirectMessage = async (employeeId: string) => {
+  const confirmDeleteConversation = (conversationId: string) => {
+    setConversationToDelete(conversationId);
+  };
+
+  const handleCancelDelete = () => {
+    setConversationToDelete(null);
+  };
+
+  const handleDeleteConversation = async () => {
+    if (!conversationToDelete) return;
+
+    setIsDeletingConversation(true);
     try {
-      console.log("Creating conversation for employee:", employeeId);
-      
-      // Create a direct conversation with the selected employee using their employee ID
-      const conversation = await createConversation.mutateAsync({
-        participantEmployeeIds: [employeeId], // Pass employee ID, not user ID
-        type: "direct"
-      });
-      
-      // Select the new conversation
-      setSelectedConversation(conversation.id);
-      setShowNewChat(false);
-      
+      await deleteConversation(conversationToDelete);
+      fetchConversations();
+      setSelectedConversation(null);
       toast({
         title: "Success",
-        description: "Conversation created successfully",
+        description: "Conversation deleted successfully"
       });
     } catch (error) {
-      console.error("Error creating conversation:", error);
+      console.error('Error deleting conversation:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create conversation",
+        description: "Failed to delete conversation",
         variant: "destructive"
       });
+    } finally {
+      setIsDeletingConversation(false);
+      setConversationToDelete(null);
     }
   };
+  
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !currentUserId) return;
 
-  const getPresenceStatus = (employeeId: string) => {
-    // For now, return a default status since we need to properly map employees to users
-    return "offline";
-  };
-
-  const getPresenceColor = (status: string) => {
-    switch (status) {
-      case "online": return "bg-green-500";
-      case "away": return "bg-yellow-500";
-      case "busy": return "bg-red-500";
-      default: return "bg-gray-500";
+    try {
+      await sendMessage({
+        content: newMessage,
+        conversationId: selectedConversation?.id || null,
+        senderId: currentUserId, // Use Firebase User.uid
+        type: 'text'
+      });
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
   };
-
-  const getConversationDisplayName = (conversation: any) => {
-    if (!conversation) return "Unknown";
-    
-    // Use participantName if available for direct messages
-    if (conversation.participantName) {
-      return conversation.participantName;
-    }
-    
-    // Use conversation name if set
-    if (conversation.name && conversation.name !== "Direct Message") {
-      return conversation.name;
-    }
-    
-    // For direct messages without participant info, show generic name
-    if (conversation.type === "direct") {
-      return "Direct Message";
-    }
-    
-    return "Group Chat";
-  };
-
-  const getConversationAvatar = (conversation: any) => {
-    if (!conversation) return "?";
-    const name = getConversationDisplayName(conversation);
-    return name.charAt(0).toUpperCase();
-  };
-
-  const getCurrentConversation = () => {
-    if (!conversations || !selectedConversation) return null;
-    return conversations.find(conv => conv.id === selectedConversation) || null;
-  };
-
-  const filteredEmployees = employees?.filter(emp => 
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const currentConversation = getCurrentConversation();
 
   return (
-    <Card className="fixed bottom-4 right-4 w-96 h-[600px] flex flex-col shadow-xl z-50">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5" />
-          <span className="font-semibold">Messages</span>
-        </div>
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+    <div className={`fixed inset-0 z-50 ${isOpen ? 'block' : 'hidden'}`}>
+      <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Conversations List */}
-        <div className="w-32 border-r flex flex-col">
-          <div className="p-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full"
-              onClick={() => setShowNewChat(!showNewChat)}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+      <div className="fixed inset-0 z-50 overflow-hidden">
+        <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+            <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
           </div>
-          
-          <ScrollArea className="flex-1">
-            {conversations?.map((conv) => (
-              <Button
-                key={conv.id}
-                variant={selectedConversation === conv.id ? "secondary" : "ghost"}
-                size="sm"
-                className="w-full mb-1 h-auto p-2"
-                onClick={() => setSelectedConversation(conv.id)}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-xs">
-                      {getConversationAvatar(conv)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs truncate w-full">
-                    {getConversationDisplayName(conv)}
-                  </span>
-                </div>
-              </Button>
-            ))}
-          </ScrollArea>
-        </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {showNewChat ? (
-            /* New Chat Interface */
-            <div className="flex-1 flex flex-col">
-              <div className="p-4 border-b">
-                <div className="flex items-center gap-2 mb-2">
-                  <Search className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm font-medium">Start a new chat</span>
-                </div>
-                <Input
-                  placeholder="Search employees..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <ScrollArea className="flex-1 p-2">
-                {filteredEmployees?.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-gray-500">
-                    <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No employees found</p>
-                  </div>
-                ) : (
-                  filteredEmployees?.map((employee) => (
-                    <div
-                      key={employee.id}
-                      className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors"
-                      onClick={() => handleCreateDirectMessage(employee.id)}
-                    >
-                      <div className="relative">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>
-                            {employee.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <Circle 
-                          className={`absolute -bottom-1 -right-1 h-3 w-3 ${getPresenceColor(getPresenceStatus(employee.id))} rounded-full border-2 border-white`}
-                          fill="currentColor"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{employee.name}</p>
-                        <p className="text-xs text-gray-500 truncate">{employee.position}</p>
-                        <p className="text-xs text-gray-400 truncate">{employee.department}</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {getPresenceStatus(employee.id)}
-                      </Badge>
-                    </div>
-                  ))
-                )}
-              </ScrollArea>
-            </div>
-          ) : selectedConversation && currentConversation ? (
-            /* Chat Interface - only render if we have a valid conversation */
-            <>
-              {/* Chat Header */}
-              <div className="p-3 border-b flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>
-                      {getConversationAvatar(currentConversation)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">
-                      {getConversationDisplayName(currentConversation)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {currentConversation.type === "direct" ? "Direct Message" : "Group Chat"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="sm">
-                    <Phone className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <Video className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+          <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-              {/* Messages */}
-              <ScrollArea className="flex-1 p-3">
-                <div className="space-y-4">
-                  {messages?.length === 0 ? (
-                    <div className="text-center py-8">
-                      <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                      <p className="text-gray-500">No messages yet. Start the conversation!</p>
-                    </div>
-                  ) : (
-                    messages?.map((message) => {
-                      const isCurrentUser = message.sender_id === user?.id;
-                      return (
-                        <div
-                          key={message.id}
-                          className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div className={`max-w-[80%] p-2 rounded-lg ${
-                            isCurrentUser 
-                              ? 'bg-blue-500 text-white' 
-                              : 'bg-gray-100 text-gray-900'
-                          }`}>
-                            <p className="text-sm">{message.content}</p>
-                            <p className={`text-xs mt-1 ${
-                              isCurrentUser ? 'text-blue-100' : 'text-gray-500'
-                            }`}>
-                              {format(new Date(message.created_at), 'HH:mm')}
-                            </p>
-                          </div>
+          <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <div className="sm:flex sm:items-start">
+                <div className="text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                    Messaging
+                  </h3>
+                  <div className="mt-2">
+                    <div className="flex h-96">
+                      {/* Conversations List */}
+                      <div className="w-1/3 border-r pr-2">
+                        <div className="mb-4">
+                          <Button variant="outline" size="sm" onClick={handleNewConversationClick} disabled={isCreatingConversation}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            New Chat
+                          </Button>
+                          {showNewConversationInput && (
+                            <div className="mt-2 flex items-center">
+                              <Input
+                                type="text"
+                                placeholder="Chat name"
+                                value={newConversationName}
+                                onChange={(e) => setNewConversationName(e.target.value)}
+                                className="mr-2"
+                              />
+                              <Button size="sm" onClick={handleCreateConversation} disabled={isCreatingConversation}>
+                                {isCreatingConversation ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Creating...
+                                  </>
+                                ) : (
+                                  "Create"
+                                )}
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                      );
-                    })
-                  )}
-                </div>
-              </ScrollArea>
+                        <ScrollArea className="h-[320px] rounded-md border p-4">
+                          {loading ? (
+                            <div className="text-center">Loading conversations...</div>
+                          ) : (
+                            <ul className="space-y-2">
+                              {conversations.map((conversation) => (
+                                <li
+                                  key={conversation.id}
+                                  className={`p-2 rounded cursor-pointer ${selectedConversation?.id === conversation.id ? 'bg-gray-100' : 'hover:bg-gray-50'
+                                    }`}
+                                  onClick={() => handleConversationSelect(conversation)}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span>{conversation.name}</span>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete this conversation and remove your data from our servers.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => {
+                                              confirmDeleteConversation(conversation.id);
+                                              handleDeleteConversation();
+                                            }}
+                                            disabled={isDeletingConversation}
+                                          >
+                                            {isDeletingConversation ? (
+                                              <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Deleting...
+                                              </>
+                                            ) : (
+                                              "Delete"
+                                            )}
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </ScrollArea>
+                      </div>
 
-              {/* Message Input */}
-              <div className="p-3 border-t">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Type a message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    className="flex-1"
-                  />
-                  <Button 
-                    onClick={handleSendMessage} 
-                    size="sm"
-                    disabled={!newMessage.trim() || sendMessage.isPending}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
+                      {/* Messages Area */}
+                      <div className="flex-1 p-4 flex flex-col justify-between">
+                        <div>
+                          {selectedConversation ? (
+                            <div className="mb-4">
+                              <h4 className="text-lg font-semibold mb-2">{selectedConversation.name}</h4>
+                            </div>
+                          ) : (
+                            <div className="text-center">Select a conversation to view messages</div>
+                          )}
+                          <ScrollArea className="h-[260px] rounded-md border p-4">
+                            {loadingMessages ? (
+                              <div className="text-center">Loading messages...</div>
+                            ) : (
+                              <div className="space-y-2">
+                                {messages.map((message) => (
+                                  <div
+                                    key={message.id}
+                                    className={`flex items-start ${message.senderId === currentUserId ? 'justify-end' : 'justify-start'
+                                      }`}
+                                  >
+                                    {message.senderId !== currentUserId && (
+                                      <Avatar className="w-6 h-6 mr-2">
+                                        <AvatarImage src={`https://avatar.vercel.sh/${message.senderId}.png`} alt={message.senderId} />
+                                        <AvatarFallback>{message.senderId.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                      </Avatar>
+                                    )}
+                                    <div
+                                      className={`rounded-lg p-2 text-sm ${message.senderId === currentUserId
+                                        ? 'bg-blue-100 text-right'
+                                        : 'bg-gray-100 text-left'
+                                        }`}
+                                    >
+                                      {message.content}
+                                    </div>
+                                  </div>
+                                ))}
+                                <div ref={messagesEndRef} />
+                              </div>
+                            )}
+                          </ScrollArea>
+                        </div>
+
+                        {/* Message Input */}
+                        {selectedConversation && (
+                          <div className="mt-4">
+                            <div className="flex items-center">
+                              <Input
+                                type="text"
+                                placeholder="Enter message"
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                className="mr-2"
+                              />
+                              <Button onClick={handleSendMessage}>
+                                <Send className="h-4 w-4 mr-2" />
+                                Send
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </>
-          ) : (
-            /* Welcome Screen */
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <MessageCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-500 mb-2">Select a conversation to start messaging</p>
-                <p className="text-sm text-gray-400">or click the + button to start a new chat</p>
               </div>
             </div>
-          )}
+            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              <Button
+                type="button"
+                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                onClick={onClose}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 };
 

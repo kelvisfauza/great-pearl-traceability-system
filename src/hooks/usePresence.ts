@@ -1,89 +1,51 @@
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useCallback } from 'react';
+// Remove supabase import - will be handled by compatibility layer
 
-export const usePresence = () => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+export const usePresence = (userId?: string) => {
+  const updatePresence = useCallback(async (status: 'online' | 'away' | 'offline' = 'online') => {
+    if (!userId) return;
 
-  // Fetch all user presence
-  const { data: userPresences } = useQuery({
-    queryKey: ["user-presence"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_presence")
-        .select("*");
+    try {
+      // Temporarily do nothing - will be implemented with Firebase later
+      console.log('Would update presence:', { userId, status });
+    } catch (error) {
+      console.error('Error updating presence:', error);
+    }
+  }, [userId]); // Use Firebase User.uid
 
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  const setOffline = useCallback(async () => {
+    await updatePresence('offline');
+  }, [updatePresence]);
 
-  // Real-time subscription for presence updates
   useEffect(() => {
-    const channel = supabase
-      .channel("presence-updates")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "user_presence",
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["user-presence"] });
-        }
-      )
-      .subscribe();
+    if (!userId) return;
 
-    return () => {
-      supabase.removeChannel(channel);
+    // Set user as online when hook mounts
+    updatePresence('online');
+
+    // Set up event listeners for when user becomes inactive
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        updatePresence('away');
+      } else {
+        updatePresence('online');
+      }
     };
-  }, [queryClient]);
-
-  // Update user presence
-  const updatePresence = useMutation({
-    mutationFn: async (status: "online" | "away" | "busy" | "offline") => {
-      if (!user) throw new Error("User not authenticated");
-
-      const { error } = await supabase
-        .from("user_presence")
-        .upsert({
-          user_id: user.id,
-          status,
-          last_seen: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-presence"] });
-    },
-  });
-
-  // Set user online on mount and offline on unmount
-  useEffect(() => {
-    if (!user) return;
-
-    updatePresence.mutate("online");
 
     const handleBeforeUnload = () => {
-      updatePresence.mutate("offline");
+      setOffline();
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      updatePresence.mutate("offline");
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      setOffline();
     };
-  }, [user]);
+  }, [userId, updatePresence, setOffline]);
 
-  return {
-    userPresences,
-    updatePresence,
-  };
+  return { updatePresence };
 };

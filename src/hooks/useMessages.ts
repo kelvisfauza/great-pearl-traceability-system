@@ -1,264 +1,156 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
+// Remove supabase import - will be handled by compatibility layer
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
+interface Message {
+  id: string;
+  content: string;
+  senderId: string;
+  conversationId: string;
+  createdAt: string;
+  type: 'text' | 'image' | 'file';
+}
 
-export const useMessages = (conversationId?: string) => {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+interface Conversation {
+  id: string;
+  name: string;
+  type: 'direct' | 'group' | 'channel';
+  createdAt: string;
+  lastMessage?: Message;
+  participants: string[];
+}
 
-  // Fetch conversations for current user with participant details
-  const { data: conversations } = useQuery({
-    queryKey: ["conversations"],
-    queryFn: async () => {
-      if (!user) return [];
-      
-      const { data, error } = await supabase
-        .from("conversation_participants")
-        .select(`
-          conversation_id,
-          conversations!inner (
-            id,
-            name,
-            type,
-            created_by,
-            created_at,
-            updated_at
-          )
-        `)
-        .eq("user_id", user.id);
+export const useMessages = (userId?: string) => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { toast } = useToast();
 
-      if (error) throw error;
-      
-      // Get unique conversations
-      const uniqueConversations = data?.map(item => item.conversations) || [];
-      
-      // For each conversation, get participant details
-      const enhancedConversations = await Promise.all(
-        uniqueConversations.map(async (conv) => {
-          if (conv.type === "direct" && !conv.name) {
-            // Get the other participant for direct messages
-            const { data: participants } = await supabase
-              .from("conversation_participants")
-              .select("user_id")
-              .eq("conversation_id", conv.id)
-              .neq("user_id", user.id);
+  const fetchConversations = useCallback(async () => {
+    if (!userId) return;
+    
+    try {
+      setLoading(true);
+      // Temporarily return empty data - will be implemented with Firebase later
+      setConversations([]);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch conversations",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, toast]);
 
-            if (participants && participants.length > 0) {
-              // Get employee details for the other participant by finding their auth user
-              const { data: employeeData } = await supabase
-                .from("employees")
-                .select("name")
-                .eq("email", (await supabase.auth.admin.getUserById(participants[0].user_id)).data.user?.email || "")
-                .maybeSingle();
+  const fetchMessages = useCallback(async (conversationId: string) => {
+    try {
+      setLoadingMessages(true);
+      // Temporarily return empty data
+      setMessages([]);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch messages",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingMessages(false);
+    }
+  }, [toast]);
 
-              if (employeeData) {
-                return {
-                  ...conv,
-                  name: employeeData.name,
-                  participantName: employeeData.name
-                };
-              }
-            }
-            
-            return {
-              ...conv,
-              name: "Direct Message",
-              participantName: null
-            };
-          }
-          return conv;
-        })
-      );
-      
-      return enhancedConversations;
-    },
-    enabled: !!user,
-  });
+  const sendMessage = async ({ content, conversationId, senderId, type = 'text' }: {
+    content: string;
+    conversationId: string | null;
+    senderId: string;  // Use Firebase User.uid
+    type?: string;
+  }) => {
+    try {
+      // Temporarily do nothing - will be implemented with Firebase later
+      console.log('Message would be sent:', { content, conversationId, senderId, type });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  };
 
-  // Fetch messages for a specific conversation
-  const { data: messages } = useQuery({
-    queryKey: ["messages", conversationId],
-    queryFn: async () => {
-      if (!conversationId) return [];
-      
-      const { data, error } = await supabase
-        .from("messages")
-        .select(`
-          *
-        `)
-        .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
+  const createConversation = async ({ name, type, participantIds }: {
+    name?: string;
+    type: 'direct' | 'group' | 'channel';
+    participantIds: string[];
+  }) => {
+    if (!userId) throw new Error('User not authenticated');
 
-      if (error) {
-        console.error("Error fetching messages:", error);
-        throw error;
-      }
-      
-      return data || [];
-    },
-    enabled: !!conversationId,
-  });
+    try {
+      // Temporarily return mock data
+      return { id: 'temp-id', name: name || 'New Conversation' };
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      throw error;
+    }
+  };
 
-  // Mark messages as read when viewing a conversation
+  const markAsRead = async (conversationId: string) => {
+    if (!userId) return;
+
+    try {
+      // Temporarily do nothing
+      console.log('Would mark as read:', conversationId);
+    } catch (error) {
+      console.error('Error marking as read:', error);
+    }
+  };
+
+  const deleteConversation = async (conversationId: string) => {
+    try {
+      // Temporarily do nothing
+      console.log('Would delete conversation:', conversationId);
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
-    if (!conversationId || !user) return;
+    if (!userId) return;
 
-    const markAsRead = async () => {
-      const { error } = await supabase
-        .from("conversation_participants")
-        .update({ last_read_at: new Date().toISOString() })
-        .eq("conversation_id", conversationId)
-        .eq("user_id", user.id);
-
-      if (error) {
-        console.error("Error marking messages as read:", error);
-      }
+    fetchConversations();
+    // Mock subscription setup
+    const unsubscribe = () => {
+      console.log('Unsubscribing from conversation updates');
     };
-
-    // Mark as read after a short delay
-    const timeout = setTimeout(markAsRead, 1000);
-    return () => clearTimeout(timeout);
-  }, [conversationId, user, messages]);
-
-  // Real-time subscription for messages
-  useEffect(() => {
-    if (!conversationId) return;
-
-    const channel = supabase
-      .channel(`messages:${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          queryClient.setQueryData(["messages", conversationId], (old: any) => [
-            ...(old || []),
-            payload.new,
-          ]);
-          
-          // Invalidate unread count
-          queryClient.invalidateQueries({ queryKey: ["unread-messages"] });
-        }
-      )
-      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      unsubscribe();
     };
-  }, [conversationId, queryClient]);
+  }, [userId, fetchConversations]);
 
-  // Send message mutation
-  const sendMessage = useMutation({
-    mutationFn: async ({ content, type = "text" }: { content: string; type?: string }) => {
-      if (!user || !conversationId) throw new Error("User or conversation not found");
-
-      const { data, error } = await supabase
-        .from("messages")
-        .insert({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          content,
-          type,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      // Invalidate unread count after sending
-      queryClient.invalidateQueries({ queryKey: ["unread-messages"] });
-    }
-  });
-
-  // Create conversation mutation
-  const createConversation = useMutation({
-    mutationFn: async ({ participantEmployeeIds, name, type = "direct" }: {
-      participantEmployeeIds: string[];
-      name?: string;
-      type?: string;
-    }) => {
-      if (!user) throw new Error("User not authenticated");
-
-      // Get employee details and find users with matching emails
-      const { data: employees, error: employeeError } = await supabase
-        .from("employees")
-        .select("id, email")
-        .in("id", participantEmployeeIds);
-
-      if (employeeError) throw employeeError;
-      if (!employees || employees.length === 0) {
-        throw new Error("Selected employees not found");
+  useEffect(() => {
+    let unread = 0;
+    conversations.forEach(conversation => {
+      if (conversation.lastMessage?.senderId !== userId) {
+        unread++;
       }
-
-      // For now, we'll create conversations but note that proper user mapping needs to be implemented
-      // This is a simplified version that creates conversations with the current user
-      const participantUserIds = [user.id]; // Only current user for now
-
-      // Check if direct conversation already exists
-      if (type === "direct" && participantEmployeeIds.length === 1) {
-        const { data: existingConv } = await supabase
-          .from("conversation_participants")
-          .select(`
-            conversation_id,
-            conversations!inner (
-              id,
-              type
-            )
-          `)
-          .eq("user_id", user.id);
-
-        if (existingConv) {
-          for (const convParticipant of existingConv) {
-            if (convParticipant.conversations.type === "direct") {
-              // For now, return existing conversation
-              return convParticipant.conversations;
-            }
-          }
-        }
-      }
-
-      // Create new conversation
-      const { data: conversation, error: convError } = await supabase
-        .from("conversations")
-        .insert({
-          name: name || employees[0]?.email || "Direct Message",
-          type,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (convError) throw convError;
-
-      // Add participants (current user)
-      const participantData = participantUserIds.map(userId => ({
-        conversation_id: conversation.id,
-        user_id: userId,
-      }));
-
-      const { error: participantError } = await supabase
-        .from("conversation_participants")
-        .insert(participantData);
-
-      if (participantError) throw participantError;
-
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      return conversation;
-    },
-  });
+    });
+    setUnreadCount(unread);
+  }, [conversations, userId]);
 
   return {
     conversations,
     messages,
+    loading,
+    loadingMessages,
+    unreadCount,
+    fetchConversations,
+    fetchMessages,
     sendMessage,
     createConversation,
+    markAsRead,
+    deleteConversation
   };
 };
