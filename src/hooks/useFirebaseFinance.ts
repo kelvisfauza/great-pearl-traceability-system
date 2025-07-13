@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -400,15 +401,25 @@ export const useFirebaseFinance = () => {
       
       // Find the payment record to get quality assessment ID
       const payment = payments.find(p => p.id === paymentId);
+      if (!payment) {
+        console.error('Payment not found:', paymentId);
+        toast({
+          title: "Error",
+          description: "Payment record not found",
+          variant: "destructive"
+        });
+        return;
+      }
       
       if (method === 'Bank Transfer') {
         // For bank transfers, create approval request
+        console.log('Creating bank transfer approval request...');
         await addDoc(collection(db, 'approval_requests'), {
           department: 'Finance',
           type: 'Bank Transfer',
           title: 'Bank Transfer Approval Required',
-          description: `Bank transfer payment request for batch: ${payment?.batchNumber || 'Unknown'}`,
-          amount: payment?.amount?.toLocaleString() || 'Pending Review',
+          description: `Bank transfer payment request for ${payment.supplier} - Batch: ${payment.batchNumber || 'Unknown'}`,
+          amount: payment.amount?.toLocaleString() || 'Pending Review',
           requestedby: 'Finance Department',
           daterequested: new Date().toISOString(),
           priority: 'High',
@@ -416,19 +427,42 @@ export const useFirebaseFinance = () => {
           details: {
             paymentId,
             method: 'Bank Transfer',
-            supplier: payment?.supplier,
-            amount: payment?.amount,
-            batchNumber: payment?.batchNumber
+            supplier: payment.supplier,
+            amount: payment.amount,
+            batchNumber: payment.batchNumber
           },
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
 
         // Update payment status to Processing
+        console.log('Updating payment status to Processing...');
         await updateDoc(doc(db, 'payment_records', paymentId), {
           status: 'Processing',
           method: 'Bank Transfer',
           updated_at: new Date().toISOString()
+        });
+
+        // Update local state immediately
+        setPayments(prevPayments => 
+          prevPayments.map(p => 
+            p.id === paymentId 
+              ? { ...p, status: 'Processing', method: 'Bank Transfer' }
+              : p
+          )
+        );
+
+        // Record daily task
+        await addDoc(collection(db, 'daily_tasks'), {
+          task_type: 'Bank Transfer Request',
+          description: `Bank transfer requested: ${payment.supplier} - UGX ${payment.amount?.toLocaleString()}`,
+          amount: payment.amount,
+          batch_number: payment.batchNumber,
+          completed_by: 'Finance Department',
+          completed_at: new Date().toISOString(),
+          date: new Date().toISOString().split('T')[0],
+          department: 'Finance',
+          created_at: new Date().toISOString()
         });
 
         toast({
@@ -437,10 +471,33 @@ export const useFirebaseFinance = () => {
         });
       } else {
         // For cash payments, mark as paid immediately
+        console.log('Processing cash payment...');
         await updateDoc(doc(db, 'payment_records', paymentId), {
           status: 'Paid',
           method: 'Cash',
           updated_at: new Date().toISOString()
+        });
+
+        // Update local state immediately
+        setPayments(prevPayments => 
+          prevPayments.map(p => 
+            p.id === paymentId 
+              ? { ...p, status: 'Paid', method: 'Cash' }
+              : p
+          )
+        );
+
+        // Record daily task
+        await addDoc(collection(db, 'daily_tasks'), {
+          task_type: 'Cash Payment',
+          description: `Cash payment made: ${payment.supplier} - UGX ${payment.amount?.toLocaleString()}`,
+          amount: payment.amount,
+          batch_number: payment.batchNumber,
+          completed_by: 'Finance Department',
+          completed_at: new Date().toISOString(),
+          date: new Date().toISOString().split('T')[0],
+          department: 'Finance',
+          created_at: new Date().toISOString()
         });
 
         toast({
@@ -450,7 +507,7 @@ export const useFirebaseFinance = () => {
       }
 
       // Update quality assessment status to "sent_to_finance" if we have the assessment ID
-      if (payment?.qualityAssessmentId) {
+      if (payment.qualityAssessmentId) {
         console.log('Updating quality assessment status to sent_to_finance:', payment.qualityAssessmentId);
         try {
           await updateDoc(doc(db, 'quality_assessments', payment.qualityAssessmentId), {
@@ -463,7 +520,7 @@ export const useFirebaseFinance = () => {
         }
       }
       
-      await fetchFinanceData();
+      console.log('Payment processing completed successfully');
     } catch (error) {
       console.error('Error processing payment:', error);
       toast({

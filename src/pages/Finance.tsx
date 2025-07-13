@@ -83,8 +83,19 @@ const Finance = () => {
   };
 
   const handleProcessPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash') => {
-    await processPayment(paymentId, method);
-    await refetch();
+    console.log('Finance page - Processing payment:', paymentId, method);
+    try {
+      await processPayment(paymentId, method);
+      console.log('Finance page - Payment processed, refreshing data...');
+      // The processPayment function now updates local state immediately, so no need to refetch
+    } catch (error) {
+      console.error('Finance page - Error processing payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process payment. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const formatCurrency = (amount: number) => {
