@@ -18,13 +18,12 @@ const Finance = () => {
     transactions,
     expenses,
     payments,
-    qualityAssessments,
     stats,
     loading,
     addTransaction,
     addExpense,
     processPayment,
-    createPaymentFromQualityAssessment
+    refetch
   } = useFinanceData();
 
   const { tasks: dailyTasks, loading: tasksLoading } = useDailyTasks();
@@ -85,12 +84,10 @@ const Finance = () => {
     setReceiptDescription("");
   };
 
-  const handleProcessPayment = (paymentId: string, method: 'Bank Transfer' | 'Cash') => {
-    processPayment(paymentId, method);
-  };
-
-  const handleCreatePayment = (assessmentId: string) => {
-    createPaymentFromQualityAssessment(assessmentId);
+  const handleProcessPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash') => {
+    await processPayment(paymentId, method);
+    // Refresh data to show updated payment status
+    await refetch();
   };
 
   const formatCurrency = (amount: number) => {
@@ -132,7 +129,7 @@ const Finance = () => {
   return (
     <Layout 
       title="Finance Management" 
-      subtitle="Process payments from quality assessments, manage cash flow, and generate financial reports"
+      subtitle="Manage cash flow, process payments, and generate financial reports"
     >
       <div className="space-y-6">
         {/* Stats Cards */}
@@ -183,9 +180,8 @@ const Finance = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="quality-assessments" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="quality-assessments">Quality Assessments</TabsTrigger>
+        <Tabs defaultValue="payments" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="payments">Payment Processing</TabsTrigger>
             <TabsTrigger value="salary-requests">HR Salary Requests</TabsTrigger>
             <TabsTrigger value="daily">Daily Reports</TabsTrigger>
@@ -194,75 +190,18 @@ const Finance = () => {
             <TabsTrigger value="overview">Overview</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="quality-assessments" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Quality Assessments Ready for Payment</CardTitle>
-                <CardDescription>Quality assessments submitted to finance for payment processing</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {qualityAssessments.length === 0 ? (
-                  <div className="text-center py-8">
-                    <CheckCircle2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No quality assessments pending payment</p>
-                    <p className="text-sm text-gray-400 mt-2">Quality assessed batches will appear here for payment processing</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Batch Number</TableHead>
-                        <TableHead>Assessed By</TableHead>
-                        <TableHead>Date Assessed</TableHead>
-                        <TableHead>Suggested Price/Kg</TableHead>
-                        <TableHead>Moisture %</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {qualityAssessments.map((assessment) => (
-                        <TableRow key={assessment.id}>
-                          <TableCell className="font-medium">{assessment.batch_number}</TableCell>
-                          <TableCell>{assessment.assessed_by}</TableCell>
-                          <TableCell>{assessment.date_assessed}</TableCell>
-                          <TableCell className="font-bold">{formatCurrency(assessment.suggested_price)}</TableCell>
-                          <TableCell>{assessment.moisture}%</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">
-                              {assessment.status.replace('_', ' ').toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleCreatePayment(assessment.id)}
-                            >
-                              <PlusCircle className="h-4 w-4 mr-1" />
-                              Create Payment
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="payments" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Payment Processing</CardTitle>
-                <CardDescription>Process payments for quality assessed coffee batches (Price × Kilograms)</CardDescription>
+                <CardDescription>Process supplier payments and track payment status</CardDescription>
               </CardHeader>
               <CardContent>
                 {payments.length === 0 ? (
                   <div className="text-center py-8">
                     <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">No payments to process</p>
-                    <p className="text-sm text-gray-400 mt-2">Quality assessed batches will appear here for payment</p>
+                    <p className="text-sm text-gray-400 mt-2">Payment records will appear here for processing</p>
                   </div>
                 ) : (
                   <Table>
@@ -270,8 +209,6 @@ const Finance = () => {
                       <TableRow>
                         <TableHead>Batch Number</TableHead>
                         <TableHead>Supplier</TableHead>
-                        <TableHead>Kilograms</TableHead>
-                        <TableHead>Price/Kg</TableHead>
                         <TableHead>Total Amount</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Date</TableHead>
@@ -281,21 +218,8 @@ const Finance = () => {
                     <TableBody>
                       {payments.map((payment) => (
                         <TableRow key={payment.id}>
-                          <TableCell className="font-medium">{payment.batchNumber}</TableCell>
+                          <TableCell className="font-medium">{payment.batchNumber || 'N/A'}</TableCell>
                           <TableCell>{payment.supplier}</TableCell>
-                          <TableCell>
-                            {payment.kilograms ? (
-                              <div className="flex items-center gap-1">
-                                <Scale className="h-3 w-3 text-gray-500" />
-                                {payment.kilograms.toLocaleString()} kg
-                              </div>
-                            ) : (
-                              '-'
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {payment.pricePerKg ? formatCurrency(payment.pricePerKg) : '-'}
-                          </TableCell>
                           <TableCell className="font-bold">{formatCurrency(payment.amount)}</TableCell>
                           <TableCell>
                             <Badge variant={
@@ -305,7 +229,12 @@ const Finance = () => {
                               {payment.status === "Processing" ? (
                                 <div className="flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  Awaiting Approval
+                                  Submitted for Approval
+                                </div>
+                              ) : payment.status === "Paid" ? (
+                                <div className="flex items-center gap-1">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  {payment.method === 'Cash' ? 'Cash Paid' : 'Bank Transfer Completed'}
                                 </div>
                               ) : (
                                 payment.status
@@ -317,12 +246,12 @@ const Finance = () => {
                             {payment.status === "Paid" ? (
                               <Badge variant="default" className="gap-1">
                                 <CheckCircle2 className="h-3 w-3" />
-                                Processed
+                                Completed
                               </Badge>
                             ) : payment.status === "Processing" ? (
                               <Badge variant="secondary" className="gap-1">
                                 <Clock className="h-3 w-3" />
-                                Pending Approval
+                                Awaiting Manager Approval
                               </Badge>
                             ) : (
                               <div className="flex gap-2">
@@ -338,7 +267,7 @@ const Finance = () => {
                                   variant="outline"
                                   onClick={() => handleProcessPayment(payment.id, 'Cash')}
                                 >
-                                  Cash
+                                  Cash Payment
                                 </Button>
                               </div>
                             )}
@@ -481,6 +410,7 @@ const Finance = () => {
             </Card>
           </TabsContent>
 
+          
           <TabsContent value="daily" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
@@ -734,10 +664,6 @@ const Finance = () => {
                       <CardTitle>Recent Payments</CardTitle>
                       <CardDescription>Latest supplier payments</CardDescription>
                     </div>
-                    <Button>
-                      <DollarSign className="h-4 w-4 mr-2" />
-                      New Payment
-                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>

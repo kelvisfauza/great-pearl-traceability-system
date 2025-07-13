@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, query, orderBy, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, orderBy, where, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -142,44 +143,6 @@ export const useFinanceData = () => {
       console.log('Payment records loaded:', paymentsData.length, 'records');
       setPayments(paymentsData);
 
-      // Fetch quality assessments from Firebase
-      console.log('Fetching quality assessments for finance from Firebase...');
-      const assessmentsQuery = query(collection(db, 'quality_assessments'), orderBy('created_at', 'desc'));
-      const assessmentsSnapshot = await getDocs(assessmentsQuery);
-      
-      const allAssessments = assessmentsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          store_record_id: data.store_record_id || null,
-          batch_number: data.batch_number || '',
-          moisture: Number(data.moisture) || 0,
-          group1_defects: Number(data.group1_defects) || 0,
-          group2_defects: Number(data.group2_defects) || 0,
-          below12: Number(data.below12) || 0,
-          pods: Number(data.pods) || 0,
-          husks: Number(data.husks) || 0,
-          stones: Number(data.stones) || 0,
-          suggested_price: Number(data.suggested_price) || 0,
-          status: data.status || 'assessed',
-          comments: data.comments || null,
-          date_assessed: data.date_assessed || new Date().toISOString().split('T')[0],
-          assessed_by: data.assessed_by || 'Quality Officer',
-          created_at: data.created_at || new Date().toISOString(),
-          updated_at: data.updated_at || new Date().toISOString()
-        };
-      }) as QualityAssessmentForPayment[];
-      
-      // Filter for assessments relevant to finance (only those submitted to finance)
-      const relevantAssessments = allAssessments.filter(assessment => 
-        assessment.status === 'submitted_to_finance' || 
-        assessment.status === 'price_requested' || 
-        assessment.status === 'approved'
-      );
-      
-      console.log('Quality assessments for finance loaded:', relevantAssessments.length, 'relevant out of', allAssessments.length, 'total');
-      setQualityAssessments(relevantAssessments);
-      
       // Update stats
       const totalReceipts = transactionsData
         .filter(t => t.type === 'Receipt' || t.type === 'Float')
@@ -220,101 +183,6 @@ export const useFinanceData = () => {
     } finally {
       setLoading(false);
       console.log('Finance data fetch completed');
-    }
-  };
-
-  const createPaymentFromQualityAssessment = async (assessmentId: string) => {
-    try {
-      console.log('Creating payment record from quality assessment:', assessmentId);
-      
-      const assessment = qualityAssessments.find(a => a.id === assessmentId);
-      if (!assessment) {
-        console.error('Quality assessment not found:', assessmentId);
-        throw new Error('Quality assessment not found');
-      }
-
-      console.log('Found assessment:', assessment);
-
-      // Fetch the coffee record to get supplier and quantity info
-      console.log('Fetching coffee record for batch:', assessment.batch_number);
-      const coffeeRecordsQuery = query(
-        collection(db, 'coffee_records'),
-        where('batch_number', '==', assessment.batch_number)
-      );
-      const coffeeRecordsSnapshot = await getDocs(coffeeRecordsQuery);
-      
-      if (coffeeRecordsSnapshot.empty) {
-        console.error('No coffee record found for batch:', assessment.batch_number);
-        throw new Error('Coffee record not found for batch');
-      }
-
-      const coffeeRecord = coffeeRecordsSnapshot.docs[0].data();
-      console.log('Found coffee record:', coffeeRecord);
-      
-      const totalAmount = assessment.suggested_price * coffeeRecord.kilograms;
-      console.log('Calculated total amount:', totalAmount);
-
-      const paymentRecord = {
-        supplier: coffeeRecord.supplier_name,
-        amount: totalAmount,
-        status: 'Pending',
-        date: new Date().toISOString().split('T')[0],
-        method: 'Bank Transfer',
-        quality_assessment_id: assessmentId,
-        batch_number: assessment.batch_number,
-        kilograms: coffeeRecord.kilograms,
-        price_per_kg: assessment.suggested_price,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      console.log('Creating payment record:', paymentRecord);
-      
-      // Save to Firebase
-      const docRef = await addDoc(collection(db, 'payment_records'), paymentRecord);
-      console.log('Payment record created in Firebase with ID:', docRef.id);
-
-      // Save to Supabase
-      const { data: supabaseData, error: supabaseError } = await supabase
-        .from('payment_records')
-        .insert({
-          supplier: paymentRecord.supplier,
-          amount: paymentRecord.amount,
-          status: paymentRecord.status,
-          date: paymentRecord.date,
-          method: paymentRecord.method,
-          quality_assessment_id: assessmentId,
-          batch_number: paymentRecord.batch_number
-        });
-
-      if (supabaseError) {
-        console.error('Error saving to Supabase:', supabaseError);
-      } else {
-        console.log('Payment record created in Supabase:', supabaseData);
-      }
-      
-      await recordDailyTask(
-        'Payment Record Created',
-        `Payment record created for ${coffeeRecord.supplier_name} - UGX ${totalAmount.toLocaleString()}`,
-        totalAmount,
-        assessment.batch_number
-      );
-      
-      toast({
-        title: "Payment Record Created",
-        description: `Payment record created for ${coffeeRecord.supplier_name} - UGX ${totalAmount.toLocaleString()}`
-      });
-
-      // Refresh data
-      await fetchFinanceData();
-      
-    } catch (error) {
-      console.error('Error creating payment from quality assessment:', error);
-      toast({
-        title: "Error",
-        description: `Failed to create payment record: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive"
-      });
     }
   };
 
@@ -383,18 +251,17 @@ export const useFinanceData = () => {
 
         console.log('Supabase approval request created:', supabaseData);
 
-        // Update payment status to Processing
-        console.log('Updating payment status to Processing...');
-        
-        // Update in Firebase (we need to find and update the payment record)
-        const paymentsQuery = query(collection(db, 'payment_records'));
-        const paymentsSnapshot = await getDocs(paymentsQuery);
+        // Update payment status to Processing in Firebase
+        console.log('Updating payment status to Processing in Firebase...');
+        const paymentsSnapshot = await getDocs(query(collection(db, 'payment_records')));
         const paymentDoc = paymentsSnapshot.docs.find(doc => doc.id === paymentId);
         
         if (paymentDoc) {
-          // Note: We can't update Firebase docs directly from this context
-          // The payment status will be updated when the approval is processed
-          console.log('Payment document found in Firebase');
+          await updateDoc(doc(db, 'payment_records', paymentDoc.id), {
+            status: 'Processing',
+            updated_at: new Date().toISOString()
+          });
+          console.log('Payment status updated to Processing in Firebase');
         }
 
         // Update in Supabase
@@ -404,7 +271,8 @@ export const useFinanceData = () => {
             status: 'Processing',
             updated_at: new Date().toISOString()
           })
-          .eq('id', paymentId);
+          .eq('supplier', payment.supplier)
+          .eq('amount', payment.amount);
 
         if (updateError) {
           console.error('Error updating payment status in Supabase:', updateError);
@@ -420,8 +288,8 @@ export const useFinanceData = () => {
         );
 
         toast({
-          title: "Approval Request Created",
-          description: `Bank transfer of UGX ${payment.amount.toLocaleString()} has been submitted for manager approval and will appear on the supervisor dashboard`
+          title: "Approval Request Submitted",
+          description: `Bank transfer of UGX ${payment.amount.toLocaleString()} has been submitted for manager approval`
         });
 
         console.log('Bank transfer approval request process completed successfully');
@@ -429,14 +297,20 @@ export const useFinanceData = () => {
         // Cash payment - process immediately
         console.log('Processing cash payment...');
         
-        await recordDailyTask(
-          'Payment',
-          `Cash payment to ${payment.supplier} - UGX ${payment.amount.toLocaleString()}`,
-          payment.amount,
-          payment.batchNumber
-        );
+        // Update payment status to Paid for cash payments in Firebase
+        const paymentsSnapshot = await getDocs(query(collection(db, 'payment_records')));
+        const paymentDoc = paymentsSnapshot.docs.find(doc => doc.id === paymentId);
+        
+        if (paymentDoc) {
+          await updateDoc(doc(db, 'payment_records', paymentDoc.id), {
+            status: 'Paid',
+            method: 'Cash',
+            updated_at: new Date().toISOString()
+          });
+          console.log('Cash payment status updated to Paid in Firebase');
+        }
 
-        // Update payment status to Paid for cash payments
+        // Update payment status to Paid for cash payments in Supabase
         const { error: updateError } = await supabase
           .from('payment_records')
           .update({ 
@@ -444,11 +318,21 @@ export const useFinanceData = () => {
             method: 'Cash',
             updated_at: new Date().toISOString()
           })
-          .eq('id', paymentId);
+          .eq('supplier', payment.supplier)
+          .eq('amount', payment.amount);
 
         if (updateError) {
           console.error('Error updating cash payment status:', updateError);
+        } else {
+          console.log('Cash payment status updated to Paid in Supabase');
         }
+        
+        await recordDailyTask(
+          'Payment',
+          `Cash payment to ${payment.supplier} - UGX ${payment.amount.toLocaleString()}`,
+          payment.amount,
+          payment.batchNumber
+        );
 
         toast({
           title: "Cash Payment Processed",
@@ -458,8 +342,6 @@ export const useFinanceData = () => {
         console.log('Cash payment processed successfully');
       }
 
-      // Refresh data to show updated status
-      await fetchFinanceData();
     } catch (error) {
       console.error('Error processing payment:', error);
       toast({
@@ -569,7 +451,6 @@ export const useFinanceData = () => {
     addTransaction,
     addExpense,
     processPayment,
-    createPaymentFromQualityAssessment,
     refetch: fetchFinanceData
   };
 };
