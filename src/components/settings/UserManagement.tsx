@@ -29,7 +29,19 @@ const userFormSchema = z.object({
   permissions: z.array(z.string()).optional(),
 });
 
+const editUserFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().optional(),
+  position: z.string().min(2, "Position is required"),
+  department: z.string().min(2, "Department is required"),
+  role: z.enum(["Administrator", "Manager", "Supervisor", "User", "Guest"]),
+  salary: z.number().min(0, "Salary must be positive"),
+  permissions: z.array(z.string()).optional(),
+});
+
 type UserFormValues = z.infer<typeof userFormSchema>;
+type EditUserFormValues = z.infer<typeof editUserFormSchema>;
 
 const availablePermissions = [
   "Human Resources", "Finance", "Procurement", "Quality Control",
@@ -54,6 +66,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const { toast } = useToast();
   const { refetch } = useEmployees();
 
@@ -72,8 +85,18 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     },
   });
 
-  const editForm = useForm<Omit<UserFormValues, 'password'>>({
-    resolver: zodResolver(userFormSchema.omit({ password: true })),
+  const editForm = useForm<EditUserFormValues>({
+    resolver: zodResolver(editUserFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      position: "",
+      department: "",
+      role: "User",
+      salary: 0,
+      permissions: [],
+    },
   });
 
   const handleAddUser = async (values: UserFormValues) => {
@@ -127,44 +150,63 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     }
   };
 
-  const handleEditUser = async (values: Omit<UserFormValues, 'password'>) => {
-    if (!selectedEmployee) return;
+  const handleEditUser = async (values: EditUserFormValues) => {
+    if (!selectedEmployee || isUpdatingUser) return;
     
+    setIsUpdatingUser(true);
     try {
+      console.log('Updating user:', selectedEmployee.id, values);
+      
       const updatedData = {
-        ...values,
         id: selectedEmployee.id,
+        name: values.name,
+        email: values.email,
+        phone: values.phone || "",
+        position: values.position,
+        department: values.department,
+        role: values.role,
+        salary: values.salary,
+        permissions: values.permissions || [],
+        // Keep existing fields that shouldn't change
+        status: selectedEmployee.status,
+        join_date: selectedEmployee.join_date,
+        created_at: selectedEmployee.created_at,
       };
 
       await onEmployeeUpdated(updatedData);
+      
       setIsEditModalOpen(false);
       setSelectedEmployee(null);
+      editForm.reset();
       
       toast({
         title: "Success",
-        description: "User updated successfully"
+        description: `User ${values.name} updated successfully`
       });
     } catch (error) {
       console.error('Error updating user:', error);
       toast({
         title: "Error",
-        description: "Failed to update user",
+        description: "Failed to update user. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsUpdatingUser(false);
     }
   };
 
   const openEditModal = (employee: Employee) => {
+    console.log('Opening edit modal for employee:', employee);
     setSelectedEmployee(employee);
     editForm.reset({
-      name: employee.name,
-      email: employee.email,
+      name: employee.name || "",
+      email: employee.email || "",
       phone: employee.phone || "",
-      position: employee.position,
-      department: employee.department,
-      role: employee.role as any,
-      salary: employee.salary,
-      permissions: employee.permissions,
+      position: employee.position || "",
+      department: employee.department || "",
+      role: employee.role as any || "User",
+      salary: employee.salary || 0,
+      permissions: employee.permissions || [],
     });
     setIsEditModalOpen(true);
   };
@@ -529,10 +571,10 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Department</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue placeholder="Select department" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -551,10 +593,10 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Role</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue placeholder="Select role" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -638,11 +680,19 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
               />
               
               <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setSelectedEmployee(null);
+                    editForm.reset();
+                  }}
+                >
                   Cancel
                 </Button>
-                <Button type="submit">
-                  Update User
+                <Button type="submit" disabled={isUpdatingUser}>
+                  {isUpdatingUser ? "Updating..." : "Update User"}
                 </Button>
               </div>
             </form>
