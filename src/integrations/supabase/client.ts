@@ -1,34 +1,44 @@
 
-// Enhanced compatibility layer for gradual migration from Supabase to Firebase
-// This provides better API compatibility to prevent build errors
-
-const createQueryBuilder = () => ({
-  select: (columns = '*') => createQueryBuilder(),
-  insert: (data) => createQueryBuilder(),
-  update: (data) => createQueryBuilder(),
-  delete: () => createQueryBuilder(),
-  eq: (column, value) => createQueryBuilder(),
-  order: (column, options) => createQueryBuilder(),
-  limit: (count) => createQueryBuilder(),
-  single: () => Promise.resolve({ data: null, error: null }),
-  maybeSingle: () => Promise.resolve({ data: null, error: null }),
-  then: (resolve) => resolve({ data: [], error: null, count: 0 })
-});
+// Temporary compatibility layer for Firebase migration
+// This provides a mock Supabase client that returns empty data to prevent build errors
 
 export const supabase = {
-  from: (table) => createQueryBuilder(),
+  from: (table: string) => ({
+    select: (columns?: string) => Promise.resolve({ data: [], error: null }),
+    insert: (data: any) => Promise.resolve({ data: null, error: null }),
+    update: (data: any) => ({
+      eq: (column: any, value: any) => Promise.resolve({ data: null, error: null })
+    }),
+    delete: () => ({
+      eq: (column: any, value: any) => Promise.resolve({ data: null, error: null })
+    }),
+    eq: (column: any, value: any) => ({
+      select: (columns?: string) => Promise.resolve({ data: [], error: null }),
+      update: (data: any) => Promise.resolve({ data: null, error: null }),
+      delete: () => Promise.resolve({ data: null, error: null }),
+      single: () => Promise.resolve({ data: null, error: null }),
+      maybeSingle: () => Promise.resolve({ data: null, error: null })
+    }),
+    order: (column: any, options?: any) => ({
+      select: (columns?: string) => Promise.resolve({ data: [], error: null }),
+      eq: (column: any, value: any) => Promise.resolve({ data: [], error: null })
+    }),
+    limit: (count: any) => Promise.resolve({ data: [], error: null }),
+    single: () => Promise.resolve({ data: null, error: null }),
+    maybeSingle: () => Promise.resolve({ data: null, error: null }),
+    in: (column: any, values: any[]) => Promise.resolve({ data: [], error: null })
+  }),
   auth: {
     getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
     signOut: () => Promise.resolve({ error: null }),
-    updateUser: (updates) => Promise.resolve({ data: null, error: null })
+    updateUser: (updates: any) => Promise.resolve({ data: { user: null }, error: null }),
+    getSession: () => Promise.resolve({ data: { session: null }, error: null })
   },
-  channel: (topic) => ({
-    on: (type, filter, callback) => ({ subscribe: () => ({}) }),
-    unsubscribe: () => {},
-    track: (state) => Promise.resolve('ok')
+  channel: (name: string) => ({
+    on: (event: string, callback: any) => ({ subscribe: () => {} }),
+    subscribe: () => {}
   }),
   functions: {
-    invoke: (name, options) => Promise.resolve({ data: null, error: null })
+    invoke: (name: string, options?: any) => Promise.resolve({ data: null, error: null })
   }
 };

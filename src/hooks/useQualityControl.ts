@@ -21,14 +21,9 @@ export const useQualityControl = () => {
   const loadStoreRecords = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('coffee_records')
-        .select('*')
-        .in('status', ['pending', 'quality_review', 'pricing', 'batched', 'drying'])
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setStoreRecords(data || []);
+      // Mock data during Firebase migration
+      console.log('Loading store records...');
+      setStoreRecords([]);
     } catch (error) {
       console.error('Error loading store records:', error);
     } finally {
@@ -38,13 +33,9 @@ export const useQualityControl = () => {
 
   const loadQualityAssessments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('quality_assessments')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setQualityAssessments(data || []);
+      // Mock data during Firebase migration
+      console.log('Loading quality assessments...');
+      setQualityAssessments([]);
     } catch (error) {
       console.error('Error loading quality assessments:', error);
     }
@@ -57,21 +48,11 @@ export const useQualityControl = () => {
 
   const updateStoreRecord = async (id: string, updates: Partial<StoreRecord>) => {
     try {
-      const { data, error } = await supabase
-        .from('coffee_records')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      console.log('Updating store record:', id, updates);
+      
       setStoreRecords(records => 
         records.map(record => 
-          record.id === id ? data : record
+          record.id === id ? { ...record, ...updates } : record
         )
       );
     } catch (error) {
@@ -82,16 +63,17 @@ export const useQualityControl = () => {
 
   const addQualityAssessment = async (assessment: Omit<QualityAssessment, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const { data, error } = await supabase
-        .from('quality_assessments')
-        .insert([assessment])
-        .select()
-        .single();
+      console.log('Adding quality assessment:', assessment);
+      
+      const newAssessment = {
+        ...assessment,
+        id: `qa-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } as QualityAssessment;
 
-      if (error) throw error;
-
-      setQualityAssessments(prev => [data, ...prev]);
-      return data;
+      setQualityAssessments(prev => [newAssessment, ...prev]);
+      return newAssessment;
     } catch (error) {
       console.error('Error adding quality assessment:', error);
       throw error;
@@ -100,21 +82,11 @@ export const useQualityControl = () => {
 
   const updateQualityAssessment = async (id: string, updates: Partial<QualityAssessment>) => {
     try {
-      const { data, error } = await supabase
-        .from('quality_assessments')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
+      console.log('Updating quality assessment:', id, updates);
+      
       setQualityAssessments(assessments => 
         assessments.map(assessment => 
-          assessment.id === id ? data : assessment
+          assessment.id === id ? { ...assessment, ...updates } : assessment
         )
       );
     } catch (error) {
