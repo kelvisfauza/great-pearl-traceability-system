@@ -46,6 +46,23 @@ export const useAuth = () => {
   return context;
 };
 
+// Security audit logging function
+const logSecurityEvent = async (action: string, details?: any) => {
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    if (session.session?.user) {
+      await supabase.from('security_audit_log').insert({
+        user_id: session.session.user.id,
+        action,
+        table_name: 'auth_events',
+        new_values: details
+      });
+    }
+  } catch (error) {
+    console.error('Failed to log security event:', error);
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -65,44 +82,114 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Fetching employee data for user:', currentSession.data.session.user.id);
       
-      // First, try to find employee by email
-      const { data: employeeData, error: employeeError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('email', currentSession.data.session.user.email)
+      // Use the new user_profiles table to get employee data securely
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select(`
+          employee_id,
+          employees:employee_id (
+            id,
+            name,
+            email,
+            phone,
+            position,
+            department,
+            role,
+            permissions,
+            address,
+            emergency_contact,
+            join_date,
+            status,
+            salary,
+            employee_id
+          )
+        `)
+        .eq('user_id', currentSession.data.session.user.id)
         .maybeSingle();
       
-      if (employeeError) {
-        console.error('Error fetching employee data:', employeeError);
-        toast({
-          title: "Access Error",
-          description: "Unable to load your employee profile. Please contact your administrator.",
-          variant: "destructive"
-        });
-        setEmployee(null);
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        
+        // Try fallback method for existing users without profiles
+        const { data: employeeData, error: employeeError } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('email', currentSession.data.session.user.email)
+          .maybeSingle();
+        
+        if (employeeError) {
+          console.error('Error fetching employee data:', employeeError);
+          toast({
+            title: "Access Error",
+            description: "Unable to load your employee profile. Please contact your administrator.",
+            variant: "destructive"
+          });
+          setEmployee(null);
+          return;
+        }
+        
+        if (employeeData) {
+          // Create user profile for existing employee
+          try {
+            await supabase.from('user_profiles').insert({
+              user_id: currentSession.data.session.user.id,
+              employee_id: employeeData.id
+            });
+            
+            setEmployee({
+              id: employeeData.id,
+              employee_id: employeeData.employee_id || employeeData.id,
+              name: employeeData.name,
+              email: employeeData.email,
+              role: employeeData.role,
+              permissions: employeeData.permissions || [],
+              department: employeeData.department,
+              position: employeeData.position,
+              phone: employeeData.phone,
+              address: employeeData.address,
+              emergency_contact: employeeData.emergency_contact,
+              join_date: employeeData.join_date,
+              status: employeeData.status,
+              salary: employeeData.salary,
+            });
+
+            await logSecurityEvent('user_profile_created', { employee_id: employeeData.id });
+          } catch (linkError) {
+            console.error('Error creating user profile link:', linkError);
+          }
+        } else {
+          console.log('No employee record found for user:', currentSession.data.session.user.email);
+          toast({
+            title: "Account Setup Required",
+            description: "Your account is not linked to an employee record. Please contact your administrator.",
+            variant: "destructive"
+          });
+          setEmployee(null);
+        }
         return;
       }
       
-      if (employeeData) {
-        console.log('Employee data found:', employeeData.name);
+      if (profileData?.employees) {
+        const emp = profileData.employees;
+        console.log('Employee data found via profile:', emp.name);
         setEmployee({
-          id: employeeData.id,
-          employee_id: employeeData.employee_id || employeeData.id,
-          name: employeeData.name,
-          email: employeeData.email,
-          role: employeeData.role,
-          permissions: employeeData.permissions || [],
-          department: employeeData.department,
-          position: employeeData.position,
-          phone: employeeData.phone,
-          address: employeeData.address,
-          emergency_contact: employeeData.emergency_contact,
-          join_date: employeeData.join_date,
-          status: employeeData.status,
-          salary: employeeData.salary,
+          id: emp.id,
+          employee_id: emp.employee_id || emp.id,
+          name: emp.name,
+          email: emp.email,
+          role: emp.role,
+          permissions: emp.permissions || [],
+          department: emp.department,
+          position: emp.position,
+          phone: emp.phone,
+          address: emp.address,
+          emergency_contact: emp.emergency_contact,
+          join_date: emp.join_date,
+          status: emp.status,
+          salary: emp.salary,
         });
       } else {
-        console.log('No employee record found for user:', currentSession.data.session.user.email);
+        console.log('No employee record found in user profile');
         toast({
           title: "Account Setup Required",
           description: "Your account is not linked to an employee record. Please contact your administrator.",
@@ -126,7 +213,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const initializeAuth = async () => {
       try {
-        // Get initial session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (mounted) {
@@ -152,12 +238,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         if (!mounted || !isInitialized) return;
         
         console.log('Auth state changed:', event, newSession?.user?.email || 'No session');
+        
+        // Log security events
+        if (event === 'SIGNED_IN') {
+          await logSecurityEvent('user_signed_in', { email: newSession?.user?.email });
+        } else if (event === 'SIGNED_OUT') {
+          await logSecurityEvent('user_signed_out');
+        }
         
         setSession(newSession);
         setUser(newSession?.user ?? null);
@@ -175,6 +267,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
     };
   }, []);
+
+  // Enhanced password validation
+  const validatePassword = (password: string): { isValid: boolean; message?: string } => {
+    if (password.length < 8) {
+      return { isValid: false, message: "Password must be at least 8 characters long" };
+    }
+    if (!/(?=.*[a-z])/.test(password)) {
+      return { isValid: false, message: "Password must contain at least one lowercase letter" };
+    }
+    if (!/(?=.*[A-Z])/.test(password)) {
+      return { isValid: false, message: "Password must contain at least one uppercase letter" };
+    }
+    if (!/(?=.*\d)/.test(password)) {
+      return { isValid: false, message: "Password must contain at least one number" };
+    }
+    if (!/(?=.*[@$!%*?&])/.test(password)) {
+      return { isValid: false, message: "Password must contain at least one special character (@$!%*?&)" };
+    }
+    return { isValid: true };
+  };
 
   const signIn = async (email: string, password: string) => {
     // Input validation
@@ -209,11 +321,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     if (error) {
       console.error('Sign in error:', error);
+      
+      // Log failed sign in attempt
+      await logSecurityEvent('failed_sign_in_attempt', { 
+        email: email.toLowerCase().trim(),
+        error: error.message 
+      });
+      
       let errorMessage = error.message;
       if (error.message.includes('Invalid login credentials')) {
         errorMessage = "Invalid email or password. Please check your credentials.";
       } else if (error.message.includes('Email not confirmed')) {
         errorMessage = "Please check your email and click the confirmation link.";
+      } else if (error.message.includes('Too many requests')) {
+        errorMessage = "Too many failed attempts. Please wait before trying again.";
       }
       
       toast({
@@ -244,11 +365,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error };
     }
 
-    // Password strength validation
-    if (password.length < 8) {
-      const error = { message: "Password must be at least 8 characters long" };
+    // Enhanced password validation
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      const error = { message: passwordValidation.message };
       toast({
-        title: "Validation Error",
+        title: "Password Requirements",
         description: error.message,
         variant: "destructive"
       });
@@ -266,6 +388,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     
     if (error) {
+      await logSecurityEvent('failed_sign_up_attempt', { 
+        email: email.toLowerCase().trim(),
+        error: error.message 
+      });
+      
       let errorMessage = error.message;
       if (error.message.includes('User already registered')) {
         errorMessage = "An account with this email already exists. Please sign in instead.";
@@ -277,6 +404,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: "destructive"
       });
     } else {
+      await logSecurityEvent('user_signed_up', { email: email.toLowerCase().trim() });
+      
       toast({
         title: "Account Created",
         description: "Please check your email to confirm your account. You may need to contact your administrator to link your account to an employee record."
