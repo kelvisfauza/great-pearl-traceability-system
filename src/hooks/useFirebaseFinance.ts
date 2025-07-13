@@ -178,10 +178,15 @@ export const useFirebaseFinance = () => {
       // Fetch coffee records to get supplier names
       const coffeeRecordsQuery = query(collection(db, 'coffee_records'));
       const coffeeRecordsSnapshot = await getDocs(coffeeRecordsQuery);
-      const coffeeRecords = coffeeRecordsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const coffeeRecords = coffeeRecordsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          batch_number: data.batch_number || '',
+          supplier_name: data.supplier_name || '',
+          ...data
+        };
+      });
 
       // Create payment records for quality assessments that don't have them yet
       const newPayments: PaymentRecord[] = [];
