@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -139,11 +140,10 @@ export const useFirebaseFinance = () => {
       
       console.log('Existing payment records:', existingPayments.length);
 
-      // Fetch quality assessments that are ready for payment but don't have payment records yet
+      // Fetch quality assessments that are ready for payment - simplified query without orderBy
       const qualityQuery = query(
         collection(db, 'quality_assessments'),
-        where('status', 'in', ['assessed', 'submitted_to_finance']),
-        orderBy('created_at', 'desc')
+        where('status', 'in', ['assessed', 'submitted_to_finance'])
       );
       const qualitySnapshot = await getDocs(qualityQuery);
       const qualityAssessments = qualitySnapshot.docs.map(doc => {
@@ -153,9 +153,15 @@ export const useFirebaseFinance = () => {
           batch_number: data.batch_number || '',
           suggested_price: data.suggested_price || 0,
           status: data.status || 'assessed',
+          created_at: data.created_at || new Date().toISOString(),
           ...data
         };
       });
+      
+      // Sort in memory by created_at (most recent first)
+      qualityAssessments.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
       
       console.log('Quality assessments ready for payment:', qualityAssessments.length);
 
