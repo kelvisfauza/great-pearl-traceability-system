@@ -52,6 +52,18 @@ const ApprovalRequests = () => {
     }
   };
 
+  const formatAmount = (amount: string | number) => {
+    // Handle both string and number inputs
+    const numericAmount = typeof amount === 'string' ? parseFloat(amount.replace(/[^\d.-]/g, '')) : amount;
+    
+    // Check if the conversion resulted in a valid number
+    if (isNaN(numericAmount)) {
+      return amount; // Return original if can't parse
+    }
+    
+    return `UGX ${numericAmount.toLocaleString()}`;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -117,7 +129,7 @@ const ApprovalRequests = () => {
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm font-medium">UGX {Number(request.amount).toLocaleString()}</p>
+                      <p className="text-sm font-medium">{formatAmount(request.amount)}</p>
                       <p className="text-xs text-muted-foreground">Amount</p>
                     </div>
                   </div>
