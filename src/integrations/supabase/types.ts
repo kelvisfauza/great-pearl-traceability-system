@@ -774,6 +774,39 @@ export type Database = {
         }
         Relationships: []
       }
+      price_data: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          market_source: string | null
+          price_type: string
+          price_value: number
+          recorded_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          market_source?: string | null
+          price_type: string
+          price_value: number
+          recorded_at?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          market_source?: string | null
+          price_type?: string
+          price_value?: number
+          recorded_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       price_forecasts: {
         Row: {
           coffee_type: string

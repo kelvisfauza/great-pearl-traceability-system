@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { usePriceData } from '@/hooks/usePriceData';
 
 interface PriceData {
   iceArabica: number;
@@ -18,6 +19,8 @@ interface PriceContextType {
 const PriceContext = createContext<PriceContextType | undefined>(undefined);
 
 export const PriceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { prices: dbPrices } = usePriceData();
+  
   const [prices, setPrices] = useState<PriceData>({
     iceArabica: 185.50,
     robusta: 2450,
@@ -27,25 +30,21 @@ export const PriceProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     exchangeRate: 3750
   });
 
+  // Update context prices when database prices change
+  useEffect(() => {
+    setPrices({
+      iceArabica: dbPrices.iceArabica,
+      robusta: dbPrices.iceRobusta,
+      drugarLocal: dbPrices.drugarLocal,
+      wugarLocal: dbPrices.wugarLocal,
+      robustaFaqLocal: dbPrices.robustaFaqLocal,
+      exchangeRate: dbPrices.exchangeRate
+    });
+  }, [dbPrices]);
+
   const updatePrices = (newPrices: Partial<PriceData>) => {
     setPrices(prev => ({ ...prev, ...newPrices }));
   };
-
-  // Simulate real-time price updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPrices(prev => ({
-        ...prev,
-        iceArabica: prev.iceArabica + (Math.random() - 0.5) * 2,
-        robusta: prev.robusta + (Math.random() - 0.5) * 50,
-        drugarLocal: prev.drugarLocal + (Math.random() - 0.5) * 100,
-        wugarLocal: prev.wugarLocal + (Math.random() - 0.5) * 100,
-        robustaFaqLocal: prev.robustaFaqLocal + (Math.random() - 0.5) * 100
-      }));
-    }, 30000); // Update every 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <PriceContext.Provider value={{ prices, updatePrices }}>
