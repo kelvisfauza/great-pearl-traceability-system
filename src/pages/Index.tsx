@@ -18,9 +18,10 @@ const Index = () => {
   const canViewManagementContent = hasRole("Administrator") || hasRole("Manager") || 
     hasRole("Operations Manager") || hasRole("Supervisor") || hasRole("Company Head");
 
-  // Check if user should see approval requests
+  // Check if user should see approval requests (supervisors and operations managers)
   const canViewApprovalRequests = hasRole("Administrator") || hasRole("Operations Manager") || 
-    hasRole("Supervisor") || hasRole("Company Head");
+    hasRole("Supervisor") || hasRole("Company Head") || employee?.position === 'Supervisor' || 
+    employee?.position === 'Operations Manager';
 
   // Check if user should see performance overview
   const canViewPerformanceOverview = hasRole("Administrator") || hasRole("Manager") || 
@@ -74,9 +75,9 @@ const Index = () => {
           <DashboardStats />
         </div>
 
-        {/* Approval Requests - Enhanced for Management */}
+        {/* Approval Requests - PRIORITY for Supervisors and Operations Managers */}
         {canViewApprovalRequests && (
-          <div>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-1">
             <div className="flex items-center gap-2 mb-6">
               <AlertCircle className="h-5 w-5 text-amber-600" />
               <h3 className="text-lg font-semibold text-gray-900">Pending Approvals</h3>

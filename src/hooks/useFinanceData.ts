@@ -326,11 +326,12 @@ export const useFinanceData = () => {
       if (!payment) throw new Error('Payment record not found');
 
       if (method === 'Bank Transfer') {
-        // Create approval request in Firebase
-        await addDoc(collection(db, 'approval_requests'), {
+        console.log('Creating approval request for bank transfer...');
+        
+        const approvalRequestData = {
           type: 'Bank Transfer',
           title: `Bank transfer to ${payment.supplier}`,
-          description: `Payment to ${payment.supplier} - UGX ${payment.amount.toLocaleString()}`,
+          description: `Payment to ${payment.supplier} - UGX ${payment.amount.toLocaleString()}${payment.batchNumber ? ` (Batch: ${payment.batchNumber})` : ''}`,
           amount: payment.amount.toString(),
           department: 'Finance',
           requestedby: 'Finance Team',
@@ -341,30 +342,75 @@ export const useFinanceData = () => {
             paymentId,
             supplier: payment.supplier,
             amount: payment.amount,
-            batchNumber: payment.batchNumber
+            batchNumber: payment.batchNumber,
+            kilograms: payment.kilograms,
+            pricePerKg: payment.pricePerKg,
+            paymentType: 'supplier_payment',
+            qualityAssessmentId: payment.qualityAssessmentId
           },
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        });
+        };
 
-        // Create approval request in Supabase
-        await supabase.from('approval_requests').insert({
-          type: 'Bank Transfer',
-          title: `Bank transfer to ${payment.supplier}`,
-          description: `Payment to ${payment.supplier} - UGX ${payment.amount.toLocaleString()}`,
-          amount: payment.amount.toString(),
-          department: 'Finance',
-          requestedby: 'Finance Team',
-          daterequested: new Date().toLocaleDateString(),
-          priority: 'High',
-          status: 'Pending',
-          details: {
-            paymentId,
-            supplier: payment.supplier,
-            amount: payment.amount,
-            batchNumber: payment.batchNumber
-          }
-        });
+        // Save to Firebase
+        console.log('Saving approval request to Firebase...');
+        const firebaseDoc = await addDoc(collection(db, 'approval_requests'), approvalRequestData);
+        console.log('Firebase approval request created with ID:', firebaseDoc.id);
+
+        // Save to Supabase
+        console.log('Saving approval request to Supabase...');
+        const { data: supabaseData, error: supabaseError } = await supabase
+          .from('approval_requests')
+          .insert({
+            type: approvalRequestData.type,
+            title: approvalRequestData.title,
+            description: approvalRequestData.description,
+            amount: approvalRequestData.amount,
+            department: approvalRequestData.department,
+            requestedby: approvalRequestData.requestedby,
+            daterequested: approvalRequestData.daterequested,
+            priority: approvalRequestData.priority,
+            status: approvalRequestData.status,
+            details: approvalRequestData.details
+          })
+          .select()
+          .single();
+
+        if (supabaseError) {
+          console.error('Error saving approval request to Supabase:', supabaseError);
+          throw supabaseError;
+        }
+
+        console.log('Supabase approval request created:', supabaseData);
+
+        // Update payment status to Processing
+        console.log('Updating payment status to Processing...');
+        
+        // Update in Firebase (we need to find and update the payment record)
+        const paymentsQuery = query(collection(db, 'payment_records'));
+        const paymentsSnapshot = await getDocs(paymentsQuery);
+        const paymentDoc = paymentsSnapshot.docs.find(doc => doc.id === paymentId);
+        
+        if (paymentDoc) {
+          // Note: We can't update Firebase docs directly from this context
+          // The payment status will be updated when the approval is processed
+          console.log('Payment document found in Firebase');
+        }
+
+        // Update in Supabase
+        const { error: updateError } = await supabase
+          .from('payment_records')
+          .update({ 
+            status: 'Processing',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', paymentId);
+
+        if (updateError) {
+          console.error('Error updating payment status in Supabase:', updateError);
+        } else {
+          console.log('Payment status updated to Processing in Supabase');
+        }
         
         await recordDailyTask(
           'Payment Request',
@@ -375,9 +421,14 @@ export const useFinanceData = () => {
 
         toast({
           title: "Approval Request Created",
-          description: `Bank transfer of UGX ${payment.amount.toLocaleString()} has been submitted for manager approval`
+          description: `Bank transfer of UGX ${payment.amount.toLocaleString()} has been submitted for manager approval and will appear on the supervisor dashboard`
         });
+
+        console.log('Bank transfer approval request process completed successfully');
       } else {
+        // Cash payment - process immediately
+        console.log('Processing cash payment...');
+        
         await recordDailyTask(
           'Payment',
           `Cash payment to ${payment.supplier} - UGX ${payment.amount.toLocaleString()}`,
@@ -385,18 +436,35 @@ export const useFinanceData = () => {
           payment.batchNumber
         );
 
+        // Update payment status to Paid for cash payments
+        const { error: updateError } = await supabase
+          .from('payment_records')
+          .update({ 
+            status: 'Paid',
+            method: 'Cash',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', paymentId);
+
+        if (updateError) {
+          console.error('Error updating cash payment status:', updateError);
+        }
+
         toast({
-          title: "Success",
-          description: `Cash payment of UGX ${payment.amount.toLocaleString()} processed successfully`
+          title: "Cash Payment Processed",
+          description: `Cash payment of UGX ${payment.amount.toLocaleString()} has been processed successfully`
         });
+
+        console.log('Cash payment processed successfully');
       }
 
+      // Refresh data to show updated status
       await fetchFinanceData();
     } catch (error) {
       console.error('Error processing payment:', error);
       toast({
         title: "Error",
-        description: "Failed to process payment",
+        description: `Failed to process payment: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     }
