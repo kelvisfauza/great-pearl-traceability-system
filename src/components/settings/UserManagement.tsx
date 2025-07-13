@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,8 @@ import * as z from "zod";
 import { UserPlus, Edit, Trash2, Shield, Key } from "lucide-react";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const userFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -81,76 +81,45 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     
     setIsCreatingUser(true);
     try {
-      console.log('Calling create-user edge function with:', values);
+      console.log('Creating Firebase user account for:', values.email);
       
-      // Call the edge function to create user and employee
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: { 
-          employeeData: {
-            ...values,
-            password: values.password // Include password for auth creation
-          }
-        }
-      });
+      // Create Firebase authentication account first
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      console.log('Firebase user created:', userCredential.user.uid);
 
-      console.log('Edge function response:', { data, error });
+      // Now create the employee record with the Firebase UID
+      const employeeData = {
+        ...values,
+        id: userCredential.user.uid, // Use Firebase UID as employee ID
+        status: 'Active',
+        join_date: new Date().toISOString(),
+      };
 
-      if (error) {
-        console.error('Edge function error:', error);
-        
-        // Handle specific error cases
-        if (error.message?.includes('non-2xx status code')) {
-          // Try to get more specific error information
-          const errorMessage = "Failed to create user. The email may already be registered or there was a server error.";
-          toast({
-            title: "Error",
-            description: errorMessage,
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: error.message || "Failed to create user",
-            variant: "destructive"
-          });
-        }
-        return;
-      }
-
-      if (!data?.success) {
-        console.error('Edge function returned unsuccessful:', data);
-        
-        // Handle specific error messages from the edge function
-        let errorMessage = data?.error || "Failed to create user";
-        
-        if (errorMessage.includes('email_exists') || errorMessage.includes('email address has already been registered')) {
-          errorMessage = `A user with the email "${values.email}" already exists. Please use a different email address.`;
-        }
-        
-        toast({
-          title: "Error", 
-          description: errorMessage,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Refresh the employees list instead of trying to add the employee again
-      // since the edge function already created it
-      await refetch();
+      await onEmployeeAdded(employeeData);
       
       form.reset();
       setIsAddModalOpen(false);
       
       toast({
         title: "Success",
-        description: "User created successfully with login credentials"
+        description: `User ${values.name} created successfully with login credentials`
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating user:', error);
+      
+      let errorMessage = "Failed to create user. Please try again.";
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = `A user with the email "${values.email}" already exists. Please use a different email address.`;
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "Password is too weak. Please use a stronger password.";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Invalid email address format.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to create user. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

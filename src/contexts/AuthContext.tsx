@@ -86,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Fetching employee data for user:', user.uid);
       
-      // First try to get employee by user ID
+      // First try to get employee by user ID (Firebase UID)
       const employeeDoc = await getDoc(doc(db, 'employees', user.uid));
       
       if (employeeDoc.exists()) {
@@ -108,10 +108,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const employeeData = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
         console.log('Found employee by email:', employeeData);
         setEmployee(employeeData);
+        
+        // Update the employee document to use the Firebase UID as the ID
+        if (employeeData.id !== user.uid) {
+          console.log('Updating employee ID to match Firebase UID');
+          await setDoc(doc(db, 'employees', user.uid), {
+            ...employeeData,
+            id: user.uid,
+            updated_at: new Date().toISOString()
+          });
+          setEmployee({ ...employeeData, id: user.uid });
+        }
         return;
       }
 
-      // If no employee found, create a default one
+      // If no employee found, create a default one (for backwards compatibility)
       console.log('No employee found, creating default employee');
       const defaultEmployee = await createDefaultEmployee(user);
       setEmployee(defaultEmployee);
