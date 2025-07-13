@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
@@ -10,6 +9,7 @@ import {
 import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { seedFirebaseData } from '@/utils/seedFirebaseData';
 
 interface Employee {
   id: string;
@@ -118,6 +118,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
       if (userCredential.user) {
+        // Seed data on first login if database is empty
+        setTimeout(() => {
+          seedFirebaseData();
+        }, 1000);
+        
         await logSecurityEvent('user_login', 'auth', userCredential.user.uid);
       }
 
@@ -145,6 +150,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
       if (userCredential.user) {
+        // Seed data on signup
+        setTimeout(() => {
+          seedFirebaseData();
+        }, 1000);
+        
         await logSecurityEvent('user_signup', 'auth', userCredential.user.uid, null, { email });
       }
 
