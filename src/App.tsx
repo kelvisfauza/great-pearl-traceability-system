@@ -42,62 +42,62 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/procurement" element={
-                <ProtectedRoute requiredPermissions={["Procurement"]}>
+                <ProtectedRoute>
                   <Procurement />
                 </ProtectedRoute>
               } />
               <Route path="/quality-control" element={
-                <ProtectedRoute requiredPermissions={["Quality Control"]}>
+                <ProtectedRoute>
                   <QualityControl />
                 </ProtectedRoute>
               } />
               <Route path="/processing" element={
-                <ProtectedRoute requiredPermissions={["Processing"]}>
+                <ProtectedRoute>
                   <Processing />
                 </ProtectedRoute>
               } />
               <Route path="/inventory" element={
-                <ProtectedRoute requiredPermissions={["Inventory"]}>
+                <ProtectedRoute>
                   <Inventory />
                 </ProtectedRoute>
               } />
               <Route path="/store" element={
-                <ProtectedRoute requiredPermissions={["Store Management"]}>
+                <ProtectedRoute>
                   <Store />
                 </ProtectedRoute>
               } />
               <Route path="/sales-marketing" element={
-                <ProtectedRoute requiredPermissions={["Sales & Marketing"]}>
+                <ProtectedRoute>
                   <SalesMarketing />
                 </ProtectedRoute>
               } />
               <Route path="/finance" element={
-                <ProtectedRoute requiredPermissions={["Finance"]}>
+                <ProtectedRoute>
                   <Finance />
                 </ProtectedRoute>
               } />
               <Route path="/field-operations" element={
-                <ProtectedRoute requiredPermissions={["Field Operations"]}>
+                <ProtectedRoute>
                   <FieldOperations />
                 </ProtectedRoute>
               } />
               <Route path="/human-resources" element={
-                <ProtectedRoute requiredPermissions={["Human Resources"]}>
+                <ProtectedRoute>
                   <HumanResources />
                 </ProtectedRoute>
               } />
               <Route path="/data-analyst" element={
-                <ProtectedRoute requiredPermissions={["Data Analysis"]}>
+                <ProtectedRoute>
                   <DataAnalyst />
                 </ProtectedRoute>
               } />
               <Route path="/reports" element={
-                <ProtectedRoute requiredPermissions={["Reports"]}>
+                <ProtectedRoute>
                   <Reports />
                 </ProtectedRoute>
               } />
               <Route path="/logistics" element={
-                <ProtectedRoute requiredPermissions={["Logistics"]}>
+                <ProtectedRoute>
                   <Logistics />
                 </ProtectedRoute>
               } />

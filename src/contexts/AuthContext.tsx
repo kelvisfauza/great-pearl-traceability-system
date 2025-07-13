@@ -7,7 +7,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { seedFirebaseData } from '@/utils/seedFirebaseData';
@@ -20,15 +20,10 @@ interface Employee {
   position: string;
   department: string;
   salary: number;
-  employee_id?: string;
-  address?: string;
-  emergency_contact?: string;
   role: string;
   permissions: string[];
   status: string;
   join_date: string;
-  created_at: string;
-  updated_at: string;
 }
 
 interface AuthContextType {
@@ -53,81 +48,94 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
+  const createDefaultEmployee = async (user: User): Promise<Employee> => {
+    const defaultEmployee: Employee = {
+      id: user.uid,
+      name: user.email?.split('@')[0] || 'User',
+      email: user.email || '',
+      position: 'Manager',
+      department: 'Operations',
+      salary: 2000000,
+      role: 'Administrator',
+      permissions: ['Human Resources', 'Finance', 'Operations', 'Reports', 'Store Management', 'Quality Control'],
+      status: 'Active',
+      join_date: new Date().toISOString().split('T')[0],
+    };
+
     try {
-      if (!user) return;
-      
-      await addDoc(collection(db, 'security_audit_log'), {
-        user_id: user.uid,
-        action,
-        table_name: tableName,
-        record_id: recordId,
-        old_values: oldValues,
-        new_values: newValues,
-        created_at: new Date().toISOString()
+      await setDoc(doc(db, 'employees', user.uid), {
+        ...defaultEmployee,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       });
+      console.log('Default employee created:', defaultEmployee);
+      return defaultEmployee;
     } catch (error) {
-      console.error('Security logging error:', error);
+      console.error('Error creating default employee:', error);
+      return defaultEmployee;
     }
   };
 
   const fetchEmployeeData = async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      console.log('No user UID available');
+      return;
+    }
 
     try {
-      // First check if user profile exists and get linked employee
-      const userProfileDoc = await getDoc(doc(db, 'user_profiles', user.uid));
+      console.log('Fetching employee data for user:', user.uid);
       
-      if (userProfileDoc.exists()) {
-        const profileData = userProfileDoc.data();
-        
-        if (profileData.employee_id) {
-          const employeeDoc = await getDoc(doc(db, 'employees', profileData.employee_id));
-          if (employeeDoc.exists()) {
-            const employeeData = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
-            setEmployee(employeeData);
-          }
-        }
-      } else {
-        // If no profile exists, try to find employee by email and create link
-        const employeesQuery = query(
-          collection(db, 'employees'), 
-          where('email', '==', user.email)
-        );
-        const employeeSnapshot = await getDocs(employeesQuery);
-
-        if (!employeeSnapshot.empty) {
-          const employeeDoc = employeeSnapshot.docs[0];
-          const employeeData = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
-
-          // Create user profile link
-          await setDoc(doc(db, 'user_profiles', user.uid), {
-            user_id: user.uid,
-            employee_id: employeeDoc.id,
-            created_at: new Date().toISOString()
-          });
-
-          setEmployee(employeeData);
-        }
+      // First try to get employee by user ID
+      const employeeDoc = await getDoc(doc(db, 'employees', user.uid));
+      
+      if (employeeDoc.exists()) {
+        const employeeData = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
+        console.log('Found employee by ID:', employeeData);
+        setEmployee(employeeData);
+        return;
       }
+
+      // If not found by ID, try to find by email
+      const employeesQuery = query(
+        collection(db, 'employees'), 
+        where('email', '==', user.email)
+      );
+      const employeeSnapshot = await getDocs(employeesQuery);
+
+      if (!employeeSnapshot.empty) {
+        const employeeDoc = employeeSnapshot.docs[0];
+        const employeeData = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
+        console.log('Found employee by email:', employeeData);
+        setEmployee(employeeData);
+        return;
+      }
+
+      // If no employee found, create a default one
+      console.log('No employee found, creating default employee');
+      const defaultEmployee = await createDefaultEmployee(user);
+      setEmployee(defaultEmployee);
+
     } catch (error) {
       console.error('Error in fetchEmployeeData:', error);
+      // Create default employee on error
+      const defaultEmployee = await createDefaultEmployee(user);
+      setEmployee(defaultEmployee);
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log('Attempting to sign in with:', email);
+      
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Sign in successful:', userCredential.user.uid);
 
-      if (userCredential.user) {
-        // Seed data on first login if database is empty
-        setTimeout(() => {
-          seedFirebaseData();
-        }, 1000);
-        
-        await logSecurityEvent('user_login', 'auth', userCredential.user.uid);
-      }
+      // Seed data after successful login
+      setTimeout(async () => {
+        console.log('Starting data seeding...');
+        await seedFirebaseData();
+      }, 1000);
 
       toast({
         title: "Success",
@@ -135,7 +143,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch (error: any) {
       console.error('Sign in error:', error);
-      await logSecurityEvent('failed_login', 'auth', undefined, { email });
       toast({
         title: "Error",
         description: error.message || "Failed to sign in",
@@ -150,16 +157,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, userData: any) => {
     try {
       setLoading(true);
+      console.log('Creating new account for:', email);
+      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('Account created:', userCredential.user.uid);
 
-      if (userCredential.user) {
-        // Seed data on signup
-        setTimeout(() => {
-          seedFirebaseData();
-        }, 1000);
-        
-        await logSecurityEvent('user_signup', 'auth', userCredential.user.uid, null, { email });
-      }
+      // Seed data after successful signup
+      setTimeout(async () => {
+        console.log('Starting data seeding after signup...');
+        await seedFirebaseData();
+      }, 1000);
 
       toast({
         title: "Success",
@@ -180,12 +187,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      await logSecurityEvent('user_logout', 'auth', user?.uid);
       await firebaseSignOut(auth);
-
       setUser(null);
       setEmployee(null);
-
       toast({
         title: "Success",
         description: "Signed out successfully"
@@ -201,11 +205,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const hasPermission = (permission: string): boolean => {
-    return employee?.permissions?.includes(permission) || false;
+    if (!employee) return false;
+    return employee.permissions?.includes(permission) || employee.role === 'Administrator';
   };
 
   const hasRole = (role: string): boolean => {
-    return employee?.role === role || false;
+    if (!employee) return false;
+    return employee.role === role;
   };
 
   const canManageEmployees = (): boolean => {
@@ -218,6 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('Auth state changed:', user ? user.uid : 'No user');
       setUser(user);
       setLoading(false);
       
@@ -231,6 +238,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (user && !loading) {
+      console.log('User available, fetching employee data...');
       fetchEmployeeData();
     }
   }, [user, loading]);

@@ -4,13 +4,19 @@ import { db } from '@/lib/firebase';
 
 export const seedFirebaseData = async () => {
   try {
+    console.log('Starting Firebase data seeding...');
+    
     // Check if employees already exist
     const employeesSnapshot = await getDocs(collection(db, 'employees'));
+    console.log('Existing employees count:', employeesSnapshot.size);
     
     if (!employeesSnapshot.empty) {
+      console.log('Data already exists, skipping seeding');
       return;
     }
 
+    console.log('Seeding employees...');
+    
     // Sample employees
     const employees = [
       {
@@ -20,7 +26,7 @@ export const seedFirebaseData = async () => {
         department: 'Management',
         salary: 5000000,
         role: 'Administrator',
-        permissions: ['Human Resources', 'Finance', 'Operations', 'Reports'],
+        permissions: ['Human Resources', 'Finance', 'Operations', 'Reports', 'Store Management'],
         status: 'Active',
         phone: '+256700000001',
         join_date: '2020-01-15',
@@ -34,52 +40,31 @@ export const seedFirebaseData = async () => {
         department: 'Operations',
         salary: 3000000,
         role: 'Manager',
-        permissions: ['Operations', 'Inventory', 'Quality Control'],
+        permissions: ['Operations', 'Inventory', 'Quality Control', 'Store Management'],
         status: 'Active',
         phone: '+256700000002',
         join_date: '2020-03-01',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      },
-      {
-        name: 'Sarah Nakato',
-        email: 'sarah.nakato@greatpearl.com',
-        position: 'Finance Manager',
-        department: 'Finance',
-        salary: 2800000,
-        role: 'Manager',
-        permissions: ['Finance', 'Reports'],
-        status: 'Active',
-        phone: '+256700000003',
-        join_date: '2020-06-15',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        name: 'James Okello',
-        email: 'james.okello@greatpearl.com',
-        position: 'Quality Control Supervisor',
-        department: 'Quality Control',
-        salary: 2200000,
-        role: 'Supervisor',
-        permissions: ['Quality Control'],
-        status: 'Active',
-        phone: '+256700000004',
-        join_date: '2021-01-10',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
       }
     ];
 
-    // Add employees
+    // Add employees in sequence
     for (const employee of employees) {
-      await addDoc(collection(db, 'employees'), employee);
+      try {
+        const docRef = await addDoc(collection(db, 'employees'), employee);
+        console.log('Added employee:', employee.name, 'with ID:', docRef.id);
+      } catch (error) {
+        console.error('Error adding employee:', employee.name, error);
+      }
     }
 
+    console.log('Seeding finance transactions...');
+    
     // Sample finance transactions
     const transactions = [
       {
-        type: 'Income',
+        type: 'Receipt',
         amount: 15000000,
         description: 'Coffee sales - Arabica Grade A',
         date: '2024-07-10',
@@ -88,89 +73,65 @@ export const seedFirebaseData = async () => {
         updated_at: new Date().toISOString()
       },
       {
-        type: 'Expense',
+        type: 'Payment',
         amount: 5000000,
         description: 'Coffee procurement from suppliers',
         date: '2024-07-09',
         time: '14:15',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      },
-      {
-        type: 'Income',
-        amount: 8500000,
-        description: 'Robusta coffee export',
-        date: '2024-07-08',
-        time: '11:45',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
       }
     ];
 
     for (const transaction of transactions) {
-      await addDoc(collection(db, 'finance_transactions'), transaction);
+      try {
+        const docRef = await addDoc(collection(db, 'finance_transactions'), transaction);
+        console.log('Added transaction:', transaction.description, 'with ID:', docRef.id);
+      } catch (error) {
+        console.error('Error adding transaction:', transaction.description, error);
+      }
     }
 
-    // Sample expenses
-    const expenses = [
+    console.log('Seeding coffee records...');
+    
+    // Sample coffee records for store
+    const coffeeRecords = [
       {
-        category: 'Operations',
-        amount: 2500000,
-        description: 'Warehouse maintenance and repairs',
-        date: '2024-07-12',
-        status: 'Approved',
+        supplier_name: 'John Doe Farmers',
+        coffee_type: 'Arabica',
+        bags: 50,
+        kilograms: 3000,
+        date: new Date().toISOString().split('T')[0],
+        batch_number: 'AR001',
+        status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       },
       {
-        category: 'Transport',
-        amount: 1800000,
-        description: 'Fuel for delivery trucks',
-        date: '2024-07-11',
-        status: 'Pending',
+        supplier_name: 'Green Valley Co-op',
+        coffee_type: 'Robusta',
+        bags: 30,
+        kilograms: 1800,
+        date: new Date().toISOString().split('T')[0],
+        batch_number: 'RB002',
+        status: 'approved',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
     ];
 
-    for (const expense of expenses) {
-      await addDoc(collection(db, 'finance_expenses'), expense);
-    }
-
-    // Sample approval requests
-    const approvals = [
-      {
-        title: 'New Coffee Processing Equipment',
-        description: 'Purchase of advanced coffee hulling machine',
-        type: 'Purchase',
-        amount: '25000000',
-        department: 'Operations',
-        requestedby: 'Kelvis Fauza',
-        priority: 'High',
-        status: 'Pending',
-        daterequested: '2024-07-13',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        title: 'Marketing Campaign Budget',
-        description: 'Q4 marketing campaign for international markets',
-        type: 'Budget',
-        amount: '8000000',
-        department: 'Sales & Marketing',
-        requestedby: 'Sarah Nakato',
-        priority: 'Medium',
-        status: 'Under Review',
-        daterequested: '2024-07-12',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+    for (const record of coffeeRecords) {
+      try {
+        const docRef = await addDoc(collection(db, 'coffee_records'), record);
+        console.log('Added coffee record:', record.batch_number, 'with ID:', docRef.id);
+      } catch (error) {
+        console.error('Error adding coffee record:', record.batch_number, error);
       }
-    ];
-
-    for (const approval of approvals) {
-      await addDoc(collection(db, 'approval_requests'), approval);
     }
+
+    console.log('Firebase data seeding completed successfully!');
+    
   } catch (error) {
-    console.error('Error seeding data:', error);
+    console.error('Error seeding Firebase data:', error);
   }
 };

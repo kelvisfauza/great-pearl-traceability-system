@@ -1,6 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, addDoc, updateDoc, doc, query, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export interface StoreRecord {
   id: string;
@@ -16,35 +18,43 @@ export interface StoreRecord {
 export const useStoreManagement = () => {
   const [storeRecords, setStoreRecords] = useState<StoreRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const fetchStoreData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('coffee_records')
-        .select('*')
-        .order('created_at', { ascending: false });
+      console.log('Fetching store records from Firebase...');
+      
+      const recordsQuery = query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(recordsQuery);
+      
+      console.log('Raw Firebase documents:', querySnapshot.size);
+      
+      const transformedRecords: StoreRecord[] = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('Document data:', data);
+        
+        return {
+          id: doc.id,
+          supplierName: data.supplier_name || '',
+          coffeeType: data.coffee_type || '',
+          bags: data.bags || 0,
+          kilograms: data.kilograms || 0,
+          date: data.date || '',
+          batchNumber: data.batch_number || '',
+          status: data.status || 'pending'
+        };
+      });
 
-      if (error) {
-        console.error('Error fetching store records:', error);
-        setStoreRecords([]);
-        return;
-      }
-
-      const transformedRecords: StoreRecord[] = data.map(record => ({
-        id: record.id,
-        supplierName: record.supplier_name,
-        coffeeType: record.coffee_type,
-        bags: record.bags,
-        kilograms: record.kilograms,
-        date: record.date,
-        batchNumber: record.batch_number,
-        status: record.status
-      }));
-
+      console.log('Transformed records:', transformedRecords);
       setStoreRecords(transformedRecords);
     } catch (error) {
       console.error('Error fetching store data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch store records",
+        variant: "destructive"
+      });
       setStoreRecords([]);
     } finally {
       setLoading(false);
@@ -53,56 +63,86 @@ export const useStoreManagement = () => {
 
   const addSupplier = async (supplierData: any) => {
     try {
-      const { error } = await supabase
-        .from('suppliers')
-        .insert([{
-          name: supplierData.name,
-          origin: supplierData.location,
-          phone: supplierData.phone,
-          code: `SUP${Date.now()}`,
-          opening_balance: 0
-        }]);
+      const supplierDoc = {
+        name: supplierData.name,
+        origin: supplierData.location,
+        phone: supplierData.phone,
+        code: `SUP${Date.now()}`,
+        opening_balance: 0,
+        date_registered: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-      if (error) throw error;
+      await addDoc(collection(db, 'suppliers'), supplierDoc);
+      
+      toast({
+        title: "Success",
+        description: "Supplier added successfully"
+      });
     } catch (error) {
       console.error('Error adding supplier:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add supplier",
+        variant: "destructive"
+      });
       throw error;
     }
   };
 
   const addCoffeeRecord = async (recordData: Omit<StoreRecord, 'id'>) => {
     try {
-      const { error } = await supabase
-        .from('coffee_records')
-        .insert([{
-          supplier_name: recordData.supplierName,
-          coffee_type: recordData.coffeeType,
-          bags: recordData.bags,
-          kilograms: recordData.kilograms,
-          date: recordData.date,
-          batch_number: recordData.batchNumber,
-          status: recordData.status
-        }]);
+      const coffeeDoc = {
+        supplier_name: recordData.supplierName,
+        coffee_type: recordData.coffeeType,
+        bags: recordData.bags,
+        kilograms: recordData.kilograms,
+        date: recordData.date,
+        batch_number: recordData.batchNumber,
+        status: recordData.status,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-      if (error) throw error;
+      await addDoc(collection(db, 'coffee_records'), coffeeDoc);
       await fetchStoreData();
+      
+      toast({
+        title: "Success",
+        description: "Coffee record added successfully"
+      });
     } catch (error) {
       console.error('Error adding coffee record:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add coffee record",
+        variant: "destructive"
+      });
       throw error;
     }
   };
 
   const updateCoffeeRecordStatus = async (recordId: string, status: string) => {
     try {
-      const { error } = await supabase
-        .from('coffee_records')
-        .update({ status })
-        .eq('id', recordId);
+      await updateDoc(doc(db, 'coffee_records', recordId), {
+        status,
+        updated_at: new Date().toISOString()
+      });
 
-      if (error) throw error;
       await fetchStoreData();
+      
+      toast({
+        title: "Success",
+        description: "Record status updated successfully"
+      });
     } catch (error) {
       console.error('Error updating coffee record status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update record status",
+        variant: "destructive"
+      });
       throw error;
     }
   };
@@ -116,7 +156,6 @@ export const useStoreManagement = () => {
       totalBags: todaysRecords.reduce((sum, record) => sum + record.bags, 0),
       totalKilograms: todaysRecords.reduce((sum, record) => sum + record.kilograms, 0),
       pendingRecords: todaysRecords.filter(record => record.status === 'pending').length,
-      // Add backward compatibility properties
       totalReceived: todaysRecords.reduce((sum, record) => sum + record.bags, 0),
       activeSuppliers: new Set(todaysRecords.map(r => r.supplierName)).size
     };
@@ -128,8 +167,8 @@ export const useStoreManagement = () => {
     return {
       ...pendingRecords,
       qualityReview: pendingRecords.filter(r => r.status === 'pending').length,
-      awaitingPricing: pendingRecords.filter(r => r.status === 'assessed').length,
-      readyForDispatch: pendingRecords.filter(r => r.status === 'approved').length
+      awaitingPricing: storeRecords.filter(r => r.status === 'assessed').length,
+      readyForDispatch: storeRecords.filter(r => r.status === 'approved').length
     };
   };
 
@@ -141,8 +180,7 @@ export const useStoreManagement = () => {
     storeRecords,
     loading,
     fetchStoreData,
-    // Legacy aliases for backward compatibility
-    suppliers: [], // This would need to be fetched separately if needed
+    suppliers: [],
     coffeeRecords: storeRecords,
     addSupplier,
     addCoffeeRecord,
