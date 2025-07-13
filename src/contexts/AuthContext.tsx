@@ -108,34 +108,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user, resetInactivityTimer]);
 
-  const createDefaultEmployee = async (user: User): Promise<Employee> => {
-    const defaultEmployee: Employee = {
-      id: user.uid,
-      name: user.email?.split('@')[0] || 'User',
-      email: user.email || '',
-      position: 'Manager',
-      department: 'Operations',
-      salary: 2000000,
-      role: 'Administrator',
-      permissions: ['Human Resources', 'Finance', 'Operations', 'Reports', 'Store Management', 'Quality Control'],
-      status: 'Active',
-      join_date: new Date().toISOString().split('T')[0],
-    };
-
-    try {
-      await setDoc(doc(db, 'employees', user.uid), {
-        ...defaultEmployee,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-      console.log('Default employee created:', defaultEmployee);
-      return defaultEmployee;
-    } catch (error) {
-      console.error('Error creating default employee:', error);
-      return defaultEmployee;
-    }
-  };
-
   const fetchEmployeeData = async () => {
     if (!user?.uid) {
       console.log('No user UID available');
@@ -181,16 +153,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // If no employee found, create a default one (for backwards compatibility)
-      console.log('No employee found, creating default employee');
-      const defaultEmployee = await createDefaultEmployee(user);
-      setEmployee(defaultEmployee);
+      // If no employee found, user doesn't have an employee record
+      console.log('No employee record found for user');
+      setEmployee(null);
+      toast({
+        title: "Access Denied",
+        description: "No employee record found. Contact your administrator.",
+        variant: "destructive"
+      });
 
     } catch (error) {
       console.error('Error in fetchEmployeeData:', error);
-      // Create default employee on error
-      const defaultEmployee = await createDefaultEmployee(user);
-      setEmployee(defaultEmployee);
+      setEmployee(null);
+      toast({
+        title: "Error",
+        description: "Failed to load employee data. Contact your administrator.",
+        variant: "destructive"
+      });
     }
   };
 
