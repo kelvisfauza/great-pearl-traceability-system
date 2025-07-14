@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -119,6 +118,7 @@ const QualityControl = () => {
         husks: parseFloat(assessmentForm.husks) || 0,
         stones: parseFloat(assessmentForm.stones) || 0,
         suggested_price: suggestedPrice,
+        status: 'assessed',
         comments: assessmentForm.comments,
         date_assessed: new Date().toISOString().split('T')[0],
         assessed_by: 'Quality Controller',
