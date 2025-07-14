@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -146,7 +147,7 @@ export const useFirebaseFinance = () => {
     try {
       console.log('Fetching payment records and quality assessments...');
       
-      // First, fetch coffee records to get supplier names
+      // First, fetch coffee records to get supplier names and kilograms
       const coffeeRecordsQuery = query(collection(db, 'coffee_records'));
       const coffeeRecordsSnapshot = await getDocs(coffeeRecordsQuery);
       const coffeeRecords = coffeeRecordsSnapshot.docs.map(doc => {
@@ -155,6 +156,7 @@ export const useFirebaseFinance = () => {
           id: doc.id,
           batch_number: data.batch_number || '',
           supplier_name: data.supplier_name || '',
+          kilograms: data.kilograms || 0,
           ...data
         };
       });
@@ -281,21 +283,29 @@ export const useFirebaseFinance = () => {
         if (!existingPayment) {
           console.log('Creating payment record for assessment:', assessment.id, 'batch:', assessment.batch_number);
           
-          // Find the corresponding coffee record to get supplier name
+          // Find the corresponding coffee record to get supplier name and kilograms
           const coffeeRecord = coffeeRecords.find(record => 
             record.id === assessment.store_record_id || 
             record.batch_number === assessment.batch_number
           );
           
           const supplierName = coffeeRecord?.supplier_name || 'Unknown Supplier';
+          const kilograms = coffeeRecord?.kilograms || 0;
+          
+          // Calculate total payment amount: kilograms × price per kg
+          const totalPaymentAmount = kilograms * assessment.suggested_price;
           
           console.log('Found coffee record for batch', assessment.batch_number, ':', coffeeRecord);
-          console.log('Using supplier name:', supplierName);
+          console.log('Payment calculation:', {
+            kilograms,
+            pricePerKg: assessment.suggested_price,
+            totalAmount: totalPaymentAmount
+          });
           
-          // Create new payment record with correct supplier name and amount
+          // Create new payment record with correct supplier name and calculated amount
           const paymentRecord = {
             supplier: supplierName,
-            amount: assessment.suggested_price || 0,
+            amount: totalPaymentAmount, // This is now kilograms × price per kg
             status: 'Pending',
             method: 'Bank Transfer',
             date: new Date().toLocaleDateString(),
@@ -315,7 +325,7 @@ export const useFirebaseFinance = () => {
               ...paymentRecord
             });
 
-            console.log('Created payment record with supplier:', supplierName, 'amount:', assessment.suggested_price, 'batch:', assessment.batch_number);
+            console.log('Created payment record with supplier:', supplierName, 'amount:', totalPaymentAmount, 'batch:', assessment.batch_number);
           } catch (error) {
             console.error('Error creating payment record:', error);
           }

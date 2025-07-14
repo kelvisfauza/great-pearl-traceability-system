@@ -166,16 +166,26 @@ export const useQualityControl = () => {
       const docRef = await addDoc(collection(db, 'quality_assessments'), assessmentToAdd);
       console.log('Quality assessment added successfully:', docRef.id);
       
-      // Create payment record in Firebase
-      console.log('Creating payment record for assessment:', docRef.id);
-      
-      // Find the coffee record to get supplier name
+      // Find the coffee record to get supplier name and kilograms
       const coffeeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
       const supplierName = coffeeRecord?.supplier_name || 'Unknown Supplier';
+      const kilograms = coffeeRecord?.kilograms || 0;
+      
+      // Calculate total payment amount: kilograms × price per kg
+      const totalPaymentAmount = kilograms * assessment.suggested_price;
+      
+      console.log('Payment calculation:', {
+        kilograms,
+        pricePerKg: assessment.suggested_price,
+        totalAmount: totalPaymentAmount
+      });
+      
+      // Create payment record in Firebase with calculated amount
+      console.log('Creating payment record for assessment:', docRef.id);
       
       await addDoc(collection(db, 'payment_records'), {
         supplier: supplierName,
-        amount: assessment.suggested_price || 0,
+        amount: totalPaymentAmount, // This is now kilograms × price per kg
         status: 'Pending',
         method: 'Bank Transfer',
         date: new Date().toISOString().split('T')[0],
@@ -185,14 +195,14 @@ export const useQualityControl = () => {
         updated_at: new Date().toISOString()
       });
       
-      console.log('Payment record created successfully');
+      console.log('Payment record created successfully with amount:', totalPaymentAmount);
       
       // Refresh assessments to get the new one with ID
       await loadQualityAssessments();
       
       toast({
         title: "Success",
-        description: "Quality assessment saved and sent to finance for payment processing"
+        description: `Quality assessment saved and payment record created for ${totalPaymentAmount.toLocaleString()} UGX (${kilograms}kg × ${assessment.suggested_price}/kg)`
       });
       
       return { id: docRef.id, ...assessmentToAdd };
