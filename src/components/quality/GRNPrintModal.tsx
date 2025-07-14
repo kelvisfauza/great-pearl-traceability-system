@@ -44,8 +44,10 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
     if (!printWindow) return;
 
     printWindow.document.write(`
-      <html>
+      <!DOCTYPE html>
+      <html lang="en">
         <head>
+          <meta charset="UTF-8" />
           <title>GRN - ${grnNumber}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
@@ -57,13 +59,18 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
             .note { margin-top: 20px; font-size: 11px; color: #666; }
           </style>
         </head>
-        <body>${content}</body>
+        <body>
+          ${content}
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
       </html>
     `);
     printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
   };
 
   return (
@@ -76,14 +83,14 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
         </DialogHeader>
 
         <div ref={printRef}>
-          <div className="text-center text-sm">
+          <div className="text-center mb-4 text-sm">
             <p className="font-bold text-lg">Great Pearl Coffee Factory</p>
             <p>+256781121639 / +256778536681</p>
             <p>www.greatpearlcoffee.com</p>
             <p>greatpearlcoffee@gmail.com</p>
           </div>
 
-          <div className="mt-4 text-sm">
+          <div className="space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p><strong>Supplier Name:</strong> {supplierName}</p>
@@ -99,7 +106,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
               </div>
             </div>
 
-            <table className="mt-6">
+            <table>
               <thead>
                 <tr>
                   <th>Description</th>
