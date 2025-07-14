@@ -53,58 +53,86 @@ serve(async (req) => {
     
     console.log('Sending SMS to:', formattedPhone, 'Message:', message)
     
-    // Send SMS using the provided API
-    const smsResponse = await fetch('https://api.sms.net/sms/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer xgpYr222zWMD4w5VIzUaZc5KYO5L1w8N38qBj1qPflwguq9PdJ545NTCSLTS7H00`
-      },
-      body: JSON.stringify({
-        to: formattedPhone,
-        message: message,
-        from: 'GreatPearl'
-      })
-    })
-
-    console.log('SMS API response status:', smsResponse.status)
-
-    if (!smsResponse.ok) {
-      const errorText = await smsResponse.text()
-      console.error('SMS API error response:', errorText)
-      
-      // Try to parse as JSON, fall back to text
-      let smsResult
-      try {
-        smsResult = JSON.parse(errorText)
-      } catch {
-        smsResult = { error: errorText }
-      }
-      
-      console.error('SMS sending failed:', smsResult)
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to send SMS', 
-          details: smsResult,
-          phone: formattedPhone 
-        }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    // Try multiple SMS providers for better reliability
+    const smsProviders = [
+      {
+        name: 'SMS.net',
+        url: 'https://api.sms.net/sms/send',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SMS_API_KEY') || 'xgpYr222zWMD4w5VIzUaZc5KYO5L1w8N38qBj1qPflwguq9PdJ545NTCSLTS7H00'}`
+        },
+        body: {
+          to: formattedPhone,
+          message: message,
+          from: 'GreatPearl'
         }
-      )
+      },
+      {
+        name: 'Backup SMS Service',
+        url: 'https://api.textlocal.in/send/',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          apikey: Deno.env.get('TEXTLOCAL_API_KEY') || '',
+          numbers: formattedPhone,
+          message: message,
+          sender: 'GreatPearl'
+        }).toString()
+      }
+    ]
+
+    let lastError = null
+    
+    for (const provider of smsProviders) {
+      try {
+        console.log(`Trying ${provider.name}...`)
+        
+        const smsResponse = await fetch(provider.url, {
+          method: 'POST',
+          headers: provider.headers,
+          body: typeof provider.body === 'string' ? provider.body : JSON.stringify(provider.body)
+        })
+
+        console.log(`${provider.name} response status:`, smsResponse.status)
+
+        if (smsResponse.ok) {
+          const smsResult = await smsResponse.json()
+          console.log(`SMS sent successfully via ${provider.name}:`, smsResult)
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'SMS sent successfully',
+              phone: formattedPhone,
+              provider: provider.name
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          )
+        } else {
+          const errorText = await smsResponse.text()
+          console.error(`${provider.name} error:`, errorText)
+          lastError = { provider: provider.name, error: errorText }
+        }
+      } catch (error) {
+        console.error(`${provider.name} request failed:`, error)
+        lastError = { provider: provider.name, error: error.message }
+      }
     }
 
-    const smsResult = await smsResponse.json()
-    console.log('SMS sent successfully:', smsResult)
-
+    // If all providers failed, return error
+    console.error('All SMS providers failed:', lastError)
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        message: 'SMS sent successfully',
+        error: 'Failed to send SMS via all providers', 
+        details: lastError,
         phone: formattedPhone 
       }),
       { 
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
