@@ -1,3 +1,4 @@
+
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import {
   Eye,
   Send
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQualityControl } from "@/hooks/useQualityControl";
 import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
@@ -50,6 +51,11 @@ const QualityControl = () => {
     comments: ''
   });
 
+  // Refresh prices when component mounts
+  useEffect(() => {
+    refreshPrices();
+  }, [refreshPrices]);
+
   const handleStartAssessment = (record: any) => {
     console.log('Starting assessment for record:', record);
     setSelectedRecord(record);
@@ -68,10 +74,24 @@ const QualityControl = () => {
   const calculateSuggestedPrice = () => {
     if (!selectedRecord) return 0;
     
-    // Refresh prices before calculation
-    refreshPrices();
+    console.log('Calculating price with current prices:', prices);
+    console.log('Selected record coffee type:', selectedRecord.coffee_type);
     
-    const basePrice = selectedRecord.coffee_type === 'Arabica' ? prices.drugarLocal : prices.robustaFaqLocal;
+    // Get base price based on coffee type
+    let basePrice = 0;
+    const coffeeType = selectedRecord.coffee_type?.toLowerCase();
+    
+    if (coffeeType?.includes('arabica') || coffeeType?.includes('drugar')) {
+      basePrice = prices.drugarLocal;
+    } else if (coffeeType?.includes('robusta')) {
+      basePrice = prices.robustaFaqLocal;
+    } else {
+      // Default to drugar if type is unclear
+      basePrice = prices.drugarLocal;
+    }
+    
+    console.log('Base price selected:', basePrice, 'for coffee type:', coffeeType);
+    
     const moisture = parseFloat(assessmentForm.moisture) || 12;
     const group1 = parseFloat(assessmentForm.group1_defects) || 0;
     const group2 = parseFloat(assessmentForm.group2_defects) || 0;
@@ -100,12 +120,28 @@ const QualityControl = () => {
   };
 
   const handleSubmitAssessment = async () => {
-    if (!selectedRecord) return;
+    if (!selectedRecord) {
+      toast({
+        title: "Error",
+        description: "No record selected for assessment",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       console.log('Submitting quality assessment...');
       
       const suggestedPrice = calculateSuggestedPrice();
+      
+      if (suggestedPrice <= 0) {
+        toast({
+          title: "Error",
+          description: "Invalid price calculation. Please check your inputs.",
+          variant: "destructive"
+        });
+        return;
+      }
       
       const assessment = {
         store_record_id: selectedRecord.id,
@@ -118,7 +154,7 @@ const QualityControl = () => {
         husks: parseFloat(assessmentForm.husks) || 0,
         stones: parseFloat(assessmentForm.stones) || 0,
         suggested_price: suggestedPrice,
-        status: 'assessed',
+        status: 'assessed' as const,
         comments: assessmentForm.comments,
         date_assessed: new Date().toISOString().split('T')[0],
         assessed_by: 'Quality Controller',
@@ -131,7 +167,7 @@ const QualityControl = () => {
       // Update the store record status
       await updateStoreRecord(selectedRecord.id, { status: 'assessed' });
       
-      // Clear form
+      // Clear form and selection
       setSelectedRecord(null);
       setAssessmentForm({
         moisture: '',
@@ -153,7 +189,7 @@ const QualityControl = () => {
       console.error('Error submitting assessment:', error);
       toast({
         title: "Error",
-        description: "Failed to submit quality assessment",
+        description: "Failed to submit quality assessment. Please try again.",
         variant: "destructive"
       });
     }
@@ -204,6 +240,14 @@ const QualityControl = () => {
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
               Current Market Prices
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={refreshPrices}
+                className="ml-auto"
+              >
+                Refresh Prices
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -368,7 +412,7 @@ const QualityControl = () => {
                 <CardHeader>
                   <CardTitle>Quality Assessment Form</CardTitle>
                   <CardDescription>
-                    Assessing: {selectedRecord.batch_number} - {selectedRecord.supplier_name}
+                    Assessing: {selectedRecord.batch_number} - {selectedRecord.supplier_name} ({selectedRecord.coffee_type})
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
