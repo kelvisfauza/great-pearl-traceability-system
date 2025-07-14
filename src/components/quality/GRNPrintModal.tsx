@@ -1,109 +1,89 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+
+interface StoreRecord {
+  id: string;
+  supplier_name: string;
+  date: string;
+  coffee_type: string;
+  quantity: number;
+  unit_price?: number;
+  total_amount?: number;
+  approved_by?: string;
+}
 
 interface GRNPrintModalProps {
   isOpen: boolean;
   onClose: () => void;
-  assessment: any;
-  storeRecord: any;
-  formatCurrency: (amount: number) => string;
+  storeRecord?: StoreRecord;
 }
 
-const GRNPrintModal = ({ isOpen, onClose, assessment, storeRecord, formatCurrency }: GRNPrintModalProps) => {
-  const { employee } = useAuth();
+const formatCurrency = (amount: number | undefined | null): string => {
+  if (typeof amount !== 'number' || isNaN(amount)) {
+    return 'UGX 0';
+  }
+  return `UGX ${amount.toLocaleString('en-UG')}`;
+};
 
-  if (!assessment || !storeRecord) return null;
-
-  const handlePrint = () => {
-    const content = document.getElementById("grn-content");
-    if (content) {
-      const printWindow = window.open("", "_blank");
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Goods Received Note</title>
-              <style>
-                body { font-family: Arial, sans-serif; margin: 40px; color: #000; }
-                .grn-container { max-width: 900px; margin: auto; }
-                .header { text-align: center; margin-bottom: 20px; }
-                .header h1 { margin: 0; font-size: 24px; }
-                .details, .footer { margin-top: 20px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-                th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-                .footer { display: flex; justify-content: space-between; margin-top: 50px; }
-                .signature { width: 30%; text-align: center; }
-                .signature-line { margin-top: 60px; border-top: 1px solid #000; }
-              </style>
-            </head>
-            <body>${content.innerHTML}</body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-      }
-    }
-  };
+const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ isOpen, onClose, storeRecord }) => {
+  if (!storeRecord) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogHeader>
-        <DialogTitle>Print Goods Received Note</DialogTitle>
-      </DialogHeader>
-      <DialogContent>
-        <div id="grn-content" className="grn-container print-content" style={{ display: "none" }}>
-          <div className="header">
-            <h1>Great Pearl Coffee Factory</h1>
-            <p><strong>Goods Received Note (GRN)</strong></p>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl text-center">Goods Received Note (GRN)</DialogTitle>
+        </DialogHeader>
+
+        <div className="p-4 border rounded shadow-sm text-sm space-y-3">
+          <div className="flex justify-between">
+            <div>
+              <p><strong>Supplier:</strong> {storeRecord.supplier_name}</p>
+              <p><strong>Date:</strong> {new Date(storeRecord.date).toLocaleDateString()}</p>
+              <p><strong>Approved by:</strong> {storeRecord.approved_by || '________________'}</p>
+            </div>
+            <div className="text-right">
+              <p><strong>GRN ID:</strong> {storeRecord.id}</p>
+              <p><strong>Coffee Type:</strong> {storeRecord.coffee_type}</p>
+            </div>
           </div>
 
-          <div className="details">
-            <p><strong>Batch Number:</strong> {storeRecord.batch_number}</p>
-            <p><strong>Supplier:</strong> {storeRecord.supplier_name || "N/A"}</p>
-            <p><strong>Date:</strong> {new Date(storeRecord.timestamp).toLocaleDateString()}</p>
-          </div>
+          <hr className="my-2" />
 
-          <table>
+          <table className="w-full table-auto border-collapse border border-gray-300">
             <thead>
-              <tr>
-                <th>Description</th>
-                <th>Quantity (kg)</th>
-                <th>Unit Price (UGX)</th>
-                <th>Total (UGX)</th>
+              <tr className="bg-gray-100">
+                <th className="border p-2">Item</th>
+                <th className="border p-2">Quantity (Kg)</th>
+                <th className="border p-2">Unit Price</th>
+                <th className="border p-2">Total Amount</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>{assessment.coffee_type} - Moisture: {assessment.moisture}%</td>
-                <td>{storeRecord.total_kg}</td>
-                <td>{formatCurrency(storeRecord.unit_price)}</td>
-                <td>{formatCurrency(storeRecord.total_amount)}</td>
+                <td className="border p-2">{storeRecord.coffee_type}</td>
+                <td className="border p-2">{storeRecord.quantity}</td>
+                <td className="border p-2">{formatCurrency(storeRecord.unit_price)}</td>
+                <td className="border p-2">{formatCurrency(storeRecord.total_amount)}</td>
               </tr>
             </tbody>
           </table>
 
-          <div className="footer">
-            <div className="signature">
-              <p>Delivered By</p>
-              <div className="signature-line"></div>
+          <div className="mt-6 flex justify-between">
+            <div>
+              <p><strong>Store Manager Signature:</strong> ___________________</p>
+              <p><strong>Receiver Signature:</strong> ___________________</p>
             </div>
-            <div className="signature">
-              <p>Received By</p>
-              <div className="signature-line"></div>
-            </div>
-            <div className="signature">
-              <p>Store Manager</p>
-              <div className="signature-line"></div>
+            <div className="text-right">
+              <p><strong>Total:</strong> {formatCurrency(storeRecord.total_amount)}</p>
             </div>
           </div>
-        </div>
 
-        <Button onClick={handlePrint} className="mt-4">
-          <Printer className="mr-2 h-4 w-4" />
-          Print GRN
-        </Button>
+          <div className="text-center mt-4">
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
