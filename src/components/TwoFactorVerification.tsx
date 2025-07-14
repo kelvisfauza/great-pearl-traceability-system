@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Loader2, Shield, RotateCcw } from 'lucide-react';
+import { Loader2, Shield, RotateCcw, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { smsService } from '@/services/smsService';
 
@@ -67,6 +67,33 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to send verification code. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // Test function to send SMS to specific number
+  const testSMSToNumber = async () => {
+    setIsSending(true);
+    try {
+      console.log('Testing SMS to 0781121639...');
+      const result = await smsService.testSMS('0781121639');
+      
+      if (result.success) {
+        toast({
+          title: "Test SMS sent",
+          description: "Test message sent to 0781121639",
+        });
+      } else {
+        throw new Error(result.error || 'Failed to send test SMS');
+      }
+    } catch (error) {
+      console.error('Error sending test SMS:', error);
+      toast({
+        title: "Test SMS Failed",
+        description: error instanceof Error ? error.message : "Failed to send test SMS",
         variant: "destructive"
       });
     } finally {
@@ -183,6 +210,17 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
           </Button>
 
           <Button
+            variant="secondary"
+            onClick={testSMSToNumber}
+            className="w-full"
+            disabled={isSending}
+          >
+            {isSending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Send className="mr-2 h-4 w-4" />
+            Test SMS to 0781121639
+          </Button>
+
+          <Button
             variant="ghost"
             onClick={onCancel}
             className="w-full"
@@ -193,6 +231,7 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
 
         <div className="text-center text-xs text-gray-500">
           <p>Didn't receive the code? Check your phone or try resending.</p>
+          <p className="mt-1">Use the test button to send a message to 0781121639</p>
         </div>
       </CardContent>
     </Card>

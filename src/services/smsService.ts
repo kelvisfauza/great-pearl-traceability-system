@@ -18,29 +18,43 @@ class YoolaSMSProvider implements SMSProvider {
 
     try {
       console.log('Attempting to send SMS via YoolaSMS to:', phone);
+      console.log('Message content:', message);
       
-      const data = {
-        phone: phone,
+      // YoolaSMS API typically uses form data or specific JSON structure
+      const requestData = {
+        api_key: this.apiKey,
+        to: phone,
         message: message,
-        api_key: this.apiKey
+        from: 'GreatPearl'
       };
 
-      const config = {
-        method: 'post',
-        maxBodyLength: Infinity,
-        url: 'https://yoolasms.com/api/v1/send',
-        headers: { 
-          'Content-Type': 'application/json'
+      console.log('YoolaSMS request data:', requestData);
+
+      // Try the standard YoolaSMS endpoint format
+      const response = await axios.post('https://yoolasms.com/api/send', requestData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        data: data
-      };
+        timeout: 10000
+      });
 
-      console.log('YoolaSMS request config:', config);
-      const response = await axios.request(config);
-      console.log('YoolaSMS response:', response.data);
-      return true;
-    } catch (error) {
+      console.log('YoolaSMS response status:', response.status);
+      console.log('YoolaSMS response data:', response.data);
+      
+      // Check if the response indicates success
+      if (response.status === 200) {
+        return true;
+      } else {
+        console.error('YoolaSMS unexpected status:', response.status);
+        return false;
+      }
+    } catch (error: any) {
       console.error('YoolaSMS request failed:', error);
+      if (error.response) {
+        console.error('YoolaSMS error response:', error.response.data);
+        console.error('YoolaSMS error status:', error.response.status);
+      }
       return false;
     }
   }
@@ -113,6 +127,13 @@ export class SMSService {
       success: false, 
       error: 'All SMS providers failed to send the verification code' 
     };
+  }
+
+  // Test method to send to specific number
+  async testSMS(phone: string): Promise<{ success: boolean; error?: string }> {
+    const testCode = Math.floor(1000 + Math.random() * 9000).toString();
+    console.log('Testing SMS service with code:', testCode);
+    return this.sendVerificationSMS(phone, testCode, 'Test User');
   }
 }
 
