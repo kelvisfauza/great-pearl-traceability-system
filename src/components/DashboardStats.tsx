@@ -6,29 +6,102 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useState, useEffect } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const DashboardStats = () => {
   const { hasRole, hasPermission, employee } = useAuth();
   const { employees } = useEmployees();
   const { requests } = useApprovalRequests();
 
-  const [coffeeData, setCoffeeData] = useState({ totalKgs: 0, totalBags: 0, totalBatches: 0 });
-  const [financeData, setFinanceData] = useState({ totalRevenue: 0, totalExpenses: 0 });
-  const [supplierCount, setSupplierCount] = useState(0);
+  const [realTimeData, setRealTimeData] = useState({
+    coffeeData: { totalKgs: 0, totalBags: 0, totalBatches: 0 },
+    financeData: { totalRevenue: 0, totalExpenses: 0 },
+    supplierCount: 0,
+    inventoryData: { totalBags: 0, totalKgs: 0 }
+  });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchRealData = async () => {
       try {
-        // Mock data for now during Firebase migration
-        setCoffeeData({ totalKgs: 15000, totalBags: 300, totalBatches: 25 });
-        setFinanceData({ totalRevenue: 850000, totalExpenses: 320000 });
-        setSupplierCount(12);
+        console.log('Fetching real-time dashboard data...');
+        
+        // Fetch coffee records
+        const coffeeSnapshot = await getDocs(collection(db, 'coffee_records'));
+        let totalKgs = 0;
+        let totalBags = 0;
+        const batches = new Set();
+        
+        coffeeSnapshot.forEach((doc) => {
+          const data = doc.data();
+          totalKgs += Number(data.kilograms) || 0;
+          totalBags += Number(data.bags) || 0;
+          if (data.batch_number) {
+            batches.add(data.batch_number);
+          }
+        });
+
+        // Fetch finance transactions for revenue
+        const transactionsSnapshot = await getDocs(collection(db, 'finance_transactions'));
+        let totalRevenue = 0;
+        transactionsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.type === 'Income' || data.type === 'Revenue') {
+            totalRevenue += Number(data.amount) || 0;
+          }
+        });
+
+        // Fetch expenses
+        const expensesSnapshot = await getDocs(collection(db, 'finance_expenses'));
+        let totalExpenses = 0;
+        expensesSnapshot.forEach((doc) => {
+          const data = doc.data();
+          totalExpenses += Number(data.amount) || 0;
+        });
+
+        // Fetch suppliers count
+        const suppliersSnapshot = await getDocs(collection(db, 'suppliers'));
+        const supplierCount = suppliersSnapshot.size;
+
+        // Fetch inventory data
+        const inventorySnapshot = await getDocs(collection(db, 'inventory_items'));
+        let inventoryBags = 0;
+        let inventoryKgs = 0;
+        inventorySnapshot.forEach((doc) => {
+          const data = doc.data();
+          inventoryBags += Number(data.total_bags) || 0;
+          inventoryKgs += Number(data.total_kilograms) || 0;
+        });
+
+        setRealTimeData({
+          coffeeData: { 
+            totalKgs, 
+            totalBags, 
+            totalBatches: batches.size 
+          },
+          financeData: { 
+            totalRevenue, 
+            totalExpenses 
+          },
+          supplierCount,
+          inventoryData: {
+            totalBags: inventoryBags,
+            totalKgs: inventoryKgs
+          }
+        });
+
+        console.log('Dashboard data updated:', {
+          coffeeData: { totalKgs, totalBags, totalBatches: batches.size },
+          financeData: { totalRevenue, totalExpenses },
+          supplierCount,
+          inventoryData: { totalBags: inventoryBags, totalKgs: inventoryKgs }
+        });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
     };
 
-    fetchData();
+    fetchRealData();
   }, []);
 
   // Different stats based on role
@@ -38,8 +111,8 @@ const DashboardStats = () => {
       return [
         {
           title: "Coffee Inventory",
-          value: `${(coffeeData.totalKgs / 1000).toFixed(1)}K kg`,
-          change: `${coffeeData.totalBags} bags stored`,
+          value: `${(realTimeData.inventoryData.totalKgs / 1000).toFixed(1)}K kg`,
+          change: `${realTimeData.inventoryData.totalBags} bags stored`,
           icon: Coffee,
           color: "text-green-600",
           bgColor: "bg-green-50",
@@ -48,7 +121,7 @@ const DashboardStats = () => {
         },
         {
           title: "Active Batches",
-          value: coffeeData.totalBatches.toString(),
+          value: realTimeData.coffeeData.totalBatches.toString(),
           change: "processing & stored",
           icon: Package,
           color: "text-blue-600",
@@ -58,7 +131,7 @@ const DashboardStats = () => {
         },
         {
           title: "Suppliers",
-          value: supplierCount.toString(),
+          value: realTimeData.supplierCount.toString(),
           change: "registered partners",
           icon: Building,
           color: "text-purple-600",
@@ -91,8 +164,8 @@ const DashboardStats = () => {
       return [
         {
           title: "Total Revenue",
-          value: `UGX ${(financeData.totalRevenue / 1000000).toFixed(1)}M`,
-          change: "this period",
+          value: `UGX ${(realTimeData.financeData.totalRevenue / 1000000).toFixed(1)}M`,
+          change: "from transactions",
           icon: DollarSign,
           color: "text-green-600",
           bgColor: "bg-green-50",
@@ -101,8 +174,8 @@ const DashboardStats = () => {
         },
         {
           title: "Coffee Processed",
-          value: `${(coffeeData.totalKgs / 1000).toFixed(1)}K kg`,
-          change: `${coffeeData.totalBatches} batches total`,
+          value: `${(realTimeData.coffeeData.totalKgs / 1000).toFixed(1)}K kg`,
+          change: `${realTimeData.coffeeData.totalBatches} batches total`,
           icon: Coffee,
           color: "text-blue-600",
           bgColor: "bg-blue-50",
@@ -122,7 +195,7 @@ const DashboardStats = () => {
         {
           title: "Active Staff",
           value: employees.filter(emp => emp.status === 'Active').length.toString(),
-          change: `UGX ${(totalSalaryRequests / 1000000).toFixed(1)}M monthly`,
+          change: `UGX ${(totalSalaryRequests / 1000000).toFixed(1)}M pending`,
           icon: Users,
           color: "text-purple-600",
           bgColor: "bg-purple-50",
@@ -136,7 +209,7 @@ const DashboardStats = () => {
     return [
       {
         title: "Coffee Batches",
-        value: coffeeData.totalBatches.toString(),
+        value: realTimeData.coffeeData.totalBatches.toString(),
         change: "in system",
         icon: Coffee,
         color: "text-green-600",
@@ -146,8 +219,8 @@ const DashboardStats = () => {
       },
       {
         title: "Inventory",
-        value: `${coffeeData.totalBags} bags`,
-        change: `${(coffeeData.totalKgs / 1000).toFixed(1)}K kg total`,
+        value: `${realTimeData.coffeeData.totalBags} bags`,
+        change: `${(realTimeData.coffeeData.totalKgs / 1000).toFixed(1)}K kg total`,
         icon: Package,
         color: "text-blue-600",
         bgColor: "bg-blue-50",
@@ -166,7 +239,7 @@ const DashboardStats = () => {
       },
       {
         title: "Suppliers",
-        value: supplierCount.toString(),
+        value: realTimeData.supplierCount.toString(),
         change: "active partners",
         icon: Building,
         color: "text-amber-600",
