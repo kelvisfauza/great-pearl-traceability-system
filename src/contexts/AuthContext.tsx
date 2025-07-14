@@ -42,7 +42,7 @@ interface AuthContextType {
   hasRole: (role: string) => boolean;
   canManageEmployees: () => boolean;
   isAdmin: () => boolean;
-  fetchEmployeeData: () => Promise<void>;
+  fetchEmployeeData: (userId?: string) => Promise<Employee | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -114,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user, resetInactivityTimer]);
 
-  const fetchEmployeeData = async (userId?: string) => {
+  const fetchEmployeeData = async (userId?: string): Promise<Employee | null> => {
     const targetUserId = userId || user?.uid;
     if (!targetUserId) {
       console.log('No user UID available');
