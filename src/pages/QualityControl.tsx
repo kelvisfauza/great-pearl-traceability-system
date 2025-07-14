@@ -18,7 +18,8 @@ import {
   FileText,
   TrendingUp,
   Eye,
-  Send
+  Send,
+  Factory
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -40,6 +41,7 @@ const QualityControl = () => {
   const { toast } = useToast();
 
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("pending");
   const [assessmentForm, setAssessmentForm] = useState({
     moisture: '',
     group1_defects: '',
@@ -48,6 +50,7 @@ const QualityControl = () => {
     pods: '',
     husks: '',
     stones: '',
+    manual_price: '',
     comments: ''
   });
 
@@ -67,8 +70,11 @@ const QualityControl = () => {
       pods: '',
       husks: '',
       stones: '',
+      manual_price: '',
       comments: ''
     });
+    // Automatically switch to assessment form tab
+    setActiveTab("assessment-form");
   };
 
   const calculateSuggestedPrice = () => {
@@ -129,19 +135,19 @@ const QualityControl = () => {
       return;
     }
 
+    const finalPrice = parseFloat(assessmentForm.manual_price) || calculateSuggestedPrice();
+    
+    if (finalPrice <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid price for the assessment.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       console.log('Submitting quality assessment...');
-      
-      const suggestedPrice = calculateSuggestedPrice();
-      
-      if (suggestedPrice <= 0) {
-        toast({
-          title: "Error",
-          description: "Invalid price calculation. Please check your inputs.",
-          variant: "destructive"
-        });
-        return;
-      }
       
       const assessment = {
         store_record_id: selectedRecord.id,
@@ -153,7 +159,7 @@ const QualityControl = () => {
         pods: parseFloat(assessmentForm.pods) || 0,
         husks: parseFloat(assessmentForm.husks) || 0,
         stones: parseFloat(assessmentForm.stones) || 0,
-        suggested_price: suggestedPrice,
+        suggested_price: finalPrice,
         status: 'assessed' as const,
         comments: assessmentForm.comments,
         date_assessed: new Date().toISOString().split('T')[0],
@@ -167,7 +173,7 @@ const QualityControl = () => {
       // Update the store record status
       await updateStoreRecord(selectedRecord.id, { status: 'assessed' });
       
-      // Clear form and selection
+      // Clear form and selection, switch back to assessments tab
       setSelectedRecord(null);
       setAssessmentForm({
         moisture: '',
@@ -177,12 +183,14 @@ const QualityControl = () => {
         pods: '',
         husks: '',
         stones: '',
+        manual_price: '',
         comments: ''
       });
+      setActiveTab("assessments");
       
       toast({
         title: "Assessment Complete",
-        description: "Quality assessment saved and payment record created for finance processing"
+        description: "Quality assessment saved and sent to finance for payment processing"
       });
       
     } catch (error) {
@@ -203,6 +211,31 @@ const QualityControl = () => {
     }
   };
 
+  const handleSendToDrier = async (assessmentId: string) => {
+    try {
+      const assessment = qualityAssessments.find(a => a.id === assessmentId);
+      if (!assessment) return;
+
+      // Update quality assessment status to indicate it's sent to drier
+      await updateStoreRecord(assessment.store_record_id, { status: 'in_drying' });
+      
+      toast({
+        title: "Sent to Drier",
+        description: `Coffee batch ${assessment.batch_number} has been sent to the drying facility`,
+      });
+      
+      // You could add more logic here to track in drying facility
+      
+    } catch (error) {
+      console.error('Error sending to drier:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send coffee to drier",
+        variant: "destructive"
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -211,6 +244,10 @@ const QualityControl = () => {
         return <Badge variant="default"><CheckCircle2 className="h-3 w-3 mr-1" />Assessed</Badge>;
       case 'submitted_to_finance':
         return <Badge variant="outline"><Send className="h-3 w-3 mr-1" />Sent to Finance</Badge>;
+      case 'paid':
+        return <Badge variant="default" className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Paid</Badge>;
+      case 'in_drying':
+        return <Badge variant="outline" className="border-orange-500 text-orange-600"><Factory className="h-3 w-3 mr-1" />In Drying</Badge>;
       case 'rejected':
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
       default:
@@ -228,10 +265,18 @@ const QualityControl = () => {
     );
   }
 
+  // Get current date for display
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
   return (
     <Layout 
       title="Quality Control" 
-      subtitle="Assess coffee quality and manage assessments"
+      subtitle={`Coffee quality assessment and management - ${currentDate}`}
     >
       <div className="space-y-6">
         {/* Current Prices Display */}
@@ -272,7 +317,7 @@ const QualityControl = () => {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="pending" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="pending">Pending Assessment ({pendingRecords.length})</TabsTrigger>
             <TabsTrigger value="assessments">Quality Assessments ({qualityAssessments.length})</TabsTrigger>
@@ -359,7 +404,7 @@ const QualityControl = () => {
                         <TableHead>Batch Number</TableHead>
                         <TableHead>Moisture %</TableHead>
                         <TableHead>Defects</TableHead>
-                        <TableHead>Suggested Price</TableHead>
+                        <TableHead>Final Price</TableHead>
                         <TableHead>Date Assessed</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
@@ -387,15 +432,27 @@ const QualityControl = () => {
                           <TableCell>{assessment.date_assessed}</TableCell>
                           <TableCell>{getStatusBadge(assessment.status)}</TableCell>
                           <TableCell>
-                            {assessment.status === 'assessed' && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleSubmitToFinance(assessment.id)}
-                              >
-                                <Send className="h-4 w-4 mr-1" />
-                                Send to Finance
-                              </Button>
-                            )}
+                            <div className="flex gap-2">
+                              {assessment.status === 'assessed' && (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleSubmitToFinance(assessment.id)}
+                                >
+                                  <Send className="h-4 w-4 mr-1" />
+                                  Send to Finance
+                                </Button>
+                              )}
+                              {(assessment.status === 'paid' || assessment.status === 'submitted_to_finance') && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleSendToDrier(assessment.id)}
+                                >
+                                  <Factory className="h-4 w-4 mr-1" />
+                                  Send to Drier
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -504,40 +561,60 @@ const QualityControl = () => {
                         />
                       </div>
                       
-                      <div className="p-4 bg-green-50 rounded-lg">
+                      <div className="p-4 bg-blue-50 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
-                          <Scale className="h-5 w-5 text-green-600" />
-                          <span className="font-semibold text-green-800">Suggested Price</span>
+                          <Scale className="h-5 w-5 text-blue-600" />
+                          <span className="font-semibold text-blue-800">Suggested Price</span>
                         </div>
-                        <p className="text-2xl font-bold text-green-600">
+                        <p className="text-lg font-bold text-blue-600 mb-2">
                           UGX {calculateSuggestedPrice().toLocaleString()}
                         </p>
-                        <p className="text-sm text-green-600 mt-1">
+                        <p className="text-sm text-blue-600">
                           Based on current market rates and quality parameters
                         </p>
                       </div>
                     </div>
                   </div>
                   
-                  <div>
-                    <Label htmlFor="comments">Comments</Label>
-                    <Textarea
-                      id="comments"
-                      value={assessmentForm.comments}
-                      onChange={(e) => setAssessmentForm({...assessmentForm, comments: e.target.value})}
-                      placeholder="Additional observations or notes..."
-                      rows={3}
-                    />
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="manual_price">Final Price (Manual Override)</Label>
+                      <Input
+                        id="manual_price"
+                        type="number"
+                        step="1"
+                        value={assessmentForm.manual_price}
+                        onChange={(e) => setAssessmentForm({...assessmentForm, manual_price: e.target.value})}
+                        placeholder={`Enter price or leave blank to use suggested: ${calculateSuggestedPrice().toLocaleString()}`}
+                      />
+                      <p className="text-sm text-gray-500 mt-1">
+                        Leave blank to use suggested price, or enter your own price
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="comments">Comments</Label>
+                      <Textarea
+                        id="comments"
+                        value={assessmentForm.comments}
+                        onChange={(e) => setAssessmentForm({...assessmentForm, comments: e.target.value})}
+                        placeholder="Additional observations or notes..."
+                        rows={3}
+                      />
+                    </div>
                   </div>
                   
                   <div className="flex gap-4">
                     <Button onClick={handleSubmitAssessment} className="flex-1">
                       <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Complete Assessment
+                      Complete Assessment & Submit to Finance
                     </Button>
                     <Button 
                       variant="outline" 
-                      onClick={() => setSelectedRecord(null)}
+                      onClick={() => {
+                        setSelectedRecord(null);
+                        setActiveTab("pending");
+                      }}
                     >
                       Cancel
                     </Button>
