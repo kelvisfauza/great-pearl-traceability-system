@@ -9,7 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Key } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { updatePassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const UserProfile = () => {
   const { employee, fetchEmployeeData } = useAuth();
@@ -45,21 +48,16 @@ const UserProfile = () => {
 
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('employees')
-        .update({
-          name: formData.name,
-          phone: formData.phone,
-          address: formData.address,
-          emergency_contact: formData.emergency_contact,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', employee.id);
-
-      if (error) {
-        console.error('Error updating profile:', error);
-        throw error;
-      }
+      console.log('Updating employee profile:', employee.id, formData);
+      
+      // Update in Firebase
+      await updateDoc(doc(db, 'employees', employee.id), {
+        name: formData.name,
+        phone: formData.phone,
+        address: formData.address,
+        emergency_contact: formData.emergency_contact,
+        updated_at: new Date().toISOString()
+      });
 
       // Refresh employee data to get updated information
       await fetchEmployeeData();
@@ -73,7 +71,7 @@ const UserProfile = () => {
       console.error('Error updating profile:', error);
       toast({
         title: "Error",
-        description: "Failed to update profile",
+        description: "Failed to update profile. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -102,14 +100,12 @@ const UserProfile = () => {
 
     setIsChangingPassword(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: passwordData.newPassword
-      });
-
-      if (error) {
-        console.error('Error changing password:', error);
-        throw error;
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('No authenticated user found');
       }
+
+      await updatePassword(currentUser, passwordData.newPassword);
 
       toast({
         title: "Success",
@@ -121,7 +117,7 @@ const UserProfile = () => {
       console.error('Error changing password:', error);
       toast({
         title: "Error",
-        description: "Failed to change password",
+        description: "Failed to change password. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -141,7 +137,16 @@ const UserProfile = () => {
     }
   }, [employee]);
 
-  if (!employee) return null;
+  if (!employee) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Profile...</h3>
+          <p className="text-gray-500">Please wait while we load your profile information.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

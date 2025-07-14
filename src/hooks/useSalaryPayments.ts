@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react'
-import { collection, getDocs, addDoc, query, orderBy, where, updateDoc, doc } from 'firebase/firestore'
+import { collection, getDocs, addDoc, query, orderBy, where, updateDoc, doc, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 
@@ -29,10 +28,11 @@ export const useSalaryPayments = () => {
     try {
       console.log('Fetching salary payment requests from Firebase...')
       
+      // Simplified query to avoid index requirements
       const approvalRequestsQuery = query(
         collection(db, 'approval_requests'),
         where('type', '==', 'Salary Payment'),
-        orderBy('created_at', 'desc')
+        limit(50) // Add limit to reduce load
       )
       
       const snapshot = await getDocs(approvalRequestsQuery)
@@ -54,6 +54,9 @@ export const useSalaryPayments = () => {
           updated_at: data.updated_at || new Date().toISOString()
         } as SalaryPaymentRequest
       })
+      
+      // Sort in memory by created_at (most recent first) to avoid compound index requirement
+      requests.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       
       console.log('Salary payment requests fetched successfully:', requests.length)
       setPaymentRequests(requests)
