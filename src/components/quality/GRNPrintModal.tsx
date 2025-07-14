@@ -32,7 +32,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
     totalKgs,
     unitPrice,
     assessedBy,
-    createdAt,
+    createdAt
   } = grnData;
 
   const totalAmount = totalKgs * unitPrice;
@@ -40,7 +40,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
   const handlePrint = () => {
     if (!printRef.current) return;
     const content = printRef.current.innerHTML;
-    const printWindow = window.open('', '', 'height=800,width=1000');
+    const printWindow = window.open('', '', 'width=900,height=1000');
     if (!printWindow) return;
 
     printWindow.document.write(`
@@ -49,11 +49,12 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
           <title>GRN - ${grnNumber}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-            .header { text-align: center; }
-            .signatures { margin-top: 40px; display: flex; justify-content: space-between; font-size: 12px; }
-            .note { font-size: 11px; margin-top: 20px; color: #666; }
+            .header { text-align: center; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+            th, td { border: 1px solid #999; padding: 8px; text-align: left; }
+            .signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 12px; }
+            .signatures div { text-align: center; }
+            .note { margin-top: 20px; font-size: 11px; color: #666; }
           </style>
         </head>
         <body>${content}</body>
@@ -75,14 +76,14 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
         </DialogHeader>
 
         <div ref={printRef}>
-          <div className="text-center mb-4 text-sm">
+          <div className="text-center text-sm">
             <p className="font-bold text-lg">Great Pearl Coffee Factory</p>
             <p>+256781121639 / +256778536681</p>
             <p>www.greatpearlcoffee.com</p>
             <p>greatpearlcoffee@gmail.com</p>
           </div>
 
-          <div className="space-y-4 text-sm">
+          <div className="mt-4 text-sm">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p><strong>Supplier Name:</strong> {supplierName}</p>
@@ -98,7 +99,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
               </div>
             </div>
 
-            <table>
+            <table className="mt-6">
               <thead>
                 <tr>
                   <th>Description</th>
