@@ -1,115 +1,159 @@
-import { useState } from "react";
+
 import Layout from "@/components/Layout";
-import PriceTicker from "@/components/PriceTicker";
-import PricingGuidance from "@/components/PricingGuidance";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { ClipboardCheck, AlertTriangle, CheckCircle, Clock, DollarSign, Send, Eye, Truck } from "lucide-react";
+import { 
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  Scale, 
+  Droplets, 
+  AlertTriangle,
+  FileText,
+  TrendingUp,
+  Eye,
+  Send
+} from "lucide-react";
+import { useState } from "react";
+import { useQualityControl } from "@/hooks/useQualityControl";
+import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
-import { useQualityControl, StoreRecord } from "@/hooks/useQualityControl";
 
 const QualityControl = () => {
-  const { toast } = useToast();
   const {
     storeRecords,
     qualityAssessments,
     pendingRecords,
     loading,
-    updateStoreRecord,
     addQualityAssessment,
-    updateQualityAssessment,
+    updateStoreRecord,
+    submitToFinance
   } = useQualityControl();
 
-  const [selectedRecord, setSelectedRecord] = useState<StoreRecord | null>(null);
+  const { prices, refreshPrices } = usePrices();
+  const { toast } = useToast();
+
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [assessmentForm, setAssessmentForm] = useState({
     moisture: '',
-    group1Defects: '',
-    group2Defects: '',
+    group1_defects: '',
+    group2_defects: '',
     below12: '',
     pods: '',
     husks: '',
     stones: '',
-    suggestedPrice: '',
     comments: ''
   });
 
-  const handleSelectRecord = async (record: StoreRecord) => {
+  const handleStartAssessment = (record: any) => {
+    console.log('Starting assessment for record:', record);
     setSelectedRecord(record);
-    // Update record status to quality_review if it was pending
-    if (record.status === 'pending') {
-      await updateStoreRecord(record.id, { status: 'quality_review' });
-    }
-    toast({
-      title: "Batch Selected",
-      description: `Selected batch ${record.batch_number} for quality assessment`,
+    setAssessmentForm({
+      moisture: '',
+      group1_defects: '',
+      group2_defects: '',
+      below12: '',
+      pods: '',
+      husks: '',
+      stones: '',
+      comments: ''
     });
   };
 
-  const handleAssessmentSubmit = async () => {
+  const calculateSuggestedPrice = () => {
+    if (!selectedRecord) return 0;
+    
+    // Refresh prices before calculation
+    refreshPrices();
+    
+    const basePrice = selectedRecord.coffee_type === 'Arabica' ? prices.drugarLocal : prices.robustaFaqLocal;
+    const moisture = parseFloat(assessmentForm.moisture) || 12;
+    const group1 = parseFloat(assessmentForm.group1_defects) || 0;
+    const group2 = parseFloat(assessmentForm.group2_defects) || 0;
+    
+    // Price adjustment based on quality parameters
+    let adjustment = 1.0;
+    
+    // Moisture adjustment (ideal is 12%)
+    if (moisture > 12) {
+      adjustment -= (moisture - 12) * 0.02; // 2% reduction per percentage point above 12%
+    } else if (moisture < 10) {
+      adjustment -= (10 - moisture) * 0.03; // 3% reduction per percentage point below 10%
+    }
+    
+    // Defects adjustment
+    adjustment -= (group1 * 0.05); // 5% reduction per Group 1 defect
+    adjustment -= (group2 * 0.02); // 2% reduction per Group 2 defect
+    
+    // Ensure adjustment doesn't go below 0.5 (50% of base price)
+    adjustment = Math.max(adjustment, 0.5);
+    
+    const suggestedPrice = Math.round(basePrice * adjustment * selectedRecord.kilograms);
+    console.log('Calculated suggested price:', suggestedPrice, 'Base price:', basePrice, 'Adjustment:', adjustment);
+    
+    return suggestedPrice;
+  };
+
+  const handleSubmitAssessment = async () => {
     if (!selectedRecord) return;
 
-    // Validate form
-    if (!assessmentForm.moisture || !assessmentForm.suggestedPrice) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in at least moisture and price information",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
+      console.log('Submitting quality assessment...');
+      
+      const suggestedPrice = calculateSuggestedPrice();
+      
       const assessment = {
         store_record_id: selectedRecord.id,
         batch_number: selectedRecord.batch_number,
-        moisture: Number(assessmentForm.moisture),
-        group1_defects: Number(assessmentForm.group1Defects) || 0,
-        group2_defects: Number(assessmentForm.group2Defects) || 0,
-        below12: Number(assessmentForm.below12) || 0,
-        pods: Number(assessmentForm.pods) || 0,
-        husks: Number(assessmentForm.husks) || 0,
-        stones: Number(assessmentForm.stones) || 0,
-        suggested_price: Number(assessmentForm.suggestedPrice),
-        status: 'assessed' as const,
+        moisture: parseFloat(assessmentForm.moisture) || 0,
+        group1_defects: parseFloat(assessmentForm.group1_defects) || 0,
+        group2_defects: parseFloat(assessmentForm.group2_defects) || 0,
+        below12: parseFloat(assessmentForm.below12) || 0,
+        pods: parseFloat(assessmentForm.pods) || 0,
+        husks: parseFloat(assessmentForm.husks) || 0,
+        stones: parseFloat(assessmentForm.stones) || 0,
+        suggested_price: suggestedPrice,
         comments: assessmentForm.comments,
         date_assessed: new Date().toISOString().split('T')[0],
-        assessed_by: 'Quality Officer'
+        assessed_by: 'Quality Controller',
       };
 
+      console.log('Assessment data:', assessment);
+      
       await addQualityAssessment(assessment);
       
-      // Update store record status
-      await updateStoreRecord(selectedRecord.id, { status: 'pricing' });
-
-      // Reset form
+      // Update the store record status
+      await updateStoreRecord(selectedRecord.id, { status: 'assessed' });
+      
+      // Clear form
+      setSelectedRecord(null);
       setAssessmentForm({
         moisture: '',
-        group1Defects: '',
-        group2Defects: '',
+        group1_defects: '',
+        group2_defects: '',
         below12: '',
         pods: '',
         husks: '',
         stones: '',
-        suggestedPrice: '',
         comments: ''
       });
-      setSelectedRecord(null);
-
+      
       toast({
         title: "Assessment Complete",
-        description: `Quality assessment for batch ${assessment.batch_number} has been saved to database`,
+        description: "Quality assessment saved and payment record created for finance processing"
       });
+      
     } catch (error) {
+      console.error('Error submitting assessment:', error);
       toast({
         title: "Error",
-        description: "Failed to save assessment. Please try again.",
+        description: "Failed to submit quality assessment",
         variant: "destructive"
       });
     }
@@ -117,75 +161,32 @@ const QualityControl = () => {
 
   const handleSubmitToFinance = async (assessmentId: string) => {
     try {
-      await updateQualityAssessment(assessmentId, { status: 'submitted_to_finance' });
-      toast({
-        title: "Submitted to Finance",
-        description: "Assessment has been sent to finance department for pricing approval",
-      });
+      await submitToFinance(assessmentId);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to submit to finance. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleRequestPriceApproval = async (assessmentId: string) => {
-    try {
-      await updateQualityAssessment(assessmentId, { status: 'price_requested' });
-      toast({
-        title: "Price Approval Requested",
-        description: "Price approval request sent to supervisor and operations manager",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to request price approval. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDispatchToDryer = async (batchNumber: string) => {
-    const record = storeRecords.find(r => r.batch_number === batchNumber);
-    if (record) {
-      try {
-        await updateStoreRecord(record.id, { status: 'drying' });
-        toast({
-          title: "Dispatched to Dryer",
-          description: `Batch ${batchNumber} has been sent to the dryer`,
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to dispatch to dryer. Please try again.",
-          variant: "destructive"
-        });
-      }
+      console.error('Error submitting to finance:', error);
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { label: 'Pending', variant: 'secondary' as const },
-      quality_review: { label: 'In Review', variant: 'default' as const },
-      pricing: { label: 'Pricing', variant: 'default' as const },
-      assessed: { label: 'Assessed', variant: 'default' as const },
-      submitted_to_finance: { label: 'With Finance', variant: 'default' as const },
-      price_requested: { label: 'Price Approval', variant: 'destructive' as const },
-      approved: { label: 'Approved', variant: 'default' as const },
-      dispatched: { label: 'Dispatched', variant: 'default' as const },
-      drying: { label: 'Drying', variant: 'default' as const }
-    };
-    return statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'secondary' as const };
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+      case 'assessed':
+        return <Badge variant="default"><CheckCircle2 className="h-3 w-3 mr-1" />Assessed</Badge>;
+      case 'submitted_to_finance':
+        return <Badge variant="outline"><Send className="h-3 w-3 mr-1" />Sent to Finance</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
   };
 
   if (loading) {
     return (
-      <Layout title="Quality Control" subtitle="Monitor and maintain coffee quality standards">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading...</div>
+      <Layout title="Quality Control" subtitle="Loading...">
+        <div className="flex items-center justify-center h-96">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </Layout>
     );
@@ -194,101 +195,71 @@ const QualityControl = () => {
   return (
     <Layout 
       title="Quality Control" 
-      subtitle="Monitor and maintain coffee quality standards"
+      subtitle="Assess coffee quality and manage assessments"
     >
       <div className="space-y-6">
-        {/* Price Ticker */}
-        <PriceTicker />
+        {/* Current Prices Display */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Current Market Prices
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <p className="text-sm text-gray-600">Drugar Local</p>
+                <p className="text-lg font-bold text-green-600">UGX {prices.drugarLocal.toLocaleString()}/kg</p>
+              </div>
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-gray-600">Wugar Local</p>
+                <p className="text-lg font-bold text-blue-600">UGX {prices.wugarLocal.toLocaleString()}/kg</p>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <p className="text-sm text-gray-600">Robusta FAQ</p>
+                <p className="text-lg font-bold text-purple-600">UGX {prices.robustaFaqLocal.toLocaleString()}/kg</p>
+              </div>
+              <div className="text-center p-3 bg-amber-50 rounded-lg">
+                <p className="text-sm text-gray-600">Exchange Rate</p>
+                <p className="text-lg font-bold text-amber-600">UGX {prices.exchangeRate.toLocaleString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                  <p className="text-2xl font-bold">{pendingRecords.length}</p>
-                </div>
-                <Clock className="h-8 w-8 text-amber-600" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Assessed Today</p>
-                  <p className="text-2xl font-bold">{qualityAssessments.filter(a => a.date_assessed === new Date().toISOString().split('T')[0]).length}</p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Price Requests</p>
-                  <p className="text-2xl font-bold">{qualityAssessments.filter(a => a.status === 'price_requested').length}</p>
-                </div>
-                <AlertTriangle className="h-8 w-8 text-red-600" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">With Finance</p>
-                  <p className="text-2xl font-bold">{qualityAssessments.filter(a => a.status === 'submitted_to_finance').length}</p>
-                </div>
-                <DollarSign className="h-8 w-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="pending">
-              <Clock className="h-4 w-4 mr-2" />
-              Pending Review ({pendingRecords.length})
-            </TabsTrigger>
-            <TabsTrigger value="assessment">
-              <ClipboardCheck className="h-4 w-4 mr-2" />
-              Quality Assessment
-            </TabsTrigger>
-            <TabsTrigger value="completed">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Completed ({qualityAssessments.length})
-            </TabsTrigger>
-            <TabsTrigger value="dispatch">
-              <Truck className="h-4 w-4 mr-2" />
-              Dispatch Management
+        <Tabs defaultValue="pending" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="pending">Pending Assessment ({pendingRecords.length})</TabsTrigger>
+            <TabsTrigger value="assessments">Quality Assessments ({qualityAssessments.length})</TabsTrigger>
+            <TabsTrigger value="assessment-form" disabled={!selectedRecord}>
+              {selectedRecord ? 'Assessment Form' : 'Select Record First'}
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pending" className="space-y-6">
+          <TabsContent value="pending">
             <Card>
               <CardHeader>
-                <CardTitle>Store Records Awaiting Quality Review</CardTitle>
-                <CardDescription>Select batches from store for quality assessment</CardDescription>
+                <CardTitle>Pending Quality Assessments</CardTitle>
+                <CardDescription>Coffee deliveries awaiting quality assessment</CardDescription>
               </CardHeader>
               <CardContent>
                 {pendingRecords.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No pending records found. Records from Store Management will appear here.</p>
+                  <div className="text-center py-12">
+                    <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">All Assessments Complete</h3>
+                    <p className="text-gray-500">No pending coffee deliveries require assessment</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Batch Number</TableHead>
-                        <TableHead>Coffee Type</TableHead>
                         <TableHead>Supplier</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Kilograms</TableHead>
+                        <TableHead>Coffee Type</TableHead>
+                        <TableHead>Weight (kg)</TableHead>
                         <TableHead>Bags</TableHead>
+                        <TableHead>Date</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -296,25 +267,23 @@ const QualityControl = () => {
                     <TableBody>
                       {pendingRecords.map((record) => (
                         <TableRow key={record.id}>
-                          <TableCell className="font-mono">{record.batch_number}</TableCell>
-                          <TableCell>{record.coffee_type}</TableCell>
+                          <TableCell className="font-medium">{record.batch_number}</TableCell>
                           <TableCell>{record.supplier_name}</TableCell>
-                          <TableCell>{record.date}</TableCell>
-                          <TableCell>{record.kilograms} kg</TableCell>
-                          <TableCell>{record.bags}</TableCell>
                           <TableCell>
-                            <Badge variant={getStatusBadge(record.status).variant}>
-                              {getStatusBadge(record.status).label}
-                            </Badge>
+                            <Badge variant="outline">{record.coffee_type}</Badge>
                           </TableCell>
+                          <TableCell>{record.kilograms?.toLocaleString()}</TableCell>
+                          <TableCell>{record.bags}</TableCell>
+                          <TableCell>{record.date}</TableCell>
+                          <TableCell>{getStatusBadge(record.status)}</TableCell>
                           <TableCell>
                             <Button 
                               size="sm" 
-                              onClick={() => handleSelectRecord(record)}
-                              disabled={record.status === 'quality_review' && selectedRecord?.id === record.id}
+                              onClick={() => handleStartAssessment(record)}
+                              className="mr-2"
                             >
-                              <Eye className="h-3 w-3 mr-1" />
-                              {selectedRecord?.id === record.id ? 'Selected' : 'Select'}
+                              <Eye className="h-4 w-4 mr-1" />
+                              Assess
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -326,176 +295,28 @@ const QualityControl = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="assessment" className="space-y-6">
-            {selectedRecord ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quality Assessment - Batch {selectedRecord.batch_number}</CardTitle>
-                  <CardDescription>
-                    {selectedRecord.coffee_type} from {selectedRecord.supplier_name} - {selectedRecord.kilograms} kg ({selectedRecord.bags} bags)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                      <Label htmlFor="moisture">Moisture (%) *</Label>
-                      <Input
-                        id="moisture"
-                        type="number"
-                        step="0.1"
-                        value={assessmentForm.moisture}
-                        onChange={(e) => setAssessmentForm({...assessmentForm, moisture: e.target.value})}
-                        placeholder="12.5"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="group1">Group 1 Defects (%)</Label>
-                      <Input
-                        id="group1"
-                        type="number"
-                        step="0.1"
-                        value={assessmentForm.group1Defects}
-                        onChange={(e) => setAssessmentForm({...assessmentForm, group1Defects: e.target.value})}
-                        placeholder="2.0"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="group2">Group 2 Defects (%)</Label>
-                      <Input
-                        id="group2"
-                        type="number"
-                        step="0.1"
-                        value={assessmentForm.group2Defects}
-                        onChange={(e) => setAssessmentForm({...assessmentForm, group2Defects: e.target.value})}
-                        placeholder="1.5"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="below12">Below 12 Screen (%)</Label>
-                      <Input
-                        id="below12"
-                        type="number"
-                        step="0.1"
-                        value={assessmentForm.below12}
-                        onChange={(e) => setAssessmentForm({...assessmentForm, below12: e.target.value})}
-                        placeholder="3.0"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="pods">Pods (%)</Label>
-                      <Input
-                        id="pods"
-                        type="number"
-                        step="0.1"
-                        value={assessmentForm.pods}
-                        onChange={(e) => setAssessmentForm({...assessmentForm, pods: e.target.value})}
-                        placeholder="0.5"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="husks">Husks (%)</Label>
-                      <Input
-                        id="husks"
-                        type="number"
-                        step="0.1"
-                        value={assessmentForm.husks}
-                        onChange={(e) => setAssessmentForm({...assessmentForm, husks: e.target.value})}
-                        placeholder="1.0"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="stones">Stones (%)</Label>
-                      <Input
-                        id="stones"
-                        type="number"
-                        step="0.1"
-                        value={assessmentForm.stones}
-                        onChange={(e) => setAssessmentForm({...assessmentForm, stones: e.target.value})}
-                        placeholder="0.2"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="price">Suggested Price (UGX/kg) *</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        value={assessmentForm.suggestedPrice}
-                        onChange={(e) => setAssessmentForm({...assessmentForm, suggestedPrice: e.target.value})}
-                        placeholder="8500"
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="comments">Comments (Optional)</Label>
-                    <Textarea
-                      id="comments"
-                      value={assessmentForm.comments}
-                      onChange={(e) => setAssessmentForm({...assessmentForm, comments: e.target.value})}
-                      placeholder="Additional observations or notes..."
-                      rows={3}
-                      className="mt-1"
-                    />
-                  </div>
-
-                  {/* Pricing Guidance */}
-                  {assessmentForm.suggestedPrice && (
-                    <PricingGuidance 
-                      coffeeType={selectedRecord.coffee_type}
-                      suggestedPrice={Number(assessmentForm.suggestedPrice)}
-                    />
-                  )}
-
-                  <div className="flex gap-4">
-                    <Button onClick={handleAssessmentSubmit} className="flex-1">
-                      <ClipboardCheck className="h-4 w-4 mr-2" />
-                      Complete Assessment
-                    </Button>
-                    <Button variant="outline" onClick={() => setSelectedRecord(null)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <ClipboardCheck className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-lg font-medium mb-2">No Batch Selected</h3>
-                  <p className="text-gray-500">Select a batch from the "Pending Review" tab to start quality assessment.</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="completed" className="space-y-6">
+          <TabsContent value="assessments">
             <Card>
               <CardHeader>
-                <CardTitle>Completed Quality Assessments</CardTitle>
-                <CardDescription>All assessed batches with quality parameters and pricing</CardDescription>
+                <CardTitle>Quality Assessments</CardTitle>
+                <CardDescription>Completed and submitted quality assessments</CardDescription>
               </CardHeader>
               <CardContent>
                 {qualityAssessments.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No completed assessments yet</p>
+                  <div className="text-center py-12">
+                    <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Assessments Yet</h3>
+                    <p className="text-gray-500">Quality assessments will appear here once completed</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Batch</TableHead>
-                        <TableHead>Moisture</TableHead>
-                        <TableHead>G1 Defects</TableHead>
-                        <TableHead>G2 Defects</TableHead>
-                        <TableHead>Price (UGX/kg)</TableHead>
+                        <TableHead>Batch Number</TableHead>
+                        <TableHead>Moisture %</TableHead>
+                        <TableHead>Defects</TableHead>
+                        <TableHead>Suggested Price</TableHead>
+                        <TableHead>Date Assessed</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -503,38 +324,34 @@ const QualityControl = () => {
                     <TableBody>
                       {qualityAssessments.map((assessment) => (
                         <TableRow key={assessment.id}>
-                          <TableCell className="font-mono">{assessment.batch_number}</TableCell>
-                          <TableCell>{assessment.moisture}%</TableCell>
-                          <TableCell>{assessment.group1_defects}%</TableCell>
-                          <TableCell>{assessment.group2_defects}%</TableCell>
-                          <TableCell>UGX {assessment.suggested_price.toLocaleString()}</TableCell>
+                          <TableCell className="font-medium">{assessment.batch_number}</TableCell>
                           <TableCell>
-                            <Badge variant={getStatusBadge(assessment.status).variant}>
-                              {getStatusBadge(assessment.status).label}
-                            </Badge>
+                            <div className="flex items-center gap-1">
+                              <Droplets className="h-4 w-4 text-blue-500" />
+                              {assessment.moisture}%
+                            </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
-                              {assessment.status === 'assessed' && (
-                                <>
-                                  <Button 
-                                    size="sm" 
-                                    onClick={() => handleSubmitToFinance(assessment.id)}
-                                  >
-                                    <DollarSign className="h-3 w-3 mr-1" />
-                                    Submit to Finance
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    onClick={() => handleRequestPriceApproval(assessment.id)}
-                                  >
-                                    <Send className="h-3 w-3 mr-1" />
-                                    Request Price Approval
-                                  </Button>
-                                </>
-                              )}
+                            <div className="text-sm">
+                              <div>G1: {assessment.group1_defects}%</div>
+                              <div>G2: {assessment.group2_defects}%</div>
                             </div>
+                          </TableCell>
+                          <TableCell className="font-bold text-green-600">
+                            UGX {assessment.suggested_price?.toLocaleString()}
+                          </TableCell>
+                          <TableCell>{assessment.date_assessed}</TableCell>
+                          <TableCell>{getStatusBadge(assessment.status)}</TableCell>
+                          <TableCell>
+                            {assessment.status === 'assessed' && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleSubmitToFinance(assessment.id)}
+                              >
+                                <Send className="h-4 w-4 mr-1" />
+                                Send to Finance
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -545,59 +362,145 @@ const QualityControl = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="dispatch" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Dispatch Management</CardTitle>
-                <CardDescription>Manage batch dispatch to dryers or other destinations</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {storeRecords.filter(r => r.status === 'pricing' || r.status === 'batched').length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No batches ready for dispatch</p>
+          <TabsContent value="assessment-form">
+            {selectedRecord && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quality Assessment Form</CardTitle>
+                  <CardDescription>
+                    Assessing: {selectedRecord.batch_number} - {selectedRecord.supplier_name}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="moisture">Moisture Content (%)</Label>
+                        <Input
+                          id="moisture"
+                          type="number"
+                          step="0.1"
+                          value={assessmentForm.moisture}
+                          onChange={(e) => setAssessmentForm({...assessmentForm, moisture: e.target.value})}
+                          placeholder="12.0"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="group1">Group 1 Defects (%)</Label>
+                        <Input
+                          id="group1"
+                          type="number"
+                          step="0.1"
+                          value={assessmentForm.group1_defects}
+                          onChange={(e) => setAssessmentForm({...assessmentForm, group1_defects: e.target.value})}
+                          placeholder="0.0"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="group2">Group 2 Defects (%)</Label>
+                        <Input
+                          id="group2"
+                          type="number"
+                          step="0.1"
+                          value={assessmentForm.group2_defects}
+                          onChange={(e) => setAssessmentForm({...assessmentForm, group2_defects: e.target.value})}
+                          placeholder="0.0"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="below12">Below 12 Screen (%)</Label>
+                        <Input
+                          id="below12"
+                          type="number"
+                          step="0.1"
+                          value={assessmentForm.below12}
+                          onChange={(e) => setAssessmentForm({...assessmentForm, below12: e.target.value})}
+                          placeholder="0.0"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="pods">Pods (%)</Label>
+                        <Input
+                          id="pods"
+                          type="number"
+                          step="0.1"
+                          value={assessmentForm.pods}
+                          onChange={(e) => setAssessmentForm({...assessmentForm, pods: e.target.value})}
+                          placeholder="0.0"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="husks">Husks (%)</Label>
+                        <Input
+                          id="husks"
+                          type="number"
+                          step="0.1"
+                          value={assessmentForm.husks}
+                          onChange={(e) => setAssessmentForm({...assessmentForm, husks: e.target.value})}
+                          placeholder="0.0"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="stones">Stones (%)</Label>
+                        <Input
+                          id="stones"
+                          type="number"
+                          step="0.1"
+                          value={assessmentForm.stones}
+                          onChange={(e) => setAssessmentForm({...assessmentForm, stones: e.target.value})}
+                          placeholder="0.0"
+                        />
+                      </div>
+                      
+                      <div className="p-4 bg-green-50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Scale className="h-5 w-5 text-green-600" />
+                          <span className="font-semibold text-green-800">Suggested Price</span>
+                        </div>
+                        <p className="text-2xl font-bold text-green-600">
+                          UGX {calculateSuggestedPrice().toLocaleString()}
+                        </p>
+                        <p className="text-sm text-green-600 mt-1">
+                          Based on current market rates and quality parameters
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Batch</TableHead>
-                        <TableHead>Coffee Type</TableHead>
-                        <TableHead>Supplier</TableHead>
-                        <TableHead>Kilograms</TableHead>
-                        <TableHead>Current Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {storeRecords.filter(r => r.status === 'pricing' || r.status === 'batched').map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-mono">{record.batch_number}</TableCell>
-                          <TableCell>{record.coffee_type}</TableCell>
-                          <TableCell>{record.supplier_name}</TableCell>
-                          <TableCell>{record.kilograms} kg</TableCell>
-                          <TableCell>
-                            <Badge variant={getStatusBadge(record.status).variant}>
-                              {getStatusBadge(record.status).label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleDispatchToDryer(record.batch_number)}
-                              >
-                                <Truck className="h-3 w-3 mr-1" />
-                                To Dryer
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+                  
+                  <div>
+                    <Label htmlFor="comments">Comments</Label>
+                    <Textarea
+                      id="comments"
+                      value={assessmentForm.comments}
+                      onChange={(e) => setAssessmentForm({...assessmentForm, comments: e.target.value})}
+                      placeholder="Additional observations or notes..."
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <Button onClick={handleSubmitAssessment} className="flex-1">
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Complete Assessment
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setSelectedRecord(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

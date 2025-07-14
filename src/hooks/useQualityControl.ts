@@ -1,12 +1,41 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { Tables } from '@/integrations/supabase/types';
 
-export interface StoreRecord extends Tables<'coffee_records'> {}
+export interface StoreRecord {
+  id: string;
+  date: string;
+  kilograms: number;
+  bags: number;
+  supplier_name: string;
+  coffee_type: string;
+  batch_number: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
 
-export interface QualityAssessment extends Tables<'quality_assessments'> {}
+export interface QualityAssessment {
+  id: string;
+  store_record_id: string;
+  batch_number: string;
+  moisture: number;
+  group1_defects: number;
+  group2_defects: number;
+  below12: number;
+  pods: number;
+  husks: number;
+  stones: number;
+  suggested_price: number;
+  status: string;
+  comments: string | null;
+  date_assessed: string;
+  assessed_by: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export const useQualityControl = () => {
   const [storeRecords, setStoreRecords] = useState<StoreRecord[]>([]);
@@ -14,7 +43,7 @@ export const useQualityControl = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Load data from Supabase
+  // Load data from Firebase instead of Supabase
   useEffect(() => {
     loadStoreRecords();
     loadQualityAssessments();
@@ -23,26 +52,17 @@ export const useQualityControl = () => {
   const loadStoreRecords = async () => {
     setLoading(true);
     try {
-      console.log('Loading store records from Supabase...');
+      console.log('Loading coffee records from Firebase...');
       
-      const { data, error } = await supabase
-        .from('coffee_records')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const coffeeQuery = query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'));
+      const coffeeSnapshot = await getDocs(coffeeQuery);
+      const coffeeData = coffeeSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as StoreRecord[];
 
-      if (error) {
-        console.error('Error loading store records:', error);
-        setStoreRecords([]);
-        toast({
-          title: "Error",
-          description: "Failed to load store records",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('Loaded store records:', data);
-      setStoreRecords(data || []);
+      console.log('Loaded coffee records:', coffeeData);
+      setStoreRecords(coffeeData || []);
     } catch (error) {
       console.error('Error loading store records:', error);
       setStoreRecords([]);
@@ -58,26 +78,17 @@ export const useQualityControl = () => {
 
   const loadQualityAssessments = async () => {
     try {
-      console.log('Loading quality assessments from Supabase...');
+      console.log('Loading quality assessments from Firebase...');
       
-      const { data, error } = await supabase
-        .from('quality_assessments')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const qualityQuery = query(collection(db, 'quality_assessments'), orderBy('created_at', 'desc'));
+      const qualitySnapshot = await getDocs(qualityQuery);
+      const qualityData = qualitySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as QualityAssessment[];
 
-      if (error) {
-        console.error('Error loading quality assessments:', error);
-        setQualityAssessments([]);
-        toast({
-          title: "Error",
-          description: "Failed to load quality assessments",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('Loaded quality assessments:', data);
-      setQualityAssessments(data || []);
+      console.log('Loaded quality assessments:', qualityData);
+      setQualityAssessments(qualityData || []);
     } catch (error) {
       console.error('Error loading quality assessments:', error);
       setQualityAssessments([]);
@@ -90,31 +101,17 @@ export const useQualityControl = () => {
   };
 
   const addStoreRecord = (record: Omit<StoreRecord, 'id'>) => {
-    // This method is kept for compatibility but data should be added through Store Management
     console.log('Store records should be added through Store Management');
   };
 
   const updateStoreRecord = async (id: string, updates: Partial<StoreRecord>) => {
     try {
-      console.log('Updating store record in Supabase:', id, updates);
+      console.log('Updating store record in Firebase:', id, updates);
       
-      const { error } = await supabase
-        .from('coffee_records')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error updating store record:', error);
-        toast({
-          title: "Error",
-          description: "Failed to update store record",
-          variant: "destructive"
-        });
-        throw error;
-      }
+      await updateDoc(doc(db, 'coffee_records', id), {
+        ...updates,
+        updated_at: new Date().toISOString()
+      });
 
       console.log('Store record updated successfully');
       
@@ -145,7 +142,7 @@ export const useQualityControl = () => {
 
   const addQualityAssessment = async (assessment: Omit<QualityAssessment, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      console.log('Adding quality assessment to Supabase:', assessment);
+      console.log('Adding quality assessment to Firebase:', assessment);
       
       const assessmentToAdd = {
         store_record_id: assessment.store_record_id,
@@ -162,45 +159,33 @@ export const useQualityControl = () => {
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed,
         assessed_by: assessment.assessed_by,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase
-        .from('quality_assessments')
-        .insert(assessmentToAdd)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding quality assessment:', error);
-        toast({
-          title: "Error",
-          description: "Failed to save quality assessment to database",
-          variant: "destructive"
-        });
-        throw error;
-      }
-
-      console.log('Quality assessment added successfully:', data);
+      const docRef = await addDoc(collection(db, 'quality_assessments'), assessmentToAdd);
+      console.log('Quality assessment added successfully:', docRef.id);
       
-      // Automatically create a payment record in Finance
-      console.log('Creating payment record for assessment:', data.id);
-      const { error: paymentError } = await supabase
-        .from('payment_records')
-        .insert({
-          supplier: assessment.batch_number || 'Unknown Supplier',
-          amount: assessment.suggested_price || 0,
-          status: 'Pending',
-          method: 'Bank Transfer',
-          date: new Date().toISOString().split('T')[0],
-          batch_number: assessment.batch_number,
-          quality_assessment_id: data.id,
-        });
+      // Create payment record in Firebase
+      console.log('Creating payment record for assessment:', docRef.id);
       
-      if (paymentError) {
-        console.error('Error creating payment record:', paymentError);
-      } else {
-        console.log('Payment record created successfully');
-      }
+      // Find the coffee record to get supplier name
+      const coffeeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
+      const supplierName = coffeeRecord?.supplier_name || 'Unknown Supplier';
+      
+      await addDoc(collection(db, 'payment_records'), {
+        supplier: supplierName,
+        amount: assessment.suggested_price || 0,
+        status: 'Pending',
+        method: 'Bank Transfer',
+        date: new Date().toISOString().split('T')[0],
+        batchNumber: assessment.batch_number,
+        qualityAssessmentId: docRef.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      
+      console.log('Payment record created successfully');
       
       // Refresh assessments to get the new one with ID
       await loadQualityAssessments();
@@ -210,12 +195,12 @@ export const useQualityControl = () => {
         description: "Quality assessment saved and sent to finance for payment processing"
       });
       
-      return data;
+      return { id: docRef.id, ...assessmentToAdd };
     } catch (error) {
       console.error('Error adding quality assessment:', error);
       toast({
         title: "Error",
-        description: "Failed to save quality assessment to database",
+        description: "Failed to save quality assessment",
         variant: "destructive"
       });
       throw error;
@@ -224,25 +209,12 @@ export const useQualityControl = () => {
 
   const updateQualityAssessment = async (id: string, updates: Partial<QualityAssessment>) => {
     try {
-      console.log('Updating quality assessment in Supabase:', id, updates);
+      console.log('Updating quality assessment in Firebase:', id, updates);
       
-      const { error } = await supabase
-        .from('quality_assessments')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error updating quality assessment:', error);
-        toast({
-          title: "Error",
-          description: "Failed to update quality assessment",
-          variant: "destructive"
-        });
-        throw error;
-      }
+      await updateDoc(doc(db, 'quality_assessments', id), {
+        ...updates,
+        updated_at: new Date().toISOString()
+      });
 
       console.log('Quality assessment updated successfully');
       
@@ -277,41 +249,8 @@ export const useQualityControl = () => {
       
       // Update the assessment status to submitted_to_finance
       await updateQualityAssessment(assessmentId, { 
-        status: 'submitted_to_finance' as any 
+        status: 'submitted_to_finance'
       });
-      
-      // Find the assessment to get details for payment record
-      const assessment = qualityAssessments.find(a => a.id === assessmentId);
-      
-      if (assessment) {
-        // Check if payment record already exists
-        const { data: existingPayments } = await supabase
-          .from('payment_records')
-          .select('id')
-          .eq('quality_assessment_id', assessmentId);
-        
-        if (!existingPayments || existingPayments.length === 0) {
-          // Create payment record
-          console.log('Creating payment record for submitted assessment');
-          const { error } = await supabase
-            .from('payment_records')
-            .insert({
-              supplier: assessment.batch_number || 'Unknown Supplier',
-              amount: assessment.suggested_price || 0,
-              status: 'Pending',
-              method: 'Bank Transfer',
-              date: new Date().toISOString().split('T')[0],
-              batch_number: assessment.batch_number,
-              quality_assessment_id: assessmentId,
-            });
-          
-          if (error) {
-            console.error('Error creating payment record:', error);
-          } else {
-            console.log('Payment record created for submitted assessment');
-          }
-        }
-      }
       
       console.log('Assessment submitted to finance successfully');
       

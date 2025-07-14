@@ -14,7 +14,13 @@ export interface ApprovalRequest {
   daterequested: string;
   priority: string;
   status: string;
-  details?: any;
+  details?: {
+    paymentId?: string;
+    method?: string;
+    supplier?: string;
+    amount?: number;
+    batchNumber?: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -68,23 +74,18 @@ export const useApprovalRequests = () => {
       console.log('Firebase approval request updated');
 
       // If approved and it's a bank transfer, update the payment record
-      if (status === 'Approved' && request.type === 'Bank Transfer') {
+      if (status === 'Approved' && request.type === 'Bank Transfer' && request.details?.paymentId) {
         console.log('Updating payment record status for approved bank transfer...');
         
-        const paymentQuery = query(collection(db, 'payment_records'));
-        const paymentSnapshot = await getDocs(paymentQuery);
-        const paymentDoc = paymentSnapshot.docs.find(doc => 
-          doc.data().supplier === request.details?.supplier &&
-          doc.data().amount === request.details?.amount
-        );
-        
-        if (paymentDoc) {
-          await updateDoc(doc(db, 'payment_records', paymentDoc.id), {
+        try {
+          await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
             status: 'Paid',
             method: 'Bank Transfer',
             updated_at: new Date().toISOString()
           });
           console.log('Payment record updated to Paid in Firebase');
+        } catch (error) {
+          console.error('Error updating payment record:', error);
         }
 
         // Record daily task
@@ -120,6 +121,6 @@ export const useApprovalRequests = () => {
     loading,
     updateRequestStatus,
     refetch: fetchRequests,
-    fetchRequests // Add this for compatibility
+    fetchRequests
   };
 };
