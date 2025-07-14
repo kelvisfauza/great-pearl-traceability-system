@@ -2,87 +2,108 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-interface StoreRecord {
-  id: string;
-  supplier_name: string;
-  date: string;
-  coffee_type: string;
-  quantity: number;
-  unit_price?: number;
-  total_amount?: number;
-  approved_by?: string;
-}
-
 interface GRNPrintModalProps {
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
-  storeRecord?: StoreRecord;
+  grnData: {
+    grnNumber: string;
+    supplierName: string;
+    coffeeType: string;
+    qualityAssessment: string;
+    numberOfBags: number;
+    totalKgs: number;
+    unitPrice: number;
+    assessedBy: string;
+    createdAt: string;
+  } | null;
 }
 
-const formatCurrency = (amount: number | undefined | null): string => {
-  if (typeof amount !== 'number' || isNaN(amount)) {
-    return 'UGX 0';
-  }
-  return `UGX ${amount.toLocaleString('en-UG')}`;
-};
+const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData }) => {
+  if (!grnData) return null;
 
-const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ isOpen, onClose, storeRecord }) => {
-  if (!storeRecord) return null;
+  const {
+    grnNumber,
+    supplierName,
+    coffeeType,
+    qualityAssessment,
+    numberOfBags,
+    totalKgs,
+    unitPrice,
+    assessedBy,
+    createdAt
+  } = grnData;
+
+  const totalAmount = totalKgs * unitPrice;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="printable w-full max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-xl text-center">Goods Received Note (GRN)</DialogTitle>
+          <DialogTitle className="text-center text-xl font-bold mb-4">
+            Goods Received Note (GRN)
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="p-4 border rounded shadow-sm text-sm space-y-3">
-          <div className="flex justify-between">
+        <div className="text-center mb-4 text-sm">
+          <p className="font-bold text-lg">Great Pearl Coffee Factory</p>
+          <p>+256781121639 / +256778536681</p>
+          <p>www.greatpearlcoffee.com</p>
+          <p>greatpearlcoffee@gmail.com</p>
+        </div>
+
+        <div className="space-y-4 text-sm">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <p><strong>Supplier:</strong> {storeRecord.supplier_name}</p>
-              <p><strong>Date:</strong> {new Date(storeRecord.date).toLocaleDateString()}</p>
-              <p><strong>Approved by:</strong> {storeRecord.approved_by || '________________'}</p>
+              <p><strong>Supplier Name:</strong> {supplierName}</p>
+              <p><strong>GRN Number:</strong> {grnNumber}</p>
+              <p><strong>Assessed By:</strong> {assessedBy}</p>
+              <p><strong>Date:</strong> {new Date(createdAt).toLocaleDateString()}</p>
             </div>
-            <div className="text-right">
-              <p><strong>GRN ID:</strong> {storeRecord.id}</p>
-              <p><strong>Coffee Type:</strong> {storeRecord.coffee_type}</p>
+            <div>
+              <p><strong>Coffee Type:</strong> {coffeeType}</p>
+              <p><strong>Quality Assessment:</strong> {qualityAssessment}</p>
+              <p><strong>Number of Bags:</strong> {numberOfBags}</p>
+              <p><strong>Total Kgs:</strong> {totalKgs.toLocaleString()} kg</p>
             </div>
           </div>
 
-          <hr className="my-2" />
-
-          <table className="w-full table-auto border-collapse border border-gray-300">
+          <table className="w-full mt-4 text-sm border border-gray-300">
             <thead>
               <tr className="bg-gray-100">
-                <th className="border p-2">Item</th>
-                <th className="border p-2">Quantity (Kg)</th>
-                <th className="border p-2">Unit Price</th>
-                <th className="border p-2">Total Amount</th>
+                <th className="border px-4 py-2 text-left">Description</th>
+                <th className="border px-4 py-2 text-left">Unit Price (UGX)</th>
+                <th className="border px-4 py-2 text-left">Total (UGX)</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td className="border p-2">{storeRecord.coffee_type}</td>
-                <td className="border p-2">{storeRecord.quantity}</td>
-                <td className="border p-2">{formatCurrency(storeRecord.unit_price)}</td>
-                <td className="border p-2">{formatCurrency(storeRecord.total_amount)}</td>
+                <td className="border px-4 py-2">{coffeeType} - {qualityAssessment}</td>
+                <td className="border px-4 py-2">{unitPrice.toLocaleString()}</td>
+                <td className="border px-4 py-2">{totalAmount.toLocaleString()}</td>
               </tr>
             </tbody>
           </table>
 
-          <div className="mt-6 flex justify-between">
-            <div>
-              <p><strong>Store Manager Signature:</strong> ___________________</p>
-              <p><strong>Receiver Signature:</strong> ___________________</p>
+          <div className="flex justify-between mt-8">
+            <div className="text-xs">
+              <p>__________________________</p>
+              <p>Store Keeper</p>
             </div>
-            <div className="text-right">
-              <p><strong>Total:</strong> {formatCurrency(storeRecord.total_amount)}</p>
+            <div className="text-xs text-right">
+              <p>__________________________</p>
+              <p>Quality Analyst</p>
             </div>
           </div>
 
-          <div className="text-center mt-4">
-            <Button onClick={onClose}>Close</Button>
+          <div className="mt-4 text-xs text-gray-500">
+            <p>This GRN is system generated and valid without a signature.</p>
           </div>
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <Button variant="outline" onClick={() => window.print()}>
+            Print
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
