@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -19,8 +19,6 @@ interface GRNPrintModalProps {
 }
 
 const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData }) => {
-  const printRef = useRef<HTMLDivElement>(null);
-
   if (!grnData) return null;
 
   const {
@@ -32,88 +30,33 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
     totalKgs,
     unitPrice,
     assessedBy,
-    createdAt,
+    createdAt
   } = grnData;
 
   const totalAmount = totalKgs * unitPrice;
 
   const handlePrint = () => {
-    if (!printRef.current) return;
-
-    const printContent = printRef.current.innerHTML;
-    const printWindow = window.open('', '', 'width=900,height=600');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>GRN - ${grnNumber}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 20px;
-            }
-            h1, h2, h3 {
-              margin: 0;
-              padding: 0;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 20px;
-            }
-            th, td {
-              border: 1px solid #ccc;
-              padding: 8px;
-              text-align: left;
-            }
-            .company-header {
-              text-align: center;
-              margin-bottom: 20px;
-            }
-            .section {
-              margin-top: 20px;
-            }
-            .signature-section {
-              display: flex;
-              justify-content: space-between;
-              margin-top: 40px;
-              font-size: 12px;
-            }
-            .note {
-              margin-top: 20px;
-              font-size: 11px;
-              color: gray;
-            }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    window.print();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-3xl">
+      <DialogContent className="printable w-full max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="text-center text-xl font-bold">Goods Received Note (GRN)</DialogTitle>
+          <DialogTitle className="text-center text-xl font-bold mb-4">
+            Goods Received Note (GRN)
+          </DialogTitle>
         </DialogHeader>
 
-        <div ref={printRef}>
-          <div className="company-header text-center text-sm">
-            <p className="text-lg font-bold">Great Pearl Coffee Factory</p>
-            <p>+256781121639 / +256778536681</p>
-            <p>www.greatpearlcoffee.com</p>
-            <p>greatpearlcoffee@gmail.com</p>
-          </div>
+        <div className="text-center mb-4 text-sm">
+          <p className="font-bold text-lg">Great Pearl Coffee Factory</p>
+          <p>+256781121639 / +256778536681</p>
+          <p>www.greatpearlcoffee.com</p>
+          <p>greatpearlcoffee@gmail.com</p>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="space-y-4 text-sm">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <p><strong>Supplier Name:</strong> {supplierName}</p>
               <p><strong>GRN Number:</strong> {grnNumber}</p>
@@ -128,41 +71,43 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
             </div>
           </div>
 
-          <table className="text-sm mt-6">
+          <table className="w-full mt-4 text-sm border border-gray-300">
             <thead>
-              <tr>
-                <th>Description</th>
-                <th>Unit Price (UGX)</th>
-                <th>Total (UGX)</th>
+              <tr className="bg-gray-100">
+                <th className="border px-4 py-2 text-left">Description</th>
+                <th className="border px-4 py-2 text-left">Unit Price (UGX)</th>
+                <th className="border px-4 py-2 text-left">Total (UGX)</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>{coffeeType} - {qualityAssessment}</td>
-                <td>{unitPrice.toLocaleString()}</td>
-                <td>{totalAmount.toLocaleString()}</td>
+                <td className="border px-4 py-2">{coffeeType} - {qualityAssessment}</td>
+                <td className="border px-4 py-2">{unitPrice.toLocaleString()}</td>
+                <td className="border px-4 py-2">{totalAmount.toLocaleString()}</td>
               </tr>
             </tbody>
           </table>
 
-          <div className="signature-section">
-            <div>
+          <div className="flex justify-between mt-8">
+            <div className="text-xs">
               <p>__________________________</p>
               <p>Store Keeper</p>
             </div>
-            <div>
+            <div className="text-xs text-right">
               <p>__________________________</p>
               <p>Quality Analyst</p>
             </div>
           </div>
 
-          <div className="note">
-            This GRN is system-generated and valid without a signature.
+          <div className="mt-4 text-xs text-gray-500">
+            <p>This GRN is system generated and valid without a signature.</p>
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end">
-          <Button variant="outline" onClick={handlePrint}>Print GRN</Button>
+        <div className="mt-6 flex justify-end no-print">
+          <Button variant="outline" onClick={handlePrint}>
+            Print GRN
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
