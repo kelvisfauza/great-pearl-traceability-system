@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -19,6 +19,8 @@ interface GRNPrintModalProps {
 }
 
 const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData }) => {
+  const printRef = useRef<HTMLDivElement>(null);
+
   if (!grnData) return null;
 
   const {
@@ -30,77 +32,103 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
     totalKgs,
     unitPrice,
     assessedBy,
-    createdAt
+    createdAt,
   } = grnData;
 
   const totalAmount = totalKgs * unitPrice;
 
   const handlePrint = () => {
-    window.print();
+    if (!printRef.current) return;
+    const content = printRef.current.innerHTML;
+    const printWindow = window.open('', '', 'height=800,width=1000');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>GRN - ${grnNumber}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+            .header { text-align: center; }
+            .signatures { margin-top: 40px; display: flex; justify-content: space-between; font-size: 12px; }
+            .note { font-size: 11px; margin-top: 20px; color: #666; }
+          </style>
+        </head>
+        <body>${content}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="printable w-full max-w-3xl">
+      <DialogContent className="w-full max-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-bold mb-4">
             Goods Received Note (GRN)
           </DialogTitle>
         </DialogHeader>
 
-        <div className="text-center mb-4 text-sm">
-          <p className="font-bold text-lg">Great Pearl Coffee Factory</p>
-          <p>+256781121639 / +256778536681</p>
-          <p>www.greatpearlcoffee.com</p>
-          <p>greatpearlcoffee@gmail.com</p>
-        </div>
-
-        <div className="space-y-4 text-sm">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p><strong>Supplier Name:</strong> {supplierName}</p>
-              <p><strong>GRN Number:</strong> {grnNumber}</p>
-              <p><strong>Assessed By:</strong> {assessedBy}</p>
-              <p><strong>Date:</strong> {new Date(createdAt).toLocaleDateString()}</p>
-            </div>
-            <div>
-              <p><strong>Coffee Type:</strong> {coffeeType}</p>
-              <p><strong>Quality Assessment:</strong> {qualityAssessment}</p>
-              <p><strong>Number of Bags:</strong> {numberOfBags}</p>
-              <p><strong>Total Kgs:</strong> {totalKgs.toLocaleString()} kg</p>
-            </div>
+        <div ref={printRef}>
+          <div className="text-center mb-4 text-sm">
+            <p className="font-bold text-lg">Great Pearl Coffee Factory</p>
+            <p>+256781121639 / +256778536681</p>
+            <p>www.greatpearlcoffee.com</p>
+            <p>greatpearlcoffee@gmail.com</p>
           </div>
 
-          <table className="w-full mt-4 text-sm border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border px-4 py-2 text-left">Description</th>
-                <th className="border px-4 py-2 text-left">Unit Price (UGX)</th>
-                <th className="border px-4 py-2 text-left">Total (UGX)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="border px-4 py-2">{coffeeType} - {qualityAssessment}</td>
-                <td className="border px-4 py-2">{unitPrice.toLocaleString()}</td>
-                <td className="border px-4 py-2">{totalAmount.toLocaleString()}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div className="flex justify-between mt-8">
-            <div className="text-xs">
-              <p>__________________________</p>
-              <p>Store Keeper</p>
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p><strong>Supplier Name:</strong> {supplierName}</p>
+                <p><strong>GRN Number:</strong> {grnNumber}</p>
+                <p><strong>Assessed By:</strong> {assessedBy}</p>
+                <p><strong>Date:</strong> {new Date(createdAt).toLocaleDateString()}</p>
+              </div>
+              <div>
+                <p><strong>Coffee Type:</strong> {coffeeType}</p>
+                <p><strong>Quality Assessment:</strong> {qualityAssessment}</p>
+                <p><strong>Number of Bags:</strong> {numberOfBags}</p>
+                <p><strong>Total Kgs:</strong> {totalKgs.toLocaleString()} kg</p>
+              </div>
             </div>
-            <div className="text-xs text-right">
-              <p>__________________________</p>
-              <p>Quality Analyst</p>
-            </div>
-          </div>
 
-          <div className="mt-4 text-xs text-gray-500">
-            <p>This GRN is system generated and valid without a signature.</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Unit Price (UGX)</th>
+                  <th>Total (UGX)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{coffeeType} - {qualityAssessment}</td>
+                  <td>{unitPrice.toLocaleString()}</td>
+                  <td>{totalAmount.toLocaleString()}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="signatures">
+              <div>
+                <p>__________________________</p>
+                <p>Store Keeper</p>
+              </div>
+              <div>
+                <p>__________________________</p>
+                <p>Quality Analyst</p>
+              </div>
+            </div>
+
+            <div className="note">
+              This GRN is system-generated and valid without a signature.
+            </div>
           </div>
         </div>
 
