@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CreditCard, Clock, CheckCircle2, AlertTriangle, Banknote } from "lucide-react";
+import { CreditCard, Clock, CheckCircle2, AlertTriangle, Banknote, Receipt } from "lucide-react";
 import { useState } from "react";
+import ReceiptPrintModal from "./ReceiptPrintModal";
 
 interface PaymentProcessingCardProps {
   pendingPayments: any[];
@@ -28,6 +29,10 @@ const PaymentProcessingCard = ({
     payment: null
   });
   const [actualAmount, setActualAmount] = useState('');
+  const [receiptPrintModal, setReceiptPrintModal] = useState<{open: boolean, payment: any}>({
+    open: false,
+    payment: null
+  });
 
   const handleCashPaymentClick = (payment: any) => {
     setCashPaymentDialog({open: true, payment});
@@ -299,6 +304,15 @@ const PaymentProcessingCard = ({
                   <div className="text-right">
                     <p className="font-bold text-green-600">{formatCurrency(payment.amount)}</p>
                     {getPaymentStatusBadge(payment)}
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="mt-2"
+                      onClick={() => setReceiptPrintModal({open: true, payment})}
+                    >
+                      <Receipt className="h-4 w-4 mr-1" />
+                      Print Receipt
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -306,6 +320,14 @@ const PaymentProcessingCard = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Receipt Print Modal */}
+      <ReceiptPrintModal 
+        isOpen={receiptPrintModal.open}
+        onClose={() => setReceiptPrintModal({open: false, payment: null})}
+        payment={receiptPrintModal.payment}
+        formatCurrency={formatCurrency}
+      />
     </div>
   );
 };

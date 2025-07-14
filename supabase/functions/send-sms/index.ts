@@ -56,13 +56,14 @@ serve(async (req) => {
     // Try multiple SMS providers for better reliability
     const smsProviders = [
       {
-        name: 'SMS.net',
-        url: 'https://api.sms.net/sms/send',
+        name: 'YoolaSMS',
+        url: 'https://yoolasms.com/api/send',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('SMS_API_KEY') || 'xgpYr222zWMD4w5VIzUaZc5KYO5L1w8N38qBj1qPflwguq9PdJ545NTCSLTS7H00'}`
+          'Accept': 'application/json'
         },
         body: {
+          api_key: Deno.env.get('YOOLA_SMS_API_KEY') || 'xgpYr222zWMD4w5VIzUaZc5KYO5L1w8N38qBj1qPflwguq9PdJ545NTCSLTS7H00',
           to: formattedPhone,
           message: message,
           from: 'GreatPearl'

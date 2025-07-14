@@ -1,60 +1,36 @@
 
-import axios from 'axios';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SMSProvider {
   name: string;
   sendSMS: (phone: string, message: string) => Promise<boolean>;
 }
 
-class YoolaSMSProvider implements SMSProvider {
-  name = 'YoolaSMS';
-  private apiKey = 'xgpYr222zWMD4w5VIzUaZc5KYO5L1w8N38qBj1qPflwguq9PdJ545NTCSLTS7H00';
+class SupabaseSMSProvider implements SMSProvider {
+  name = 'Supabase SMS';
 
   async sendSMS(phone: string, message: string): Promise<boolean> {
-    if (!this.apiKey || this.apiKey === 'your api key') {
-      console.log('YoolaSMS API key not configured, skipping...');
-      return false;
-    }
-
     try {
-      console.log('Attempting to send SMS via YoolaSMS to:', phone);
+      console.log('Attempting to send SMS via Supabase Edge Function to:', phone);
       console.log('Message content:', message);
       
-      // YoolaSMS API typically uses form data or specific JSON structure
-      const requestData = {
-        api_key: this.apiKey,
-        to: phone,
-        message: message,
-        from: 'GreatPearl'
-      };
-
-      console.log('YoolaSMS request data:', requestData);
-
-      // Try the standard YoolaSMS endpoint format
-      const response = await axios.post('https://yoolasms.com/api/send', requestData, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        timeout: 10000
+      const { data, error } = await supabase.functions.invoke('send-sms', {
+        body: { 
+          phone: phone, 
+          code: message,
+          userName: 'User' 
+        }
       });
 
-      console.log('YoolaSMS response status:', response.status);
-      console.log('YoolaSMS response data:', response.data);
-      
-      // Check if the response indicates success
-      if (response.status === 200) {
-        return true;
-      } else {
-        console.error('YoolaSMS unexpected status:', response.status);
+      if (error) {
+        console.error('Supabase SMS error:', error);
         return false;
       }
-    } catch (error: any) {
-      console.error('YoolaSMS request failed:', error);
-      if (error.response) {
-        console.error('YoolaSMS error response:', error.response.data);
-        console.error('YoolaSMS error status:', error.response.status);
-      }
+
+      console.log('SMS sent successfully via Supabase:', data);
+      return true;
+    } catch (error) {
+      console.error('Supabase SMS request failed:', error);
       return false;
     }
   }
@@ -74,7 +50,7 @@ class DevelopmentProvider implements SMSProvider {
 
 export class SMSService {
   private providers: SMSProvider[] = [
-    new YoolaSMSProvider(),
+    new SupabaseSMSProvider(),
     new DevelopmentProvider() // Always works for testing
   ];
 
@@ -100,23 +76,40 @@ export class SMSService {
 
   async sendVerificationSMS(phone: string, code: string, userName?: string): Promise<{ success: boolean; error?: string }> {
     const formattedPhone = this.formatPhoneNumber(phone);
-    const greeting = userName ? `Dear ${userName},` : 'Dear User,';
-    const message = `Great Pearl Coffee Factory - ${greeting} Please use code ${code} for logging in. This code expires in 5 minutes.`;
-
-    console.log('Sending SMS to:', formattedPhone, 'Message:', message);
+    
+    console.log('Sending SMS to:', formattedPhone, 'Code:', code);
 
     for (const provider of this.providers) {
       try {
         console.log(`Trying ${provider.name}...`);
-        const success = await provider.sendSMS(formattedPhone, message);
         
-        if (success) {
-          console.log(`SMS sent successfully via ${provider.name}`);
-          return { 
-            success: true 
-          };
+        // For Supabase provider, we need to send the raw code, not the formatted message
+        if (provider.name === 'Supabase SMS') {
+          const success = await provider.sendSMS(formattedPhone, code);
+          
+          if (success) {
+            console.log(`SMS sent successfully via ${provider.name}`);
+            return { 
+              success: true 
+            };
+          } else {
+            console.log(`${provider.name} returned false, trying next provider...`);
+          }
         } else {
-          console.log(`${provider.name} returned false, trying next provider...`);
+          // For other providers, send the formatted message
+          const greeting = userName ? `Dear ${userName},` : 'Dear User,';
+          const message = `Great Pearl Coffee Factory - ${greeting} Please use code ${code} for logging in. This code expires in 5 minutes.`;
+          
+          const success = await provider.sendSMS(formattedPhone, message);
+          
+          if (success) {
+            console.log(`SMS sent successfully via ${provider.name}`);
+            return { 
+              success: true 
+            };
+          } else {
+            console.log(`${provider.name} returned false, trying next provider...`);
+          }
         }
       } catch (error) {
         console.error(`${provider.name} failed:`, error);

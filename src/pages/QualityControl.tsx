@@ -19,12 +19,14 @@ import {
   TrendingUp,
   Eye,
   Send,
-  Factory
+  Factory,
+  FileDown
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQualityControl } from "@/hooks/useQualityControl";
 import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
+import GRNPrintModal from "@/components/quality/GRNPrintModal";
 
 const QualityControl = () => {
   const {
@@ -52,6 +54,11 @@ const QualityControl = () => {
     stones: '',
     manual_price: '',
     comments: ''
+  });
+  const [grnPrintModal, setGrnPrintModal] = useState<{open: boolean, assessment: any, storeRecord: any}>({
+    open: false,
+    assessment: null,
+    storeRecord: null
   });
 
   // Refresh prices when component mounts
@@ -234,6 +241,21 @@ const QualityControl = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handlePrintGRN = (assessment: any) => {
+    const storeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
+    if (storeRecord) {
+      setGrnPrintModal({
+        open: true,
+        assessment,
+        storeRecord
+      });
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `UGX ${amount.toLocaleString()}`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -452,6 +474,14 @@ const QualityControl = () => {
                                   Send to Drier
                                 </Button>
                               )}
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handlePrintGRN(assessment)}
+                              >
+                                <FileDown className="h-4 w-4 mr-1" />
+                                Print GRN
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -624,6 +654,15 @@ const QualityControl = () => {
             )}
           </TabsContent>
         </Tabs>
+        
+        {/* GRN Print Modal */}
+        <GRNPrintModal 
+          isOpen={grnPrintModal.open}
+          onClose={() => setGrnPrintModal({open: false, assessment: null, storeRecord: null})}
+          assessment={grnPrintModal.assessment}
+          storeRecord={grnPrintModal.storeRecord}
+          formatCurrency={formatCurrency}
+        />
       </div>
     </Layout>
   );
