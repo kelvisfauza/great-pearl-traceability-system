@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Loader2, Shield, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { smsService } from '@/services/smsService';
 
 interface TwoFactorVerificationProps {
   phone: string;
@@ -49,36 +50,23 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
     setStoredCode(newCode);
     
     try {
-      const response = await fetch(`https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk`
-        },
-        body: JSON.stringify({
-          phone: phone,
-          code: newCode,
-          userName: userName
-        })
-      });
+      console.log('Sending verification code:', newCode, 'to:', phone);
+      const result = await smsService.sendVerificationSMS(phone, newCode, userName);
 
-      const result = await response.json();
-
-      if (!response.ok) {
+      if (result.success) {
+        toast({
+          title: "Verification code sent",
+          description: `A 4-digit code has been sent to ${phone}`,
+        });
+        setTimeRemaining(300); // Reset timer to 5 minutes
+      } else {
         throw new Error(result.error || 'Failed to send SMS');
       }
-
-      toast({
-        title: "Verification code sent",
-        description: `A 4-digit code has been sent to ${phone}`,
-      });
-
-      setTimeRemaining(300); // Reset timer to 5 minutes
     } catch (error) {
       console.error('Error sending SMS:', error);
       toast({
         title: "Error",
-        description: "Failed to send verification code. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to send verification code. Please try again.",
         variant: "destructive"
       });
     } finally {
