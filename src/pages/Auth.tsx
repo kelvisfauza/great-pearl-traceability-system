@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Coffee, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import TwoFactorVerification from '@/components/TwoFactorVerification';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, user } = useAuth();
+  const { signIn, user, pendingUser, pendingPhone, completeTwoFactorAuth, cancelTwoFactorAuth } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,6 +34,19 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  // Show 2FA verification if user is pending
+  if (pendingUser && pendingPhone) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
+        <TwoFactorVerification
+          phone={pendingPhone}
+          onVerificationSuccess={completeTwoFactorAuth}
+          onCancel={cancelTwoFactorAuth}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
@@ -86,7 +100,7 @@ const Auth = () => {
             <p>Contact your admin if you need access.</p>
             <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
               <p className="text-amber-800">
-                <strong>Security Notice:</strong> Sessions automatically expire after 5 minutes of inactivity
+                <strong>Security Notice:</strong> Two-factor authentication is required for all users
               </p>
             </div>
           </div>

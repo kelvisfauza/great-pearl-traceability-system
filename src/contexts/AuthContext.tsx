@@ -31,9 +31,13 @@ interface AuthContextType {
   user: User | null;
   employee: Employee | null;
   loading: boolean;
+  pendingUser: User | null;
+  pendingPhone: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, userData: any) => Promise<void>;
   signOut: () => Promise<void>;
+  completeTwoFactorAuth: () => void;
+  cancelTwoFactorAuth: () => void;
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   canManageEmployees: () => boolean;
@@ -50,6 +54,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [pendingPhone, setPendingPhone] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Refs for inactivity tracking
@@ -108,29 +114,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user, resetInactivityTimer]);
 
-  const fetchEmployeeData = async () => {
-    if (!user?.uid) {
+  const fetchEmployeeData = async (userId?: string) => {
+    const targetUserId = userId || user?.uid;
+    if (!targetUserId) {
       console.log('No user UID available');
-      return;
+      return null;
     }
 
     try {
-      console.log('Fetching employee data for user:', user.uid);
+      console.log('Fetching employee data for user:', targetUserId);
       
       // First try to get employee by user ID (Firebase UID)
-      const employeeDoc = await getDoc(doc(db, 'employees', user.uid));
+      const employeeDoc = await getDoc(doc(db, 'employees', targetUserId));
       
       if (employeeDoc.exists()) {
         const employeeData = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
         console.log('Found employee by ID:', employeeData);
-        setEmployee(employeeData);
-        return;
+        return employeeData;
       }
 
       // If not found by ID, try to find by email
       const employeesQuery = query(
         collection(db, 'employees'), 
-        where('email', '==', user.email)
+        where('email', '==', user?.email)
       );
       const employeeSnapshot = await getDocs(employeesQuery);
 
@@ -138,38 +144,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const employeeDoc = employeeSnapshot.docs[0];
         const employeeData = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
         console.log('Found employee by email:', employeeData);
-        setEmployee(employeeData);
         
         // Update the employee document to use the Firebase UID as the ID
-        if (employeeData.id !== user.uid) {
+        if (employeeData.id !== targetUserId) {
           console.log('Updating employee ID to match Firebase UID');
-          await setDoc(doc(db, 'employees', user.uid), {
+          await setDoc(doc(db, 'employees', targetUserId), {
             ...employeeData,
-            id: user.uid,
+            id: targetUserId,
             updated_at: new Date().toISOString()
           });
-          setEmployee({ ...employeeData, id: user.uid });
+          return { ...employeeData, id: targetUserId };
         }
-        return;
+        return employeeData;
       }
 
-      // If no employee found, user doesn't have an employee record
       console.log('No employee record found for user');
-      setEmployee(null);
-      toast({
-        title: "Access Denied",
-        description: "No employee record found. Contact your administrator.",
-        variant: "destructive"
-      });
+      return null;
 
     } catch (error) {
       console.error('Error in fetchEmployeeData:', error);
-      setEmployee(null);
-      toast({
-        title: "Error",
-        description: "Failed to load employee data. Contact your administrator.",
-        variant: "destructive"
-      });
+      return null;
     }
   };
 
@@ -181,16 +175,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log('Sign in successful:', userCredential.user.uid);
 
-      // Seed data after successful login
-      setTimeout(async () => {
-        console.log('Starting data seeding...');
-        await seedFirebaseData();
-      }, 1000);
+      // Check if user has an employee record with phone number
+      const employeeData = await fetchEmployeeData(userCredential.user.uid);
+      
+      if (!employeeData) {
+        await firebaseSignOut(auth);
+        toast({
+          title: "Access Denied",
+          description: "No employee record found. Contact your administrator.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!employeeData.phone) {
+        await firebaseSignOut(auth);
+        toast({
+          title: "Phone Number Required",
+          description: "Your account needs a phone number for 2FA. Contact your administrator.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Store pending user and phone for 2FA
+      setPendingUser(userCredential.user);
+      setPendingPhone(employeeData.phone);
+      
+      // Sign out temporarily until 2FA is complete
+      await firebaseSignOut(auth);
 
       toast({
-        title: "Success",
-        description: "Signed in successfully"
+        title: "First Step Complete",
+        description: "Please verify your phone number to complete login"
       });
+
     } catch (error: any) {
       console.error('Sign in error:', error);
       toast({
@@ -202,6 +221,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
+  };
+
+  const completeTwoFactorAuth = async () => {
+    if (!pendingUser) return;
+
+    try {
+      setLoading(true);
+      
+      // Re-authenticate the user
+      setUser(pendingUser);
+      
+      // Fetch and set employee data
+      const employeeData = await fetchEmployeeData(pendingUser.uid);
+      setEmployee(employeeData);
+      
+      // Clear pending state
+      setPendingUser(null);
+      setPendingPhone(null);
+
+      // Seed data after successful login
+      setTimeout(async () => {
+        console.log('Starting data seeding...');
+        await seedFirebaseData();
+      }, 1000);
+
+      toast({
+        title: "Login Successful",
+        description: "You have been successfully authenticated!"
+      });
+    } catch (error: any) {
+      console.error('2FA completion error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete authentication",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelTwoFactorAuth = () => {
+    setPendingUser(null);
+    setPendingPhone(null);
+    toast({
+      title: "Authentication Cancelled",
+      description: "Login process was cancelled"
+    });
   };
 
   const signUp = async (email: string, password: string, userData: any) => {
@@ -300,7 +367,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (user && !loading) {
       console.log('User available, fetching employee data...');
-      fetchEmployeeData();
+      const loadEmployeeData = async () => {
+        const employeeData = await fetchEmployeeData();
+        setEmployee(employeeData);
+      };
+      loadEmployeeData();
     }
   }, [user, loading]);
 
@@ -308,9 +379,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     employee,
     loading,
+    pendingUser,
+    pendingPhone,
     signIn,
     signUp,
     signOut,
+    completeTwoFactorAuth,
+    cancelTwoFactorAuth,
     hasPermission,
     hasRole,
     canManageEmployees,
