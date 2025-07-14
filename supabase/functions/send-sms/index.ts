@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { phone, code } = await req.json()
+    const { phone, code, userName } = await req.json()
     
     if (!phone || !code) {
       return new Response(
@@ -28,7 +28,11 @@ serve(async (req) => {
     // Format phone number (remove + if present)
     const formattedPhone = phone.replace(/^\+/, '')
     
-    const message = `Your Great Pearl Coffee verification code is: ${code}. This code expires in 5 minutes.`
+    // Personalize the message with user's name if available
+    const greeting = userName ? `Dear ${userName},` : 'Dear User,'
+    const message = `Great Pearl Coffee Factory - ${greeting} Please use code ${code} for logging in. This code expires in 5 minutes.`
+    
+    console.log('Sending SMS to:', formattedPhone, 'Message:', message)
     
     // Send SMS using the provided API
     const smsResponse = await fetch('https://api.sms.net/sms/send', {

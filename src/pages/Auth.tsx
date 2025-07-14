@@ -13,7 +13,7 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, user, pendingUser, pendingPhone, completeTwoFactorAuth, cancelTwoFactorAuth } = useAuth();
+  const { signIn, user, pendingUser, pendingPhone, pendingEmployeeName, completeTwoFactorAuth, cancelTwoFactorAuth } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,6 +41,7 @@ const Auth = () => {
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
         <TwoFactorVerification
           phone={pendingPhone}
+          userName={pendingEmployeeName || undefined}
           onVerificationSuccess={completeTwoFactorAuth}
           onCancel={cancelTwoFactorAuth}
         />

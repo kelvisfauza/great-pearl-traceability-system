@@ -8,12 +8,14 @@ import { useToast } from '@/hooks/use-toast';
 
 interface TwoFactorVerificationProps {
   phone: string;
+  userName?: string;
   onVerificationSuccess: () => void;
   onCancel: () => void;
 }
 
 const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
   phone,
+  userName,
   onVerificationSuccess,
   onCancel
 }) => {
@@ -47,15 +49,16 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
     setStoredCode(newCode);
     
     try {
-      const response = await fetch('/functions/v1/send-sms', {
+      const response = await fetch(`https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk`
         },
         body: JSON.stringify({
           phone: phone,
-          code: newCode
+          code: newCode,
+          userName: userName
         })
       });
 
@@ -144,7 +147,7 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
         </div>
         <CardTitle className="text-2xl">Two-Factor Authentication</CardTitle>
         <CardDescription>
-          Enter the 4-digit code sent to {maskedPhone}
+          {userName ? `Hello ${userName}, enter` : 'Enter'} the 4-digit code sent to {maskedPhone}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

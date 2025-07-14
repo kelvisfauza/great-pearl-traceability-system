@@ -33,6 +33,7 @@ interface AuthContextType {
   loading: boolean;
   pendingUser: User | null;
   pendingPhone: string | null;
+  pendingEmployeeName: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, userData: any) => Promise<void>;
   signOut: () => Promise<void>;
@@ -56,6 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [pendingPhone, setPendingPhone] = useState<string | null>(null);
+  const [pendingEmployeeName, setPendingEmployeeName] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Refs for inactivity tracking
@@ -198,9 +200,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Store pending user and phone for 2FA
+      // Store pending user, phone, and employee name for 2FA
       setPendingUser(userCredential.user);
       setPendingPhone(employeeData.phone);
+      setPendingEmployeeName(employeeData.name);
       
       // Sign out temporarily until 2FA is complete
       await firebaseSignOut(auth);
@@ -239,6 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Clear pending state
       setPendingUser(null);
       setPendingPhone(null);
+      setPendingEmployeeName(null);
 
       // Seed data after successful login
       setTimeout(async () => {
@@ -265,6 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const cancelTwoFactorAuth = () => {
     setPendingUser(null);
     setPendingPhone(null);
+    setPendingEmployeeName(null);
     toast({
       title: "Authentication Cancelled",
       description: "Login process was cancelled"
@@ -381,6 +386,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     pendingUser,
     pendingPhone,
+    pendingEmployeeName,
     signIn,
     signUp,
     signOut,
