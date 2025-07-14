@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,13 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Coffee, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import TwoFactorVerification from '@/components/TwoFactorVerification';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, user, pendingUser, pendingPhone, pendingEmployeeName, completeTwoFactorAuth, cancelTwoFactorAuth } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,26 +26,13 @@ const Auth = () => {
 
     try {
       await signIn(email, password);
+      navigate('/'); // ✅ Proceed directly after login
     } catch (error) {
       console.error('Auth error:', error);
     } finally {
       setLoading(false);
     }
   };
-
-  // Show 2FA verification if user is pending
-  if (pendingUser && pendingPhone) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
-        <TwoFactorVerification
-          phone={pendingPhone}
-          userName={pendingEmployeeName || undefined}
-          onVerificationSuccess={completeTwoFactorAuth}
-          onCancel={cancelTwoFactorAuth}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
@@ -99,11 +84,6 @@ const Auth = () => {
           <div className="mt-4 text-center text-sm text-gray-600">
             <p>Accounts are managed by administrators.</p>
             <p>Contact your admin if you need access.</p>
-            <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
-              <p className="text-amber-800">
-                <strong>Security Notice:</strong> Two-factor authentication is required for all users
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
