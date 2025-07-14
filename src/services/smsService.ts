@@ -1,7 +1,46 @@
 
+import axios from 'axios';
+
 interface SMSProvider {
   name: string;
   sendSMS: (phone: string, message: string) => Promise<boolean>;
+}
+
+class YoolaSMSProvider implements SMSProvider {
+  name = 'YoolaSMS';
+  private apiKey = ''; // Add your YoolaSMS API key here
+
+  async sendSMS(phone: string, message: string): Promise<boolean> {
+    if (!this.apiKey) {
+      console.log('YoolaSMS API key not configured, skipping...');
+      return false;
+    }
+
+    try {
+      const data = {
+        phone: phone,
+        message: message,
+        api_key: this.apiKey
+      };
+
+      const config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: 'https://yoolasms.com/api/v1/send',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        data: data
+      };
+
+      const response = await axios.request(config);
+      console.log('SMS sent successfully via YoolaSMS:', response.data);
+      return true;
+    } catch (error) {
+      console.error('YoolaSMS request failed:', error);
+      return false;
+    }
+  }
 }
 
 class SMS_NetProvider implements SMSProvider {
@@ -81,10 +120,24 @@ class TextLocalProvider implements SMSProvider {
   }
 }
 
+class DevelopmentProvider implements SMSProvider {
+  name = 'Development';
+
+  async sendSMS(phone: string, message: string): Promise<boolean> {
+    console.log('=== DEVELOPMENT SMS ===');
+    console.log('Phone:', phone);
+    console.log('Message:', message);
+    console.log('======================');
+    return true;
+  }
+}
+
 export class SMSService {
   private providers: SMSProvider[] = [
+    new YoolaSMSProvider(),
     new SMS_NetProvider(),
-    new TextLocalProvider()
+    new TextLocalProvider(),
+    new DevelopmentProvider() // Always works for testing
   ];
 
   private formatPhoneNumber(phone: string): string {
