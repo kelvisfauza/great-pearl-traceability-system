@@ -8,7 +8,7 @@ interface SMSProvider {
 
 class YoolaSMSProvider implements SMSProvider {
   name = 'YoolaSMS';
-  private apiKey = 'your api key'; // Add your actual YoolaSMS API key here
+  private apiKey = 'xgpYr222zWMD4w5VIzUaZc5KYO5L1w8N38qBj1qPflwguq9PdJ545NTCSLTS7H00';
 
   async sendSMS(phone: string, message: string): Promise<boolean> {
     if (!this.apiKey || this.apiKey === 'your api key') {
