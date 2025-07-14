@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -26,6 +25,7 @@ export interface PaymentRecord {
   id: string;
   supplier: string;
   amount: number;
+  paid_amount?: number;
   status: string;
   method: string;
   date: string;
@@ -395,9 +395,9 @@ export const useFirebaseFinance = () => {
     }
   };
 
-  const processPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash') => {
+  const processPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash', actualAmount?: number) => {
     try {
-      console.log('Processing payment:', paymentId, method);
+      console.log('Processing payment:', paymentId, method, actualAmount ? `Actual amount: ${actualAmount}` : 'Full amount');
       
       // Find the payment record to get quality assessment ID
       const payment = payments.find(p => p.id === paymentId);
@@ -470,11 +470,32 @@ export const useFirebaseFinance = () => {
           description: "Bank transfer submitted for approval",
         });
       } else {
-        // For cash payments, mark as paid immediately
-        console.log('Processing cash payment...');
+        // For cash payments, handle partial payments
+        const originalAmount = payment.amount;
+        const previouslyPaid = payment.paid_amount || 0;
+        const amountBeingPaid = actualAmount || originalAmount;
+        const totalPaid = previouslyPaid + amountBeingPaid;
+        const remainingBalance = originalAmount - totalPaid;
+        
+        console.log('Cash payment calculation:', {
+          originalAmount,
+          previouslyPaid,
+          amountBeingPaid,
+          totalPaid,
+          remainingBalance
+        });
+
+        // Determine new status based on payment completion
+        let newStatus = 'Paid';
+        if (remainingBalance > 0) {
+          newStatus = 'Partial';
+        }
+
+        console.log('Processing cash payment with status:', newStatus);
         await updateDoc(doc(db, 'payment_records', paymentId), {
-          status: 'Paid',
+          status: newStatus,
           method: 'Cash',
+          paid_amount: totalPaid,
           updated_at: new Date().toISOString()
         });
 
@@ -482,16 +503,20 @@ export const useFirebaseFinance = () => {
         setPayments(prevPayments => 
           prevPayments.map(p => 
             p.id === paymentId 
-              ? { ...p, status: 'Paid', method: 'Cash' }
+              ? { ...p, status: newStatus, method: 'Cash', paid_amount: totalPaid }
               : p
           )
         );
 
         // Record daily task
+        const taskDescription = remainingBalance > 0 
+          ? `Partial cash payment: ${payment.supplier} - UGX ${amountBeingPaid.toLocaleString()} (Balance: UGX ${remainingBalance.toLocaleString()})`
+          : `Cash payment completed: ${payment.supplier} - UGX ${amountBeingPaid.toLocaleString()}`;
+
         await addDoc(collection(db, 'daily_tasks'), {
-          task_type: 'Cash Payment',
-          description: `Cash payment made: ${payment.supplier} - UGX ${payment.amount?.toLocaleString()}`,
-          amount: payment.amount,
+          task_type: remainingBalance > 0 ? 'Partial Cash Payment' : 'Cash Payment',
+          description: taskDescription,
+          amount: amountBeingPaid,
           batch_number: payment.batchNumber,
           completed_by: 'Finance Department',
           completed_at: new Date().toISOString(),
@@ -500,9 +525,13 @@ export const useFirebaseFinance = () => {
           created_at: new Date().toISOString()
         });
 
+        const successMessage = remainingBalance > 0 
+          ? `Partial payment processed. Remaining balance: UGX ${remainingBalance.toLocaleString()}`
+          : "Cash payment processed successfully";
+
         toast({
           title: "Success",
-          description: "Cash payment processed successfully",
+          description: successMessage,
         });
       }
 

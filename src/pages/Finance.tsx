@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -82,10 +81,10 @@ const Finance = () => {
     setReceiptDescription("");
   };
 
-  const handleProcessPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash') => {
-    console.log('Finance page - Processing payment:', paymentId, method);
+  const handleProcessPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash', actualAmount?: number) => {
+    console.log('Finance page - Processing payment:', paymentId, method, actualAmount ? `Actual amount: ${actualAmount}` : 'Full amount');
     try {
-      await processPayment(paymentId, method);
+      await processPayment(paymentId, method, actualAmount);
       console.log('Finance page - Payment processed, refreshing data...');
       // The processPayment function now updates local state immediately, so no need to refetch
     } catch (error) {

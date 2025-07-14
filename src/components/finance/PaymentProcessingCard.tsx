@@ -2,14 +2,17 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CreditCard, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { CreditCard, Clock, CheckCircle2, AlertTriangle, Banknote } from "lucide-react";
+import { useState } from "react";
 
 interface PaymentProcessingCardProps {
   pendingPayments: any[];
   processingPayments: any[];
   completedPayments: any[];
-  onProcessPayment: (paymentId: string, method: 'Bank Transfer' | 'Cash') => void;
+  onProcessPayment: (paymentId: string, method: 'Bank Transfer' | 'Cash', actualAmount?: number) => void;
   formatCurrency: (amount: number) => string;
 }
 
@@ -20,6 +23,46 @@ const PaymentProcessingCard = ({
   onProcessPayment, 
   formatCurrency 
 }: PaymentProcessingCardProps) => {
+  const [cashPaymentDialog, setCashPaymentDialog] = useState<{open: boolean, payment: any}>({
+    open: false,
+    payment: null
+  });
+  const [actualAmount, setActualAmount] = useState('');
+
+  const handleCashPaymentClick = (payment: any) => {
+    setCashPaymentDialog({open: true, payment});
+    setActualAmount(payment.amount.toString());
+  };
+
+  const handleCashPaymentSubmit = () => {
+    if (cashPaymentDialog.payment && actualAmount) {
+      const amountPaid = parseFloat(actualAmount);
+      onProcessPayment(cashPaymentDialog.payment.id, 'Cash', amountPaid);
+      setCashPaymentDialog({open: false, payment: null});
+      setActualAmount('');
+    }
+  };
+
+  const getPaymentStatusBadge = (payment: any) => {
+    const originalAmount = payment.amount;
+    const paidAmount = payment.paid_amount || 0;
+    const balance = originalAmount - paidAmount;
+
+    if (balance <= 0) {
+      return <Badge variant="default" className="gap-1">
+        <CheckCircle2 className="h-3 w-3" />
+        Fully Paid
+      </Badge>;
+    } else if (paidAmount > 0) {
+      return <Badge variant="secondary" className="gap-1">
+        <Banknote className="h-3 w-3" />
+        Partial ({formatCurrency(balance)} remaining)
+      </Badge>;
+    } else {
+      return <Badge variant="destructive">{payment.status}</Badge>;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Pending Payments */}
@@ -51,51 +94,130 @@ const PaymentProcessingCard = ({
                     <TableHead>Supplier</TableHead>
                     <TableHead>Batch</TableHead>
                     <TableHead>Amount</TableHead>
+                    <TableHead>Paid</TableHead>
+                    <TableHead>Balance</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pendingPayments.map((payment) => (
-                    <TableRow key={payment.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{payment.supplier}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{payment.batchNumber || 'N/A'}</Badge>
-                      </TableCell>
-                      <TableCell className="font-bold text-green-600">
-                        {formatCurrency(payment.amount)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="destructive">{payment.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-gray-500">{payment.date}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            onClick={() => onProcessPayment(payment.id, 'Bank Transfer')}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            Bank Transfer
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => onProcessPayment(payment.id, 'Cash')}
-                          >
-                            Cash Payment
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {pendingPayments.map((payment) => {
+                    const originalAmount = payment.amount;
+                    const paidAmount = payment.paid_amount || 0;
+                    const balance = originalAmount - paidAmount;
+                    
+                    return (
+                      <TableRow key={payment.id} className="hover:bg-gray-50">
+                        <TableCell className="font-medium">{payment.supplier}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{payment.batchNumber || 'N/A'}</Badge>
+                        </TableCell>
+                        <TableCell className="font-bold text-blue-600">
+                          {formatCurrency(originalAmount)}
+                        </TableCell>
+                        <TableCell className="font-medium text-green-600">
+                          {formatCurrency(paidAmount)}
+                        </TableCell>
+                        <TableCell className="font-medium text-amber-600">
+                          {formatCurrency(balance)}
+                        </TableCell>
+                        <TableCell>
+                          {getPaymentStatusBadge(payment)}
+                        </TableCell>
+                        <TableCell className="text-gray-500">{payment.date}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              onClick={() => onProcessPayment(payment.id, 'Bank Transfer')}
+                              className="bg-blue-600 hover:bg-blue-700"
+                            >
+                              Bank Transfer
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleCashPaymentClick(payment)}
+                            >
+                              <Banknote className="h-4 w-4 mr-1" />
+                              Cash
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Cash Payment Dialog */}
+      <Dialog open={cashPaymentDialog.open} onOpenChange={(open) => setCashPaymentDialog({open, payment: null})}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Banknote className="h-5 w-5" />
+              Cash Payment
+            </DialogTitle>
+            <DialogDescription>
+              Process cash payment for {cashPaymentDialog.payment?.supplier}
+            </DialogDescription>
+          </DialogHeader>
+          {cashPaymentDialog.payment && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Amount:</span>
+                  <span className="font-semibold">{formatCurrency(cashPaymentDialog.payment.amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Previously Paid:</span>
+                  <span className="font-semibold text-green-600">
+                    {formatCurrency(cashPaymentDialog.payment.paid_amount || 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="text-sm text-gray-600">Remaining Balance:</span>
+                  <span className="font-bold text-amber-600">
+                    {formatCurrency(cashPaymentDialog.payment.amount - (cashPaymentDialog.payment.paid_amount || 0))}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Amount Being Paid (UGX)
+                </label>
+                <Input
+                  type="number"
+                  placeholder="Enter actual amount paid"
+                  value={actualAmount}
+                  onChange={(e) => setActualAmount(e.target.value)}
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500">
+                  You can enter partial payments. The remaining balance will be tracked.
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setCashPaymentDialog({open: false, payment: null})}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCashPaymentSubmit}>
+              Process Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Processing Payments */}
       {processingPayments.length > 0 && (
@@ -176,10 +298,7 @@ const PaymentProcessingCard = ({
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-green-600">{formatCurrency(payment.amount)}</p>
-                    <Badge variant="default" className="gap-1">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Completed
-                    </Badge>
+                    {getPaymentStatusBadge(payment)}
                   </div>
                 </div>
               ))}
