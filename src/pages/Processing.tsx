@@ -1,34 +1,50 @@
-
 import Layout from "@/components/Layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Coffee, 
-  Cog, 
-  TrendingUp, 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Coffee,
+  Cog,
+  TrendingUp,
   Clock,
   Play,
-  Pause,
   Settings,
   Eye,
-  AlertTriangle,
   CheckCircle,
   Search,
   Filter,
-  Plus
+  Plus,
 } from "lucide-react";
 import { useProcessingOperations } from "@/hooks/useProcessingOperations";
 
 const Processing = () => {
-  const { processingBatches, machines, loading, todayMetrics } = useProcessingOperations();
+  const { processingBatches, machines, loading, todayMetrics } =
+    useProcessingOperations();
 
   return (
-    <Layout 
-      title="Processing Operations" 
+    <Layout
+      title="Processing Operations"
       subtitle="Monitor milling, sorting, and production processes"
     >
       <div className="space-y-6">
@@ -38,8 +54,12 @@ const Processing = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Processed Today</p>
-                  <p className="text-2xl font-bold">{todayMetrics.processedBags} bags</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Processed Today
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {todayMetrics?.processedBags ?? 0} bags
+                  </p>
                   <p className="text-xs text-green-600">Real-time data</p>
                 </div>
                 <Coffee className="h-8 w-8 text-green-600" />
@@ -50,9 +70,15 @@ const Processing = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Machine Efficiency</p>
-                  <p className="text-2xl font-bold">{todayMetrics.averageEfficiency}%</p>
-                  <p className="text-xs text-blue-600">From {machines.length} machines</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Machine Efficiency
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {todayMetrics?.averageEfficiency ?? 0}%
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    From {machines.length} machines
+                  </p>
                 </div>
                 <Cog className="h-8 w-8 text-blue-600" />
               </div>
@@ -63,7 +89,9 @@ const Processing = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Output Rate</p>
-                  <p className="text-2xl font-bold">{todayMetrics.outputRate}%</p>
+                  <p className="text-2xl font-bold">
+                    {todayMetrics?.outputRate ?? 0}%
+                  </p>
                   <p className="text-xs text-amber-600">Average yield</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-amber-600" />
@@ -74,8 +102,12 @@ const Processing = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Avg Processing Time</p>
-                  <p className="text-2xl font-bold">{todayMetrics.averageProcessingTime.toFixed(1)} hrs</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Avg Processing Time
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {todayMetrics?.averageProcessingTime?.toFixed(1) ?? 0} hrs
+                  </p>
                   <p className="text-xs text-purple-600">Per batch</p>
                 </div>
                 <Clock className="h-8 w-8 text-purple-600" />
@@ -100,28 +132,26 @@ const Processing = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Active Processing Batches</CardTitle>
-                    <CardDescription>Monitor current milling and sorting operations</CardDescription>
+                    <CardDescription>
+                      Monitor current milling and sorting operations
+                    </CardDescription>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm">
-                      <Filter className="h-4 w-4 mr-2" />
-                      Filter
+                      <Filter className="h-4 w-4 mr-2" /> Filter
                     </Button>
                     <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Start Batch
+                      <Plus className="h-4 w-4 mr-2" /> Start Batch
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="mb-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input placeholder="Search batches..." className="pl-10" />
-                  </div>
+                <div className="mb-4 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input placeholder="Search batches..." className="pl-10" />
                 </div>
-                
+
                 {loading ? (
                   <div className="text-center py-8">
                     <p className="text-gray-500">Loading processing batches...</p>
@@ -130,7 +160,9 @@ const Processing = () => {
                   <div className="text-center py-8">
                     <Coffee className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-gray-500">No active processing batches</p>
-                    <p className="text-sm text-gray-400">Start a new batch to begin processing</p>
+                    <p className="text-sm text-gray-400">
+                      Start a new batch to begin processing
+                    </p>
                   </div>
                 ) : (
                   <Table>
@@ -150,7 +182,9 @@ const Processing = () => {
                     <TableBody>
                       {processingBatches.map((batch) => (
                         <TableRow key={batch.id}>
-                          <TableCell className="font-medium">{batch.batchNumber}</TableCell>
+                          <TableCell className="font-medium">
+                            {batch.batchNumber}
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline">{batch.coffeeType}</Badge>
                           </TableCell>
@@ -160,10 +194,15 @@ const Processing = () => {
                           <TableCell>{batch.efficiency}%</TableCell>
                           <TableCell>{batch.operatorName}</TableCell>
                           <TableCell>
-                            <Badge variant={
-                              batch.status === "Completed" ? "default" : 
-                              batch.status === "In Progress" ? "secondary" : "outline"
-                            }>
+                            <Badge
+                              variant={
+                                batch.status === "Completed"
+                                  ? "default"
+                                  : batch.status === "In Progress"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                            >
                               {batch.status}
                             </Badge>
                           </TableCell>
@@ -191,7 +230,9 @@ const Processing = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Machine Status & Monitoring</CardTitle>
-                <CardDescription>Real-time status of processing equipment</CardDescription>
+                <CardDescription>
+                  Real-time status of processing equipment
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -202,7 +243,9 @@ const Processing = () => {
                   <div className="text-center py-8">
                     <Cog className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-gray-500">No machines configured</p>
-                    <p className="text-sm text-gray-400">Add processing equipment to monitor status</p>
+                    <p className="text-sm text-gray-400">
+                      Add processing equipment to monitor status
+                    </p>
                   </div>
                 ) : (
                   <Table>
@@ -221,14 +264,22 @@ const Processing = () => {
                     <TableBody>
                       {machines.map((machine) => (
                         <TableRow key={machine.id}>
-                          <TableCell className="font-medium">{machine.machineName}</TableCell>
+                          <TableCell className="font-medium">
+                            {machine.machineName}
+                          </TableCell>
                           <TableCell>{machine.type}</TableCell>
                           <TableCell>
-                            <Badge variant={
-                              machine.status === "Running" ? "default" : 
-                              machine.status === "Idle" ? "secondary" : 
-                              machine.status === "Maintenance" ? "destructive" : "outline"
-                            }>
+                            <Badge
+                              variant={
+                                machine.status === "Running"
+                                  ? "default"
+                                  : machine.status === "Idle"
+                                  ? "secondary"
+                                  : machine.status === "Maintenance"
+                                  ? "destructive"
+                                  : "outline"
+                              }
+                            >
                               {machine.status}
                             </Badge>
                           </TableCell>
@@ -260,13 +311,17 @@ const Processing = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Production Schedule</CardTitle>
-                <CardDescription>Plan and track processing operations</CardDescription>
+                <CardDescription>
+                  Plan and track processing operations
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8 text-gray-500">
                   <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>No scheduled operations</p>
-                  <p className="text-sm">Schedule processing batches to see them here</p>
+                  <p className="text-sm">
+                    Schedule processing batches to see them here
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -277,13 +332,17 @@ const Processing = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Processing Quality Metrics</CardTitle>
-                <CardDescription>Track quality outcomes from processing operations</CardDescription>
+                <CardDescription>
+                  Track quality outcomes from processing operations
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8 text-gray-500">
                   <CheckCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>No quality data available</p>
-                  <p className="text-sm">Quality metrics will appear as batches are processed</p>
+                  <p className="text-sm">
+                    Quality metrics will appear as batches are processed
+                  </p>
                 </div>
               </CardContent>
             </Card>
