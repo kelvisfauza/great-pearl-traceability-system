@@ -1,6 +1,8 @@
+
 import React, { useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface GRNPrintModalProps {
   open: boolean;
@@ -15,6 +17,13 @@ interface GRNPrintModalProps {
     unitPrice: number;
     assessedBy: string;
     createdAt: string;
+    moisture?: number;
+    group1_defects?: number;
+    group2_defects?: number;
+    below12?: number;
+    pods?: number;
+    husks?: number;
+    stones?: number;
   } | null;
 }
 
@@ -32,15 +41,32 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
     totalKgs,
     unitPrice,
     assessedBy,
-    createdAt
+    createdAt,
+    moisture,
+    group1_defects,
+    group2_defects,
+    below12,
+    pods,
+    husks,
+    stones
   } = grnData;
 
   const totalAmount = totalKgs * unitPrice;
 
+  const qualityParameters = [
+    { parameter: 'Moisture', value: moisture, unit: '%', description: 'Water content in coffee beans' },
+    { parameter: 'Group 1 Defects', value: group1_defects, unit: '%', description: 'Primary defects (black beans, sour beans, etc.)' },
+    { parameter: 'Group 2 Defects', value: group2_defects, unit: '%', description: 'Secondary defects (partial black, floaters, etc.)' },
+    { parameter: 'Below 12 Screen', value: below12, unit: '%', description: 'Small bean size percentage' },
+    { parameter: 'Pods', value: pods, unit: '%', description: 'Dried coffee cherries' },
+    { parameter: 'Husks', value: husks, unit: '%', description: 'Parchment remnants' },
+    { parameter: 'Stones', value: stones, unit: '%', description: 'Foreign matter' },
+  ];
+
   const handlePrint = () => {
     if (!printRef.current) return;
     const content = printRef.current.innerHTML;
-    const printWindow = window.open('', '', 'width=900,height=1000');
+    const printWindow = window.open('', '', 'width=900,height=1200');
     if (!printWindow) return;
 
     printWindow.document.write(`
@@ -57,6 +83,8 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
             .signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 12px; }
             .signatures div { text-align: center; }
             .note { margin-top: 20px; font-size: 11px; color: #666; }
+            .quality-table { margin-top: 20px; }
+            .quality-table th { background-color: #f5f5f5; font-weight: bold; }
           </style>
         </head>
         <body>
@@ -75,7 +103,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-3xl">
+      <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-bold mb-4">
             Goods Received Note (GRN)
@@ -122,6 +150,30 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
                 </tr>
               </tbody>
             </table>
+
+            <div className="quality-table">
+              <h3 className="font-bold text-base mb-2">Quality Assessment Parameters</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Parameter</th>
+                    <th>Value</th>
+                    <th>Unit</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {qualityParameters.map((param, index) => (
+                    <tr key={index}>
+                      <td className="font-medium">{param.parameter}</td>
+                      <td className="text-center">{param.value !== undefined ? param.value : 'N/A'}</td>
+                      <td className="text-center">{param.unit}</td>
+                      <td>{param.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <div className="signatures">
               <div>

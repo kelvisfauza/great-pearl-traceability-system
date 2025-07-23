@@ -1,3 +1,4 @@
+
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,6 @@ import { useQualityControl } from "@/hooks/useQualityControl";
 import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
-import QualityParametersTable from "@/components/quality/QualityParametersTable";
 
 const QualityControl = () => {
   const {
@@ -67,6 +67,13 @@ const QualityControl = () => {
       unitPrice: number;
       assessedBy: string;
       createdAt: string;
+      moisture?: number;
+      group1_defects?: number;
+      group2_defects?: number;
+      below12?: number;
+      pods?: number;
+      husks?: number;
+      stones?: number;
     } | null;
   }>({
     open: false,
@@ -258,7 +265,14 @@ const QualityControl = () => {
           totalKgs: storeRecord.kilograms,
           unitPrice: assessment.suggested_price,
           assessedBy: assessment.assessed_by,
-          createdAt: assessment.date_assessed
+          createdAt: assessment.date_assessed,
+          moisture: assessment.moisture,
+          group1_defects: assessment.group1_defects,
+          group2_defects: assessment.group2_defects,
+          below12: assessment.below12,
+          pods: assessment.pods,
+          husks: assessment.husks,
+          stones: assessment.stones
         }
       });
     }
@@ -310,9 +324,6 @@ const QualityControl = () => {
       subtitle={`Coffee quality assessment and management - ${currentDate}`}
     >
       <div className="space-y-6">
-        {/* Quality Parameters Guide */}
-        <QualityParametersTable />
-
         {/* Current Prices Display */}
         <Card>
           <CardHeader>
