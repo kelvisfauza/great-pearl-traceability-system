@@ -26,6 +26,7 @@ import { useQualityControl } from "@/hooks/useQualityControl";
 import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
+import QualityParametersTable from "@/components/quality/QualityParametersTable";
 
 const QualityControl = () => {
   const {
@@ -309,6 +310,9 @@ const QualityControl = () => {
       subtitle={`Coffee quality assessment and management - ${currentDate}`}
     >
       <div className="space-y-6">
+        {/* Quality Parameters Guide */}
+        <QualityParametersTable />
+
         {/* Current Prices Display */}
         <Card>
           <CardHeader>
