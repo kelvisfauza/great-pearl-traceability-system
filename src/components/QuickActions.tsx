@@ -2,7 +2,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useRoleBasedData } from "@/hooks/useRoleBasedData";
+import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   Plus, 
   FileText, 
@@ -17,9 +18,10 @@ import {
 
 const QuickActions = () => {
   const navigate = useNavigate();
-  const dataFilters = useRoleBasedData();
+  const { employee } = useAuth();
+  const access = useRoleBasedAccess();
 
-  if (!dataFilters) return null;
+  if (!employee) return null;
 
   const allActions = [
     {
@@ -27,63 +29,56 @@ const QuickActions = () => {
       description: "Record new coffee delivery",
       icon: ShoppingCart,
       color: "bg-orange-600 hover:bg-orange-700",
-      action: "Record Purchase",
       route: "/store?tab=records",
-      access: dataFilters.canViewInventory
+      access: access.canManageInventory
     },
     {
       title: "New Coffee Batch",
       description: "Record incoming coffee delivery",
       icon: Coffee,
       color: "bg-green-600 hover:bg-green-700",
-      action: "Add Batch",
       route: "/procurement",
-      access: dataFilters.canViewProcurement
+      access: access.canViewProcurement
     },
     {
       title: "Quality Inspection",
       description: "Start quality control process",
       icon: ClipboardCheck,
       color: "bg-blue-600 hover:bg-blue-700",
-      action: "Inspect",
       route: "/quality-control",
-      access: dataFilters.canViewQualityControl
+      access: access.canManageQuality
     },
     {
       title: "Process Payment",
       description: "Pay supplier or farmer",
       icon: DollarSign,
       color: "bg-amber-600 hover:bg-amber-700",
-      action: "Pay Now",
       route: "/finance",
-      access: dataFilters.canViewFinancialData
+      access: access.canProcessPayments
     },
     {
       title: "Generate Report",
       description: "Create management report",
       icon: FileText,
       color: "bg-purple-600 hover:bg-purple-700",
-      action: "Generate",
       route: "/reports",
-      access: dataFilters.canViewReports
+      access: access.canGenerateReports
     },
     {
       title: "Add Supplier",
       description: "Register new coffee supplier",
       icon: Users,
       color: "bg-indigo-600 hover:bg-indigo-700",
-      action: "Register",
       route: "/store?tab=suppliers",
-      access: dataFilters.canViewProcurement || dataFilters.canViewInventory
+      access: access.canViewProcurement || access.canManageInventory
     },
     {
       title: "Sales Entry",
       description: "Record new sales transaction",
       icon: TrendingUp,
       color: "bg-pink-600 hover:bg-pink-700",
-      action: "Record Sale",
       route: "/sales-marketing",
-      access: dataFilters.canViewAnalytics || dataFilters.userDepartment === 'Sales'
+      access: access.canViewSales
     }
   ];
 
@@ -98,7 +93,7 @@ const QuickActions = () => {
           Quick Actions
         </CardTitle>
         <CardDescription>
-          Available actions for {dataFilters.userRole} in {dataFilters.userDepartment}
+          Available actions for {employee.role} in {employee.department}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -133,7 +128,7 @@ const QuickActions = () => {
               <Package className="h-12 w-12 mx-auto" />
             </div>
             <p className="text-sm text-gray-500">
-              No quick actions available for {dataFilters.userRole} role
+              No quick actions available for {employee.role} role
             </p>
             <p className="text-xs text-gray-400 mt-1">
               Contact your administrator if you need additional access

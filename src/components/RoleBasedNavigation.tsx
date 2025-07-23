@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRoleBasedData } from "@/hooks/useRoleBasedData";
+import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import { 
   Coffee,
   Users,
@@ -23,11 +23,11 @@ import {
 const RoleBasedNavigation = () => {
   const location = useLocation();
   const { employee } = useAuth();
-  const dataFilters = useRoleBasedData();
+  const access = useRoleBasedAccess();
   
-  if (!employee || !dataFilters) return null;
+  if (!employee) return null;
 
-  const allNavigationItems = [
+  const navigationItems = [
     {
       title: "Operations",
       items: [
@@ -35,37 +35,37 @@ const RoleBasedNavigation = () => {
           name: "Dashboard", 
           icon: BarChart3, 
           path: "/", 
-          access: true // Everyone gets dashboard access
+          access: access.canViewDashboard
         },
         { 
           name: "Procurement", 
           icon: Package, 
           path: "/procurement", 
-          access: dataFilters.canViewProcurement
+          access: access.canViewProcurement
         },
         { 
           name: "Quality Control", 
           icon: ClipboardCheck, 
           path: "/quality-control", 
-          access: dataFilters.canViewQualityControl
+          access: access.canViewQuality
         },
         { 
           name: "Processing", 
           icon: Coffee, 
           path: "/processing", 
-          access: dataFilters.canViewProcessing
+          access: access.canViewProcessing
         },
         { 
           name: "Store Management", 
           icon: Shield, 
           path: "/store", 
-          access: dataFilters.canViewInventory
+          access: access.canViewInventory
         },
         { 
           name: "Inventory", 
           icon: Package, 
           path: "/inventory", 
-          access: dataFilters.canViewInventory
+          access: access.canViewInventory
         },
       ]
     },
@@ -76,31 +76,31 @@ const RoleBasedNavigation = () => {
           name: "Sales & Marketing", 
           icon: TrendingUp, 
           path: "/sales-marketing", 
-          access: dataFilters.canViewAnalytics || employee.department === 'Sales'
+          access: access.canViewSales
         },
         { 
           name: "Finance", 
           icon: DollarSign, 
           path: "/finance", 
-          access: dataFilters.canViewFinancialData
+          access: access.canViewFinance
         },
         { 
           name: "Field Operations", 
           icon: MapPin, 
           path: "/field-operations", 
-          access: dataFilters.canViewDashboard || employee.department === 'Field Operations'
+          access: access.canViewFieldOps
         },
         { 
           name: "Human Resources", 
           icon: Users, 
           path: "/human-resources", 
-          access: dataFilters.canViewEmployeeData
+          access: access.canViewHR
         },
         { 
           name: "Data Analyst", 
           icon: LineChart, 
           path: "/data-analyst", 
-          access: dataFilters.canViewAnalytics
+          access: access.canViewAnalytics
         },
       ]
     },
@@ -111,26 +111,26 @@ const RoleBasedNavigation = () => {
           name: "Reports", 
           icon: FileText, 
           path: "/reports", 
-          access: dataFilters.canViewReports
+          access: access.canViewReports
         },
         { 
           name: "Settings", 
           icon: Settings, 
           path: "/settings", 
-          access: true // Everyone gets settings access
+          access: access.canViewSettings
         },
         { 
           name: "Logistics", 
           icon: Truck, 
           path: "/logistics", 
-          access: dataFilters.canViewDashboard || employee.department === 'Operations'
+          access: access.canViewLogistics
         },
       ]
     }
   ];
 
   // Filter navigation items based on access control
-  const filteredNavigationItems = allNavigationItems.map(section => ({
+  const filteredNavigationItems = navigationItems.map(section => ({
     ...section,
     items: section.items.filter(item => item.access)
   })).filter(section => section.items.length > 0);
