@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,13 +54,24 @@ const QualityControl = () => {
     manual_price: '',
     comments: ''
   });
-  const [grnPrintModal, setGrnPrintModal] = useState<{open: boolean, assessment: any, storeRecord: any}>({
+  const [grnPrintModal, setGrnPrintModal] = useState<{
+    open: boolean;
+    grnData: {
+      grnNumber: string;
+      supplierName: string;
+      coffeeType: string;
+      qualityAssessment: string;
+      numberOfBags: number;
+      totalKgs: number;
+      unitPrice: number;
+      assessedBy: string;
+      createdAt: string;
+    } | null;
+  }>({
     open: false,
-    assessment: null,
-    storeRecord: null
+    grnData: null
   });
 
-  // Refresh prices when component mounts
   useEffect(() => {
     refreshPrices();
   }, [refreshPrices]);
@@ -80,7 +90,6 @@ const QualityControl = () => {
       manual_price: '',
       comments: ''
     });
-    // Automatically switch to assessment form tab
     setActiveTab("assessment-form");
   };
 
@@ -90,7 +99,6 @@ const QualityControl = () => {
     console.log('Calculating price with current prices:', prices);
     console.log('Selected record coffee type:', selectedRecord.coffee_type);
     
-    // Get base price based on coffee type
     let basePrice = 0;
     const coffeeType = selectedRecord.coffee_type?.toLowerCase();
     
@@ -99,7 +107,6 @@ const QualityControl = () => {
     } else if (coffeeType?.includes('robusta')) {
       basePrice = prices.robustaFaqLocal;
     } else {
-      // Default to drugar if type is unclear
       basePrice = prices.drugarLocal;
     }
     
@@ -109,21 +116,17 @@ const QualityControl = () => {
     const group1 = parseFloat(assessmentForm.group1_defects) || 0;
     const group2 = parseFloat(assessmentForm.group2_defects) || 0;
     
-    // Price adjustment based on quality parameters
     let adjustment = 1.0;
     
-    // Moisture adjustment (ideal is 12%)
     if (moisture > 12) {
-      adjustment -= (moisture - 12) * 0.02; // 2% reduction per percentage point above 12%
+      adjustment -= (moisture - 12) * 0.02;
     } else if (moisture < 10) {
-      adjustment -= (10 - moisture) * 0.03; // 3% reduction per percentage point below 10%
+      adjustment -= (10 - moisture) * 0.03;
     }
     
-    // Defects adjustment
-    adjustment -= (group1 * 0.05); // 5% reduction per Group 1 defect
-    adjustment -= (group2 * 0.02); // 2% reduction per Group 2 defect
+    adjustment -= (group1 * 0.05);
+    adjustment -= (group2 * 0.02);
     
-    // Ensure adjustment doesn't go below 0.5 (50% of base price)
     adjustment = Math.max(adjustment, 0.5);
     
     const suggestedPrice = Math.round(basePrice * adjustment * selectedRecord.kilograms);
@@ -177,10 +180,8 @@ const QualityControl = () => {
       
       await addQualityAssessment(assessment);
       
-      // Update the store record status
       await updateStoreRecord(selectedRecord.id, { status: 'assessed' });
       
-      // Clear form and selection, switch back to assessments tab
       setSelectedRecord(null);
       setAssessmentForm({
         moisture: '',
@@ -223,15 +224,12 @@ const QualityControl = () => {
       const assessment = qualityAssessments.find(a => a.id === assessmentId);
       if (!assessment) return;
 
-      // Update quality assessment status to indicate it's sent to drier
       await updateStoreRecord(assessment.store_record_id, { status: 'in_drying' });
       
       toast({
         title: "Sent to Drier",
         description: `Coffee batch ${assessment.batch_number} has been sent to the drying facility`,
       });
-      
-      // You could add more logic here to track in drying facility
       
     } catch (error) {
       console.error('Error sending to drier:', error);
@@ -246,10 +244,21 @@ const QualityControl = () => {
   const handlePrintGRN = (assessment: any) => {
     const storeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
     if (storeRecord) {
+      const qualityResult = `Moisture: ${assessment.moisture}%, Group 1 Defects: ${assessment.group1_defects}%, Group 2 Defects: ${assessment.group2_defects}%`;
+      
       setGrnPrintModal({
         open: true,
-        assessment,
-        storeRecord
+        grnData: {
+          grnNumber: `GRN-${assessment.batch_number}`,
+          supplierName: storeRecord.supplier_name,
+          coffeeType: storeRecord.coffee_type,
+          qualityAssessment: qualityResult,
+          numberOfBags: storeRecord.bags,
+          totalKgs: storeRecord.kilograms,
+          unitPrice: assessment.suggested_price,
+          assessedBy: assessment.assessed_by,
+          createdAt: assessment.date_assessed
+        }
       });
     }
   };
@@ -287,7 +296,6 @@ const QualityControl = () => {
     );
   }
 
-  // Get current date for display
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -657,15 +665,13 @@ const QualityControl = () => {
         
         {/* GRN Print Modal */}
         <GRNPrintModal 
-          isOpen={grnPrintModal.open}
-          onClose={() => setGrnPrintModal({open: false, assessment: null, storeRecord: null})}
-          assessment={grnPrintModal.assessment}
-          storeRecord={grnPrintModal.storeRecord}
-          formatCurrency={formatCurrency}
+          open={grnPrintModal.open}
+          onClose={() => setGrnPrintModal({open: false, grnData: null})}
+          grnData={grnPrintModal.grnData}
         />
       </div>
     </Layout>
   );
 };
 
-export default QualityControl; i expect u to only change the assesment but still leaving other items un touched 
+export default QualityControl;
