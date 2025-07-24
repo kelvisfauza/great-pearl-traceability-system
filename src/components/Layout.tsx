@@ -4,6 +4,7 @@ import RoleBasedNavigation from "./RoleBasedNavigation";
 import MessagingPanel from "./messaging/MessagingPanel";
 import MessageButton from "./messaging/MessageButton";
 import { useMessages } from "@/hooks/useMessages";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,7 +14,8 @@ interface LayoutProps {
 
 const Layout = ({ children, title, subtitle }: LayoutProps) => {
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
-  const { unreadCount } = useMessages();
+  const { user, employee } = useAuth();
+  const { unreadCount } = useMessages(user?.uid, employee?.id);
 
   const toggleMessaging = () => setIsMessagingOpen(!isMessagingOpen);
 
