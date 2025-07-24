@@ -34,6 +34,10 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     markAsRead
   } = useMessages(user?.uid, employee?.id);
 
+  // Debug logging
+  console.log('MessagingPanel - user:', user?.uid, 'employee:', employee?.id);
+  console.log('MessagingPanel - loading:', loading, 'conversations:', conversations.length, 'employees:', employees.length);
+
   useEffect(() => {
     if (selectedConversation) {
       const conversation = conversations.find(c => c.id === selectedConversation);

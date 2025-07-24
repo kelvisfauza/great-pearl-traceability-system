@@ -47,60 +47,106 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
   // Fetch all employees for user selection
   const fetchEmployees = useCallback(async () => {
     try {
+      console.log('Fetching employees...');
       const employeesSnapshot = await getDocs(collection(db, 'employees'));
       const employeesData = employeesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Employee[];
       
+      console.log('Fetched employees:', employeesData.length);
+      
       // Filter out current user
       const filteredEmployees = employeesData.filter(emp => emp.id !== currentEmployeeId);
+      console.log('Filtered employees (excluding current user):', filteredEmployees.length);
       setEmployees(filteredEmployees);
     } catch (error) {
       console.error('Error fetching employees:', error);
+      setEmployees([]); // Set empty array on error
     }
   }, [currentEmployeeId]);
 
   // Fetch conversations for current user
   const fetchConversations = useCallback(async () => {
-    if (!currentUserId) return;
+    if (!currentUserId) {
+      console.log('No current user ID, skipping conversations fetch');
+      return;
+    }
+    
+    console.log('Fetching conversations for user:', currentUserId);
     
     try {
       setLoading(true);
       
-      const q = query(
-        collection(db, 'conversations'),
-        where('participants', 'array-contains', currentUserId),
-        orderBy('lastMessageAt', 'desc')
-      );
+      // First try with orderBy, if it fails, get without ordering
+      let q;
+      try {
+        q = query(
+          collection(db, 'conversations'),
+          where('participants', 'array-contains', currentUserId),
+          orderBy('lastMessageAt', 'desc')
+        );
+      } catch (orderByError) {
+        // Fallback to query without orderBy if the field doesn't exist
+        q = query(
+          collection(db, 'conversations'),
+          where('participants', 'array-contains', currentUserId)
+        );
+      }
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
+        console.log('Conversations snapshot received, docs count:', snapshot.docs.length);
         const conversationsData = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
             ...data,
             createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
-            lastMessageAt: data.lastMessageAt?.toDate?.()?.toISOString() || data.lastMessageAt,
+            lastMessageAt: data.lastMessageAt?.toDate?.()?.toISOString() || data.lastMessageAt || data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
           };
         }) as Conversation[];
         
+        // Sort by lastMessageAt in memory since orderBy might fail
+        conversationsData.sort((a, b) => new Date(b.lastMessageAt || b.createdAt).getTime() - new Date(a.lastMessageAt || a.createdAt).getTime());
+        
+        console.log('Setting conversations:', conversationsData.length);
         setConversations(conversationsData);
         setLoading(false);
+      }, (error) => {
+        console.error('Error in conversations listener:', error);
+        // If the query fails, try a simpler query
+        const simpleQuery = query(
+          collection(db, 'conversations'),
+          where('participants', 'array-contains', currentUserId)
+        );
+        
+        const simpleUnsubscribe = onSnapshot(simpleQuery, (snapshot) => {
+          const conversationsData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
+              lastMessageAt: data.lastMessageAt?.toDate?.()?.toISOString() || data.lastMessageAt || new Date().toISOString(),
+            };
+          }) as Conversation[];
+          
+          setConversations(conversationsData);
+          setLoading(false);
+        });
+        
+        return simpleUnsubscribe;
       });
 
       return unsubscribe;
     } catch (error) {
       console.error('Error fetching conversations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch conversations",
-        variant: "destructive"
-      });
       setLoading(false);
+      // Return empty conversations instead of throwing
+      setConversations([]);
       return undefined;
     }
-  }, [currentUserId, toast]);
+  }, [currentUserId]);
 
   // Fetch messages for a specific conversation
   const fetchMessages = useCallback(async (conversationId: string) => {
@@ -127,19 +173,20 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
         
         setMessages(messagesData);
         setLoadingMessages(false);
+      }, (error) => {
+        console.error('Error fetching messages:', error);
+        setMessages([]);
+        setLoadingMessages(false);
       });
 
       return unsubscribe;
     } catch (error) {
-      console.error('Error fetching messages:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch messages",
-        variant: "destructive"
-      });
+      console.error('Error setting up messages listener:', error);
+      setMessages([]);
       setLoadingMessages(false);
+      return undefined;
     }
-  }, [toast]);
+  }, []);
 
   // Send a message
   const sendMessage = async ({ content, conversationId, recipientUserId, recipientEmployeeId, recipientName }: {
