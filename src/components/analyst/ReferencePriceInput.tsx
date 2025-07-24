@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { barchartService } from '@/services/barchartService';
+import { useReferencePrices } from '@/hooks/useReferencePrices';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -17,6 +17,8 @@ interface ReferencePrices {
 
 const ReferencePriceInput: React.FC = () => {
   const { toast } = useToast();
+  const { prices: currentPrices, loading: hookLoading, savePrices } = useReferencePrices();
+  
   const [prices, setPrices] = useState<ReferencePrices>({
     iceArabica: 185.50,
     robusta: 2450,
@@ -27,19 +29,17 @@ const ReferencePriceInput: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
 
+  // Update local state when Firebase data changes
   useEffect(() => {
-    // Load existing prices on component mount
-    loadCurrentPrices();
-  }, []);
-
-  const loadCurrentPrices = async () => {
-    try {
-      const currentPrices = await barchartService.getCoffeePrices();
-      setPrices(currentPrices);
-    } catch (error) {
-      console.error('Error loading current prices:', error);
-    }
-  };
+    setPrices({
+      iceArabica: currentPrices.iceArabica,
+      robusta: currentPrices.robusta,
+      exchangeRate: currentPrices.exchangeRate,
+      drugarLocal: currentPrices.drugarLocal,
+      wugarLocal: currentPrices.wugarLocal,
+      robustaFaqLocal: currentPrices.robustaFaqLocal
+    });
+  }, [currentPrices]);
 
   const handleInputChange = (field: keyof ReferencePrices, value: string) => {
     const numValue = parseFloat(value) || 0;
@@ -52,17 +52,17 @@ const ReferencePriceInput: React.FC = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      await barchartService.saveReferencePrices(prices);
+      await savePrices(prices);
       
       toast({
         title: "Reference Prices Updated",
-        description: "New reference prices have been saved successfully"
+        description: "New reference prices have been saved to Firebase successfully"
       });
     } catch (error) {
       console.error('Error saving prices:', error);
       toast({
         title: "Error",
-        description: "Failed to save reference prices",
+        description: "Failed to save reference prices to Firebase",
         variant: "destructive"
       });
     } finally {
@@ -85,6 +85,11 @@ const ReferencePriceInput: React.FC = () => {
     <Card>
       <CardHeader>
         <CardTitle>Reference Price Management</CardTitle>
+        {currentPrices.lastUpdated && (
+          <p className="text-sm text-muted-foreground">
+            Last updated: {new Date(currentPrices.lastUpdated).toLocaleString()}
+          </p>
+        )}
       </CardHeader>
       <CardContent className="space-y-6">
         {/* International Markets */}
@@ -163,8 +168,8 @@ const ReferencePriceInput: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4">
-          <Button onClick={handleSave} disabled={loading}>
-            {loading ? 'Saving...' : 'Save Reference Prices'}
+          <Button onClick={handleSave} disabled={loading || hookLoading}>
+            {loading ? 'Saving to Firebase...' : 'Save Reference Prices'}
           </Button>
           <Button variant="outline" onClick={handleReset}>
             Reset to Defaults

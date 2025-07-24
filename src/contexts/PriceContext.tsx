@@ -31,19 +31,18 @@ export const PriceProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchFromBarchartAPI = async () => {
+  const refreshPrices = async () => {
     try {
       setLoading(true);
-      console.log('Fetching real market data from Barchart API...');
+      console.log('Refreshing prices from Firebase...');
       
-      const marketPrices = await barchartService.getCoffeePrices();
+      const data = await barchartService.getCoffeePrices();
+      setPrices(data);
       
-      console.log('Updated prices from Barchart API:', marketPrices);
-      setPrices(marketPrices);
-      
+      console.log('Prices refreshed successfully:', data);
     } catch (error) {
-      console.error('Error fetching from Barchart API:', error);
-      // Fall back to default values on error
+      console.error('Error refreshing prices:', error);
+      // Keep current prices on error
       setPrices({
         iceArabica: 185.50,
         robusta: 2450,
@@ -57,16 +56,13 @@ export const PriceProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const refreshPrices = async () => {
-    await fetchFromBarchartAPI();
-  };
-
   // Load prices on component mount and set up periodic refresh
   useEffect(() => {
+    // Initial price fetch from Firebase
     refreshPrices();
     
-    // Refresh prices every 5 minutes to simulate real-time market data
-    const interval = setInterval(refreshPrices, 5 * 60 * 1000);
+    // Set up periodic refresh every 30 minutes
+    const interval = setInterval(refreshPrices, 30 * 60 * 1000);
     
     return () => clearInterval(interval);
   }, []);

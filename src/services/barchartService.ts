@@ -9,21 +9,55 @@ interface CoffeePrices {
 
 export class BarchartService {
   /**
-   * Get manually set reference prices from localStorage
+   * Get reference prices from Firebase
    */
   async getCoffeePrices(): Promise<CoffeePrices> {
-    const storedPrices = localStorage.getItem('referencePrices');
-    if (storedPrices) {
-      return JSON.parse(storedPrices);
+    try {
+      const { doc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      
+      const docRef = doc(db, 'market_prices', 'reference_prices');
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+          iceArabica: data.iceArabica || 185.50,
+          robusta: data.robusta || 2450,
+          exchangeRate: data.exchangeRate || 3750,
+          drugarLocal: data.drugarLocal || 8500,
+          wugarLocal: data.wugarLocal || 8200,
+          robustaFaqLocal: data.robustaFaqLocal || 7800
+        };
+      }
+      
+      return this.getFallbackPrices();
+    } catch (error) {
+      console.error('Error fetching reference prices from Firebase:', error);
+      return this.getFallbackPrices();
     }
-    return this.getFallbackPrices();
   }
 
   /**
-   * Save reference prices to localStorage
+   * Save reference prices to Firebase
    */
   async saveReferencePrices(prices: CoffeePrices): Promise<void> {
-    localStorage.setItem('referencePrices', JSON.stringify(prices));
+    try {
+      const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      
+      const docRef = doc(db, 'market_prices', 'reference_prices');
+      await setDoc(docRef, {
+        ...prices,
+        lastUpdated: serverTimestamp(),
+        updatedAt: new Date().toISOString()
+      });
+      
+      console.log('Reference prices saved to Firebase successfully');
+    } catch (error) {
+      console.error('Error saving reference prices to Firebase:', error);
+      throw error;
+    }
   }
 
   private getFallbackPrices(): CoffeePrices {
