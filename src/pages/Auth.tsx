@@ -26,18 +26,31 @@ const Auth = () => {
     setError('');
     setLoading(true);
 
+    console.log('=== STARTING LOGIN ATTEMPT ===');
+    console.log('Email:', email);
+    console.log('Password length:', password.length);
+
     try {
+      console.log('Calling signIn function...');
       const result = await signIn(email, password);
+      console.log('SignIn result:', result);
       
       if (result.requiresPasswordChange) {
+        console.log('Password change required, showing modal');
         setShowPasswordChange(true);
       } else {
+        console.log('Login successful, navigating to home');
         navigate('/');
       }
     } catch (error: any) {
+      console.error('=== LOGIN ERROR ===');
+      console.error('Error object:', error);
+      console.error('Error message:', error.message);
+      console.error('Error code:', error.code);
       setError(error.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
+      console.log('=== LOGIN ATTEMPT COMPLETE ===');
     }
   };
 
