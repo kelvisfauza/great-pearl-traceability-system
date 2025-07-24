@@ -22,37 +22,58 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Navigation = () => {
   const location = useLocation();
-  const { signOut, employee } = useAuth();
+  const { signOut, employee, hasPermission, hasRole, isAdmin } = useAuth();
   
   const navigationItems = [
     {
       title: "Operations",
       items: [
-        { name: "Dashboard", icon: BarChart3, path: "/" },
-        { name: "Procurement", icon: Package, path: "/procurement" },
-        { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control" },
-        { name: "Store Management", icon: Shield, path: "/store" },
-        { name: "Inventory", icon: Package, path: "/inventory" },
+        { name: "Dashboard", icon: BarChart3, path: "/", permission: null }, // Everyone can see dashboard
+        { name: "Procurement", icon: Package, path: "/procurement", permission: "Procurement" },
+        { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permission: "Quality Control" },
+        { name: "Store Management", icon: Shield, path: "/store", permission: "Store Management" },
+        { name: "Inventory", icon: Package, path: "/inventory", permission: "Inventory" },
+        { name: "Processing", icon: Coffee, path: "/processing", permission: "Processing" },
+        { name: "Field Operations", icon: MapPin, path: "/field-operations", permission: "Field Operations" },
       ]
     },
     {
       title: "Management",
       items: [
-        { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing" },
-        { name: "Finance", icon: DollarSign, path: "/finance" },
-        { name: "Human Resources", icon: Users, path: "/human-resources" },
-        { name: "Data Analyst", icon: LineChart, path: "/data-analyst" },
+        { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
+        { name: "Finance", icon: DollarSign, path: "/finance", permission: "Finance" },
+        { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
+        { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },
       ]
     },
     {
       title: "System",
       items: [
-        { name: "Reports", icon: FileText, path: "/reports" },
-        { name: "Settings", icon: Settings, path: "/settings" },
-        { name: "Logistics", icon: Truck, path: "/logistics" },
+        { name: "Reports", icon: FileText, path: "/reports", permission: "Reports" },
+        { name: "Settings", icon: Settings, path: "/settings", permission: null }, // Everyone can access settings
+        { name: "Logistics", icon: Truck, path: "/logistics", permission: "Logistics" },
       ]
     }
   ];
+
+  // Filter navigation items based on user permissions
+  const getFilteredNavigationItems = () => {
+    return navigationItems.map(section => ({
+      ...section,
+      items: section.items.filter(item => {
+        // If no permission required, show to everyone
+        if (!item.permission) return true;
+        
+        // If user is admin, show everything
+        if (isAdmin()) return true;
+        
+        // Check if user has the specific permission
+        return hasPermission(item.permission);
+      })
+    })).filter(section => section.items.length > 0); // Remove empty sections
+  };
+
+  const filteredNavigationItems = getFilteredNavigationItems();
 
   const handleLogout = async () => {
     try {
@@ -70,7 +91,7 @@ const Navigation = () => {
       
       <div className="flex-1 p-3">
         <nav className="space-y-4">
-          {navigationItems.map((section, sectionIndex) => (
+          {filteredNavigationItems.map((section, sectionIndex) => (
             <div key={sectionIndex}>
               <h3 className="font-medium text-xs text-gray-500 uppercase tracking-wider mb-2 px-2">
                 {section.title}
