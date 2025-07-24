@@ -25,14 +25,53 @@ import {
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
 import { useDeliveries } from "@/hooks/useDeliveries";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Procurement = () => {
   const { suppliers, loading: suppliersLoading } = useSuppliers();
   const { purchaseOrders, loading: ordersLoading } = usePurchaseOrders();
   const { deliveries, loading: deliveriesLoading } = useDeliveries();
+  const [marketData, setMarketData] = useState<any[]>([]);
+  const [marketLoading, setMarketLoading] = useState(true);
 
-  // Reference prices - these could also come from database in the future
-  const referencePrices = [
+  // Fetch market data for reference prices
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('market_data')
+          .select('*')
+          .order('date_recorded', { ascending: false })
+          .limit(10);
+
+        if (error) {
+          console.error('Error fetching market data:', error);
+        } else {
+          setMarketData(data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching market data:', error);
+      } finally {
+        setMarketLoading(false);
+      }
+    };
+
+    fetchMarketData();
+  }, []);
+
+  // Calculate derived metrics
+  const activeOrders = purchaseOrders.filter(order => order.status === 'Active').length;
+  const pendingDeliveries = deliveries.filter(delivery => delivery.status === 'Pending').length;
+  const totalOrderValue = purchaseOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+
+  // Reference prices from market data or fallback
+  const referencePrices = marketData.length > 0 ? marketData.slice(0, 3).map(data => ({
+    grade: data.coffee_type,
+    currentPrice: data.price_ugx,
+    previousPrice: data.price_ugx * 0.97, // Simulated previous price
+    change: data.change_percentage ? `${data.change_percentage > 0 ? '+' : ''}${data.change_percentage.toFixed(1)}%` : '+2.5%'
+  })) : [
     { grade: "Drugar", currentPrice: 7200, previousPrice: 7000, change: "+2.9%" },
     { grade: "Wugar", currentPrice: 7500, previousPrice: 7300, change: "+2.7%" },
     { grade: "Robusta", currentPrice: 6800, previousPrice: 6900, change: "-1.4%" }
@@ -51,7 +90,7 @@ const Procurement = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Suppliers</p>
-                  <p className="text-2xl font-bold">{suppliers.length}</p>
+                  <p className="text-2xl font-bold">{suppliersLoading ? '...' : suppliers.length}</p>
                   <p className="text-xs text-green-600">Real-time data</p>
                 </div>
                 <Users className="h-8 w-8 text-blue-600" />
@@ -63,7 +102,7 @@ const Procurement = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Orders</p>
-                  <p className="text-2xl font-bold">{purchaseOrders.length}</p>
+                  <p className="text-2xl font-bold">{ordersLoading ? '...' : activeOrders}</p>
                   <p className="text-xs text-blue-600">From database</p>
                 </div>
                 <Package className="h-8 w-8 text-green-600" />
@@ -75,7 +114,7 @@ const Procurement = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Pending Deliveries</p>
-                  <p className="text-2xl font-bold">{deliveries.length}</p>
+                  <p className="text-2xl font-bold">{deliveriesLoading ? '...' : pendingDeliveries}</p>
                   <p className="text-xs text-amber-600">Live data</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-amber-600" />
@@ -86,11 +125,11 @@ const Procurement = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Pending Actions</p>
-                  <p className="text-2xl font-bold">0</p>
-                  <p className="text-xs text-red-600">No pending items</p>
+                  <p className="text-sm font-medium text-gray-600">Total Order Value</p>
+                  <p className="text-2xl font-bold">UGX {totalOrderValue.toLocaleString()}</p>
+                  <p className="text-xs text-green-600">Current month</p>
                 </div>
-                <AlertTriangle className="h-8 w-8 text-red-600" />
+                <DollarSign className="h-8 w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
@@ -152,12 +191,11 @@ const Procurement = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Supplier Name</TableHead>
+                        <TableHead>Code</TableHead>
                         <TableHead>Location</TableHead>
                         <TableHead>Contact</TableHead>
-                        <TableHead>Coffee Types</TableHead>
-                        <TableHead>Rating</TableHead>
-                        <TableHead>Total Bags</TableHead>
-                        <TableHead>Avg Price</TableHead>
+                        <TableHead>Opening Balance</TableHead>
+                        <TableHead>Date Registered</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -166,6 +204,7 @@ const Procurement = () => {
                       {suppliers.map((supplier) => (
                         <TableRow key={supplier.id}>
                           <TableCell className="font-medium">{supplier.name}</TableCell>
+                          <TableCell><Badge variant="outline">{supplier.code}</Badge></TableCell>
                           <TableCell>
                             <div className="flex items-center">
                               <MapPin className="h-4 w-4 mr-1 text-gray-400" />
@@ -173,19 +212,10 @@ const Procurement = () => {
                             </div>
                           </TableCell>
                           <TableCell>{supplier.phone || 'N/A'}</TableCell>
-                          <TableCell>Arabica, Robusta</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                              4.5
-                            </div>
-                          </TableCell>
-                          <TableCell>0</TableCell>
                           <TableCell>UGX {supplier.opening_balance.toLocaleString()}</TableCell>
+                          <TableCell>{supplier.date_registered}</TableCell>
                           <TableCell>
-                            <Badge variant="default">
-                              Active
-                            </Badge>
+                            <Badge variant="default">Active</Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
@@ -236,7 +266,7 @@ const Procurement = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>PO Number</TableHead>
+                        <TableHead>Order ID</TableHead>
                         <TableHead>Supplier</TableHead>
                         <TableHead>Coffee Type</TableHead>
                         <TableHead>Quantity (Bags)</TableHead>
@@ -251,7 +281,7 @@ const Procurement = () => {
                     <TableBody>
                       {purchaseOrders.map((order) => (
                         <TableRow key={order.id}>
-                          <TableCell className="font-medium">{order.id}</TableCell>
+                          <TableCell className="font-medium">{order.id.slice(0, 8)}...</TableCell>
                           <TableCell>{order.supplier}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{order.coffeeType}</Badge>
@@ -325,7 +355,7 @@ const Procurement = () => {
                     <TableBody>
                       {deliveries.map((delivery) => (
                         <TableRow key={delivery.id}>
-                          <TableCell className="font-medium">{delivery.id}</TableCell>
+                          <TableCell className="font-medium">{delivery.id.slice(0, 8)}...</TableCell>
                           <TableCell>{delivery.supplier}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{delivery.coffeeType}</Badge>
@@ -371,10 +401,29 @@ const Procurement = () => {
                   <CardDescription>Coffee purchases by type and grade</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No procurement data available yet</p>
-                    <p className="text-sm">Data will appear when purchases are made</p>
-                  </div>
+                  {ordersLoading ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>Loading procurement data...</p>
+                    </div>
+                  ) : purchaseOrders.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No procurement data available yet</p>
+                      <p className="text-sm">Data will appear when purchases are made</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-4 border rounded">
+                          <p className="text-2xl font-bold">{purchaseOrders.length}</p>
+                          <p className="text-sm text-gray-600">Total Orders</p>
+                        </div>
+                        <div className="text-center p-4 border rounded">
+                          <p className="text-2xl font-bold">{purchaseOrders.reduce((sum, order) => sum + order.quantity, 0)}</p>
+                          <p className="text-sm text-gray-600">Total Bags</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -384,19 +433,25 @@ const Procurement = () => {
                   <CardDescription>Average procurement prices and trends</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {referencePrices.map((price, index) => (
-                      <div key={index} className="flex justify-between items-center p-3 border rounded">
-                        <div>
-                          <p className="font-medium">{price.grade}</p>
-                          <p className="text-sm text-gray-500">Current: UGX {price.currentPrice.toLocaleString()}</p>
+                  {marketLoading ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>Loading market data...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {referencePrices.map((price, index) => (
+                        <div key={index} className="flex justify-between items-center p-3 border rounded">
+                          <div>
+                            <p className="font-medium">{price.grade}</p>
+                            <p className="text-sm text-gray-500">Current: UGX {price.currentPrice.toLocaleString()}</p>
+                          </div>
+                          <Badge variant={price.change.startsWith('+') ? 'default' : 'destructive'}>
+                            {price.change}
+                          </Badge>
                         </div>
-                        <Badge variant={price.change.startsWith('+') ? 'default' : 'destructive'}>
-                          {price.change}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

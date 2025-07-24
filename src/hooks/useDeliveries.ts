@@ -10,9 +10,9 @@ export interface Delivery {
   moistureContent: number;
   defects: string;
   pricePerBag: number;
+  grn: string;
   status: string;
   deliveryDate: string;
-  grn: string;
 }
 
 export const useDeliveries = () => {
@@ -22,10 +22,10 @@ export const useDeliveries = () => {
   const fetchDeliveries = async () => {
     try {
       setLoading(true);
+      // For now, we'll use coffee_records as deliveries since we don't have a specific deliveries table
       const { data, error } = await supabase
         .from('coffee_records')
         .select('*')
-        .eq('status', 'delivered')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -39,12 +39,12 @@ export const useDeliveries = () => {
         supplier: record.supplier_name,
         coffeeType: record.coffee_type,
         weight: record.bags,
-        moistureContent: 12.5, // Default moisture content
-        defects: 'None', // Default defects
-        pricePerBag: Math.round(7000 + Math.random() * 1000), // Random price between 7000-8000
-        status: 'Quality Check',
-        deliveryDate: record.date,
-        grn: record.batch_number
+        moistureContent: 12.5, // Default value since not in coffee_records
+        defects: 'Low', // Default value
+        pricePerBag: 7000, // Default value
+        grn: record.batch_number,
+        status: record.status === 'pending' ? 'Pending' : 'Approved',
+        deliveryDate: record.date
       }));
 
       setDeliveries(transformedDeliveries);
