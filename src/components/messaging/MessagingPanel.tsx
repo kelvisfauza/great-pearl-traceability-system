@@ -1,13 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { X, Minimize2, Maximize2 } from 'lucide-react';
+import { X, Minimize2, Maximize2, Send } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePresence } from '@/hooks/usePresence';
-import { useCallNotifications } from '@/hooks/useCallNotifications';
-import UsersSidebar from './UsersSidebar';
-import ChatArea from './ChatArea';
-import IncomingCallModal from './IncomingCallModal';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface MessagingPanelProps {
   isOpen: boolean;
@@ -18,163 +15,23 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
-  const [incomingCall, setIncomingCall] = useState<any>(null);
-  const { user, employee } = useAuth();
+  const { user } = useAuth();
   
   const {
-    conversations,
-    messages,
-    employees,
+    messages = [],
+    users = [],
     loading,
-    loadingMessages,
-    sendMessage,
-    fetchMessages,
-    markAsRead,
-    setMessages
-  } = useMessages(user?.id, employee?.id);
-  
-  const { onlineUsers } = usePresence(user?.id);
-
-  // Call notifications setup
-  const { updateCallStatus } = useCallNotifications({
-    currentUserId: user?.id,
-    onIncomingCall: (callData) => {
-      console.log('Incoming call received:', callData);
-      setIncomingCall(callData);
-    },
-    onCallStatusChange: async (callData) => {
-      console.log('Call status changed:', callData);
-      if (callData.status === 'ended' || callData.status === 'missed') {
-        setIncomingCall(null);
-        
-        // Add call message to chat
-        const callerEmployee = employees.find(emp => emp.id === callData.caller_id);
-        if (callerEmployee) {
-          const callMessage = callData.status === 'missed' 
-            ? `📞 Missed call from ${callerEmployee.name} at ${new Date(callData.started_at).toLocaleTimeString()}`
-            : `📞 Call with ${callerEmployee.name} ended (${callData.duration ? Math.floor(callData.duration / 60) + ':' + (callData.duration % 60).toString().padStart(2, '0') : '0:00'})`;
-          
-          // Find or create conversation with caller
-          const existingConversation = conversations.find(conv => 
-            conv.participantEmployeeIds?.includes(callerEmployee.id) && conv.participants?.length === 2
-          );
-
-          if (existingConversation) {
-            await sendMessage({
-              content: callMessage,
-              conversationId: existingConversation.id
-            });
-          } else {
-            await sendMessage({
-              content: callMessage,
-              recipientUserId: callerEmployee.id,
-              recipientEmployeeId: callerEmployee.id,
-              recipientName: callerEmployee.name
-            });
-          }
-        }
-      }
-    }
-  });
-
-  // Debug logging
-  console.log('MessagingPanel - user:', user?.id, 'employee:', employee?.id);
-  console.log('MessagingPanel - loading:', loading, 'conversations:', conversations.length, 'employees:', employees.length);
-
-  // Find conversation when user is selected
-  useEffect(() => {
-    if (selectedUser && user?.id) {
-      console.log('Selected user changed:', selectedUser.displayName || selectedUser.name);
-      
-      const conversation = conversations.find(conv => 
-        conv.participantEmployeeIds?.includes(selectedUser.id) && conv.participants?.length === 2
-      );
-      
-      if (conversation) {
-        console.log('Found existing conversation:', conversation.id);
-        fetchMessages(conversation.id);
-        markAsRead(conversation.id);
-      } else {
-        console.log('No existing conversation found');
-        setMessages([]);
-      }
-    } else if (!selectedUser) {
-      setMessages([]);
-    }
-  }, [selectedUser?.id, conversations.length, user?.id, fetchMessages, markAsRead, setMessages]);
-
-  const handleUserSelect = (user: any) => {
-    setSelectedUser(user);
-    setNewMessage('');
-  };
+    sendMessage
+  } = useMessages(user?.id);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !user?.id || !employee?.id || !selectedUser) return;
+    if (!newMessage.trim() || !selectedUser) return;
 
     try {
-      // Find existing conversation
-      const existingConversation = conversations.find(conv => 
-        conv.participantEmployeeIds?.includes(selectedUser.id) && conv.participants?.length === 2
-      );
-
-      if (existingConversation) {
-        // Send to existing conversation
-        await sendMessage({
-          content: newMessage,
-          conversationId: existingConversation.id
-        });
-      } else {
-        // Create new conversation and send message
-        await sendMessage({
-          content: newMessage,
-          recipientUserId: selectedUser.userId || selectedUser.id,
-          recipientEmployeeId: selectedUser.id,
-          recipientName: selectedUser.name
-        });
-      }
-      
+      await sendMessage(selectedUser.id, newMessage);
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
-    }
-  };
-
-  const handleSendFile = async (file: File, type: 'image' | 'file') => {
-    if (!user?.id || !employee?.id || !selectedUser) return;
-
-    try {
-      // For now, we'll simulate file upload by creating a message with file info
-      // In a real implementation, you'd upload to storage first
-      const fileUrl = URL.createObjectURL(file);
-      
-      // Find existing conversation
-      const existingConversation = conversations.find(conv => 
-        conv.participantEmployeeIds?.includes(selectedUser.id) && conv.participants?.length === 2
-      );
-
-      if (existingConversation) {
-        // Send to existing conversation
-        await sendMessage({
-          content: `Shared ${type}: ${file.name}`,
-          conversationId: existingConversation.id,
-          type,
-          fileUrl,
-          fileName: file.name
-        });
-      } else {
-        // Create new conversation and send message
-        await sendMessage({
-          content: `Shared ${type}: ${file.name}`,
-          recipientUserId: selectedUser.userId || selectedUser.id,
-          recipientEmployeeId: selectedUser.id,
-          recipientName: selectedUser.name,
-          type,
-          fileUrl,
-          fileName: file.name
-        });
-      }
-    } catch (error) {
-      console.error('Failed to send file:', error);
     }
   };
 
@@ -185,88 +42,114 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     }
   };
 
-  const handleAnswerCall = async () => {
-    if (incomingCall) {
-      await updateCallStatus(incomingCall.id, 'answered');
-      setIncomingCall(null);
-      // Here you would also start the WebRTC connection
-    }
-  };
-
-  const handleDeclineCall = async () => {
-    if (incomingCall) {
-      await updateCallStatus(incomingCall.id, 'declined');
-      setIncomingCall(null);
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
-    <>
-      <div className={`fixed right-4 bottom-20 bg-white border border-gray-200 rounded-lg shadow-lg z-50 transition-all duration-200 ${
-        isMinimized ? 'w-80 h-16' : 'w-[900px] h-[600px]'
-      }`}>
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-lg">Microsoft Teams Style Chat</h3>
-            {selectedUser && !isMinimized && (
-              <span className="text-sm text-gray-500">• {selectedUser.name}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setIsMinimized(!isMinimized)}
-            >
-              {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+    <div className={`fixed right-4 bottom-20 bg-white border border-gray-200 rounded-lg shadow-lg z-50 transition-all duration-200 ${
+      isMinimized ? 'w-80 h-16' : 'w-[500px] h-[600px]'
+    }`}>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold text-lg">Messages</h3>
+          {selectedUser && !isMinimized && (
+            <span className="text-sm text-gray-500">• {selectedUser.name}</span>
+          )}
         </div>
-
-        {/* Main Content */}
-        {!isMinimized && (
-          <div className="flex h-[calc(600px-73px)]">
-            {/* Left Sidebar - Users */}
-            <UsersSidebar
-              users={employees}
-              selectedUserId={selectedUser?.id || null}
-              onUserSelect={handleUserSelect}
-              conversations={conversations}
-              currentUserId={user?.id}
-              onlineUsers={onlineUsers}
-              onCreateNewChat={handleUserSelect}
-            />
-
-            {/* Right Area - Chat */}
-            <ChatArea
-              selectedUser={selectedUser}
-              messages={messages}
-              newMessage={newMessage}
-              setNewMessage={setNewMessage}
-              onSendMessage={handleSendMessage}
-              onSendFile={handleSendFile}
-              onKeyPress={handleKeyPress}
-              loadingMessages={loadingMessages}
-              currentUserId={user?.id}
-            />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setIsMinimized(!isMinimized)}
+          >
+            {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      {/* Incoming Call Modal */}
-      <IncomingCallModal
-        isOpen={!!incomingCall}
-        callData={incomingCall}
-        onAnswer={handleAnswerCall}
-        onDecline={handleDeclineCall}
-      />
-    </>
+      {/* Main Content */}
+      {!isMinimized && (
+        <div className="flex h-[calc(600px-73px)]">
+          {/* Left Sidebar - Users */}
+          <div className="w-1/3 border-r border-gray-200 bg-gray-50">
+            <div className="p-3">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Users</h4>
+              <ScrollArea className="h-[400px]">
+                {users.map((user) => (
+                  <div 
+                    key={user.id}
+                    className={`p-2 rounded cursor-pointer hover:bg-gray-100 ${
+                      selectedUser?.id === user.id ? 'bg-blue-100' : ''
+                    }`}
+                    onClick={() => setSelectedUser(user)}
+                  >
+                    <div className="font-medium text-sm">{user.name}</div>
+                    <div className="text-xs text-gray-500">{user.email}</div>
+                  </div>
+                ))}
+              </ScrollArea>
+            </div>
+          </div>
+
+          {/* Right Area - Chat */}
+          <div className="flex-1 flex flex-col">
+            {selectedUser ? (
+              <>
+                {/* Messages Area */}
+                <ScrollArea className="flex-1 p-4">
+                  {messages.length === 0 ? (
+                    <div className="text-center text-gray-500 text-sm">
+                      No messages yet. Start a conversation!
+                    </div>
+                  ) : (
+                    messages.map((message) => (
+                      <div 
+                        key={message.id} 
+                        className={`mb-3 ${message.senderId === user?.id ? 'text-right' : 'text-left'}`}
+                      >
+                        <div className={`inline-block p-2 rounded-lg max-w-xs ${
+                          message.senderId === user?.id 
+                            ? 'bg-blue-500 text-white' 
+                            : 'bg-gray-200 text-gray-800'
+                        }`}>
+                          {message.content}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {new Date(message.timestamp).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </ScrollArea>
+
+                {/* Message Input */}
+                <div className="p-4 border-t border-gray-200">
+                  <div className="flex gap-2">
+                    <Input
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Type a message..."
+                      className="flex-1"
+                    />
+                    <Button onClick={handleSendMessage} size="sm">
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-500">
+                Select a user to start chatting
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
