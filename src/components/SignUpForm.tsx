@@ -7,8 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from '@/hooks/use-toast';
-import { addDoc, collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { Loader2, UserPlus, AlertCircle } from 'lucide-react';
 
 interface SignUpFormData {
@@ -89,20 +88,32 @@ const SignUpForm = () => {
         return;
       }
 
-      // Submit registration request
-      await addDoc(collection(db, 'user_registration_requests'), {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        email: formData.email.toLowerCase().trim(),
-        phone: formData.phone.trim(),
-        department: formData.department,
-        role: formData.role,
-        reason: formData.reason.trim(),
-        status: 'pending',
-        requestedAt: new Date().toISOString(),
-        permissions: [], // Will be set by HR/Admin during approval
-        created_at: new Date().toISOString()
-      });
+      // Submit registration request to Supabase
+      const { error } = await supabase
+        .from('approval_requests')
+        .insert([{
+          title: `Access Request - ${formData.firstName} ${formData.lastName}`,
+          description: `Registration request for ${formData.department} department`,
+          type: 'User Registration',
+          department: formData.department,
+          requestedby: formData.email,
+          daterequested: new Date().toISOString(),
+          amount: '0',
+          status: 'Pending',
+          details: {
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            email: formData.email.toLowerCase().trim(),
+            phone: formData.phone.trim(),
+            department: formData.department,
+            role: formData.role,
+            reason: formData.reason.trim()
+          }
+        }]);
+
+      if (error) {
+        throw error;
+      }
 
       setSubmitted(true);
       toast({
