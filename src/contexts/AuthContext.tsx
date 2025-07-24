@@ -221,10 +221,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log('=== AUTH CONTEXT SIGNIN ===');
       console.log('Attempting to sign in with email:', email);
+      console.log('Password provided:', password ? 'Yes' : 'No');
+      console.log('Password length:', password?.length || 0);
+      console.log('Firebase Auth instance:', auth);
+      console.log('Firebase project ID:', auth.app.options.projectId);
       
+      console.log('Calling Firebase signInWithEmailAndPassword...');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('Firebase sign in successful:', userCredential.user.uid);
+      console.log('Firebase sign in successful!');
+      console.log('User UID:', userCredential.user.uid);
+      console.log('User email:', userCredential.user.email);
+      console.log('Email verified:', userCredential.user.emailVerified);
+      // Note: Firebase User object doesn't have disabled property in client SDK
 
       // Set user first so fetchEmployeeData can access user.email
       setUser(userCredential.user);

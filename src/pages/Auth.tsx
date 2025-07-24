@@ -29,6 +29,7 @@ const Auth = () => {
     console.log('=== STARTING LOGIN ATTEMPT ===');
     console.log('Email:', email);
     console.log('Password length:', password.length);
+    // Firebase Auth debugging will be done in signIn function
 
     try {
       console.log('Calling signIn function...');
@@ -47,7 +48,26 @@ const Auth = () => {
       console.error('Error object:', error);
       console.error('Error message:', error.message);
       console.error('Error code:', error.code);
-      setError(error.message || 'Login failed. Please check your credentials.');
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      
+      // More specific error handling
+      let errorMessage = 'Login failed. Please check your credentials.';
+      
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
+        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email address.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password.';
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = 'This account has been disabled. Contact your administrator.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed login attempts. Please try again later.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
       console.log('=== LOGIN ATTEMPT COMPLETE ===');
