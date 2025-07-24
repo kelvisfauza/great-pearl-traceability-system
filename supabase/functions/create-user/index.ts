@@ -30,6 +30,23 @@ serve(async (req) => {
     const { employeeData } = await req.json()
     console.log('Creating user for employee:', employeeData.email)
 
+    // First check if user already exists
+    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(employeeData.email)
+    
+    if (existingUser.user) {
+      console.log('User already exists:', existingUser.user.id)
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `A user with email ${employeeData.email} already exists. Please use a different email address.` 
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
     // Create the authentication user
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: employeeData.email,
@@ -43,8 +60,15 @@ serve(async (req) => {
 
     if (authError) {
       console.error('Auth error:', authError)
+      let errorMessage = authError.message
+      
+      // Handle specific auth errors
+      if (authError.code === 'email_exists') {
+        errorMessage = `A user with email ${employeeData.email} already exists. Please use a different email address.`
+      }
+      
       return new Response(
-        JSON.stringify({ success: false, error: authError.message }),
+        JSON.stringify({ success: false, error: errorMessage }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -78,7 +102,9 @@ serve(async (req) => {
       console.error('Employee creation error:', employeeError)
       
       // If employee creation fails, clean up the auth user
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+      if (authData.user) {
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+      }
       
       return new Response(
         JSON.stringify({ success: false, error: employeeError.message }),
