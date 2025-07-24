@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Key, LogOut } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Key } from "lucide-react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db, storage } from "@/lib/firebase";
 import { updatePassword } from "firebase/auth";
@@ -259,15 +259,11 @@ const UserProfile = () => {
     <div className="space-y-6">
       {/* Profile Header */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <div>
             <CardTitle>My Profile</CardTitle>
             <CardDescription>Manage your personal information and account settings</CardDescription>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
         </CardHeader>
         <CardContent>
           <div className="flex items-start gap-6">

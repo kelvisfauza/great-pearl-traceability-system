@@ -17,13 +17,22 @@ import {
   DollarSign,
   ClipboardCheck,
   MapPin,
-  LineChart
+  LineChart,
+  LogOut
 } from "lucide-react";
 
 const RoleBasedNavigation = () => {
   const location = useLocation();
-  const { employee } = useAuth();
+  const { employee, signOut } = useAuth();
   const access = useRoleBasedAccess();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
   
   if (!employee) return null;
 
@@ -164,6 +173,18 @@ const RoleBasedNavigation = () => {
             </div>
           ))}
         </nav>
+        
+        {/* Logout Section */}
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4 mr-3" />
+            Logout
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
