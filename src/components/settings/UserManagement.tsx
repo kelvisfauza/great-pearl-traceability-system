@@ -2,58 +2,13 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { UserPlus, Edit, Trash2, Shield, Key } from "lucide-react";
+import { UserPlus, Shield } from "lucide-react";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useToast } from "@/hooks/use-toast";
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-
-const userFormSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  phone: z.string().optional(),
-  position: z.string().min(2, "Position is required"),
-  department: z.string().min(2, "Department is required"),
-  role: z.enum(["Administrator", "Manager", "Supervisor", "User", "Guest"]),
-  salary: z.number().min(0, "Salary must be positive"),
-  permissions: z.array(z.string()).optional(),
-});
-
-const editUserFormSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().optional(),
-  position: z.string().min(2, "Position is required"),
-  department: z.string().min(2, "Department is required"),
-  role: z.enum(["Administrator", "Manager", "Supervisor", "User", "Guest"]),
-  salary: z.number().min(0, "Salary must be positive"),
-  permissions: z.array(z.string()).optional(),
-});
-
-type UserFormValues = z.infer<typeof userFormSchema>;
-type EditUserFormValues = z.infer<typeof editUserFormSchema>;
-
-const availablePermissions = [
-  "Human Resources", "Finance", "Procurement", "Quality Control",
-  "Processing", "Store Management", "Inventory", "Sales & Marketing",
-  "Field Operations", "Data Analysis", "Reports", "Logistics"
-];
-
-const departments = [
-  "Human Resources", "Finance", "Operations", "Quality Control",
-  "Sales", "Procurement", "Administration", "Field Operations"
-];
+import AddUserForm from './AddUserForm';
+import EditUserForm from './EditUserForm';
+import UserList from './UserList';
 
 interface UserManagementProps {
   employees: Employee[];
@@ -66,67 +21,16 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const { toast } = useToast();
   const { refetch } = useEmployees();
 
-  const form = useForm<UserFormValues>({
-    resolver: zodResolver(userFormSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      phone: "",
-      position: "",
-      department: "",
-      role: "User",
-      salary: 0,
-      permissions: [],
-    },
-  });
-
-  const editForm = useForm<EditUserFormValues>({
-    resolver: zodResolver(editUserFormSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      position: "",
-      department: "",
-      role: "User",
-      salary: 0,
-      permissions: [],
-    },
-  });
-
-  const handleAddUser = async (values: UserFormValues) => {
-    if (isCreatingUser) return;
-    
-    setIsCreatingUser(true);
+  const handleAddUser = async (employeeData: any) => {
     try {
-      console.log('Creating Firebase user account for:', values.email);
-      
-      // Create Firebase authentication account first
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      console.log('Firebase user created:', userCredential.user.uid);
-
-      // Now create the employee record with the Firebase UID
-      const employeeData = {
-        ...values,
-        id: userCredential.user.uid, // Use Firebase UID as employee ID
-        status: 'Active',
-        join_date: new Date().toISOString(),
-      };
-
       await onEmployeeAdded(employeeData);
-      
-      form.reset();
       setIsAddModalOpen(false);
-      
       toast({
         title: "Success",
-        description: `User ${values.name} created successfully with login credentials`
+        description: `User ${employeeData.name} created successfully with login credentials`
       });
     } catch (error: any) {
       console.error('Error creating user:', error);
@@ -134,7 +38,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
       let errorMessage = "Failed to create user. Please try again.";
       
       if (error.code === 'auth/email-already-in-use') {
-        errorMessage = `A user with the email "${values.email}" already exists. Please use a different email address.`;
+        errorMessage = `A user with the email "${employeeData.email}" already exists. Please use a different email address.`;
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "Password is too weak. Please use a stronger password.";
       } else if (error.code === 'auth/invalid-email') {
@@ -146,51 +50,23 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         description: errorMessage,
         variant: "destructive"
       });
-    } finally {
-      setIsCreatingUser(false);
     }
   };
 
-  const handleEditUser = async (values: EditUserFormValues) => {
-    if (!selectedEmployee || isUpdatingUser) return;
+  const handleEditUser = async (employeeData: any) => {
+    if (!selectedEmployee) return;
     
-    setIsUpdatingUser(true);
     try {
-      console.log('Starting user update for employee:', selectedEmployee.id);
-      console.log('Form values:', values);
-      
-      // Prepare the update data with proper validation and structure
-      const updateData = {
-        name: values.name.trim(),
-        email: values.email.toLowerCase().trim(),
-        phone: values.phone?.trim() || "",
-        position: values.position.trim(),
-        department: values.department.trim(),
-        role: values.role,
-        salary: Number(values.salary),
-        permissions: Array.isArray(values.permissions) ? values.permissions : [],
-      };
-
-      console.log('Calling updateEmployee with ID:', selectedEmployee.id, 'Data:', updateData);
-      
-      // Call the update function with the correct signature
-      await onEmployeeUpdated(selectedEmployee.id, updateData);
-      
-      console.log('Update completed successfully');
-      
-      // Close modal and reset form
+      await onEmployeeUpdated(selectedEmployee.id, employeeData);
       setIsEditModalOpen(false);
       setSelectedEmployee(null);
-      editForm.reset();
       
       toast({
         title: "Success",
-        description: `User ${values.name} updated successfully`
+        description: `User ${employeeData.name} updated successfully`
       });
 
-      // Refresh the data
       await refetch();
-      
     } catch (error: any) {
       console.error('Error updating user:', error);
       toast({
@@ -198,28 +74,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         description: error.message || "Failed to update user. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsUpdatingUser(false);
     }
-  };
-
-  const openEditModal = (employee: Employee) => {
-    console.log('Opening edit modal for employee:', employee);
-    setSelectedEmployee(employee);
-    
-    // Reset form with current employee data
-    editForm.reset({
-      name: employee.name || "",
-      email: employee.email || "",
-      phone: employee.phone || "",
-      position: employee.position || "",
-      department: employee.department || "",
-      role: (employee.role as any) || "User",
-      salary: Number(employee.salary) || 0,
-      permissions: Array.isArray(employee.permissions) ? employee.permissions : [],
-    });
-    
-    setIsEditModalOpen(true);
   };
 
   const handleDeleteUser = async (employee: Employee) => {
@@ -240,6 +95,11 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         });
       }
     }
+  };
+
+  const openEditModal = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setIsEditModalOpen(true);
   };
 
   return (
@@ -267,248 +127,19 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
                   Create a new user account with login credentials and system permissions
                 </DialogDescription>
               </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleAddUser)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email (Login Username)</FormLabel>
-                          <FormControl>
-                            <Input type="email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Phone (Optional)</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="position"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Position</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="department"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Department</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {departments.map((dept) => (
-                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="role"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Role</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Administrator">Administrator</SelectItem>
-                              <SelectItem value="Manager">Manager</SelectItem>
-                              <SelectItem value="Supervisor">Supervisor</SelectItem>
-                              <SelectItem value="User">User</SelectItem>
-                              <SelectItem value="Guest">Guest</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="salary"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Salary</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="permissions"
-                    render={() => (
-                      <FormItem>
-                        <FormLabel>Permissions</FormLabel>
-                        <div className="grid grid-cols-3 gap-2 mt-2">
-                          {availablePermissions.map((permission) => (
-                            <FormField
-                              key={permission}
-                              control={form.control}
-                              name="permissions"
-                              render={({ field }) => {
-                                return (
-                                  <FormItem
-                                    key={permission}
-                                    className="flex flex-row items-start space-x-3 space-y-0"
-                                  >
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(permission)}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? field.onChange([...(field.value || []), permission])
-                                            : field.onChange(
-                                                field.value?.filter(
-                                                  (value) => value !== permission
-                                                )
-                                              )
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="text-xs font-normal">
-                                      {permission}
-                                    </FormLabel>
-                                  </FormItem>
-                                )
-                              }}
-                            />
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex justify-end space-x-2 pt-4">
-                    <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={isCreatingUser}>
-                      <Key className="h-4 w-4 mr-2" />
-                      {isCreatingUser ? "Creating..." : "Create User & Login"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+              <AddUserForm onSubmit={handleAddUser} />
             </DialogContent>
           </Dialog>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {employees.map((employee) => (
-            <div key={employee.id} className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="font-medium">{employee.name}</p>
-                    <p className="text-sm text-gray-500">{employee.email}</p>
-                    <p className="text-xs text-gray-400">{employee.position} • {employee.department}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Badge variant="outline">{employee.role}</Badge>
-                <Badge variant={employee.status === "Active" ? "default" : "secondary"}>
-                  {employee.status}
-                </Badge>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => openEditModal(employee)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleDeleteUser(employee)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <UserList 
+          employees={employees}
+          onEdit={openEditModal}
+          onDelete={handleDeleteUser}
+        />
       </CardContent>
 
-      {/* Edit User Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -517,199 +148,16 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
               Update user information and permissions
             </DialogDescription>
           </DialogHeader>
-          <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(handleEditUser)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone (Optional)</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="position"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Position</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="department"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Department</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select department" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {departments.map((dept) => (
-                            <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Administrator">Administrator</SelectItem>
-                          <SelectItem value="Manager">Manager</SelectItem>
-                          <SelectItem value="Supervisor">Supervisor</SelectItem>
-                          <SelectItem value="User">User</SelectItem>
-                          <SelectItem value="Guest">Guest</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="salary"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Salary</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={editForm.control}
-                name="permissions"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Permissions</FormLabel>
-                    <div className="grid grid-cols-3 gap-2 mt-2">
-                      {availablePermissions.map((permission) => (
-                        <FormField
-                          key={permission}
-                          control={editForm.control}
-                          name="permissions"
-                          render={({ field }) => {
-                            return (
-                              <FormItem
-                                key={permission}
-                                className="flex flex-row items-start space-x-3 space-y-0"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(permission)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...(field.value || []), permission])
-                                        : field.onChange(
-                                          field.value?.filter(
-                                            (value) => value !== permission
-                                          )
-                                        )
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-xs font-normal">
-                                  {permission}
-                                </FormLabel>
-                              </FormItem>
-                            )
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setSelectedEmployee(null);
-                    editForm.reset();
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isUpdatingUser}>
-                  {isUpdatingUser ? "Updating..." : "Update User"}
-                </Button>
-              </div>
-            </form>
-          </Form>
+          {selectedEmployee && (
+            <EditUserForm 
+              employee={selectedEmployee}
+              onSubmit={handleEditUser}
+              onCancel={() => {
+                setIsEditModalOpen(false);
+                setSelectedEmployee(null);
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </Card>
