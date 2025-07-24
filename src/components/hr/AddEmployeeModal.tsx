@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,12 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 interface AddEmployeeModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onEmployeeAdded: (employee: any) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onAddEmployee: (employeeData: any) => Promise<void>;
+  employee?: any;
 }
 
-const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeModalProps) => {
+const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmployeeModalProps) => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -37,6 +37,31 @@ const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeMo
     "Human Resources", "Reports", "Settings", "Data Analytics", "Logistics"
   ];
 
+  useEffect(() => {
+    if (employee) {
+      setFormData({
+        name: employee.name || "",
+        email: employee.email || "",
+        phone: employee.phone || "",
+        position: employee.position || "",
+        department: employee.department || "",
+        salary: employee.salary?.toString() || "",
+        join_date: employee.join_date ? employee.join_date.split('T')[0] : "",
+        employee_id: employee.employee_id || "",
+        address: employee.address || "",
+        emergency_contact: employee.emergency_contact || "",
+        role: employee.role || "User",
+        permissions: employee.permissions || []
+      });
+    } else {
+      setFormData({
+        name: "", email: "", phone: "", position: "", department: "", salary: "",
+        join_date: "", employee_id: "", address: "", emergency_contact: "",
+        role: "User", permissions: []
+      });
+    }
+  }, [employee]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -44,20 +69,15 @@ const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeMo
       return;
     }
 
-    const newEmployee = {
+    const employeeData = {
       ...formData,
       salary: parseInt(formData.salary) || 0,
-      status: "Active",
+      status: employee?.status || "Active",
       join_date: formData.join_date || new Date().toISOString()
     };
 
-    await onEmployeeAdded(newEmployee);
-    
-    setFormData({
-      name: "", email: "", phone: "", position: "", department: "", salary: "",
-      join_date: "", employee_id: "", address: "", emergency_contact: "",
-      role: "User", permissions: []
-    });
+    await onAddEmployee(employeeData);
+    onClose();
   };
 
   const handlePermissionChange = (permission: string, checked: boolean) => {
@@ -70,11 +90,13 @@ const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeMo
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Employee</DialogTitle>
-          <DialogDescription>Fill in the employee details and system permissions</DialogDescription>
+          <DialogTitle>{employee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
+          <DialogDescription>
+            {employee ? "Update employee details and system permissions" : "Fill in the employee details and system permissions"}
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -223,10 +245,12 @@ const AddEmployeeModal = ({ open, onOpenChange, onEmployeeAdded }: AddEmployeeMo
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">Add Employee</Button>
+            <Button type="submit">
+              {employee ? "Update Employee" : "Add Employee"}
+            </Button>
           </div>
         </form>
       </DialogContent>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -12,13 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Briefcase, Settings, Clock } from "lucide-react";
 
 interface EmployeeDetailsModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  isOpen: boolean;
+  onClose: () => void;
   employee: any;
-  onEmployeeUpdated: (employee: any) => void;
 }
 
-const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated }: EmployeeDetailsModalProps) => {
+const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModalProps) => {
   const [formData, setFormData] = useState({
     name: "", email: "", phone: "", position: "", department: "", salary: "",
     address: "", emergency_contact: "", role: "", permissions: [] as string[],
@@ -60,7 +58,7 @@ const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated 
       salary: parseInt(formData.salary) || 0
     };
 
-    onEmployeeUpdated(updatedEmployee);
+    // onEmployeeUpdated(updatedEmployee);
     setIsEditing(false);
     toast({
       title: "Success",
@@ -80,7 +78,7 @@ const EmployeeDetailsModal = ({ open, onOpenChange, employee, onEmployeeUpdated 
   if (!employee) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
