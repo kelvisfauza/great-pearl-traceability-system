@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { UserPlus, Shield } from "lucide-react";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
 import AddUserForm from './AddUserForm';
 import EditUserForm from './EditUserForm';
 import UserList from './UserList';
@@ -28,18 +28,42 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     try {
       console.log('UserManagement handleAddUser called with:', employeeData);
       
-      // Ensure permissions is an array
+      // Generate one-time password
+      const oneTimePassword = generateOneTimePassword();
+      
+      // Prepare employee data with one-time password flag
       const processedData = {
         ...employeeData,
-        permissions: Array.isArray(employeeData.permissions) ? employeeData.permissions : []
+        permissions: Array.isArray(employeeData.permissions) ? employeeData.permissions : [],
+        isOneTimePassword: true,
+        mustChangePassword: true
       };
+
+      // Create user through Supabase edge function
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          employeeData: {
+            ...processedData,
+            password: oneTimePassword
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Error creating user:', error);
+        throw new Error(error.message || 'Failed to create user');
+      }
+
+      console.log('User created successfully:', data);
       
+      // Add the employee to local state
       await onEmployeeAdded(processedData);
+      
       setIsAddModalOpen(false);
       
       toast({
-        title: "Success",
-        description: `User ${employeeData.name} created successfully`
+        title: "User Created Successfully",
+        description: `User ${employeeData.name} created with one-time password: ${oneTimePassword}. They must change this password on first login.`
       });
       
       await refetch();
@@ -72,6 +96,16 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         variant: "destructive"
       });
     }
+  };
+
+  const generateOneTimePassword = (): string => {
+    // Generate a secure 8-character password with letters and numbers
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let password = '';
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
   };
 
   const handleEditUser = async (employeeData: any) => {
@@ -153,7 +187,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
               <DialogHeader>
                 <DialogTitle>Add New User</DialogTitle>
                 <DialogDescription>
-                  Create a new user account with system permissions
+                  Create a new user account with system permissions. A one-time password will be generated that the user must change on first login.
                 </DialogDescription>
               </DialogHeader>
               <AddUserForm onSubmit={handleAddUser} />

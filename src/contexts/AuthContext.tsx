@@ -4,7 +4,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  updatePassword
 } from 'firebase/auth';
 import {
   doc,
@@ -13,7 +14,8 @@ import {
   collection,
   query,
   where,
-  getDocs
+  getDocs,
+  updateDoc
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -33,15 +35,18 @@ interface Employee {
   join_date: string;
   address?: string;
   emergency_contact?: string;
+  isOneTimePassword?: boolean;
+  mustChangePassword?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   employee: Employee | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ requiresPasswordChange?: boolean }>;
   signUp: (email: string, password: string, userData: any) => Promise<void>;
   signOut: () => Promise<void>;
+  changePassword: (newPassword: string) => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   canManageEmployees: () => boolean;
@@ -149,11 +154,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: "No employee record found. Contact your administrator.",
           variant: "destructive"
         });
-        return;
+        return {};
       }
 
       console.log('Employee data found:', employeeData);
       setEmployee(employeeData);
+
+      // Check if user needs to change password
+      if (employeeData.mustChangePassword) {
+        toast({
+          title: "Password Change Required",
+          description: "You must change your password before continuing.",
+          variant: "destructive"
+        });
+        return { requiresPasswordChange: true };
+      }
 
       setTimeout(async () => {
         await seedFirebaseData();
@@ -163,6 +178,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: "Login Successful",
         description: `Welcome back, ${employeeData.name}!`
       });
+
+      return {};
 
     } catch (error: any) {
       console.error('Sign in error:', error);
@@ -188,6 +205,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw error;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const changePassword = async (newPassword: string) => {
+    try {
+      if (!user) throw new Error('No user logged in');
+      
+      await updatePassword(user, newPassword);
+      
+      // Update employee record to remove one-time password flag
+      if (employee) {
+        const employeeRef = doc(db, 'employees', employee.id);
+        await updateDoc(employeeRef, {
+          isOneTimePassword: false,
+          mustChangePassword: false,
+          updated_at: new Date().toISOString()
+        });
+        
+        // Update local state
+        setEmployee(prev => prev ? {
+          ...prev,
+          isOneTimePassword: false,
+          mustChangePassword: false
+        } : null);
+      }
+      
+      toast({
+        title: "Password Changed",
+        description: "Your password has been successfully changed"
+      });
+    } catch (error: any) {
+      console.error('Password change error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to change password",
+        variant: "destructive"
+      });
+      throw error;
     }
   };
 
@@ -289,6 +344,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signIn,
     signUp,
     signOut,
+    changePassword,
     hasPermission,
     hasRole,
     canManageEmployees,

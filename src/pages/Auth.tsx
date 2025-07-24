@@ -4,50 +4,101 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Coffee, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff, Coffee } from 'lucide-react';
+import TwoFactorVerification from '@/components/TwoFactorVerification';
+import PasswordChangeModal from '@/components/PasswordChangeModal';
 
 const Auth = () => {
+  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn, user } = useAuth();
+  const [showTwoFactor, setShowTwoFactor] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  
+  const { signIn, signUp, user, employee } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
+    if (user && employee && !employee.mustChangePassword) {
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, employee, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await signIn(email, password);
-      navigate('/'); // ✅ Proceed directly after login
-    } catch (error) {
-      console.error('Auth error:', error);
+      if (isLogin) {
+        const result = await signIn(email, password);
+        if (result.requiresPasswordChange) {
+          setShowPasswordChange(true);
+        } else {
+          // For now, we'll skip 2FA and go directly to dashboard
+          navigate('/');
+        }
+      } else {
+        await signUp(email, password, {});
+        toast({
+          title: "Success",
+          description: "Account created successfully!"
+        });
+        navigate('/');
+      }
+    } catch (error: any) {
+      // Error is already handled in signIn/signUp functions
     } finally {
       setLoading(false);
     }
   };
 
+  const handleTwoFactorSuccess = () => {
+    setShowTwoFactor(false);
+    navigate('/');
+  };
+
+  const handlePasswordChangeComplete = () => {
+    setShowPasswordChange(false);
+    navigate('/');
+  };
+
+  if (showTwoFactor) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+        <TwoFactorVerification
+          phone={employee?.phone || ''}
+          userName={employee?.name}
+          onVerificationSuccess={handleTwoFactorSuccess}
+          onCancel={() => setShowTwoFactor(false)}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center mb-4">
+        <CardHeader className="space-y-4">
+          <div className="flex items-center justify-center">
             <Coffee className="h-12 w-12 text-green-600" />
           </div>
-          <CardTitle className="text-2xl">Great Pearl Coffee Factory</CardTitle>
-          <CardDescription>
-            Sign in to your account
-          </CardDescription>
+          <div className="text-center">
+            <CardTitle className="text-2xl font-bold text-gray-900">
+              Great Pearl Coffee Factory
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              {isLogin ? 'Sign in to your account' : 'Create a new account'}
+            </CardDescription>
+          </div>
         </CardHeader>
+        
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -55,38 +106,55 @@ const Auth = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
                 required
-                disabled={loading}
-                autoComplete="off"
-                data-1p-ignore
-                data-lpignore="true"
               />
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                autoComplete="new-password"
-                data-1p-ignore
-                data-lpignore="true"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
+            
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Sign Up')}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm text-gray-600">
-            <p>Accounts are managed by administrators.</p>
-            <p>Contact your admin if you need access.</p>
+          
+          <div className="mt-6 text-center">
+            <Button
+              variant="link"
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-sm text-gray-600 hover:text-gray-900"
+            >
+              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+            </Button>
           </div>
         </CardContent>
       </Card>
+
+      <PasswordChangeModal
+        open={showPasswordChange}
+        onClose={handlePasswordChangeComplete}
+      />
     </div>
   );
 };
