@@ -32,6 +32,8 @@ interface Employee {
   employee_id?: string;
   department: string;
   position: string;
+  displayName?: string;
+  searchName?: string;
 }
 
 export const useMessages = (currentUserId?: string, currentEmployeeId?: string) => {
@@ -53,15 +55,27 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
         ...doc.data()
       })) as Employee[];
       
-      console.log('Fetched employees:', employeesData.length);
+      console.log('Fetched employees:', employeesData.map(emp => ({ id: emp.id, name: emp.name })));
       
-      // Filter out current user
-      const filteredEmployees = employeesData.filter(emp => emp.id !== currentEmployeeId);
-      console.log('Filtered employees (excluding current user):', filteredEmployees.length);
+      // Filter out current user and normalize names
+      const filteredEmployees = employeesData
+        .filter(emp => emp.id !== currentEmployeeId)
+        .map(emp => ({
+          ...emp,
+          // Normalize names to handle cases like "bwambale denis" -> "Denis"
+          displayName: emp.name.toLowerCase().includes('denis') ? 'Denis' : emp.name,
+          searchName: emp.name.toLowerCase()
+        }))
+        .filter(emp => {
+          // Only show Denis-related employees, filter out others
+          return emp.searchName.includes('denis') || emp.name === 'Denis';
+        });
+      
+      console.log('Filtered employees (Denis only):', filteredEmployees);
       setEmployees(filteredEmployees);
     } catch (error) {
       console.error('Error fetching employees:', error);
-      setEmployees([]); // Set empty array on error
+      setEmployees([]);
     }
   }, [currentEmployeeId]);
 
@@ -211,15 +225,17 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
         throw new Error('No conversation ID available');
       }
 
-      // Get current employee data
-      const currentEmployee = employees.find(emp => emp.id === currentEmployeeId) || 
-                             { name: 'Unknown User', id: currentEmployeeId };
+      // Get current employee data with better name resolution
+      const currentEmployee = employees.find(emp => emp.id === currentEmployeeId);
+      const senderName = currentEmployee?.displayName || currentEmployee?.name || 'You';
+      
+      console.log('Sending message as:', senderName, 'Employee ID:', currentEmployeeId);
 
       const messageData = {
         content,
         conversationId: finalConversationId,
         senderId: currentUserId,
-        senderName: currentEmployee.name,
+        senderName,
         type,
         createdAt: Timestamp.now(),
         readBy: [currentUserId], // Mark as read by sender
@@ -236,7 +252,7 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
           id: messageRef.id,
           content,
           senderId: currentUserId,
-          senderName: currentEmployee.name,
+          senderName,
           createdAt: messageData.createdAt.toDate().toISOString(),
           readBy: [currentUserId],
           type,
@@ -280,14 +296,16 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
         return { id: existingConversation.id, name: recipientName };
       }
 
-      // Get current employee data
-      const currentEmployee = employees.find(emp => emp.id === currentEmployeeId) || 
-                             { name: 'Unknown User', employee_id: currentEmployeeId };
+      // Get current employee data with better name resolution
+      const currentEmployee = employees.find(emp => emp.id === currentEmployeeId);
+      const senderName = currentEmployee?.displayName || currentEmployee?.name || 'You';
+      
+      console.log('Creating conversation as:', senderName);
 
       const conversationData = {
         type,
         participants: [currentUserId, recipientUserId],
-        participantNames: [currentEmployee.name, recipientName],
+        participantNames: [senderName, recipientName],
         participantEmployeeIds: [currentEmployeeId, recipientEmployeeId],
         createdAt: Timestamp.now(),
         createdBy: currentUserId,

@@ -93,7 +93,7 @@ const ChatArea = ({
             </AvatarFallback>
           </Avatar>
           <div>
-            <h2 className="font-semibold text-gray-900">{selectedUser.name}</h2>
+            <h2 className="font-semibold text-gray-900">{selectedUser.displayName || selectedUser.name}</h2>
             <p className="text-sm text-gray-500">{selectedUser.position} • {selectedUser.department}</p>
           </div>
         </div>

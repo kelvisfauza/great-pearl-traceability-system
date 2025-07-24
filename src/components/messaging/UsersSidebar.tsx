@@ -10,6 +10,7 @@ interface User {
   name: string;
   position: string;
   department: string;
+  displayName?: string;
   status?: 'online' | 'away' | 'busy' | 'offline';
 }
 
@@ -130,7 +131,7 @@ const UsersSidebar = ({ users, selectedUserId, onUserSelect, conversations, curr
                       <div className={`font-medium text-sm truncate ${
                         isSelected ? 'text-blue-900' : 'text-gray-900'
                       }`}>
-                        {user.name}
+                        {user.displayName || user.name}
                       </div>
                       <div className={`text-xs truncate ${
                         isSelected ? 'text-blue-700' : 'text-gray-500'
