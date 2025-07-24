@@ -12,6 +12,19 @@ const Settings = () => {
   const { canManageEmployees } = useAuth();
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useFirebaseEmployees();
 
+  // Wrapper functions to match the expected interface
+  const handleEmployeeAdded = async (employee: any): Promise<void> => {
+    await addEmployee(employee);
+  };
+
+  const handleEmployeeUpdated = async (id: string, updates: any): Promise<void> => {
+    await updateEmployee(id, updates);
+  };
+
+  const handleEmployeeDeleted = async (id: string): Promise<void> => {
+    await deleteEmployee(id);
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6">
@@ -41,9 +54,9 @@ const Settings = () => {
             <TabsContent value="users">
               <UserManagement 
                 employees={employees}
-                onEmployeeAdded={addEmployee}
-                onEmployeeUpdated={updateEmployee}
-                onEmployeeDeleted={deleteEmployee}
+                onEmployeeAdded={handleEmployeeAdded}
+                onEmployeeUpdated={handleEmployeeUpdated}
+                onEmployeeDeleted={handleEmployeeDeleted}
               />
             </TabsContent>
             
