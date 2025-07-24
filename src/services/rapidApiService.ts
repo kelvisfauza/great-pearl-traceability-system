@@ -7,17 +7,19 @@ interface CoffeePrices {
   robustaFaqLocal: number;
 }
 
-export class BarchartService {
+export class RapidApiService {
+  private readonly rapidApiHost = 'investing-cryptocurrency-markets.p.rapidapi.com';
   private readonly supabaseUrl = 'https://pudfybkyfedeggmokhco.supabase.co';
 
   /**
-   * Fetch coffee futures prices from Investing.com via Supabase edge function
+   * Fetch coffee futures prices using RapidAPI Investing.com scraper
    */
   async getCoffeePrices(): Promise<CoffeePrices> {
     try {
-      console.log('Fetching real coffee prices from Investing.com...');
+      console.log('Fetching coffee prices using RapidAPI scraper...');
       
-      const response = await fetch(`${this.supabaseUrl}/functions/v1/scrape-coffee-prices`, {
+      // Try to get API key from Supabase secrets via edge function
+      const response = await fetch(`${this.supabaseUrl}/functions/v1/fetch-coffee-prices-rapidapi`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -31,7 +33,7 @@ export class BarchartService {
       const result = await response.json();
       
       if (result.success && result.data) {
-        console.log('Successfully fetched real coffee prices:', result.data);
+        console.log('Successfully fetched coffee prices from RapidAPI:', result.data);
         return {
           iceArabica: result.data.iceArabica,
           robusta: result.data.robusta,
@@ -41,12 +43,12 @@ export class BarchartService {
           robustaFaqLocal: result.data.robustaFaqLocal
         };
       } else {
-        console.warn('Edge function returned error, using fallback data:', result.error);
-        return result.data || this.getFallbackPrices();
+        console.warn('RapidAPI returned error, using fallback data:', result.error);
+        return this.getFallbackPrices();
       }
       
     } catch (error) {
-      console.error('Error fetching from edge function:', error);
+      console.error('Error fetching from RapidAPI:', error);
       return this.getFallbackPrices();
     }
   }
@@ -79,53 +81,6 @@ export class BarchartService {
       robustaFaqLocal: Math.round(7800 + robustaInfluence)
     };
   }
-
-  /**
-   * Get historical price data for charting
-   */
-  async getHistoricalPrices(symbol: string, days: number = 7): Promise<any[]> {
-    // For demo purposes, generate historical data
-    const data = [];
-    const now = new Date();
-    
-    for (let i = days; i >= 0; i--) {
-      const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
-      const basePrice = symbol === 'KC' ? 185.50 : 2450;
-      const variation = Math.sin(i * 0.3) * 5 + (Math.random() - 0.5) * 8;
-      
-      data.push({
-        date: date.toISOString().split('T')[0],
-        price: Math.round((basePrice + variation) * 100) / 100,
-        volume: Math.floor(Math.random() * 10000) + 5000
-      });
-    }
-    
-    return data;
-  }
-
-  /**
-   * Get market status (open/closed)
-   */
-  getMarketStatus(): { isOpen: boolean; nextOpen: string; timezone: string } {
-    const now = new Date();
-    const utcHour = now.getUTCHours();
-    
-    // ICE coffee futures trade approximately 14:30-19:00 UTC
-    const isOpen = utcHour >= 14 && utcHour < 19;
-    
-    let nextOpen = '';
-    if (!isOpen) {
-      const tomorrow = new Date(now.getTime() + (24 * 60 * 60 * 1000));
-      tomorrow.setUTCHours(14, 30, 0, 0);
-      nextOpen = tomorrow.toISOString();
-    }
-    
-    return {
-      isOpen,
-      nextOpen,
-      timezone: 'UTC'
-    };
-  }
 }
 
-export const barchartService = new BarchartService();
+export const rapidApiService = new RapidApiService();
