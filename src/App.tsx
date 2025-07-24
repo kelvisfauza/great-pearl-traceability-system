@@ -22,6 +22,8 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Logistics from "./pages/Logistics";
 import DataAnalyst from "./pages/DataAnalyst";
+import FieldOperations from "./pages/FieldOperations";
+import Processing from "./pages/Processing";
 
 const App: React.FC = () => {
   const queryClient = new QueryClient();
@@ -42,53 +44,63 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/procurement" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["Procurement"]}>
                     <Procurement />
                   </ProtectedRoute>
                 } />
                 <Route path="/quality-control" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["Quality Control"]}>
                     <QualityControl />
                   </ProtectedRoute>
                 } />
                 <Route path="/inventory" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["Inventory"]}>
                     <Inventory />
                   </ProtectedRoute>
                 } />
                 <Route path="/store" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["Store Management"]}>
                     <Store />
                   </ProtectedRoute>
                 } />
                 <Route path="/sales-marketing" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["Sales Marketing"]}>
                     <SalesMarketing />
                   </ProtectedRoute>
                 } />
                 <Route path="/finance" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["Finance"]}>
                     <Finance />
                   </ProtectedRoute>
                 } />
                 <Route path="/human-resources" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["Human Resources"]}>
                     <HumanResources />
                   </ProtectedRoute>
                 } />
                 <Route path="/data-analyst" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["Data Analysis"]}>
                     <DataAnalyst />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["Reports"]}>
                     <Reports />
                   </ProtectedRoute>
                 } />
                 <Route path="/logistics" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredPermissions={["Logistics"]}>
                     <Logistics />
+                  </ProtectedRoute>
+                } />
+                <Route path="/field-operations" element={
+                  <ProtectedRoute requiredPermissions={["Field Operations"]}>
+                    <FieldOperations />
+                  </ProtectedRoute>
+                } />
+                <Route path="/processing" element={
+                  <ProtectedRoute requiredPermissions={["Processing"]}>
+                    <Processing />
                   </ProtectedRoute>
                 } />
                 <Route path="/settings" element={

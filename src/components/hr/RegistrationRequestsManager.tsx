@@ -127,7 +127,10 @@ const RegistrationRequestsManager = () => {
       modifiedDepartment: request.department,
       modifiedRole: request.role,
       modifiedSalary: 0,
-      modifiedPermissions: [request.department]
+      // Ensure permissions are based on the department with proper defaults
+      modifiedPermissions: request.permissions && request.permissions.length > 0 
+        ? request.permissions 
+        : [request.department]
     });
     setShowModifyDialog(true);
   };
@@ -151,7 +154,16 @@ const RegistrationRequestsManager = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, selectedRequest.email, tempPassword);
       console.log('Firebase user created successfully:', userCredential.user.uid);
       
-      // Step 3: Prepare employee data
+      // Step 3: Prepare employee data with proper permission validation
+      const finalPermissions = selectedRequest.modifiedPermissions && selectedRequest.modifiedPermissions.length > 0
+        ? selectedRequest.modifiedPermissions
+        : [selectedRequest.modifiedDepartment || selectedRequest.department];
+      
+      // Ensure users don't get admin permissions unless explicitly set
+      const validatedPermissions = finalPermissions.filter(permission => 
+        permission !== '*' || selectedRequest.modifiedRole === 'Administrator'
+      );
+      
       const employeeData = {
         name: `${selectedRequest.firstName} ${selectedRequest.lastName}`,
         email: selectedRequest.email.toLowerCase().trim(),
@@ -160,7 +172,7 @@ const RegistrationRequestsManager = () => {
         department: selectedRequest.modifiedDepartment || selectedRequest.department,
         salary: selectedRequest.modifiedSalary || 0,
         role: selectedRequest.modifiedRole || selectedRequest.role,
-        permissions: selectedRequest.modifiedPermissions || [selectedRequest.department],
+        permissions: validatedPermissions,
         status: 'Active',
         join_date: new Date().toISOString(),
         created_at: new Date().toISOString(),
@@ -185,7 +197,7 @@ const RegistrationRequestsManager = () => {
         finalDepartment: selectedRequest.modifiedDepartment || selectedRequest.department,
         finalRole: selectedRequest.modifiedRole || selectedRequest.role,
         finalSalary: selectedRequest.modifiedSalary || 0,
-        finalPermissions: selectedRequest.modifiedPermissions || [selectedRequest.department],
+        finalPermissions: validatedPermissions,
         tempPassword: tempPassword,
         employeeId: employeeDoc.id
       });
