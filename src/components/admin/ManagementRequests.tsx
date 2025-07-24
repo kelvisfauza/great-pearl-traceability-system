@@ -105,10 +105,13 @@ const ManagementRequests = () => {
 
   const handleApprove = async (request: ManagementRequest) => {
     try {
+      const isPaymentRequest = ['payment_advance', 'expense_reimbursement'].includes(request.requestType);
+      const isComplaint = request.requestType === 'complaint';
+      
       const updatedWorkflowHistory = [
         ...(request.workflowHistory || []),
         {
-          step: request.requestType === 'complaint' ? 'admin' : 'management',
+          step: isComplaint ? 'admin' : 'management',
           timestamp: new Date().toISOString(),
           action: 'approved',
           reviewedBy: 'Management',
@@ -116,11 +119,34 @@ const ManagementRequests = () => {
         }
       ];
 
-      const finalStatus = request.requestType === 'complaint' ? 'Resolved' : 'Completed';
+      let finalStatus: string;
+      let currentStep: string;
+
+      if (isComplaint) {
+        finalStatus = 'Resolved';
+        currentStep = 'completed';
+      } else if (isPaymentRequest) {
+        // Payment requests go back to finance for payment processing
+        finalStatus = 'Approved - Awaiting Payment';
+        currentStep = 'finance_payment';
+        
+        // Add note to workflow that this is for payment processing
+        updatedWorkflowHistory.push({
+          step: 'finance_payment',
+          timestamp: new Date().toISOString(),
+          action: 'forwarded',
+          reviewedBy: 'Management',
+          notes: 'Forwarded to Finance for payment processing'
+        });
+      } else {
+        // Other requests are completed
+        finalStatus = 'Completed';
+        currentStep = 'completed';
+      }
 
       await updateDoc(doc(db, 'user_requests', request.id), {
         status: finalStatus,
-        currentStep: 'completed',
+        currentStep: currentStep,
         workflowHistory: updatedWorkflowHistory,
         responseMessage: responseMessage || 'Approved by Management',
         reviewedAt: Timestamp.now(),
@@ -129,7 +155,9 @@ const ManagementRequests = () => {
 
       toast({
         title: "Success",
-        description: `Request ${finalStatus.toLowerCase()} successfully`
+        description: isPaymentRequest 
+          ? "Request approved and forwarded to Finance for payment processing"
+          : `Request ${finalStatus.toLowerCase()} successfully`
       });
 
       setIsResponseOpen(false);

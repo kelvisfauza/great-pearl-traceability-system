@@ -29,9 +29,9 @@ interface EmployeeRequest {
   description: string;
   amount?: number;
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  status: 'With Finance';
+  status: 'With Finance' | 'Approved - Awaiting Payment';
   requestedDate: string;
-  currentStep: 'finance';
+  currentStep: 'finance' | 'finance_payment';
   workflowHistory?: any[];
   createdAt: string;
   updatedAt: string;
@@ -50,11 +50,11 @@ const FinanceEmployeeRequestsManager = () => {
   const [filterType, setFilterType] = useState('all');
   const { toast } = useToast();
 
-  // Fetch requests that are with Finance
+  // Fetch requests that are with Finance (initial review) or awaiting payment processing
   useEffect(() => {
     const q = query(
       collection(db, 'user_requests'),
-      where('currentStep', '==', 'finance'),
+      where('currentStep', 'in', ['finance', 'finance_payment']),
       orderBy('createdAt', 'desc')
     );
 
@@ -93,29 +93,46 @@ const FinanceEmployeeRequestsManager = () => {
 
   const handleApprove = async (request: EmployeeRequest) => {
     try {
+      const isPaymentProcessing = request.currentStep === 'finance_payment';
+      
       const updatedWorkflowHistory = [
         ...(request.workflowHistory || []),
         {
-          step: 'finance',
+          step: isPaymentProcessing ? 'finance_payment' : 'finance',
           timestamp: new Date().toISOString(),
-          action: 'approved',
+          action: isPaymentProcessing ? 'payment_processed' : 'approved',
           reviewedBy: 'Finance Manager',
-          notes: responseMessage || 'Approved by Finance and forwarded to Management'
+          notes: responseMessage || (isPaymentProcessing ? 'Payment processed and completed' : 'Approved by Finance and forwarded to Management')
         }
       ];
 
+      let finalStatus: string;
+      let currentStep: string;
+
+      if (isPaymentProcessing) {
+        // If processing payment after management approval, mark as completed
+        finalStatus = 'Completed';
+        currentStep = 'completed';
+      } else {
+        // If initial finance review, forward to management
+        finalStatus = 'Awaiting Management Approval';
+        currentStep = 'management';
+      }
+
       await updateDoc(doc(db, 'user_requests', request.id), {
-        status: 'Awaiting Management Approval',
-        currentStep: 'management',
+        status: finalStatus,
+        currentStep: currentStep,
         workflowHistory: updatedWorkflowHistory,
-        responseMessage: responseMessage || 'Approved by Finance',
+        responseMessage: responseMessage || (isPaymentProcessing ? 'Payment processed' : 'Approved by Finance'),
         reviewedAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });
 
       toast({
         title: "Success",
-        description: "Request approved and forwarded to Management"
+        description: isPaymentProcessing 
+          ? "Payment processed and request completed"
+          : "Request approved and forwarded to Management"
       });
 
       setIsResponseOpen(false);
@@ -177,7 +194,8 @@ const FinanceEmployeeRequestsManager = () => {
 
   const stats = {
     total: filteredRequests.length,
-    pending: filteredRequests.filter(r => r.status === 'With Finance').length,
+    pending: filteredRequests.filter(r => r.currentStep === 'finance').length,
+    paymentProcessing: filteredRequests.filter(r => r.currentStep === 'finance_payment').length,
   };
 
   return (
@@ -201,8 +219,20 @@ const FinanceEmployeeRequestsManager = () => {
             <div className="flex items-center">
               <Clock className="h-8 w-8 text-yellow-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Awaiting Review</p>
+                <p className="text-sm font-medium text-gray-600">Initial Review</p>
                 <p className="text-2xl font-bold">{stats.pending}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Process Payment</p>
+                <p className="text-2xl font-bold">{stats.paymentProcessing}</p>
               </div>
             </div>
           </CardContent>
@@ -212,7 +242,7 @@ const FinanceEmployeeRequestsManager = () => {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>HR Requests for Finance Review</CardTitle>
+          <CardTitle>Employee Payment Requests</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6">
@@ -258,7 +288,7 @@ const FinanceEmployeeRequestsManager = () => {
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          With Finance
+                          {request.currentStep === 'finance_payment' ? 'Process Payment' : 'With Finance'}
                         </Badge>
                       </div>
                     </div>
@@ -383,7 +413,7 @@ const FinanceEmployeeRequestsManager = () => {
                   className="flex-1"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve & Forward to Management
+                  {selectedRequest.currentStep === 'finance_payment' ? 'Process Payment & Complete' : 'Approve & Forward to Management'}
                 </Button>
                 <Button 
                   variant="destructive"
