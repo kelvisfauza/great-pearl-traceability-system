@@ -1,5 +1,4 @@
-import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+// Mock Firebase functionality - Firebase disabled
 
 export const updateEmployeePermissions = async (email: string, updates: {
   role?: string;
@@ -8,31 +7,11 @@ export const updateEmployeePermissions = async (email: string, updates: {
   department?: string;
 }) => {
   try {
-    console.log('Updating employee permissions for:', email);
-    
-    // Find employee by email
-    const employeesQuery = query(collection(db, 'employees'), where('email', '==', email));
-    const employeeSnapshot = await getDocs(employeesQuery);
-    
-    if (employeeSnapshot.empty) {
-      throw new Error('Employee not found');
-    }
-    
-    const employeeDoc = employeeSnapshot.docs[0];
-    const employeeRef = doc(db, 'employees', employeeDoc.id);
-    
-    // Update the employee record
-    await updateDoc(employeeRef, {
-      ...updates,
-      updated_at: new Date().toISOString()
-    });
-    
-    console.log('Employee permissions updated successfully');
-    return { success: true, message: 'Employee permissions updated successfully' };
-    
+    console.log('Mock: updateEmployeePermissions called for', email, updates);
+    return { success: true, message: 'Employee permissions updated successfully (mock)' };
   } catch (error) {
     console.error('Error updating employee permissions:', error);
-    throw error;
+    return { success: false, message: 'Failed to update employee permissions (mock)' };
   }
 };
 
@@ -57,14 +36,9 @@ export const PERMISSION_SETS = {
 
 // Quick function to set employee role with predefined permissions
 export const setEmployeeRole = async (email: string, roleType: keyof typeof PERMISSION_SETS) => {
-  const permissions = PERMISSION_SETS[roleType];
-  const role = roleType === 'ADMIN' ? 'Administrator' : 
-               roleType.includes('MANAGER') ? 'Manager' :
-               roleType === 'SUPERVISOR' ? 'Supervisor' :
-               roleType === 'DATA_ANALYST' ? 'Data Analyst' : 'User';
-  
+  console.log('Mock: setEmployeeRole called for', email, roleType);
   return updateEmployeePermissions(email, {
-    role,
-    permissions
+    role: roleType,
+    permissions: PERMISSION_SETS[roleType]
   });
 };
