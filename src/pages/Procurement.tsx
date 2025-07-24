@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +26,9 @@ import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
 import { useDeliveries } from "@/hooks/useDeliveries";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import GRNGenerator from "@/components/procurement/GRNGenerator";
+import QualityReportsModal from "@/components/procurement/QualityReportsModal";
+import SupplierContractModal from "@/components/procurement/SupplierContractModal";
 
 const Procurement = () => {
   const { suppliers, loading: suppliersLoading } = useSuppliers();
@@ -34,6 +36,11 @@ const Procurement = () => {
   const { deliveries, loading: deliveriesLoading } = useDeliveries();
   const [marketData, setMarketData] = useState<any[]>([]);
   const [marketLoading, setMarketLoading] = useState(true);
+
+  // Modal states
+  const [grnModalOpen, setGrnModalOpen] = useState(false);
+  const [qualityReportsOpen, setQualityReportsOpen] = useState(false);
+  const [contractsModalOpen, setContractsModalOpen] = useState(false);
 
   // Fetch market data for reference prices
   useEffect(() => {
@@ -469,20 +476,26 @@ const Procurement = () => {
                   <div className="border rounded-lg p-4">
                     <FileText className="h-8 w-8 text-blue-600 mb-2" />
                     <h3 className="font-medium">GRNs & Delivery Notes</h3>
-                    <p className="text-sm text-gray-500 mb-3">0 documents</p>
-                    <Button variant="outline" size="sm">View All</Button>
+                    <p className="text-sm text-gray-500 mb-3">Generate from existing records</p>
+                    <Button variant="outline" size="sm" onClick={() => setGrnModalOpen(true)}>
+                      Generate GRN
+                    </Button>
                   </div>
                   <div className="border rounded-lg p-4">
                     <FileText className="h-8 w-8 text-green-600 mb-2" />
                     <h3 className="font-medium">Supplier Contracts</h3>
-                    <p className="text-sm text-gray-500 mb-3">0 contracts</p>
-                    <Button variant="outline" size="sm">View All</Button>
+                    <p className="text-sm text-gray-500 mb-3">Manage supplier agreements</p>
+                    <Button variant="outline" size="sm" onClick={() => setContractsModalOpen(true)}>
+                      View Contracts
+                    </Button>
                   </div>
                   <div className="border rounded-lg p-4">
                     <FileText className="h-8 w-8 text-amber-600 mb-2" />
                     <h3 className="font-medium">Quality Reports</h3>
-                    <p className="text-sm text-gray-500 mb-3">0 reports</p>
-                    <Button variant="outline" size="sm">View All</Button>
+                    <p className="text-sm text-gray-500 mb-3">Stock quality averages</p>
+                    <Button variant="outline" size="sm" onClick={() => setQualityReportsOpen(true)}>
+                      View Reports
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -552,6 +565,22 @@ const Procurement = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Modals */}
+        <GRNGenerator 
+          open={grnModalOpen} 
+          onClose={() => setGrnModalOpen(false)} 
+        />
+        
+        <QualityReportsModal 
+          open={qualityReportsOpen} 
+          onClose={() => setQualityReportsOpen(false)} 
+        />
+        
+        <SupplierContractModal 
+          open={contractsModalOpen} 
+          onClose={() => setContractsModalOpen(false)} 
+        />
       </div>
     </Layout>
   );

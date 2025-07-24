@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useSupplierContracts } from './useSupplierContracts';
 
 export interface StoreRecord {
   id: string;
@@ -29,6 +30,7 @@ export const useStoreManagement = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { getActiveContractForSupplier } = useSupplierContracts();
 
   const fetchStoreData = async () => {
     try {
@@ -194,6 +196,10 @@ export const useStoreManagement = () => {
     try {
       console.log('Adding coffee record to Firebase:', recordData);
       
+      // Find supplier to get supplier ID
+      const supplier = suppliers.find(s => s.name === recordData.supplierName);
+      const contract = supplier ? getActiveContractForSupplier(supplier.id) : null;
+      
       const coffeeDoc = {
         supplier_name: recordData.supplierName,
         coffee_type: recordData.coffeeType,
@@ -202,6 +208,12 @@ export const useStoreManagement = () => {
         date: recordData.date,
         batch_number: recordData.batchNumber,
         status: recordData.status,
+        supplier_id: supplier?.id || null,
+        contract_info: contract ? {
+          contractId: contract.id,
+          contractPrice: contract.pricePerKg,
+          contractType: contract.contractType
+        } : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -211,9 +223,13 @@ export const useStoreManagement = () => {
       
       await fetchStoreData();
       
+      const contractMessage = contract ? 
+        ` (Contract: ${contract.contractType} @ ${contract.pricePerKg}/kg)` : 
+        ' (No active contract)';
+      
       toast({
         title: "Success",
-        description: "Coffee record added successfully to database"
+        description: `Coffee record added successfully${contractMessage}`
       });
     } catch (error) {
       console.error('Error adding coffee record:', error);

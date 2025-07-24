@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useSupplierContracts } from './useSupplierContracts';
 
 export interface StoreRecord {
   id: string;
@@ -42,6 +42,7 @@ export const useQualityControl = () => {
   const [qualityAssessments, setQualityAssessments] = useState<QualityAssessment[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { getContractPriceForSupplier } = useSupplierContracts();
 
   // Load data from Firebase instead of Supabase
   useEffect(() => {
@@ -144,6 +145,36 @@ export const useQualityControl = () => {
     try {
       console.log('Adding quality assessment to Firebase:', assessment);
       
+      // Find the coffee record to get supplier info
+      const coffeeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
+      if (!coffeeRecord) {
+        throw new Error('Coffee record not found');
+      }
+
+      // Get supplier from suppliers collection to get the supplier ID
+      const suppliersQuery = query(
+        collection(db, 'suppliers'),
+        where('name', '==', coffeeRecord.supplier_name)
+      );
+      const suppliersSnapshot = await getDocs(suppliersQuery);
+      
+      let contractPrice: number | null = null;
+      if (!suppliersSnapshot.empty) {
+        const supplierDoc = suppliersSnapshot.docs[0];
+        const supplierId = supplierDoc.id;
+        contractPrice = getContractPriceForSupplier(supplierId);
+      }
+
+      // Validate price against contract if contract exists
+      if (contractPrice && assessment.suggested_price > contractPrice) {
+        toast({
+          title: "Price Validation Error",
+          description: `Suggested price (${assessment.suggested_price}) exceeds contract price (${contractPrice}). Please adjust.`,
+          variant: "destructive"
+        });
+        throw new Error('Price exceeds contract limit');
+      }
+
       const assessmentToAdd = {
         store_record_id: assessment.store_record_id,
         batch_number: assessment.batch_number,
@@ -159,6 +190,7 @@ export const useQualityControl = () => {
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed,
         assessed_by: assessment.assessed_by,
+        contract_price: contractPrice, // Store contract price for reference
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -166,31 +198,29 @@ export const useQualityControl = () => {
       const docRef = await addDoc(collection(db, 'quality_assessments'), assessmentToAdd);
       console.log('Quality assessment added successfully:', docRef.id);
       
-      // Find the coffee record to get supplier name and kilograms
-      const coffeeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
-      const supplierName = coffeeRecord?.supplier_name || 'Unknown Supplier';
-      const kilograms = coffeeRecord?.kilograms || 0;
-      
       // Calculate total payment amount: kilograms × price per kg
+      const kilograms = coffeeRecord?.kilograms || 0;
       const totalPaymentAmount = kilograms * assessment.suggested_price;
       
       console.log('Payment calculation:', {
         kilograms,
         pricePerKg: assessment.suggested_price,
-        totalAmount: totalPaymentAmount
+        totalAmount: totalPaymentAmount,
+        contractPrice: contractPrice || 'No contract'
       });
       
       // Create payment record in Firebase with calculated amount
       console.log('Creating payment record for assessment:', docRef.id);
       
       await addDoc(collection(db, 'payment_records'), {
-        supplier: supplierName,
-        amount: totalPaymentAmount, // This is now kilograms × price per kg
+        supplier: coffeeRecord.supplier_name,
+        amount: totalPaymentAmount,
         status: 'Pending',
         method: 'Bank Transfer',
         date: new Date().toISOString().split('T')[0],
         batchNumber: assessment.batch_number,
         qualityAssessmentId: docRef.id,
+        contractPrice: contractPrice,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
@@ -200,9 +230,13 @@ export const useQualityControl = () => {
       // Refresh assessments to get the new one with ID
       await loadQualityAssessments();
       
+      const contractMessage = contractPrice ? 
+        ` (Contract price: ${contractPrice}/kg)` : 
+        ' (No active contract)';
+      
       toast({
         title: "Success",
-        description: `Quality assessment saved and payment record created for ${totalPaymentAmount.toLocaleString()} UGX (${kilograms}kg × ${assessment.suggested_price}/kg)`
+        description: `Quality assessment saved and payment record created for ${totalPaymentAmount.toLocaleString()} UGX${contractMessage}`
       });
       
       return { id: docRef.id, ...assessmentToAdd };
