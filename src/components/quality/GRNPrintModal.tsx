@@ -79,6 +79,8 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
             body { font-family: Arial, sans-serif; padding: 20px; }
             .header { text-align: center; margin-bottom: 20px; }
             .logo { height: 60px; width: auto; max-width: 120px; }
+            .company-name { font-weight: bold; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-bottom: 10px; }
+            .company-address { font-weight: bold; text-align: center; margin-bottom: 15px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
             th, td { border: 1px solid #999; padding: 8px; text-align: left; }
             .signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 12px; }
@@ -117,8 +119,8 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
              <div className="mb-4">
                <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Great Pearl Coffee Factory Logo" className="mx-auto h-16 w-auto mb-2 logo" />
              </div>
-            <h1 className="font-bold text-xl uppercase tracking-wide mb-2">GREAT PEARL COFFEE FACTORY</h1>
-            <div className="mb-4">
+            <h1 className="font-bold text-xl uppercase tracking-wide mb-2 company-name">GREAT PEARL COFFEE FACTORY</h1>
+            <div className="mb-4 company-address">
               <p>+256781121639 / +256778536681</p>
               <p>www.greatpearlcoffee.com</p>
               <p>greatpearlcoffee@gmail.com</p>
