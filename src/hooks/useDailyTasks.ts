@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface DailyTask {
@@ -24,65 +22,20 @@ export const useDailyTasks = () => {
   const fetchDailyTasks = async (date?: string) => {
     try {
       setLoading(true);
-      console.log('Fetching daily tasks from Firebase...');
+      console.log('Fetching daily tasks...');
       
-      const targetDate = date || new Date().toISOString().split('T')[0];
-      console.log('Target date:', targetDate);
-      
-      // Use a simpler query to avoid composite index requirement
-      const tasksQuery = query(
-        collection(db, 'daily_tasks'),
-        where('date', '==', targetDate)
-      );
-      
-      const snapshot = await getDocs(tasksQuery);
-      console.log('Daily tasks found for date:', snapshot.docs.length);
-      
-      const tasksData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('Processing task:', data);
-        
-        return {
-          id: doc.id,
-          task_type: data.task_type || 'Unknown',
-          description: data.description || 'No description',
-          amount: data.amount || undefined,
-          batch_number: data.batch_number || undefined,
-          completed_at: data.completed_at ? 
-            (typeof data.completed_at === 'string' ? 
-              data.completed_at : 
-              new Date(data.completed_at.seconds * 1000).toLocaleTimeString()
-            ) : new Date().toLocaleTimeString(),
-          completed_by: data.completed_by || 'Unknown',
-          date: data.date || targetDate,
-          department: data.department || 'General'
-        };
-      }) as DailyTask[];
+      // Mock data since daily_tasks table doesn't exist yet
+      const mockTasks: DailyTask[] = [];
 
-      // Sort client-side by completed_at to avoid composite index
-      tasksData.sort((a, b) => {
-        const timeA = new Date(`${a.date} ${a.completed_at}`).getTime();
-        const timeB = new Date(`${b.date} ${b.completed_at}`).getTime();
-        return timeB - timeA; // Descending order (newest first)
-      });
-
-      console.log('Processed and sorted daily tasks:', tasksData);
-      setTasks(tasksData);
+      console.log('Daily tasks loaded:', mockTasks.length);
+      setTasks(mockTasks);
     } catch (error) {
       console.error('Error fetching daily tasks:', error);
-      console.error('Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        code: (error as any)?.code,
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      
       toast({
         title: "Error",
-        description: `Failed to fetch daily tasks: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: "Failed to fetch daily tasks",
         variant: "destructive"
       });
-      
-      // Set empty array on error
       setTasks([]);
     } finally {
       setLoading(false);

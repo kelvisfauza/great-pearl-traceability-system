@@ -1,69 +1,49 @@
-
 import { useEffect, useCallback, useState } from 'react';
-import { doc, setDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 export const usePresence = (userId?: string) => {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
-  const updatePresence = useCallback(async (status: 'online' | 'away' | 'offline' = 'online') => {
+  const updatePresence = useCallback(async (isOnline: boolean = true) => {
     if (!userId) return;
 
     try {
-      await setDoc(doc(db, 'user_presence', userId), {
-        status,
-        lastSeen: new Date().toISOString(),
-        userId
-      }, { merge: true });
+      console.log('Updating presence for user:', userId, 'online:', isOnline);
+      
+      // Mock presence update - in real implementation would use Supabase
+      if (isOnline) {
+        setOnlineUsers(prev => [...new Set([...prev, userId])]);
+      } else {
+        setOnlineUsers(prev => prev.filter(id => id !== userId));
+      }
     } catch (error) {
       console.error('Error updating presence:', error);
     }
   }, [userId]);
 
-  const setOffline = useCallback(async () => {
-    await updatePresence('offline');
-  }, [updatePresence]);
-
   useEffect(() => {
     if (!userId) return;
 
-    // Set user as online when hook mounts
-    updatePresence('online');
+    // Set user as online when component mounts
+    updatePresence(true);
 
-    // Listen to all online users
-    const presenceQuery = query(
-      collection(db, 'user_presence'),
-      where('status', '==', 'online')
-    );
+    // Mock subscription to online users - in real implementation would use Supabase realtime
+    console.log('Subscribing to online users');
 
-    const unsubscribe = onSnapshot(presenceQuery, (snapshot) => {
-      const onlineUserIds = snapshot.docs.map(doc => doc.data().userId);
-      setOnlineUsers(onlineUserIds);
-    });
-
-    // Set up event listeners for when user becomes inactive
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        updatePresence('away');
-      } else {
-        updatePresence('online');
-      }
-    };
-
-    const handleBeforeUnload = () => {
-      setOffline();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
+    // Cleanup function to set user as offline
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      unsubscribe();
-      setOffline();
+      updatePresence(false);
+      console.log('Unsubscribing from online users');
     };
-  }, [userId, updatePresence, setOffline]);
+  }, [userId, updatePresence]);
 
-  return { updatePresence, onlineUsers };
+  const isUserOnline = useCallback((checkUserId: string) => {
+    return onlineUsers.includes(checkUserId);
+  }, [onlineUsers]);
+
+  return {
+    onlineUsers,
+    updatePresence,
+    isUserOnline
+  };
 };

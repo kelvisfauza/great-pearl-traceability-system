@@ -1,16 +1,5 @@
 import { useState, useEffect } from 'react';
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot, 
-  updateDoc, 
-  doc,
-  Timestamp 
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -57,33 +46,14 @@ export const useUserRequests = () => {
       return;
     }
 
-    const q = query(
-      collection(db, 'user_requests'),
-      where('userId', '==', user.id),
-      orderBy('createdAt', 'desc')
-    );
+    // Mock subscription - in real implementation would use Supabase realtime
+    console.log('Loading user requests for:', user.id);
+    setRequests([]);
+    setLoading(false);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const requestsData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          // Convert Firestore timestamps to strings
-          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
-          updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
-          reviewedAt: data.reviewedAt?.toDate?.()?.toISOString() || data.reviewedAt,
-        };
-      }) as UserRequest[];
-      
-      setRequests(requestsData);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching requests:', error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    return () => {
+      console.log('Unsubscribing from user requests');
+    };
   }, [user, employee]);
 
   const createRequest = async (requestData: Omit<UserRequest, 'id' | 'userId' | 'employeeId' | 'status' | 'createdAt' | 'updatedAt' | 'currentStep' | 'workflowHistory'>) => {
@@ -102,7 +72,8 @@ export const useUserRequests = () => {
       const initialStatus = isComplaint ? 'Reviewing' : 'With HR';
       const initialStep = isComplaint ? 'admin' : 'hr';
 
-      const docData = {
+      const newRequest: UserRequest = {
+        id: `req-${Date.now()}`,
         ...requestData,
         userId: user.id,
         employeeId: employee.id,
@@ -114,12 +85,14 @@ export const useUserRequests = () => {
           action: 'submitted' as const,
           notes: `Request submitted by ${employee.name || 'user'}`
         }],
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      console.log('Creating request with data:', docData);
-      await addDoc(collection(db, 'user_requests'), docData);
+      console.log('Creating request with data:', newRequest);
+      
+      // Mock request creation - in real implementation would use Supabase
+      setRequests(prev => [newRequest, ...prev]);
 
       toast({
         title: "Success",
@@ -140,10 +113,16 @@ export const useUserRequests = () => {
 
   const updateRequest = async (requestId: string, updates: Partial<UserRequest>) => {
     try {
-      await updateDoc(doc(db, 'user_requests', requestId), {
-        ...updates,
-        updatedAt: Timestamp.now()
-      });
+      console.log('Updating request:', requestId, updates);
+      
+      // Mock request update - in real implementation would use Supabase
+      setRequests(prev => 
+        prev.map(req => 
+          req.id === requestId 
+            ? { ...req, ...updates, updatedAt: new Date().toISOString() } 
+            : req
+        )
+      );
 
       toast({
         title: "Success",

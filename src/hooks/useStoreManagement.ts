@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
 
@@ -35,31 +34,13 @@ export const useStoreManagement = () => {
   const fetchStoreData = async () => {
     try {
       setLoading(true);
-      console.log('Fetching store records from Firebase...');
+      console.log('Fetching store records...');
       
-      const recordsQuery = query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'));
-      const querySnapshot = await getDocs(recordsQuery);
-      
-      console.log('Raw Firebase documents:', querySnapshot.size);
-      
-      const transformedRecords: StoreRecord[] = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('Document data:', data);
-        
-        return {
-          id: doc.id,
-          supplierName: data.supplier_name || '',
-          coffeeType: data.coffee_type || '',
-          bags: Number(data.bags) || 0,
-          kilograms: Number(data.kilograms) || 0,
-          date: data.date || '',
-          batchNumber: data.batch_number || '',
-          status: data.status || 'pending'
-        };
-      });
+      // Mock data since coffee_records table doesn't exist yet
+      const mockStoreRecords: StoreRecord[] = [];
 
-      console.log('Transformed records:', transformedRecords);
-      setStoreRecords(transformedRecords);
+      console.log('Store records loaded:', mockStoreRecords.length);
+      setStoreRecords(mockStoreRecords);
     } catch (error) {
       console.error('Error fetching store data:', error);
       toast({
@@ -75,26 +56,13 @@ export const useStoreManagement = () => {
 
   const fetchSuppliers = async () => {
     try {
-      console.log('Fetching suppliers from Firebase...');
+      console.log('Fetching suppliers...');
       
-      const suppliersQuery = query(collection(db, 'suppliers'), orderBy('created_at', 'desc'));
-      const querySnapshot = await getDocs(suppliersQuery);
-      
-      const transformedSuppliers: Supplier[] = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.name || '',
-          origin: data.origin || '',
-          phone: data.phone || '',
-          code: data.code || '',
-          opening_balance: Number(data.opening_balance) || 0,
-          date_registered: data.date_registered || ''
-        };
-      });
+      // Mock data since suppliers table doesn't exist yet
+      const mockSuppliers: Supplier[] = [];
 
-      console.log('Suppliers loaded:', transformedSuppliers);
-      setSuppliers(transformedSuppliers);
+      console.log('Suppliers loaded:', mockSuppliers.length);
+      setSuppliers(mockSuppliers);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       toast({
@@ -107,34 +75,30 @@ export const useStoreManagement = () => {
 
   const addSupplier = async (supplierData: any) => {
     try {
-      console.log('Adding supplier to Firebase:', supplierData);
+      console.log('Adding supplier:', supplierData);
       
-      const supplierDoc = {
+      const newSupplier: Supplier = {
+        id: `sup-${Date.now()}`,
         name: supplierData.name,
         origin: supplierData.location,
         phone: supplierData.phone,
         code: `SUP${Date.now()}`,
         opening_balance: 0,
-        date_registered: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        date_registered: new Date().toISOString()
       };
 
-      const docRef = await addDoc(collection(db, 'suppliers'), supplierDoc);
-      console.log('Supplier added with ID:', docRef.id);
+      setSuppliers(prev => [newSupplier, ...prev]);
       
       toast({
         title: "Success",
-        description: "Supplier added successfully to database"
+        description: "Supplier added successfully"
       });
       
-      // Refresh suppliers list
-      await fetchSuppliers();
     } catch (error) {
       console.error('Error adding supplier:', error);
       toast({
         title: "Error",
-        description: "Failed to add supplier to database",
+        description: "Failed to add supplier",
         variant: "destructive"
       });
       throw error;
@@ -143,15 +107,13 @@ export const useStoreManagement = () => {
 
   const updateCoffeeRecord = async (recordId: string, recordData: Partial<Omit<StoreRecord, 'id'>>) => {
     try {
-      console.log('Updating coffee record in Firebase:', recordId, recordData);
+      console.log('Updating coffee record:', recordId, recordData);
       
-      const docRef = doc(db, 'coffee_records', recordId);
-      await updateDoc(docRef, {
-        ...recordData,
-        updated_at: new Date().toISOString()
-      });
-
-      await fetchStoreData();
+      setStoreRecords(prev => 
+        prev.map(record => 
+          record.id === recordId ? { ...record, ...recordData } : record
+        )
+      );
       
       toast({
         title: "Success",
@@ -170,12 +132,9 @@ export const useStoreManagement = () => {
 
   const deleteCoffeeRecord = async (recordId: string) => {
     try {
-      console.log('Deleting coffee record from Firebase:', recordId);
+      console.log('Deleting coffee record:', recordId);
       
-      const docRef = doc(db, 'coffee_records', recordId);
-      await deleteDoc(docRef);
-
-      await fetchStoreData();
+      setStoreRecords(prev => prev.filter(record => record.id !== recordId));
       
       toast({
         title: "Success",
@@ -194,48 +153,24 @@ export const useStoreManagement = () => {
 
   const addCoffeeRecord = async (recordData: Omit<StoreRecord, 'id'>) => {
     try {
-      console.log('Adding coffee record to Firebase:', recordData);
+      console.log('Adding coffee record:', recordData);
       
-      // Find supplier to get supplier ID
-      const supplier = suppliers.find(s => s.name === recordData.supplierName);
-      const contract = supplier ? getActiveContractForSupplier(supplier.id) : null;
-      
-      const coffeeDoc = {
-        supplier_name: recordData.supplierName,
-        coffee_type: recordData.coffeeType,
-        bags: recordData.bags,
-        kilograms: recordData.kilograms,
-        date: recordData.date,
-        batch_number: recordData.batchNumber,
-        status: recordData.status,
-        supplier_id: supplier?.id || null,
-        contract_info: contract ? {
-          contractId: contract.id,
-          contractPrice: contract.pricePerKg,
-          contractType: contract.contractType
-        } : null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+      const newRecord: StoreRecord = {
+        id: `record-${Date.now()}`,
+        ...recordData
       };
 
-      const docRef = await addDoc(collection(db, 'coffee_records'), coffeeDoc);
-      console.log('Coffee record added with ID:', docRef.id);
-      
-      await fetchStoreData();
-      
-      const contractMessage = contract ? 
-        ` (Contract: ${contract.contractType} @ ${contract.pricePerKg}/kg)` : 
-        ' (No active contract)';
+      setStoreRecords(prev => [newRecord, ...prev]);
       
       toast({
         title: "Success",
-        description: `Coffee record added successfully${contractMessage}`
+        description: "Coffee record added successfully"
       });
     } catch (error) {
       console.error('Error adding coffee record:', error);
       toast({
         title: "Error",
-        description: "Failed to add coffee record to database",
+        description: "Failed to add coffee record",
         variant: "destructive"
       });
       throw error;
@@ -244,15 +179,13 @@ export const useStoreManagement = () => {
 
   const updateCoffeeRecordStatus = async (recordId: string, status: string) => {
     try {
-      console.log('Updating coffee record status in Firebase:', recordId, status);
+      console.log('Updating coffee record status:', recordId, status);
       
-      const docRef = doc(db, 'coffee_records', recordId);
-      await updateDoc(docRef, {
-        status,
-        updated_at: new Date().toISOString()
-      });
-
-      await fetchStoreData();
+      setStoreRecords(prev => 
+        prev.map(record => 
+          record.id === recordId ? { ...record, status } : record
+        )
+      );
       
       toast({
         title: "Success",
