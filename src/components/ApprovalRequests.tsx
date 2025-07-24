@@ -3,24 +3,30 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye } from 'lucide-react';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
 import { useToast } from '@/hooks/use-toast';
+import { RejectionModal } from './workflow/RejectionModal';
+import { WorkflowTracker } from './workflow/WorkflowTracker';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const ApprovalRequests = () => {
   const { requests, loading, updateRequestStatus, fetchRequests } = useApprovalRequests();
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleApproval = async (id: string, status: 'Approved' | 'Rejected') => {
+  const handleApproval = async (id: string) => {
     setProcessingId(id);
     try {
-      const success = await updateRequestStatus(id, status);
+      const success = await updateRequestStatus(id, 'Approved');
       if (success) {
         toast({
-          title: `Request ${status}`,
-          description: `The approval request has been ${status.toLowerCase()} successfully.`,
-          variant: status === 'Approved' ? 'default' : 'destructive'
+          title: "Request Approved",
+          description: "The approval request has been approved successfully.",
         });
       }
     } catch (error) {
@@ -33,6 +39,42 @@ const ApprovalRequests = () => {
     } finally {
       setProcessingId(null);
     }
+  };
+
+  const handleRejection = (id: string) => {
+    setSelectedRequestId(id);
+    setRejectionModalOpen(true);
+  };
+
+  const handleRejectionConfirm = async (reason: string, comments?: string) => {
+    if (!selectedRequestId) return;
+    
+    setProcessingId(selectedRequestId);
+    try {
+      const success = await updateRequestStatus(selectedRequestId, 'Rejected', reason, comments);
+      if (success) {
+        toast({
+          title: "Request Rejected",
+          description: "The approval request has been rejected and sent back for modification.",
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error('Error processing rejection:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to process the rejection.',
+        variant: 'destructive'
+      });
+    } finally {
+      setProcessingId(null);
+      setSelectedRequestId(null);
+    }
+  };
+
+  const handleViewWorkflow = (paymentId: string) => {
+    setSelectedPaymentId(paymentId);
+    setWorkflowModalOpen(true);
   };
 
   const handleRefresh = async () => {
@@ -53,12 +95,10 @@ const ApprovalRequests = () => {
   };
 
   const formatAmount = (amount: string | number) => {
-    // Handle both string and number inputs
     const numericAmount = typeof amount === 'string' ? parseFloat(amount.replace(/[^\d.-]/g, '')) : amount;
     
-    // Check if the conversion resulted in a valid number
     if (isNaN(numericAmount)) {
-      return amount; // Return original if can't parse
+      return amount;
     }
     
     return `UGX ${numericAmount.toLocaleString()}`;
@@ -105,9 +145,21 @@ const ApprovalRequests = () => {
                     <CardTitle className="text-lg">{request.title}</CardTitle>
                     <CardDescription>{request.description}</CardDescription>
                   </div>
-                  <Badge className={getPriorityColor(request.priority)}>
-                    {request.priority}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getPriorityColor(request.priority)}>
+                      {request.priority}
+                    </Badge>
+                    {request.details?.paymentId && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewWorkflow(request.details?.paymentId || '')}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Workflow
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -144,7 +196,7 @@ const ApprovalRequests = () => {
 
                 <div className="flex items-center gap-3">
                   <Button
-                    onClick={() => handleApproval(request.id, 'Approved')}
+                    onClick={() => handleApproval(request.id)}
                     disabled={processingId === request.id}
                     className="bg-green-600 hover:bg-green-700"
                   >
@@ -152,7 +204,7 @@ const ApprovalRequests = () => {
                     Approve
                   </Button>
                   <Button
-                    onClick={() => handleApproval(request.id, 'Rejected')}
+                    onClick={() => handleRejection(request.id)}
                     disabled={processingId === request.id}
                     variant="destructive"
                   >
@@ -171,6 +223,28 @@ const ApprovalRequests = () => {
           ))}
         </div>
       )}
+
+      <RejectionModal
+        open={rejectionModalOpen}
+        onClose={() => {
+          setRejectionModalOpen(false);
+          setSelectedRequestId(null);
+        }}
+        onConfirm={handleRejectionConfirm}
+        title="Reject Approval Request"
+        description="Please provide a reason for rejecting this request. This will help the requesting department understand what needs to be modified."
+      />
+
+      <Dialog open={workflowModalOpen} onOpenChange={setWorkflowModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Payment Workflow History</DialogTitle>
+          </DialogHeader>
+          {selectedPaymentId && (
+            <WorkflowTracker paymentId={selectedPaymentId} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

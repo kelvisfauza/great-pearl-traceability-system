@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, doc, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useWorkflowTracking } from './useWorkflowTracking';
 
 export interface ApprovalRequest {
   id: string;
@@ -20,14 +21,18 @@ export interface ApprovalRequest {
     supplier?: string;
     amount?: number;
     batchNumber?: string;
+    qualityAssessmentId?: string;
   };
   created_at: string;
   updated_at: string;
+  rejection_reason?: string;
+  rejection_comments?: string;
 }
 
 export const useApprovalRequests = () => {
   const [requests, setRequests] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const { trackWorkflowStep } = useWorkflowTracking();
 
   const fetchRequests = async () => {
     try {
@@ -54,7 +59,12 @@ export const useApprovalRequests = () => {
     }
   };
 
-  const updateRequestStatus = async (id: string, status: 'Approved' | 'Rejected') => {
+  const updateRequestStatus = async (
+    id: string, 
+    status: 'Approved' | 'Rejected',
+    rejectionReason?: string,
+    rejectionComments?: string
+  ) => {
     try {
       console.log('Updating approval request status:', id, status);
       
@@ -64,14 +74,34 @@ export const useApprovalRequests = () => {
         return false;
       }
 
-      console.log('Updating Firebase approval request...');
-      const firebaseDoc = doc(db, 'approval_requests', id);
-      await updateDoc(firebaseDoc, {
+      const updateData: any = {
         status,
         updated_at: new Date().toISOString()
-      });
+      };
+
+      if (status === 'Rejected' && rejectionReason) {
+        updateData.rejection_reason = rejectionReason;
+        updateData.rejection_comments = rejectionComments || '';
+      }
+
+      console.log('Updating Firebase approval request...');
+      const firebaseDoc = doc(db, 'approval_requests', id);
+      await updateDoc(firebaseDoc, updateData);
       
       console.log('Firebase approval request updated');
+
+      // Track workflow step
+      await trackWorkflowStep({
+        paymentId: request.details?.paymentId || id,
+        qualityAssessmentId: request.details?.qualityAssessmentId,
+        fromDepartment: 'Finance',
+        toDepartment: 'Operations',
+        action: status === 'Approved' ? 'approved' : 'rejected',
+        reason: rejectionReason,
+        comments: rejectionComments,
+        processedBy: 'Operations Manager',
+        status: 'completed'
+      });
 
       // If approved and it's a bank transfer, update the payment record
       if (status === 'Approved' && request.type === 'Bank Transfer' && request.details?.paymentId) {
@@ -100,6 +130,23 @@ export const useApprovalRequests = () => {
           department: 'Finance',
           created_at: new Date().toISOString()
         });
+      }
+
+      // If rejected, update payment record status
+      if (status === 'Rejected' && request.details?.paymentId) {
+        console.log('Updating payment record status for rejected request...');
+        
+        try {
+          await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
+            status: 'Rejected',
+            updated_at: new Date().toISOString(),
+            rejection_reason: rejectionReason,
+            rejection_comments: rejectionComments
+          });
+          console.log('Payment record updated to Rejected in Firebase');
+        } catch (error) {
+          console.error('Error updating payment record:', error);
+        }
       }
 
       // Remove from local state since it's no longer pending

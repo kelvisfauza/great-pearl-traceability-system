@@ -27,6 +27,7 @@ const Finance = () => {
     addTransaction,
     addExpense,
     processPayment,
+    handleModifyPayment,
     refetch
   } = useFinanceData();
 
@@ -97,6 +98,20 @@ const Finance = () => {
     }
   };
 
+  const handleModifyPayment = async (paymentId: string, targetDepartment: string, reason: string, comments?: string) => {
+    console.log('Finance page - Modifying payment:', paymentId, targetDepartment, reason);
+    try {
+      await handleModifyPayment(paymentId, targetDepartment, reason, comments);
+    } catch (error) {
+      console.error('Finance page - Error modifying payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send payment for modification. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return `UGX ${amount.toLocaleString()}`;
   };
@@ -114,6 +129,7 @@ const Finance = () => {
   const pendingPayments = payments.filter(payment => payment.status === 'Pending');
   const processingPayments = payments.filter(payment => payment.status === 'Processing');
   const completedPayments = payments.filter(payment => payment.status === 'Paid');
+  const rejectedPayments = payments.filter(payment => payment.status === 'Rejected');
   const salaryPaymentRequests = approvalRequests.filter(req => req.type === 'Salary Payment');
   const pendingSalaryRequests = salaryPaymentRequests.filter(req => req.status === 'Pending');
 
@@ -271,7 +287,9 @@ const Finance = () => {
               pendingPayments={pendingPayments}
               processingPayments={processingPayments}
               completedPayments={completedPayments}
+              rejectedPayments={rejectedPayments}
               onProcessPayment={handleProcessPayment}
+              onModifyPayment={handleModifyPayment}
               formatCurrency={formatCurrency}
             />
           </TabsContent>

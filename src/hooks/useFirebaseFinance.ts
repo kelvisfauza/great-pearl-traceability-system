@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -32,6 +31,8 @@ export interface PaymentRecord {
   date: string;
   batchNumber?: string;
   qualityAssessmentId?: string;
+  rejection_reason?: string | null;
+  rejection_comments?: string | null;
 }
 
 interface FinanceStats {
@@ -176,6 +177,9 @@ export const useFirebaseFinance = () => {
           date: data.date || new Date().toLocaleDateString(),
           batchNumber: data.batchNumber || data.batch_number || '',
           qualityAssessmentId: data.qualityAssessmentId || data.quality_assessment_id || null,
+          paid_amount: data.paid_amount || 0,
+          rejection_reason: data.rejection_reason || null,
+          rejection_comments: data.rejection_comments || null,
           ...data
         } as PaymentRecord;
       });
@@ -343,7 +347,8 @@ export const useFirebaseFinance = () => {
           supplier: payment.supplier,
           amount: payment.amount,
           batchNumber: payment.batchNumber,
-          status: payment.status
+          status: payment.status,
+          rejectionReason: payment.rejection_reason
         });
       });
       
@@ -439,13 +444,14 @@ export const useFirebaseFinance = () => {
             method: 'Bank Transfer',
             supplier: payment.supplier,
             amount: payment.amount,
-            batchNumber: payment.batchNumber
+            batchNumber: payment.batchNumber,
+            qualityAssessmentId: payment.qualityAssessmentId
           },
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
 
-        // Update payment status to Processing
+        // Update payment status to Processing (not Rejected)
         console.log('Updating payment status to Processing...');
         await updateDoc(doc(db, 'payment_records', paymentId), {
           status: 'Processing',
@@ -570,6 +576,47 @@ export const useFirebaseFinance = () => {
     }
   };
 
+  const handleModifyPayment = async (paymentId: string, targetDepartment: string, reason: string, comments?: string) => {
+    try {
+      console.log('Handling payment modification:', paymentId, targetDepartment, reason);
+      
+      // Update payment status to indicate it's being modified
+      await updateDoc(doc(db, 'payment_records', paymentId), {
+        status: 'Under Modification',
+        modification_reason: reason,
+        modification_comments: comments,
+        modification_target: targetDepartment,
+        updated_at: new Date().toISOString()
+      });
+
+      // Update local state
+      setPayments(prevPayments => 
+        prevPayments.map(p => 
+          p.id === paymentId 
+            ? { 
+                ...p, 
+                status: 'Under Modification',
+                modification_reason: reason,
+                modification_comments: comments
+              }
+            : p
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: `Payment sent to ${targetDepartment} for modification`,
+      });
+    } catch (error) {
+      console.error('Error modifying payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send payment for modification",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     fetchFinanceData();
   }, []);
@@ -583,6 +630,7 @@ export const useFirebaseFinance = () => {
     addTransaction,
     addExpense,
     processPayment,
+    handleModifyPayment,
     refetch: fetchFinanceData
   };
 };
