@@ -86,6 +86,7 @@ const RegistrationRequestsManager = () => {
 
   const fetchRequests = async () => {
     try {
+      console.log('Fetching registration requests...');
       const requestsQuery = query(
         collection(db, 'user_registration_requests'),
         orderBy('created_at', 'desc')
@@ -97,6 +98,7 @@ const RegistrationRequestsManager = () => {
         ...doc.data()
       })) as RegistrationRequest[];
       
+      console.log('Fetched requests:', requestsData.length);
       setRequests(requestsData);
     } catch (error) {
       console.error('Error fetching requests:', error);
@@ -117,6 +119,7 @@ const RegistrationRequestsManager = () => {
   }, [canManageEmployees]);
 
   const openModifyDialog = (request: RegistrationRequest) => {
+    console.log('Opening modify dialog for:', request);
     setSelectedRequest({
       ...request,
       modifiedDepartment: request.department,
@@ -128,19 +131,26 @@ const RegistrationRequestsManager = () => {
   };
 
   const handleApprove = async () => {
-    if (!selectedRequest || !employee) return;
+    if (!selectedRequest || !employee) {
+      console.error('Missing selectedRequest or employee:', { selectedRequest, employee });
+      return;
+    }
     
+    console.log('Starting approval process for:', selectedRequest.id);
     setProcessing(selectedRequest.id);
     
     try {
-      // Generate temporary password
+      // Step 1: Generate temporary password
       const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+      console.log('Generated temporary password');
       
-      // Create Firebase user
+      // Step 2: Create Firebase user
+      console.log('Creating Firebase user for:', selectedRequest.email);
       const userCredential = await createUserWithEmailAndPassword(auth, selectedRequest.email, tempPassword);
+      console.log('Firebase user created successfully:', userCredential.user.uid);
       
-      // Create employee record
-      await addDoc(collection(db, 'employees'), {
+      // Step 3: Prepare employee data
+      const employeeData = {
         name: `${selectedRequest.firstName} ${selectedRequest.lastName}`,
         email: selectedRequest.email.toLowerCase().trim(),
         phone: selectedRequest.phone,
@@ -156,9 +166,16 @@ const RegistrationRequestsManager = () => {
         authUserId: userCredential.user.uid,
         isOneTimePassword: true,
         mustChangePassword: true
-      });
+      };
+      
+      console.log('Creating employee record with data:', employeeData);
+      
+      // Step 4: Create employee record
+      const employeeDoc = await addDoc(collection(db, 'employees'), employeeData);
+      console.log('Employee record created successfully:', employeeDoc.id);
 
-      // Update request status
+      // Step 5: Update request status
+      console.log('Updating request status to approved');
       await updateDoc(doc(db, 'user_registration_requests', selectedRequest.id), {
         status: 'approved',
         approvedAt: new Date().toISOString(),
@@ -169,8 +186,10 @@ const RegistrationRequestsManager = () => {
         finalPermissions: selectedRequest.modifiedPermissions || [selectedRequest.department],
         tempPassword: tempPassword
       });
+      
+      console.log('Request updated successfully');
 
-      // Generate credentials for printing
+      // Step 6: Generate credentials for printing
       setGeneratedCredentials({
         name: `${selectedRequest.firstName} ${selectedRequest.lastName}`,
         email: selectedRequest.email,
@@ -181,12 +200,15 @@ const RegistrationRequestsManager = () => {
         approvedDate: new Date().toLocaleDateString()
       });
 
+      // Step 7: Update local state
       setRequests(prev => prev.map(req => 
         req.id === selectedRequest.id 
           ? { ...req, status: 'approved' as const }
           : req
       ));
 
+      console.log('Approval process completed successfully');
+      
       toast({
         title: "Request Approved",
         description: `User ${selectedRequest.firstName} ${selectedRequest.lastName} has been approved and account created.`
@@ -195,11 +217,26 @@ const RegistrationRequestsManager = () => {
       setShowModifyDialog(false);
       setShowCredentialsDialog(true);
 
-    } catch (error) {
-      console.error('Error approving request:', error);
+    } catch (error: any) {
+      console.error('Detailed approval error:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      
+      let errorMessage = "Failed to approve request. Please try again.";
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "An account with this email already exists.";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Invalid email address.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "Password is too weak.";
+      } else if (error.code === 'permission-denied') {
+        errorMessage = "You don't have permission to create employee records.";
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to approve request. Please try again.",
+        title: "Approval Failed",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -208,8 +245,12 @@ const RegistrationRequestsManager = () => {
   };
 
   const handleReject = async () => {
-    if (!selectedRequest || !employee || !rejectionReason.trim()) return;
+    if (!selectedRequest || !employee || !rejectionReason.trim()) {
+      console.error('Missing data for rejection:', { selectedRequest, employee, rejectionReason });
+      return;
+    }
     
+    console.log('Rejecting request:', selectedRequest.id);
     setProcessing(selectedRequest.id);
     
     try {
@@ -390,7 +431,11 @@ const RegistrationRequestsManager = () => {
                           onClick={() => openModifyDialog(request)}
                           disabled={processing === request.id}
                         >
-                          Review & Approve
+                          {processing === request.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            'Review & Approve'
+                          )}
                         </Button>
                       </div>
                     )}
