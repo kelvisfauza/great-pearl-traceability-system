@@ -4,15 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { TrendingUp, TrendingDown, RefreshCw, Globe, AlertTriangle, Clock } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { TrendingUp, TrendingDown, RefreshCw, Globe, AlertTriangle, Clock, Settings } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useMarketData } from '@/hooks/useMarketData';
 import { usePrices } from '@/contexts/PriceContext';
+import ReferencePriceInput from './ReferencePriceInput';
 
 const MarketMonitor = () => {
   const { marketData, priceHistory, loading } = useMarketData();
-  const { prices } = usePrices();
+  const { prices, refreshPrices } = usePrices();
 
   const marketMetrics = [
     {
@@ -97,10 +97,10 @@ const MarketMonitor = () => {
       {/* Header with refresh */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Live Market Monitor</h2>
-          <p className="text-muted-foreground">Real-time coffee market data and analysis</p>
+          <h2 className="text-2xl font-bold">Reference Price Monitor</h2>
+          <p className="text-muted-foreground">Manage and monitor coffee reference prices</p>
         </div>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={refreshPrices}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh Data
         </Button>
@@ -108,10 +108,10 @@ const MarketMonitor = () => {
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Market Overview</TabsTrigger>
+          <TabsTrigger value="overview">Price Overview</TabsTrigger>
+          <TabsTrigger value="input">Set Prices</TabsTrigger>
           <TabsTrigger value="charts">Price Charts</TabsTrigger>
           <TabsTrigger value="local">Local Markets</TabsTrigger>
-          <TabsTrigger value="alerts">Alerts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -121,13 +121,9 @@ const MarketMonitor = () => {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium">{metric.name}</CardTitle>
-                    <Badge variant={metric.trend === 'up' ? 'default' : 'secondary'}>
-                      {metric.trend === 'up' ? (
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 mr-1" />
-                      )}
-                      {Math.abs(metric.change)}%
+                    <Badge variant="outline">
+                      <Settings className="h-3 w-3 mr-1" />
+                      Reference
                     </Badge>
                   </div>
                 </CardHeader>
@@ -135,24 +131,17 @@ const MarketMonitor = () => {
                   <div className="text-2xl font-bold">
                     {(metric.price || 0).toLocaleString()} {metric.unit}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Volume:</span>
-                      <div className="font-medium">{metric.volume}</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Support:</span>
-                      <div className="font-medium">{metric.support}</div>
-                    </div>
-                  </div>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Resistance: </span>
-                    <span className="font-medium">{metric.resistance}</span>
+                  <div className="text-sm text-muted-foreground">
+                    Current reference price for {metric.name.toLowerCase()}
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="input" className="space-y-4">
+          <ReferencePriceInput />
         </TabsContent>
 
         <TabsContent value="charts" className="space-y-4">
@@ -205,34 +194,6 @@ const MarketMonitor = () => {
                     <div className="text-center">
                       <div className="text-sm text-muted-foreground mb-1">Export FOB</div>
                       <div className="text-lg font-bold text-green-600">UGX {price.export.toLocaleString()}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="alerts" className="space-y-4">
-          <div className="space-y-3">
-            {alerts.map((alert, index) => (
-              <Card key={index} className={`border-l-4 ${
-                alert.type === 'urgent' ? 'border-l-red-500' : 
-                alert.type === 'warning' ? 'border-l-yellow-500' : 'border-l-blue-500'
-              }`}>
-                <CardContent className="pt-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      {alert.type === 'urgent' && <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />}
-                      {alert.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />}
-                      {alert.type === 'info' && <Globe className="h-5 w-5 text-blue-500 mt-0.5" />}
-                      <div>
-                        <p className="font-medium">{alert.message}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {alert.time}
                     </div>
                   </div>
                 </CardContent>

@@ -9,12 +9,21 @@ interface CoffeePrices {
 
 export class BarchartService {
   /**
-   * Fetch coffee futures prices - now uses Firebase backend
+   * Get manually set reference prices from localStorage
    */
   async getCoffeePrices(): Promise<CoffeePrices> {
-    // Import Firebase service dynamically to avoid circular imports
-    const { firebasePriceService } = await import('./firebasePriceService');
-    return firebasePriceService.getCoffeePrices();
+    const storedPrices = localStorage.getItem('referencePrices');
+    if (storedPrices) {
+      return JSON.parse(storedPrices);
+    }
+    return this.getFallbackPrices();
+  }
+
+  /**
+   * Save reference prices to localStorage
+   */
+  async saveReferencePrices(prices: CoffeePrices): Promise<void> {
+    localStorage.setItem('referencePrices', JSON.stringify(prices));
   }
 
   private getFallbackPrices(): CoffeePrices {

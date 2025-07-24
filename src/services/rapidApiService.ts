@@ -9,12 +9,14 @@ interface CoffeePrices {
 
 export class RapidApiService {
   /**
-   * Fetch coffee futures prices - now uses Firebase backend
+   * Get manually set reference prices from localStorage
    */
   async getCoffeePrices(): Promise<CoffeePrices> {
-    // Import Firebase service dynamically to avoid circular imports
-    const { firebasePriceService } = await import('./firebasePriceService');
-    return firebasePriceService.getCoffeePrices();
+    const storedPrices = localStorage.getItem('referencePrices');
+    if (storedPrices) {
+      return JSON.parse(storedPrices);
+    }
+    return this.getFallbackPrices();
   }
 
   private getFallbackPrices(): CoffeePrices {
