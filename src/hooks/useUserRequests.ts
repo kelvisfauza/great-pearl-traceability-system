@@ -24,7 +24,7 @@ export interface UserRequest {
   amount?: number;
   supplierDetails?: any;
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  status: 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Completed';
+  status: 'With HR' | 'With Finance' | 'Awaiting Management Approval' | 'Completed' | 'Rejected' | 'Reviewing' | 'Resolved';
   requestedDate: string;
   expectedDate?: string;
   department?: string;
@@ -33,6 +33,14 @@ export interface UserRequest {
   reviewedAt?: string;
   responseMessage?: string;
   attachments?: string[];
+  currentStep: 'hr' | 'finance' | 'management' | 'admin' | 'completed';
+  workflowHistory?: {
+    step: string;
+    timestamp: string;
+    reviewedBy?: string;
+    action: 'submitted' | 'approved' | 'rejected' | 'forwarded';
+    notes?: string;
+  }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -78,7 +86,7 @@ export const useUserRequests = () => {
     return () => unsubscribe();
   }, [user, employee]);
 
-  const createRequest = async (requestData: Omit<UserRequest, 'id' | 'userId' | 'employeeId' | 'status' | 'createdAt' | 'updatedAt'>) => {
+  const createRequest = async (requestData: Omit<UserRequest, 'id' | 'userId' | 'employeeId' | 'status' | 'createdAt' | 'updatedAt' | 'currentStep' | 'workflowHistory'>) => {
     if (!user || !employee) {
       toast({
         title: "Error",
@@ -89,11 +97,23 @@ export const useUserRequests = () => {
     }
 
     try {
+      // Determine initial status and workflow step based on request type
+      const isComplaint = requestData.requestType === 'complaint';
+      const initialStatus = isComplaint ? 'Reviewing' : 'With HR';
+      const initialStep = isComplaint ? 'admin' : 'hr';
+
       const docData = {
         ...requestData,
         userId: user.uid,
         employeeId: employee.id,
-        status: 'Pending',
+        status: initialStatus,
+        currentStep: initialStep,
+        workflowHistory: [{
+          step: initialStep,
+          timestamp: new Date().toISOString(),
+          action: 'submitted' as const,
+          notes: `Request submitted by ${employee.name || 'user'}`
+        }],
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       };

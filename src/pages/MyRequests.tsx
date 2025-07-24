@@ -80,22 +80,26 @@ const MyRequests = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Pending': return 'secondary';
-      case 'Under Review': return 'default';
-      case 'Approved': return 'default';
-      case 'Rejected': return 'destructive';
+      case 'With HR': return 'secondary';
+      case 'With Finance': return 'default';
+      case 'Awaiting Management Approval': return 'default';
       case 'Completed': return 'default';
+      case 'Rejected': return 'destructive';
+      case 'Reviewing': return 'secondary';
+      case 'Resolved': return 'default';
       default: return 'secondary';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'Pending': return <Clock className="h-4 w-4" />;
-      case 'Under Review': return <Eye className="h-4 w-4" />;
-      case 'Approved': return <CheckCircle className="h-4 w-4" />;
-      case 'Rejected': return <XCircle className="h-4 w-4" />;
+      case 'With HR': return <Clock className="h-4 w-4" />;
+      case 'With Finance': return <DollarSign className="h-4 w-4" />;
+      case 'Awaiting Management Approval': return <Eye className="h-4 w-4" />;
       case 'Completed': return <CheckCircle className="h-4 w-4" />;
+      case 'Rejected': return <XCircle className="h-4 w-4" />;
+      case 'Reviewing': return <Eye className="h-4 w-4" />;
+      case 'Resolved': return <CheckCircle className="h-4 w-4" />;
       default: return <Clock className="h-4 w-4" />;
     }
   };
@@ -144,9 +148,13 @@ const MyRequests = () => {
 
   const requestsByStatus = getRequestsByStatus();
   const totalRequests = requests.length;
-  const pendingRequests = requestsByStatus['Pending']?.length || 0;
-  const approvedRequests = requestsByStatus['Approved']?.length || 0;
+  const activeRequests = requests.filter(r => !['Completed', 'Resolved', 'Rejected'].includes(r.status)).length;
+  const completedRequests = requestsByStatus['Completed']?.length || 0;
   const rejectedRequests = requestsByStatus['Rejected']?.length || 0;
+  
+  // Separate active and previous requests
+  const activeRequestsList = requests.filter(r => !['Completed', 'Resolved', 'Rejected'].includes(r.status));
+  const previousRequestsList = requests.filter(r => ['Completed', 'Resolved', 'Rejected'].includes(r.status));
 
   if (loading) {
     return (
@@ -180,8 +188,8 @@ const MyRequests = () => {
               <div className="flex items-center">
                 <Clock className="h-8 w-8 text-yellow-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Pending</p>
-                  <p className="text-2xl font-bold">{pendingRequests}</p>
+                  <p className="text-sm font-medium text-gray-600">Active</p>
+                  <p className="text-2xl font-bold">{activeRequests}</p>
                 </div>
               </div>
             </CardContent>
@@ -192,8 +200,8 @@ const MyRequests = () => {
               <div className="flex items-center">
                 <CheckCircle className="h-8 w-8 text-green-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Approved</p>
-                  <p className="text-2xl font-bold">{approvedRequests}</p>
+                  <p className="text-sm font-medium text-gray-600">Completed</p>
+                  <p className="text-2xl font-bold">{completedRequests}</p>
                 </div>
               </div>
             </CardContent>
@@ -370,61 +378,159 @@ const MyRequests = () => {
                 <p className="text-gray-600 mb-4">You haven't submitted any requests yet. Click the button above to create your first request.</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {requests.map((request) => (
-                  <Card key={request.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="pt-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          {getRequestTypeIcon(request.requestType)}
-                          <div>
-                            <h4 className="font-semibold text-lg">{request.title}</h4>
-                            <p className="text-sm text-gray-600">
-                              {formatRequestType(request.requestType)}
-                              {request.amount && ` - UGX ${request.amount.toLocaleString()}`}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={getStatusColor(request.status)} className="flex items-center gap-1">
-                            {getStatusIcon(request.status)}
-                            {request.status}
-                          </Badge>
-                          <Badge variant={getPriorityColor(request.priority)}>
-                            {request.priority}
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-gray-700 mb-3 line-clamp-2">{request.description}</p>
-                      
-                      <div className="flex justify-between items-center text-xs text-gray-500">
-                        <div className="flex gap-4">
-                          <span>Submitted: {new Date(request.requestedDate).toLocaleDateString()}</span>
-                          {request.reviewedAt && (
-                            <span>Reviewed: {new Date(request.reviewedAt).toLocaleDateString()}</span>
-                          )}
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleViewDetails(request)}
-                        >
-                          View Details
-                        </Button>
-                      </div>
-                      
-                      {request.responseMessage && (
-                        <div className="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                          <p className="text-sm">
-                            <strong className="text-blue-800">Management Response:</strong>
-                            <span className="text-blue-700 ml-2">{request.responseMessage}</span>
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="space-y-6">
+                {/* Active Requests */}
+                {activeRequestsList.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Active Requests</h3>
+                    <div className="space-y-4">
+                      {activeRequestsList.map((request) => (
+                        <Card key={request.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="pt-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                {getRequestTypeIcon(request.requestType)}
+                                <div>
+                                  <h4 className="font-semibold text-lg">{request.title}</h4>
+                                  <p className="text-sm text-gray-600">
+                                    {formatRequestType(request.requestType)}
+                                    {request.amount && ` - UGX ${request.amount.toLocaleString()}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={getStatusColor(request.status)} className="flex items-center gap-1">
+                                  {getStatusIcon(request.status)}
+                                  {request.status}
+                                </Badge>
+                                <Badge variant={getPriorityColor(request.priority)}>
+                                  {request.priority}
+                                </Badge>
+                              </div>
+                            </div>
+                            
+                            <p className="text-sm text-gray-700 mb-3 line-clamp-2">{request.description}</p>
+                            
+                            {/* Workflow Progress */}
+                            {request.requestType !== 'complaint' && (
+                              <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                                <p className="text-xs font-medium text-gray-600 mb-2">Progress:</p>
+                                <div className="flex items-center gap-2">
+                                  <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                                    request.currentStep === 'hr' ? 'bg-yellow-100 text-yellow-800' : 
+                                    ['finance', 'management', 'completed'].includes(request.currentStep) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    HR {['finance', 'management', 'completed'].includes(request.currentStep) ? '✓' : '→'}
+                                  </div>
+                                  <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                                    request.currentStep === 'finance' ? 'bg-yellow-100 text-yellow-800' : 
+                                    ['management', 'completed'].includes(request.currentStep) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    Finance {['management', 'completed'].includes(request.currentStep) ? '✓' : request.currentStep === 'finance' ? '→' : ''}
+                                  </div>
+                                  <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                                    request.currentStep === 'management' ? 'bg-yellow-100 text-yellow-800' : 
+                                    request.currentStep === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                                  }`}>
+                                    Management {request.currentStep === 'completed' ? '✓' : request.currentStep === 'management' ? '→' : ''}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="flex justify-between items-center text-xs text-gray-500">
+                              <div className="flex gap-4">
+                                <span>Submitted: {new Date(request.requestedDate).toLocaleDateString()}</span>
+                                {request.reviewedAt && (
+                                  <span>Reviewed: {new Date(request.reviewedAt).toLocaleDateString()}</span>
+                                )}
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleViewDetails(request)}
+                              >
+                                View Details
+                              </Button>
+                            </div>
+                            
+                            {request.responseMessage && (
+                              <div className="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                                <p className="text-sm">
+                                  <strong className="text-blue-800">Response:</strong>
+                                  <span className="text-blue-700 ml-2">{request.responseMessage}</span>
+                                </p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Previous Requests */}
+                {previousRequestsList.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Previous Requests</h3>
+                    <div className="space-y-4">
+                      {previousRequestsList.map((request) => (
+                        <Card key={request.id} className="hover:shadow-md transition-shadow opacity-75">
+                          <CardContent className="pt-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                {getRequestTypeIcon(request.requestType)}
+                                <div>
+                                  <h4 className="font-semibold text-lg">{request.title}</h4>
+                                  <p className="text-sm text-gray-600">
+                                    {formatRequestType(request.requestType)}
+                                    {request.amount && ` - UGX ${request.amount.toLocaleString()}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={getStatusColor(request.status)} className="flex items-center gap-1">
+                                  {getStatusIcon(request.status)}
+                                  {request.status}
+                                </Badge>
+                                <Badge variant={getPriorityColor(request.priority)}>
+                                  {request.priority}
+                                </Badge>
+                              </div>
+                            </div>
+                            
+                            <p className="text-sm text-gray-700 mb-3 line-clamp-2">{request.description}</p>
+                            
+                            <div className="flex justify-between items-center text-xs text-gray-500">
+                              <div className="flex gap-4">
+                                <span>Submitted: {new Date(request.requestedDate).toLocaleDateString()}</span>
+                                {request.reviewedAt && (
+                                  <span>Completed: {new Date(request.reviewedAt).toLocaleDateString()}</span>
+                                )}
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleViewDetails(request)}
+                              >
+                                View Details
+                              </Button>
+                            </div>
+                            
+                            {request.responseMessage && (
+                              <div className="mt-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                                <p className="text-sm">
+                                  <strong className="text-blue-800">Final Response:</strong>
+                                  <span className="text-blue-700 ml-2">{request.responseMessage}</span>
+                                </p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
