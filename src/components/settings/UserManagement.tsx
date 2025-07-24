@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useSecureEmployees } from '@/hooks/useSecureEmployees';
 import AddUserForm from './AddUserForm';
 import EditUserForm from './EditUserForm';
 import UserList from './UserList';
@@ -25,6 +27,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
   const { toast } = useToast();
   const { refetch } = useEmployees();
   const { isAdmin } = useAuth();
+  const { addEmployee } = useSecureEmployees();
 
   // Only administrators can access user management
   if (!isAdmin()) {
@@ -52,7 +55,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
       // Generate one-time password
       const oneTimePassword = generateOneTimePassword();
       
-      // Prepare employee data with one-time password flag
+      // First, create the employee record in Firebase
       const processedData = {
         ...employeeData,
         permissions: Array.isArray(employeeData.permissions) ? employeeData.permissions : [],
@@ -60,7 +63,12 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         mustChangePassword: true
       };
 
-      // Create user through Supabase edge function
+      console.log('Creating employee record in Firebase first...');
+      const firebaseEmployee = await addEmployee(processedData);
+      
+      console.log('Employee record created in Firebase:', firebaseEmployee);
+
+      // Then create the authentication user through Supabase
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           employeeData: {
@@ -71,14 +79,12 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
       });
 
       if (error) {
-        console.error('Error creating user:', error);
-        throw new Error(error.message || 'Failed to create user');
+        console.error('Error creating auth user:', error);
+        // If auth user creation fails, we should handle cleanup if needed
+        throw new Error(error.message || 'Failed to create authentication user');
       }
 
-      console.log('User created successfully:', data);
-      
-      // Add the employee to local state
-      await onEmployeeAdded(processedData);
+      console.log('Auth user created successfully:', data);
       
       setIsAddModalOpen(false);
       
