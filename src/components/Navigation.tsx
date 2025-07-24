@@ -19,10 +19,53 @@ import {
   LogOut
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 const Navigation = () => {
   const location = useLocation();
   const { signOut, employee, hasPermission, hasRole, isAdmin } = useAuth();
+  const { toast } = useToast();
+
+  // Auto-update permissions for keizyeda@gmail.com if needed
+  useEffect(() => {
+    const checkAndUpdatePermissions = async () => {
+      if (employee && employee.email === 'keizyeda@gmail.com') {
+        const currentPermissions = employee.permissions || [];
+        
+        if (!currentPermissions.includes('Store Management')) {
+          console.log('Auto-updating Store Management permission for keizyeda@gmail.com');
+          
+          try {
+            const newPermissions = [...currentPermissions, 'Store Management'];
+            
+            // Update in Firestore
+            await updateDoc(doc(db, 'employees', employee.id), {
+              permissions: newPermissions,
+              updated_at: new Date().toISOString()
+            });
+            
+            toast({
+              title: "Permissions Updated",
+              description: "Store Management access has been added automatically",
+            });
+            
+            // Refresh the page to get updated permissions
+            window.location.reload();
+            
+          } catch (error) {
+            console.error('Error auto-updating permissions:', error);
+          }
+        }
+      }
+    };
+
+    if (employee) {
+      checkAndUpdatePermissions();
+    }
+  }, [employee, toast]);
   
   const navigationItems = [
     {
@@ -72,6 +115,14 @@ const Navigation = () => {
   };
 
   const filteredNavigationItems = getFilteredNavigationItems();
+
+  // Debug logging to see user permissions
+  console.log('=== NAVIGATION DEBUG ===');
+  console.log('Employee:', employee);
+  console.log('Employee permissions:', employee?.permissions);
+  console.log('Has Store Management permission:', hasPermission('Store Management'));
+  console.log('Is Admin:', isAdmin());
+  console.log('Filtered navigation items:', filteredNavigationItems);
 
   const handleLogout = async () => {
     try {
