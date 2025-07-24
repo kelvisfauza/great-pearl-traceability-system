@@ -4,6 +4,7 @@ import DashboardStats from "@/components/DashboardStats";
 import RecentActivity from "@/components/RecentActivity";
 import QuickActions from "@/components/QuickActions";
 import ApprovalRequests from "@/components/ApprovalRequests";
+import ManagementRequests from "@/components/admin/ManagementRequests";
 import PerformanceOverview from "@/components/PerformanceOverview";
 import PriceTicker from "@/components/PriceTicker";
 import ProtectedContent from "@/components/ProtectedContent";
@@ -70,13 +71,24 @@ const Index = () => {
           <DashboardStats />
         </div>
 
-        {/* Approval Requests - Only for those who can approve */}
+        {/* Management Requests - Only for those who can approve */}
         {access.canApproveRequests && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-1">
             <div className="flex items-center gap-2 mb-6">
               <AlertCircle className="h-5 w-5 text-amber-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Pending Approvals</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Employee Requests for Approval</h3>
               <Badge variant="destructive" className="ml-2">Requires Action</Badge>
+            </div>
+            <ManagementRequests />
+          </div>
+        )}
+
+        {/* Legacy Approval Requests - Only for those who can approve */}
+        {access.canApproveRequests && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-1">
+            <div className="flex items-center gap-2 mb-6">
+              <AlertCircle className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Legacy Approval Requests</h3>
             </div>
             <ApprovalRequests />
           </div>
