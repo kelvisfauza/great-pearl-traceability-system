@@ -165,15 +165,19 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-green-100 rounded-full">
-              <Coffee className="h-8 w-8 text-green-600" />
+            <div className="p-3 bg-white rounded-full shadow-lg">
+              <img 
+                src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+                alt="Great Pearl Coffee Factory" 
+                className="h-16 w-16 object-contain"
+              />
             </div>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Coffee Management System
+            Great Pearl Coffee Factory
           </h1>
           <p className="text-gray-600">
-            Welcome to the Coffee Management System
+            Coffee Management System
           </p>
         </div>
 

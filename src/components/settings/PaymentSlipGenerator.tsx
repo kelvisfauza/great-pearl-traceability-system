@@ -92,10 +92,15 @@ const PaymentSlipGenerator = ({ isOpen, onClose }: PaymentSlipGeneratorProps) =>
       </head>
       <body>
         <div class="header">
-          <div class="company-name">Coffee Company Ltd</div>
-          <div class="company-address">
-            P.O. Box 12345, Kampala, Uganda<br>
-            Tel: +256 123 456 789 | Email: info@coffeecompany.com
+          <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Great Pearl Coffee Factory" style="height: 80px; width: 80px; margin-right: 20px;">
+            <div>
+              <div class="company-name">Great Pearl Coffee Factory</div>
+              <div class="company-address">
+                P.O. Box 12345, Kampala, Uganda<br>
+                Tel: +256 123 456 789 | Email: info@greatpearlcoffee.com
+              </div>
+            </div>
           </div>
         </div>
 
