@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
 import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, doc, getDocs, Timestamp, or } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -43,7 +42,6 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const { toast } = useToast();
 
   // Fetch all employees for user selection
   const fetchEmployees = useCallback(async () => {
@@ -126,10 +124,10 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
 
   // Fetch messages for a specific conversation
   const fetchMessages = useCallback(async (conversationId: string) => {
-    if (!conversationId) return;
+    if (!conversationId || currentConversationId === conversationId) return;
 
     try {
-      // Only show loading for initial fetch, not for real-time updates
+      setCurrentConversationId(conversationId);
       setLoadingMessages(true);
       console.log('Fetching messages for conversation:', conversationId);
       
@@ -178,7 +176,7 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
       setLoadingMessages(false);
       return undefined;
     }
-  }, []);
+  }, [currentConversationId]);
 
   // Send a message
   const sendMessage = async ({ content, conversationId, recipientUserId, recipientEmployeeId, recipientName, type = 'text', fileUrl, fileName }: {
