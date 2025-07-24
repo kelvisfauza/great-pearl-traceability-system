@@ -50,12 +50,6 @@ const RoleBasedNavigation = () => {
           access: access.canViewQuality
         },
         { 
-          name: "Processing", 
-          icon: Coffee, 
-          path: "/processing", 
-          access: access.canViewProcessing
-        },
-        { 
           name: "Store Management", 
           icon: Shield, 
           path: "/store", 
@@ -83,12 +77,6 @@ const RoleBasedNavigation = () => {
           icon: DollarSign, 
           path: "/finance", 
           access: access.canViewFinance
-        },
-        { 
-          name: "Field Operations", 
-          icon: MapPin, 
-          path: "/field-operations", 
-          access: access.canViewFieldOps
         },
         { 
           name: "Human Resources", 

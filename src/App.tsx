@@ -13,12 +13,10 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Procurement from "./pages/Procurement";
 import QualityControl from "./pages/QualityControl";
-import Processing from "./pages/Processing";
 import Inventory from "./pages/Inventory";
 import Store from "./pages/Store";
 import SalesMarketing from "./pages/SalesMarketing";
 import Finance from "./pages/Finance";
-import FieldOperations from "./pages/FieldOperations";
 import HumanResources from "./pages/HumanResources";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
@@ -53,11 +51,6 @@ const App: React.FC = () => {
                     <QualityControl />
                   </ProtectedRoute>
                 } />
-                <Route path="/processing" element={
-                  <ProtectedRoute>
-                    <Processing />
-                  </ProtectedRoute>
-                } />
                 <Route path="/inventory" element={
                   <ProtectedRoute>
                     <Inventory />
@@ -76,11 +69,6 @@ const App: React.FC = () => {
                 <Route path="/finance" element={
                   <ProtectedRoute>
                     <Finance />
-                  </ProtectedRoute>
-                } />
-                <Route path="/field-operations" element={
-                  <ProtectedRoute>
-                    <FieldOperations />
                   </ProtectedRoute>
                 } />
                 <Route path="/human-resources" element={
