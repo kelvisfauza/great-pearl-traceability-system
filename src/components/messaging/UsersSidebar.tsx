@@ -44,6 +44,22 @@ const UsersSidebar = ({ users, selectedUserId, onUserSelect, conversations, curr
     return readBy.includes(currentUserId) ? 0 : 1;
   };
 
+  const getLastMessage = (userId: string) => {
+    const conversation = conversations.find(conv => 
+      conv.participantEmployeeIds?.includes(userId) && conv.participants?.length === 2
+    );
+    
+    if (conversation?.lastMessage) {
+      const msg = conversation.lastMessage;
+      const preview = msg.type === 'text' ? msg.content : 
+                     msg.type === 'image' ? '📷 Image' : 
+                     '📎 File';
+      return preview.length > 30 ? preview.substring(0, 30) + '...' : preview;
+    }
+    
+    return 'No messages yet';
+  };
+
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'online': return 'bg-green-500';
@@ -83,6 +99,7 @@ const UsersSidebar = ({ users, selectedUserId, onUserSelect, conversations, curr
             <div className="space-y-1">
               {filteredUsers.map((user) => {
                 const unreadCount = getUnreadCount(user.id);
+                const lastMessage = getLastMessage(user.id);
                 const isSelected = selectedUserId === user.id;
                 
                 return (
@@ -124,6 +141,11 @@ const UsersSidebar = ({ users, selectedUserId, onUserSelect, conversations, curr
                         isSelected ? 'text-blue-600' : 'text-gray-400'
                       }`}>
                         {user.department}
+                      </div>
+                      <div className={`text-xs truncate mt-1 ${
+                        isSelected ? 'text-blue-600' : 'text-gray-500'
+                      }`}>
+                        {lastMessage}
                       </div>
                     </div>
 

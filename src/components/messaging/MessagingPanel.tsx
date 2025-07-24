@@ -88,6 +88,45 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     }
   };
 
+  const handleSendFile = async (file: File, type: 'image' | 'file') => {
+    if (!user?.uid || !employee?.id || !selectedUser) return;
+
+    try {
+      // For now, we'll simulate file upload by creating a message with file info
+      // In a real implementation, you'd upload to storage first
+      const fileUrl = URL.createObjectURL(file);
+      
+      // Find existing conversation
+      const existingConversation = conversations.find(conv => 
+        conv.participantEmployeeIds?.includes(selectedUser.id) && conv.participants?.length === 2
+      );
+
+      if (existingConversation) {
+        // Send to existing conversation
+        await sendMessage({
+          content: `Shared ${type}: ${file.name}`,
+          conversationId: existingConversation.id,
+          type,
+          fileUrl,
+          fileName: file.name
+        });
+      } else {
+        // Create new conversation and send message
+        await sendMessage({
+          content: `Shared ${type}: ${file.name}`,
+          recipientUserId: selectedUser.userId || selectedUser.id,
+          recipientEmployeeId: selectedUser.id,
+          recipientName: selectedUser.name,
+          type,
+          fileUrl,
+          fileName: file.name
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send file:', error);
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -143,6 +182,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
             newMessage={newMessage}
             setNewMessage={setNewMessage}
             onSendMessage={handleSendMessage}
+            onSendFile={handleSendFile}
             onKeyPress={handleKeyPress}
             loadingMessages={loadingMessages}
             currentUserId={user?.uid}

@@ -210,12 +210,15 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
   }, []);
 
   // Send a message
-  const sendMessage = async ({ content, conversationId, recipientUserId, recipientEmployeeId, recipientName }: {
+  const sendMessage = async ({ content, conversationId, recipientUserId, recipientEmployeeId, recipientName, type = 'text', fileUrl, fileName }: {
     content: string;
     conversationId?: string | null;
     recipientUserId?: string;
     recipientEmployeeId?: string;
     recipientName?: string;
+    type?: 'text' | 'image' | 'file';
+    fileUrl?: string;
+    fileName?: string;
   }) => {
     if (!currentUserId || !currentEmployeeId) {
       throw new Error('User not authenticated');
@@ -248,9 +251,11 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
         conversationId: finalConversationId,
         senderId: currentUserId,
         senderName: currentEmployee.name,
-        type: 'text' as const,
+        type,
         createdAt: Timestamp.now(),
-        readBy: [currentUserId] // Mark as read by sender
+        readBy: [currentUserId], // Mark as read by sender
+        ...(fileUrl && { fileUrl }),
+        ...(fileName && { fileName })
       };
 
       const messageRef = await addDoc(collection(db, 'messages'), messageData);
@@ -263,7 +268,11 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
           content,
           senderId: currentUserId,
           senderName: currentEmployee.name,
-          createdAt: messageData.createdAt.toDate().toISOString()
+          createdAt: messageData.createdAt.toDate().toISOString(),
+          readBy: [currentUserId],
+          type,
+          ...(fileUrl && { fileUrl }),
+          ...(fileName && { fileName })
         }
       });
 
