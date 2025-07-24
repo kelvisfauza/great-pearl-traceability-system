@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { WebRTCManager, RingtoneManager } from '@/utils/WebRTCManager';
+import { useCallNotifications } from '@/hooks/useCallNotifications';
 import { supabase } from '@/integrations/supabase/client';
 
 interface VoiceCallButtonProps {
@@ -17,9 +18,15 @@ const VoiceCallButton = ({ selectedUser, currentUserId, onCallStart }: VoiceCall
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
+  const [currentCallId, setCurrentCallId] = useState<string | null>(null);
   const webRTCManager = useRef<WebRTCManager | null>(null);
   const ringtoneManager = useRef<RingtoneManager | null>(null);
   const { toast } = useToast();
+  const { createCall, updateCallStatus } = useCallNotifications({
+    currentUserId,
+    onIncomingCall: () => {},
+    onCallStatusChange: () => {}
+  });
 
   // Initialize managers
   useEffect(() => {
@@ -50,10 +57,29 @@ const VoiceCallButton = ({ selectedUser, currentUserId, onCallStart }: VoiceCall
 
   const startCall = async () => {
     try {
+      if (!currentUserId) {
+        toast({
+          title: "Error",
+          description: "User not authenticated",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setCallState('ringing');
       ringtoneManager.current?.startRinging();
       
       console.log('Initiating call to:', selectedUser.displayName || selectedUser.name);
+      
+      // Create call record in database
+      const callData = await createCall(
+        currentUserId,
+        'You', // We'll get actual user name from context later
+        selectedUser.id,
+        selectedUser.displayName || selectedUser.name
+      );
+      
+      setCurrentCallId(callData.id);
       
       // Initialize WebRTC
       webRTCManager.current = new WebRTCManager(
@@ -63,15 +89,19 @@ const VoiceCallButton = ({ selectedUser, currentUserId, onCallStart }: VoiceCall
           remoteAudio.srcObject = remoteStream;
           remoteAudio.play().catch(console.error);
         },
-        (connectionState) => {
+        async (connectionState) => {
           console.log('Connection state changed:', connectionState);
           if (connectionState === 'connected') {
             setCallState('connected');
             ringtoneManager.current?.stopRinging();
+            if (currentCallId) {
+              await updateCallStatus(currentCallId, 'answered');
+            }
             toast({
               title: "Call Connected",
               description: `Connected to ${selectedUser.displayName || selectedUser.name}`,
             });
+            onCallStart?.();
           } else if (connectionState === 'failed' || connectionState === 'disconnected') {
             endCall();
           }
@@ -81,20 +111,7 @@ const VoiceCallButton = ({ selectedUser, currentUserId, onCallStart }: VoiceCall
       // Initialize call with microphone access
       await webRTCManager.current.initializeCall();
       
-      // Signal call initiation
-      const { data, error } = await supabase.functions.invoke('call-signaling', {
-        body: {
-          action: 'initiate_call',
-          fromUserId: currentUserId,
-          toUserId: selectedUser.id,
-          fromUserName: 'You',
-          toUserName: selectedUser.displayName || selectedUser.name
-        }
-      });
-
-      if (error) throw error;
-
-      // Simulate call connection process
+      // Simulate call connection process (in real app, this would wait for recipient response)
       setTimeout(async () => {
         // Simulate random call outcome
         const isAvailable = Math.random() > 0.3; // 70% chance user is available
@@ -103,10 +120,12 @@ const VoiceCallButton = ({ selectedUser, currentUserId, onCallStart }: VoiceCall
           setCallState('connecting');
           
           // Simulate connection time
-          setTimeout(() => {
+          setTimeout(async () => {
             setCallState('connected');
             ringtoneManager.current?.stopRinging();
-            onCallStart?.();
+            if (currentCallId) {
+              await updateCallStatus(currentCallId, 'answered');
+            }
           }, 2000 + Math.random() * 3000); // 2-5 seconds
         } else {
           // User unavailable
@@ -118,6 +137,9 @@ const VoiceCallButton = ({ selectedUser, currentUserId, onCallStart }: VoiceCall
       console.error('Error starting call:', error);
       ringtoneManager.current?.stopRinging();
       setCallState('idle');
+      if (currentCallId) {
+        await updateCallStatus(currentCallId, 'missed');
+      }
       toast({
         title: "Call Failed",
         description: "Could not start the call. Please check permissions.",
@@ -160,12 +182,20 @@ const VoiceCallButton = ({ selectedUser, currentUserId, onCallStart }: VoiceCall
     }
   };
 
-  const endCall = () => {
+  const endCall = async () => {
     webRTCManager.current?.endCall();
     ringtoneManager.current?.stopRinging();
     ringtoneManager.current?.cleanup();
     
+    // Update call record with duration if call was connected
+    if (currentCallId && callState === 'connected') {
+      await updateCallStatus(currentCallId, 'ended', callDuration);
+    } else if (currentCallId && callState === 'ringing') {
+      await updateCallStatus(currentCallId, 'missed');
+    }
+    
     setCallState('idle');
+    setCurrentCallId(null);
     setCallDuration(0);
     setIsMuted(false);
     
