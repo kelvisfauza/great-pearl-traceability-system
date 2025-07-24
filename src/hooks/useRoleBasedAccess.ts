@@ -72,7 +72,7 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
     }
 
     const isAdminUser = isAdmin();
-    const isManagerUser = hasRole('Manager') || hasRole('Operations Manager');
+    const isManagerUser = hasRole('Manager') || hasRole('Operations Manager') || hasRole('Finance Manager') || hasRole('HR Manager');
     const isSupervisorUser = hasRole('Supervisor');
     
     // Determine role level
@@ -85,18 +85,18 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       // Page access
       canViewDashboard: true, // Everyone can see dashboard
       canViewEmployees: isAdminUser || hasPermission('Human Resources') || isManagerUser,
-      canViewFinance: isAdminUser || hasPermission('Finance') || (isManagerUser && employee.department === 'Finance'),
-      canViewHR: isAdminUser || hasPermission('Human Resources') || (isManagerUser && employee.department === 'Human Resources'),
-      canViewReports: isAdminUser || hasPermission('Reports') || isManagerUser,
+      canViewFinance: isAdminUser || hasPermission('Finance'),
+      canViewHR: isAdminUser || hasPermission('Human Resources'),
+      canViewReports: isAdminUser || hasPermission('Reports'),
       canViewSettings: true, // Everyone can access settings (but with different tabs)
-      canViewQuality: isAdminUser || hasPermission('Quality Control') || employee.department === 'Quality Control' || isManagerUser,
-      canViewProcurement: isAdminUser || hasPermission('Procurement') || employee.department === 'Procurement' || isManagerUser,
-      canViewInventory: isAdminUser || hasPermission('Inventory') || hasPermission('Store Management') || employee.department === 'Inventory' || isManagerUser,
-      canViewProcessing: isAdminUser || hasPermission('Processing') || employee.department === 'Processing' || isManagerUser,
-      canViewSales: isAdminUser || employee.department === 'Sales' || isManagerUser,
-      canViewFieldOps: isAdminUser || employee.department === 'Field Operations' || isManagerUser,
-      canViewLogistics: isAdminUser || employee.department === 'Operations' || isManagerUser,
-      canViewAnalytics: isAdminUser || hasPermission('Data Analysis') || isManagerUser,
+      canViewQuality: isAdminUser || hasPermission('Quality Control'),
+      canViewProcurement: isAdminUser || hasPermission('Procurement'),
+      canViewInventory: isAdminUser || hasPermission('Inventory') || hasPermission('Store Management'),
+      canViewProcessing: isAdminUser || hasPermission('Processing'),
+      canViewSales: isAdminUser || hasPermission('Sales Marketing'),
+      canViewFieldOps: isAdminUser || hasPermission('Field Operations'),
+      canViewLogistics: isAdminUser || hasPermission('Logistics'),
+      canViewAnalytics: isAdminUser || hasPermission('Data Analysis'),
       
       // Action permissions
       canCreateEmployees: isAdminUser || hasPermission('Human Resources'),
@@ -104,11 +104,11 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       canDeleteEmployees: isAdminUser,
       canProcessPayments: isAdminUser || hasPermission('Finance'),
       canApproveRequests: isAdminUser || isManagerUser || isSupervisorUser,
-      canManageInventory: isAdminUser || hasPermission('Inventory') || hasPermission('Store Management') || (isManagerUser && employee.department === 'Inventory'),
+      canManageInventory: isAdminUser || hasPermission('Inventory') || hasPermission('Store Management'),
       canViewSalaries: isAdminUser || hasPermission('Finance') || hasPermission('Human Resources'),
-      canGenerateReports: isAdminUser || hasPermission('Reports') || isManagerUser,
-      canManageQuality: isAdminUser || hasPermission('Quality Control') || (isManagerUser && employee.department === 'Quality Control'),
-      canCreatePurchaseOrders: isAdminUser || hasPermission('Procurement') || (isManagerUser && employee.department === 'Procurement'),
+      canGenerateReports: isAdminUser || hasPermission('Reports'),
+      canManageQuality: isAdminUser || hasPermission('Quality Control'),
+      canCreatePurchaseOrders: isAdminUser || hasPermission('Procurement'),
       
       // Data filtering
       departmentFilter: isAdminUser ? null : employee.department,
