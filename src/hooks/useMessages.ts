@@ -78,24 +78,15 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
     try {
       setLoading(true);
       
-      // First try with orderBy, if it fails, get without ordering
-      let q;
-      try {
-        q = query(
-          collection(db, 'conversations'),
-          where('participants', 'array-contains', currentUserId),
-          orderBy('lastMessageAt', 'desc')
-        );
-      } catch (orderByError) {
-        // Fallback to query without orderBy if the field doesn't exist
-        q = query(
-          collection(db, 'conversations'),
-          where('participants', 'array-contains', currentUserId)
-        );
-      }
+      // Query conversations where current user is a participant
+      const q = query(
+        collection(db, 'conversations'),
+        where('participants', 'array-contains', currentUserId)
+      );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
         console.log('Conversations snapshot received, docs count:', snapshot.docs.length);
+        
         const conversationsData = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
@@ -106,43 +97,27 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
           };
         }) as Conversation[];
         
-        // Sort by lastMessageAt in memory since orderBy might fail
-        conversationsData.sort((a, b) => new Date(b.lastMessageAt || b.createdAt).getTime() - new Date(a.lastMessageAt || a.createdAt).getTime());
+        // Filter to only include conversations where current user is actually a participant
+        const userConversations = conversationsData.filter(conv => 
+          conv.participants && conv.participants.includes(currentUserId)
+        );
         
-        console.log('Setting conversations:', conversationsData.length);
-        setConversations(conversationsData);
+        // Sort by lastMessageAt in memory
+        userConversations.sort((a, b) => new Date(b.lastMessageAt || b.createdAt).getTime() - new Date(a.lastMessageAt || a.createdAt).getTime());
+        
+        console.log('Setting filtered conversations for user:', userConversations.length);
+        setConversations(userConversations);
         setLoading(false);
       }, (error) => {
         console.error('Error in conversations listener:', error);
-        // If the query fails, try a simpler query
-        const simpleQuery = query(
-          collection(db, 'conversations'),
-          where('participants', 'array-contains', currentUserId)
-        );
-        
-        const simpleUnsubscribe = onSnapshot(simpleQuery, (snapshot) => {
-          const conversationsData = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
-              lastMessageAt: data.lastMessageAt?.toDate?.()?.toISOString() || data.lastMessageAt || new Date().toISOString(),
-            };
-          }) as Conversation[];
-          
-          setConversations(conversationsData);
-          setLoading(false);
-        });
-        
-        return simpleUnsubscribe;
+        setConversations([]);
+        setLoading(false);
       });
 
       return unsubscribe;
     } catch (error) {
       console.error('Error fetching conversations:', error);
       setLoading(false);
-      // Return empty conversations instead of throwing
       setConversations([]);
       return undefined;
     }
@@ -154,14 +129,17 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
 
     try {
       setLoadingMessages(true);
+      console.log('Fetching messages for conversation:', conversationId);
       
+      // Use a simpler query to avoid index requirements
       const q = query(
         collection(db, 'messages'),
-        where('conversationId', '==', conversationId),
-        orderBy('createdAt', 'asc')
+        where('conversationId', '==', conversationId)
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
+        console.log('Messages snapshot received, docs count:', snapshot.docs.length);
+        
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
             const messageData = { 
@@ -170,15 +148,18 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
               createdAt: change.doc.data().createdAt?.toDate?.()?.toISOString() || change.doc.data().createdAt,
             } as Message;
             
-            setMessages(prev => {
-              // Check if message already exists
-              if (prev.find(msg => msg.id === messageData.id)) {
-                return prev;
-              }
-              // Add new message in correct position
-              const newMessages = [...prev, messageData];
-              return newMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-            });
+            // Only process messages for the current conversation
+            if (messageData.conversationId === conversationId) {
+              setMessages(prev => {
+                // Check if message already exists
+                if (prev.find(msg => msg.id === messageData.id)) {
+                  return prev;
+                }
+                // Add new message in correct position
+                const newMessages = [...prev, messageData];
+                return newMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+              });
+            }
           } else if (change.type === 'modified') {
             const messageData = { 
               id: change.doc.id, 
@@ -186,13 +167,16 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
               createdAt: change.doc.data().createdAt?.toDate?.()?.toISOString() || change.doc.data().createdAt,
             } as Message;
             
-            setMessages(prev => prev.map(msg => 
-              msg.id === messageData.id ? messageData : msg
-            ));
+            if (messageData.conversationId === conversationId) {
+              setMessages(prev => prev.map(msg => 
+                msg.id === messageData.id ? messageData : msg
+              ));
+            }
           } else if (change.type === 'removed') {
             setMessages(prev => prev.filter(msg => msg.id !== change.doc.id));
           }
         });
+        
         setLoadingMessages(false);
       }, (error) => {
         console.error('Error fetching messages:', error);
@@ -427,6 +411,7 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
     sendMessage,
     createConversation,
     markAsRead,
-    deleteConversation
+    deleteConversation,
+    setMessages
   };
 };
