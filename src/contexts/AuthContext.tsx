@@ -61,7 +61,7 @@ const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
 // Main admin account that bypasses employee record checks
 const MAIN_ADMIN_EMAIL = 'kelvifauza@gmail.com';
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
