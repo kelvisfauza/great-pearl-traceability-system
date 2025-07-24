@@ -179,6 +179,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
             conversations={conversations}
             currentUserId={user?.uid}
             onlineUsers={onlineUsers}
+            onCreateNewChat={handleUserSelect}
           />
 
           {/* Right Area - Chat */}

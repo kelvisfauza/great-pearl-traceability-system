@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Search, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Search, Users, Plus, MessageCircle } from 'lucide-react';
 
 interface User {
   id: string;
@@ -21,10 +23,12 @@ interface UsersSidebarProps {
   conversations: any[];
   currentUserId?: string;
   onlineUsers: string[];
+  onCreateNewChat?: (user: User) => void;
 }
 
-const UsersSidebar = ({ users, selectedUserId, onUserSelect, conversations, currentUserId, onlineUsers }: UsersSidebarProps) => {
-  const [searchQuery, setSearchQuery] = React.useState('');
+const UsersSidebar = ({ users, selectedUserId, onUserSelect, conversations, currentUserId, onlineUsers, onCreateNewChat }: UsersSidebarProps) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
 
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -70,15 +74,78 @@ const UsersSidebar = ({ users, selectedUserId, onUserSelect, conversations, curr
     }
   };
 
+  const handleNewChatSelect = (user: User) => {
+    setIsNewChatOpen(false);
+    if (onCreateNewChat) {
+      onCreateNewChat(user);
+    } else {
+      onUserSelect(user);
+    }
+  };
+
   return (
     <div className="w-80 border-r border-gray-200 bg-gray-50 flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 bg-white">
-        <h2 className="font-semibold text-lg mb-3">Colleagues</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-lg">Chats</h2>
+          <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Start New Chat</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search colleagues..."
+                    className="pl-10"
+                  />
+                </div>
+                <ScrollArea className="max-h-60">
+                  <div className="space-y-2">
+                    {users.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center space-x-3 p-2 rounded-lg cursor-pointer hover:bg-gray-100"
+                        onClick={() => handleNewChatSelect(user)}
+                      >
+                        <div className="relative">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="text-xs">
+                              {(user.displayName || user.name).substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          {onlineUsers.includes(user.id) && (
+                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {user.displayName || user.name}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {user.position}
+                          </p>
+                        </div>
+                        <MessageCircle className="h-4 w-4 text-gray-400" />
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search colleagues..."
+            placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"

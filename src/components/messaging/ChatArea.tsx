@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Send, Paperclip, Image, Check, CheckCheck, MessageSquare } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import VoiceCallButton from './VoiceCallButton';
 
 interface Message {
   id: string;
@@ -89,13 +90,21 @@ const ChatArea = ({
         <div className="flex items-center space-x-3">
           <Avatar className="h-10 w-10">
             <AvatarFallback className="bg-blue-500 text-white font-medium">
-              {selectedUser.name.substring(0, 2).toUpperCase()}
+              {(selectedUser.displayName || selectedUser.name).substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div>
             <h2 className="font-semibold text-gray-900">{selectedUser.displayName || selectedUser.name}</h2>
             <p className="text-sm text-gray-500">{selectedUser.position} • {selectedUser.department}</p>
           </div>
+        </div>
+        
+        {/* Call buttons */}
+        <div className="flex items-center space-x-2">
+          <VoiceCallButton 
+            selectedUser={selectedUser}
+            onCallStart={() => console.log('Starting voice call with', selectedUser.name)}
+          />
         </div>
       </div>
 
