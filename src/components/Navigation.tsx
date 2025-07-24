@@ -31,7 +31,6 @@ const Navigation = () => {
         { name: "Dashboard", icon: BarChart3, path: "/" },
         { name: "Procurement", icon: Package, path: "/procurement" },
         { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control" },
-        { name: "Processing", icon: Coffee, path: "/processing" },
         { name: "Store Management", icon: Shield, path: "/store" },
         { name: "Inventory", icon: Package, path: "/inventory" },
       ]
@@ -41,7 +40,6 @@ const Navigation = () => {
       items: [
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing" },
         { name: "Finance", icon: DollarSign, path: "/finance" },
-        { name: "Field Operations", icon: MapPin, path: "/field-operations" },
         { name: "Human Resources", icon: Users, path: "/human-resources" },
         { name: "Data Analyst", icon: LineChart, path: "/data-analyst" },
       ]
