@@ -101,19 +101,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!targetUserId) return null;
 
     try {
+      console.log('Fetching employee data for user:', targetUserId);
+      
+      // First try to get by document ID
       const employeeDoc = await getDoc(doc(db, 'employees', targetUserId));
       if (employeeDoc.exists()) {
+        console.log('Found employee by ID:', employeeDoc.data());
         return { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
       }
 
+      // If not found by ID, try to find by email
       const employeesQuery = query(collection(db, 'employees'), where('email', '==', user?.email));
       const employeeSnapshot = await getDocs(employeesQuery);
 
       if (!employeeSnapshot.empty) {
         const docSnap = employeeSnapshot.docs[0];
         const employeeData = { id: docSnap.id, ...docSnap.data() } as Employee;
+        console.log('Found employee by email:', employeeData);
 
+        // Update document with correct ID if needed
         if (employeeData.id !== targetUserId) {
+          console.log('Updating employee document with correct ID');
           await setDoc(doc(db, 'employees', targetUserId), {
             ...employeeData,
             id: targetUserId,
@@ -125,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return employeeData;
       }
 
+      console.log('No employee record found');
       return null;
     } catch (error) {
       console.error('Error in fetchEmployeeData:', error);
@@ -135,10 +144,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log('Attempting to sign in with email:', email);
+      
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Firebase sign in successful:', userCredential.user.uid);
 
       const employeeData = await fetchEmployeeData(userCredential.user.uid);
       if (!employeeData) {
+        console.error('No employee record found for user:', userCredential.user.uid);
         await firebaseSignOut(auth);
         toast({
           title: "Access Denied",
@@ -148,6 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
+      console.log('Employee data found:', employeeData);
       setUser(userCredential.user);
       setEmployee(employeeData);
 
@@ -157,14 +171,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       toast({
         title: "Login Successful",
-        description: "Welcome back!"
+        description: `Welcome back, ${employeeData.name}!`
       });
 
     } catch (error: any) {
       console.error('Sign in error:', error);
+      
+      let errorMessage = "Failed to sign in";
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = "No account found with this email address";
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = "Incorrect password";
+      } else if (error.code === 'auth/invalid-credential') {
+        errorMessage = "Invalid email or password";
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = "This account has been disabled";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Too many failed attempts. Please try again later";
+      }
+      
       toast({
-        title: "Error",
-        description: error.message || "Failed to sign in",
+        title: "Login Failed",
+        description: errorMessage,
         variant: "destructive"
       });
       throw error;
@@ -242,6 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('Auth state changed:', user ? user.uid : 'No user');
       setUser(user);
       setLoading(false);
       if (!user) {

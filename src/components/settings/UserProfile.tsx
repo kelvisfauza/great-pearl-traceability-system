@@ -46,18 +46,30 @@ const UserProfile = () => {
       return;
     }
 
+    if (!formData.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       console.log('Updating employee profile:', employee.id, formData);
       
-      // Update in Firebase
-      await updateDoc(doc(db, 'employees', employee.id), {
-        name: formData.name,
-        phone: formData.phone,
-        address: formData.address,
-        emergency_contact: formData.emergency_contact,
+      const updateData = {
+        name: formData.name.trim(),
+        phone: formData.phone?.trim() || "",
+        address: formData.address?.trim() || "",
+        emergency_contact: formData.emergency_contact?.trim() || "",
         updated_at: new Date().toISOString()
-      });
+      };
+
+      // Update in Firebase
+      await updateDoc(doc(db, 'employees', employee.id), updateData);
+      console.log('Profile updated successfully in Firebase');
 
       // Refresh employee data to get updated information
       await fetchEmployeeData();
@@ -125,9 +137,21 @@ const UserProfile = () => {
     }
   };
 
+  const handleCancel = () => {
+    // Reset form to original values
+    setFormData({
+      name: employee?.name || '',
+      phone: employee?.phone || '',
+      address: employee?.address || '',
+      emergency_contact: employee?.emergency_contact || ''
+    });
+    setIsEditing(false);
+  };
+
   // Update form data when employee data changes
   useEffect(() => {
     if (employee) {
+      console.log('Setting form data from employee:', employee);
       setFormData({
         name: employee.name || '',
         phone: employee.phone || '',
@@ -214,7 +238,7 @@ const UserProfile = () => {
           </div>
           <Button 
             variant={isEditing ? "outline" : "default"} 
-            onClick={() => isEditing ? setIsEditing(false) : setIsEditing(true)}
+            onClick={() => isEditing ? handleCancel() : setIsEditing(true)}
             disabled={isSaving}
           >
             {isEditing ? "Cancel" : "Edit"}
@@ -265,7 +289,7 @@ const UserProfile = () => {
               <Button onClick={handleSaveProfile} disabled={isSaving}>
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
-              <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
+              <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
                 Cancel
               </Button>
             </div>
