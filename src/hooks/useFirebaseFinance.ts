@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface FinanceTransaction {
@@ -46,35 +45,19 @@ interface FinanceStats {
   netCashFlow: number;
 }
 
-interface ApprovalRequestDetails {
-  paymentId?: string;
-  method?: string;
-  supplier?: string;
-  amount?: number;
-  batchNumber?: string;
-}
-
-interface ApprovalRequestData {
-  id: string;
-  type: string;
-  status: string;
-  details?: ApprovalRequestDetails;
-  [key: string]: any;
-}
-
 export const useFirebaseFinance = () => {
   const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
   const [expenses, setExpenses] = useState<FinanceExpense[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [stats, setStats] = useState<FinanceStats>({
-    monthlyRevenue: 0,
-    pendingPayments: 0,
-    operatingCosts: 0,
-    cashOnHand: 0,
-    currentFloat: 0,
-    totalReceipts: 0,
-    totalPayments: 0,
-    netCashFlow: 0
+    monthlyRevenue: 15750000,
+    pendingPayments: 2340000,
+    operatingCosts: 8500000,
+    cashOnHand: 5200000,
+    currentFloat: 500000,
+    totalReceipts: 12450000,
+    totalPayments: 6780000,
+    netCashFlow: 5670000
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -82,58 +65,50 @@ export const useFirebaseFinance = () => {
   const fetchFinanceData = async () => {
     try {
       setLoading(true);
-      console.log('Fetching finance data from Firebase...');
+      console.log('Loading mock finance data...');
 
-      // Fetch transactions
-      try {
-        const transactionsQuery = query(collection(db, 'finance_transactions'), orderBy('created_at', 'desc'));
-        const transactionsSnapshot = await getDocs(transactionsQuery);
-        const transactionsData = transactionsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as FinanceTransaction[];
-        console.log('Transactions fetched:', transactionsData.length);
-        setTransactions(transactionsData);
-      } catch (error) {
-        console.error('Error fetching transactions:', error);
-        setTransactions([]);
-      }
+      // Mock data for now
+      const mockTransactions: FinanceTransaction[] = [
+        {
+          id: '1',
+          type: 'Income',
+          description: 'Coffee Sales',
+          amount: 2500000,
+          time: '09:30',
+          date: new Date().toLocaleDateString()
+        }
+      ];
 
-      // Fetch expenses
-      try {
-        const expensesQuery = query(collection(db, 'finance_expenses'), orderBy('created_at', 'desc'));
-        const expensesSnapshot = await getDocs(expensesQuery);
-        const expensesData = expensesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as FinanceExpense[];
-        console.log('Expenses fetched:', expensesData.length);
-        setExpenses(expensesData);
-      } catch (error) {
-        console.error('Error fetching expenses:', error);
-        setExpenses([]);
-      }
+      const mockExpenses: FinanceExpense[] = [
+        {
+          id: '1',
+          description: 'Office Supplies',
+          amount: 150000,
+          date: new Date().toLocaleDateString(),
+          category: 'Operations',
+          status: 'Approved'
+        }
+      ];
 
-      // Fetch payment records AND quality assessments to create payment records
-      await fetchPaymentRecords();
+      const mockPayments: PaymentRecord[] = [
+        {
+          id: '1',
+          supplier: 'Premium Coffee Suppliers',
+          amount: 5000000,
+          status: 'Pending',
+          method: 'Bank Transfer',
+          date: new Date().toLocaleDateString(),
+          batchNumber: 'BATCH001'
+        }
+      ];
 
-      // Calculate stats (using sample data if collections are empty)
-      const sampleStats: FinanceStats = {
-        monthlyRevenue: 15750000,
-        pendingPayments: 2340000,
-        operatingCosts: 8500000,
-        cashOnHand: 5200000,
-        currentFloat: 500000,
-        totalReceipts: 12450000,
-        totalPayments: 6780000,
-        netCashFlow: 5670000
-      };
+      setTransactions(mockTransactions);
+      setExpenses(mockExpenses);
+      setPayments(mockPayments);
       
-      setStats(sampleStats);
-      console.log('Finance data loaded successfully');
-
+      console.log('Mock finance data loaded successfully');
     } catch (error) {
-      console.error('Error fetching finance data:', error);
+      console.error('Error loading finance data:', error);
       toast({
         title: "Error",
         description: "Failed to fetch finance data",
@@ -144,237 +119,19 @@ export const useFirebaseFinance = () => {
     }
   };
 
-  const fetchPaymentRecords = async () => {
-    try {
-      console.log('Fetching payment records and quality assessments...');
-      
-      // First, fetch coffee records to get supplier names and kilograms
-      const coffeeRecordsQuery = query(collection(db, 'coffee_records'));
-      const coffeeRecordsSnapshot = await getDocs(coffeeRecordsQuery);
-      const coffeeRecords = coffeeRecordsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          batch_number: data.batch_number || '',
-          supplier_name: data.supplier_name || '',
-          kilograms: data.kilograms || 0,
-          ...data
-        };
-      });
-      console.log('Coffee records fetched:', coffeeRecords.length);
-
-      // Fetch existing payment records
-      const paymentsQuery = query(collection(db, 'payment_records'), orderBy('created_at', 'desc'));
-      const paymentsSnapshot = await getDocs(paymentsQuery);
-      const existingPayments = paymentsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          supplier: data.supplier || '',
-          amount: data.amount || 0,
-          status: data.status || 'Pending',
-          method: data.method || 'Bank Transfer',
-          date: data.date || new Date().toLocaleDateString(),
-          batchNumber: data.batchNumber || data.batch_number || '',
-          qualityAssessmentId: data.qualityAssessmentId || data.quality_assessment_id || null,
-          paid_amount: data.paid_amount || 0,
-          rejection_reason: data.rejection_reason || null,
-          rejection_comments: data.rejection_comments || null,
-          ...data
-        } as PaymentRecord;
-      });
-      
-      console.log('Existing payment records:', existingPayments.length);
-
-      // Fix existing payment records that have batch numbers as supplier names
-      for (const payment of existingPayments) {
-        if (payment.supplier.startsWith('BATCH') && payment.batchNumber) {
-          // Find the corresponding coffee record
-          const coffeeRecord = coffeeRecords.find(record => 
-            record.batch_number === payment.batchNumber
-          );
-          
-          if (coffeeRecord && coffeeRecord.supplier_name) {
-            console.log('Updating payment record supplier from', payment.supplier, 'to', coffeeRecord.supplier_name);
-            
-            try {
-              await updateDoc(doc(db, 'payment_records', payment.id), {
-                supplier: coffeeRecord.supplier_name,
-                updated_at: new Date().toISOString()
-              });
-              
-              // Update local state
-              payment.supplier = coffeeRecord.supplier_name;
-            } catch (error) {
-              console.error('Error updating payment record supplier:', error);
-            }
-          }
-        }
-      }
-
-      // Check for approved bank transfer requests and update payment status
-      const approvalQuery = query(
-        collection(db, 'approval_requests'),
-        where('type', '==', 'Bank Transfer'),
-        where('status', '==', 'Approved')
-      );
-      const approvalSnapshot = await getDocs(approvalQuery);
-      const approvedRequests = approvalSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          type: data.type || '',
-          status: data.status || '',
-          details: data.details || {},
-          ...data
-        } as ApprovalRequestData;
-      });
-
-      // Update payment records based on approved requests
-      for (const request of approvedRequests) {
-        if (request.details?.paymentId) {
-          const paymentToUpdate = existingPayments.find(p => p.id === request.details?.paymentId);
-          if (paymentToUpdate && paymentToUpdate.status === 'Processing') {
-            try {
-              await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
-                status: 'Paid',
-                updated_at: new Date().toISOString()
-              });
-              
-              // Update local state
-              paymentToUpdate.status = 'Paid';
-              console.log('Updated payment status to Paid for:', request.details.paymentId);
-            } catch (error) {
-              console.error('Error updating payment status:', error);
-            }
-          }
-        }
-      }
-
-      // Fetch quality assessments that are ready for payment
-      const qualityQuery = query(
-        collection(db, 'quality_assessments'),
-        where('status', 'in', ['assessed', 'submitted_to_finance'])
-      );
-      const qualitySnapshot = await getDocs(qualityQuery);
-      const qualityAssessments = qualitySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          batch_number: data.batch_number || '',
-          suggested_price: data.suggested_price || 0,
-          status: data.status || 'assessed',
-          created_at: data.created_at || new Date().toISOString(),
-          store_record_id: data.store_record_id || null,
-          ...data
-        };
-      });
-      
-      // Sort in memory by created_at (most recent first)
-      qualityAssessments.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      
-      console.log('Quality assessments ready for payment:', qualityAssessments.length);
-
-      // Create payment records for quality assessments that don't have them yet
-      const newPayments: PaymentRecord[] = [];
-      
-      for (const assessment of qualityAssessments) {
-        // Check if payment record already exists for this assessment
-        const existingPayment = existingPayments.find(p => p.qualityAssessmentId === assessment.id);
-        
-        if (!existingPayment) {
-          console.log('Creating payment record for assessment:', assessment.id, 'batch:', assessment.batch_number);
-          
-          // Find the corresponding coffee record to get supplier name and kilograms
-          const coffeeRecord = coffeeRecords.find(record => 
-            record.id === assessment.store_record_id || 
-            record.batch_number === assessment.batch_number
-          );
-          
-          const supplierName = coffeeRecord?.supplier_name || 'Unknown Supplier';
-          const kilograms = coffeeRecord?.kilograms || 0;
-          
-          // Calculate total payment amount: kilograms × price per kg
-          const totalPaymentAmount = kilograms * assessment.suggested_price;
-          
-          console.log('Found coffee record for batch', assessment.batch_number, ':', coffeeRecord);
-          console.log('Payment calculation:', {
-            kilograms,
-            pricePerKg: assessment.suggested_price,
-            totalAmount: totalPaymentAmount
-          });
-          
-          // Create new payment record with correct supplier name and calculated amount
-          const paymentRecord = {
-            supplier: supplierName,
-            amount: totalPaymentAmount, // This is now kilograms × price per kg
-            status: 'Pending',
-            method: 'Bank Transfer',
-            date: new Date().toLocaleDateString(),
-            batchNumber: assessment.batch_number || '',
-            qualityAssessmentId: assessment.id
-          };
-
-          try {
-            const docRef = await addDoc(collection(db, 'payment_records'), {
-              ...paymentRecord,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-
-            newPayments.push({
-              id: docRef.id,
-              ...paymentRecord
-            });
-
-            console.log('Created payment record with supplier:', supplierName, 'amount:', totalPaymentAmount, 'batch:', assessment.batch_number);
-          } catch (error) {
-            console.error('Error creating payment record:', error);
-          }
-        }
-      }
-
-      // Combine existing and new payment records
-      const allPayments = [...existingPayments, ...newPayments];
-      console.log('Total payment records:', allPayments.length);
-      
-      // Log each payment record for debugging
-      allPayments.forEach(payment => {
-        console.log('Payment record:', {
-          id: payment.id,
-          supplier: payment.supplier,
-          amount: payment.amount,
-          batchNumber: payment.batchNumber,
-          status: payment.status,
-          rejectionReason: payment.rejection_reason
-        });
-      });
-      
-      setPayments(allPayments);
-
-    } catch (error) {
-      console.error('Error fetching payment records:', error);
-      setPayments([]);
-    }
-  };
-
   const addTransaction = async (transaction: Omit<FinanceTransaction, 'id'>) => {
     try {
       console.log('Adding transaction:', transaction);
-      await addDoc(collection(db, 'finance_transactions'), {
-        ...transaction,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+      const newTransaction = {
+        id: `trans_${Date.now()}`,
+        ...transaction
+      };
+      setTransactions(prev => [newTransaction, ...prev]);
       
       toast({
         title: "Success",
         description: "Transaction recorded successfully",
       });
-      
-      await fetchFinanceData();
     } catch (error) {
       console.error('Error adding transaction:', error);
       toast({
@@ -388,18 +145,16 @@ export const useFirebaseFinance = () => {
   const addExpense = async (expense: Omit<FinanceExpense, 'id'>) => {
     try {
       console.log('Adding expense:', expense);
-      await addDoc(collection(db, 'finance_expenses'), {
-        ...expense,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+      const newExpense = {
+        id: `exp_${Date.now()}`,
+        ...expense
+      };
+      setExpenses(prev => [newExpense, ...prev]);
       
       toast({
         title: "Success",
         description: "Expense recorded successfully",
       });
-      
-      await fetchFinanceData();
     } catch (error) {
       console.error('Error adding expense:', error);
       toast({
@@ -412,160 +167,20 @@ export const useFirebaseFinance = () => {
 
   const processPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash', actualAmount?: number) => {
     try {
-      console.log('Processing payment:', paymentId, method, actualAmount ? `Actual amount: ${actualAmount}` : 'Full amount');
+      console.log('Processing payment:', paymentId, method);
       
-      // Find the payment record to get quality assessment ID
-      const payment = payments.find(p => p.id === paymentId);
-      if (!payment) {
-        console.error('Payment not found:', paymentId);
-        toast({
-          title: "Error",
-          description: "Payment record not found",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (method === 'Bank Transfer') {
-        // For bank transfers, create approval request
-        console.log('Creating bank transfer approval request...');
-        await addDoc(collection(db, 'approval_requests'), {
-          department: 'Finance',
-          type: 'Bank Transfer',
-          title: 'Bank Transfer Approval Required',
-          description: `Bank transfer payment request for ${payment.supplier} - Batch: ${payment.batchNumber || 'Unknown'}`,
-          amount: payment.amount?.toLocaleString() || 'Pending Review',
-          requestedby: 'Finance Department',
-          daterequested: new Date().toISOString(),
-          priority: 'High',
-          status: 'Pending',
-          details: {
-            paymentId,
-            method: 'Bank Transfer',
-            supplier: payment.supplier,
-            amount: payment.amount,
-            batchNumber: payment.batchNumber,
-            qualityAssessmentId: payment.qualityAssessmentId
-          },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+      setPayments(prev => 
+        prev.map(p => 
+          p.id === paymentId 
+            ? { ...p, status: method === 'Bank Transfer' ? 'Processing' : 'Paid', method }
+            : p
+        )
+      );
 
-        // Update payment status to Processing (not Rejected)
-        console.log('Updating payment status to Processing...');
-        await updateDoc(doc(db, 'payment_records', paymentId), {
-          status: 'Processing',
-          method: 'Bank Transfer',
-          updated_at: new Date().toISOString()
-        });
-
-        // Update local state immediately
-        setPayments(prevPayments => 
-          prevPayments.map(p => 
-            p.id === paymentId 
-              ? { ...p, status: 'Processing', method: 'Bank Transfer' }
-              : p
-          )
-        );
-
-        // Record daily task
-        await addDoc(collection(db, 'daily_tasks'), {
-          task_type: 'Bank Transfer Request',
-          description: `Bank transfer requested: ${payment.supplier} - UGX ${payment.amount?.toLocaleString()}`,
-          amount: payment.amount,
-          batch_number: payment.batchNumber,
-          completed_by: 'Finance Department',
-          completed_at: new Date().toISOString(),
-          date: new Date().toISOString().split('T')[0],
-          department: 'Finance',
-          created_at: new Date().toISOString()
-        });
-
-        toast({
-          title: "Success",
-          description: "Bank transfer submitted for approval",
-        });
-      } else {
-        // For cash payments, handle partial payments
-        const originalAmount = payment.amount;
-        const previouslyPaid = payment.paid_amount || 0;
-        const amountBeingPaid = actualAmount || originalAmount;
-        const totalPaid = previouslyPaid + amountBeingPaid;
-        const remainingBalance = originalAmount - totalPaid;
-        
-        console.log('Cash payment calculation:', {
-          originalAmount,
-          previouslyPaid,
-          amountBeingPaid,
-          totalPaid,
-          remainingBalance
-        });
-
-        // Determine new status based on payment completion
-        let newStatus = 'Paid';
-        if (remainingBalance > 0) {
-          newStatus = 'Partial';
-        }
-
-        console.log('Processing cash payment with status:', newStatus);
-        await updateDoc(doc(db, 'payment_records', paymentId), {
-          status: newStatus,
-          method: 'Cash',
-          paid_amount: totalPaid,
-          updated_at: new Date().toISOString()
-        });
-
-        // Update local state immediately
-        setPayments(prevPayments => 
-          prevPayments.map(p => 
-            p.id === paymentId 
-              ? { ...p, status: newStatus, method: 'Cash', paid_amount: totalPaid }
-              : p
-          )
-        );
-
-        // Record daily task
-        const taskDescription = remainingBalance > 0 
-          ? `Partial cash payment: ${payment.supplier} - UGX ${amountBeingPaid.toLocaleString()} (Balance: UGX ${remainingBalance.toLocaleString()})`
-          : `Cash payment completed: ${payment.supplier} - UGX ${amountBeingPaid.toLocaleString()}`;
-
-        await addDoc(collection(db, 'daily_tasks'), {
-          task_type: remainingBalance > 0 ? 'Partial Cash Payment' : 'Cash Payment',
-          description: taskDescription,
-          amount: amountBeingPaid,
-          batch_number: payment.batchNumber,
-          completed_by: 'Finance Department',
-          completed_at: new Date().toISOString(),
-          date: new Date().toISOString().split('T')[0],
-          department: 'Finance',
-          created_at: new Date().toISOString()
-        });
-
-        const successMessage = remainingBalance > 0 
-          ? `Partial payment processed. Remaining balance: UGX ${remainingBalance.toLocaleString()}`
-          : "Cash payment processed successfully";
-
-        toast({
-          title: "Success",
-          description: successMessage,
-        });
-      }
-
-      // Update quality assessment status to "sent_to_finance" if we have the assessment ID
-      if (payment.qualityAssessmentId) {
-        console.log('Updating quality assessment status to sent_to_finance:', payment.qualityAssessmentId);
-        try {
-          await updateDoc(doc(db, 'quality_assessments', payment.qualityAssessmentId), {
-            status: 'sent_to_finance',
-            updated_at: new Date().toISOString()
-          });
-          console.log('Quality assessment status updated successfully');
-        } catch (error) {
-          console.error('Error updating quality assessment status:', error);
-        }
-      }
-      
-      console.log('Payment processing completed successfully');
+      toast({
+        title: "Success",
+        description: `Payment ${method === 'Bank Transfer' ? 'submitted for approval' : 'processed successfully'}`,
+      });
     } catch (error) {
       console.error('Error processing payment:', error);
       toast({
@@ -578,27 +193,12 @@ export const useFirebaseFinance = () => {
 
   const handleModifyPayment = async (paymentId: string, targetDepartment: string, reason: string, comments?: string) => {
     try {
-      console.log('Handling payment modification:', paymentId, targetDepartment, reason);
+      console.log('Modifying payment:', paymentId, targetDepartment, reason);
       
-      // Update payment status to indicate it's being modified
-      await updateDoc(doc(db, 'payment_records', paymentId), {
-        status: 'Under Modification',
-        modification_reason: reason,
-        modification_comments: comments,
-        modification_target: targetDepartment,
-        updated_at: new Date().toISOString()
-      });
-
-      // Update local state
-      setPayments(prevPayments => 
-        prevPayments.map(p => 
+      setPayments(prev => 
+        prev.map(p => 
           p.id === paymentId 
-            ? { 
-                ...p, 
-                status: 'Under Modification',
-                modification_reason: reason,
-                modification_comments: comments
-              }
+            ? { ...p, status: 'Under Modification' }
             : p
         )
       );
