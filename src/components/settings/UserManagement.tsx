@@ -26,23 +26,44 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
 
   const handleAddUser = async (employeeData: any) => {
     try {
-      await onEmployeeAdded(employeeData);
+      console.log('UserManagement handleAddUser called with:', employeeData);
+      
+      // Ensure permissions is an array
+      const processedData = {
+        ...employeeData,
+        permissions: Array.isArray(employeeData.permissions) ? employeeData.permissions : []
+      };
+      
+      await onEmployeeAdded(processedData);
       setIsAddModalOpen(false);
+      
       toast({
         title: "Success",
-        description: `User ${employeeData.name} created successfully with login credentials`
+        description: `User ${employeeData.name} created successfully`
       });
+      
+      await refetch();
     } catch (error: any) {
       console.error('Error creating user:', error);
       
       let errorMessage = "Failed to create user. Please try again.";
       
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = `A user with the email "${employeeData.email}" already exists. Please use a different email address.`;
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = "Password is too weak. Please use a stronger password.";
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = "Invalid email address format.";
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.code) {
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorMessage = `A user with the email "${employeeData.email}" already exists.`;
+            break;
+          case 'auth/weak-password':
+            errorMessage = "Password is too weak. Please use a stronger password.";
+            break;
+          case 'auth/invalid-email':
+            errorMessage = "Invalid email address format.";
+            break;
+          default:
+            errorMessage = `Error: ${error.code}`;
+        }
       }
       
       toast({
@@ -57,7 +78,15 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     if (!selectedEmployee) return;
     
     try {
-      await onEmployeeUpdated(selectedEmployee.id, employeeData);
+      console.log('UserManagement handleEditUser called with:', employeeData);
+      
+      // Ensure permissions is an array
+      const processedData = {
+        ...employeeData,
+        permissions: Array.isArray(employeeData.permissions) ? employeeData.permissions : []
+      };
+      
+      await onEmployeeUpdated(selectedEmployee.id, processedData);
       setIsEditModalOpen(false);
       setSelectedEmployee(null);
       
@@ -78,7 +107,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
   };
 
   const handleDeleteUser = async (employee: Employee) => {
-    if (window.confirm(`Are you sure you want to delete ${employee.name}? This will also remove their login access.`)) {
+    if (window.confirm(`Are you sure you want to delete ${employee.name}? This action cannot be undone.`)) {
       try {
         await onEmployeeDeleted(employee.id);
         toast({
@@ -111,7 +140,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
               <Shield className="h-5 w-5" />
               User Management
             </CardTitle>
-            <CardDescription>Create and manage user accounts with login credentials</CardDescription>
+            <CardDescription>Create and manage user accounts with system permissions</CardDescription>
           </div>
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
             <DialogTrigger asChild>
@@ -124,7 +153,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
               <DialogHeader>
                 <DialogTitle>Add New User</DialogTitle>
                 <DialogDescription>
-                  Create a new user account with login credentials and system permissions
+                  Create a new user account with system permissions
                 </DialogDescription>
               </DialogHeader>
               <AddUserForm onSubmit={handleAddUser} />

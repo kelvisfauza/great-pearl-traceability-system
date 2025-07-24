@@ -9,13 +9,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Key } from "lucide-react";
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
 const userFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
   phone: z.string().optional(),
   position: z.string().min(2, "Position is required"),
   department: z.string().min(2, "Department is required"),
@@ -49,7 +46,6 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
     defaultValues: {
       name: "",
       email: "",
-      password: "",
       phone: "",
       position: "",
       department: "",
@@ -64,14 +60,17 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
     
     setIsCreatingUser(true);
     try {
-      console.log('Creating Firebase user account for:', values.email);
+      console.log('Creating user with data:', values);
       
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      console.log('Firebase user created:', userCredential.user.uid);
-
       const employeeData = {
-        ...values,
-        id: userCredential.user.uid,
+        name: values.name.trim(),
+        email: values.email.toLowerCase().trim(),
+        phone: values.phone?.trim() || "",
+        position: values.position.trim(),
+        department: values.department.trim(),
+        role: values.role,
+        salary: Number(values.salary),
+        permissions: Array.isArray(values.permissions) ? values.permissions : [],
         status: 'Active',
         join_date: new Date().toISOString(),
       };
@@ -79,6 +78,7 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
       await onSubmit(employeeData);
       form.reset();
     } catch (error) {
+      console.error('Error in form submission:', error);
       throw error;
     } finally {
       setIsCreatingUser(false);
@@ -120,19 +120,6 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <Input type="password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
             name="phone"
             render={({ field }) => (
               <FormItem>
@@ -144,9 +131,6 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
               </FormItem>
             )}
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="position"
@@ -160,6 +144,9 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
               </FormItem>
             )}
           />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="department"
@@ -169,7 +156,7 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -182,9 +169,6 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
               </FormItem>
             )}
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="role"
@@ -194,7 +178,7 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -209,6 +193,9 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
               </FormItem>
             )}
           />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
           <FormField
             control={form.control}
             name="salary"
@@ -277,7 +264,7 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
         <div className="flex justify-end space-x-2 pt-4">
           <Button type="submit" disabled={isCreatingUser}>
             <Key className="h-4 w-4 mr-2" />
-            {isCreatingUser ? "Creating..." : "Create User & Login"}
+            {isCreatingUser ? "Creating..." : "Create User"}
           </Button>
         </div>
       </form>

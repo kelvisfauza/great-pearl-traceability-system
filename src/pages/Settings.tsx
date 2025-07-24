@@ -17,16 +17,55 @@ const Settings = () => {
 
   // Wrapper functions to match UserManagement component expectations
   const handleEmployeeAdded = async (employeeData: any): Promise<void> => {
-    await addEmployee(employeeData);
+    try {
+      console.log('Settings handleEmployeeAdded called with:', employeeData);
+      
+      // Ensure all required fields are present
+      const completeData = {
+        name: employeeData.name,
+        email: employeeData.email,
+        phone: employeeData.phone || "",
+        position: employeeData.position,
+        department: employeeData.department,
+        role: employeeData.role,
+        salary: Number(employeeData.salary) || 0,
+        permissions: Array.isArray(employeeData.permissions) ? employeeData.permissions : [],
+        status: employeeData.status || 'Active',
+        join_date: employeeData.join_date || new Date().toISOString(),
+      };
+      
+      await addEmployee(completeData);
+    } catch (error) {
+      console.error('Error in handleEmployeeAdded:', error);
+      throw error;
+    }
   };
 
   const handleEmployeeUpdated = async (id: string, updates: any): Promise<void> => {
-    console.log('Settings handleEmployeeUpdated called with:', { id, updates });
-    await updateEmployee(id, updates);
+    try {
+      console.log('Settings handleEmployeeUpdated called with:', { id, updates });
+      
+      // Ensure permissions is properly formatted
+      const processedUpdates = {
+        ...updates,
+        permissions: Array.isArray(updates.permissions) ? updates.permissions : []
+      };
+      
+      await updateEmployee(id, processedUpdates);
+    } catch (error) {
+      console.error('Error in handleEmployeeUpdated:', error);
+      throw error;
+    }
   };
 
   const handleEmployeeDeleted = async (id: string): Promise<void> => {
-    await deleteEmployee(id);
+    try {
+      console.log('Settings handleEmployeeDeleted called with:', id);
+      await deleteEmployee(id);
+    } catch (error) {
+      console.error('Error in handleEmployeeDeleted:', error);
+      throw error;
+    }
   };
 
   // Determine available tabs
