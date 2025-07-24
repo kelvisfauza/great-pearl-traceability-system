@@ -35,6 +35,7 @@ interface Employee {
   join_date: string;
   address?: string;
   emergency_contact?: string;
+  avatar_url?: string;
   isOneTimePassword?: boolean;
   mustChangePassword?: boolean;
   authUserId?: string;

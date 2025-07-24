@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Coffee, AlertCircle, UserPlus } from 'lucide-react';
+import { Loader2, Coffee, AlertCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 import SignUpForm from '@/components/SignUpForm';
@@ -159,57 +159,6 @@ const Auth = () => {
     }
   };
 
-  const updateUserPermissions = async () => {
-    try {
-      console.log('Updating permissions for keizyeda@gmail.com...');
-      
-      // Find the user by email
-      const employeesRef = collection(db, 'employees');
-      const q = query(employeesRef);
-      const querySnapshot = await getDocs(q);
-      
-      let userDoc = null;
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.email === 'keizyeda@gmail.com') {
-          userDoc = { id: doc.id, ...data };
-        }
-      });
-      
-      if (!userDoc) {
-        toast({
-          title: "User Not Found",
-          description: "Could not find keizyeda@gmail.com in employee records",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Update permissions to include Store Management
-      const currentPermissions = userDoc.permissions || [];
-      const newPermissions = [...new Set([...currentPermissions, 'Store Management'])];
-      
-      await updateDoc(doc(db, 'employees', userDoc.id), {
-        permissions: newPermissions,
-        updated_at: new Date().toISOString()
-      });
-      
-      toast({
-        title: "Permissions Updated",
-        description: "Store Management access has been added to keizyeda@gmail.com",
-      });
-      
-      console.log('Updated permissions:', newPermissions);
-      
-    } catch (error) {
-      console.error('Error updating permissions:', error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update user permissions",
-        variant: "destructive"
-      });
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
@@ -226,29 +175,6 @@ const Auth = () => {
           <p className="text-gray-600">
             Welcome to the Coffee Management System
           </p>
-          
-          {/* Quick Test Credentials */}
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm font-semibold text-blue-800">Quick Actions:</p>
-            <p className="text-xs text-blue-600">Admin: kelvifauza@gmail.com (any password)</p>
-            <Button 
-              onClick={() => setShowCreateAccount(true)} 
-              size="sm" 
-              variant="outline" 
-              className="mt-2 text-xs mr-2"
-            >
-              <UserPlus className="h-3 w-3 mr-1" />
-              Recreate Account
-            </Button>
-            <Button 
-              onClick={updateUserPermissions} 
-              size="sm" 
-              variant="outline" 
-              className="mt-2 text-xs"
-            >
-              Add Store Access
-            </Button>
-          </div>
         </div>
 
         {/* Account Creation Modal */}

@@ -8,11 +8,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Key } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Key, Upload } from "lucide-react";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { updatePassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const UserProfile = () => {
   const { employee, fetchEmployeeData } = useAuth();
@@ -22,12 +23,14 @@ const UserProfile = () => {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   
   const [formData, setFormData] = useState({
     name: employee?.name || '',
     phone: employee?.phone || '',
     address: employee?.address || '',
-    emergency_contact: employee?.emergency_contact || ''
+    emergency_contact: employee?.emergency_contact || '',
+    avatar_url: employee?.avatar_url || ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -64,6 +67,7 @@ const UserProfile = () => {
         phone: formData.phone?.trim() || "",
         address: formData.address?.trim() || "",
         emergency_contact: formData.emergency_contact?.trim() || "",
+        avatar_url: formData.avatar_url || "",
         updated_at: new Date().toISOString()
       };
 
@@ -137,13 +141,81 @@ const UserProfile = () => {
     }
   };
 
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !employee?.id) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Please select a valid image file",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image size should be less than 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    try {
+      // Create a reference to the storage location
+      const storageRef = ref(storage, `avatars/${employee.id}/${Date.now()}_${file.name}`);
+      
+      // Upload the file
+      console.log('Uploading file to Firebase Storage...');
+      const snapshot = await uploadBytes(storageRef, file);
+      console.log('File uploaded successfully');
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      console.log('Download URL:', downloadURL);
+      
+      // Update the employee record with the new avatar URL
+      await updateDoc(doc(db, 'employees', employee.id), {
+        avatar_url: downloadURL,
+        updated_at: new Date().toISOString()
+      });
+      
+      // Update local state
+      setFormData(prev => ({ ...prev, avatar_url: downloadURL }));
+      
+      // Refresh employee data
+      await fetchEmployeeData();
+      
+      toast({
+        title: "Success",
+        description: "Profile picture updated successfully"
+      });
+      
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload profile picture. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
   const handleCancel = () => {
     // Reset form to original values
     setFormData({
       name: employee?.name || '',
       phone: employee?.phone || '',
       address: employee?.address || '',
-      emergency_contact: employee?.emergency_contact || ''
+      emergency_contact: employee?.emergency_contact || '',
+      avatar_url: employee?.avatar_url || ''
     });
     setIsEditing(false);
   };
@@ -156,7 +228,8 @@ const UserProfile = () => {
         name: employee.name || '',
         phone: employee.phone || '',
         address: employee.address || '',
-        emergency_contact: employee.emergency_contact || ''
+        emergency_contact: employee.emergency_contact || '',
+        avatar_url: employee.avatar_url || ''
       });
     }
   }, [employee]);
@@ -184,18 +257,29 @@ const UserProfile = () => {
           <div className="flex items-start gap-6">
             <div className="relative">
               <Avatar className="h-24 w-24">
-                <AvatarImage src="" alt={employee.name} />
+                <AvatarImage src={formData.avatar_url || employee.avatar_url} alt={employee.name} />
                 <AvatarFallback className="text-lg">
                   {employee.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+              <input
+                type="file"
+                id="avatar-upload"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                disabled={isUploadingPhoto}
+              />
+              <label
+                htmlFor="avatar-upload"
+                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
               >
-                <Camera className="h-4 w-4" />
-              </Button>
+                {isUploadingPhoto ? (
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+              </label>
             </div>
             
             <div className="flex-1">

@@ -22,6 +22,7 @@ export interface Employee {
   join_date: string
   created_at: string
   updated_at: string
+  avatar_url?: string
 }
 
 const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
