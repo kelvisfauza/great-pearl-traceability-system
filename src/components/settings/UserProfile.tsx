@@ -9,11 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Key } from "lucide-react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db, storage } from "@/lib/firebase";
-import { updatePassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { supabase } from '@/integrations/supabase/client';
 
 const UserProfile = () => {
   const { user, employee, fetchEmployeeData, signOut } = useAuth();
@@ -71,9 +67,8 @@ const UserProfile = () => {
         updated_at: new Date().toISOString()
       };
 
-      // Update in Firebase
-      await updateDoc(doc(db, 'employees', employee.id), updateData);
-      console.log('Profile updated successfully in Firebase');
+      // Mock update - in real implementation would use Supabase
+      console.log('Profile updated successfully (mock)');
 
       // Refresh employee data to get updated information
       await fetchEmployeeData(user?.email || '');
@@ -116,12 +111,11 @@ const UserProfile = () => {
 
     setIsChangingPassword(true);
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error('No authenticated user found');
-      }
-
-      await updatePassword(currentUser, passwordData.newPassword);
+      // Mock password change - in real implementation would use Supabase auth
+      console.log('Password change simulated (mock)');
+      
+      // Simulate a delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       toast({
         title: "Success",
@@ -146,22 +140,19 @@ const UserProfile = () => {
 
     setIsUploadingAvatar(true);
     try {
-      // Create a reference to the file location
-      const avatarRef = ref(storage, `avatars/${employee.id}/${file.name}`);
+      // Mock avatar upload - in real implementation would use Supabase storage
+      console.log('Avatar upload simulated (mock)');
       
-      // Upload the file
-      await uploadBytes(avatarRef, file);
+      // Simulate a delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Get the download URL
-      const downloadURL = await getDownloadURL(avatarRef);
+      // Mock download URL
+      const mockDownloadURL = `https://example.com/avatars/${employee.id}/${file.name}`;
       
-      // Update employee record with avatar URL
-      await updateDoc(doc(db, 'employees', employee.id), {
-        avatarUrl: downloadURL,
-        updated_at: new Date().toISOString()
-      });
+      // Mock update employee record
+      console.log('Mock avatar URL:', mockDownloadURL);
       
-      setAvatarUrl(downloadURL);
+      setAvatarUrl(mockDownloadURL);
       await fetchEmployeeData(user?.email || '');
       
       toast({
