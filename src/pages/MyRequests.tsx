@@ -411,32 +411,37 @@ const MyRequests = () => {
                             
                             <p className="text-sm text-gray-700 mb-3 line-clamp-2">{request.description}</p>
                             
-                            {/* Workflow Progress */}
-                            {request.requestType !== 'complaint' && (
-                              <div className="mb-3 p-3 bg-gray-50 rounded-lg">
-                                <p className="text-xs font-medium text-gray-600 mb-2">Progress:</p>
-                                <div className="flex items-center gap-2">
-                                  <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
-                                    request.currentStep === 'hr' ? 'bg-yellow-100 text-yellow-800' : 
-                                    ['finance', 'management', 'completed'].includes(request.currentStep) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                                  }`}>
-                                    HR {['finance', 'management', 'completed'].includes(request.currentStep) ? '✓' : '→'}
-                                  </div>
-                                  <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
-                                    request.currentStep === 'finance' ? 'bg-yellow-100 text-yellow-800' : 
-                                    ['management', 'completed'].includes(request.currentStep) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                                  }`}>
-                                    Finance {['management', 'completed'].includes(request.currentStep) ? '✓' : request.currentStep === 'finance' ? '→' : ''}
-                                  </div>
-                                  <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
-                                    request.currentStep === 'management' ? 'bg-yellow-100 text-yellow-800' : 
-                                    request.currentStep === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                                  }`}>
-                                    Management {request.currentStep === 'completed' ? '✓' : request.currentStep === 'management' ? '→' : ''}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                             {/* Workflow Progress */}
+                             {request.requestType !== 'complaint' && (
+                               <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                                 <p className="text-xs font-medium text-gray-600 mb-2">Progress:</p>
+                                 <div className="flex items-center gap-2">
+                                   <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                                     request.currentStep === 'hr' ? 'bg-yellow-100 text-yellow-800' : 
+                                     ['finance', 'management', 'completed'].includes(request.currentStep) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                                   }`}>
+                                     HR {['finance', 'management', 'completed'].includes(request.currentStep) ? '✓' : '→'}
+                                   </div>
+                                   
+                                   {/* Show Finance step only for payment-related requests */}
+                                   {(request.requestType === 'payment_advance' || request.requestType === 'expense_reimbursement') && (
+                                     <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                                       request.currentStep === 'finance' ? 'bg-yellow-100 text-yellow-800' : 
+                                       ['management', 'completed'].includes(request.currentStep) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                                     }`}>
+                                       Finance {['management', 'completed'].includes(request.currentStep) ? '✓' : request.currentStep === 'finance' ? '→' : ''}
+                                     </div>
+                                   )}
+                                   
+                                   <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                                     request.currentStep === 'management' ? 'bg-yellow-100 text-yellow-800' : 
+                                     request.currentStep === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                                   }`}>
+                                     Management {request.currentStep === 'completed' ? '✓' : request.currentStep === 'management' ? '→' : ''}
+                                   </div>
+                                 </div>
+                               </div>
+                             )}
                             
                             <div className="flex justify-between items-center text-xs text-gray-500">
                               <div className="flex gap-4">

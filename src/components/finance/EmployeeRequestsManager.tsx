@@ -1,43 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useUserRequests } from '@/hooks/useUserRequests';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { 
   Clock, 
   DollarSign, 
-  MessageSquare, 
-  AlertTriangle, 
-  Calendar, 
-  FileText, 
+  Eye,
   CheckCircle, 
   XCircle, 
-  Eye,
-  Forward,
-  MessageCircle
+  MessageCircle,
+  FileText,
+  AlertTriangle
 } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot, updateDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect } from 'react';
 
 interface EmployeeRequest {
   id: string;
   userId: string;
   employeeId: string;
-  requestType: 'payment_advance' | 'supplier_motivation' | 'complaint' | 'feedback' | 'leave_request' | 'expense_reimbursement';
+  requestType: 'payment_advance' | 'expense_reimbursement';
   title: string;
   description: string;
   amount?: number;
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  status: 'With HR' | 'With Finance' | 'Awaiting Management Approval' | 'Completed' | 'Rejected' | 'Reviewing' | 'Resolved';
+  status: 'With Finance';
   requestedDate: string;
-  currentStep: 'hr' | 'finance' | 'management' | 'admin' | 'completed';
+  currentStep: 'finance';
   workflowHistory?: any[];
   createdAt: string;
   updatedAt: string;
@@ -46,21 +40,21 @@ interface EmployeeRequest {
   employeeDepartment?: string;
 }
 
-const EmployeeRequestsManager = () => {
+const FinanceEmployeeRequestsManager = () => {
   const [requests, setRequests] = useState<EmployeeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<EmployeeRequest | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isResponseOpen, setIsResponseOpen] = useState(false);
   const [responseMessage, setResponseMessage] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const { toast } = useToast();
 
-  // Fetch all user requests from Firebase
+  // Fetch requests that are with Finance
   useEffect(() => {
     const q = query(
       collection(db, 'user_requests'),
+      where('currentStep', '==', 'finance'),
       orderBy('createdAt', 'desc')
     );
 
@@ -78,46 +72,16 @@ const EmployeeRequestsManager = () => {
       setRequests(requestsData);
       setLoading(false);
     }, (error) => {
-      console.error('Error fetching requests:', error);
+      console.error('Error fetching finance requests:', error);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'With HR': return 'secondary';
-      case 'With Finance': return 'default';
-      case 'Awaiting Management Approval': return 'default';
-      case 'Completed': return 'default';
-      case 'Rejected': return 'destructive';
-      case 'Reviewing': return 'secondary';
-      case 'Resolved': return 'default';
-      default: return 'secondary';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'With HR': return <Clock className="h-4 w-4" />;
-      case 'With Finance': return <DollarSign className="h-4 w-4" />;
-      case 'Awaiting Management Approval': return <Eye className="h-4 w-4" />;
-      case 'Completed': return <CheckCircle className="h-4 w-4" />;
-      case 'Rejected': return <XCircle className="h-4 w-4" />;
-      case 'Reviewing': return <Eye className="h-4 w-4" />;
-      case 'Resolved': return <CheckCircle className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
-  };
-
   const getRequestTypeIcon = (type: string) => {
     switch (type) {
       case 'payment_advance': return <DollarSign className="h-5 w-5" />;
-      case 'supplier_motivation': return <FileText className="h-5 w-5" />;
-      case 'complaint': return <AlertTriangle className="h-5 w-5" />;
-      case 'feedback': return <MessageSquare className="h-5 w-5" />;
-      case 'leave_request': return <Calendar className="h-5 w-5" />;
       case 'expense_reimbursement': return <DollarSign className="h-5 w-5" />;
       default: return <FileText className="h-5 w-5" />;
     }
@@ -129,57 +93,29 @@ const EmployeeRequestsManager = () => {
 
   const handleApprove = async (request: EmployeeRequest) => {
     try {
-      let newStatus = '';
-      let newStep = '';
-
-      if (request.requestType === 'complaint') {
-        newStatus = 'Resolved';
-        newStep = 'completed';
-      } else {
-        // Payment-related requests: HR -> Finance -> Management
-        // Other requests: HR -> Management
-        const isPaymentRelated = request.requestType === 'payment_advance' || request.requestType === 'expense_reimbursement';
-        
-        if (request.currentStep === 'hr') {
-          if (isPaymentRelated) {
-            newStatus = 'With Finance';
-            newStep = 'finance';
-          } else {
-            newStatus = 'Awaiting Management Approval';
-            newStep = 'management';
-          }
-        } else if (request.currentStep === 'finance') {
-          newStatus = 'Awaiting Management Approval';
-          newStep = 'management';
-        } else if (request.currentStep === 'management') {
-          newStatus = 'Completed';
-          newStep = 'completed';
-        }
-      }
-
       const updatedWorkflowHistory = [
         ...(request.workflowHistory || []),
         {
-          step: request.currentStep,
+          step: 'finance',
           timestamp: new Date().toISOString(),
           action: 'approved',
-          reviewedBy: 'HR Manager', // This should come from auth context
-          notes: responseMessage || `Approved and forwarded to ${newStep}`
+          reviewedBy: 'Finance Manager',
+          notes: responseMessage || 'Approved by Finance and forwarded to Management'
         }
       ];
 
       await updateDoc(doc(db, 'user_requests', request.id), {
-        status: newStatus,
-        currentStep: newStep,
+        status: 'Awaiting Management Approval',
+        currentStep: 'management',
         workflowHistory: updatedWorkflowHistory,
-        responseMessage: responseMessage || `Approved by HR`,
+        responseMessage: responseMessage || 'Approved by Finance',
         reviewedAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });
 
       toast({
         title: "Success",
-        description: `Request has been approved and ${newStep === 'completed' ? 'completed' : `forwarded to ${newStep}`}`
+        description: "Request approved and forwarded to Management"
       });
 
       setIsResponseOpen(false);
@@ -200,11 +136,11 @@ const EmployeeRequestsManager = () => {
       const updatedWorkflowHistory = [
         ...(request.workflowHistory || []),
         {
-          step: request.currentStep,
+          step: 'finance',
           timestamp: new Date().toISOString(),
           action: 'rejected',
-          reviewedBy: 'HR Manager',
-          notes: responseMessage || 'Rejected by HR'
+          reviewedBy: 'Finance Manager',
+          notes: responseMessage || 'Rejected by Finance'
         }
       ];
 
@@ -212,7 +148,7 @@ const EmployeeRequestsManager = () => {
         status: 'Rejected',
         currentStep: 'completed',
         workflowHistory: updatedWorkflowHistory,
-        responseMessage: responseMessage || 'Rejected by HR',
+        responseMessage: responseMessage || 'Rejected by Finance',
         reviewedAt: Timestamp.now(),
         updatedAt: Timestamp.now()
       });
@@ -235,31 +171,25 @@ const EmployeeRequestsManager = () => {
     }
   };
 
-  // Filter requests for HR (only those currently with HR or complaints)
-  const hrRequests = requests.filter(request => {
-    const isHRRequest = request.currentStep === 'hr' || (request.requestType === 'complaint' && request.currentStep === 'admin');
-    const statusMatch = filterStatus === 'all' || request.status === filterStatus;
-    const typeMatch = filterType === 'all' || request.requestType === filterType;
-    return isHRRequest && statusMatch && typeMatch;
+  const filteredRequests = requests.filter(request => {
+    return filterType === 'all' || request.requestType === filterType;
   });
 
   const stats = {
-    total: hrRequests.length,
-    pending: hrRequests.filter(r => r.status === 'With HR' || r.status === 'Reviewing').length,
-    completed: hrRequests.filter(r => r.status === 'Completed' || r.status === 'Resolved').length,
-    rejected: hrRequests.filter(r => r.status === 'Rejected').length
+    total: filteredRequests.length,
+    pending: filteredRequests.filter(r => r.status === 'With Finance').length,
   };
 
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center">
-              <FileText className="h-8 w-8 text-blue-600" />
+              <DollarSign className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Requests</p>
+                <p className="text-sm font-medium text-gray-600">Payment Requests</p>
                 <p className="text-2xl font-bold">{stats.total}</p>
               </div>
             </div>
@@ -271,32 +201,8 @@ const EmployeeRequestsManager = () => {
             <div className="flex items-center">
               <Clock className="h-8 w-8 text-yellow-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending Review</p>
+                <p className="text-sm font-medium text-gray-600">Awaiting Review</p>
                 <p className="text-2xl font-bold">{stats.pending}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Processed</p>
-                <p className="text-2xl font-bold">{stats.completed}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <XCircle className="h-8 w-8 text-red-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Rejected</p>
-                <p className="text-2xl font-bold">{stats.rejected}</p>
               </div>
             </div>
           </CardContent>
@@ -306,24 +212,10 @@ const EmployeeRequestsManager = () => {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Employee Requests</CardTitle>
+          <CardTitle>HR Requests for Finance Review</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="With HR">With HR</SelectItem>
-                <SelectItem value="Reviewing">Reviewing</SelectItem>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Resolved">Resolved</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by type" />
@@ -331,10 +223,6 @@ const EmployeeRequestsManager = () => {
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="payment_advance">Payment Advance</SelectItem>
-                <SelectItem value="supplier_motivation">Supplier Motivation</SelectItem>
-                <SelectItem value="complaint">Complaint</SelectItem>
-                <SelectItem value="feedback">Feedback</SelectItem>
-                <SelectItem value="leave_request">Leave Request</SelectItem>
                 <SelectItem value="expense_reimbursement">Expense Reimbursement</SelectItem>
               </SelectContent>
             </Select>
@@ -344,15 +232,15 @@ const EmployeeRequestsManager = () => {
             <div className="text-center py-8">
               <p>Loading requests...</p>
             </div>
-          ) : hrRequests.length === 0 ? (
+          ) : filteredRequests.length === 0 ? (
             <div className="text-center py-12">
-              <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No requests to review</h3>
-              <p className="text-gray-600">There are no employee requests waiting for HR review at the moment.</p>
+              <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No payment requests</h3>
+              <p className="text-gray-600">There are no payment requests from HR awaiting finance review.</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {hrRequests.map((request) => (
+              {filteredRequests.map((request) => (
                 <Card key={request.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between mb-3">
@@ -368,9 +256,9 @@ const EmployeeRequestsManager = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={getStatusColor(request.status)} className="flex items-center gap-1">
-                          {getStatusIcon(request.status)}
-                          {request.status}
+                        <Badge variant="secondary" className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          With Finance
                         </Badge>
                       </div>
                     </div>
@@ -393,18 +281,16 @@ const EmployeeRequestsManager = () => {
                           <Eye className="h-4 w-4 mr-1" />
                           View Details
                         </Button>
-                        {(request.status === 'With HR' || request.status === 'Reviewing') && (
-                          <Button 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedRequest(request);
-                              setIsResponseOpen(true);
-                            }}
-                          >
-                            <MessageCircle className="h-4 w-4 mr-1" />
-                            Review
-                          </Button>
-                        )}
+                        <Button 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedRequest(request);
+                            setIsResponseOpen(true);
+                          }}
+                        >
+                          <MessageCircle className="h-4 w-4 mr-1" />
+                          Review
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -430,7 +316,7 @@ const EmployeeRequestsManager = () => {
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Status</Label>
-                  <Badge variant={getStatusColor(selectedRequest.status)}>{selectedRequest.status}</Badge>
+                  <Badge variant="secondary">With Finance</Badge>
                 </div>
               </div>
               <div>
@@ -447,6 +333,20 @@ const EmployeeRequestsManager = () => {
                   <p className="text-sm">UGX {selectedRequest.amount.toLocaleString()}</p>
                 </div>
               )}
+              {selectedRequest.workflowHistory && selectedRequest.workflowHistory.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium">Workflow History</Label>
+                  <div className="space-y-2 mt-2">
+                    {selectedRequest.workflowHistory.map((entry, index) => (
+                      <div key={index} className="text-sm p-2 bg-gray-50 rounded">
+                        <p><strong>{entry.step.toUpperCase()}:</strong> {entry.action} by {entry.reviewedBy}</p>
+                        <p className="text-gray-600">{entry.notes}</p>
+                        <p className="text-xs text-gray-500">{new Date(entry.timestamp).toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
@@ -456,13 +356,16 @@ const EmployeeRequestsManager = () => {
       <Dialog open={isResponseOpen} onOpenChange={setIsResponseOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Review Request</DialogTitle>
+            <DialogTitle>Review Payment Request</DialogTitle>
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-4">
               <div>
                 <Label className="text-sm font-medium mb-2">Request: {selectedRequest.title}</Label>
                 <p className="text-sm text-gray-600">{selectedRequest.description}</p>
+                {selectedRequest.amount && (
+                  <p className="text-sm font-medium mt-2">Amount: UGX {selectedRequest.amount.toLocaleString()}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="response">Response Message</Label>
@@ -480,7 +383,7 @@ const EmployeeRequestsManager = () => {
                   className="flex-1"
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve & Forward
+                  Approve & Forward to Management
                 </Button>
                 <Button 
                   variant="destructive"
@@ -499,4 +402,4 @@ const EmployeeRequestsManager = () => {
   );
 };
 
-export default EmployeeRequestsManager;
+export default FinanceEmployeeRequestsManager;
