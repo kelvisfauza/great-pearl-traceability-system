@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import Navigation from "./Navigation";
+import RoleBasedNavigation from "./RoleBasedNavigation";
 import MessagingPanel from "./messaging/MessagingPanel";
 import MessageButton from "./messaging/MessageButton";
 import { useMessages } from "@/hooks/useMessages";
@@ -20,7 +20,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="fixed left-0 top-0 h-full w-64 z-30 bg-white border-r border-gray-200 overflow-y-auto">
-        <Navigation />
+        <RoleBasedNavigation />
       </aside>
       
       <main className="flex-1 ml-64 min-w-0">
