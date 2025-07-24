@@ -13,7 +13,7 @@ import PasswordChangeModal from '@/components/PasswordChangeModal';
 import SignUpForm from '@/components/SignUpForm';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, query, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
@@ -111,7 +111,7 @@ const Auth = () => {
         department: 'Operations',
         salary: 500000,
         role: 'User',
-        permissions: ['Operations', 'General Access'],
+        permissions: ['Operations', 'General Access', 'Store Management'],
         status: 'Active',
         join_date: new Date().toISOString(),
         created_at: new Date().toISOString(),
@@ -159,6 +159,58 @@ const Auth = () => {
     }
   };
 
+  const updateUserPermissions = async () => {
+    try {
+      console.log('Updating permissions for keizyeda@gmail.com...');
+      
+      // Find the user by email
+      const employeesRef = collection(db, 'employees');
+      const q = query(employeesRef);
+      const querySnapshot = await getDocs(q);
+      
+      let userDoc = null;
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.email === 'keizyeda@gmail.com') {
+          userDoc = { id: doc.id, ...data };
+        }
+      });
+      
+      if (!userDoc) {
+        toast({
+          title: "User Not Found",
+          description: "Could not find keizyeda@gmail.com in employee records",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Update permissions to include Store Management
+      const currentPermissions = userDoc.permissions || [];
+      const newPermissions = [...new Set([...currentPermissions, 'Store Management'])];
+      
+      await updateDoc(doc(db, 'employees', userDoc.id), {
+        permissions: newPermissions,
+        updated_at: new Date().toISOString()
+      });
+      
+      toast({
+        title: "Permissions Updated",
+        description: "Store Management access has been added to keizyeda@gmail.com",
+      });
+      
+      console.log('Updated permissions:', newPermissions);
+      
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update user permissions",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -183,10 +235,18 @@ const Auth = () => {
               onClick={() => setShowCreateAccount(true)} 
               size="sm" 
               variant="outline" 
-              className="mt-2 text-xs"
+              className="mt-2 text-xs mr-2"
             >
               <UserPlus className="h-3 w-3 mr-1" />
-              Recreate keizyeda@gmail.com
+              Recreate Account
+            </Button>
+            <Button 
+              onClick={updateUserPermissions} 
+              size="sm" 
+              variant="outline" 
+              className="mt-2 text-xs"
+            >
+              Add Store Access
             </Button>
           </div>
         </div>
