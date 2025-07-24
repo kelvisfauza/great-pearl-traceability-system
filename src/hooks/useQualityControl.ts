@@ -41,7 +41,7 @@ export interface QualityAssessment {
 export const useQualityControl = () => {
   const [storeRecords, setStoreRecords] = useState<StoreRecord[]>([]);
   const [qualityAssessments, setQualityAssessments] = useState<QualityAssessment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { getContractPriceForSupplier } = useSupplierContracts();
@@ -59,18 +59,13 @@ export const useQualityControl = () => {
 
       console.log('Loaded coffee records:', coffeeData.length, 'records');
       setStoreRecords(coffeeData || []);
-      setError(null);
+      return coffeeData;
     } catch (error) {
       console.error('Error loading store records:', error);
       setStoreRecords([]);
-      setError('Failed to load store records');
-      toast({
-        title: "Error",
-        description: "Failed to load store records",
-        variant: "destructive"
-      });
+      throw error;
     }
-  }, [toast]);
+  }, []);
 
   const loadQualityAssessments = useCallback(async () => {
     try {
@@ -85,44 +80,56 @@ export const useQualityControl = () => {
 
       console.log('Loaded quality assessments:', qualityData.length, 'assessments');
       setQualityAssessments(qualityData || []);
-      setError(null);
+      return qualityData;
     } catch (error) {
       console.error('Error loading quality assessments:', error);
       setQualityAssessments([]);
-      setError('Failed to load quality assessments');
-      toast({
-        title: "Error",
-        description: "Failed to load quality assessments",
-        variant: "destructive"
-      });
+      throw error;
     }
-  }, [toast]);
+  }, []);
 
   const loadData = useCallback(async () => {
+    if (loading) return; // Prevent multiple concurrent loads
+    
     setLoading(true);
     setError(null);
     
     try {
+      console.log('Starting data load...');
       await Promise.all([
         loadStoreRecords(),
         loadQualityAssessments()
       ]);
+      console.log('Data load completed successfully');
     } catch (error) {
       console.error('Error loading data:', error);
-      setError('Failed to load data');
+      setError('Failed to load data. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to load data. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
-  }, [loadStoreRecords, loadQualityAssessments]);
+  }, [loadStoreRecords, loadQualityAssessments, loading, toast]);
 
-  // Load data on mount
+  // Load data on mount - only once
   useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const addStoreRecord = (record: Omit<StoreRecord, 'id'>) => {
-    console.log('Store records should be added through Store Management');
-  };
+    let isMounted = true;
+    
+    const initializeData = async () => {
+      if (isMounted) {
+        await loadData();
+      }
+    };
+    
+    initializeData();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array - only run once
 
   const updateStoreRecord = async (id: string, updates: Partial<StoreRecord>) => {
     try {
@@ -329,8 +336,8 @@ export const useQualityControl = () => {
     record.status === 'pending' || record.status === 'quality_review'
   );
 
-  const refreshData = useCallback(() => {
-    loadData();
+  const refreshData = useCallback(async () => {
+    await loadData();
   }, [loadData]);
 
   return {
@@ -339,7 +346,6 @@ export const useQualityControl = () => {
     pendingRecords,
     loading,
     error,
-    addStoreRecord,
     updateStoreRecord,
     addQualityAssessment,
     updateQualityAssessment,

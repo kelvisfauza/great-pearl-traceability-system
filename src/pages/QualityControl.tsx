@@ -22,7 +22,8 @@ import {
   Factory,
   FileDown,
   Edit,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -58,6 +59,7 @@ const QualityControl = () => {
 
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("pending");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [assessmentForm, setAssessmentForm] = useState({
     moisture: '',
     group1_defects: '',
@@ -69,6 +71,7 @@ const QualityControl = () => {
     manual_price: '',
     comments: ''
   });
+
   const [grnPrintModal, setGrnPrintModal] = useState<{
     open: boolean;
     grnData: {
@@ -98,22 +101,35 @@ const QualityControl = () => {
   const pendingModificationRequests = getPendingModificationRequests('Quality');
 
   useEffect(() => {
+    let isMounted = true;
+    
     const initializeData = async () => {
       try {
-        await refreshPrices();
-        await refetchWorkflow();
+        if (isMounted) {
+          await refreshPrices();
+          await refetchWorkflow();
+        }
       } catch (error) {
         console.error('Error initializing data:', error);
       }
     };
 
     initializeData();
-  }, [refreshPrices, refetchWorkflow]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleRefresh = async () => {
+    if (isRefreshing) return; // Prevent multiple refreshes
+    
+    setIsRefreshing(true);
     try {
-      await refreshData();
-      await refetchWorkflow();
+      await Promise.all([
+        refreshData(),
+        refetchWorkflow()
+      ]);
       toast({
         title: "Success",
         description: "Data refreshed successfully"
@@ -125,6 +141,8 @@ const QualityControl = () => {
         description: "Failed to refresh data",
         variant: "destructive"
       });
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -409,11 +427,14 @@ const QualityControl = () => {
     }
   };
 
-  if (loading || workflowLoading) {
+  if (loading) {
     return (
       <Layout title="Quality Control" subtitle="Loading quality control data...">
         <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-gray-600">Loading quality control data...</p>
+          </div>
         </div>
       </Layout>
     );
@@ -429,10 +450,16 @@ const QualityControl = () => {
               {error}
             </AlertDescription>
           </Alert>
-          <Button onClick={handleRefresh} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Retry
-          </Button>
+          <div className="flex gap-4">
+            <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
+              {isRefreshing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              {isRefreshing ? 'Refreshing...' : 'Retry'}
+            </Button>
+          </div>
         </div>
       </Layout>
     );
@@ -470,9 +497,14 @@ const QualityControl = () => {
                 variant="outline" 
                 size="sm" 
                 onClick={handleRefresh}
+                disabled={isRefreshing}
               >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Refresh Data
+                {isRefreshing ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                )}
+                {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
               </Button>
             </CardTitle>
           </CardHeader>
