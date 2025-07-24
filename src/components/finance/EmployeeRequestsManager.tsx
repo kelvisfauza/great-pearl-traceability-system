@@ -16,8 +16,7 @@ import {
   FileText,
   AlertTriangle
 } from 'lucide-react';
-import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+// Mock Firebase functionality - Firebase disabled
 import { useToast } from '@/hooks/use-toast';
 
 interface EmployeeRequest {
@@ -50,33 +49,11 @@ const FinanceEmployeeRequestsManager = () => {
   const [filterType, setFilterType] = useState('all');
   const { toast } = useToast();
 
-  // Fetch requests that are with Finance (initial review) or awaiting payment processing
+  // Mock data loading - Firebase disabled
   useEffect(() => {
-    const q = query(
-      collection(db, 'user_requests'),
-      where('currentStep', 'in', ['finance', 'finance_payment']),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const requestsData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
-          updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
-        };
-      }) as EmployeeRequest[];
-      
-      setRequests(requestsData);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching finance requests:', error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    console.log('Mock: Loading finance employee requests');
+    setRequests([]);
+    setLoading(false);
   }, []);
 
   const getRequestTypeIcon = (type: string) => {
@@ -119,14 +96,7 @@ const FinanceEmployeeRequestsManager = () => {
         currentStep = 'management';
       }
 
-      await updateDoc(doc(db, 'user_requests', request.id), {
-        status: finalStatus,
-        currentStep: currentStep,
-        workflowHistory: updatedWorkflowHistory,
-        responseMessage: responseMessage || (isPaymentProcessing ? 'Payment processed' : 'Approved by Finance'),
-        reviewedAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      });
+      console.log('Mock: Updating request', request.id, { status: finalStatus, currentStep });
 
       toast({
         title: "Success",
@@ -161,14 +131,7 @@ const FinanceEmployeeRequestsManager = () => {
         }
       ];
 
-      await updateDoc(doc(db, 'user_requests', request.id), {
-        status: 'Rejected',
-        currentStep: 'completed',
-        workflowHistory: updatedWorkflowHistory,
-        responseMessage: responseMessage || 'Rejected by Finance',
-        reviewedAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      });
+      console.log('Mock: Rejecting request', request.id);
 
       toast({
         title: "Success",

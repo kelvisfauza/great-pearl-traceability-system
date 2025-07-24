@@ -9,9 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { collection, getDocs, query, orderBy, updateDoc, doc, addDoc, deleteDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
-import { db, auth } from '@/lib/firebase';
+// Mock Firebase functionality - Firebase disabled
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, CheckCircle, XCircle, Clock, UserPlus, Printer, Trash2 } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
@@ -88,20 +86,8 @@ const RegistrationRequestsManager = () => {
 
   const fetchRequests = async () => {
     try {
-      console.log('Fetching registration requests...');
-      const requestsQuery = query(
-        collection(db, 'user_registration_requests'),
-        orderBy('created_at', 'desc')
-      );
-      const querySnapshot = await getDocs(requestsQuery);
-      
-      const requestsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as RegistrationRequest[];
-      
-      console.log('Fetched requests:', requestsData.length);
-      setRequests(requestsData);
+      console.log('Mock: Fetching registration requests');
+      setRequests([]);
     } catch (error) {
       console.error('Error fetching requests:', error);
       toast({
@@ -146,49 +132,8 @@ const RegistrationRequestsManager = () => {
       const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
       console.log('Generated temporary password');
       
-      // Step 2: Create Firebase user
-      console.log('Creating Firebase user for:', selectedRequest.email);
-      const userCredential = await createUserWithEmailAndPassword(auth, selectedRequest.email, tempPassword);
-      console.log('Firebase user created successfully:', userCredential.user.uid);
-      
-      // Step 3: Prepare employee data
-      const employeeData = {
-        name: `${selectedRequest.firstName} ${selectedRequest.lastName}`,
-        email: selectedRequest.email.toLowerCase().trim(),
-        phone: selectedRequest.phone,
-        position: selectedRequest.modifiedRole || selectedRequest.role,
-        department: selectedRequest.modifiedDepartment || selectedRequest.department,
-        salary: selectedRequest.modifiedSalary || 0,
-        role: selectedRequest.modifiedRole || selectedRequest.role,
-        permissions: selectedRequest.modifiedPermissions || [selectedRequest.department],
-        status: 'Active',
-        join_date: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        authUserId: userCredential.user.uid,
-        isOneTimePassword: true,
-        mustChangePassword: true
-      };
-      
-      console.log('Creating employee record with data:', employeeData);
-      
-      // Step 4: Create employee record
-      const employeeDoc = await addDoc(collection(db, 'employees'), employeeData);
-      console.log('Employee record created successfully:', employeeDoc.id);
-
-      // Step 5: Update request status
-      console.log('Updating request status to approved');
-      await updateDoc(doc(db, 'user_registration_requests', selectedRequest.id), {
-        status: 'approved',
-        approvedAt: new Date().toISOString(),
-        approvedBy: employee.name,
-        finalDepartment: selectedRequest.modifiedDepartment || selectedRequest.department,
-        finalRole: selectedRequest.modifiedRole || selectedRequest.role,
-        finalSalary: selectedRequest.modifiedSalary || 0,
-        finalPermissions: selectedRequest.modifiedPermissions || [selectedRequest.department],
-        tempPassword: tempPassword,
-        employeeId: employeeDoc.id
-      });
+      // Mock Firebase user creation
+      console.log('Mock: Creating user account for:', selectedRequest.email);
       
       console.log('Request updated successfully');
 
@@ -263,12 +208,7 @@ const RegistrationRequestsManager = () => {
     setProcessing(selectedRequest.id);
     
     try {
-      await updateDoc(doc(db, 'user_registration_requests', selectedRequest.id), {
-        status: 'rejected',
-        rejectedAt: new Date().toISOString(),
-        rejectedBy: employee.name,
-        rejectionReason: rejectionReason.trim()
-      });
+      console.log('Mock: Rejecting request', selectedRequest.id);
 
       setRequests(prev => prev.map(req => 
         req.id === selectedRequest.id 
@@ -299,7 +239,7 @@ const RegistrationRequestsManager = () => {
     console.log('Deleting request:', requestId);
     
     try {
-      await deleteDoc(doc(db, 'user_registration_requests', requestId));
+      console.log('Mock: Deleting request', requestId);
       
       setRequests(prev => prev.filter(req => req.id !== requestId));
       

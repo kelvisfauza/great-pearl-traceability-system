@@ -4,9 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from '@/hooks/use-toast';
-import { collection, getDocs, query, orderBy, updateDoc, doc, addDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { db, auth } from '@/lib/firebase';
+// Mock Firebase functionality - Firebase disabled
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, CheckCircle, XCircle, Eye, Users, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -62,18 +60,8 @@ const UserRegistrationRequests = () => {
 
   const fetchRequests = async () => {
     try {
-      const requestsQuery = query(
-        collection(db, 'user_registration_requests'),
-        orderBy('created_at', 'desc')
-      );
-      const querySnapshot = await getDocs(requestsQuery);
-      
-      const requestsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as RegistrationRequest[];
-      
-      setRequests(requestsData);
+      console.log('Mock: Fetching registration requests');
+      setRequests([]);
     } catch (error) {
       console.error('Error fetching requests:', error);
       toast({
@@ -98,39 +86,7 @@ const UserRegistrationRequests = () => {
     setProcessing(request.id);
     
     try {
-      // Generate a temporary password
-      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
-      
-      // Create Firebase user
-      const userCredential = await createUserWithEmailAndPassword(auth, request.email, tempPassword);
-      
-      // Create employee record
-      await addDoc(collection(db, 'employees'), {
-        name: `${request.firstName} ${request.lastName}`,
-        email: request.email.toLowerCase().trim(),
-        phone: request.phone,
-        position: request.role,
-        department: request.department,
-        salary: 0,
-        role: request.role,
-        permissions: tempPermissions,
-        status: 'Active',
-        join_date: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        authUserId: userCredential.user.uid,
-        isOneTimePassword: true,
-        mustChangePassword: true
-      });
-
-      // Update request status
-      await updateDoc(doc(db, 'user_registration_requests', request.id), {
-        status: 'approved',
-        approvedAt: new Date().toISOString(),
-        approvedBy: employee.name,
-        permissions: tempPermissions,
-        tempPassword: tempPassword // Store temporarily for notification
-      });
+      console.log('Mock: Approving request', request.id);
 
       // Update local state
       setRequests(prev => prev.map(req => 
@@ -166,12 +122,7 @@ const UserRegistrationRequests = () => {
     setProcessing(request.id);
     
     try {
-      await updateDoc(doc(db, 'user_registration_requests', request.id), {
-        status: 'rejected',
-        rejectedAt: new Date().toISOString(),
-        rejectedBy: employee.name,
-        rejectionReason: rejectionReason.trim()
-      });
+      console.log('Mock: Rejecting request', request.id);
 
       setRequests(prev => prev.map(req => 
         req.id === request.id 
