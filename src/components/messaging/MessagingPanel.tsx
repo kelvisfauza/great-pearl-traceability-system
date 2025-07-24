@@ -39,7 +39,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
   // Find conversation when user is selected
   useEffect(() => {
     if (selectedUser && user?.uid) {
-      console.log('Selected user changed:', selectedUser.id);
+      console.log('Selected user changed:', selectedUser.displayName || selectedUser.name);
       
       const conversation = conversations.find(conv => 
         conv.participantEmployeeIds?.includes(selectedUser.id) && conv.participants?.length === 2
@@ -56,7 +56,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     } else if (!selectedUser) {
       setMessages([]);
     }
-  }, [selectedUser?.id, conversations.length, user?.uid]); // Simplified dependencies
+  }, [selectedUser?.id, conversations.length, user?.uid, fetchMessages, markAsRead, setMessages]);
 
   const handleUserSelect = (user: any) => {
     setSelectedUser(user);

@@ -79,14 +79,14 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
     }
   }, [currentEmployeeId]);
 
-  // Fetch conversations for current user
+  // Fetch conversations for current user with real-time updates
   const fetchConversations = useCallback(async () => {
     if (!currentUserId) {
       console.log('No current user ID, skipping conversations fetch');
       return;
     }
     
-    console.log('Fetching conversations for user:', currentUserId);
+    console.log('Setting up real-time conversations for user:', currentUserId);
     
     try {
       setLoading(true);
@@ -98,94 +98,121 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        console.log('Conversations snapshot received, docs count:', snapshot.docs.length);
+        console.log('Real-time conversation update - changes:', snapshot.docChanges().length);
         
-        const conversationsData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
-            lastMessageAt: data.lastMessageAt?.toDate?.()?.toISOString() || data.lastMessageAt || data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-          };
-        }) as Conversation[];
+        // Process conversation changes for real-time updates
+        snapshot.docChanges().forEach((change) => {
+          const conversationData = {
+            id: change.doc.id,
+            ...change.doc.data(),
+            createdAt: change.doc.data().createdAt?.toDate?.()?.toISOString() || change.doc.data().createdAt,
+            lastMessageAt: change.doc.data().lastMessageAt?.toDate?.()?.toISOString() || change.doc.data().lastMessageAt || change.doc.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+          } as Conversation;
+          
+          // Only include conversations where current user is actually a participant
+          if (conversationData.participants && conversationData.participants.includes(currentUserId)) {
+            if (change.type === 'added') {
+              console.log('New conversation added:', conversationData.id);
+              setConversations(prev => {
+                if (prev.find(conv => conv.id === conversationData.id)) {
+                  return prev;
+                }
+                const newConversations = [...prev, conversationData];
+                return newConversations.sort((a, b) => new Date(b.lastMessageAt || b.createdAt).getTime() - new Date(a.lastMessageAt || a.createdAt).getTime());
+              });
+            } else if (change.type === 'modified') {
+              console.log('Conversation updated:', conversationData.id);
+              setConversations(prev => {
+                const updated = prev.map(conv => conv.id === conversationData.id ? conversationData : conv);
+                return updated.sort((a, b) => new Date(b.lastMessageAt || b.createdAt).getTime() - new Date(a.lastMessageAt || a.createdAt).getTime());
+              });
+            } else if (change.type === 'removed') {
+              console.log('Conversation removed:', conversationData.id);
+              setConversations(prev => prev.filter(conv => conv.id !== change.doc.id));
+            }
+          }
+        });
         
-        // Filter to only include conversations where current user is actually a participant
-        const userConversations = conversationsData.filter(conv => 
-          conv.participants && conv.participants.includes(currentUserId)
-        );
-        
-        // Sort by lastMessageAt in memory
-        userConversations.sort((a, b) => new Date(b.lastMessageAt || b.createdAt).getTime() - new Date(a.lastMessageAt || a.createdAt).getTime());
-        
-        console.log('Setting filtered conversations for user:', userConversations.length);
-        setConversations(userConversations);
         setLoading(false);
       }, (error) => {
-        console.error('Error in conversations listener:', error);
+        console.error('Error in real-time conversations listener:', error);
         setConversations([]);
         setLoading(false);
       });
 
       return unsubscribe;
     } catch (error) {
-      console.error('Error fetching conversations:', error);
+      console.error('Error setting up real-time conversations:', error);
       setLoading(false);
       setConversations([]);
       return undefined;
     }
   }, [currentUserId]);
 
-  // Fetch messages for a specific conversation
+  // Fetch messages for a specific conversation with real-time updates
   const fetchMessages = useCallback(async (conversationId: string) => {
     if (!conversationId || currentConversationId === conversationId) return;
 
     try {
       setCurrentConversationId(conversationId);
       setLoadingMessages(true);
-      console.log('Fetching messages for conversation:', conversationId);
+      console.log('Setting up real-time messages for conversation:', conversationId);
       
-      // Use a simpler query to avoid index requirements
+      // Clear existing messages first
+      setMessages([]);
+      
+      // Set up real-time listener with proper change handling
       const q = query(
         collection(db, 'messages'),
         where('conversationId', '==', conversationId)
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        console.log('Messages snapshot received, docs count:', snapshot.docs.length);
+        console.log('Real-time message update - changes:', snapshot.docChanges().length);
         
-        // For initial load, replace all messages
-        if (snapshot.docs.length > 0) {
-          const allMessages = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
-            };
-          }) as Message[];
+        snapshot.docChanges().forEach((change) => {
+          const messageData = { 
+            id: change.doc.id, 
+            ...change.doc.data(),
+            createdAt: change.doc.data().createdAt?.toDate?.()?.toISOString() || change.doc.data().createdAt,
+          } as Message;
           
-          // Filter and sort messages
-          const conversationMessages = allMessages
-            .filter(msg => msg.conversationId === conversationId)
-            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-          
-          setMessages(conversationMessages);
-        } else {
-          setMessages([]);
-        }
+          // Only process messages for current conversation
+          if (messageData.conversationId === conversationId) {
+            if (change.type === 'added') {
+              console.log('New message received:', messageData.content);
+              setMessages(prev => {
+                // Check if message already exists
+                if (prev.find(msg => msg.id === messageData.id)) {
+                  return prev;
+                }
+                // Add new message and sort by timestamp
+                const newMessages = [...prev, messageData];
+                return newMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+              });
+            } else if (change.type === 'modified') {
+              console.log('Message updated:', messageData.id);
+              setMessages(prev => prev.map(msg => 
+                msg.id === messageData.id ? messageData : msg
+              ));
+            } else if (change.type === 'removed') {
+              console.log('Message removed:', messageData.id);
+              setMessages(prev => prev.filter(msg => msg.id !== change.doc.id));
+            }
+          }
+        });
         
-        // Hide loading after initial load
+        // Only hide loading after first snapshot
         setLoadingMessages(false);
       }, (error) => {
-        console.error('Error fetching messages:', error);
+        console.error('Real-time message error:', error);
         setMessages([]);
         setLoadingMessages(false);
       });
 
       return unsubscribe;
     } catch (error) {
-      console.error('Error setting up messages listener:', error);
+      console.error('Error setting up real-time messages:', error);
       setMessages([]);
       setLoadingMessages(false);
       return undefined;
@@ -243,7 +270,9 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
         ...(fileName && { fileName })
       };
 
+      console.log('Adding message to Firebase:', messageData);
       const messageRef = await addDoc(collection(db, 'messages'), messageData);
+      console.log('Message sent successfully with ID:', messageRef.id);
 
       // Update conversation's last message
       await updateDoc(doc(db, 'conversations', finalConversationId), {
