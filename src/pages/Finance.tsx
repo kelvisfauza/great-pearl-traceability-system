@@ -27,7 +27,7 @@ const Finance = () => {
     addTransaction,
     addExpense,
     processPayment,
-    handleModifyPayment,
+    handleModifyPayment: modifyPaymentFromHook,
     refetch
   } = useFinanceData();
 
@@ -98,10 +98,10 @@ const Finance = () => {
     }
   };
 
-  const handleModifyPayment = async (paymentId: string, targetDepartment: string, reason: string, comments?: string) => {
+  const handlePaymentModification = async (paymentId: string, targetDepartment: string, reason: string, comments?: string) => {
     console.log('Finance page - Modifying payment:', paymentId, targetDepartment, reason);
     try {
-      await handleModifyPayment(paymentId, targetDepartment, reason, comments);
+      await modifyPaymentFromHook(paymentId, targetDepartment, reason, comments);
     } catch (error) {
       console.error('Finance page - Error modifying payment:', error);
       toast({
@@ -289,7 +289,7 @@ const Finance = () => {
               completedPayments={completedPayments}
               rejectedPayments={rejectedPayments}
               onProcessPayment={handleProcessPayment}
-              onModifyPayment={handleModifyPayment}
+              onModifyPayment={handlePaymentModification}
               formatCurrency={formatCurrency}
             />
           </TabsContent>
