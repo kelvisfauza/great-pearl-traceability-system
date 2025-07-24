@@ -36,6 +36,7 @@ interface Employee {
   emergency_contact?: string;
   isOneTimePassword?: boolean;
   mustChangePassword?: boolean;
+  authUserId?: string;
 }
 
 interface AuthContextType {
@@ -126,21 +127,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: 'Active',
         join_date: new Date().toISOString(),
         isOneTimePassword: false,
-        mustChangePassword: false
+        mustChangePassword: false,
+        authUserId: targetUserId
       };
     }
 
     try {
       console.log('Fetching employee data for email:', userEmail);
+      console.log('Target user ID:', targetUserId);
       
-      // Always search by email first since that's how employees are stored
-      const employeesQuery = query(collection(db, 'employees'), where('email', '==', userEmail));
+      // First try to search by authUserId (for newly created users)
+      if (targetUserId) {
+        const authUserQuery = query(collection(db, 'employees'), where('authUserId', '==', targetUserId));
+        const authUserSnapshot = await getDocs(authUserQuery);
+        
+        if (!authUserSnapshot.empty) {
+          const docSnap = authUserSnapshot.docs[0];
+          const employeeData = { id: docSnap.id, ...docSnap.data() } as Employee;
+          console.log('Found employee by authUserId:', employeeData);
+          return employeeData;
+        }
+      }
+      
+      // Fallback to search by email (for existing users)
+      const normalizedEmail = userEmail.toLowerCase().trim();
+      const employeesQuery = query(collection(db, 'employees'), where('email', '==', normalizedEmail));
       const employeeSnapshot = await getDocs(employeesQuery);
 
       if (!employeeSnapshot.empty) {
         const docSnap = employeeSnapshot.docs[0];
         const employeeData = { id: docSnap.id, ...docSnap.data() } as Employee;
         console.log('Found employee by email:', employeeData);
+        
+        // Update the employee record with authUserId if it's missing
+        if (!employeeData.authUserId && targetUserId) {
+          console.log('Updating employee record with authUserId');
+          await updateDoc(doc(db, 'employees', docSnap.id), {
+            authUserId: targetUserId,
+            updated_at: new Date().toISOString()
+          });
+          employeeData.authUserId = targetUserId;
+        }
+        
         return employeeData;
       }
 
@@ -163,8 +191,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Set user first so fetchEmployeeData can access user.email
       setUser(userCredential.user);
       
-      // Fetch employee data using the email
-      const employeeData = await fetchEmployeeData();
+      // Add a small delay to ensure user state is set
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Fetch employee data using the email and uid
+      const employeeData = await fetchEmployeeData(userCredential.user.uid);
       
       // Special handling for main admin account
       if (email === MAIN_ADMIN_EMAIL) {
@@ -186,6 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Regular employee login flow
       if (!employeeData) {
         console.error('No employee record found for email:', email);
+        console.error('User ID:', userCredential.user.uid);
         await firebaseSignOut(auth);
         setUser(null);
         toast({
@@ -345,7 +377,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (user && !loading) {
       const loadEmployeeData = async () => {
-        const employeeData = await fetchEmployeeData();
+        const employeeData = await fetchEmployeeData(user.uid);
         setEmployee(employeeData);
       };
       loadEmployeeData();
