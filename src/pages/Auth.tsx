@@ -17,7 +17,7 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPasswordChange, setShowPasswordChange] = useState(true); // Force show for testing
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
 

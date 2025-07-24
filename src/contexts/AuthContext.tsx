@@ -271,6 +271,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Check if user needs to change password
       if (employeeData.mustChangePassword) {
+        console.log('User must change password, returning requiresPasswordChange flag');
         toast({
           title: "Password Change Required",
           description: "You must change your password before continuing.",
@@ -279,6 +280,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { requiresPasswordChange: true };
       }
 
+      console.log('Login successful, no password change required');
       setTimeout(async () => {
         await seedFirebaseData();
       }, 1000);
