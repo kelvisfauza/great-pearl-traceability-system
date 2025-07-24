@@ -111,11 +111,17 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
         </DialogHeader>
 
         <div ref={printRef}>
-          <div className="text-center mb-4 text-sm">
-            <p className="font-bold text-lg">Great Pearl Coffee Factory</p>
-            <p>+256781121639 / +256778536681</p>
-            <p>www.greatpearlcoffee.com</p>
-            <p>greatpearlcoffee@gmail.com</p>
+          <div className="text-center mb-6 text-sm">
+            <div className="mb-4">
+              <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Great Pearl Coffee Factory Logo" className="mx-auto h-16 w-auto mb-2" />
+            </div>
+            <h1 className="font-bold text-xl uppercase tracking-wide mb-2">GREAT PEARL COFFEE FACTORY</h1>
+            <div className="mb-4">
+              <p>+256781121639 / +256778536681</p>
+              <p>www.greatpearlcoffee.com</p>
+              <p>greatpearlcoffee@gmail.com</p>
+            </div>
+            <hr className="border-t-2 border-gray-800 my-4" />
           </div>
 
           <div className="space-y-4 text-sm">
@@ -137,14 +143,12 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
             <table>
               <thead>
                 <tr>
-                  <th>Description</th>
                   <th>Unit Price (UGX)</th>
                   <th>Total (UGX)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>{coffeeType} - {qualityAssessment}</td>
                   <td>{unitPrice.toLocaleString()}</td>
                   <td>{totalAmount.toLocaleString()}</td>
                 </tr>
@@ -159,7 +163,6 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
                     <th>Parameter</th>
                     <th>Value</th>
                     <th>Unit</th>
-                    <th>Description</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -168,7 +171,6 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
                       <td className="font-medium">{param.parameter}</td>
                       <td className="text-center">{param.value !== undefined ? param.value : 'N/A'}</td>
                       <td className="text-center">{param.unit}</td>
-                      <td>{param.description}</td>
                     </tr>
                   ))}
                 </tbody>
