@@ -22,6 +22,7 @@ export interface ModificationRequest {
   id: string;
   originalPaymentId: string;
   qualityAssessmentId?: string;
+  batchNumber?: string;
   requestedBy: string;
   requestedByDepartment: string;
   targetDepartment: string;
@@ -98,8 +99,26 @@ export const useWorkflowTracking = () => {
 
   const createModificationRequest = async (requestData: Omit<ModificationRequest, 'id' | 'createdAt'>) => {
     try {
+      console.log('Creating modification request:', requestData);
+      
+      // Add batch number if not provided
+      let batchNumber = requestData.batchNumber;
+      if (!batchNumber) {
+        // Try to get batch number from payment records
+        const paymentQuery = query(
+          collection(db, 'payment_records'),
+          where('id', '==', requestData.originalPaymentId)
+        );
+        const paymentSnapshot = await getDocs(paymentQuery);
+        if (!paymentSnapshot.empty) {
+          const paymentData = paymentSnapshot.docs[0].data();
+          batchNumber = paymentData.batch_number;
+        }
+      }
+
       await addDoc(collection(db, 'modification_requests'), {
         ...requestData,
+        batchNumber,
         createdAt: new Date().toISOString()
       });
       

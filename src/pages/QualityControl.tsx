@@ -20,10 +20,12 @@ import {
   Eye,
   Send,
   Factory,
-  FileDown
+  FileDown,
+  Edit
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQualityControl } from "@/hooks/useQualityControl";
+import { useWorkflowTracking } from "@/hooks/useWorkflowTracking";
 import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
@@ -38,6 +40,13 @@ const QualityControl = () => {
     updateStoreRecord,
     submitToFinance
   } = useQualityControl();
+
+  const { 
+    modificationRequests,
+    getPendingModificationRequests,
+    completeModificationRequest,
+    trackWorkflowStep
+  } = useWorkflowTracking();
 
   const { prices, refreshPrices } = usePrices();
   const { toast } = useToast();
@@ -80,6 +89,9 @@ const QualityControl = () => {
     grnData: null
   });
 
+  // Get pending modification requests for quality department
+  const pendingModificationRequests = getPendingModificationRequests('Quality');
+
   useEffect(() => {
     refreshPrices();
   }, [refreshPrices]);
@@ -99,6 +111,37 @@ const QualityControl = () => {
       comments: ''
     });
     setActiveTab("assessment-form");
+  };
+
+  const handleStartModification = (modificationRequest: any) => {
+    console.log('Starting modification for request:', modificationRequest);
+    
+    // Find the original payment record to get coffee details
+    const originalRecord = storeRecords.find(record => 
+      record.batch_number === modificationRequest.batchNumber ||
+      record.id === modificationRequest.originalPaymentId
+    );
+    
+    if (originalRecord) {
+      setSelectedRecord({
+        ...originalRecord,
+        isModification: true,
+        modificationRequestId: modificationRequest.id,
+        modificationReason: modificationRequest.reason
+      });
+      setAssessmentForm({
+        moisture: '',
+        group1_defects: '',
+        group2_defects: '',
+        below12: '',
+        pods: '',
+        husks: '',
+        stones: '',
+        manual_price: '',
+        comments: `Modification requested due to: ${modificationRequest.reason}`
+      });
+      setActiveTab("assessment-form");
+    }
   };
 
   const calculateSuggestedPrice = () => {
@@ -188,6 +231,24 @@ const QualityControl = () => {
       
       await addQualityAssessment(assessment);
       
+      // If this is a modification request, complete it and track workflow
+      if (selectedRecord.isModification) {
+        await completeModificationRequest(selectedRecord.modificationRequestId);
+        
+        // Track workflow step
+        await trackWorkflowStep({
+          paymentId: selectedRecord.id,
+          qualityAssessmentId: assessment.store_record_id,
+          fromDepartment: 'Quality',
+          toDepartment: 'Finance',
+          action: 'modified',
+          reason: 'quality_reassessment',
+          comments: `Quality reassessment completed. New price: ${finalPrice}`,
+          processedBy: 'Quality Controller',
+          status: 'completed'
+        });
+      }
+      
       await updateStoreRecord(selectedRecord.id, { status: 'assessed' });
       
       setSelectedRecord(null);
@@ -206,7 +267,9 @@ const QualityControl = () => {
       
       toast({
         title: "Assessment Complete",
-        description: "Quality assessment saved and sent to finance for payment processing"
+        description: selectedRecord.isModification 
+          ? "Quality reassessment completed and sent back to finance"
+          : "Quality assessment saved and sent to finance for payment processing"
       });
       
     } catch (error) {
@@ -363,8 +426,9 @@ const QualityControl = () => {
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="pending">Pending Assessment ({pendingRecords.length})</TabsTrigger>
+            <TabsTrigger value="modifications">Modification Requests ({pendingModificationRequests.length})</TabsTrigger>
             <TabsTrigger value="assessments">Quality Assessments ({qualityAssessments.length})</TabsTrigger>
             <TabsTrigger value="assessment-form" disabled={!selectedRecord}>
               {selectedRecord ? 'Assessment Form' : 'Select Record First'}
@@ -418,6 +482,59 @@ const QualityControl = () => {
                             >
                               <Eye className="h-4 w-4 mr-1" />
                               Assess
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="modifications">
+            <Card>
+              <CardHeader>
+                <CardTitle>Modification Requests</CardTitle>
+                <CardDescription>Rejected payments sent to quality for modification</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingModificationRequests.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Edit className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Modification Requests</h3>
+                    <p className="text-gray-500">No rejected payments require quality modification</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Payment ID</TableHead>
+                        <TableHead>Requested By</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead>Comments</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingModificationRequests.map((request) => (
+                        <TableRow key={request.id}>
+                          <TableCell className="font-medium">{request.originalPaymentId}</TableCell>
+                          <TableCell>{request.requestedBy}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{request.reason.replace('_', ' ')}</Badge>
+                          </TableCell>
+                          <TableCell>{request.comments || 'N/A'}</TableCell>
+                          <TableCell>{new Date(request.createdAt).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleStartModification(request)}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Modify
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -520,9 +637,23 @@ const QualityControl = () => {
             {selectedRecord && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Quality Assessment Form</CardTitle>
+                  <CardTitle>
+                    {selectedRecord.isModification ? 'Quality Modification Form' : 'Quality Assessment Form'}
+                  </CardTitle>
                   <CardDescription>
-                    Assessing: {selectedRecord.batch_number} - {selectedRecord.supplier_name} ({selectedRecord.coffee_type})
+                    {selectedRecord.isModification ? 'Modifying: ' : 'Assessing: '}
+                    {selectedRecord.batch_number} - {selectedRecord.supplier_name} ({selectedRecord.coffee_type})
+                    {selectedRecord.isModification && (
+                      <div className="mt-2 p-2 bg-orange-50 rounded-lg">
+                        <Badge variant="outline" className="text-orange-600">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Modification Request
+                        </Badge>
+                        <p className="text-sm text-orange-600 mt-1">
+                          Reason: {selectedRecord.modificationReason}
+                        </p>
+                      </div>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -660,7 +791,10 @@ const QualityControl = () => {
                   <div className="flex gap-4">
                     <Button onClick={handleSubmitAssessment} className="flex-1">
                       <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Complete Assessment & Submit to Finance
+                      {selectedRecord.isModification 
+                        ? 'Complete Modification & Submit to Finance' 
+                        : 'Complete Assessment & Submit to Finance'
+                      }
                     </Button>
                     <Button 
                       variant="outline" 
