@@ -148,13 +148,24 @@ const MyRequests = () => {
 
   const requestsByStatus = getRequestsByStatus();
   const totalRequests = requests.length;
-  const activeRequests = requests.filter(r => !['Completed', 'Resolved', 'Rejected'].includes(r.status)).length;
-  const completedRequests = requestsByStatus['Completed']?.length || 0;
+  const activeRequests = requests.filter(r => 
+    !['Completed', 'Resolved', 'Rejected'].includes(r.status) && 
+    r.currentStep !== 'completed'
+  ).length;
+  const completedRequests = requests.filter(r => 
+    ['Completed', 'Resolved'].includes(r.status) || r.currentStep === 'completed'
+  ).length;
   const rejectedRequests = requestsByStatus['Rejected']?.length || 0;
   
-  // Separate active and previous requests
-  const activeRequestsList = requests.filter(r => !['Completed', 'Resolved', 'Rejected'].includes(r.status));
-  const previousRequestsList = requests.filter(r => ['Completed', 'Resolved', 'Rejected'].includes(r.status));
+  // Separate active and previous requests - check both status and currentStep
+  const activeRequestsList = requests.filter(r => 
+    !['Completed', 'Resolved', 'Rejected'].includes(r.status) && 
+    r.currentStep !== 'completed'
+  );
+  const previousRequestsList = requests.filter(r => 
+    ['Completed', 'Resolved', 'Rejected'].includes(r.status) || 
+    r.currentStep === 'completed'
+  );
 
   if (loading) {
     return (
