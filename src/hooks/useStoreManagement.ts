@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
@@ -170,7 +170,57 @@ export const useStoreManagement = () => {
 
   const deleteCoffeeRecord = async (recordId: string) => {
     try {
-      console.log('Deleting coffee record from Firebase:', recordId);
+      console.log('Checking if coffee record can be deleted:', recordId);
+      
+      // Get the coffee record to check its batch number
+      const coffeeRecord = storeRecords.find(record => record.id === recordId);
+      if (!coffeeRecord) {
+        throw new Error('Coffee record not found');
+      }
+
+      // Check if there are any payment records for this batch that are paid or processing
+      const paymentQuery = query(
+        collection(db, 'payment_records'), 
+        where('batch_number', '==', coffeeRecord.batchNumber)
+      );
+      const paymentSnapshot = await getDocs(paymentQuery);
+      
+      const paidPayments = paymentSnapshot.docs.filter(doc => {
+        const data = doc.data();
+        return ['Paid', 'Processing', 'Approved'].includes(data.status);
+      });
+
+      if (paidPayments.length > 0) {
+        toast({
+          title: "Cannot Delete",
+          description: `Cannot delete coffee record: Payment has been processed or approved for batch ${coffeeRecord.batchNumber}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check if there are quality assessments that have been submitted to finance
+      const qualityQuery = query(
+        collection(db, 'quality_assessments'), 
+        where('store_record_id', '==', recordId)
+      );
+      const qualitySnapshot = await getDocs(qualityQuery);
+      
+      const submittedQuality = qualitySnapshot.docs.filter(doc => {
+        const data = doc.data();
+        return ['submitted_to_finance', 'paid'].includes(data.status);
+      });
+
+      if (submittedQuality.length > 0) {
+        toast({
+          title: "Cannot Delete",
+          description: `Cannot delete coffee record: Quality assessment has been submitted to finance for batch ${coffeeRecord.batchNumber}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Coffee record can be deleted, proceeding...');
       
       const docRef = doc(db, 'coffee_records', recordId);
       await deleteDoc(docRef);
