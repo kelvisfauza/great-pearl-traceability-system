@@ -94,6 +94,13 @@ const Auth = () => {
           <p className="text-gray-600">
             Welcome to the Coffee Management System
           </p>
+          
+          {/* Quick Test Credentials */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm font-semibold text-blue-800">Quick Test:</p>
+            <p className="text-xs text-blue-600">Admin: kelvifauza@gmail.com (any password)</p>
+            <p className="text-xs text-blue-600">If keizyeda@gmail.com exists, try different password</p>
+          </div>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
