@@ -17,23 +17,13 @@ import {
   DollarSign,
   ClipboardCheck,
   MapPin,
-  LineChart,
-  LogOut,
-  MessageSquare
+  LineChart
 } from "lucide-react";
 
 const RoleBasedNavigation = () => {
   const location = useLocation();
-  const { employee, signOut } = useAuth();
+  const { employee } = useAuth();
   const access = useRoleBasedAccess();
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
   
   if (!employee) return null;
 
@@ -63,7 +53,7 @@ const RoleBasedNavigation = () => {
           name: "Store Management", 
           icon: Shield, 
           path: "/store", 
-          access: access.canViewStoreManagement
+          access: access.canViewInventory
         },
         { 
           name: "Inventory", 
@@ -103,23 +93,6 @@ const RoleBasedNavigation = () => {
       ]
     },
     {
-      title: "Personal",
-      items: [
-        { 
-          name: "My Requests", 
-          icon: MessageSquare, 
-          path: "/my-requests", 
-          access: true // Everyone can access their own requests
-        },
-        { 
-          name: "Settings", 
-          icon: Settings, 
-          path: "/settings", 
-          access: access.canViewSettings
-        },
-      ]
-    },
-    {
       title: "System",
       items: [
         { 
@@ -127,6 +100,12 @@ const RoleBasedNavigation = () => {
           icon: FileText, 
           path: "/reports", 
           access: access.canViewReports
+        },
+        { 
+          name: "Settings", 
+          icon: Settings, 
+          path: "/settings", 
+          access: access.canViewSettings
         },
         { 
           name: "Logistics", 
@@ -185,18 +164,6 @@ const RoleBasedNavigation = () => {
             </div>
           ))}
         </nav>
-        
-        {/* Logout Section */}
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4 mr-3" />
-            Logout
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

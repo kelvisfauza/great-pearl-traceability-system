@@ -1,5 +1,7 @@
+
 import { useState, useEffect } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -27,8 +29,15 @@ export interface Employee {
 
 const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
   try {
-    console.log('Security event logged:', { action, tableName, recordId });
-    // Mock security logging - in real implementation would use Supabase
+    console.log('Logging security event:', { action, tableName, recordId });
+    await addDoc(collection(db, 'security_audit_log'), {
+      action,
+      table_name: tableName,
+      record_id: recordId,
+      old_values: oldValues,
+      new_values: newValues,
+      created_at: new Date().toISOString()
+    });
   } catch (error) {
     console.error('Security logging error:', error);
   }
@@ -42,14 +51,18 @@ export const useSecureEmployees = () => {
 
   const fetchEmployees = async () => {
     try {
-      console.log('Fetching employees...');
+      console.log('Fetching employees from Firebase...');
       setLoading(true)
+      const employeesQuery = query(collection(db, 'employees'), orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(employeesQuery);
       
-      // Mock data since employees table doesn't exist yet
-      const mockEmployees: Employee[] = []
+      const employeesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Employee[];
       
-      console.log('Employees loaded:', mockEmployees.length);
-      setEmployees(mockEmployees);
+      console.log('Employees fetched successfully:', employeesData.length);
+      setEmployees(employeesData);
     } catch (error) {
       console.error('Error fetching employees:', error)
       toast({
@@ -119,10 +132,9 @@ export const useSecureEmployees = () => {
     }
 
     try {
-      console.log('Adding employee:', employeeData);
+      console.log('Adding employee to Firebase:', employeeData);
       
-      const newEmployee: Employee = {
-        id: `emp-${Date.now()}`,
+      const sanitizedData = {
         ...employeeData,
         name: employeeData.name.trim(),
         email: employeeData.email.toLowerCase().trim(),
@@ -138,9 +150,14 @@ export const useSecureEmployees = () => {
         authUserId: employeeData.authUserId || null
       }
 
-      console.log('Employee added successfully:', newEmployee);
+      console.log('Sanitized employee data:', sanitizedData);
+
+      const docRef = await addDoc(collection(db, 'employees'), sanitizedData);
+      const newEmployee = { id: docRef.id, ...sanitizedData };
+
+      console.log('Employee added successfully to Firebase:', newEmployee);
       setEmployees(prev => [newEmployee, ...prev])
-      await logSecurityEvent('employee_created', 'employees', newEmployee.id, null, newEmployee);
+      await logSecurityEvent('employee_created', 'employees', docRef.id, null, newEmployee);
       
       toast({
         title: "Success",
@@ -169,7 +186,7 @@ export const useSecureEmployees = () => {
     }
 
     try {
-      console.log('Updating employee:', id, updates);
+      console.log('Updating employee in Firebase:', id, updates);
       
       const sanitizedUpdates = {
         ...updates,
@@ -180,6 +197,8 @@ export const useSecureEmployees = () => {
         updated_at: new Date().toISOString()
       }
 
+      await updateDoc(doc(db, 'employees', id), sanitizedUpdates);
+      
       setEmployees(prev => prev.map(emp => 
         emp.id === id ? { ...emp, ...sanitizedUpdates } : emp
       ));
@@ -213,7 +232,9 @@ export const useSecureEmployees = () => {
     }
 
     try {
-      console.log('Deleting employee:', id);
+      console.log('Deleting employee from Firebase:', id);
+      
+      await deleteDoc(doc(db, 'employees', id));
       
       setEmployees(prev => prev.filter(emp => emp.id !== id));
       await logSecurityEvent('employee_deleted', 'employees', id, null, null);

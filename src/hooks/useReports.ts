@@ -1,5 +1,7 @@
+
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Report {
@@ -25,13 +27,18 @@ export const useReports = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      console.log('Fetching reports...');
+      console.log('Fetching reports from Firebase...');
       
-      // Mock data since reports table doesn't exist yet
-      const mockReports: Report[] = [];
+      const reportsQuery = query(collection(db, 'reports'), orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(reportsQuery);
       
-      console.log('Reports loaded:', mockReports.length);
-      setReports(mockReports);
+      const reportsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Report[];
+      
+      console.log('Firebase reports:', reportsData);
+      setReports(reportsData);
     } catch (error) {
       console.error('Error fetching reports:', error);
       toast({
@@ -52,10 +59,9 @@ export const useReports = () => {
     format: string;
   }) => {
     try {
-      console.log('Generating report:', reportData);
+      console.log('Generating report in Firebase:', reportData);
       
-      const newReport: Report = {
-        id: `report-${Date.now()}`,
+      const reportDoc = {
         name: reportData.name,
         type: reportData.type,
         category: reportData.category,
@@ -68,14 +74,16 @@ export const useReports = () => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
-      
-      setReports(prev => [newReport, ...prev]);
+
+      const docRef = await addDoc(collection(db, 'reports'), reportDoc);
+      console.log('Report generated with ID:', docRef.id);
       
       toast({
         title: "Success",
         description: "Report generated successfully"
       });
       
+      await fetchReports();
     } catch (error) {
       console.error('Error generating report:', error);
       toast({
@@ -89,15 +97,16 @@ export const useReports = () => {
 
   const deleteReport = async (reportId: string) => {
     try {
-      console.log('Deleting report:', reportId);
+      console.log('Deleting report from Firebase:', reportId);
       
-      setReports(prev => prev.filter(report => report.id !== reportId));
+      await deleteDoc(doc(db, 'reports', reportId));
       
       toast({
         title: "Success",
         description: "Report deleted successfully"
       });
       
+      await fetchReports();
     } catch (error) {
       console.error('Error deleting report:', error);
       toast({

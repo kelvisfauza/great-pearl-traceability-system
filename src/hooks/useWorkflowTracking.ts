@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, addDoc, query, where, getDocs, updateDoc, doc, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 export interface WorkflowStep {
@@ -42,14 +43,33 @@ export const useWorkflowTracking = () => {
     try {
       setLoading(true);
       
-      // Using mock data for now since workflow tables don't exist yet
-      const mockWorkflowSteps: WorkflowStep[] = [];
-      const mockModificationRequests: ModificationRequest[] = [];
+      // Fetch workflow steps
+      const workflowQuery = query(
+        collection(db, 'workflow_steps'),
+        orderBy('timestamp', 'desc')
+      );
+      const workflowSnapshot = await getDocs(workflowQuery);
+      const steps = workflowSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as WorkflowStep[];
       
-      console.log('Mock workflow data loaded');
+      // Fetch modification requests
+      const modificationQuery = query(
+        collection(db, 'modification_requests'),
+        orderBy('createdAt', 'desc')
+      );
+      const modificationSnapshot = await getDocs(modificationQuery);
+      const requests = modificationSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ModificationRequest[];
       
-      setWorkflowSteps(mockWorkflowSteps);
-      setModificationRequests(mockModificationRequests);
+      console.log('Fetched workflow steps:', steps);
+      console.log('Fetched modification requests:', requests);
+      
+      setWorkflowSteps(steps);
+      setModificationRequests(requests);
     } catch (error) {
       console.error('Error fetching workflow data:', error);
       toast({
@@ -66,16 +86,13 @@ export const useWorkflowTracking = () => {
     try {
       console.log('Tracking workflow step:', stepData);
       
-      // Mock implementation - would use Supabase table when ready
-      const newStep: WorkflowStep = {
-        id: `step_${Date.now()}`,
+      const docRef = await addDoc(collection(db, 'workflow_steps'), {
         ...stepData,
         timestamp: new Date().toISOString()
-      };
+      });
       
-      setWorkflowSteps(prev => [newStep, ...prev]);
-      
-      console.log('Workflow step tracked with ID:', newStep.id);
+      console.log('Workflow step tracked with ID:', docRef.id);
+      await fetchWorkflowData();
     } catch (error) {
       console.error('Error tracking workflow step:', error);
       toast({
@@ -90,15 +107,30 @@ export const useWorkflowTracking = () => {
     try {
       console.log('Creating modification request:', requestData);
       
-      const newRequest: ModificationRequest = {
-        id: `mod_${Date.now()}`,
+      // Try to get batch number from store records if not provided
+      let batchNumber = requestData.batchNumber;
+      if (!batchNumber) {
+        const storeQuery = query(
+          collection(db, 'store_records'),
+          where('id', '==', requestData.originalPaymentId)
+        );
+        const storeSnapshot = await getDocs(storeQuery);
+        if (!storeSnapshot.empty) {
+          const storeData = storeSnapshot.docs[0].data();
+          batchNumber = storeData.batch_number;
+        }
+      }
+
+      const modificationRequestData = {
         ...requestData,
+        batchNumber,
         createdAt: new Date().toISOString()
       };
 
-      setModificationRequests(prev => [newRequest, ...prev]);
+      const docRef = await addDoc(collection(db, 'modification_requests'), modificationRequestData);
+      console.log('Modification request created with ID:', docRef.id);
       
-      console.log('Modification request created with ID:', newRequest.id);
+      await fetchWorkflowData();
       
       toast({
         title: "Success",
@@ -118,13 +150,12 @@ export const useWorkflowTracking = () => {
     try {
       console.log('Completing modification request:', requestId);
       
-      setModificationRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: 'completed' as const, completedAt: new Date().toISOString() }
-            : req
-        )
-      );
+      await updateDoc(doc(db, 'modification_requests', requestId), {
+        status: 'completed',
+        completedAt: new Date().toISOString()
+      });
+      
+      await fetchWorkflowData();
       
       toast({
         title: "Success",

@@ -6,7 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const DashboardStats = () => {
   const { hasRole, hasPermission, employee } = useAuth();
@@ -25,26 +26,76 @@ const DashboardStats = () => {
       try {
         console.log('Fetching real-time dashboard data...');
         
-        // For now, use mock data since we're transitioning from Firebase to Supabase
-        // These tables would need to be created in Supabase if real data is needed
-        setRealTimeData({
-          coffeeData: { 
-            totalKgs: 15000, 
-            totalBags: 250, 
-            totalBatches: 12 
-          },
-          financeData: { 
-            totalRevenue: 45000000, 
-            totalExpenses: 12000000 
-          },
-          supplierCount: 8,
-          inventoryData: {
-            totalBags: 180,
-            totalKgs: 12000
+        // Fetch coffee records
+        const coffeeSnapshot = await getDocs(collection(db, 'coffee_records'));
+        let totalKgs = 0;
+        let totalBags = 0;
+        const batches = new Set();
+        
+        coffeeSnapshot.forEach((doc) => {
+          const data = doc.data();
+          totalKgs += Number(data.kilograms) || 0;
+          totalBags += Number(data.bags) || 0;
+          if (data.batch_number) {
+            batches.add(data.batch_number);
           }
         });
 
-        console.log('Dashboard data updated with mock data');
+        // Fetch finance transactions for revenue
+        const transactionsSnapshot = await getDocs(collection(db, 'finance_transactions'));
+        let totalRevenue = 0;
+        transactionsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.type === 'Income' || data.type === 'Revenue') {
+            totalRevenue += Number(data.amount) || 0;
+          }
+        });
+
+        // Fetch expenses
+        const expensesSnapshot = await getDocs(collection(db, 'finance_expenses'));
+        let totalExpenses = 0;
+        expensesSnapshot.forEach((doc) => {
+          const data = doc.data();
+          totalExpenses += Number(data.amount) || 0;
+        });
+
+        // Fetch suppliers count
+        const suppliersSnapshot = await getDocs(collection(db, 'suppliers'));
+        const supplierCount = suppliersSnapshot.size;
+
+        // Fetch inventory data
+        const inventorySnapshot = await getDocs(collection(db, 'inventory_items'));
+        let inventoryBags = 0;
+        let inventoryKgs = 0;
+        inventorySnapshot.forEach((doc) => {
+          const data = doc.data();
+          inventoryBags += Number(data.total_bags) || 0;
+          inventoryKgs += Number(data.total_kilograms) || 0;
+        });
+
+        setRealTimeData({
+          coffeeData: { 
+            totalKgs, 
+            totalBags, 
+            totalBatches: batches.size 
+          },
+          financeData: { 
+            totalRevenue, 
+            totalExpenses 
+          },
+          supplierCount,
+          inventoryData: {
+            totalBags: inventoryBags,
+            totalKgs: inventoryKgs
+          }
+        });
+
+        console.log('Dashboard data updated:', {
+          coffeeData: { totalKgs, totalBags, totalBatches: batches.size },
+          financeData: { totalRevenue, totalExpenses },
+          supplierCount,
+          inventoryData: { totalBags: inventoryBags, totalKgs: inventoryKgs }
+        });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
@@ -143,7 +194,7 @@ const DashboardStats = () => {
         },
         {
           title: "Active Staff",
-          value: employees.filter(emp => emp.status === 'active').length.toString(),
+          value: employees.filter(emp => emp.status === 'Active').length.toString(),
           change: `UGX ${(totalSalaryRequests / 1000000).toFixed(1)}M pending`,
           icon: Users,
           color: "text-purple-600",

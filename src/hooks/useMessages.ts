@@ -1,221 +1,156 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+// Remove supabase import - will be handled by compatibility layer
 
 interface Message {
   id: string;
-  senderId: string;
-  receiverId: string;
   content: string;
-  timestamp: Date;
-  read: boolean;
-  messageType: 'text' | 'image' | 'file';
-  metadata?: any;
+  senderId: string;
+  conversationId: string;
+  createdAt: string;
+  type: 'text' | 'image' | 'file';
 }
 
-interface User {
+interface Conversation {
   id: string;
   name: string;
-  email: string;
-  avatar?: string;
-  department?: string;
-  role?: string;
-  isOnline?: boolean;
-  lastSeen?: Date;
+  type: 'direct' | 'group' | 'channel';
+  createdAt: string;
+  lastMessage?: Message;
+  participants: string[];
 }
 
-interface VoiceCall {
-  id: string;
-  callerId: string;
-  receiverId: string;
-  status: 'ringing' | 'active' | 'ended';
-  startTime: Date;
-  endTime?: Date;
-  duration?: number;
-}
-
-export const useMessages = (currentUserId?: string) => {
+export const useMessages = (userId?: string) => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [calls, setCalls] = useState<VoiceCall[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { toast } = useToast();
 
-  const fetchUsers = useCallback(async () => {
+  const fetchConversations = useCallback(async () => {
+    if (!userId) return;
+    
     try {
-      // Mock data since users table doesn't exist yet
-      const mockUsers: User[] = [
-        {
-          id: '1',
-          name: 'John Admin',
-          email: 'admin@company.com',
-          department: 'IT',
-          role: 'admin',
-          isOnline: true
-        }
-      ];
-
-      console.log('Loaded users:', mockUsers.length);
-      setUsers(mockUsers);
+      setLoading(true);
+      // Temporarily return empty data - will be implemented with Firebase later
+      setConversations([]);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching conversations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch conversations",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [userId, toast]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  const subscribeToMessages = useCallback((userId: string, partnerId: string) => {
-    if (!userId || !partnerId) return () => {};
-
-    console.log('Subscribing to messages between:', userId, 'and', partnerId);
-    
-    // Mock subscription - in real implementation would use Supabase realtime
-    setMessages([]);
-    setLoading(false);
-
-    return () => {
-      console.log('Unsubscribing from messages');
-    };
-  }, []);
-
-  const subscribeToUserCalls = useCallback((userId: string) => {
-    if (!userId) return () => {};
-
-    console.log('Subscribing to calls for user:', userId);
-    
-    // Mock subscription - in real implementation would use Supabase realtime
-    setCalls([]);
-
-    return () => {
-      console.log('Unsubscribing from calls');
-    };
-  }, []);
-
-  const sendMessage = async (receiverId: string, content: string, messageType: 'text' | 'image' | 'file' = 'text', metadata?: any) => {
-    if (!currentUserId) {
-      throw new Error('Current user ID is required');
-    }
-
+  const fetchMessages = useCallback(async (conversationId: string) => {
     try {
-      const messageData = {
-        senderId: currentUserId,
-        receiverId,
-        content,
-        messageType,
-        metadata,
-        timestamp: new Date(),
-        read: false
-      };
+      setLoadingMessages(true);
+      // Temporarily return empty data
+      setMessages([]);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch messages",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingMessages(false);
+    }
+  }, [toast]);
 
-      console.log('Sending message:', messageData);
-      
-      // Mock message sending - in real implementation would use Supabase
-      const newMessage: Message = {
-        id: `msg-${Date.now()}`,
-        ...messageData
-      };
-
-      setMessages(prev => [...prev, newMessage]);
-      console.log('Message sent successfully');
-      
-      return newMessage;
+  const sendMessage = async ({ content, conversationId, senderId, type = 'text' }: {
+    content: string;
+    conversationId: string | null;
+    senderId: string;  // Use Firebase User.uid
+    type?: string;
+  }) => {
+    try {
+      // Temporarily do nothing - will be implemented with Firebase later
+      console.log('Message would be sent:', { content, conversationId, senderId, type });
     } catch (error) {
       console.error('Error sending message:', error);
       throw error;
     }
   };
 
-  const markAsRead = async (messageId: string) => {
-    try {
-      console.log('Marking message as read:', messageId);
-      
-      // Mock marking as read - in real implementation would use Supabase
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === messageId ? { ...msg, read: true } : msg
-        )
-      );
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-    }
-  };
-
-  const getConversations = useCallback(async (userId: string) => {
-    try {
-      console.log('Fetching conversations for user:', userId);
-      
-      // Mock conversations - in real implementation would use Supabase
-      return [];
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-      return [];
-    }
-  }, []);
-
-  const initiateVoiceCall = async (receiverId: string) => {
-    if (!currentUserId) {
-      throw new Error('Current user ID is required');
-    }
+  const createConversation = async ({ name, type, participantIds }: {
+    name?: string;
+    type: 'direct' | 'group' | 'channel';
+    participantIds: string[];
+  }) => {
+    if (!userId) throw new Error('User not authenticated');
 
     try {
-      const callData = {
-        callerId: currentUserId,
-        receiverId,
-        status: 'ringing' as const,
-        startTime: new Date()
-      };
-
-      console.log('Initiating voice call:', callData);
-      
-      // Mock call initiation - in real implementation would use Supabase
-      const newCall: VoiceCall = {
-        id: `call-${Date.now()}`,
-        ...callData
-      };
-
-      setCalls(prev => [...prev, newCall]);
-      console.log('Voice call initiated successfully');
-      
-      return newCall;
+      // Temporarily return mock data
+      return { id: 'temp-id', name: name || 'New Conversation' };
     } catch (error) {
-      console.error('Error initiating voice call:', error);
+      console.error('Error creating conversation:', error);
       throw error;
     }
   };
 
-  const updateCallStatus = async (callId: string, status: 'ringing' | 'active' | 'ended', duration?: number) => {
+  const markAsRead = async (conversationId: string) => {
+    if (!userId) return;
+
     try {
-      console.log('Updating call status:', callId, status);
-      
-      // Mock call status update - in real implementation would use Supabase
-      setCalls(prev => 
-        prev.map(call => 
-          call.id === callId 
-            ? { 
-                ...call, 
-                status, 
-                ...(status === 'ended' && { endTime: new Date(), duration }) 
-              } 
-            : call
-        )
-      );
+      // Temporarily do nothing
+      console.log('Would mark as read:', conversationId);
     } catch (error) {
-      console.error('Error updating call status:', error);
+      console.error('Error marking as read:', error);
     }
   };
 
+  const deleteConversation = async (conversationId: string) => {
+    try {
+      // Temporarily do nothing
+      console.log('Would delete conversation:', conversationId);
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+
+    fetchConversations();
+    // Mock subscription setup
+    const unsubscribe = () => {
+      console.log('Unsubscribing from conversation updates');
+    };
+
+    return () => {
+      unsubscribe();
+    };
+  }, [userId, fetchConversations]);
+
+  useEffect(() => {
+    let unread = 0;
+    conversations.forEach(conversation => {
+      if (conversation.lastMessage?.senderId !== userId) {
+        unread++;
+      }
+    });
+    setUnreadCount(unread);
+  }, [conversations, userId]);
+
   return {
+    conversations,
     messages,
-    users,
-    calls,
     loading,
-    subscribeToMessages,
-    subscribeToUserCalls,
+    loadingMessages,
+    unreadCount,
+    fetchConversations,
+    fetchMessages,
     sendMessage,
+    createConversation,
     markAsRead,
-    getConversations,
-    initiateVoiceCall,
-    updateCallStatus,
-    fetchUsers
+    deleteConversation
   };
 };

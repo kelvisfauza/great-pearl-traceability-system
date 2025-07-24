@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
 
@@ -47,27 +48,18 @@ export const useQualityControl = () => {
 
   const loadStoreRecords = useCallback(async () => {
     try {
-      console.log('Loading coffee records...');
+      console.log('Loading coffee records from Firebase...');
       
-      // Using mock data since coffee_records table doesn't exist yet
-      const mockStoreRecords: StoreRecord[] = [
-        {
-          id: '1',
-          date: '2024-01-15',
-          kilograms: 1000,
-          bags: 20,
-          supplier_name: 'Mountain Coffee Co.',
-          coffee_type: 'Arabica',
-          batch_number: 'MCO-2024-001',
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
+      const coffeeQuery = query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'));
+      const coffeeSnapshot = await getDocs(coffeeQuery);
+      const coffeeData = coffeeSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as StoreRecord[];
 
-      console.log('Loaded coffee records:', mockStoreRecords.length, 'records');
-      setStoreRecords(mockStoreRecords);
-      return mockStoreRecords;
+      console.log('Loaded coffee records:', coffeeData.length, 'records');
+      setStoreRecords(coffeeData || []);
+      return coffeeData;
     } catch (error) {
       console.error('Error loading store records:', error);
       setStoreRecords([]);
@@ -77,14 +69,18 @@ export const useQualityControl = () => {
 
   const loadQualityAssessments = useCallback(async () => {
     try {
-      console.log('Loading quality assessments...');
+      console.log('Loading quality assessments from Firebase...');
       
-      // Using mock data since quality_assessments table doesn't exist yet
-      const mockQualityAssessments: QualityAssessment[] = [];
+      const qualityQuery = query(collection(db, 'quality_assessments'), orderBy('created_at', 'desc'));
+      const qualitySnapshot = await getDocs(qualityQuery);
+      const qualityData = qualitySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as QualityAssessment[];
 
-      console.log('Loaded quality assessments:', mockQualityAssessments.length, 'assessments');
-      setQualityAssessments(mockQualityAssessments);
-      return mockQualityAssessments;
+      console.log('Loaded quality assessments:', qualityData.length, 'assessments');
+      setQualityAssessments(qualityData || []);
+      return qualityData;
     } catch (error) {
       console.error('Error loading quality assessments:', error);
       setQualityAssessments([]);
@@ -137,15 +133,19 @@ export const useQualityControl = () => {
 
   const updateStoreRecord = async (id: string, updates: Partial<StoreRecord>) => {
     try {
-      console.log('Updating store record:', id, updates);
+      console.log('Updating store record in Firebase:', id, updates);
       
-      // Mock update - in real implementation would use Supabase
+      await updateDoc(doc(db, 'coffee_records', id), {
+        ...updates,
+        updated_at: new Date().toISOString()
+      });
+
       console.log('Store record updated successfully');
       
       // Update local state
       setStoreRecords(records => 
         records.map(record => 
-          record.id === id ? { ...record, ...updates, updated_at: new Date().toISOString() } : record
+          record.id === id ? { ...record, ...updates } : record
         )
       );
       
@@ -166,7 +166,7 @@ export const useQualityControl = () => {
 
   const addQualityAssessment = async (assessment: Omit<QualityAssessment, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      console.log('Adding quality assessment:', assessment);
+      console.log('Adding quality assessment to Firebase:', assessment);
       
       // Find the coffee record to get supplier info
       const coffeeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
@@ -174,8 +174,19 @@ export const useQualityControl = () => {
         throw new Error('Coffee record not found');
       }
 
-      // Mock supplier lookup - in real implementation would use Supabase
-      let contractPrice: number | null = getContractPriceForSupplier(coffeeRecord.supplier_name);
+      // Get supplier from suppliers collection to get the supplier ID
+      const suppliersQuery = query(
+        collection(db, 'suppliers'),
+        where('name', '==', coffeeRecord.supplier_name)
+      );
+      const suppliersSnapshot = await getDocs(suppliersQuery);
+      
+      let contractPrice: number | null = null;
+      if (!suppliersSnapshot.empty) {
+        const supplierDoc = suppliersSnapshot.docs[0];
+        const supplierId = supplierDoc.id;
+        contractPrice = getContractPriceForSupplier(supplierId);
+      }
 
       // Validate price against contract if contract exists
       if (contractPrice && assessment.suggested_price > contractPrice) {
@@ -188,7 +199,6 @@ export const useQualityControl = () => {
       }
 
       const assessmentToAdd = {
-        id: `assessment-${Date.now()}`,
         store_record_id: assessment.store_record_id,
         batch_number: assessment.batch_number,
         moisture: assessment.moisture,
@@ -203,11 +213,13 @@ export const useQualityControl = () => {
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed,
         assessed_by: assessment.assessed_by,
+        contract_price: contractPrice,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
 
-      console.log('Quality assessment added successfully:', assessmentToAdd.id);
+      const docRef = await addDoc(collection(db, 'quality_assessments'), assessmentToAdd);
+      console.log('Quality assessment added successfully:', docRef.id);
       
       // Calculate total payment amount: kilograms × price per kg
       const kilograms = coffeeRecord?.kilograms || 0;
@@ -220,12 +232,27 @@ export const useQualityControl = () => {
         contractPrice: contractPrice || 'No contract'
       });
       
-      // Mock payment record creation - in real implementation would use Supabase
-      console.log('Creating payment record for assessment:', assessmentToAdd.id);
+      // Create payment record in Firebase with calculated amount
+      console.log('Creating payment record for assessment:', docRef.id);
+      
+      await addDoc(collection(db, 'payment_records'), {
+        supplier: coffeeRecord.supplier_name,
+        amount: totalPaymentAmount,
+        status: 'Pending',
+        method: 'Bank Transfer',
+        date: new Date().toISOString().split('T')[0],
+        batchNumber: assessment.batch_number,
+        qualityAssessmentId: docRef.id,
+        contractPrice: contractPrice,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      
       console.log('Payment record created successfully with amount:', totalPaymentAmount);
       
       // Update local state
-      setQualityAssessments(prev => [assessmentToAdd, ...prev]);
+      const newAssessment = { id: docRef.id, ...assessmentToAdd };
+      setQualityAssessments(prev => [newAssessment, ...prev]);
       
       const contractMessage = contractPrice ? 
         ` (Contract price: ${contractPrice}/kg)` : 
@@ -236,7 +263,7 @@ export const useQualityControl = () => {
         description: `Quality assessment saved and payment record created for ${totalPaymentAmount.toLocaleString()} UGX${contractMessage}`
       });
       
-      return assessmentToAdd;
+      return newAssessment;
     } catch (error) {
       console.error('Error adding quality assessment:', error);
       toast({
@@ -250,15 +277,19 @@ export const useQualityControl = () => {
 
   const updateQualityAssessment = async (id: string, updates: Partial<QualityAssessment>) => {
     try {
-      console.log('Updating quality assessment:', id, updates);
+      console.log('Updating quality assessment in Firebase:', id, updates);
       
-      // Mock update - in real implementation would use Supabase
+      await updateDoc(doc(db, 'quality_assessments', id), {
+        ...updates,
+        updated_at: new Date().toISOString()
+      });
+
       console.log('Quality assessment updated successfully');
       
       // Update local state
       setQualityAssessments(assessments => 
         assessments.map(assessment => 
-          assessment.id === id ? { ...assessment, ...updates, updated_at: new Date().toISOString() } : assessment
+          assessment.id === id ? { ...assessment, ...updates } : assessment
         )
       );
       

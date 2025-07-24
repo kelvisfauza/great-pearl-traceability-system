@@ -1,14 +1,23 @@
-// Mock Firebase functionality - Firebase disabled
+import { db } from '@/lib/firebase';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 
 export const createMissingEmployeeRecord = async (email: string, authUserId: string) => {
   try {
-    console.log('Mock: createMissingEmployeeRecord called for', email, authUserId);
-    
+    // First check if employee record exists
+    const normalizedEmail = email.toLowerCase().trim();
+    const employeesQuery = query(collection(db, 'employees'), where('email', '==', normalizedEmail));
+    const employeeSnapshot = await getDocs(employeesQuery);
+
+    if (!employeeSnapshot.empty) {
+      console.log('Employee record already exists');
+      return employeeSnapshot.docs[0].data();
+    }
+
+    // Create the missing employee record
     const employeeData = {
-      id: 'mock-id-' + Math.random().toString(36).substr(2, 9),
-      name: 'Denis Bwambaledeni',
-      email: email.toLowerCase().trim(),
-      phone: '',
+      name: 'Denis Bwambaledeni', // Based on email
+      email: normalizedEmail,
+      phone: '', // Can be updated later
       position: 'Staff',
       department: 'General',
       salary: 0,
@@ -23,8 +32,10 @@ export const createMissingEmployeeRecord = async (email: string, authUserId: str
       mustChangePassword: false
     };
 
-    console.log('Mock: Created employee record', employeeData);
-    return employeeData;
+    const docRef = await addDoc(collection(db, 'employees'), employeeData);
+    console.log('Created employee record with ID:', docRef.id);
+    
+    return { id: docRef.id, ...employeeData };
   } catch (error) {
     console.error('Error creating employee record:', error);
     throw error;

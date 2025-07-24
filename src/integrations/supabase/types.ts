@@ -98,45 +98,6 @@ export type Database = {
         }
         Relationships: []
       }
-      calls: {
-        Row: {
-          caller_id: string
-          caller_name: string
-          created_at: string
-          duration: number | null
-          ended_at: string | null
-          id: string
-          recipient_id: string
-          recipient_name: string
-          started_at: string
-          status: string
-        }
-        Insert: {
-          caller_id: string
-          caller_name: string
-          created_at?: string
-          duration?: number | null
-          ended_at?: string | null
-          id?: string
-          recipient_id: string
-          recipient_name: string
-          started_at?: string
-          status?: string
-        }
-        Update: {
-          caller_id?: string
-          caller_name?: string
-          created_at?: string
-          duration?: number | null
-          ended_at?: string | null
-          id?: string
-          recipient_id?: string
-          recipient_name?: string
-          started_at?: string
-          status?: string
-        }
-        Relationships: []
-      }
       coffee_records: {
         Row: {
           bags: number

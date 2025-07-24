@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, addDoc, query, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Supplier {
@@ -23,36 +24,18 @@ export const useSuppliers = () => {
   const fetchSuppliers = async () => {
     try {
       setLoading(true);
-      console.log('Fetching suppliers...');
+      console.log('Fetching suppliers from Firebase...');
       
-      // Using mock data for now since suppliers table doesn't exist yet
-      const mockSuppliers: Supplier[] = [
-        {
-          id: '1',
-          name: 'Premium Coffee Suppliers Ltd',
-          code: 'SUP001',
-          phone: '+256 700 123456',
-          origin: 'Bugisu',
-          opening_balance: 5000000,
-          date_registered: '2024-01-15',
-          created_at: '2024-01-15T08:00:00Z',
-          updated_at: '2024-01-15T08:00:00Z'
-        },
-        {
-          id: '2',
-          name: 'Mountain Coffee Co.',
-          code: 'SUP002',
-          phone: '+256 750 987654',
-          origin: 'Rwenzori',
-          opening_balance: 3500000,
-          date_registered: '2024-02-01',
-          created_at: '2024-02-01T09:30:00Z',
-          updated_at: '2024-02-01T09:30:00Z'
-        }
-      ];
+      const suppliersQuery = query(collection(db, 'suppliers'), orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(suppliersQuery);
       
-      console.log('Mock suppliers loaded:', mockSuppliers);
-      setSuppliers(mockSuppliers);
+      const suppliersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Supplier[];
+      
+      console.log('Firebase suppliers:', suppliersData);
+      setSuppliers(suppliersData);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       setSuppliers([]);
@@ -68,11 +51,9 @@ export const useSuppliers = () => {
     opening_balance: number;
   }) => {
     try {
-      console.log('Adding supplier:', supplierData);
+      console.log('Adding supplier to Firebase:', supplierData);
       
-      // For now, simulate adding to the mock data
-      const newSupplier: Supplier = {
-        id: `SUP${Date.now()}`,
+      const supplierToAdd = {
         name: supplierData.name,
         origin: supplierData.origin,
         phone: supplierData.phone || null,
@@ -83,16 +64,17 @@ export const useSuppliers = () => {
         updated_at: new Date().toISOString()
       };
 
-      console.log('New supplier object:', newSupplier);
-      
-      // Add to current state (mock implementation)
-      setSuppliers(prev => [newSupplier, ...prev]);
+      console.log('Supplier object to add:', supplierToAdd);
+
+      await addDoc(collection(db, 'suppliers'), supplierToAdd);
       
       console.log('Supplier added successfully');
       toast({
         title: "Success",
         description: "Supplier added successfully"
       });
+      
+      await fetchSuppliers(); // Refresh the list
     } catch (error) {
       console.error('Error adding supplier:', error);
       toast({

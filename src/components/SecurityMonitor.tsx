@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, AlertTriangle, Eye, Clock, Users, Activity } from 'lucide-react';
-// Mock Firebase functionality - Firebase disabled
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 interface SecurityEvent {
@@ -30,8 +31,19 @@ const SecurityMonitor = () => {
       setLoading(true);
       setError(null);
       
-      console.log('Mock: Fetching security events');
-      setSecurityEvents([]);
+      const securityQuery = query(
+        collection(db, 'security_audit_log'),
+        orderBy('created_at', 'desc'),
+        limit(100)
+      );
+      
+      const querySnapshot = await getDocs(securityQuery);
+      const events = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as SecurityEvent[];
+
+      setSecurityEvents(events);
     } catch (err) {
       console.error('Error in fetchSecurityEvents:', err);
       setError('A system error occurred while fetching security events');

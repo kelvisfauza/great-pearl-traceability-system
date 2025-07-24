@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,19 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Key } from "lucide-react";
-import { supabase } from '@/integrations/supabase/client';
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { updatePassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const UserProfile = () => {
-  const { user, employee, fetchEmployeeData, signOut } = useAuth();
+  const { employee, fetchEmployeeData } = useAuth();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState('');
   
   const [formData, setFormData] = useState({
     name: employee?.name || '',
@@ -67,11 +67,12 @@ const UserProfile = () => {
         updated_at: new Date().toISOString()
       };
 
-      // Mock update - in real implementation would use Supabase
-      console.log('Profile updated successfully (mock)');
+      // Update in Firebase
+      await updateDoc(doc(db, 'employees', employee.id), updateData);
+      console.log('Profile updated successfully in Firebase');
 
       // Refresh employee data to get updated information
-      await fetchEmployeeData(user?.email || '');
+      await fetchEmployeeData();
       
       toast({
         title: "Success",
@@ -111,11 +112,12 @@ const UserProfile = () => {
 
     setIsChangingPassword(true);
     try {
-      // Mock password change - in real implementation would use Supabase auth
-      console.log('Password change simulated (mock)');
-      
-      // Simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('No authenticated user found');
+      }
+
+      await updatePassword(currentUser, passwordData.newPassword);
 
       toast({
         title: "Success",
@@ -132,81 +134,6 @@ const UserProfile = () => {
       });
     } finally {
       setIsChangingPassword(false);
-    }
-  };
-
-  const handleAvatarUpload = async (file: File) => {
-    if (!employee?.id) return;
-
-    setIsUploadingAvatar(true);
-    try {
-      // Mock avatar upload - in real implementation would use Supabase storage
-      console.log('Avatar upload simulated (mock)');
-      
-      // Simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock download URL
-      const mockDownloadURL = `https://example.com/avatars/${employee.id}/${file.name}`;
-      
-      // Mock update employee record
-      console.log('Mock avatar URL:', mockDownloadURL);
-      
-      setAvatarUrl(mockDownloadURL);
-      await fetchEmployeeData(user?.email || '');
-      
-      toast({
-        title: "Success",
-        description: "Profile picture updated successfully"
-      });
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-      toast({
-        title: "Error",
-        description: "Failed to upload profile picture. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUploadingAvatar(false);
-    }
-  };
-
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Error",
-          description: "Please select an image file",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Error",
-          description: "File size must be less than 5MB",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      handleAvatarUpload(file);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Logout error:', error);
     }
   };
 
@@ -231,7 +158,6 @@ const UserProfile = () => {
         address: employee.address || '',
         emergency_contact: employee.emergency_contact || ''
       });
-      setAvatarUrl((employee as any).avatarUrl || '');
     }
   }, [employee]);
 
@@ -251,16 +177,14 @@ const UserProfile = () => {
       {/* Profile Header */}
       <Card>
         <CardHeader>
-          <div>
-            <CardTitle>My Profile</CardTitle>
-            <CardDescription>Manage your personal information and account settings</CardDescription>
-          </div>
+          <CardTitle>My Profile</CardTitle>
+          <CardDescription>Manage your personal information and account settings</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-start gap-6">
             <div className="relative">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={avatarUrl} alt={employee.name} />
+                <AvatarImage src="" alt={employee.name} />
                 <AvatarFallback className="text-lg">
                   {employee.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
@@ -269,18 +193,9 @@ const UserProfile = () => {
                 size="sm" 
                 variant="outline" 
                 className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
-                onClick={handleAvatarClick}
-                disabled={isUploadingAvatar}
               >
                 <Camera className="h-4 w-4" />
               </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
             </div>
             
             <div className="flex-1">

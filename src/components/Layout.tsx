@@ -1,8 +1,9 @@
+
 import { useState } from "react";
-import RoleBasedNavigation from "./RoleBasedNavigation";
+import Navigation from "./Navigation";
 import MessagingPanel from "./messaging/MessagingPanel";
 import MessageButton from "./messaging/MessageButton";
-import { useAuth } from "@/contexts/AuthContext";
+import { useMessages } from "@/hooks/useMessages";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,16 +13,14 @@ interface LayoutProps {
 
 const Layout = ({ children, title, subtitle }: LayoutProps) => {
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
-  const { user, employee } = useAuth();
-  
-  // Remove useMessages from Layout to prevent React queue issues
+  const { unreadCount } = useMessages();
 
   const toggleMessaging = () => setIsMessagingOpen(!isMessagingOpen);
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="fixed left-0 top-0 h-full w-64 z-30 bg-white border-r border-gray-200 overflow-y-auto">
-        <RoleBasedNavigation />
+        <Navigation />
       </aside>
       
       <main className="flex-1 ml-64 min-w-0">
@@ -40,7 +39,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
 
       <MessageButton 
         onToggleMessaging={toggleMessaging}
-        unreadCount={0} // Simplified for now to fix React queue issue
+        unreadCount={unreadCount}
       />
       
       <MessagingPanel 

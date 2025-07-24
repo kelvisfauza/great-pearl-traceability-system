@@ -22,7 +22,6 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Logistics from "./pages/Logistics";
 import DataAnalyst from "./pages/DataAnalyst";
-import MyRequests from "./pages/MyRequests";
 
 const App: React.FC = () => {
   const queryClient = new QueryClient();
@@ -95,11 +94,6 @@ const App: React.FC = () => {
                 <Route path="/settings" element={
                   <ProtectedRoute>
                     <Settings />
-                  </ProtectedRoute>
-                } />
-                <Route path="/my-requests" element={
-                  <ProtectedRoute>
-                    <MyRequests />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFound />} />

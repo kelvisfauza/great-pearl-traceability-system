@@ -1,250 +1,241 @@
+
 import { useState, useEffect } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 
 export interface Employee {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  position: string;
-  department: string;
-  salary: number;
-  role: string; // Changed from strict union to string
-  permissions: string[];
-  status: 'active' | 'inactive';
-  join_date: string;
-  created_at: string;
-  updated_at: string;
+  id: string
+  name: string
+  email: string
+  phone?: string
+  position: string
+  department: string
+  salary: number
+  employee_id?: string
+  address?: string
+  emergency_contact?: string
+  role: string
+  permissions: string[]
+  status: string
+  join_date: string
+  created_at: string
+  updated_at: string
 }
 
-// Security logging function
 const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
   try {
-    console.log('Security event:', { action, tableName, recordId, oldValues, newValues });
-    // Mock security logging - in real implementation would use Supabase
+    await addDoc(collection(db, 'security_audit_log'), {
+      action,
+      table_name: tableName,
+      record_id: recordId,
+      old_values: oldValues,
+      new_values: newValues,
+      created_at: new Date().toISOString()
+    });
   } catch (error) {
-    console.error('Error logging security event:', error);
+    console.error('Security logging error:', error);
   }
 };
 
 export const useFirebaseEmployees = () => {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  const { user, hasPermission } = useAuth();
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+  const { canManageEmployees, isAdmin } = useAuth()
 
   const fetchEmployees = async () => {
     try {
-      setLoading(true);
-      console.log('Loading employees...');
+      setLoading(true)
+      const employeesQuery = query(collection(db, 'employees'), orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(employeesQuery);
       
-      // Mock data since employees table doesn't exist yet
-      const mockEmployees: Employee[] = [
-        {
-          id: '1',
-          name: 'John Admin',
-          email: 'admin@company.com',
-          position: 'System Administrator',
-          department: 'IT',
-          salary: 5000000,
-          role: 'admin',
-          permissions: ['all'],
-          status: 'active',
-          join_date: '2024-01-01',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
-
-      console.log('Loaded employees:', mockEmployees.length, 'records');
-      setEmployees(mockEmployees);
+      const employeesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Employee[];
+      
+      setEmployees(employeesData);
     } catch (error) {
-      console.error('Error fetching employees:', error);
-      setEmployees([]);
+      console.error('Error fetching employees:', error)
       toast({
         title: "Error",
-        description: "Failed to load employees",
+        description: "Failed to fetch employees",
         variant: "destructive"
-      });
+      })
+      setEmployees([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  // Validation function
   const validateEmployeeData = (employeeData: Omit<Employee, 'id' | 'created_at' | 'updated_at'>): string[] => {
-    const errors: string[] = [];
+    const errors: string[] = []
     
-    if (!employeeData.name?.trim()) errors.push('Name is required');
-    if (!employeeData.email?.trim()) errors.push('Email is required');
-    if (!employeeData.position?.trim()) errors.push('Position is required');
-    if (!employeeData.department?.trim()) errors.push('Department is required');
-    if (!employeeData.role) errors.push('Role is required');
+    if (!employeeData.name?.trim()) errors.push('Name is required')
+    if (!employeeData.email?.trim()) errors.push('Email is required')
+    if (!employeeData.position?.trim()) errors.push('Position is required')
+    if (!employeeData.department?.trim()) errors.push('Department is required')
+    if (!employeeData.role?.trim()) errors.push('Role is required')
     
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (employeeData.email && !emailRegex.test(employeeData.email)) {
-      errors.push('Invalid email format');
+      errors.push('Invalid email format')
     }
     
-    // Salary validation
-    if (employeeData.salary && employeeData.salary < 0) {
-      errors.push('Salary must be a positive number');
+    if (employeeData.salary < 0) {
+      errors.push('Salary must be a positive number')
     }
     
-    // Role validation
-    const validRoles = ['admin', 'hr', 'finance', 'analyst', 'field', 'store', 'quality', 'procurement', 'logistics', 'processing', 'sales_marketing', 'management'];
+    const validRoles = ['Administrator', 'Manager', 'Supervisor', 'User']
     if (employeeData.role && !validRoles.includes(employeeData.role)) {
-      errors.push('Invalid role specified');
+      errors.push('Invalid role selected')
     }
     
-    return errors;
-  };
+    return errors
+  }
 
   const addEmployee = async (employeeData: Omit<Employee, 'id' | 'created_at' | 'updated_at'>) => {
+    if (!canManageEmployees()) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to add employees",
+        variant: "destructive"
+      })
+      throw new Error("Access denied")
+    }
+
+    const validationErrors = validateEmployeeData(employeeData)
+    if (validationErrors.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: validationErrors.join(', '),
+        variant: "destructive"
+      })
+      throw new Error("Validation failed")
+    }
+
+    if (employeeData.role === 'Administrator' && !isAdmin()) {
+      toast({
+        title: "Access Denied",
+        description: "Only administrators can create admin accounts",
+        variant: "destructive"
+      })
+      throw new Error("Insufficient privileges")
+    }
+
     try {
-      // Check permissions
-      if (!hasPermission('manage_employees')) {
-        toast({
-          title: "Access Denied",
-          description: "You don't have permission to add employees",
-          variant: "destructive"
-        });
-        throw new Error('Insufficient permissions');
-      }
-
-      // Validate data
-      const validationErrors = validateEmployeeData(employeeData);
-      if (validationErrors.length > 0) {
-        toast({
-          title: "Validation Error",
-          description: validationErrors.join(', '),
-          variant: "destructive"
-        });
-        throw new Error('Validation failed');
-      }
-
-      const newEmployee = {
-        id: `emp-${Date.now()}`,
+      const sanitizedData = {
         ...employeeData,
+        name: employeeData.name.trim(),
+        email: employeeData.email.toLowerCase().trim(),
+        position: employeeData.position.trim(),
+        department: employeeData.department.trim(),
+        join_date: employeeData.join_date || new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      };
+      }
 
-      console.log('Employee added successfully:', newEmployee.id);
-      
-      // Update local state
-      setEmployees(prev => [newEmployee, ...prev]);
-      
-      // Log security event
-      await logSecurityEvent('CREATE', 'employees', newEmployee.id, null, employeeData);
+      const docRef = await addDoc(collection(db, 'employees'), sanitizedData);
+      const newEmployee = { id: docRef.id, ...sanitizedData };
+
+      setEmployees(prev => [newEmployee, ...prev])
+      await logSecurityEvent('employee_created', 'employees', docRef.id, null, newEmployee);
       
       toast({
         title: "Success",
-        description: "Employee added successfully"
-      });
-      
-      return newEmployee;
+        description: `Employee ${newEmployee.name} added successfully`
+      })
+      return newEmployee
     } catch (error) {
-      console.error('Error adding employee:', error);
+      console.error('Error adding employee:', error)
       toast({
         title: "Error",
         description: "Failed to add employee",
         variant: "destructive"
-      });
-      throw error;
+      })
+      throw error
     }
-  };
+  }
 
   const updateEmployee = async (id: string, updates: Partial<Employee>) => {
+    if (!canManageEmployees()) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to update employees",
+        variant: "destructive"
+      })
+      throw new Error("Access denied")
+    }
+
     try {
-      // Check permissions
-      if (!hasPermission('manage_employees')) {
-        toast({
-          title: "Access Denied",
-          description: "You don't have permission to update employees",
-          variant: "destructive"
-        });
-        throw new Error('Insufficient permissions');
+      const sanitizedUpdates = {
+        ...updates,
+        ...(updates.name && { name: updates.name.trim() }),
+        ...(updates.email && { email: updates.email.toLowerCase().trim() }),
+        ...(updates.position && { position: updates.position.trim() }),
+        ...(updates.department && { department: updates.department.trim() }),
+        updated_at: new Date().toISOString()
       }
 
-      const existingEmployee = employees.find(emp => emp.id === id);
-      if (!existingEmployee) {
-        throw new Error('Employee not found');
-      }
-
-      console.log('Employee updated successfully');
+      await updateDoc(doc(db, 'employees', id), sanitizedUpdates);
       
-      // Update local state
-      setEmployees(prev => 
-        prev.map(emp => 
-          emp.id === id ? { ...emp, ...updates, updated_at: new Date().toISOString() } : emp
-        )
-      );
+      setEmployees(prev => prev.map(emp => 
+        emp.id === id ? { ...emp, ...sanitizedUpdates } : emp
+      ));
       
-      // Log security event
-      await logSecurityEvent('UPDATE', 'employees', id, existingEmployee, updates);
+      await logSecurityEvent('employee_updated', 'employees', id, null, sanitizedUpdates);
       
       toast({
         title: "Success",
         description: "Employee updated successfully"
-      });
+      })
     } catch (error) {
-      console.error('Error updating employee:', error);
+      console.error('Error updating employee:', error)
       toast({
         title: "Error",
         description: "Failed to update employee",
         variant: "destructive"
-      });
-      throw error;
+      })
+      throw error
     }
-  };
+  }
 
   const deleteEmployee = async (id: string) => {
+    if (!isAdmin()) {
+      toast({
+        title: "Access Denied",
+        description: "Only administrators can delete employees",
+        variant: "destructive"
+      })
+      throw new Error("Access denied")
+    }
+
     try {
-      // Check permissions
-      if (!hasPermission('manage_employees')) {
-        toast({
-          title: "Access Denied",
-          description: "You don't have permission to delete employees",
-          variant: "destructive"
-        });
-        throw new Error('Insufficient permissions');
-      }
-
-      const existingEmployee = employees.find(emp => emp.id === id);
-      if (!existingEmployee) {
-        throw new Error('Employee not found');
-      }
-
-      console.log('Employee deleted successfully');
+      await deleteDoc(doc(db, 'employees', id));
       
-      // Update local state
       setEmployees(prev => prev.filter(emp => emp.id !== id));
-      
-      // Log security event
-      await logSecurityEvent('DELETE', 'employees', id, existingEmployee, null);
+      await logSecurityEvent('employee_deleted', 'employees', id, null, null);
       
       toast({
         title: "Success",
         description: "Employee deleted successfully"
-      });
+      })
     } catch (error) {
-      console.error('Error deleting employee:', error);
+      console.error('Error deleting employee:', error)
       toast({
         title: "Error",
         description: "Failed to delete employee",
         variant: "destructive"
-      });
-      throw error;
+      })
+      throw error
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchEmployees()
+  }, [])
 
   return {
     employees,
@@ -253,5 +244,5 @@ export const useFirebaseEmployees = () => {
     updateEmployee,
     deleteEmployee,
     refetch: fetchEmployees
-  };
-};
+  }
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '@/integrations/supabase/client'
+import { collection, getDocs, addDoc, query, orderBy, where, updateDoc, doc, limit } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 
 export interface SalaryPaymentRequest {
@@ -25,13 +26,40 @@ export const useSalaryPayments = () => {
 
   const fetchPaymentRequests = async () => {
     try {
-      console.log('Fetching salary payment requests...')
+      console.log('Fetching salary payment requests from Firebase...')
       
-      // Mock data since approval_requests table doesn't exist yet
-      const mockRequests: SalaryPaymentRequest[] = []
+      // Simplified query to avoid index requirements
+      const approvalRequestsQuery = query(
+        collection(db, 'approval_requests'),
+        where('type', '==', 'Salary Payment'),
+        limit(50) // Add limit to reduce load
+      )
       
-      console.log('Salary payment requests loaded:', mockRequests.length)
-      setPaymentRequests(mockRequests)
+      const snapshot = await getDocs(approvalRequestsQuery)
+      const requests = snapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          department: data.department || 'HR',
+          type: data.type || 'Salary Payment',
+          title: data.title || '',
+          description: data.description || '',
+          amount: data.amount || '0',
+          requestedby: data.requestedby || '',
+          daterequested: data.daterequested || new Date().toISOString(),
+          priority: data.priority || 'Medium',
+          status: data.status as 'Pending' | 'Approved' | 'Rejected' || 'Pending',
+          details: data.details || {},
+          created_at: data.created_at || new Date().toISOString(),
+          updated_at: data.updated_at || new Date().toISOString()
+        } as SalaryPaymentRequest
+      })
+      
+      // Sort in memory by created_at (most recent first) to avoid compound index requirement
+      requests.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      
+      console.log('Salary payment requests fetched successfully:', requests.length)
+      setPaymentRequests(requests)
     } catch (error) {
       console.error('Error fetching salary payment requests:', error)
       toast({
@@ -47,10 +75,16 @@ export const useSalaryPayments = () => {
 
   const submitPaymentRequest = async (requestData: Omit<SalaryPaymentRequest, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      console.log('Submitting salary payment request:', requestData)
+      console.log('Submitting salary payment request to Firebase:', requestData)
       
+      const docRef = await addDoc(collection(db, 'approval_requests'), {
+        ...requestData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+
       const newRequest: SalaryPaymentRequest = {
-        id: `req-${Date.now()}`,
+        id: docRef.id,
         ...requestData,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -78,6 +112,11 @@ export const useSalaryPayments = () => {
     try {
       console.log('Updating payment request status:', id, status);
       
+      await updateDoc(doc(db, 'approval_requests', id), {
+        status,
+        updated_at: new Date().toISOString()
+      });
+
       setPaymentRequests(prev => 
         prev.map(req => 
           req.id === id ? { ...req, status, updated_at: new Date().toISOString() } : req

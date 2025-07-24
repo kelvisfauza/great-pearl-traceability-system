@@ -8,7 +8,8 @@ import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecureEmployees } from '@/hooks/useSecureEmployees';
-import { supabase } from '@/integrations/supabase/client';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import AddUserForm from './AddUserForm';
 import EditUserForm from './EditUserForm';
 import UserList from './UserList';
@@ -52,26 +53,29 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     try {
       console.log('UserManagement handleAddUser called with:', employeeData);
       
-      // Create user with Supabase auth (commented out - using mock for now)
-      console.log('Would create Supabase auth user for:', employeeData.email);
+      // First, create the Firebase authentication user
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        employeeData.email, 
+        employeeData.password
+      );
       
-      // Mock user creation
-      const mockUserId = `user-${Date.now()}`;
+      console.log('Firebase auth user created:', userCredential.user.uid);
 
-      // Create the employee record with mock auth user ID
+      // Then create the employee record in Firebase with the flag to change password
       const processedData = {
         ...employeeData,
         permissions: Array.isArray(employeeData.permissions) ? employeeData.permissions : [],
         isOneTimePassword: true,
         mustChangePassword: true,
-        authUserId: mockUserId, // Link to mock auth user
+        authUserId: userCredential.user.uid, // Link to Firebase auth user
         email: employeeData.email.toLowerCase().trim() // Ensure email is normalized
       };
 
       // Remove password from employee data (don't store it in the employee record)
       delete processedData.password;
 
-      console.log('Creating employee record...');
+      console.log('Creating employee record in Firebase...');
       await addEmployee(processedData);
       
       console.log('Employee record created successfully');

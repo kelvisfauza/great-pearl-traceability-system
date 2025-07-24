@@ -2,7 +2,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, DollarSign, UserCheck, TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface Employee {
   id: string;
@@ -23,11 +24,24 @@ const EmployeeStatsCards = ({ employees }: EmployeeStatsCardsProps) => {
     const fetchSalaryRequests = async () => {
       try {
         console.log('Fetching salary payment requests for stats...');
+        const salaryQuery = query(
+          collection(db, 'approval_requests'),
+          where('type', '==', 'Salary Payment'),
+          where('status', '==', 'Pending')
+        );
         
-        // Use mock data for now since approval_requests table structure needs to be confirmed
-        setSalaryRequestsTotal(5000000); // Mock: 5M UGX in pending salary requests
+        const snapshot = await getDocs(salaryQuery);
+        let total = 0;
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          const amount = typeof data.amount === 'string' 
+            ? parseFloat(data.amount.replace(/[^\d.]/g, '')) 
+            : Number(data.amount) || 0;
+          total += amount;
+        });
         
-        console.log('Salary requests total calculated with mock data');
+        setSalaryRequestsTotal(total);
+        console.log('Salary requests total calculated:', total);
       } catch (error) {
         console.error('Error fetching salary requests:', error);
       }

@@ -27,7 +27,6 @@ import EmployeeDetailsModal from '@/components/hr/EmployeeDetailsModal';
 import EmployeeFilters from '@/components/hr/EmployeeFilters';
 import EmptyState from '@/components/hr/EmptyState';
 import RegistrationRequestsManager from '@/components/hr/RegistrationRequestsManager';
-import EmployeeRequestsManager from '@/components/hr/EmployeeRequestsManager';
 import PrintCredentialsDialog from '@/components/hr/PrintCredentialsDialog';
 
 const HumanResources = () => {
@@ -128,9 +127,8 @@ const HumanResources = () => {
         </div>
 
         <Tabs defaultValue="employees" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="employees">Employee Management</TabsTrigger>
-            <TabsTrigger value="employee-requests">Employee Requests</TabsTrigger>
             <TabsTrigger value="requests">Registration Requests</TabsTrigger>
           </TabsList>
 
@@ -202,10 +200,6 @@ const HumanResources = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="employee-requests">
-            <EmployeeRequestsManager />
           </TabsContent>
 
           <TabsContent value="requests">
