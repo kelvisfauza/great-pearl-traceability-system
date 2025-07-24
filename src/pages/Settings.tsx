@@ -6,9 +6,11 @@ import UserManagement from '@/components/settings/UserManagement';
 import UserRegistrationRequests from '@/components/UserRegistrationRequests';
 import UserProfile from '@/components/settings/UserProfile';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
 
 const Settings = () => {
   const { canManageEmployees } = useAuth();
+  const { employees, addEmployee, updateEmployee, deleteEmployee } = useFirebaseEmployees();
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -37,7 +39,12 @@ const Settings = () => {
         {canManageEmployees() && (
           <>
             <TabsContent value="users">
-              <UserManagement />
+              <UserManagement 
+                employees={employees}
+                onEmployeeAdded={addEmployee}
+                onEmployeeUpdated={updateEmployee}
+                onEmployeeDeleted={deleteEmployee}
+              />
             </TabsContent>
             
             <TabsContent value="requests">
