@@ -1,12 +1,11 @@
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import UserManagement from '@/components/settings/UserManagement';
-import UserRegistrationRequests from '@/components/UserRegistrationRequests';
-import UserProfile from '@/components/settings/UserProfile';
+import Layout from '@/components/Layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
+import UserManagement from '@/components/settings/UserManagement';
+import UserProfile from '@/components/settings/UserProfile';
 
 const Settings = () => {
   const { canManageEmployees } = useAuth();
@@ -26,31 +25,26 @@ const Settings = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-2">
-          Manage your account settings and system preferences
-        </p>
-      </div>
+    <Layout>
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">Manage your account settings and system preferences</p>
+        </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          {canManageEmployees() && (
-            <>
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            {canManageEmployees() && (
               <TabsTrigger value="users">User Management</TabsTrigger>
-              <TabsTrigger value="requests">Registration Requests</TabsTrigger>
-            </>
-          )}
-        </TabsList>
+            )}
+          </TabsList>
 
-        <TabsContent value="profile">
-          <UserProfile />
-        </TabsContent>
+          <TabsContent value="profile" className="space-y-6">
+            <UserProfile />
+          </TabsContent>
 
-        {canManageEmployees() && (
-          <>
+          {canManageEmployees() && (
             <TabsContent value="users">
               <UserManagement 
                 employees={employees}
@@ -59,14 +53,10 @@ const Settings = () => {
                 onEmployeeDeleted={handleEmployeeDeleted}
               />
             </TabsContent>
-            
-            <TabsContent value="requests">
-              <UserRegistrationRequests />
-            </TabsContent>
-          </>
-        )}
-      </Tabs>
-    </div>
+          )}
+        </Tabs>
+      </div>
+    </Layout>
   );
 };
 

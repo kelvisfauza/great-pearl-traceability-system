@@ -4,15 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, UserPlus, DollarSign, Clock, TrendingUp, Send } from 'lucide-react';
+import { Users, UserPlus, DollarSign, Clock, TrendingUp, Send, UserCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useSecureEmployees } from '@/hooks/useSecureEmployees';
 import { useSalaryPayments } from '@/hooks/useSalaryPayments';
 import AddEmployeeModal from '@/components/hr/AddEmployeeModal';
 import SalaryPaymentModal from '@/components/hr/SalaryPaymentModal';
 import EmployeeDetailsModal from '@/components/hr/EmployeeDetailsModal';
+import RegistrationRequestsManager from '@/components/hr/RegistrationRequestsManager';
 
 const HumanResources = () => {
   const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useSecureEmployees();
@@ -137,11 +137,16 @@ const HumanResources = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="employees" className="space-y-4">
+        <Tabs defaultValue="registration" className="space-y-4">
           <TabsList>
+            <TabsTrigger value="registration">Registration Requests</TabsTrigger>
             <TabsTrigger value="employees">Employees</TabsTrigger>
             <TabsTrigger value="payroll">Payroll</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="registration" className="space-y-4">
+            <RegistrationRequestsManager />
+          </TabsContent>
           
           <TabsContent value="employees" className="space-y-4">
             <Card>
