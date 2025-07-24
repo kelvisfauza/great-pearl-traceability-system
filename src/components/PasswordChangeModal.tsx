@@ -10,10 +10,10 @@ import { Lock, Eye, EyeOff } from 'lucide-react';
 
 interface PasswordChangeModalProps {
   open: boolean;
-  onClose: () => void;
+  onPasswordChanged: () => void;
 }
 
-const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ open, onClose }) => {
+const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ open, onPasswordChanged }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,7 +46,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ open, onClose
     setIsChanging(true);
     try {
       await changePassword(newPassword);
-      onClose();
+      onPasswordChanged();
       setNewPassword('');
       setConfirmPassword('');
     } catch (error) {
