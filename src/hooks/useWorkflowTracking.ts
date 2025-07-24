@@ -65,6 +65,9 @@ export const useWorkflowTracking = () => {
         ...doc.data()
       })) as ModificationRequest[];
       
+      console.log('Fetched workflow steps:', steps);
+      console.log('Fetched modification requests:', requests);
+      
       setWorkflowSteps(steps);
       setModificationRequests(requests);
     } catch (error) {
@@ -81,11 +84,14 @@ export const useWorkflowTracking = () => {
 
   const trackWorkflowStep = async (stepData: Omit<WorkflowStep, 'id' | 'timestamp'>) => {
     try {
-      await addDoc(collection(db, 'workflow_steps'), {
+      console.log('Tracking workflow step:', stepData);
+      
+      const docRef = await addDoc(collection(db, 'workflow_steps'), {
         ...stepData,
         timestamp: new Date().toISOString()
       });
       
+      console.log('Workflow step tracked with ID:', docRef.id);
       await fetchWorkflowData();
     } catch (error) {
       console.error('Error tracking workflow step:', error);
@@ -101,26 +107,28 @@ export const useWorkflowTracking = () => {
     try {
       console.log('Creating modification request:', requestData);
       
-      // Add batch number if not provided
+      // Try to get batch number from store records if not provided
       let batchNumber = requestData.batchNumber;
       if (!batchNumber) {
-        // Try to get batch number from payment records
-        const paymentQuery = query(
-          collection(db, 'payment_records'),
+        const storeQuery = query(
+          collection(db, 'store_records'),
           where('id', '==', requestData.originalPaymentId)
         );
-        const paymentSnapshot = await getDocs(paymentQuery);
-        if (!paymentSnapshot.empty) {
-          const paymentData = paymentSnapshot.docs[0].data();
-          batchNumber = paymentData.batch_number;
+        const storeSnapshot = await getDocs(storeQuery);
+        if (!storeSnapshot.empty) {
+          const storeData = storeSnapshot.docs[0].data();
+          batchNumber = storeData.batch_number;
         }
       }
 
-      await addDoc(collection(db, 'modification_requests'), {
+      const modificationRequestData = {
         ...requestData,
         batchNumber,
         createdAt: new Date().toISOString()
-      });
+      };
+
+      const docRef = await addDoc(collection(db, 'modification_requests'), modificationRequestData);
+      console.log('Modification request created with ID:', docRef.id);
       
       await fetchWorkflowData();
       
@@ -140,12 +148,19 @@ export const useWorkflowTracking = () => {
 
   const completeModificationRequest = async (requestId: string) => {
     try {
+      console.log('Completing modification request:', requestId);
+      
       await updateDoc(doc(db, 'modification_requests', requestId), {
         status: 'completed',
         completedAt: new Date().toISOString()
       });
       
       await fetchWorkflowData();
+      
+      toast({
+        title: "Success",
+        description: "Modification request completed"
+      });
     } catch (error) {
       console.error('Error completing modification request:', error);
       toast({
@@ -161,9 +176,11 @@ export const useWorkflowTracking = () => {
   };
 
   const getPendingModificationRequests = (department: string) => {
-    return modificationRequests.filter(
+    const pending = modificationRequests.filter(
       request => request.targetDepartment === department && request.status === 'pending'
     );
+    console.log(`Pending modification requests for ${department}:`, pending);
+    return pending;
   };
 
   useEffect(() => {

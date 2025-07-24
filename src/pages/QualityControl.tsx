@@ -44,7 +44,9 @@ const QualityControl = () => {
     modificationRequests,
     getPendingModificationRequests,
     completeModificationRequest,
-    trackWorkflowStep
+    trackWorkflowStep,
+    loading: workflowLoading,
+    refetch: refetchWorkflow
   } = useWorkflowTracking();
 
   const { prices, refreshPrices } = usePrices();
@@ -93,7 +95,8 @@ const QualityControl = () => {
 
   useEffect(() => {
     refreshPrices();
-  }, [refreshPrices]);
+    refetchWorkflow();
+  }, [refreshPrices, refetchWorkflow]);
 
   const handleStartAssessment = (record: any) => {
     console.log('Starting assessment for record:', record);
@@ -114,6 +117,7 @@ const QualityControl = () => {
 
   const handleStartModification = (modificationRequest: any) => {
     console.log('Starting modification for request:', modificationRequest);
+    console.log('Available store records:', storeRecords);
     
     // Try to find the original record by batch number first, then by payment ID
     let originalRecord = storeRecords.find(record => 
@@ -128,6 +132,8 @@ const QualityControl = () => {
     
     if (!originalRecord) {
       console.error('Original record not found for modification request:', modificationRequest);
+      console.error('Available records:', storeRecords.map(r => ({ id: r.id, batch_number: r.batch_number })));
+      
       toast({
         title: "Error",
         description: "Cannot find the original coffee record for this modification request",
@@ -388,7 +394,7 @@ const QualityControl = () => {
     }
   };
 
-  if (loading) {
+  if (loading || workflowLoading) {
     return (
       <Layout title="Quality Control" subtitle="Loading...">
         <div className="flex items-center justify-center h-96">
