@@ -68,7 +68,8 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         permissions: Array.isArray(employeeData.permissions) ? employeeData.permissions : [],
         isOneTimePassword: true,
         mustChangePassword: true,
-        authUserId: userCredential.user.uid // Link to Firebase auth user
+        authUserId: userCredential.user.uid, // Link to Firebase auth user
+        email: employeeData.email.toLowerCase().trim() // Ensure email is normalized
       };
 
       // Remove password from employee data (don't store it in the employee record)

@@ -22,6 +22,9 @@ export interface Employee {
   join_date: string
   created_at: string
   updated_at: string
+  authUserId?: string
+  isOneTimePassword?: boolean
+  mustChangePassword?: boolean
 }
 
 const logSecurityEvent = async (action: string, tableName: string, recordId?: string, oldValues?: any, newValues?: any) => {
@@ -141,13 +144,18 @@ export const useSecureEmployees = () => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         permissions: employeeData.permissions || [],
-        status: employeeData.status || 'Active'
+        status: employeeData.status || 'Active',
+        isOneTimePassword: employeeData.isOneTimePassword || false,
+        mustChangePassword: employeeData.mustChangePassword || false,
+        authUserId: employeeData.authUserId || null
       }
+
+      console.log('Sanitized employee data:', sanitizedData);
 
       const docRef = await addDoc(collection(db, 'employees'), sanitizedData);
       const newEmployee = { id: docRef.id, ...sanitizedData };
 
-      console.log('Employee added successfully:', newEmployee);
+      console.log('Employee added successfully to Firebase:', newEmployee);
       setEmployees(prev => [newEmployee, ...prev])
       await logSecurityEvent('employee_created', 'employees', docRef.id, null, newEmployee);
       
