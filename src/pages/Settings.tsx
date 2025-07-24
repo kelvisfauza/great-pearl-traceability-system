@@ -42,11 +42,9 @@ const Settings = () => {
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList>
             <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
             {canManageEmployees() && (
               <TabsTrigger value="users">User Management</TabsTrigger>
-            )}
-            {canManageEmployees() && (
-              <TabsTrigger value="documents">Documents</TabsTrigger>
             )}
             {isAdmin() && (
               <TabsTrigger value="admin">Admin Tools</TabsTrigger>
@@ -68,8 +66,7 @@ const Settings = () => {
             </TabsContent>
           )}
 
-          {canManageEmployees() && (
-            <TabsContent value="documents" className="space-y-6">
+          <TabsContent value="documents" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Document Templates</CardTitle>
@@ -99,7 +96,6 @@ const Settings = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-          )}
 
           {isAdmin() && (
             <TabsContent value="admin" className="space-y-6">
