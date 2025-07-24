@@ -46,6 +46,22 @@ export const seedFirebaseData = async () => {
         join_date: '2020-03-01',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
+      },
+      {
+        name: 'Bwambaledenis',
+        email: 'bwambaledenis8@gmail.com',
+        position: 'General Manager',
+        department: 'Management',
+        salary: 4000000,
+        role: 'Manager',
+        permissions: ['Human Resources', 'Finance', 'Operations', 'Reports', 'Store Management', 'Data Analysis', 'Procurement', 'Quality Control', 'Inventory', 'Processing', 'Logistics', 'Sales Marketing'],
+        status: 'Active',
+        phone: '+256700000003',
+        join_date: '2024-01-01',
+        mustChangePassword: false,
+        isOneTimePassword: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
     ];
 
