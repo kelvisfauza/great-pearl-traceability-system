@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { UserPlus, Shield } from "lucide-react";
+import { UserPlus, Shield, AlertTriangle } from "lucide-react";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import AddUserForm from './AddUserForm';
 import EditUserForm from './EditUserForm';
@@ -23,6 +24,26 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const { toast } = useToast();
   const { refetch } = useEmployees();
+  const { isAdmin } = useAuth();
+
+  // Only administrators can access user management
+  if (!isAdmin()) {
+    return (
+      <Card className="border-red-200 bg-red-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-800">
+            <AlertTriangle className="h-5 w-5" />
+            Access Denied
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-red-700">
+            Only administrators can manage user accounts. Contact your system administrator if you need access.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleAddUser = async (employeeData: any) => {
     try {
@@ -174,7 +195,9 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
               <Shield className="h-5 w-5" />
               User Management
             </CardTitle>
-            <CardDescription>Create and manage user accounts with system permissions</CardDescription>
+            <CardDescription>
+              Create and manage user accounts with system permissions (Administrator Only)
+            </CardDescription>
           </div>
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
             <DialogTrigger asChild>

@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState, useRef, useCallb
 import {
   User,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   updatePassword
@@ -44,7 +43,6 @@ interface AuthContextType {
   employee: Employee | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ requiresPasswordChange?: boolean }>;
-  signUp: (email: string, password: string, userData: any) => Promise<void>;
   signOut: () => Promise<void>;
   changePassword: (newPassword: string) => Promise<void>;
   hasPermission: (permission: string) => boolean;
@@ -287,32 +285,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string, userData: any) => {
-    try {
-      setLoading(true);
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
-      setTimeout(async () => {
-        await seedFirebaseData();
-      }, 1000);
-
-      toast({
-        title: "Success",
-        description: "Account created successfully"
-      });
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create account",
-        variant: "destructive"
-      });
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const signOut = async () => {
     try {
       if (timeoutRef.current) {
@@ -385,7 +357,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     employee,
     loading,
     signIn,
-    signUp,
     signOut,
     changePassword,
     hasPermission,
