@@ -1,7 +1,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Eye, Edit, Trash2, Mail, Phone, Building, Calendar } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Trash2, Mail, Phone, Building, Calendar, Printer } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,9 +15,10 @@ interface EmployeeListProps {
   onViewEmployee: (employee: any) => void;
   onEditEmployee: (employee: any) => void;
   onDeleteEmployee: (employeeId: string) => void;
+  onPrintCredentials: (employee: any) => void;
 }
 
-const EmployeeList = ({ employees, onViewEmployee, onEditEmployee, onDeleteEmployee }: EmployeeListProps) => {
+const EmployeeList = ({ employees, onViewEmployee, onEditEmployee, onDeleteEmployee, onPrintCredentials }: EmployeeListProps) => {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'Administrator':
@@ -103,6 +104,12 @@ const EmployeeList = ({ employees, onViewEmployee, onEditEmployee, onDeleteEmplo
                     <Edit className="h-4 w-4 mr-2" />
                     Edit Employee
                   </DropdownMenuItem>
+                  {employee.authUserId && (
+                    <DropdownMenuItem onClick={() => onPrintCredentials(employee)}>
+                      <Printer className="h-4 w-4 mr-2" />
+                      Print Login Credentials
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem 
                     onClick={() => onDeleteEmployee(employee.id)}
                     className="text-red-600"

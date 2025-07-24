@@ -1,279 +1,236 @@
-
+import { useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, UserPlus, DollarSign, Clock, TrendingUp, Send, UserCheck } from 'lucide-react';
-import { useState } from 'react';
-import { useSecureEmployees } from '@/hooks/useSecureEmployees';
-import { useSalaryPayments } from '@/hooks/useSalaryPayments';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Users, 
+  UserPlus, 
+  Search, 
+  Filter,
+  Download,
+  FileText,
+  DollarSign,
+  Calendar,
+  TrendingUp,
+  UserCheck
+} from 'lucide-react';
+
+import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
+import { useAuth } from '@/contexts/AuthContext';
+import EmployeeList from '@/components/hr/EmployeeList';
+import EmployeeStatsCards from '@/components/hr/EmployeeStatsCards';
 import AddEmployeeModal from '@/components/hr/AddEmployeeModal';
-import SalaryPaymentModal from '@/components/hr/SalaryPaymentModal';
 import EmployeeDetailsModal from '@/components/hr/EmployeeDetailsModal';
+import EmployeeFilters from '@/components/hr/EmployeeFilters';
+import EmptyState from '@/components/hr/EmptyState';
 import RegistrationRequestsManager from '@/components/hr/RegistrationRequestsManager';
+import PrintCredentialsDialog from '@/components/hr/PrintCredentialsDialog';
 
 const HumanResources = () => {
-  const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useSecureEmployees();
-  const { paymentRequests, submitPaymentRequest } = useSalaryPayments();
-  
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+
+  const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useFirebaseEmployees();
+  const { canManageEmployees, isAdmin } = useAuth();
+
+  const filteredEmployees = employees.filter(employee => {
+    const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         employee.position.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDepartment = departmentFilter === 'all' || employee.department === departmentFilter;
+    const matchesRole = roleFilter === 'all' || employee.role === roleFilter;
+    const matchesStatus = statusFilter === 'all' || employee.status === statusFilter;
+    
+    return matchesSearch && matchesDepartment && matchesRole && matchesStatus;
+  });
+
+  const handleViewEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
+    setShowDetailsModal(true);
+  };
+
+  const handleEditEmployee = (employee: any) => {
+    setSelectedEmployee(employee);
+    setShowAddModal(true);
+  };
+
+  const handleDeleteEmployee = async (employeeId: string) => {
+    if (window.confirm('Are you sure you want to delete this employee?')) {
+      try {
+        await deleteEmployee(employeeId);
+      } catch (error) {
+        console.error('Error deleting employee:', error);
+      }
+    }
+  };
 
   const handleAddEmployee = async (employeeData: any) => {
     try {
-      console.log('HR: Adding new employee:', employeeData);
-      await addEmployee(employeeData);
-      setIsAddDialogOpen(false);
+      if (selectedEmployee) {
+        await updateEmployee(selectedEmployee.id, employeeData);
+      } else {
+        await addEmployee(employeeData);
+      }
+      setShowAddModal(false);
+      setSelectedEmployee(null);
     } catch (error) {
-      console.error('HR: Error adding employee:', error);
+      console.error('Error saving employee:', error);
     }
   };
 
-  const handleEmployeeUpdated = async (updatedEmployee: any) => {
-    try {
-      console.log('HR: Updating employee:', updatedEmployee);
-      await updateEmployee(updatedEmployee.id, updatedEmployee);
-    } catch (error) {
-      console.error('HR: Error updating employee:', error);
-    }
+  const handlePrintCredentials = (employee: any) => {
+    setSelectedEmployee(employee);
+    setShowPrintDialog(true);
   };
 
-  const handleSalaryPaymentRequest = async (requestData: any) => {
-    try {
-      console.log('HR: Submitting salary payment request:', requestData);
-      await submitPaymentRequest(requestData);
-      setIsSalaryModalOpen(false);
-    } catch (error) {
-      console.error('HR: Error submitting salary payment request:', error);
-    }
+  const resetFilters = () => {
+    setSearchTerm('');
+    setDepartmentFilter('all');
+    setRoleFilter('all');
+    setStatusFilter('all');
   };
 
-  const stats = {
-    totalEmployees: employees.length,
-    activeEmployees: employees.filter(e => e.status === 'Active').length,
-    pendingRequests: paymentRequests.filter(r => r.status === 'Pending').length,
-    avgSalary: employees.length > 0 ? Math.round(employees.reduce((sum, e) => sum + e.salary, 0) / employees.length) : 0
-  };
+  if (!canManageEmployees()) {
+    return (
+      <Layout>
+        <div className="p-6">
+          <Card>
+            <CardContent className="text-center py-8">
+              <div className="mb-4">
+                <Users className="h-12 w-12 mx-auto text-gray-400" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+              <p className="text-gray-600">You don't have permission to access Human Resources management.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Human Resources</h1>
-            <p className="text-muted-foreground">Manage employees, payroll, and HR operations</p>
-          </div>
-          
-          <div className="flex space-x-2">
-            <Button onClick={() => setIsSalaryModalOpen(true)} variant="outline">
-              <Send className="mr-2 h-4 w-4" />
-              Submit Salary Request
-            </Button>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add Employee
-            </Button>
-          </div>
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Human Resources</h1>
+          <p className="text-muted-foreground">Manage employees, track performance, and handle HR operations</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalEmployees}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.activeEmployees} active
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Salary</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">UGX {stats.avgSalary.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">
-                Monthly average
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingRequests}</div>
-              <p className="text-xs text-muted-foreground">
-                Salary payment requests
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Department Count</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {new Set(employees.map(e => e.department)).size}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Active departments
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="registration" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="registration">Registration Requests</TabsTrigger>
-            <TabsTrigger value="employees">Employees</TabsTrigger>
-            <TabsTrigger value="payroll">Payroll</TabsTrigger>
+        <Tabs defaultValue="employees" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="employees">Employee Management</TabsTrigger>
+            <TabsTrigger value="requests">Registration Requests</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="registration" className="space-y-4">
+
+          <TabsContent value="employees" className="space-y-6">
+            <EmployeeStatsCards employees={employees} />
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Employee Directory
+                    </CardTitle>
+                    <CardDescription>
+                      Manage employee information and access controls
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => setShowAddModal(true)}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Employee
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search employees..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <EmployeeFilters 
+                      departmentFilter={departmentFilter}
+                      roleFilter={roleFilter}
+                      statusFilter={statusFilter}
+                      onDepartmentChange={setDepartmentFilter}
+                      onRoleChange={setRoleFilter}
+                      onStatusChange={setStatusFilter}
+                      onReset={resetFilters}
+                    />
+                  </div>
+
+                  {loading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="text-gray-600 mt-2">Loading employees...</p>
+                    </div>
+                  ) : filteredEmployees.length === 0 ? (
+                    <EmptyState 
+                      searchTerm={searchTerm}
+                      hasEmployees={employees.length > 0}
+                      onAddEmployee={() => setShowAddModal(true)}
+                      onResetFilters={resetFilters}
+                    />
+                  ) : (
+                    <EmployeeList
+                      employees={filteredEmployees}
+                      onViewEmployee={handleViewEmployee}
+                      onEditEmployee={handleEditEmployee}
+                      onDeleteEmployee={handleDeleteEmployee}
+                      onPrintCredentials={handlePrintCredentials}
+                    />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="requests">
             <RegistrationRequestsManager />
-          </TabsContent>
-          
-          <TabsContent value="employees" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Employee Directory</CardTitle>
-                <CardDescription>
-                  Manage employee information and access controls
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="text-center py-4">Loading employees...</div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Position</TableHead>
-                        <TableHead>Department</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Salary</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {employees.map((employee) => (
-                        <TableRow key={employee.id}>
-                          <TableCell className="font-medium">{employee.name}</TableCell>
-                          <TableCell>{employee.position}</TableCell>
-                          <TableCell>{employee.department}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{employee.role}</Badge>
-                          </TableCell>
-                          <TableCell>UGX {employee.salary.toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Badge variant={employee.status === 'Active' ? 'default' : 'secondary'}>
-                              {employee.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => {
-                                setSelectedEmployee(employee);
-                                setIsDetailsModalOpen(true);
-                              }}
-                            >
-                              View Details
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="payroll" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Salary Payment Requests</CardTitle>
-                <CardDescription>
-                  Review and process salary payment requests
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Request ID</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Requested By</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paymentRequests.map((request) => (
-                      <TableRow key={request.id}>
-                        <TableCell className="font-mono text-sm">{request.id.slice(0, 8)}</TableCell>
-                        <TableCell>{request.title}</TableCell>
-                        <TableCell>{request.amount}</TableCell>
-                        <TableCell>{request.requestedby}</TableCell>
-                        <TableCell>{new Date(request.daterequested).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            request.status === 'Approved' ? 'default' : 
-                            request.status === 'Rejected' ? 'destructive' : 'secondary'
-                          }>
-                            {request.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
 
         <AddEmployeeModal
-          open={isAddDialogOpen}
-          onOpenChange={setIsAddDialogOpen}
-          onEmployeeAdded={handleAddEmployee}
+          isOpen={showAddModal}
+          onClose={() => {
+            setShowAddModal(false);
+            setSelectedEmployee(null);
+          }}
+          onAddEmployee={handleAddEmployee}
+          employee={selectedEmployee}
         />
 
-        <SalaryPaymentModal
-          open={isSalaryModalOpen}
-          onOpenChange={setIsSalaryModalOpen}
-          employees={employees}
-          onPaymentRequestSubmitted={handleSalaryPaymentRequest}
+        <EmployeeDetailsModal
+          isOpen={showDetailsModal}
+          onClose={() => setShowDetailsModal(false)}
+          employee={selectedEmployee}
         />
 
-        {selectedEmployee && (
-          <EmployeeDetailsModal
-            open={isDetailsModalOpen}
-            onOpenChange={setIsDetailsModalOpen}
-            employee={selectedEmployee}
-            onEmployeeUpdated={handleEmployeeUpdated}
-          />
-        )}
+        <PrintCredentialsDialog
+          isOpen={showPrintDialog}
+          onClose={() => {
+            setShowPrintDialog(false);
+            setSelectedEmployee(null);
+          }}
+          employee={selectedEmployee}
+        />
       </div>
     </Layout>
   );
