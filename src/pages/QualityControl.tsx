@@ -32,6 +32,7 @@ import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
+import { clearCoffeeData } from "@/utils/clearCoffeeData";
 
 const QualityControl = () => {
   const {
@@ -141,6 +142,39 @@ const QualityControl = () => {
       toast({
         title: "Error",
         description: "Failed to refresh data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleClearCoffeeData = async () => {
+    if (!confirm('Are you sure you want to clear all coffee data? This action cannot be undone.')) {
+      return;
+    }
+    
+    setIsRefreshing(true);
+    try {
+      const result = await clearCoffeeData();
+      if (result.success) {
+        await refreshData();
+        toast({
+          title: "Success",
+          description: "All coffee data cleared successfully"
+        });
+      } else {
+        toast({
+          title: "Error", 
+          description: result.message,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing coffee data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear coffee data",
         variant: "destructive"
       });
     } finally {
@@ -562,6 +596,19 @@ const QualityControl = () => {
                   <RefreshCw className="h-4 w-4 mr-1" />
                 )}
                 {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={handleClearCoffeeData}
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <XCircle className="h-4 w-4 mr-1" />
+                )}
+                Clear Data
               </Button>
             </CardTitle>
           </CardHeader>

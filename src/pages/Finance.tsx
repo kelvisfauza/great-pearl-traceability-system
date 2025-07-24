@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle, Users, AlertTriangle, Clock, CheckCircle, Activity, Target, Wallet } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle, Users, AlertTriangle, Clock, CheckCircle, Activity, Target, Wallet, XCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useDailyTasks } from "@/hooks/useDailyTasks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useToast } from "@/hooks/use-toast";
+import { clearCoffeeData } from "@/utils/clearCoffeeData";
 import PaymentProcessingCard from "@/components/finance/PaymentProcessingCard";
 import SalaryRequestsCard from "@/components/finance/SalaryRequestsCard";
 import DailyReportsCard from "@/components/finance/DailyReportsCard";
@@ -41,6 +42,7 @@ const Finance = () => {
   const [floatAmount, setFloatAmount] = useState("");
   const [receiptAmount, setReceiptAmount] = useState("");
   const [receiptDescription, setReceiptDescription] = useState("");
+  const [isClearing, setIsClearing] = useState(false);
 
   const canManageFloat = hasRole('Supervisor') || hasRole('Operations Manager') || employee?.position === 'Supervisor' || employee?.position === 'Operations Manager';
 
@@ -171,12 +173,62 @@ const Finance = () => {
     }
   };
 
+  const handleClearCoffeeData = async () => {
+    if (!confirm('Are you sure you want to clear all coffee-related financial data? This action cannot be undone.')) {
+      return;
+    }
+    
+    setIsClearing(true);
+    try {
+      const result = await clearCoffeeData();
+      if (result.success) {
+        await refetch();
+        toast({
+          title: "Success",
+          description: "All coffee-related financial data cleared successfully"
+        });
+      } else {
+        toast({
+          title: "Error", 
+          description: result.message,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing coffee data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear coffee data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   return (
     <Layout 
       title="Finance Dashboard" 
       subtitle="Comprehensive financial management and reporting"
     >
       <div className="space-y-8">
+        {/* Clear Data Button */}
+        <div className="flex justify-end mb-4">
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={handleClearCoffeeData}
+            disabled={isClearing}
+          >
+            {isClearing ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <XCircle className="h-4 w-4 mr-1" />
+            )}
+            {isClearing ? 'Clearing...' : 'Clear Coffee Data'}
+          </Button>
+        </div>
+
         {/* Key Metrics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
