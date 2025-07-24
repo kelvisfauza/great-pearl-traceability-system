@@ -104,9 +104,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [user, resetInactivityTimer]);
 
-  const fetchEmployeeData = async (userId?: string): Promise<Employee | null> => {
+  const fetchEmployeeData = async (userId?: string, email?: string): Promise<Employee | null> => {
     const targetUserId = userId || user?.uid;
-    const userEmail = user?.email;
+    const userEmail = email || user?.email;
+    
+    console.log('=== FETCH EMPLOYEE DATA ===');
+    console.log('Target User ID:', targetUserId);
+    console.log('User Email:', userEmail);
+    console.log('user?.email:', user?.email);
+    console.log('passed email:', email);
     
     if (!userEmail) {
       console.log('No user email available');
@@ -226,8 +232,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Add a small delay to ensure user state is set
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Fetch employee data using the email and uid
-      const employeeData = await fetchEmployeeData(userCredential.user.uid);
+      // Fetch employee data using the email and uid - pass email explicitly
+      const employeeData = await fetchEmployeeData(userCredential.user.uid, email);
       
       // Special handling for main admin account
       if (email === MAIN_ADMIN_EMAIL) {
