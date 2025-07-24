@@ -22,7 +22,7 @@ export const auth = getAuth(app);
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
 
-// Initialize Firebase Storage and get a reference to the service
+// Initialize Firebase Storage and get a reference to the service  
 export const storage = getStorage(app);
 
 export default app;
