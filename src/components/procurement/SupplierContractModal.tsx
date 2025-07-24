@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,33 +7,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useToast } from '@/hooks/use-toast';
-import { collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useSupplierContracts } from '@/hooks/useSupplierContracts';
+import { AlertTriangle, FileText, X } from 'lucide-react';
 
 interface SupplierContractModalProps {
   open: boolean;
   onClose: () => void;
 }
 
-interface Contract {
-  id: string;
-  supplierName: string;
-  supplierId: string;
-  contractType: string;
-  date: string;
-  kilogramsExpected: number;
-  pricePerKg: number;
-  advanceGiven: number;
-  status: string;
-  created_at: string;
-}
-
 const SupplierContractModal: React.FC<SupplierContractModalProps> = ({ open, onClose }) => {
   const { suppliers, loading: suppliersLoading } = useSuppliers();
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { contracts, loading, createContract, requestContractAction, approveContractAction, fetchContracts } = useSupplierContracts();
   const { toast } = useToast();
 
   // Form state
@@ -47,38 +33,24 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({ open, onC
     advanceGiven: ''
   });
 
+  // Action modal state
+  const [actionModal, setActionModal] = useState<{
+    open: boolean;
+    contractId: string;
+    actionType: 'void' | 'terminate';
+    reason: string;
+  }>({
+    open: false,
+    contractId: '',
+    actionType: 'void',
+    reason: ''
+  });
+
   useEffect(() => {
     if (open) {
       fetchContracts();
     }
   }, [open]);
-
-  const fetchContracts = async () => {
-    setLoading(true);
-    try {
-      const contractsQuery = query(
-        collection(db, 'supplier_contracts'),
-        orderBy('created_at', 'desc')
-      );
-      
-      const contractsSnapshot = await getDocs(contractsQuery);
-      const contractsData = contractsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Contract[];
-
-      setContracts(contractsData);
-    } catch (error) {
-      console.error('Error fetching contracts:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load contracts",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +69,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({ open, onC
       const selectedSupplier = suppliers.find(s => s.id === formData.supplierId);
       if (!selectedSupplier) return;
 
-      const contractData = {
+      await createContract({
         supplierName: selectedSupplier.name,
         supplierId: formData.supplierId,
         contractType: formData.contractType,
@@ -105,11 +77,8 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({ open, onC
         kilogramsExpected: Number(formData.kilogramsExpected),
         pricePerKg: Number(formData.pricePerKg),
         advanceGiven: Number(formData.advanceGiven) || 0,
-        status: 'Active',
-        created_at: new Date().toISOString()
-      };
-
-      await addDoc(collection(db, 'supplier_contracts'), contractData);
+        status: 'Active'
+      });
       
       toast({
         title: "Success",
@@ -125,9 +94,6 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({ open, onC
         pricePerKg: '',
         advanceGiven: ''
       });
-
-      // Refresh contracts
-      fetchContracts();
     } catch (error) {
       console.error('Error creating contract:', error);
       toast({
@@ -138,7 +104,50 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({ open, onC
     }
   };
 
-  const handlePrintContract = (contract: Contract) => {
+  const handleContractAction = async (contractId: string, actionType: 'void' | 'terminate') => {
+    setActionModal({
+      open: true,
+      contractId,
+      actionType,
+      reason: ''
+    });
+  };
+
+  const submitContractAction = async () => {
+    if (!actionModal.reason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide a reason for this action",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await requestContractAction(
+        actionModal.contractId, 
+        actionModal.actionType, 
+        actionModal.reason, 
+        'Current User' // In a real app, this would be the current user's name
+      );
+      
+      toast({
+        title: "Success",
+        description: `Contract ${actionModal.actionType} request submitted for management approval`
+      });
+
+      setActionModal({ open: false, contractId: '', actionType: 'void', reason: '' });
+    } catch (error) {
+      console.error('Error requesting contract action:', error);
+      toast({
+        title: "Error",
+        description: `Failed to request contract ${actionModal.actionType}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handlePrintContract = (contract: any) => {
     const contractContent = `
       <div style="padding: 20px; font-family: Arial, sans-serif;">
         <div style="text-align: center; margin-bottom: 30px;">
@@ -154,6 +163,7 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({ open, onC
           <p><strong>Date:</strong> ${new Date(contract.date).toLocaleDateString()}</p>
           <p><strong>Supplier:</strong> ${contract.supplierName}</p>
           <p><strong>Contract Type:</strong> ${contract.contractType}</p>
+          <p><strong>Status:</strong> ${contract.status}</p>
         </div>
         
         <div style="margin-bottom: 20px;">
@@ -207,170 +217,232 @@ const SupplierContractModal: React.FC<SupplierContractModalProps> = ({ open, onC
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Supplier Contract Management</DialogTitle>
-        </DialogHeader>
-        
-        <Tabs defaultValue="create" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="create">Create Contract</TabsTrigger>
-            <TabsTrigger value="view">View Contracts</TabsTrigger>
-          </TabsList>
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Supplier Contract Management</DialogTitle>
+          </DialogHeader>
           
-          <TabsContent value="create" className="space-y-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="supplier">Supplier *</Label>
-                  <Select 
-                    value={formData.supplierId} 
-                    onValueChange={(value) => setFormData({...formData, supplierId: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.name} - {supplier.origin}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          <Tabs defaultValue="create" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="create">Create Contract</TabsTrigger>
+              <TabsTrigger value="view">View Contracts</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="create" className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="supplier">Supplier *</Label>
+                    <Select 
+                      value={formData.supplierId} 
+                      onValueChange={(value) => setFormData({...formData, supplierId: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select supplier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.name} - {supplier.origin}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="contractType">Contract Type *</Label>
+                    <Select 
+                      value={formData.contractType} 
+                      onValueChange={(value) => setFormData({...formData, contractType: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select contract type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Fixed Price">Fixed Price</SelectItem>
+                        <SelectItem value="Market Price">Market Price</SelectItem>
+                        <SelectItem value="Advance Payment">Advance Payment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="date">Contract Date *</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData({...formData, date: e.target.value})}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="kilogramsExpected">Expected Kilograms *</Label>
+                    <Input
+                      id="kilogramsExpected"
+                      type="number"
+                      value={formData.kilogramsExpected}
+                      onChange={(e) => setFormData({...formData, kilogramsExpected: e.target.value})}
+                      placeholder="Enter expected kilograms"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="pricePerKg">Price per KG (UGX) *</Label>
+                    <Input
+                      id="pricePerKg"
+                      type="number"
+                      value={formData.pricePerKg}
+                      onChange={(e) => setFormData({...formData, pricePerKg: e.target.value})}
+                      placeholder="Enter price per kilogram"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="advanceGiven">Advance Given (UGX)</Label>
+                    <Input
+                      id="advanceGiven"
+                      type="number"
+                      value={formData.advanceGiven}
+                      onChange={(e) => setFormData({...formData, advanceGiven: e.target.value})}
+                      placeholder="Enter advance amount (optional)"
+                    />
+                  </div>
                 </div>
                 
-                <div>
-                  <Label htmlFor="contractType">Contract Type *</Label>
-                  <Select 
-                    value={formData.contractType} 
-                    onValueChange={(value) => setFormData({...formData, contractType: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select contract type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Fixed Price">Fixed Price</SelectItem>
-                      <SelectItem value="Market Price">Market Price</SelectItem>
-                      <SelectItem value="Advance Payment">Advance Payment</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    Create Contract
+                  </Button>
                 </div>
-                
-                <div>
-                  <Label htmlFor="date">Contract Date *</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({...formData, date: e.target.value})}
-                    required
-                  />
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="view" className="space-y-4">
+              {loading ? (
+                <div className="text-center py-8">
+                  <p>Loading contracts...</p>
                 </div>
-                
-                <div>
-                  <Label htmlFor="kilogramsExpected">Expected Kilograms *</Label>
-                  <Input
-                    id="kilogramsExpected"
-                    type="number"
-                    value={formData.kilogramsExpected}
-                    onChange={(e) => setFormData({...formData, kilogramsExpected: e.target.value})}
-                    placeholder="Enter expected kilograms"
-                    required
-                  />
+              ) : contracts.length === 0 ? (
+                <div className="text-center py-8">
+                  <p>No contracts found</p>
                 </div>
-                
-                <div>
-                  <Label htmlFor="pricePerKg">Price per KG (UGX) *</Label>
-                  <Input
-                    id="pricePerKg"
-                    type="number"
-                    value={formData.pricePerKg}
-                    onChange={(e) => setFormData({...formData, pricePerKg: e.target.value})}
-                    placeholder="Enter price per kilogram"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="advanceGiven">Advance Given (UGX)</Label>
-                  <Input
-                    id="advanceGiven"
-                    type="number"
-                    value={formData.advanceGiven}
-                    onChange={(e) => setFormData({...formData, advanceGiven: e.target.value})}
-                    placeholder="Enter advance amount (optional)"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Create Contract
-                </Button>
-              </div>
-            </form>
-          </TabsContent>
-          
-          <TabsContent value="view" className="space-y-4">
-            {loading ? (
-              <div className="text-center py-8">
-                <p>Loading contracts...</p>
-              </div>
-            ) : contracts.length === 0 ? (
-              <div className="text-center py-8">
-                <p>No contracts found</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Expected KG</TableHead>
-                    <TableHead>Price/KG</TableHead>
-                    <TableHead>Advance</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {contracts.map((contract) => (
-                    <TableRow key={contract.id}>
-                      <TableCell>{contract.supplierName}</TableCell>
-                      <TableCell>{contract.contractType}</TableCell>
-                      <TableCell>{new Date(contract.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{contract.kilogramsExpected.toLocaleString()}</TableCell>
-                      <TableCell>UGX {contract.pricePerKg.toLocaleString()}</TableCell>
-                      <TableCell>UGX {contract.advanceGiven.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Badge variant={contract.status === 'Active' ? 'default' : 'secondary'}>
-                          {contract.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePrintContract(contract)}
-                        >
-                          Print
-                        </Button>
-                      </TableCell>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Supplier</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Expected KG</TableHead>
+                      <TableHead>Price/KG</TableHead>
+                      <TableHead>Advance</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+                  </TableHeader>
+                  <TableBody>
+                    {contracts.map((contract) => (
+                      <TableRow key={contract.id}>
+                        <TableCell>{contract.supplierName}</TableCell>
+                        <TableCell>{contract.contractType}</TableCell>
+                        <TableCell>{new Date(contract.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{contract.kilogramsExpected.toLocaleString()}</TableCell>
+                        <TableCell>UGX {contract.pricePerKg.toLocaleString()}</TableCell>
+                        <TableCell>UGX {contract.advanceGiven.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            contract.status === 'Active' ? 'default' : 
+                            contract.status === 'Voided' ? 'destructive' : 'secondary'
+                          }>
+                            {contract.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePrintContract(contract)}
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                            {contract.status === 'Active' && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleContractAction(contract.id, 'void')}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleContractAction(contract.id, 'terminate')}
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Modal */}
+      <Dialog open={actionModal.open} onOpenChange={(open) => setActionModal({...actionModal, open})}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {actionModal.actionType === 'void' ? 'Void Contract' : 'Terminate Contract'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="reason">Reason for {actionModal.actionType} *</Label>
+              <Textarea
+                id="reason"
+                value={actionModal.reason}
+                onChange={(e) => setActionModal({...actionModal, reason: e.target.value})}
+                placeholder={`Enter reason for ${actionModal.actionType}...`}
+                rows={3}
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setActionModal({...actionModal, open: false})}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={submitContractAction}
+              >
+                Submit Request
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

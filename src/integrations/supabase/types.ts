@@ -148,6 +148,56 @@ export type Database = {
           },
         ]
       }
+      contract_approvals: {
+        Row: {
+          action_type: string
+          approved_at: string | null
+          approved_by: string | null
+          contract_id: string | null
+          created_at: string | null
+          id: string
+          reason: string
+          rejection_reason: string | null
+          requested_at: string | null
+          requested_by: string
+          status: string | null
+        }
+        Insert: {
+          action_type: string
+          approved_at?: string | null
+          approved_by?: string | null
+          contract_id?: string | null
+          created_at?: string | null
+          id?: string
+          reason: string
+          rejection_reason?: string | null
+          requested_at?: string | null
+          requested_by: string
+          status?: string | null
+        }
+        Update: {
+          action_type?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          contract_id?: string | null
+          created_at?: string | null
+          id?: string
+          reason?: string
+          rejection_reason?: string | null
+          requested_at?: string | null
+          requested_by?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_approvals_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_participants: {
         Row: {
           conversation_id: string | null
@@ -1131,6 +1181,66 @@ export type Database = {
           name?: string
           occupancy_percentage?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      supplier_contracts: {
+        Row: {
+          advance_given: number | null
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          contract_type: string
+          created_at: string | null
+          date: string
+          id: string
+          kilograms_expected: number
+          price_per_kg: number
+          status: string | null
+          supplier_id: string | null
+          supplier_name: string
+          updated_at: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          advance_given?: number | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          contract_type: string
+          created_at?: string | null
+          date: string
+          id?: string
+          kilograms_expected: number
+          price_per_kg: number
+          status?: string | null
+          supplier_id?: string | null
+          supplier_name: string
+          updated_at?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          advance_given?: number | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          contract_type?: string
+          created_at?: string | null
+          date?: string
+          id?: string
+          kilograms_expected?: number
+          price_per_kg?: number
+          status?: string | null
+          supplier_id?: string | null
+          supplier_name?: string
+          updated_at?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: []
       }
