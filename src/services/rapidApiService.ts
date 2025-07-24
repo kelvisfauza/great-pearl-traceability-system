@@ -8,49 +8,13 @@ interface CoffeePrices {
 }
 
 export class RapidApiService {
-  private readonly rapidApiHost = 'investing-cryptocurrency-markets.p.rapidapi.com';
-  private readonly supabaseUrl = 'https://pudfybkyfedeggmokhco.supabase.co';
-
   /**
-   * Fetch coffee futures prices using RapidAPI Investing.com scraper
+   * Fetch coffee futures prices - now uses Firebase backend
    */
   async getCoffeePrices(): Promise<CoffeePrices> {
-    try {
-      console.log('Fetching coffee prices using RapidAPI scraper...');
-      
-      // Try to get API key from Supabase secrets via edge function
-      const response = await fetch(`${this.supabaseUrl}/functions/v1/fetch-coffee-prices-rapidapi`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        console.log('Successfully fetched coffee prices from RapidAPI:', result.data);
-        return {
-          iceArabica: result.data.iceArabica,
-          robusta: result.data.robusta,
-          exchangeRate: result.data.exchangeRate,
-          drugarLocal: result.data.drugarLocal,
-          wugarLocal: result.data.wugarLocal,
-          robustaFaqLocal: result.data.robustaFaqLocal
-        };
-      } else {
-        console.warn('RapidAPI returned error, using fallback data:', result.error);
-        return this.getFallbackPrices();
-      }
-      
-    } catch (error) {
-      console.error('Error fetching from RapidAPI:', error);
-      return this.getFallbackPrices();
-    }
+    // Import Firebase service dynamically to avoid circular imports
+    const { firebasePriceService } = await import('./firebasePriceService');
+    return firebasePriceService.getCoffeePrices();
   }
 
   private getFallbackPrices(): CoffeePrices {

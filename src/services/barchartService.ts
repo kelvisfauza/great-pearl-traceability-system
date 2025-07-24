@@ -8,47 +8,13 @@ interface CoffeePrices {
 }
 
 export class BarchartService {
-  private readonly supabaseUrl = 'https://pudfybkyfedeggmokhco.supabase.co';
-
   /**
-   * Fetch coffee futures prices from Investing.com via Supabase edge function
+   * Fetch coffee futures prices - now uses Firebase backend
    */
   async getCoffeePrices(): Promise<CoffeePrices> {
-    try {
-      console.log('Fetching real coffee prices from Investing.com...');
-      
-      const response = await fetch(`${this.supabaseUrl}/functions/v1/scrape-coffee-prices`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success && result.data) {
-        console.log('Successfully fetched real coffee prices:', result.data);
-        return {
-          iceArabica: result.data.iceArabica,
-          robusta: result.data.robusta,
-          exchangeRate: result.data.exchangeRate,
-          drugarLocal: result.data.drugarLocal,
-          wugarLocal: result.data.wugarLocal,
-          robustaFaqLocal: result.data.robustaFaqLocal
-        };
-      } else {
-        console.warn('Edge function returned error, using fallback data:', result.error);
-        return result.data || this.getFallbackPrices();
-      }
-      
-    } catch (error) {
-      console.error('Error fetching from edge function:', error);
-      return this.getFallbackPrices();
-    }
+    // Import Firebase service dynamically to avoid circular imports
+    const { firebasePriceService } = await import('./firebasePriceService');
+    return firebasePriceService.getCoffeePrices();
   }
 
   private getFallbackPrices(): CoffeePrices {
