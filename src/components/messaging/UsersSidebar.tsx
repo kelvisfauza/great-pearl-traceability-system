@@ -19,9 +19,10 @@ interface UsersSidebarProps {
   onUserSelect: (user: User) => void;
   conversations: any[];
   currentUserId?: string;
+  onlineUsers: string[];
 }
 
-const UsersSidebar = ({ users, selectedUserId, onUserSelect, conversations, currentUserId }: UsersSidebarProps) => {
+const UsersSidebar = ({ users, selectedUserId, onUserSelect, conversations, currentUserId, onlineUsers }: UsersSidebarProps) => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const filteredUsers = users.filter(user => 
@@ -102,8 +103,10 @@ const UsersSidebar = ({ users, selectedUserId, onUserSelect, conversations, curr
                           {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      {/* Status indicator */}
-                      <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(user.status || 'online')}`} />
+                      {/* Status indicator - show green if online */}
+                      {onlineUsers.includes(user.id) && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
+                      )}
                     </div>
                     
                     <div className="flex-1 min-w-0">

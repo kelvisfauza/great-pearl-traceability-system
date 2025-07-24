@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { X, Minimize2, Maximize2 } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePresence } from '@/hooks/usePresence';
 import UsersSidebar from './UsersSidebar';
 import ChatArea from './ChatArea';
 
@@ -27,6 +28,8 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     fetchMessages,
     markAsRead
   } = useMessages(user?.uid, employee?.id);
+  
+  const { onlineUsers } = usePresence(user?.uid);
 
   // Debug logging
   console.log('MessagingPanel - user:', user?.uid, 'employee:', employee?.id);
@@ -130,6 +133,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
             onUserSelect={handleUserSelect}
             conversations={conversations}
             currentUserId={user?.uid}
+            onlineUsers={onlineUsers}
           />
 
           {/* Right Area - Chat */}

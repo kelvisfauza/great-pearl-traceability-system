@@ -1,18 +1,24 @@
 
-import { useEffect, useCallback } from 'react';
-// Remove supabase import - will be handled by compatibility layer
+import { useEffect, useCallback, useState } from 'react';
+import { doc, setDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export const usePresence = (userId?: string) => {
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+
   const updatePresence = useCallback(async (status: 'online' | 'away' | 'offline' = 'online') => {
     if (!userId) return;
 
     try {
-      // Temporarily do nothing - will be implemented with Firebase later
-      console.log('Would update presence:', { userId, status });
+      await setDoc(doc(db, 'user_presence', userId), {
+        status,
+        lastSeen: new Date().toISOString(),
+        userId
+      }, { merge: true });
     } catch (error) {
       console.error('Error updating presence:', error);
     }
-  }, [userId]); // Use Firebase User.uid
+  }, [userId]);
 
   const setOffline = useCallback(async () => {
     await updatePresence('offline');
@@ -23,6 +29,17 @@ export const usePresence = (userId?: string) => {
 
     // Set user as online when hook mounts
     updatePresence('online');
+
+    // Listen to all online users
+    const presenceQuery = query(
+      collection(db, 'user_presence'),
+      where('status', '==', 'online')
+    );
+
+    const unsubscribe = onSnapshot(presenceQuery, (snapshot) => {
+      const onlineUserIds = snapshot.docs.map(doc => doc.data().userId);
+      setOnlineUsers(onlineUserIds);
+    });
 
     // Set up event listeners for when user becomes inactive
     const handleVisibilityChange = () => {
@@ -43,9 +60,10 @@ export const usePresence = (userId?: string) => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      unsubscribe();
       setOffline();
     };
   }, [userId, updatePresence, setOffline]);
 
-  return { updatePresence };
+  return { updatePresence, onlineUsers };
 };
