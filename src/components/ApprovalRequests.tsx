@@ -3,11 +3,13 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye, FileText } from 'lucide-react';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
 import { useToast } from '@/hooks/use-toast';
 import { RejectionModal } from './workflow/RejectionModal';
 import { WorkflowTracker } from './workflow/WorkflowTracker';
+import { DetailedWorkflowView } from './workflow/DetailedWorkflowView';
+import { AuditPrintModal } from './workflow/AuditPrintModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const ApprovalRequests = () => {
@@ -17,6 +19,9 @@ const ApprovalRequests = () => {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  const [detailedViewModalOpen, setDetailedViewModalOpen] = useState(false);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [workflowDataForPrint, setWorkflowDataForPrint] = useState<any>(null);
   const { toast } = useToast();
 
   const handleApproval = async (id: string) => {
@@ -75,6 +80,30 @@ const ApprovalRequests = () => {
   const handleViewWorkflow = (paymentId: string) => {
     setSelectedPaymentId(paymentId);
     setWorkflowModalOpen(true);
+  };
+
+  const handleViewDetailedWorkflow = (requestId: string, paymentId?: string) => {
+    setSelectedRequestId(requestId);
+    setSelectedPaymentId(paymentId || null);
+    setDetailedViewModalOpen(true);
+  };
+
+  const handleDetailedApproval = async () => {
+    if (!selectedRequestId) return;
+    await handleApproval(selectedRequestId);
+    setDetailedViewModalOpen(false);
+  };
+
+  const handleDetailedRejection = () => {
+    setDetailedViewModalOpen(false);
+    if (selectedRequestId) {
+      handleRejection(selectedRequestId);
+    }
+  };
+
+  const handlePrintAudit = (workflowData: any) => {
+    setWorkflowDataForPrint(workflowData);
+    setPrintModalOpen(true);
   };
 
   const handleRefresh = async () => {
@@ -149,6 +178,14 @@ const ApprovalRequests = () => {
                     <Badge className={getPriorityColor(request.priority)}>
                       {request.priority}
                     </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewDetailedWorkflow(request.id, request.details?.paymentId)}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      Review Details
+                    </Button>
                     {request.details?.paymentId && (
                       <Button
                         variant="outline"
@@ -245,6 +282,32 @@ const ApprovalRequests = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={detailedViewModalOpen} onOpenChange={setDetailedViewModalOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Complete Transaction Review</DialogTitle>
+          </DialogHeader>
+          {selectedRequestId && (
+            <DetailedWorkflowView
+              requestId={selectedRequestId}
+              paymentId={selectedPaymentId || undefined}
+              onApprove={handleDetailedApproval}
+              onReject={handleDetailedRejection}
+              onPrint={handlePrintAudit}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {printModalOpen && workflowDataForPrint && selectedRequestId && (
+        <AuditPrintModal
+          open={printModalOpen}
+          onClose={() => setPrintModalOpen(false)}
+          workflowData={workflowDataForPrint}
+          requestId={selectedRequestId}
+        />
+      )}
     </div>
   );
 };
