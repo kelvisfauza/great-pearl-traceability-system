@@ -247,9 +247,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       // Regular employee login flow
+      console.log('Checking employee data after fetch:', employeeData);
+      console.log('Employee data type:', typeof employeeData);
+      console.log('Employee data null check:', employeeData === null);
+      console.log('Employee data undefined check:', employeeData === undefined);
+      
       if (!employeeData) {
         console.error('No employee record found for email:', email);
         console.error('User ID:', userCredential.user.uid);
+        console.error('This should not happen if logs show employee was found');
         await firebaseSignOut(auth);
         setUser(null);
         toast({
