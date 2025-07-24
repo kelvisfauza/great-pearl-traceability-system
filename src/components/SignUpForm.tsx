@@ -19,6 +19,7 @@ interface SignUpFormData {
   department: string;
   role: string;
   reason: string;
+  password: string;
 }
 
 const SignUpForm = () => {
@@ -29,7 +30,8 @@ const SignUpForm = () => {
     phone: '',
     department: '',
     role: '',
-    reason: ''
+    reason: '',
+    password: ''
   });
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -69,10 +71,20 @@ const SignUpForm = () => {
     try {
       // Validate form
       if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim() || 
-          !formData.phone.trim() || !formData.department || !formData.role) {
+          !formData.phone.trim() || !formData.department || !formData.role || !formData.password.trim()) {
         toast({
           title: "Validation Error",
           description: "Please fill in all required fields",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Password validation
+      if (formData.password.length < 6) {
+        toast({
+          title: "Invalid Password",
+          description: "Password must be at least 6 characters long",
           variant: "destructive"
         });
         return;
@@ -98,6 +110,7 @@ const SignUpForm = () => {
         department: formData.department,
         role: formData.role,
         reason: formData.reason.trim(),
+        password: formData.password, // Store the password for account creation
         status: 'pending',
         requestedAt: new Date().toISOString(),
         permissions: [], // Will be set by HR/Admin during approval
@@ -251,6 +264,19 @@ const SignUpForm = () => {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password *</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Choose a secure password"
+              value={formData.password}
+              onChange={(e) => handleChange('password', e.target.value)}
+              required
+              disabled={loading}
+            />
           </div>
 
           <div className="space-y-2">
