@@ -78,6 +78,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
             .header { text-align: center; margin-bottom: 20px; }
+            .logo { height: 60px; width: auto; max-width: 120px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
             th, td { border: 1px solid #999; padding: 8px; text-align: left; }
             .signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 12px; }
@@ -85,6 +86,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
             .note { margin-top: 20px; font-size: 11px; color: #666; }
             .quality-table { margin-top: 20px; }
             .quality-table th { background-color: #f5f5f5; font-weight: bold; }
+            .separator { border-top: 2px solid #000; margin: 15px 0; }
           </style>
         </head>
         <body>
@@ -112,9 +114,9 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
 
         <div ref={printRef}>
           <div className="text-center mb-6 text-sm">
-            <div className="mb-4">
-              <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Great Pearl Coffee Factory Logo" className="mx-auto h-16 w-auto mb-2" />
-            </div>
+             <div className="mb-4">
+               <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Great Pearl Coffee Factory Logo" className="mx-auto h-16 w-auto mb-2 logo" />
+             </div>
             <h1 className="font-bold text-xl uppercase tracking-wide mb-2">GREAT PEARL COFFEE FACTORY</h1>
             <div className="mb-4">
               <p>+256781121639 / +256778536681</p>
