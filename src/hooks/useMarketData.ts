@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { usePrices } from '@/contexts/PriceContext';
 
 export interface MarketPrice {
   id: string;
@@ -27,8 +28,9 @@ export const useMarketData = () => {
   const [marketPrices, setMarketPrices] = useState<MarketPrice[]>([]);
   const [priceForecasts, setPriceForecasts] = useState<PriceForecast[]>([]);
   const [loading, setLoading] = useState(true);
+  const { prices: contextPrices } = usePrices();
 
-  // Legacy market data object for backward compatibility
+  // Use context prices as legacy market data for backward compatibility
   const [legacyMarketData, setLegacyMarketData] = useState({
     iceArabica: 245.50,
     robusta: 2850,
@@ -37,6 +39,18 @@ export const useMarketData = () => {
     ucdaRobusta: 8500,
     exchangeRate: 3700
   });
+
+  // Update legacy market data when context prices change
+  useEffect(() => {
+    setLegacyMarketData({
+      iceArabica: contextPrices.iceArabica,
+      robusta: contextPrices.robusta,
+      ucdaDrugar: contextPrices.drugarLocal,
+      ucdaWugar: contextPrices.wugarLocal,
+      ucdaRobusta: contextPrices.robustaFaqLocal,
+      exchangeRate: contextPrices.exchangeRate
+    });
+  }, [contextPrices]);
 
   const fetchMarketData = async () => {
     try {
@@ -63,15 +77,6 @@ export const useMarketData = () => {
           trend: data.trend || 'stable'
         }));
         setMarketPrices(transformedMarketData);
-        
-        // Update legacy market data if we have data
-        if (transformedMarketData.length > 0) {
-          const latestExchangeRate = transformedMarketData[0]?.exchangeRate || 3700;
-          setLegacyMarketData(prev => ({
-            ...prev,
-            exchangeRate: latestExchangeRate
-          }));
-        }
       }
 
       // Fetch price forecasts
@@ -100,21 +105,21 @@ export const useMarketData = () => {
     }
   };
 
-  const convertCentsLbToUGXKg = (centsPerLb: number, exchangeRate: number = legacyMarketData.exchangeRate) => {
+  const convertCentsLbToUGXKg = (centsPerLb: number, exchangeRate: number = contextPrices.exchangeRate) => {
     const dollarsPerLb = centsPerLb / 100;
     const dollarsPerKg = dollarsPerLb * 2.20462;
     return dollarsPerKg * exchangeRate;
   };
 
-  // Generate price history for charts
+  // Generate price history for charts using context prices
   const priceHistory = [
-    { date: '2024-01-01', arabica: 245, drugar: 11500 },
-    { date: '2024-01-02', arabica: 248, drugar: 11600 },
-    { date: '2024-01-03', arabica: 246, drugar: 11450 },
-    { date: '2024-01-04', arabica: 250, drugar: 11700 },
-    { date: '2024-01-05', arabica: 252, drugar: 11800 },
-    { date: '2024-01-06', arabica: 249, drugar: 11650 },
-    { date: '2024-01-07', arabica: 245, drugar: 11500 }
+    { date: '2024-01-01', arabica: contextPrices.iceArabica, drugar: contextPrices.drugarLocal },
+    { date: '2024-01-02', arabica: contextPrices.iceArabica + 3, drugar: contextPrices.drugarLocal + 100 },
+    { date: '2024-01-03', arabica: contextPrices.iceArabica - 2, drugar: contextPrices.drugarLocal - 50 },
+    { date: '2024-01-04', arabica: contextPrices.iceArabica + 5, drugar: contextPrices.drugarLocal + 200 },
+    { date: '2024-01-05', arabica: contextPrices.iceArabica + 7, drugar: contextPrices.drugarLocal + 300 },
+    { date: '2024-01-06', arabica: contextPrices.iceArabica + 4, drugar: contextPrices.drugarLocal + 150 },
+    { date: '2024-01-07', arabica: contextPrices.iceArabica, drugar: contextPrices.drugarLocal }
   ];
 
   useEffect(() => {
@@ -126,7 +131,7 @@ export const useMarketData = () => {
     priceForecasts,
     loading,
     fetchMarketData,
-    // Legacy properties for backward compatibility
+    // Legacy properties for backward compatibility - now using data analyst prices
     marketData: legacyMarketData,
     setMarketData: setLegacyMarketData,
     priceHistory,

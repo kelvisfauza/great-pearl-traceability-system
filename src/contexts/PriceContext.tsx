@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PriceData {
   iceArabica: number;
@@ -16,6 +15,7 @@ interface PriceContextType {
   prices: PriceData;
   updatePrices: (newPrices: Partial<PriceData>) => void;
   refreshPrices: () => Promise<void>;
+  loading: boolean;
 }
 
 const PriceContext = createContext<PriceContextType | undefined>(undefined);
@@ -29,53 +29,52 @@ export const PriceProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     robustaFaqLocal: 7800,
     exchangeRate: 3750
   });
+  const [loading, setLoading] = useState(true);
 
   const refreshPrices = async () => {
     try {
-      console.log('Refreshing prices from Firebase...');
+      setLoading(true);
+      console.log('Refreshing prices from Supabase price_data table...');
       
-      // Fetch latest price data from Firebase
-      const priceQuery = query(
-        collection(db, 'price_data'), 
-        orderBy('recorded_at', 'desc'), 
-        limit(10)
-      );
-      const priceSnapshot = await getDocs(priceQuery);
-      const priceData = priceSnapshot.docs.map(doc => doc.data());
+      // Fetch latest price data from Supabase
+      const { data: priceData, error } = await supabase
+        .from('price_data')
+        .select('*')
+        .order('recorded_at', { ascending: false });
       
-      console.log('Latest price data:', priceData);
+      if (error) {
+        console.error('Error fetching prices:', error);
+        return;
+      }
       
-      if (priceData.length > 0) {
+      console.log('Latest price data from Supabase:', priceData);
+      
+      if (priceData && priceData.length > 0) {
         const latestPrices: Partial<PriceData> = {};
         
+        // Get the most recent price for each type
+        const priceMap = new Map();
         priceData.forEach((price: any) => {
-          switch (price.price_type) {
-            case 'ice_arabica':
-              latestPrices.iceArabica = price.price_value;
-              break;
-            case 'ice_robusta':
-              latestPrices.robusta = price.price_value;
-              break;
-            case 'drugar_local':
-              latestPrices.drugarLocal = price.price_value;
-              break;
-            case 'wugar_local':
-              latestPrices.wugarLocal = price.price_value;
-              break;
-            case 'robusta_faq_local':
-              latestPrices.robustaFaqLocal = price.price_value;
-              break;
-            case 'exchange_rate':
-              latestPrices.exchangeRate = price.price_value;
-              break;
+          if (!priceMap.has(price.price_type)) {
+            priceMap.set(price.price_type, price.price_value);
           }
         });
         
-        console.log('Updated prices:', latestPrices);
+        // Map the price types to our interface
+        latestPrices.iceArabica = priceMap.get('ice_arabica') || 185.50;
+        latestPrices.robusta = priceMap.get('ice_robusta') || 2450;
+        latestPrices.drugarLocal = priceMap.get('drugar_local') || 8500;
+        latestPrices.wugarLocal = priceMap.get('wugar_local') || 8200;
+        latestPrices.robustaFaqLocal = priceMap.get('robusta_faq_local') || 7800;
+        latestPrices.exchangeRate = priceMap.get('exchange_rate') || 3750;
+        
+        console.log('Updated prices from data analyst manual input:', latestPrices);
         setPrices(prev => ({ ...prev, ...latestPrices }));
       }
     } catch (error) {
       console.error('Error refreshing prices:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -83,8 +82,8 @@ export const PriceProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     refreshPrices();
     
-    // Refresh prices every 5 minutes
-    const interval = setInterval(refreshPrices, 5 * 60 * 1000);
+    // Refresh prices every 30 seconds to get latest manual inputs
+    const interval = setInterval(refreshPrices, 30 * 1000);
     
     return () => clearInterval(interval);
   }, []);
@@ -95,7 +94,7 @@ export const PriceProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   return (
-    <PriceContext.Provider value={{ prices, updatePrices, refreshPrices }}>
+    <PriceContext.Provider value={{ prices, updatePrices, refreshPrices, loading }}>
       {children}
     </PriceContext.Provider>
   );

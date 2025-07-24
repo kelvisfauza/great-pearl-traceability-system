@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, Database } from 'lucide-react';
 import { usePrices } from '@/contexts/PriceContext';
 
 interface PricingGuidanceProps {
@@ -11,7 +11,7 @@ interface PricingGuidanceProps {
 }
 
 const PricingGuidance: React.FC<PricingGuidanceProps> = ({ coffeeType, suggestedPrice }) => {
-  const { prices } = usePrices();
+  const { prices, loading } = usePrices();
 
   const getMarketPrice = (type: string) => {
     switch (type.toLowerCase()) {
@@ -35,21 +35,21 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({ coffeeType, suggested
       return {
         status: 'good',
         icon: CheckCircle,
-        message: 'Price aligns with current market',
+        message: 'Price aligns with data analyst reference price',
         variant: 'default' as const
       };
     } else if (pricePercentDiff > 5) {
       return {
         status: 'high',
         icon: AlertTriangle,
-        message: 'Price above market - verify quality justifies premium',
+        message: 'Price above reference - verify quality justifies premium',
         variant: 'destructive' as const
       };
     } else {
       return {
         status: 'low',
         icon: Info,
-        message: 'Price below market - potential profit opportunity',
+        message: 'Price below reference - potential profit opportunity',
         variant: 'secondary' as const
       };
     }
@@ -58,15 +58,31 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({ coffeeType, suggested
   const priceStatus = getPriceStatus();
   const StatusIcon = priceStatus.icon;
 
+  if (loading) {
+    return (
+      <Card className="mt-4">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 animate-pulse" />
+            <span className="text-sm text-gray-600">Loading reference prices from data analyst...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="mt-4">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium">Pricing Guidance</CardTitle>
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Database className="h-4 w-4" />
+          Pricing Guidance (Data Analyst Reference)
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-gray-600">Current Market ({coffeeType}):</span>
+            <span className="text-gray-600">Reference Price ({coffeeType}):</span>
             <div className="font-semibold">UGX {getCurrentMarketPrice.toLocaleString()}/kg</div>
           </div>
           <div>
@@ -85,7 +101,7 @@ const PricingGuidance: React.FC<PricingGuidanceProps> = ({ coffeeType, suggested
         </div>
 
         <div className="text-xs text-gray-500">
-          Based on live market data • Consider quality parameters and outturn rates
+          Based on data analyst manual input prices • Updated every 30 seconds
         </div>
       </CardContent>
     </Card>
