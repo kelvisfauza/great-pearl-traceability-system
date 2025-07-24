@@ -31,7 +31,7 @@ const PerformanceOverview = () => {
   }, []);
 
   // Calculate performance metrics based on real data
-  const activeEmployees = employees.filter(emp => emp.status === 'Active').length;
+  const activeEmployees = employees.filter(emp => emp.status === 'active').length;
   const totalEmployees = employees.length;
   const employeeEfficiency = totalEmployees > 0 ? Math.round((activeEmployees / totalEmployees) * 100) : 100;
 

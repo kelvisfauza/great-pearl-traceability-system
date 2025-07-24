@@ -7,10 +7,11 @@ export interface Employee {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   position: string;
   department: string;
   salary: number;
-  role: 'admin' | 'hr' | 'finance' | 'analyst' | 'field' | 'store' | 'quality' | 'procurement' | 'logistics' | 'processing' | 'sales_marketing' | 'management';
+  role: string; // Changed from strict union to string
   permissions: string[];
   status: 'active' | 'inactive';
   join_date: string;

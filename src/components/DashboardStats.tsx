@@ -143,7 +143,7 @@ const DashboardStats = () => {
         },
         {
           title: "Active Staff",
-          value: employees.filter(emp => emp.status === 'Active').length.toString(),
+          value: employees.filter(emp => emp.status === 'active').length.toString(),
           change: `UGX ${(totalSalaryRequests / 1000000).toFixed(1)}M pending`,
           icon: Users,
           color: "text-purple-600",

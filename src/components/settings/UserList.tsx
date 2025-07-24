@@ -27,7 +27,7 @@ export default function UserList({ employees, onEdit, onDelete }: UserListProps)
           </div>
           <div className="flex items-center space-x-2">
             <Badge variant="outline">{employee.role}</Badge>
-            <Badge variant={employee.status === "Active" ? "default" : "secondary"}>
+            <Badge variant={employee.status === "active" ? "default" : "secondary"}>
               {employee.status}
             </Badge>
             <Button

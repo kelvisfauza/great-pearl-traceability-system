@@ -157,7 +157,7 @@ const UserManagementPanel = () => {
         salary: parseFloat(newUserForm.salary) || 0,
         address: newUserForm.address || '',
         emergency_contact: newUserForm.emergencyContact || '',
-        status: 'Active',
+        status: 'active' as const,
         join_date: new Date().toISOString()
       };
 
@@ -488,7 +488,7 @@ const UserManagementPanel = () => {
                           </TableCell>
                           <TableCell>{employee.department}</TableCell>
                           <TableCell>
-                            <Badge variant={employee.status === 'Active' ? 'default' : 'secondary'}>
+                            <Badge variant={employee.status === 'active' ? 'default' : 'secondary'}>
                               {employee.status}
                             </Badge>
                           </TableCell>
