@@ -37,14 +37,10 @@ const Settings = () => {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <UserCog className="h-4 w-4" />
               Profile
-            </TabsTrigger>
-            <TabsTrigger value="requests" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              My Requests
             </TabsTrigger>
             {hasPermission('Human Resources') && (
               <TabsTrigger value="users" className="flex items-center gap-2">
@@ -68,10 +64,6 @@ const Settings = () => {
 
           <TabsContent value="profile" className="space-y-6">
             <UserProfile />
-          </TabsContent>
-
-          <TabsContent value="requests" className="space-y-6">
-            <UserRequestsPanel />
           </TabsContent>
 
           {hasPermission('Human Resources') && (

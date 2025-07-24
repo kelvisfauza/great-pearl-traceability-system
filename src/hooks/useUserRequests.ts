@@ -8,7 +8,7 @@ import {
   onSnapshot, 
   updateDoc, 
   doc,
-  serverTimestamp 
+  Timestamp 
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +26,9 @@ export interface UserRequest {
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
   status: 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Completed';
   requestedDate: string;
+  expectedDate?: string;
+  department?: string;
+  justification?: string;
   reviewedBy?: string;
   reviewedAt?: string;
   responseMessage?: string;
@@ -53,12 +56,22 @@ export const useUserRequests = () => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const requestsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as UserRequest[];
+      const requestsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Convert Firestore timestamps to strings
+          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
+          reviewedAt: data.reviewedAt?.toDate?.()?.toISOString() || data.reviewedAt,
+        };
+      }) as UserRequest[];
       
       setRequests(requestsData);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching requests:', error);
       setLoading(false);
     });
 
@@ -76,14 +89,17 @@ export const useUserRequests = () => {
     }
 
     try {
-      await addDoc(collection(db, 'user_requests'), {
+      const docData = {
         ...requestData,
         userId: user.uid,
         employeeId: employee.id,
         status: 'Pending',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      };
+
+      console.log('Creating request with data:', docData);
+      await addDoc(collection(db, 'user_requests'), docData);
 
       toast({
         title: "Success",
@@ -106,7 +122,7 @@ export const useUserRequests = () => {
     try {
       await updateDoc(doc(db, 'user_requests', requestId), {
         ...updates,
-        updatedAt: serverTimestamp()
+        updatedAt: Timestamp.now()
       });
 
       toast({

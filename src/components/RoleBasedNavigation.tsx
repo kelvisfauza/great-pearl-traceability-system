@@ -18,7 +18,8 @@ import {
   ClipboardCheck,
   MapPin,
   LineChart,
-  LogOut
+  LogOut,
+  MessageSquare
 } from "lucide-react";
 
 const RoleBasedNavigation = () => {
@@ -102,6 +103,23 @@ const RoleBasedNavigation = () => {
       ]
     },
     {
+      title: "Personal",
+      items: [
+        { 
+          name: "My Requests", 
+          icon: MessageSquare, 
+          path: "/my-requests", 
+          access: true // Everyone can access their own requests
+        },
+        { 
+          name: "Settings", 
+          icon: Settings, 
+          path: "/settings", 
+          access: access.canViewSettings
+        },
+      ]
+    },
+    {
       title: "System",
       items: [
         { 
@@ -109,12 +127,6 @@ const RoleBasedNavigation = () => {
           icon: FileText, 
           path: "/reports", 
           access: access.canViewReports
-        },
-        { 
-          name: "Settings", 
-          icon: Settings, 
-          path: "/settings", 
-          access: access.canViewSettings
         },
         { 
           name: "Logistics", 
