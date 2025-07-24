@@ -6,9 +6,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
 import UserManagement from '@/components/settings/UserManagement';
 import UserProfile from '@/components/settings/UserProfile';
+import QuickEmployeeUpdate from '@/components/admin/QuickEmployeeUpdate';
 
 const Settings = () => {
-  const { canManageEmployees } = useAuth();
+  const { canManageEmployees, isAdmin } = useAuth();
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useFirebaseEmployees();
 
   // Wrapper functions to match the expected interface
@@ -38,6 +39,9 @@ const Settings = () => {
             {canManageEmployees() && (
               <TabsTrigger value="users">User Management</TabsTrigger>
             )}
+            {isAdmin() && (
+              <TabsTrigger value="admin">Admin Tools</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="profile" className="space-y-6">
@@ -52,6 +56,19 @@ const Settings = () => {
                 onEmployeeUpdated={handleEmployeeUpdated}
                 onEmployeeDeleted={handleEmployeeDeleted}
               />
+            </TabsContent>
+          )}
+
+          {isAdmin() && (
+            <TabsContent value="admin" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Employee Role Update</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <QuickEmployeeUpdate />
+                </CardContent>
+              </Card>
             </TabsContent>
           )}
         </Tabs>
