@@ -8,7 +8,7 @@ import { setEmployeeRole, PERMISSION_SETS } from '@/utils/updateEmployeePermissi
 
 const QuickEmployeeUpdate = () => {
   const [email, setEmail] = useState('bwambaledenis8@gmail.com');
-  const [roleType, setRoleType] = useState<keyof typeof PERMISSION_SETS>('MANAGER');
+  const [roleType, setRoleType] = useState<keyof typeof PERMISSION_SETS>('DATA_ANALYST');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -67,6 +67,7 @@ const QuickEmployeeUpdate = () => {
               <SelectItem value="HR_MANAGER">HR Manager</SelectItem>
               <SelectItem value="FINANCE_MANAGER">Finance Manager</SelectItem>
               <SelectItem value="OPERATIONS_MANAGER">Operations Manager</SelectItem>
+              <SelectItem value="DATA_ANALYST">Data Analyst</SelectItem>
               <SelectItem value="SUPERVISOR">Supervisor</SelectItem>
               <SelectItem value="USER">Regular User</SelectItem>
             </SelectContent>

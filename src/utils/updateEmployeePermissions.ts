@@ -50,6 +50,7 @@ export const PERMISSION_SETS = {
     'Operations', 'Inventory', 'Quality Control', 'Store Management',
     'Processing', 'Procurement', 'Reports'
   ],
+  DATA_ANALYST: ['Data Analysis', 'Reports'],
   SUPERVISOR: ['Operations', 'Quality Control', 'Reports'],
   USER: ['General Access']
 };
@@ -59,7 +60,8 @@ export const setEmployeeRole = async (email: string, roleType: keyof typeof PERM
   const permissions = PERMISSION_SETS[roleType];
   const role = roleType === 'ADMIN' ? 'Administrator' : 
                roleType.includes('MANAGER') ? 'Manager' :
-               roleType === 'SUPERVISOR' ? 'Supervisor' : 'User';
+               roleType === 'SUPERVISOR' ? 'Supervisor' :
+               roleType === 'DATA_ANALYST' ? 'Data Analyst' : 'User';
   
   return updateEmployeePermissions(email, {
     role,
