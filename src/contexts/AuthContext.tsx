@@ -14,7 +14,8 @@ import {
   query,
   where,
   getDocs,
-  updateDoc
+  updateDoc,
+  addDoc
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -173,6 +174,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       console.log('No employee record found for email:', userEmail);
+      
+      // If user exists in Firebase Auth but no employee record, create one
+      if (targetUserId) {
+        console.log('Creating missing employee record for authenticated user');
+        const employeeData = {
+          name: userEmail.split('@')[0], // Use email prefix as name
+          email: normalizedEmail,
+          phone: '',
+          position: 'Staff',
+          department: 'General',
+          salary: 0,
+          role: 'User',
+          permissions: ['General Access'],
+          status: 'Active',
+          join_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          authUserId: targetUserId,
+          isOneTimePassword: false,
+          mustChangePassword: false
+        };
+
+        try {
+          const docRef = await addDoc(collection(db, 'employees'), employeeData);
+          console.log('Created employee record with ID:', docRef.id);
+          return { id: docRef.id, ...employeeData } as Employee;
+        } catch (error) {
+          console.error('Error creating employee record:', error);
+        }
+      }
+      
       return null;
     } catch (error) {
       console.error('Error in fetchEmployeeData:', error);
