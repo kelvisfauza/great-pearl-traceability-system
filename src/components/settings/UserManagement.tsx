@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +7,9 @@ import { UserPlus, Shield, AlertTriangle } from "lucide-react";
 import { useEmployees, Employee } from "@/hooks/useEmployees";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useSecureEmployees } from '@/hooks/useSecureEmployees';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import AddUserForm from './AddUserForm';
 import EditUserForm from './EditUserForm';
 import UserList from './UserList';
@@ -51,36 +53,31 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     try {
       console.log('UserManagement handleAddUser called with:', employeeData);
       
-      // First, create the employee record in Firebase
+      // First, create the Firebase authentication user
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        employeeData.email, 
+        employeeData.password
+      );
+      
+      console.log('Firebase auth user created:', userCredential.user.uid);
+
+      // Then create the employee record in Firebase with the flag to change password
       const processedData = {
         ...employeeData,
         permissions: Array.isArray(employeeData.permissions) ? employeeData.permissions : [],
-        isOneTimePassword: false,
-        mustChangePassword: true
+        isOneTimePassword: true,
+        mustChangePassword: true,
+        authUserId: userCredential.user.uid // Link to Firebase auth user
       };
 
-      console.log('Creating employee record in Firebase first...');
-      const firebaseEmployee = await addEmployee(processedData);
+      // Remove password from employee data (don't store it in the employee record)
+      delete processedData.password;
+
+      console.log('Creating employee record in Firebase...');
+      await addEmployee(processedData);
       
-      console.log('Employee record created in Firebase:', firebaseEmployee);
-
-      // Then create the authentication user through Supabase
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: {
-          employeeData: {
-            ...processedData,
-            password: employeeData.password
-          }
-        }
-      });
-
-      if (error) {
-        console.error('Error creating auth user:', error);
-        // If auth user creation fails, we should handle cleanup if needed
-        throw new Error(error.message || 'Failed to create authentication user');
-      }
-
-      console.log('Auth user created successfully:', data);
+      console.log('Employee record created successfully');
       
       setIsAddModalOpen(false);
       
@@ -95,9 +92,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
       
       let errorMessage = "Failed to create user. Please try again.";
       
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (error.code) {
+      if (error.code) {
         switch (error.code) {
           case 'auth/email-already-in-use':
             errorMessage = `A user with the email "${employeeData.email}" already exists.`;
@@ -109,7 +104,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
             errorMessage = "Invalid email address format.";
             break;
           default:
-            errorMessage = `Error: ${error.code}`;
+            errorMessage = `Error: ${error.message}`;
         }
       }
       
@@ -119,16 +114,6 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         variant: "destructive"
       });
     }
-  };
-
-  const generateOneTimePassword = (): string => {
-    // Generate a secure 8-character password with letters and numbers
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-    let password = '';
-    for (let i = 0; i < 8; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
   };
 
   const handleEditUser = async (employeeData: any) => {
