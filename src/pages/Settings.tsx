@@ -1,16 +1,22 @@
 
 import Layout from '@/components/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
 import UserManagement from '@/components/settings/UserManagement';
 import UserProfile from '@/components/settings/UserProfile';
 import QuickEmployeeUpdate from '@/components/admin/QuickEmployeeUpdate';
+import PaymentSlipGenerator from '@/components/settings/PaymentSlipGenerator';
+import ContractGenerator from '@/components/settings/ContractGenerator';
+import { useState } from 'react';
 
 const Settings = () => {
   const { canManageEmployees, isAdmin } = useAuth();
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useFirebaseEmployees();
+  const [showPaymentSlipModal, setShowPaymentSlipModal] = useState(false);
+  const [showContractModal, setShowContractModal] = useState(false);
 
   // Wrapper functions to match the expected interface
   const handleEmployeeAdded = async (employee: any): Promise<void> => {
@@ -39,6 +45,9 @@ const Settings = () => {
             {canManageEmployees() && (
               <TabsTrigger value="users">User Management</TabsTrigger>
             )}
+            {canManageEmployees() && (
+              <TabsTrigger value="documents">Documents</TabsTrigger>
+            )}
             {isAdmin() && (
               <TabsTrigger value="admin">Admin Tools</TabsTrigger>
             )}
@@ -59,6 +68,39 @@ const Settings = () => {
             </TabsContent>
           )}
 
+          {canManageEmployees() && (
+            <TabsContent value="documents" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Document Templates</CardTitle>
+                  <CardDescription>Generate and print employee documents</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-2">Payment Slips</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Generate salary payment slips with deductions, bonuses, and allowances
+                        </p>
+                        <Button onClick={() => setShowPaymentSlipModal(true)}>Generate Payment Slip</Button>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-2">Employment Contracts</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Create employment contracts with terms and conditions
+                        </p>
+                        <Button onClick={() => setShowContractModal(true)}>Generate Contract</Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
           {isAdmin() && (
             <TabsContent value="admin" className="space-y-6">
               <Card>
@@ -72,6 +114,16 @@ const Settings = () => {
             </TabsContent>
           )}
         </Tabs>
+
+        <PaymentSlipGenerator 
+          isOpen={showPaymentSlipModal}
+          onClose={() => setShowPaymentSlipModal(false)}
+        />
+
+        <ContractGenerator 
+          isOpen={showContractModal}
+          onClose={() => setShowContractModal(false)}
+        />
       </div>
     </Layout>
   );
