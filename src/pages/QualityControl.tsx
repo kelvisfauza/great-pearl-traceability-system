@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   CheckCircle2, 
   XCircle, 
@@ -20,7 +21,8 @@ import {
   Send,
   Factory,
   FileDown,
-  Edit
+  Edit,
+  RefreshCw
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -35,9 +37,11 @@ const QualityControl = () => {
     qualityAssessments,
     pendingRecords,
     loading,
+    error,
     addQualityAssessment,
     updateStoreRecord,
-    submitToFinance
+    submitToFinance,
+    refreshData
   } = useQualityControl();
 
   const { 
@@ -94,9 +98,35 @@ const QualityControl = () => {
   const pendingModificationRequests = getPendingModificationRequests('Quality');
 
   useEffect(() => {
-    refreshPrices();
-    refetchWorkflow();
+    const initializeData = async () => {
+      try {
+        await refreshPrices();
+        await refetchWorkflow();
+      } catch (error) {
+        console.error('Error initializing data:', error);
+      }
+    };
+
+    initializeData();
   }, [refreshPrices, refetchWorkflow]);
+
+  const handleRefresh = async () => {
+    try {
+      await refreshData();
+      await refetchWorkflow();
+      toast({
+        title: "Success",
+        description: "Data refreshed successfully"
+      });
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh data",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleStartAssessment = (record: any) => {
     console.log('Starting assessment for record:', record);
@@ -119,7 +149,6 @@ const QualityControl = () => {
     console.log('Starting modification for request:', modificationRequest);
     console.log('Available store records:', storeRecords);
     
-    // Try to find the original record by batch number first, then by payment ID
     let originalRecord = storeRecords.find(record => 
       record.batch_number === modificationRequest.batchNumber
     );
@@ -132,7 +161,6 @@ const QualityControl = () => {
     
     if (!originalRecord) {
       console.error('Original record not found for modification request:', modificationRequest);
-      console.error('Available records:', storeRecords.map(r => ({ id: r.id, batch_number: r.batch_number })));
       
       toast({
         title: "Error",
@@ -142,9 +170,6 @@ const QualityControl = () => {
       return;
     }
     
-    console.log('Found original record for modification:', originalRecord);
-    
-    // Set up the selected record with modification info
     setSelectedRecord({
       ...originalRecord,
       isModification: true,
@@ -152,7 +177,6 @@ const QualityControl = () => {
       modificationReason: modificationRequest.reason
     });
     
-    // Reset form and add modification context to comments
     setAssessmentForm({
       moisture: '',
       group1_defects: '',
@@ -165,7 +189,6 @@ const QualityControl = () => {
       comments: `Modification requested due to: ${modificationRequest.reason}${modificationRequest.comments ? '. Additional notes: ' + modificationRequest.comments : ''}`
     });
     
-    // Switch to assessment form tab
     setActiveTab("assessment-form");
     
     toast({
@@ -177,9 +200,6 @@ const QualityControl = () => {
   const calculateSuggestedPrice = () => {
     if (!selectedRecord) return 0;
     
-    console.log('Calculating price with current prices:', prices);
-    console.log('Selected record coffee type:', selectedRecord.coffee_type);
-    
     let basePrice = 0;
     const coffeeType = selectedRecord.coffee_type?.toLowerCase();
     
@@ -190,8 +210,6 @@ const QualityControl = () => {
     } else {
       basePrice = prices.drugarLocal;
     }
-    
-    console.log('Base price selected:', basePrice, 'for coffee type:', coffeeType);
     
     const moisture = parseFloat(assessmentForm.moisture) || 12;
     const group1 = parseFloat(assessmentForm.group1_defects) || 0;
@@ -211,7 +229,6 @@ const QualityControl = () => {
     adjustment = Math.max(adjustment, 0.5);
     
     const suggestedPrice = Math.round(basePrice * adjustment * selectedRecord.kilograms);
-    console.log('Calculated suggested price:', suggestedPrice, 'Base price:', basePrice, 'Adjustment:', adjustment);
     
     return suggestedPrice;
   };
@@ -261,11 +278,9 @@ const QualityControl = () => {
       
       await addQualityAssessment(assessment);
       
-      // If this is a modification request, complete it and track workflow
       if (selectedRecord.isModification) {
         await completeModificationRequest(selectedRecord.modificationRequestId);
         
-        // Track workflow step
         await trackWorkflowStep({
           paymentId: selectedRecord.id,
           qualityAssessmentId: assessment.store_record_id,
@@ -396,9 +411,28 @@ const QualityControl = () => {
 
   if (loading || workflowLoading) {
     return (
-      <Layout title="Quality Control" subtitle="Loading...">
+      <Layout title="Quality Control" subtitle="Loading quality control data...">
         <div className="flex items-center justify-center h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout title="Quality Control" subtitle="Error loading data">
+        <div className="space-y-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              {error}
+            </AlertDescription>
+          </Alert>
+          <Button onClick={handleRefresh} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
         </div>
       </Layout>
     );
@@ -429,7 +463,16 @@ const QualityControl = () => {
                 onClick={refreshPrices}
                 className="ml-auto"
               >
+                <RefreshCw className="h-4 w-4 mr-1" />
                 Refresh Prices
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+              >
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Refresh Data
               </Button>
             </CardTitle>
           </CardHeader>

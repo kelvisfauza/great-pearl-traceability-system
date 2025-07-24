@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -41,17 +42,11 @@ export const useQualityControl = () => {
   const [storeRecords, setStoreRecords] = useState<StoreRecord[]>([]);
   const [qualityAssessments, setQualityAssessments] = useState<QualityAssessment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { getContractPriceForSupplier } = useSupplierContracts();
 
-  // Load data from Firebase instead of Supabase
-  useEffect(() => {
-    loadStoreRecords();
-    loadQualityAssessments();
-  }, []);
-
-  const loadStoreRecords = async () => {
-    setLoading(true);
+  const loadStoreRecords = useCallback(async () => {
     try {
       console.log('Loading coffee records from Firebase...');
       
@@ -62,22 +57,22 @@ export const useQualityControl = () => {
         ...doc.data()
       })) as StoreRecord[];
 
-      console.log('Loaded coffee records:', coffeeData);
+      console.log('Loaded coffee records:', coffeeData.length, 'records');
       setStoreRecords(coffeeData || []);
+      setError(null);
     } catch (error) {
       console.error('Error loading store records:', error);
       setStoreRecords([]);
+      setError('Failed to load store records');
       toast({
         title: "Error",
         description: "Failed to load store records",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [toast]);
 
-  const loadQualityAssessments = async () => {
+  const loadQualityAssessments = useCallback(async () => {
     try {
       console.log('Loading quality assessments from Firebase...');
       
@@ -88,18 +83,42 @@ export const useQualityControl = () => {
         ...doc.data()
       })) as QualityAssessment[];
 
-      console.log('Loaded quality assessments:', qualityData);
+      console.log('Loaded quality assessments:', qualityData.length, 'assessments');
       setQualityAssessments(qualityData || []);
+      setError(null);
     } catch (error) {
       console.error('Error loading quality assessments:', error);
       setQualityAssessments([]);
+      setError('Failed to load quality assessments');
       toast({
         title: "Error",
         description: "Failed to load quality assessments",
         variant: "destructive"
       });
     }
-  };
+  }, [toast]);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      await Promise.all([
+        loadStoreRecords(),
+        loadQualityAssessments()
+      ]);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, [loadStoreRecords, loadQualityAssessments]);
+
+  // Load data on mount
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const addStoreRecord = (record: Omit<StoreRecord, 'id'>) => {
     console.log('Store records should be added through Store Management');
@@ -122,9 +141,6 @@ export const useQualityControl = () => {
           record.id === id ? { ...record, ...updates } : record
         )
       );
-      
-      // Refresh data to ensure consistency
-      await loadStoreRecords();
       
       toast({
         title: "Success",
@@ -190,7 +206,7 @@ export const useQualityControl = () => {
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed,
         assessed_by: assessment.assessed_by,
-        contract_price: contractPrice, // Store contract price for reference
+        contract_price: contractPrice,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -227,8 +243,9 @@ export const useQualityControl = () => {
       
       console.log('Payment record created successfully with amount:', totalPaymentAmount);
       
-      // Refresh assessments to get the new one with ID
-      await loadQualityAssessments();
+      // Update local state
+      const newAssessment = { id: docRef.id, ...assessmentToAdd };
+      setQualityAssessments(prev => [newAssessment, ...prev]);
       
       const contractMessage = contractPrice ? 
         ` (Contract price: ${contractPrice}/kg)` : 
@@ -239,7 +256,7 @@ export const useQualityControl = () => {
         description: `Quality assessment saved and payment record created for ${totalPaymentAmount.toLocaleString()} UGX${contractMessage}`
       });
       
-      return { id: docRef.id, ...assessmentToAdd };
+      return newAssessment;
     } catch (error) {
       console.error('Error adding quality assessment:', error);
       toast({
@@ -269,9 +286,6 @@ export const useQualityControl = () => {
         )
       );
       
-      // Refresh data to ensure consistency
-      await loadQualityAssessments();
-      
       toast({
         title: "Success",
         description: "Quality assessment updated successfully"
@@ -291,7 +305,6 @@ export const useQualityControl = () => {
     try {
       console.log('Submitting assessment to finance:', assessmentId);
       
-      // Update the assessment status to submitted_to_finance
       await updateQualityAssessment(assessmentId, { 
         status: 'submitted_to_finance'
       });
@@ -316,19 +329,21 @@ export const useQualityControl = () => {
     record.status === 'pending' || record.status === 'quality_review'
   );
 
+  const refreshData = useCallback(() => {
+    loadData();
+  }, [loadData]);
+
   return {
     storeRecords,
     qualityAssessments,
     pendingRecords,
     loading,
+    error,
     addStoreRecord,
     updateStoreRecord,
     addQualityAssessment,
     updateQualityAssessment,
     submitToFinance,
-    refreshData: () => {
-      loadStoreRecords();
-      loadQualityAssessments();
-    },
+    refreshData,
   };
 };
