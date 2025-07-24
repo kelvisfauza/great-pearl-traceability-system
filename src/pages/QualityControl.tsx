@@ -1,4 +1,3 @@
-
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -116,32 +115,57 @@ const QualityControl = () => {
   const handleStartModification = (modificationRequest: any) => {
     console.log('Starting modification for request:', modificationRequest);
     
-    // Find the original payment record to get coffee details
-    const originalRecord = storeRecords.find(record => 
-      record.batch_number === modificationRequest.batchNumber ||
-      record.id === modificationRequest.originalPaymentId
+    // Try to find the original record by batch number first, then by payment ID
+    let originalRecord = storeRecords.find(record => 
+      record.batch_number === modificationRequest.batchNumber
     );
     
-    if (originalRecord) {
-      setSelectedRecord({
-        ...originalRecord,
-        isModification: true,
-        modificationRequestId: modificationRequest.id,
-        modificationReason: modificationRequest.reason
-      });
-      setAssessmentForm({
-        moisture: '',
-        group1_defects: '',
-        group2_defects: '',
-        below12: '',
-        pods: '',
-        husks: '',
-        stones: '',
-        manual_price: '',
-        comments: `Modification requested due to: ${modificationRequest.reason}`
-      });
-      setActiveTab("assessment-form");
+    if (!originalRecord) {
+      originalRecord = storeRecords.find(record => 
+        record.id === modificationRequest.originalPaymentId
+      );
     }
+    
+    if (!originalRecord) {
+      console.error('Original record not found for modification request:', modificationRequest);
+      toast({
+        title: "Error",
+        description: "Cannot find the original coffee record for this modification request",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log('Found original record for modification:', originalRecord);
+    
+    // Set up the selected record with modification info
+    setSelectedRecord({
+      ...originalRecord,
+      isModification: true,
+      modificationRequestId: modificationRequest.id,
+      modificationReason: modificationRequest.reason
+    });
+    
+    // Reset form and add modification context to comments
+    setAssessmentForm({
+      moisture: '',
+      group1_defects: '',
+      group2_defects: '',
+      below12: '',
+      pods: '',
+      husks: '',
+      stones: '',
+      manual_price: '',
+      comments: `Modification requested due to: ${modificationRequest.reason}${modificationRequest.comments ? '. Additional notes: ' + modificationRequest.comments : ''}`
+    });
+    
+    // Switch to assessment form tab
+    setActiveTab("assessment-form");
+    
+    toast({
+      title: "Modification Started",
+      description: `Starting quality modification for batch ${originalRecord.batch_number}`,
+    });
   };
 
   const calculateSuggestedPrice = () => {
@@ -510,6 +534,7 @@ const QualityControl = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Batch Number</TableHead>
                         <TableHead>Payment ID</TableHead>
                         <TableHead>Requested By</TableHead>
                         <TableHead>Reason</TableHead>
@@ -521,7 +546,8 @@ const QualityControl = () => {
                     <TableBody>
                       {pendingModificationRequests.map((request) => (
                         <TableRow key={request.id}>
-                          <TableCell className="font-medium">{request.originalPaymentId}</TableCell>
+                          <TableCell className="font-medium">{request.batchNumber || 'N/A'}</TableCell>
+                          <TableCell>{request.originalPaymentId}</TableCell>
                           <TableCell>{request.requestedBy}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{request.reason.replace('_', ' ')}</Badge>
