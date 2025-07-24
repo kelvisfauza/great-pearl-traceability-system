@@ -163,30 +163,67 @@ const QualityControl = () => {
     setActiveTab("assessment-form");
   };
 
-  const handleStartModification = (modificationRequest: any) => {
+  const handleStartModification = async (modificationRequest: any) => {
     console.log('Starting modification for request:', modificationRequest);
     console.log('Available store records:', storeRecords);
+    console.log('Available quality assessments:', qualityAssessments);
     
+    // First, try to find the record by batch number
     let originalRecord = storeRecords.find(record => 
       record.batch_number === modificationRequest.batchNumber
     );
     
+    // If not found by batch number, try by original payment ID
     if (!originalRecord) {
       originalRecord = storeRecords.find(record => 
         record.id === modificationRequest.originalPaymentId
       );
     }
     
+    // If still not found, try to find by quality assessment ID
+    if (!originalRecord && modificationRequest.qualityAssessmentId) {
+      const qualityAssessment = qualityAssessments.find(qa => 
+        qa.id === modificationRequest.qualityAssessmentId
+      );
+      
+      if (qualityAssessment) {
+        originalRecord = storeRecords.find(record => 
+          record.id === qualityAssessment.store_record_id
+        );
+      }
+    }
+    
+    // If still not found, refresh data and try again
+    if (!originalRecord) {
+      console.log('Record not found, refreshing data and trying again...');
+      try {
+        await refreshData();
+        
+        // Try searching again after refresh
+        originalRecord = storeRecords.find(record => 
+          record.batch_number === modificationRequest.batchNumber ||
+          record.id === modificationRequest.originalPaymentId
+        );
+      } catch (error) {
+        console.error('Error refreshing data:', error);
+      }
+    }
+    
     if (!originalRecord) {
       console.error('Original record not found for modification request:', modificationRequest);
+      console.error('Searched for batch_number:', modificationRequest.batchNumber);
+      console.error('Searched for originalPaymentId:', modificationRequest.originalPaymentId);
+      console.error('Available records:', storeRecords.map(r => ({ id: r.id, batch_number: r.batch_number })));
       
       toast({
         title: "Error",
-        description: "Cannot find the original coffee record for this modification request",
+        description: `Cannot find the original coffee record for batch ${modificationRequest.batchNumber || 'N/A'}. Please refresh the page and try again.`,
         variant: "destructive"
       });
       return;
     }
+    
+    console.log('Found original record:', originalRecord);
     
     setSelectedRecord({
       ...originalRecord,
