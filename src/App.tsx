@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,95 +25,97 @@ import Settings from "./pages/Settings";
 import Logistics from "./pages/Logistics";
 import DataAnalyst from "./pages/DataAnalyst";
 
-const queryClient = new QueryClient();
+const App: React.FC = () => {
+  const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <PriceProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              } />
-              <Route path="/procurement" element={
-                <ProtectedRoute>
-                  <Procurement />
-                </ProtectedRoute>
-              } />
-              <Route path="/quality-control" element={
-                <ProtectedRoute>
-                  <QualityControl />
-                </ProtectedRoute>
-              } />
-              <Route path="/processing" element={
-                <ProtectedRoute>
-                  <Processing />
-                </ProtectedRoute>
-              } />
-              <Route path="/inventory" element={
-                <ProtectedRoute>
-                  <Inventory />
-                </ProtectedRoute>
-              } />
-              <Route path="/store" element={
-                <ProtectedRoute>
-                  <Store />
-                </ProtectedRoute>
-              } />
-              <Route path="/sales-marketing" element={
-                <ProtectedRoute>
-                  <SalesMarketing />
-                </ProtectedRoute>
-              } />
-              <Route path="/finance" element={
-                <ProtectedRoute>
-                  <Finance />
-                </ProtectedRoute>
-              } />
-              <Route path="/field-operations" element={
-                <ProtectedRoute>
-                  <FieldOperations />
-                </ProtectedRoute>
-              } />
-              <Route path="/human-resources" element={
-                <ProtectedRoute>
-                  <HumanResources />
-                </ProtectedRoute>
-              } />
-              <Route path="/data-analyst" element={
-                <ProtectedRoute>
-                  <DataAnalyst />
-                </ProtectedRoute>
-              } />
-              <Route path="/reports" element={
-                <ProtectedRoute>
-                  <Reports />
-                </ProtectedRoute>
-              } />
-              <Route path="/logistics" element={
-                <ProtectedRoute>
-                  <Logistics />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </PriceProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <PriceProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                } />
+                <Route path="/procurement" element={
+                  <ProtectedRoute>
+                    <Procurement />
+                  </ProtectedRoute>
+                } />
+                <Route path="/quality-control" element={
+                  <ProtectedRoute>
+                    <QualityControl />
+                  </ProtectedRoute>
+                } />
+                <Route path="/processing" element={
+                  <ProtectedRoute>
+                    <Processing />
+                  </ProtectedRoute>
+                } />
+                <Route path="/inventory" element={
+                  <ProtectedRoute>
+                    <Inventory />
+                  </ProtectedRoute>
+                } />
+                <Route path="/store" element={
+                  <ProtectedRoute>
+                    <Store />
+                  </ProtectedRoute>
+                } />
+                <Route path="/sales-marketing" element={
+                  <ProtectedRoute>
+                    <SalesMarketing />
+                  </ProtectedRoute>
+                } />
+                <Route path="/finance" element={
+                  <ProtectedRoute>
+                    <Finance />
+                  </ProtectedRoute>
+                } />
+                <Route path="/field-operations" element={
+                  <ProtectedRoute>
+                    <FieldOperations />
+                  </ProtectedRoute>
+                } />
+                <Route path="/human-resources" element={
+                  <ProtectedRoute>
+                    <HumanResources />
+                  </ProtectedRoute>
+                } />
+                <Route path="/data-analyst" element={
+                  <ProtectedRoute>
+                    <DataAnalyst />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports" element={
+                  <ProtectedRoute>
+                    <Reports />
+                  </ProtectedRoute>
+                } />
+                <Route path="/logistics" element={
+                  <ProtectedRoute>
+                    <Logistics />
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                } />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </PriceProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
