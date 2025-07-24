@@ -30,6 +30,7 @@ import { useQualityControl } from "@/hooks/useQualityControl";
 import { useWorkflowTracking } from "@/hooks/useWorkflowTracking";
 import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
 
 const QualityControl = () => {
@@ -56,6 +57,7 @@ const QualityControl = () => {
 
   const { prices, refreshPrices } = usePrices();
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
 
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("pending");
@@ -463,6 +465,24 @@ const QualityControl = () => {
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
+
+  if (!hasPermission('Quality Control')) {
+    return (
+      <Layout>
+        <div className="p-6">
+          <Card>
+            <CardContent className="text-center py-8">
+              <div className="mb-4">
+                <CheckCircle2 className="h-12 w-12 mx-auto text-gray-400" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+              <p className="text-gray-600">You don't have permission to access Quality Control management.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
 
   if (loading) {
     return (

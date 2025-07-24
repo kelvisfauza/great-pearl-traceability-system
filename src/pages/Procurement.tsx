@@ -29,11 +29,13 @@ import { supabase } from "@/integrations/supabase/client";
 import GRNGenerator from "@/components/procurement/GRNGenerator";
 import QualityReportsModal from "@/components/procurement/QualityReportsModal";
 import SupplierContractModal from "@/components/procurement/SupplierContractModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Procurement = () => {
   const { suppliers, loading: suppliersLoading } = useSuppliers();
   const { purchaseOrders, loading: ordersLoading } = usePurchaseOrders();
   const { deliveries, loading: deliveriesLoading } = useDeliveries();
+  const { hasPermission } = useAuth();
   const [marketData, setMarketData] = useState<any[]>([]);
   const [marketLoading, setMarketLoading] = useState(true);
 
@@ -41,6 +43,24 @@ const Procurement = () => {
   const [grnModalOpen, setGrnModalOpen] = useState(false);
   const [qualityReportsOpen, setQualityReportsOpen] = useState(false);
   const [contractsModalOpen, setContractsModalOpen] = useState(false);
+
+  if (!hasPermission('Procurement')) {
+    return (
+      <Layout>
+        <div className="p-6">
+          <Card>
+            <CardContent className="text-center py-8">
+              <div className="mb-4">
+                <Package className="h-12 w-12 mx-auto text-gray-400" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+              <p className="text-gray-600">You don't have permission to access Procurement management.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
 
   // Fetch market data for reference prices
   useEffect(() => {

@@ -33,7 +33,7 @@ const Finance = () => {
 
   const { tasks: dailyTasks, loading: tasksLoading } = useDailyTasks();
   const { requests: approvalRequests, updateRequestStatus } = useApprovalRequests();
-  const { employee, hasRole } = useAuth();
+  const { employee, hasRole, hasPermission } = useAuth();
   const { toast } = useToast();
 
   const [expenseAmount, setExpenseAmount] = useState("");
@@ -43,6 +43,24 @@ const Finance = () => {
   const [receiptDescription, setReceiptDescription] = useState("");
 
   const canManageFloat = hasRole('Supervisor') || hasRole('Operations Manager') || employee?.position === 'Supervisor' || employee?.position === 'Operations Manager';
+
+  if (!hasPermission('Finance')) {
+    return (
+      <Layout>
+        <div className="p-6">
+          <Card>
+            <CardContent className="text-center py-8">
+              <div className="mb-4">
+                <DollarSign className="h-12 w-12 mx-auto text-gray-400" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+              <p className="text-gray-600">You don't have permission to access Finance management.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
 
   const handleExpenseSubmit = () => {
     if (!expenseAmount || !expenseDescription) return;

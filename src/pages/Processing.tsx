@@ -37,10 +37,30 @@ import {
   Plus,
 } from "lucide-react";
 import { useProcessingOperations } from "@/hooks/useProcessingOperations";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Processing = () => {
   const { processingBatches, machines, loading, todayMetrics } =
     useProcessingOperations();
+  const { hasPermission } = useAuth();
+
+  if (!hasPermission('Processing')) {
+    return (
+      <Layout>
+        <div className="p-6">
+          <Card>
+            <CardContent className="text-center py-8">
+              <div className="mb-4">
+                <Coffee className="h-12 w-12 mx-auto text-gray-400" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+              <p className="text-gray-600">You don't have permission to access Processing Operations.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout

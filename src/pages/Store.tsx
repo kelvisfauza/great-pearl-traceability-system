@@ -16,6 +16,7 @@ import { useStoreManagement } from "@/hooks/useStoreManagement";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import PriceTicker from "@/components/PriceTicker";
 import PricingGuidance from "@/components/PricingGuidance";
 
@@ -44,6 +45,7 @@ const Store = () => {
     qualityAssessments,
     loading: qualityLoading
   } = useQualityControl();
+  const { hasPermission } = useAuth();
 
   const [newSupplier, setNewSupplier] = useState({
     name: '',
@@ -313,6 +315,24 @@ const Store = () => {
       toast.error(`Failed to send ${action.toLowerCase()} request`);
     }
   };
+
+  if (!hasPermission('Store Management')) {
+    return (
+      <Layout>
+        <div className="p-6">
+          <Card>
+            <CardContent className="text-center py-8">
+              <div className="mb-4">
+                <Package className="h-12 w-12 mx-auto text-gray-400" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+              <p className="text-gray-600">You don't have permission to access Store Management.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
 
   if (loading) {
     return (
