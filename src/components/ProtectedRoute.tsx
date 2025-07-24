@@ -19,7 +19,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, employee, loading, hasPermission, hasRole } = useAuth();
 
-  console.log('ProtectedRoute - User:', user ? user.uid : 'No user');
+  console.log('ProtectedRoute - User:', user ? user.id : 'No user');
   console.log('ProtectedRoute - Employee:', employee ? employee.name : 'No employee');
   console.log('ProtectedRoute - Loading:', loading);
   console.log('ProtectedRoute - Required permissions:', requiredPermissions);

@@ -25,10 +25,12 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ requiresPasswordChange?: boolean }>;
   signOut: () => Promise<void>;
+  changePassword: (newPassword: string) => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   canManageEmployees: () => boolean;
   isAdmin: () => boolean;
+  fetchEmployeeData: (userEmail: string) => Promise<Employee | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -175,6 +177,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const changePassword = async (newPassword: string) => {
+    try {
+      if (!user) throw new Error('No user logged in');
+      
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+      
+      toast({
+        title: "Password Changed",
+        description: "Your password has been successfully changed"
+      });
+    } catch (error: any) {
+      console.error('Password change error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to change password",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   const hasPermission = (permission: string): boolean => {
     if (!employee) return false;
     if (employee.permissions?.includes('*')) return true;
@@ -228,10 +255,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loading,
     signIn,
     signOut,
+    changePassword,
     hasPermission,
     hasRole,
     canManageEmployees,
-    isAdmin
+    isAdmin,
+    fetchEmployeeData
   };
 
   return (

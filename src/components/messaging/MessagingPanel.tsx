@@ -31,13 +31,13 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     fetchMessages,
     markAsRead,
     setMessages
-  } = useMessages(user?.uid, employee?.id);
+  } = useMessages(user?.id, employee?.id);
   
-  const { onlineUsers } = usePresence(user?.uid);
+  const { onlineUsers } = usePresence(user?.id);
 
   // Call notifications setup
   const { updateCallStatus } = useCallNotifications({
-    currentUserId: user?.uid,
+    currentUserId: user?.id,
     onIncomingCall: (callData) => {
       console.log('Incoming call received:', callData);
       setIncomingCall(callData);
@@ -78,12 +78,12 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
   });
 
   // Debug logging
-  console.log('MessagingPanel - user:', user?.uid, 'employee:', employee?.id);
+  console.log('MessagingPanel - user:', user?.id, 'employee:', employee?.id);
   console.log('MessagingPanel - loading:', loading, 'conversations:', conversations.length, 'employees:', employees.length);
 
   // Find conversation when user is selected
   useEffect(() => {
-    if (selectedUser && user?.uid) {
+    if (selectedUser && user?.id) {
       console.log('Selected user changed:', selectedUser.displayName || selectedUser.name);
       
       const conversation = conversations.find(conv => 
@@ -101,7 +101,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     } else if (!selectedUser) {
       setMessages([]);
     }
-  }, [selectedUser?.id, conversations.length, user?.uid, fetchMessages, markAsRead, setMessages]);
+  }, [selectedUser?.id, conversations.length, user?.id, fetchMessages, markAsRead, setMessages]);
 
   const handleUserSelect = (user: any) => {
     setSelectedUser(user);
@@ -109,7 +109,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !user?.uid || !employee?.id || !selectedUser) return;
+    if (!newMessage.trim() || !user?.id || !employee?.id || !selectedUser) return;
 
     try {
       // Find existing conversation
@@ -140,7 +140,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
   };
 
   const handleSendFile = async (file: File, type: 'image' | 'file') => {
-    if (!user?.uid || !employee?.id || !selectedUser) return;
+    if (!user?.id || !employee?.id || !selectedUser) return;
 
     try {
       // For now, we'll simulate file upload by creating a message with file info
@@ -238,7 +238,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
               selectedUserId={selectedUser?.id || null}
               onUserSelect={handleUserSelect}
               conversations={conversations}
-              currentUserId={user?.uid}
+              currentUserId={user?.id}
               onlineUsers={onlineUsers}
               onCreateNewChat={handleUserSelect}
             />
@@ -253,7 +253,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
               onSendFile={handleSendFile}
               onKeyPress={handleKeyPress}
               loadingMessages={loadingMessages}
-              currentUserId={user?.uid}
+              currentUserId={user?.id}
             />
           </div>
         )}

@@ -59,7 +59,7 @@ export const useUserRequests = () => {
 
     const q = query(
       collection(db, 'user_requests'),
-      where('userId', '==', user.uid),
+      where('userId', '==', user.id),
       orderBy('createdAt', 'desc')
     );
 
@@ -104,7 +104,7 @@ export const useUserRequests = () => {
 
       const docData = {
         ...requestData,
-        userId: user.uid,
+        userId: user.id,
         employeeId: employee.id,
         status: initialStatus,
         currentStep: initialStep,

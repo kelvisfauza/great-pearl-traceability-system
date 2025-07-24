@@ -16,7 +16,7 @@ import { auth } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
 const UserProfile = () => {
-  const { employee, fetchEmployeeData, signOut } = useAuth();
+  const { user, employee, fetchEmployeeData, signOut } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -76,7 +76,7 @@ const UserProfile = () => {
       console.log('Profile updated successfully in Firebase');
 
       // Refresh employee data to get updated information
-      await fetchEmployeeData();
+      await fetchEmployeeData(user?.email || '');
       
       toast({
         title: "Success",
@@ -162,7 +162,7 @@ const UserProfile = () => {
       });
       
       setAvatarUrl(downloadURL);
-      await fetchEmployeeData();
+      await fetchEmployeeData(user?.email || '');
       
       toast({
         title: "Success",
