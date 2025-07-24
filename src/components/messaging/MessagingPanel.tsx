@@ -40,8 +40,6 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
   useEffect(() => {
     if (selectedUser) {
       console.log('Selected user changed:', selectedUser.id);
-      // Clear messages first to prevent showing old messages
-      setMessages([]);
       
       const conversation = conversations.find(conv => 
         conv.participantEmployeeIds?.includes(selectedUser.id) && conv.participants?.length === 2
@@ -49,17 +47,19 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
       
       if (conversation) {
         console.log('Found existing conversation:', conversation.id);
+        // Don't clear messages here to avoid flashing, let fetchMessages handle it
         fetchMessages(conversation.id);
         markAsRead(conversation.id);
       } else {
         console.log('No existing conversation found');
-        // No existing conversation, messages will be empty until first message is sent
+        // Clear messages only when no conversation exists
+        setMessages([]);
       }
     } else {
       // Clear messages when no user is selected
       setMessages([]);
     }
-  }, [selectedUser, conversations, fetchMessages, markAsRead]);
+  }, [selectedUser, conversations, fetchMessages, markAsRead, setMessages]);
 
   const handleUserSelect = (user: any) => {
     setSelectedUser(user);

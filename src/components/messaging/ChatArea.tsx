@@ -101,7 +101,8 @@ const ChatArea = ({
 
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4">
-        {loadingMessages ? (
+        {/* Only show loading for very first load, not for refreshes */}
+        {loadingMessages && messages.length === 0 ? (
           <div className="flex items-center justify-center h-32">
             <div className="text-sm text-gray-500">Loading messages...</div>
           </div>

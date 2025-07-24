@@ -42,6 +42,7 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
   const [loading, setLoading] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Fetch all employees for user selection
@@ -128,6 +129,7 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
     if (!conversationId) return;
 
     try {
+      // Only show loading for initial fetch, not for real-time updates
       setLoadingMessages(true);
       console.log('Fetching messages for conversation:', conversationId);
       
@@ -140,43 +142,28 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
       const unsubscribe = onSnapshot(q, (snapshot) => {
         console.log('Messages snapshot received, docs count:', snapshot.docs.length);
         
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added') {
-            const messageData = { 
-              id: change.doc.id, 
-              ...change.doc.data(),
-              createdAt: change.doc.data().createdAt?.toDate?.()?.toISOString() || change.doc.data().createdAt,
-            } as Message;
-            
-            // Only process messages for the current conversation
-            if (messageData.conversationId === conversationId) {
-              setMessages(prev => {
-                // Check if message already exists
-                if (prev.find(msg => msg.id === messageData.id)) {
-                  return prev;
-                }
-                // Add new message in correct position
-                const newMessages = [...prev, messageData];
-                return newMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-              });
-            }
-          } else if (change.type === 'modified') {
-            const messageData = { 
-              id: change.doc.id, 
-              ...change.doc.data(),
-              createdAt: change.doc.data().createdAt?.toDate?.()?.toISOString() || change.doc.data().createdAt,
-            } as Message;
-            
-            if (messageData.conversationId === conversationId) {
-              setMessages(prev => prev.map(msg => 
-                msg.id === messageData.id ? messageData : msg
-              ));
-            }
-          } else if (change.type === 'removed') {
-            setMessages(prev => prev.filter(msg => msg.id !== change.doc.id));
-          }
-        });
+        // For initial load, replace all messages
+        if (snapshot.docs.length > 0) {
+          const allMessages = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
+            };
+          }) as Message[];
+          
+          // Filter and sort messages
+          const conversationMessages = allMessages
+            .filter(msg => msg.conversationId === conversationId)
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          
+          setMessages(conversationMessages);
+        } else {
+          setMessages([]);
+        }
         
+        // Hide loading after initial load
         setLoadingMessages(false);
       }, (error) => {
         console.error('Error fetching messages:', error);
