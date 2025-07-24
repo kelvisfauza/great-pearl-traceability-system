@@ -8,11 +8,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Key } from "lucide-react";
+import { Key, Eye, EyeOff } from "lucide-react";
 
 const userFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   phone: z.string().optional(),
   position: z.string().min(2, "Position is required"),
   department: z.string().min(2, "Department is required"),
@@ -40,12 +41,14 @@ interface AddUserFormProps {
 
 export default function AddUserForm({ onSubmit }: AddUserFormProps) {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
       name: "",
       email: "",
+      password: "",
       phone: "",
       position: "",
       department: "",
@@ -65,6 +68,7 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
       const employeeData = {
         name: values.name.trim(),
         email: values.email.toLowerCase().trim(),
+        password: values.password,
         phone: values.phone?.trim() || "",
         position: values.position.trim(),
         department: values.department.trim(),
@@ -73,6 +77,8 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
         permissions: Array.isArray(values.permissions) ? values.permissions : [],
         status: 'Active',
         join_date: new Date().toISOString(),
+        isOneTimePassword: false,
+        mustChangePassword: true,
       };
 
       await onSubmit(employeeData);
@@ -116,8 +122,36 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
             )}
           />
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Initial Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input 
+                      type={showPassword ? "text" : "password"} 
+                      {...field} 
+                      placeholder="Enter initial password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="phone"
@@ -131,6 +165,9 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
               </FormItem>
             )}
           />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="position"
@@ -144,9 +181,6 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
               </FormItem>
             )}
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="department"
@@ -169,6 +203,9 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
               </FormItem>
             )}
           />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="role"
@@ -193,9 +230,6 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
               </FormItem>
             )}
           />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4">
           <FormField
             control={form.control}
             name="salary"

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,14 +51,11 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     try {
       console.log('UserManagement handleAddUser called with:', employeeData);
       
-      // Generate one-time password
-      const oneTimePassword = generateOneTimePassword();
-      
       // First, create the employee record in Firebase
       const processedData = {
         ...employeeData,
         permissions: Array.isArray(employeeData.permissions) ? employeeData.permissions : [],
-        isOneTimePassword: true,
+        isOneTimePassword: false,
         mustChangePassword: true
       };
 
@@ -73,7 +69,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         body: {
           employeeData: {
             ...processedData,
-            password: oneTimePassword
+            password: employeeData.password
           }
         }
       });
@@ -90,7 +86,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
       
       toast({
         title: "User Created Successfully",
-        description: `User ${employeeData.name} created with one-time password: ${oneTimePassword}. They must change this password on first login.`
+        description: `User ${employeeData.name} created successfully. They must change their password on first login.`
       });
       
       await refetch();
@@ -216,7 +212,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
               <DialogHeader>
                 <DialogTitle>Add New User</DialogTitle>
                 <DialogDescription>
-                  Create a new user account with system permissions. A one-time password will be generated that the user must change on first login.
+                  Create a new user account with system permissions. The user will be required to change their password on first login.
                 </DialogDescription>
               </DialogHeader>
               <AddUserForm onSubmit={handleAddUser} />
