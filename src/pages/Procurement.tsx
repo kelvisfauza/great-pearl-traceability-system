@@ -62,6 +62,7 @@ const Procurement = () => {
     );
   }
 
+
   // Fetch market data for reference prices
   useEffect(() => {
     const fetchMarketData = async () => {
