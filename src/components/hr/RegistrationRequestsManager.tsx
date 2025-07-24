@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { collection, getDocs, query, orderBy, updateDoc, doc, addDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { collection, getDocs, query, orderBy, updateDoc, doc, addDoc, deleteDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, CheckCircle, XCircle, Clock, UserPlus, Printer } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Clock, UserPlus, Printer, Trash2 } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -47,6 +48,7 @@ const RegistrationRequestsManager = () => {
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState<any>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const { toast } = useToast();
   const { employee, canManageEmployees } = useAuth();
 
@@ -184,21 +186,26 @@ const RegistrationRequestsManager = () => {
         finalRole: selectedRequest.modifiedRole || selectedRequest.role,
         finalSalary: selectedRequest.modifiedSalary || 0,
         finalPermissions: selectedRequest.modifiedPermissions || [selectedRequest.department],
-        tempPassword: tempPassword
+        tempPassword: tempPassword,
+        employeeId: employeeDoc.id
       });
       
       console.log('Request updated successfully');
 
       // Step 6: Generate credentials for printing
-      setGeneratedCredentials({
+      const credentials = {
         name: `${selectedRequest.firstName} ${selectedRequest.lastName}`,
         email: selectedRequest.email,
         password: tempPassword,
         department: selectedRequest.modifiedDepartment || selectedRequest.department,
         role: selectedRequest.modifiedRole || selectedRequest.role,
         approvedBy: employee.name,
-        approvedDate: new Date().toLocaleDateString()
-      });
+        approvedDate: new Date().toLocaleDateString(),
+        companyName: "Great Pearl Coffee Company"
+      };
+
+      console.log('Generated credentials:', credentials);
+      setGeneratedCredentials(credentials);
 
       // Step 7: Update local state
       setRequests(prev => prev.map(req => 
@@ -215,12 +222,14 @@ const RegistrationRequestsManager = () => {
       });
 
       setShowModifyDialog(false);
-      setShowCredentialsDialog(true);
+      
+      // Ensure the credentials dialog shows
+      setTimeout(() => {
+        setShowCredentialsDialog(true);
+      }, 100);
 
     } catch (error: any) {
       console.error('Detailed approval error:', error);
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
       
       let errorMessage = "Failed to approve request. Please try again.";
       
@@ -286,6 +295,30 @@ const RegistrationRequestsManager = () => {
     }
   };
 
+  const handleDeleteRequest = async (requestId: string) => {
+    console.log('Deleting request:', requestId);
+    
+    try {
+      await deleteDoc(doc(db, 'user_registration_requests', requestId));
+      
+      setRequests(prev => prev.filter(req => req.id !== requestId));
+      
+      toast({
+        title: "Request Deleted",
+        description: "Registration request has been deleted successfully."
+      });
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete request. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteConfirmId(null);
+    }
+  };
+
   const togglePermission = (permission: string) => {
     if (!selectedRequest) return;
     
@@ -301,57 +334,159 @@ const RegistrationRequestsManager = () => {
   };
 
   const printCredentials = () => {
-    if (!generatedCredentials) return;
+    if (!generatedCredentials) {
+      console.error('No credentials to print');
+      return;
+    }
+    
+    console.log('Printing credentials for:', generatedCredentials.name);
     
     const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    if (!printWindow) {
+      toast({
+        title: "Error",
+        description: "Could not open print window. Please check your browser's popup settings.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     printWindow.document.write(`
       <html>
         <head>
-          <title>Login Credentials</title>
+          <title>Login Credentials - ${generatedCredentials.companyName}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .credentials { border: 2px solid #333; padding: 20px; margin: 20px 0; }
-            .field { margin: 10px 0; }
-            .label { font-weight: bold; }
-            .footer { margin-top: 30px; text-align: center; font-size: 12px; }
+            body { 
+              font-family: Arial, sans-serif; 
+              padding: 20px; 
+              margin: 0;
+              background: #f9f9f9;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background: white;
+              padding: 30px;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            .header { 
+              text-align: center; 
+              margin-bottom: 30px; 
+              border-bottom: 2px solid #333;
+              padding-bottom: 20px;
+            }
+            .header h1 { 
+              color: #2c3e50; 
+              margin: 0;
+              font-size: 28px;
+            }
+            .header h2 { 
+              color: #34495e; 
+              margin: 10px 0 0 0;
+              font-size: 18px;
+              font-weight: normal;
+            }
+            .credentials { 
+              border: 2px solid #2c3e50; 
+              padding: 25px; 
+              margin: 20px 0; 
+              background: #f8f9fa;
+              border-radius: 5px;
+            }
+            .field { 
+              margin: 12px 0; 
+              padding: 8px 0;
+              border-bottom: 1px solid #eee;
+            }
+            .field:last-child {
+              border-bottom: none;
+            }
+            .label { 
+              font-weight: bold; 
+              color: #2c3e50;
+              display: inline-block;
+              width: 150px;
+            }
+            .value {
+              color: #34495e;
+            }
+            .password-field {
+              background: #fff3cd;
+              padding: 10px;
+              border-radius: 4px;
+              border: 1px solid #ffeaa7;
+            }
+            .footer { 
+              margin-top: 30px; 
+              text-align: center; 
+              font-size: 12px; 
+              color: #7f8c8d;
+              border-top: 1px solid #eee;
+              padding-top: 20px;
+            }
+            .important {
+              background: #e74c3c;
+              color: white;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 20px 0;
+              text-align: center;
+              font-weight: bold;
+            }
+            @media print {
+              body { background: white; }
+              .container { box-shadow: none; }
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>Great Pearl Coffee Company</h1>
-            <h2>User Login Credentials</h2>
-          </div>
-          
-          <div class="credentials">
-            <div class="field">
-              <span class="label">Name:</span> ${generatedCredentials.name}
+          <div class="container">
+            <div class="header">
+              <h1>${generatedCredentials.companyName}</h1>
+              <h2>Employee Login Credentials</h2>
             </div>
-            <div class="field">
-              <span class="label">Email/Username:</span> ${generatedCredentials.email}
+            
+            <div class="credentials">
+              <div class="field">
+                <span class="label">Full Name:</span>
+                <span class="value">${generatedCredentials.name}</span>
+              </div>
+              <div class="field">
+                <span class="label">Email/Username:</span>
+                <span class="value">${generatedCredentials.email}</span>
+              </div>
+              <div class="field password-field">
+                <span class="label">Temporary Password:</span>
+                <span class="value" style="font-family: monospace; font-size: 16px; font-weight: bold;">${generatedCredentials.password}</span>
+              </div>
+              <div class="field">
+                <span class="label">Department:</span>
+                <span class="value">${generatedCredentials.department}</span>
+              </div>
+              <div class="field">
+                <span class="label">Role:</span>
+                <span class="value">${generatedCredentials.role}</span>
+              </div>
+              <div class="field">
+                <span class="label">Approved By:</span>
+                <span class="value">${generatedCredentials.approvedBy}</span>
+              </div>
+              <div class="field">
+                <span class="label">Approved Date:</span>
+                <span class="value">${generatedCredentials.approvedDate}</span>
+              </div>
             </div>
-            <div class="field">
-              <span class="label">Temporary Password:</span> ${generatedCredentials.password}
+            
+            <div class="important">
+              IMPORTANT: You must change your password upon first login for security reasons.
             </div>
-            <div class="field">
-              <span class="label">Department:</span> ${generatedCredentials.department}
+            
+            <div class="footer">
+              <p><strong>Security Notice:</strong> This document contains sensitive login information.</p>
+              <p>Please keep this document secure and destroy it after the employee has successfully logged in and changed their password.</p>
+              <p>For technical support, contact the IT department.</p>
             </div>
-            <div class="field">
-              <span class="label">Role:</span> ${generatedCredentials.role}
-            </div>
-            <div class="field">
-              <span class="label">Approved By:</span> ${generatedCredentials.approvedBy}
-            </div>
-            <div class="field">
-              <span class="label">Approved Date:</span> ${generatedCredentials.approvedDate}
-            </div>
-          </div>
-          
-          <div class="footer">
-            <p><strong>Important:</strong> You must change your password upon first login.</p>
-            <p>This is a temporary password. Please keep this document secure.</p>
           </div>
         </body>
       </html>
@@ -424,8 +559,8 @@ const RegistrationRequestsManager = () => {
                       </div>
                     </div>
                     
-                    {request.status === 'pending' && (
-                      <div className="flex gap-2">
+                    <div className="flex gap-2">
+                      {request.status === 'pending' && (
                         <Button
                           size="sm"
                           onClick={() => openModifyDialog(request)}
@@ -437,8 +572,34 @@ const RegistrationRequestsManager = () => {
                             'Review & Approve'
                           )}
                         </Button>
-                      </div>
-                    )}
+                      )}
+                      
+                      <AlertDialog open={deleteConfirmId === request.id} onOpenChange={() => setDeleteConfirmId(deleteConfirmId === request.id ? null : request.id)}>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setDeleteConfirmId(request.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Registration Request</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete the registration request from {request.firstName} {request.lastName}? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteRequest(request.id)}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -584,26 +745,30 @@ const RegistrationRequestsManager = () => {
       <Dialog open={showCredentialsDialog} onOpenChange={setShowCredentialsDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>User Account Created</DialogTitle>
+            <DialogTitle>User Account Created Successfully!</DialogTitle>
           </DialogHeader>
           {generatedCredentials && (
             <div className="space-y-4">
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                <p className="text-green-800 font-semibold">Account successfully created!</p>
+                <p className="text-green-800 font-semibold">Account successfully created for {generatedCredentials.name}!</p>
               </div>
               
-              <div className="space-y-2">
+              <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
                 <div><strong>Name:</strong> {generatedCredentials.name}</div>
                 <div><strong>Email:</strong> {generatedCredentials.email}</div>
                 <div><strong>Department:</strong> {generatedCredentials.department}</div>
                 <div><strong>Role:</strong> {generatedCredentials.role}</div>
+                <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                  <div><strong>Temporary Password:</strong></div>
+                  <div className="font-mono text-lg font-bold text-blue-600">{generatedCredentials.password}</div>
+                </div>
               </div>
               
               <div className="flex gap-2">
                 <Button onClick={printCredentials} className="flex-1">
                   <Printer className="h-4 w-4 mr-2" />
-                  Print Credentials
+                  Print Login Credentials
                 </Button>
                 <Button 
                   variant="outline" 
@@ -611,6 +776,10 @@ const RegistrationRequestsManager = () => {
                 >
                   Close
                 </Button>
+              </div>
+              
+              <div className="text-sm text-gray-600 text-center">
+                <p><strong>Important:</strong> User must change password on first login</p>
               </div>
             </div>
           )}
