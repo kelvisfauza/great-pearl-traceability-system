@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { barchartService } from '@/services/barchartService';
 
 interface PriceData {
   iceArabica: number;
@@ -31,59 +31,42 @@ export const PriceProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
   const [loading, setLoading] = useState(true);
 
-  const refreshPrices = async () => {
+  const fetchFromBarchartAPI = async () => {
     try {
       setLoading(true);
-      console.log('Refreshing prices from Supabase price_data table...');
+      console.log('Fetching real market data from Barchart API...');
       
-      // Fetch latest price data from Supabase
-      const { data: priceData, error } = await supabase
-        .from('price_data')
-        .select('*')
-        .order('recorded_at', { ascending: false });
+      const marketPrices = await barchartService.getCoffeePrices();
       
-      if (error) {
-        console.error('Error fetching prices:', error);
-        return;
-      }
+      console.log('Updated prices from Barchart API:', marketPrices);
+      setPrices(marketPrices);
       
-      console.log('Latest price data from Supabase:', priceData);
-      
-      if (priceData && priceData.length > 0) {
-        const latestPrices: Partial<PriceData> = {};
-        
-        // Get the most recent price for each type
-        const priceMap = new Map();
-        priceData.forEach((price: any) => {
-          if (!priceMap.has(price.price_type)) {
-            priceMap.set(price.price_type, price.price_value);
-          }
-        });
-        
-        // Map the price types to our interface
-        latestPrices.iceArabica = priceMap.get('ice_arabica') || 185.50;
-        latestPrices.robusta = priceMap.get('ice_robusta') || 2450;
-        latestPrices.drugarLocal = priceMap.get('drugar_local') || 8500;
-        latestPrices.wugarLocal = priceMap.get('wugar_local') || 8200;
-        latestPrices.robustaFaqLocal = priceMap.get('robusta_faq_local') || 7800;
-        latestPrices.exchangeRate = priceMap.get('exchange_rate') || 3750;
-        
-        console.log('Updated prices from data analyst manual input:', latestPrices);
-        setPrices(prev => ({ ...prev, ...latestPrices }));
-      }
     } catch (error) {
-      console.error('Error refreshing prices:', error);
+      console.error('Error fetching from Barchart API:', error);
+      // Fall back to default values on error
+      setPrices({
+        iceArabica: 185.50,
+        robusta: 2450,
+        drugarLocal: 8500,
+        wugarLocal: 8200,
+        robustaFaqLocal: 7800,
+        exchangeRate: 3750
+      });
     } finally {
       setLoading(false);
     }
+  };
+
+  const refreshPrices = async () => {
+    await fetchFromBarchartAPI();
   };
 
   // Load prices on component mount and set up periodic refresh
   useEffect(() => {
     refreshPrices();
     
-    // Refresh prices every 30 seconds to get latest manual inputs
-    const interval = setInterval(refreshPrices, 30 * 1000);
+    // Refresh prices every 5 minutes to simulate real-time market data
+    const interval = setInterval(refreshPrices, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
   }, []);
