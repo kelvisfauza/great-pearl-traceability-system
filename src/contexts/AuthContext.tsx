@@ -59,6 +59,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Auto logout after 5 minutes of inactivity
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
 
+// Main admin account that bypasses employee record checks
+const MAIN_ADMIN_EMAIL = 'kelvifauza@gmail.com';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -110,6 +113,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
 
+    // Check if this is the main admin account
+    if (userEmail === MAIN_ADMIN_EMAIL) {
+      console.log('Main admin account detected, creating admin profile');
+      return {
+        id: 'main-admin',
+        name: 'Main Administrator',
+        email: userEmail,
+        position: 'System Administrator',
+        department: 'Administration',
+        salary: 0,
+        role: 'Administrator',
+        permissions: ['*'], // All permissions
+        status: 'Active',
+        join_date: new Date().toISOString(),
+        isOneTimePassword: false,
+        mustChangePassword: false
+      };
+    }
+
     try {
       console.log('Fetching employee data for email:', userEmail);
       
@@ -145,6 +167,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Fetch employee data using the email
       const employeeData = await fetchEmployeeData();
+      
+      // Special handling for main admin account
+      if (email === MAIN_ADMIN_EMAIL) {
+        console.log('Main admin logged in successfully');
+        setEmployee(employeeData);
+        
+        setTimeout(async () => {
+          await seedFirebaseData();
+        }, 1000);
+
+        toast({
+          title: "Login Successful",
+          description: "Welcome back, Administrator!"
+        });
+
+        return {};
+      }
+      
+      // Regular employee login flow
       if (!employeeData) {
         console.error('No employee record found for email:', email);
         await firebaseSignOut(auth);
@@ -298,6 +339,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasPermission = (permission: string): boolean => {
     if (!employee) return false;
+    // Main admin has all permissions
+    if (employee.permissions?.includes('*')) return true;
     return employee.permissions?.includes(permission) || employee.role === 'Administrator';
   };
 
