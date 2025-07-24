@@ -2,11 +2,12 @@
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Shield, UserCog, Key } from 'lucide-react';
+import { Users, Shield, UserCog, Key, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
 import UserManagement from '@/components/settings/UserManagement';
 import UserProfile from '@/components/settings/UserProfile';
+import UserRequestsPanel from '@/components/settings/UserRequestsPanel';
 import QuickEmployeeUpdate from '@/components/admin/QuickEmployeeUpdate';
 import UserManagementPanel from '@/components/admin/UserManagementPanel';
 
@@ -36,10 +37,14 @@ const Settings = () => {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <UserCog className="h-4 w-4" />
               Profile
+            </TabsTrigger>
+            <TabsTrigger value="requests" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              My Requests
             </TabsTrigger>
             {hasPermission('Human Resources') && (
               <TabsTrigger value="users" className="flex items-center gap-2">
@@ -63,6 +68,10 @@ const Settings = () => {
 
           <TabsContent value="profile" className="space-y-6">
             <UserProfile />
+          </TabsContent>
+
+          <TabsContent value="requests" className="space-y-6">
+            <UserRequestsPanel />
           </TabsContent>
 
           {hasPermission('Human Resources') && (

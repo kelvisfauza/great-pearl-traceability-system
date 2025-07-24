@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,20 +8,24 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Key } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Key, LogOut } from "lucide-react";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { updatePassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
 const UserProfile = () => {
-  const { employee, fetchEmployeeData } = useAuth();
+  const { employee, fetchEmployeeData, signOut } = useAuth();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
   
   const [formData, setFormData] = useState({
     name: employee?.name || '',
@@ -137,6 +141,84 @@ const UserProfile = () => {
     }
   };
 
+  const handleAvatarUpload = async (file: File) => {
+    if (!employee?.id) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      // Create a reference to the file location
+      const avatarRef = ref(storage, `avatars/${employee.id}/${file.name}`);
+      
+      // Upload the file
+      await uploadBytes(avatarRef, file);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(avatarRef);
+      
+      // Update employee record with avatar URL
+      await updateDoc(doc(db, 'employees', employee.id), {
+        avatarUrl: downloadURL,
+        updated_at: new Date().toISOString()
+      });
+      
+      setAvatarUrl(downloadURL);
+      await fetchEmployeeData();
+      
+      toast({
+        title: "Success",
+        description: "Profile picture updated successfully"
+      });
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload profile picture. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Error",
+          description: "Please select an image file",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "File size must be less than 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      handleAvatarUpload(file);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   const handleCancel = () => {
     // Reset form to original values
     setFormData({
@@ -158,6 +240,7 @@ const UserProfile = () => {
         address: employee.address || '',
         emergency_contact: employee.emergency_contact || ''
       });
+      setAvatarUrl((employee as any).avatarUrl || '');
     }
   }, [employee]);
 
@@ -176,15 +259,21 @@ const UserProfile = () => {
     <div className="space-y-6">
       {/* Profile Header */}
       <Card>
-        <CardHeader>
-          <CardTitle>My Profile</CardTitle>
-          <CardDescription>Manage your personal information and account settings</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>My Profile</CardTitle>
+            <CardDescription>Manage your personal information and account settings</CardDescription>
+          </div>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="flex items-start gap-6">
             <div className="relative">
               <Avatar className="h-24 w-24">
-                <AvatarImage src="" alt={employee.name} />
+                <AvatarImage src={avatarUrl} alt={employee.name} />
                 <AvatarFallback className="text-lg">
                   {employee.name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
@@ -193,9 +282,18 @@ const UserProfile = () => {
                 size="sm" 
                 variant="outline" 
                 className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                onClick={handleAvatarClick}
+                disabled={isUploadingAvatar}
               >
                 <Camera className="h-4 w-4" />
               </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
             </div>
             
             <div className="flex-1">
