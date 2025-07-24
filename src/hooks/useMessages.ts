@@ -309,25 +309,27 @@ export const useMessages = (currentUserId?: string, currentEmployeeId?: string) 
     if (!currentUserId) return;
 
     try {
-      // Mark all messages in conversation as read by current user
+      // Get all messages in conversation first, then filter client-side
       const messagesQuery = query(
         collection(db, 'messages'),
-        where('conversationId', '==', conversationId),
-        where('senderId', '!=', currentUserId)
+        where('conversationId', '==', conversationId)
       );
 
       const messagesSnapshot = await getDocs(messagesQuery);
       
-      const updatePromises = messagesSnapshot.docs.map(doc => {
-        const data = doc.data();
-        const readBy = data.readBy || [];
-        if (!readBy.includes(currentUserId)) {
-          return updateDoc(doc.ref, {
-            readBy: [...readBy, currentUserId]
-          });
-        }
-        return Promise.resolve();
-      });
+      // Filter messages not sent by current user and update readBy
+      const updatePromises = messagesSnapshot.docs
+        .filter(doc => doc.data().senderId !== currentUserId)
+        .map(doc => {
+          const data = doc.data();
+          const readBy = data.readBy || [];
+          if (!readBy.includes(currentUserId)) {
+            return updateDoc(doc.ref, {
+              readBy: [...readBy, currentUserId]
+            });
+          }
+          return Promise.resolve();
+        });
 
       await Promise.all(updatePromises);
     } catch (error) {
