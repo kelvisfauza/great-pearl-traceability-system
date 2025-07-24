@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Send, X, Users, Plus, ArrowLeft } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
@@ -137,42 +136,10 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
           </h3>
         </div>
         <div className="flex items-center gap-2">
-          {!selectedConversation && !selectedEmployee && (
-            <Dialog open={showNewMessage} onOpenChange={setShowNewMessage}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Start New Conversation</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <ScrollArea className="h-64">
-                    {employees.map((emp) => (
-                      <div
-                        key={emp.id}
-                        className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer rounded"
-                        onClick={() => handleStartNewConversation(emp)}
-                      >
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback>
-                            {emp.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{emp.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {emp.position} - {emp.department}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </ScrollArea>
-                </div>
-              </DialogContent>
-            </Dialog>
+          {!selectedConversation && !selectedEmployee && conversations.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setShowNewMessage(true)}>
+              <Plus className="h-4 w-4" />
+            </Button>
           )}
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -190,53 +157,77 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                   <div className="text-sm text-gray-500 p-4">Loading...</div>
                 ) : conversations.length === 0 ? (
                   <div className="text-sm text-gray-500 p-4 text-center">
-                    <Users className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                    <div>No conversations yet</div>
-                    <div className="text-xs">Start a new conversation to get started</div>
+                    <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <div className="mb-3 font-medium">No conversations yet</div>
+                    <div className="text-xs mb-4 text-gray-400">Start messaging with your colleagues</div>
+                    <Button 
+                      onClick={() => setShowNewMessage(true)}
+                      className="w-full"
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Start New Chat
+                    </Button>
                   </div>
                 ) : (
-                  conversations.map((conversation) => {
-                    const unread = getUnreadCount(conversation);
-                    return (
-                      <div
-                        key={conversation.id}
-                        className="p-3 rounded cursor-pointer hover:bg-gray-50 border-b border-gray-100"
-                        onClick={() => setSelectedConversation(conversation.id)}
+                  <div className="space-y-1">
+                    {/* Start New Chat Button */}
+                    <div className="p-2 border-b border-gray-100">
+                      <Button 
+                        onClick={() => setShowNewMessage(true)}
+                        variant="outline"
+                        className="w-full"
+                        size="sm"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarFallback>
-                                {getConversationName(conversation).split(' ').map(n => n[0]).join('').toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm truncate">
-                                {getConversationName(conversation)}
-                              </div>
-                              {conversation.lastMessage && (
-                                <div className="text-xs text-gray-500 truncate">
-                                  {conversation.lastMessage.content}
+                        <Plus className="h-4 w-4 mr-2" />
+                        Start New Chat
+                      </Button>
+                    </div>
+                    
+                    {/* Existing Conversations */}
+                    {conversations.map((conversation) => {
+                      const unread = getUnreadCount(conversation);
+                      return (
+                        <div
+                          key={conversation.id}
+                          className="p-3 rounded cursor-pointer hover:bg-gray-50 border-b border-gray-100"
+                          onClick={() => setSelectedConversation(conversation.id)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarFallback>
+                                  {getConversationName(conversation).split(' ').map(n => n[0]).join('').toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm truncate">
+                                  {getConversationName(conversation)}
                                 </div>
+                                {conversation.lastMessage && (
+                                  <div className="text-xs text-gray-500 truncate">
+                                    {conversation.lastMessage.content}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              {conversation.lastMessageAt && (
+                                <div className="text-xs text-gray-400">
+                                  {new Date(conversation.lastMessageAt).toLocaleDateString()}
+                                </div>
+                              )}
+                              {unread > 0 && (
+                                <Badge variant="destructive" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                                  {unread}
+                                </Badge>
                               )}
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-1">
-                            {conversation.lastMessageAt && (
-                              <div className="text-xs text-gray-400">
-                                {new Date(conversation.lastMessageAt).toLocaleDateString()}
-                              </div>
-                            )}
-                            {unread > 0 && (
-                              <Badge variant="destructive" className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                                {unread}
-                              </Badge>
-                            )}
-                          </div>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </ScrollArea>
@@ -300,6 +291,49 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
           </div>
         )}
       </div>
+
+      {/* Employee Selection Dialog */}
+      <Dialog open={showNewMessage} onOpenChange={setShowNewMessage}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Start New Conversation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm text-gray-600">
+              Select a colleague to start messaging
+            </div>
+            <ScrollArea className="h-64">
+              <div className="space-y-2">
+                {employees.map((emp) => (
+                  <div
+                    key={emp.id}
+                    className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer rounded border"
+                    onClick={() => handleStartNewConversation(emp)}
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-blue-100 text-blue-700">
+                        {emp.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{emp.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {emp.position} • {emp.department}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {employees.length === 0 && (
+                  <div className="text-center text-gray-500 py-8">
+                    <Users className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <div className="text-sm">No colleagues found</div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
