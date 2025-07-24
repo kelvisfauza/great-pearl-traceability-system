@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,10 +21,8 @@ import {
   Forward,
   MessageCircle
 } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot, updateDoc, doc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect } from 'react';
 
 interface EmployeeRequest {
   id: string;
@@ -57,32 +55,11 @@ const EmployeeRequestsManager = () => {
   const [filterType, setFilterType] = useState('all');
   const { toast } = useToast();
 
-  // Fetch all user requests from Firebase
+  // Mock data loading - all Firebase functionality disabled
   useEffect(() => {
-    const q = query(
-      collection(db, 'user_requests'),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const requestsData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
-          updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
-        };
-      }) as EmployeeRequest[];
-      
-      setRequests(requestsData);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching requests:', error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    console.log('Mock: Loading employee requests');
+    setRequests([]);
+    setLoading(false);
   }, []);
 
   const getStatusColor = (status: string) => {
@@ -129,57 +106,11 @@ const EmployeeRequestsManager = () => {
 
   const handleApprove = async (request: EmployeeRequest) => {
     try {
-      let newStatus = '';
-      let newStep = '';
-
-      if (request.requestType === 'complaint') {
-        newStatus = 'Resolved';
-        newStep = 'completed';
-      } else {
-        // Payment-related requests: HR -> Finance -> Management
-        // Other requests: HR -> Management
-        const isPaymentRelated = request.requestType === 'payment_advance' || request.requestType === 'expense_reimbursement';
-        
-        if (request.currentStep === 'hr') {
-          if (isPaymentRelated) {
-            newStatus = 'With Finance';
-            newStep = 'finance';
-          } else {
-            newStatus = 'Awaiting Management Approval';
-            newStep = 'management';
-          }
-        } else if (request.currentStep === 'finance') {
-          newStatus = 'Awaiting Management Approval';
-          newStep = 'management';
-        } else if (request.currentStep === 'management') {
-          newStatus = 'Completed';
-          newStep = 'completed';
-        }
-      }
-
-      const updatedWorkflowHistory = [
-        ...(request.workflowHistory || []),
-        {
-          step: request.currentStep,
-          timestamp: new Date().toISOString(),
-          action: 'approved',
-          reviewedBy: 'HR Manager', // This should come from auth context
-          notes: responseMessage || `Approved and forwarded to ${newStep}`
-        }
-      ];
-
-      await updateDoc(doc(db, 'user_requests', request.id), {
-        status: newStatus,
-        currentStep: newStep,
-        workflowHistory: updatedWorkflowHistory,
-        responseMessage: responseMessage || `Approved by HR`,
-        reviewedAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      });
-
+      console.log('Mock: Approving request', request.id);
+      
       toast({
         title: "Success",
-        description: `Request has been approved and ${newStep === 'completed' ? 'completed' : `forwarded to ${newStep}`}`
+        description: "Request has been approved (mock)"
       });
 
       setIsResponseOpen(false);
@@ -197,29 +128,11 @@ const EmployeeRequestsManager = () => {
 
   const handleReject = async (request: EmployeeRequest) => {
     try {
-      const updatedWorkflowHistory = [
-        ...(request.workflowHistory || []),
-        {
-          step: request.currentStep,
-          timestamp: new Date().toISOString(),
-          action: 'rejected',
-          reviewedBy: 'HR Manager',
-          notes: responseMessage || 'Rejected by HR'
-        }
-      ];
-
-      await updateDoc(doc(db, 'user_requests', request.id), {
-        status: 'Rejected',
-        currentStep: 'completed',
-        workflowHistory: updatedWorkflowHistory,
-        responseMessage: responseMessage || 'Rejected by HR',
-        reviewedAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      });
+      console.log('Mock: Rejecting request', request.id);
 
       toast({
         title: "Success",
-        description: "Request has been rejected"
+        description: "Request has been rejected (mock)"
       });
 
       setIsResponseOpen(false);
@@ -303,198 +216,19 @@ const EmployeeRequestsManager = () => {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Main Content */}
       <Card>
         <CardHeader>
           <CardTitle>Employee Requests</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-6">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="With HR">With HR</SelectItem>
-                <SelectItem value="Reviewing">Reviewing</SelectItem>
-                <SelectItem value="Completed">Completed</SelectItem>
-                <SelectItem value="Resolved">Resolved</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="payment_advance">Payment Advance</SelectItem>
-                <SelectItem value="supplier_motivation">Supplier Motivation</SelectItem>
-                <SelectItem value="complaint">Complaint</SelectItem>
-                <SelectItem value="feedback">Feedback</SelectItem>
-                <SelectItem value="leave_request">Leave Request</SelectItem>
-                <SelectItem value="expense_reimbursement">Expense Reimbursement</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="text-center py-12">
+            <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No requests to review</h3>
+            <p className="text-gray-600">Employee request management functionality is disabled. Mock data only.</p>
           </div>
-
-          {loading ? (
-            <div className="text-center py-8">
-              <p>Loading requests...</p>
-            </div>
-          ) : hrRequests.length === 0 ? (
-            <div className="text-center py-12">
-              <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No requests to review</h3>
-              <p className="text-gray-600">There are no employee requests waiting for HR review at the moment.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {hrRequests.map((request) => (
-                <Card key={request.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="pt-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        {getRequestTypeIcon(request.requestType)}
-                        <div>
-                          <h4 className="font-semibold text-lg">{request.title}</h4>
-                          <p className="text-sm text-gray-600">
-                            {formatRequestType(request.requestType)}
-                            {request.amount && ` - UGX ${request.amount.toLocaleString()}`}
-                          </p>
-                          <p className="text-xs text-gray-500">Employee ID: {request.employeeId}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={getStatusColor(request.status)} className="flex items-center gap-1">
-                          {getStatusIcon(request.status)}
-                          {request.status}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <p className="text-sm text-gray-700 mb-3 line-clamp-2">{request.description}</p>
-                    
-                    <div className="flex justify-between items-center">
-                      <div className="text-xs text-gray-500">
-                        <span>Submitted: {new Date(request.requestedDate).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setIsDetailsOpen(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View Details
-                        </Button>
-                        {(request.status === 'With HR' || request.status === 'Reviewing') && (
-                          <Button 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedRequest(request);
-                              setIsResponseOpen(true);
-                            }}
-                          >
-                            <MessageCircle className="h-4 w-4 mr-1" />
-                            Review
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
         </CardContent>
       </Card>
-
-      {/* Details Dialog */}
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Request Details</DialogTitle>
-          </DialogHeader>
-          {selectedRequest && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Type</Label>
-                  <p className="text-sm">{formatRequestType(selectedRequest.requestType)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Status</Label>
-                  <Badge variant={getStatusColor(selectedRequest.status)}>{selectedRequest.status}</Badge>
-                </div>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Title</Label>
-                <p className="text-sm">{selectedRequest.title}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Description</Label>
-                <p className="text-sm">{selectedRequest.description}</p>
-              </div>
-              {selectedRequest.amount && (
-                <div>
-                  <Label className="text-sm font-medium">Amount</Label>
-                  <p className="text-sm">UGX {selectedRequest.amount.toLocaleString()}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Response Dialog */}
-      <Dialog open={isResponseOpen} onOpenChange={setIsResponseOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Review Request</DialogTitle>
-          </DialogHeader>
-          {selectedRequest && (
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium mb-2">Request: {selectedRequest.title}</Label>
-                <p className="text-sm text-gray-600">{selectedRequest.description}</p>
-              </div>
-              <div>
-                <Label htmlFor="response">Response Message</Label>
-                <Textarea
-                  id="response"
-                  value={responseMessage}
-                  onChange={(e) => setResponseMessage(e.target.value)}
-                  placeholder="Add your response or comments..."
-                  rows={3}
-                />
-              </div>
-              <div className="flex gap-2 pt-4">
-                <Button 
-                  onClick={() => handleApprove(selectedRequest)}
-                  className="flex-1"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve & Forward
-                </Button>
-                <Button 
-                  variant="destructive"
-                  onClick={() => handleReject(selectedRequest)}
-                  className="flex-1"
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Reject
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
