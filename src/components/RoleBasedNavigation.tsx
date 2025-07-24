@@ -53,7 +53,7 @@ const RoleBasedNavigation = () => {
           name: "Store Management", 
           icon: Shield, 
           path: "/store", 
-          access: access.canViewInventory
+          access: access.canViewStoreManagement
         },
         { 
           name: "Inventory", 

@@ -18,6 +18,7 @@ interface RoleBasedAccess {
   canViewFieldOps: boolean;
   canViewLogistics: boolean;
   canViewAnalytics: boolean;
+  canViewStoreManagement: boolean;
   
   // Action permissions
   canCreateEmployees: boolean;
@@ -56,6 +57,7 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
         canViewFieldOps: false,
         canViewLogistics: false,
         canViewAnalytics: false,
+        canViewStoreManagement: false,
         canCreateEmployees: false,
         canEditEmployees: false,
         canDeleteEmployees: false,
@@ -91,7 +93,8 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       canViewSettings: true, // Everyone can access settings (but with different tabs)
       canViewQuality: isAdminUser || hasPermission('Quality Control'),
       canViewProcurement: isAdminUser || hasPermission('Procurement'),
-      canViewInventory: isAdminUser || hasPermission('Inventory') || hasPermission('Store Management'),
+      canViewInventory: isAdminUser || hasPermission('Inventory'),
+      canViewStoreManagement: isAdminUser || hasPermission('Store Management'),
       canViewProcessing: isAdminUser || hasPermission('Processing'),
       canViewSales: isAdminUser || hasPermission('Sales Marketing'),
       canViewFieldOps: isAdminUser || hasPermission('Field Operations'),
