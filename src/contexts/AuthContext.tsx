@@ -98,42 +98,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchEmployeeData = async (userId?: string): Promise<Employee | null> => {
     const targetUserId = userId || user?.uid;
-    if (!targetUserId) return null;
+    const userEmail = user?.email;
+    
+    if (!userEmail) {
+      console.log('No user email available');
+      return null;
+    }
 
     try {
-      console.log('Fetching employee data for user:', targetUserId);
+      console.log('Fetching employee data for email:', userEmail);
       
-      // First try to get by document ID
-      const employeeDoc = await getDoc(doc(db, 'employees', targetUserId));
-      if (employeeDoc.exists()) {
-        console.log('Found employee by ID:', employeeDoc.data());
-        return { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
-      }
-
-      // If not found by ID, try to find by email
-      const employeesQuery = query(collection(db, 'employees'), where('email', '==', user?.email));
+      // Always search by email first since that's how employees are stored
+      const employeesQuery = query(collection(db, 'employees'), where('email', '==', userEmail));
       const employeeSnapshot = await getDocs(employeesQuery);
 
       if (!employeeSnapshot.empty) {
         const docSnap = employeeSnapshot.docs[0];
         const employeeData = { id: docSnap.id, ...docSnap.data() } as Employee;
         console.log('Found employee by email:', employeeData);
-
-        // Update document with correct ID if needed
-        if (employeeData.id !== targetUserId) {
-          console.log('Updating employee document with correct ID');
-          await setDoc(doc(db, 'employees', targetUserId), {
-            ...employeeData,
-            id: targetUserId,
-            updated_at: new Date().toISOString()
-          });
-          return { ...employeeData, id: targetUserId };
-        }
-
         return employeeData;
       }
 
-      console.log('No employee record found');
+      console.log('No employee record found for email:', userEmail);
       return null;
     } catch (error) {
       console.error('Error in fetchEmployeeData:', error);
@@ -149,10 +135,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log('Firebase sign in successful:', userCredential.user.uid);
 
-      const employeeData = await fetchEmployeeData(userCredential.user.uid);
+      // Set user first so fetchEmployeeData can access user.email
+      setUser(userCredential.user);
+      
+      // Fetch employee data using the email
+      const employeeData = await fetchEmployeeData();
       if (!employeeData) {
-        console.error('No employee record found for user:', userCredential.user.uid);
+        console.error('No employee record found for email:', email);
         await firebaseSignOut(auth);
+        setUser(null);
         toast({
           title: "Access Denied",
           description: "No employee record found. Contact your administrator.",
@@ -162,7 +153,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       console.log('Employee data found:', employeeData);
-      setUser(userCredential.user);
       setEmployee(employeeData);
 
       setTimeout(async () => {
