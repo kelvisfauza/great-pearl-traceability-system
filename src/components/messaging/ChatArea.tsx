@@ -103,7 +103,8 @@ const ChatArea = ({
         <div className="flex items-center space-x-2">
           <VoiceCallButton 
             selectedUser={selectedUser}
-            onCallStart={() => console.log('Starting voice call with', selectedUser.name)}
+            currentUserId={currentUserId}
+            onCallStart={() => console.log('Starting voice call with', selectedUser.displayName || selectedUser.name)}
           />
         </div>
       </div>
