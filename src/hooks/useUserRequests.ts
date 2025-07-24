@@ -24,7 +24,7 @@ export interface UserRequest {
   amount?: number;
   supplierDetails?: any;
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  status: 'With HR' | 'With Finance' | 'Awaiting Management Approval' | 'Completed' | 'Rejected' | 'Reviewing' | 'Resolved';
+  status: 'With HR' | 'With Finance' | 'Awaiting Management Approval' | 'Approved - Awaiting Payment' | 'Completed' | 'Rejected' | 'Reviewing' | 'Resolved';
   requestedDate: string;
   expectedDate?: string;
   department?: string;
@@ -33,12 +33,12 @@ export interface UserRequest {
   reviewedAt?: string;
   responseMessage?: string;
   attachments?: string[];
-  currentStep: 'hr' | 'finance' | 'management' | 'admin' | 'completed';
+  currentStep: 'hr' | 'finance' | 'finance_payment' | 'management' | 'admin' | 'completed';
   workflowHistory?: {
     step: string;
     timestamp: string;
     reviewedBy?: string;
-    action: 'submitted' | 'approved' | 'rejected' | 'forwarded';
+    action: 'submitted' | 'approved' | 'rejected' | 'forwarded' | 'payment_processed';
     notes?: string;
   }[];
   createdAt: string;

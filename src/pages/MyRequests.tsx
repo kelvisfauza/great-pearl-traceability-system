@@ -83,6 +83,7 @@ const MyRequests = () => {
       case 'With HR': return 'secondary';
       case 'With Finance': return 'default';
       case 'Awaiting Management Approval': return 'default';
+      case 'Approved - Awaiting Payment': return 'default';
       case 'Completed': return 'default';
       case 'Rejected': return 'destructive';
       case 'Reviewing': return 'secondary';
@@ -96,6 +97,7 @@ const MyRequests = () => {
       case 'With HR': return <Clock className="h-4 w-4" />;
       case 'With Finance': return <DollarSign className="h-4 w-4" />;
       case 'Awaiting Management Approval': return <Eye className="h-4 w-4" />;
+      case 'Approved - Awaiting Payment': return <DollarSign className="h-4 w-4" />;
       case 'Completed': return <CheckCircle className="h-4 w-4" />;
       case 'Rejected': return <XCircle className="h-4 w-4" />;
       case 'Reviewing': return <Eye className="h-4 w-4" />;
@@ -434,22 +436,32 @@ const MyRequests = () => {
                                      HR {['finance', 'management', 'completed'].includes(request.currentStep) ? '✓' : '→'}
                                    </div>
                                    
-                                   {/* Show Finance step only for payment-related requests */}
-                                   {(request.requestType === 'payment_advance' || request.requestType === 'expense_reimbursement') && (
-                                     <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
-                                       request.currentStep === 'finance' ? 'bg-yellow-100 text-yellow-800' : 
-                                       ['management', 'completed'].includes(request.currentStep) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                                     }`}>
-                                       Finance {['management', 'completed'].includes(request.currentStep) ? '✓' : request.currentStep === 'finance' ? '→' : ''}
-                                     </div>
-                                   )}
-                                   
-                                   <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
-                                     request.currentStep === 'management' ? 'bg-yellow-100 text-yellow-800' : 
-                                     request.currentStep === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                                   }`}>
-                                     Management {request.currentStep === 'completed' ? '✓' : request.currentStep === 'management' ? '→' : ''}
-                                   </div>
+                                    {/* Show Finance step only for payment-related requests */}
+                                    {(request.requestType === 'payment_advance' || request.requestType === 'expense_reimbursement') && (
+                                      <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                                        request.currentStep === 'finance' || request.currentStep === 'finance_payment' ? 'bg-yellow-100 text-yellow-800' : 
+                                        ['management', 'completed'].includes(request.currentStep) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                                      }`}>
+                                        Finance {
+                                          ['management', 'completed'].includes(request.currentStep) ? '✓' : 
+                                          (request.currentStep === 'finance' || request.currentStep === 'finance_payment') ? '→' : ''
+                                        }
+                                        {request.currentStep === 'finance_payment' && (
+                                          <span className="ml-1 text-xs">(Payment)</span>
+                                        )}
+                                      </div>
+                                    )}
+                                    
+                                    <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                                      request.currentStep === 'management' ? 'bg-yellow-100 text-yellow-800' : 
+                                      (request.currentStep === 'completed' || request.currentStep === 'finance_payment') ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                                    }`}>
+                                      Management {
+                                        request.currentStep === 'completed' ? '✓' : 
+                                        request.currentStep === 'management' ? '→' : 
+                                        request.currentStep === 'finance_payment' ? '✓' : ''
+                                      }
+                                    </div>
                                  </div>
                                </div>
                              )}
