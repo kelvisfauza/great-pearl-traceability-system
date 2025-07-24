@@ -29,11 +29,9 @@ const Navigation = () => {
       title: "Operations",
       items: [
         { name: "Dashboard", icon: BarChart3, path: "/", permission: null }, // Everyone can see dashboard
-        { name: "Procurement", icon: Package, path: "/procurement", permission: "Procurement" },
         { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permission: "Quality Control" },
         { name: "Store Management", icon: Shield, path: "/store", permission: "Store Management" },
         { name: "Inventory", icon: Package, path: "/inventory", permission: "Inventory" },
-        { name: "Processing", icon: Coffee, path: "/processing", permission: "Processing" },
         { name: "Field Operations", icon: MapPin, path: "/field-operations", permission: "Field Operations" },
       ]
     },
