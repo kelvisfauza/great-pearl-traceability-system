@@ -17,7 +17,7 @@ const MarketMonitor = () => {
   const marketMetrics = [
     {
       name: 'ICE Arabica C',
-      price: prices.iceArabica,
+      price: prices.iceArabica || 185.50,
       unit: '¢/lb',
       change: 2.5,
       trend: 'up',
@@ -27,7 +27,7 @@ const MarketMonitor = () => {
     },
     {
       name: 'Robusta',
-      price: prices.robusta,
+      price: prices.robusta || 2450,
       unit: '$/MT',
       change: -1.2,
       trend: 'down',
@@ -37,7 +37,7 @@ const MarketMonitor = () => {
     },
     {
       name: 'USD/UGX',
-      price: prices.exchangeRate,
+      price: prices.exchangeRate || 3750,
       unit: 'UGX',
       change: 0.3,
       trend: 'up',
@@ -133,7 +133,7 @@ const MarketMonitor = () => {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="text-2xl font-bold">
-                    {metric.price.toLocaleString()} {metric.unit}
+                    {(metric.price || 0).toLocaleString()} {metric.unit}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
