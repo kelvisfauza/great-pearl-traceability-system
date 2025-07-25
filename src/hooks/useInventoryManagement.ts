@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { firebaseClient } from '@/lib/firebaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface InventoryItem {
   id: string;
@@ -31,62 +31,63 @@ export const useInventoryManagement = () => {
       setLoading(true);
       
       // Fetch coffee records that are in inventory (received status)
-      const { data: coffeeData, error: coffeeError } = await firebaseClient
+      const { data: coffeeData, error: coffeeError } = await supabase
         .from('coffee_records')
-        .select()
-        .order('created_at', { ascending: false })
-        .get();
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (coffeeError) {
         console.error('Error fetching coffee records:', coffeeError);
       } else if (coffeeData) {
-        // Filter for received coffee that's still in inventory
+        // Include all coffee records that would be considered inventory
+        // This includes pending, received, or any status that indicates coffee is in store
         const inventoryRecords = coffeeData.filter((record: any) => 
-          record.status === 'received' || record.status === 'in_inventory'
+          record.status !== 'cancelled' && record.status !== 'rejected'
         );
         
         const transformedInventory: InventoryItem[] = inventoryRecords.map((record: any) => ({
           id: record.id,
-          coffeeType: record.coffee_type || record.coffeeType || 'Arabica',
-          totalBags: record.bags_received || record.quantity || 0,
-          totalKilograms: record.kilograms_received || (record.quantity * 60) || 0,
-          location: record.storage_location || 'Store 1',
+          coffeeType: record.coffee_type || 'Arabica',
+          totalBags: record.bags || 0,
+          totalKilograms: record.kilograms || 0,
+          location: 'Store 1',
           status: record.status || 'in_stock',
-          batchNumbers: [record.batch_number || record.batchNumber || ''],
+          batchNumbers: [record.batch_number || ''],
           lastUpdated: record.updated_at || record.created_at || new Date().toISOString()
         }));
         setInventoryItems(transformedInventory);
       }
 
       // Check if storage locations exist, if not create them
-      const { data: storageData, error: storageError } = await firebaseClient
+      const { data: storageData, error: storageError } = await supabase
         .from('storage_locations')
-        .select()
-        .order('created_at', { ascending: false })
-        .get();
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (storageError || !storageData || storageData.length === 0) {
         console.log('Creating default storage locations...');
         
         // Create default storage locations
-        const store1Data = {
-          name: 'Store 1',
-          capacity: 30000,
-          current_occupancy: 0,
-          occupancy_percentage: 0,
-          location_type: 'primary'
-        };
-        
-        const store2Data = {
-          name: 'Store 2', 
-          capacity: 40000,
-          current_occupancy: 0,
-          occupancy_percentage: 0,
-          location_type: 'secondary'
-        };
+        const { error: insertError1 } = await supabase
+          .from('storage_locations')
+          .insert({
+            name: 'Store 1',
+            capacity: 30000,
+            current_occupancy: 0,
+            occupancy_percentage: 0
+          });
 
-        await firebaseClient.from('storage_locations').insert(store1Data);
-        await firebaseClient.from('storage_locations').insert(store2Data);
+        const { error: insertError2 } = await supabase
+          .from('storage_locations')
+          .insert({
+            name: 'Store 2', 
+            capacity: 40000,
+            current_occupancy: 0,
+            occupancy_percentage: 0
+          });
+
+        if (insertError1) console.error('Error creating Store 1:', insertError1);
+        if (insertError2) console.error('Error creating Store 2:', insertError2);
         
         // Set default storage locations
         const defaultStorageLocations: StorageLocation[] = [
@@ -111,8 +112,8 @@ export const useInventoryManagement = () => {
           id: location.id,
           name: location.name,
           capacity: location.capacity,
-          currentOccupancy: location.current_occupancy || location.currentOccupancy || 0,
-          occupancyPercentage: location.occupancy_percentage || location.occupancyPercentage || 0
+          currentOccupancy: location.current_occupancy || 0,
+          occupancyPercentage: location.occupancy_percentage || 0
         }));
         setStorageLocations(transformedStorage);
       }
