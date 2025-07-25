@@ -74,17 +74,42 @@ export const usePriceData = () => {
   };
 
   const updateLocalPrices = async (localPrices: { drugar: number; wugar: number; robusta: number }) => {
-    setPrices(prev => ({
-      ...prev,
-      drugarLocal: localPrices.drugar,
-      wugarLocal: localPrices.wugar,
-      robustaFaqLocal: localPrices.robusta
-    }));
+    try {
+      // Import Firebase functions
+      const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      
+      const docRef = doc(db, 'market_prices', 'reference_prices');
+      
+      const priceData = {
+        drugarLocal: localPrices.drugar,
+        wugarLocal: localPrices.wugar,
+        robustaFaqLocal: localPrices.robusta,
+        lastUpdated: serverTimestamp(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      await setDoc(docRef, priceData, { merge: true });
+      
+      setPrices(prev => ({
+        ...prev,
+        drugarLocal: localPrices.drugar,
+        wugarLocal: localPrices.wugar,
+        robustaFaqLocal: localPrices.robusta
+      }));
 
-    toast({
-      title: "Success",
-      description: "Local reference prices updated successfully",
-    });
+      toast({
+        title: "Success",
+        description: "Local reference prices saved to Firebase successfully",
+      });
+    } catch (error) {
+      console.error('Error saving reference prices:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save reference prices to database",
+        variant: "destructive"
+      });
+    }
   };
 
   const updateMarketPrices = async (marketPrices: { iceArabica: number; iceRobusta: number }) => {
