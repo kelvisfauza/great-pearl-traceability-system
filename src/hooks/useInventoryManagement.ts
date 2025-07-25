@@ -30,39 +30,65 @@ export const useInventoryManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch inventory items from Firebase
-      const { data: inventoryData, error: inventoryError } = await firebaseClient
-        .from('inventory_items')
+      // Fetch coffee records that are in inventory (received status)
+      const { data: coffeeData, error: coffeeError } = await firebaseClient
+        .from('coffee_records')
         .select()
         .order('created_at', { ascending: false })
         .get();
 
-      if (inventoryError) {
-        console.error('Error fetching inventory items:', inventoryError);
-      } else if (inventoryData) {
-        const transformedInventory: InventoryItem[] = inventoryData.map((item: any) => ({
-          id: item.id,
-          coffeeType: item.coffee_type || item.coffeeType,
-          totalBags: item.total_bags || item.totalBags || 0,
-          totalKilograms: item.total_kilograms || item.totalKilograms || 0,
-          location: item.location || 'Store 1',
-          status: item.status || 'in_stock',
-          batchNumbers: item.batch_numbers || item.batchNumbers || [],
-          lastUpdated: item.last_updated || item.lastUpdated || item.created_at
+      if (coffeeError) {
+        console.error('Error fetching coffee records:', coffeeError);
+      } else if (coffeeData) {
+        // Filter for received coffee that's still in inventory
+        const inventoryRecords = coffeeData.filter((record: any) => 
+          record.status === 'received' || record.status === 'in_inventory'
+        );
+        
+        const transformedInventory: InventoryItem[] = inventoryRecords.map((record: any) => ({
+          id: record.id,
+          coffeeType: record.coffee_type || record.coffeeType || 'Arabica',
+          totalBags: record.bags_received || record.quantity || 0,
+          totalKilograms: record.kilograms_received || (record.quantity * 60) || 0,
+          location: record.storage_location || 'Store 1',
+          status: record.status || 'in_stock',
+          batchNumbers: [record.batch_number || record.batchNumber || ''],
+          lastUpdated: record.updated_at || record.created_at || new Date().toISOString()
         }));
         setInventoryItems(transformedInventory);
       }
 
-      // Fetch storage locations from Firebase
+      // Check if storage locations exist, if not create them
       const { data: storageData, error: storageError } = await firebaseClient
         .from('storage_locations')
         .select()
         .order('created_at', { ascending: false })
         .get();
 
-      if (storageError) {
-        console.error('Error fetching storage locations:', storageError);
-        // Set default storage locations if none exist
+      if (storageError || !storageData || storageData.length === 0) {
+        console.log('Creating default storage locations...');
+        
+        // Create default storage locations
+        const store1Data = {
+          name: 'Store 1',
+          capacity: 30000,
+          current_occupancy: 0,
+          occupancy_percentage: 0,
+          location_type: 'primary'
+        };
+        
+        const store2Data = {
+          name: 'Store 2', 
+          capacity: 40000,
+          current_occupancy: 0,
+          occupancy_percentage: 0,
+          location_type: 'secondary'
+        };
+
+        await firebaseClient.from('storage_locations').insert(store1Data);
+        await firebaseClient.from('storage_locations').insert(store2Data);
+        
+        // Set default storage locations
         const defaultStorageLocations: StorageLocation[] = [
           {
             id: '1',
@@ -80,7 +106,7 @@ export const useInventoryManagement = () => {
           }
         ];
         setStorageLocations(defaultStorageLocations);
-      } else if (storageData) {
+      } else {
         const transformedStorage: StorageLocation[] = storageData.map((location: any) => ({
           id: location.id,
           name: location.name,
@@ -89,25 +115,6 @@ export const useInventoryManagement = () => {
           occupancyPercentage: location.occupancy_percentage || location.occupancyPercentage || 0
         }));
         setStorageLocations(transformedStorage);
-      } else {
-        // Set default storage locations if none exist
-        const defaultStorageLocations: StorageLocation[] = [
-          {
-            id: '1',
-            name: 'Store 1',
-            capacity: 30000,
-            currentOccupancy: 0,
-            occupancyPercentage: 0
-          },
-          {
-            id: '2',
-            name: 'Store 2',
-            capacity: 40000,
-            currentOccupancy: 0,
-            occupancyPercentage: 0
-          }
-        ];
-        setStorageLocations(defaultStorageLocations);
       }
     } catch (error) {
       console.error('Error fetching inventory data:', error);
