@@ -30,7 +30,7 @@ export const useInventoryManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch coffee records that are in inventory (received status)
+      // Fetch coffee records that are in inventory
       const { data: coffeeData, error: coffeeError } = await supabase
         .from('coffee_records')
         .select('*')
@@ -38,10 +38,12 @@ export const useInventoryManagement = () => {
 
       if (coffeeError) {
         console.error('Error fetching coffee records:', coffeeError);
-      } else if (coffeeData) {
+      }
+
+      let inventoryRecords: any[] = [];
+      if (coffeeData) {
         // Include all coffee records that would be considered inventory
-        // This includes pending, received, or any status that indicates coffee is in store
-        const inventoryRecords = coffeeData.filter((record: any) => 
+        inventoryRecords = coffeeData.filter((record: any) => 
           record.status !== 'cancelled' && record.status !== 'rejected'
         );
         
@@ -50,7 +52,7 @@ export const useInventoryManagement = () => {
           coffeeType: record.coffee_type || 'Arabica',
           totalBags: record.bags || 0,
           totalKilograms: record.kilograms || 0,
-          location: 'Store 1',
+          location: 'Store 1', // Default location
           status: record.status || 'in_stock',
           batchNumbers: [record.batch_number || ''],
           lastUpdated: record.updated_at || record.created_at || new Date().toISOString()
@@ -58,64 +60,102 @@ export const useInventoryManagement = () => {
         setInventoryItems(transformedInventory);
       }
 
-      // Check if storage locations exist, if not create them
+      // Calculate total occupancy from inventory
+      const totalKilograms = inventoryRecords.reduce((sum: number, record: any) => 
+        sum + (record.kilograms || 0), 0
+      );
+
+      // Check if storage locations exist
       const { data: storageData, error: storageError } = await supabase
         .from('storage_locations')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (storageError || !storageData || storageData.length === 0) {
+      if (storageError) {
+        console.error('Error fetching storage locations:', storageError);
+      }
+
+      if (!storageData || storageData.length === 0) {
         console.log('Creating default storage locations...');
         
-        // Create default storage locations
-        const { error: insertError1 } = await supabase
+        // Create Store 1
+        const { data: store1Data, error: insertError1 } = await supabase
           .from('storage_locations')
           .insert({
             name: 'Store 1',
             capacity: 30000,
-            current_occupancy: 0,
-            occupancy_percentage: 0
-          });
+            current_occupancy: totalKilograms,
+            occupancy_percentage: Math.round((totalKilograms / 30000) * 100)
+          })
+          .select()
+          .single();
 
-        const { error: insertError2 } = await supabase
+        // Create Store 2
+        const { data: store2Data, error: insertError2 } = await supabase
           .from('storage_locations')
           .insert({
             name: 'Store 2', 
             capacity: 40000,
             current_occupancy: 0,
             occupancy_percentage: 0
-          });
+          })
+          .select()
+          .single();
 
         if (insertError1) console.error('Error creating Store 1:', insertError1);
         if (insertError2) console.error('Error creating Store 2:', insertError2);
         
-        // Set default storage locations
-        const defaultStorageLocations: StorageLocation[] = [
-          {
-            id: '1',
-            name: 'Store 1',
-            capacity: 30000,
-            currentOccupancy: 0,
-            occupancyPercentage: 0
-          },
-          {
-            id: '2',
-            name: 'Store 2',
-            capacity: 40000,
-            currentOccupancy: 0,
-            occupancyPercentage: 0
-          }
-        ];
-        setStorageLocations(defaultStorageLocations);
+        // Set storage locations from created data or defaults
+        const storageLocations: StorageLocation[] = [];
+        
+        if (store1Data) {
+          storageLocations.push({
+            id: store1Data.id,
+            name: store1Data.name,
+            capacity: store1Data.capacity,
+            currentOccupancy: store1Data.current_occupancy,
+            occupancyPercentage: store1Data.occupancy_percentage
+          });
+        }
+        
+        if (store2Data) {
+          storageLocations.push({
+            id: store2Data.id,
+            name: store2Data.name,
+            capacity: store2Data.capacity,
+            currentOccupancy: store2Data.current_occupancy,
+            occupancyPercentage: store2Data.occupancy_percentage
+          });
+        }
+        
+        setStorageLocations(storageLocations);
       } else {
-        const transformedStorage: StorageLocation[] = storageData.map((location: any) => ({
-          id: location.id,
-          name: location.name,
-          capacity: location.capacity,
-          currentOccupancy: location.current_occupancy || 0,
-          occupancyPercentage: location.occupancy_percentage || 0
-        }));
-        setStorageLocations(transformedStorage);
+        // Update occupancy for existing storage locations
+        const updatedStorage: StorageLocation[] = storageData.map((location: any) => {
+          // For now, put all inventory in Store 1
+          const occupancy = location.name === 'Store 1' ? totalKilograms : 0;
+          const occupancyPercentage = Math.round((occupancy / location.capacity) * 100);
+          
+          // Update the database with new occupancy
+          supabase
+            .from('storage_locations')
+            .update({
+              current_occupancy: occupancy,
+              occupancy_percentage: occupancyPercentage
+            })
+            .eq('id', location.id)
+            .then(() => console.log(`Updated occupancy for ${location.name}`));
+          
+          return {
+            id: location.id,
+            name: location.name,
+            capacity: location.capacity,
+            currentOccupancy: occupancy,
+            occupancyPercentage: occupancyPercentage
+          };
+        });
+        
+        setStorageLocations(updatedStorage);
       }
     } catch (error) {
       console.error('Error fetching inventory data:', error);
