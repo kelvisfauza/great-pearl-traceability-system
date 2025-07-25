@@ -8,6 +8,7 @@ import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useState, useEffect } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { firebaseClient } from "@/lib/firebaseClient";
 
 const DashboardStats = () => {
   const { hasRole, hasPermission, employee } = useAuth();
@@ -26,20 +27,26 @@ const DashboardStats = () => {
       try {
         console.log('Fetching real-time dashboard data...');
         
-        // Fetch coffee records
-        const coffeeSnapshot = await getDocs(collection(db, 'coffee_records'));
+        // Fetch coffee records using firebaseClient (same as inventory page)
+        const { data: coffeeRecords, error: coffeeError } = await firebaseClient
+          .from('coffee_records')
+          .select()
+          .order('created_at', { ascending: false })
+          .get();
+
         let totalKgs = 0;
         let totalBags = 0;
         const batches = new Set();
         
-        coffeeSnapshot.forEach((doc) => {
-          const data = doc.data();
-          totalKgs += Number(data.kilograms) || 0;
-          totalBags += Number(data.bags) || 0;
-          if (data.batch_number) {
-            batches.add(data.batch_number);
-          }
-        });
+        if (coffeeRecords && coffeeRecords.length > 0) {
+          coffeeRecords.forEach((record) => {
+            totalKgs += Number(record.kilograms || record.weight) || 0;
+            totalBags += Number(record.bags || record.quantity) || 0;
+            if (record.batch_number || record.batchNumber) {
+              batches.add(record.batch_number || record.batchNumber);
+            }
+          });
+        }
 
         // Fetch finance transactions for revenue
         const transactionsSnapshot = await getDocs(collection(db, 'finance_transactions'));
@@ -63,15 +70,9 @@ const DashboardStats = () => {
         const suppliersSnapshot = await getDocs(collection(db, 'suppliers'));
         const supplierCount = suppliersSnapshot.size;
 
-        // Fetch inventory data
-        const inventorySnapshot = await getDocs(collection(db, 'inventory_items'));
-        let inventoryBags = 0;
-        let inventoryKgs = 0;
-        inventorySnapshot.forEach((doc) => {
-          const data = doc.data();
-          inventoryBags += Number(data.total_bags) || 0;
-          inventoryKgs += Number(data.total_kilograms) || 0;
-        });
+        // Use coffee records as inventory data (same as inventory page)
+        let inventoryBags = totalBags;
+        let inventoryKgs = totalKgs;
 
         setRealTimeData({
           coffeeData: { 
