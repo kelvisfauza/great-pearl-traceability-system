@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye, FileText } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye, FileText, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
 import { useToast } from '@/hooks/use-toast';
+import { useProcurementRecommendations } from '@/hooks/useProcurementRecommendations';
 import { RejectionModal } from './workflow/RejectionModal';
 import { WorkflowTracker } from './workflow/WorkflowTracker';
 import { DetailedWorkflowView } from './workflow/DetailedWorkflowView';
@@ -14,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 
 const ApprovalRequests = () => {
   const { requests, loading, updateRequestStatus, fetchRequests } = useApprovalRequests();
+  const { recommendations, loading: recommendationsLoading } = useProcurementRecommendations();
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
@@ -145,9 +147,9 @@ const ApprovalRequests = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Approval Requests</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Management Dashboard</h2>
           <p className="text-muted-foreground">
-            Review and approve pending requests from various departments
+            Review approvals and monitor procurement recommendations
           </p>
         </div>
         <Button onClick={handleRefresh} variant="outline" size="sm">
@@ -156,17 +158,99 @@ const ApprovalRequests = () => {
         </Button>
       </div>
 
-      {requests.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Pending Requests</h3>
-            <p className="text-muted-foreground">All approval requests have been processed.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {requests.map((request) => (
+      {/* Procurement Recommendations Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-blue-600" />
+            <CardTitle>Latest Procurement Recommendations</CardTitle>
+          </div>
+          <CardDescription>
+            Strategic buying recommendations from data analysts
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {recommendationsLoading ? (
+            <div className="flex items-center justify-center p-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          ) : recommendations.length === 0 ? (
+            <div className="text-center text-muted-foreground py-4">
+              No procurement recommendations available
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recommendations.slice(0, 3).map((rec, index) => (
+                <div key={rec.id || index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <h4 className="font-medium">{rec.grade}</h4>
+                        <p className="text-sm text-muted-foreground">UGX {rec.priceRange}</p>
+                      </div>
+                      <Badge 
+                        variant={rec.action === 'Strong Buy' ? 'default' : 
+                                rec.action === 'Buy' ? 'secondary' : 'outline'}
+                        className={rec.action === 'Strong Buy' ? 'bg-green-500' : ''}
+                      >
+                        {rec.action}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="text-center">
+                      <div className="font-medium">{rec.confidence}%</div>
+                      <div className="text-muted-foreground">Confidence</div>
+                    </div>
+                    <div className="text-center">
+                      <div className={`font-medium ${
+                        rec.risk === 'Low' ? 'text-green-600' : 
+                        rec.risk === 'Medium' ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {rec.risk}
+                      </div>
+                      <div className="text-muted-foreground">Risk</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-medium">{rec.timeframe}</div>
+                      <div className="text-muted-foreground">Timeframe</div>
+                    </div>
+                  </div>
+                  {rec.risk === 'High' && (
+                    <AlertTriangle className="h-4 w-4 text-red-500 ml-2" />
+                  )}
+                </div>
+              ))}
+              {recommendations.length > 3 && (
+                <div className="text-center pt-2">
+                  <Badge variant="outline">
+                    +{recommendations.length - 3} more recommendations
+                  </Badge>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Approval Requests Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Pending Approval Requests</CardTitle>
+          <CardDescription>
+            Review and approve requests from various departments
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {requests.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Pending Requests</h3>
+              <p className="text-muted-foreground">All approval requests have been processed.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {requests.map((request) => (
             <Card key={request.id} className="transition-all hover:shadow-md">
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -257,9 +341,11 @@ const ApprovalRequests = () => {
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <RejectionModal
         open={rejectionModalOpen}

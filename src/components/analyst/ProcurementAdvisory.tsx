@@ -7,101 +7,119 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, TrendingUp, AlertCircle, CheckCircle, Target, DollarSign } from 'lucide-react';
+import { Textarea } from "@/components/ui/textarea";
+import { Calculator, TrendingUp, AlertCircle, CheckCircle, Target, DollarSign, Plus } from 'lucide-react';
 import { usePrices } from '@/contexts/PriceContext';
+import { useProcurementRecommendations } from '@/hooks/useProcurementRecommendations';
+import { useSuppliers } from '@/hooks/useSuppliers';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ProcurementAdvisory = () => {
   const { prices } = usePrices();
+  const { employee } = useAuth();
+  const { recommendations, loading: recommendationsLoading, addRecommendation } = useProcurementRecommendations();
+  const { suppliers, loading: suppliersLoading } = useSuppliers();
+  
   const [calculatorData, setCalculatorData] = useState({
     coffeeType: 'drugar',
     quantity: '',
     targetPrice: '',
-    quality: 'premium'
+    quality: 'premium',
+    moistureContent: '12.5',
+    screenSize: '15',
+    defects: '2'
   });
 
-  const procurementRecommendations = [
-    {
-      grade: 'Drugar Premium',
-      action: 'Strong Buy',
-      priceRange: '8,400 - 8,600',
-      reasoning: 'Price below historical average, high export demand',
-      confidence: 85,
-      risk: 'Low',
-      timeframe: 'Next 2 weeks'
-    },
-    {
-      grade: 'Wugar Standard',
-      action: 'Hold',
-      priceRange: '8,000 - 8,200',
-      reasoning: 'Market stable, wait for better entry point',
+  const [newRecommendation, setNewRecommendation] = useState({
+    grade: '',
+    action: 'Buy' as const,
+    priceRange: '',
+    reasoning: '',
+    confidence: 70,
+    risk: 'Medium' as const,
+    timeframe: ''
+  });
+
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  const handleAddRecommendation = async () => {
+    if (!newRecommendation.grade || !newRecommendation.priceRange || !newRecommendation.reasoning || !newRecommendation.timeframe) {
+      return;
+    }
+
+    await addRecommendation({
+      ...newRecommendation,
+      createdBy: employee?.name || 'Unknown User'
+    });
+
+    // Reset form
+    setNewRecommendation({
+      grade: '',
+      action: 'Buy',
+      priceRange: '',
+      reasoning: '',
       confidence: 70,
       risk: 'Medium',
-      timeframe: 'Next month'
-    },
-    {
-      grade: 'Robusta FAQ',
-      action: 'Buy',
-      priceRange: '7,600 - 7,800',
-      reasoning: 'International prices rising, good margin potential',
-      confidence: 78,
-      risk: 'Low',
-      timeframe: 'This week'
-    }
-  ];
+      timeframe: ''
+    });
+    setShowAddForm(false);
+  };
 
+  // Standard international coffee profitability calculation
   const calculateProfitability = () => {
-    const basePrice = calculatorData.coffeeType === 'drugar' ? 8500 : 
-                     calculatorData.coffeeType === 'wugar' ? 8200 : 7800;
     const quantity = parseFloat(calculatorData.quantity) || 0;
-    const targetPrice = parseFloat(calculatorData.targetPrice) || basePrice;
+    const targetPrice = parseFloat(calculatorData.targetPrice) || 0;
+    const moistureContent = parseFloat(calculatorData.moistureContent) || 12.5;
+    const defects = parseFloat(calculatorData.defects) || 0;
     
-    const totalCost = quantity * targetPrice;
-    const processingCost = quantity * 300; // Processing cost per kg
-    const exportPrice = basePrice + 700; // Export premium
-    const totalRevenue = quantity * exportPrice;
-    const netProfit = totalRevenue - totalCost - processingCost;
+    // Moisture content adjustment (standard: 12.5%, penalty for higher moisture)
+    const moistureAdjustment = moistureContent > 12.5 ? (moistureContent - 12.5) * 2 : 0; // 2% penalty per 1% excess
+    
+    // Quality adjustments based on defects
+    const qualityAdjustment = defects > 5 ? defects * 1.5 : 0; // 1.5% penalty per defect above 5
+    
+    // Base costs per kg (international standards)
+    const purchaseCost = quantity * targetPrice;
+    const processingCost = quantity * 350; // Processing cost per kg
+    const certificationCost = quantity * 25; // Quality certification
+    const transportCost = quantity * 45; // Transport to port
+    const exportTax = purchaseCost * 0.02; // 2% export tax
+    const financingCost = purchaseCost * 0.015; // 1.5% financing cost
+    
+    const totalCost = purchaseCost + processingCost + certificationCost + transportCost + exportTax + financingCost;
+    
+    // Revenue calculation with quality adjustments
+    const baseExportPrice = calculatorData.coffeeType === 'drugar' ? 9500 : 
+                           calculatorData.coffeeType === 'wugar' ? 9200 : 8600;
+    
+    const qualityPremium = calculatorData.quality === 'premium' ? 500 : 
+                          calculatorData.quality === 'standard' ? 200 : 0;
+    
+    const adjustedPrice = baseExportPrice + qualityPremium - (moistureAdjustment + qualityAdjustment) * baseExportPrice / 100;
+    const totalRevenue = quantity * adjustedPrice;
+    
+    const netProfit = totalRevenue - totalCost;
     const marginPercentage = totalCost > 0 ? (netProfit / totalCost) * 100 : 0;
+    const roiPercentage = purchaseCost > 0 ? (netProfit / purchaseCost) * 100 : 0;
 
     return {
-      totalCost,
+      purchaseCost,
       processingCost,
+      certificationCost,
+      transportCost,
+      exportTax,
+      financingCost,
+      totalCost,
       totalRevenue,
       netProfit,
-      marginPercentage
+      marginPercentage,
+      roiPercentage,
+      adjustedPrice,
+      qualityAdjustment: moistureAdjustment + qualityAdjustment
     };
   };
 
   const profitability = calculateProfitability();
-
-  const suppliers = [
-    {
-      name: 'Kasese Coffee Farmers',
-      location: 'Kasese',
-      rating: 4.5,
-      reliability: 'High',
-      priceRange: '8,200 - 8,400',
-      lastDelivery: '3 days ago',
-      status: 'Active'
-    },
-    {
-      name: 'Mbale Cooperative',
-      location: 'Mbale',
-      rating: 4.2,
-      reliability: 'Medium',
-      priceRange: '8,100 - 8,300',
-      lastDelivery: '1 week ago',
-      status: 'Available'
-    },
-    {
-      name: 'Fort Portal Growers',
-      location: 'Fort Portal',
-      rating: 4.7,
-      reliability: 'High',
-      priceRange: '8,300 - 8,500',
-      lastDelivery: '2 days ago',
-      status: 'Preferred'
-    }
-  ];
 
   return (
     <div className="space-y-6">
@@ -118,60 +136,183 @@ const ProcurementAdvisory = () => {
         </TabsList>
 
         <TabsContent value="recommendations" className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
-            {procurementRecommendations.map((rec, index) => (
-              <Card key={index} className="relative">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{rec.grade}</CardTitle>
-                    <Badge 
-                      variant={rec.action === 'Strong Buy' ? 'default' : 
-                              rec.action === 'Buy' ? 'secondary' : 'outline'}
-                      className={rec.action === 'Strong Buy' ? 'bg-green-500' : ''}
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Buy Recommendations</h3>
+            <Button onClick={() => setShowAddForm(!showAddForm)} variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Recommendation
+            </Button>
+          </div>
+
+          {showAddForm && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Add New Recommendation</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="grade">Coffee Grade</Label>
+                    <Input
+                      id="grade"
+                      placeholder="e.g., Drugar Premium"
+                      value={newRecommendation.grade}
+                      onChange={(e) => setNewRecommendation({...newRecommendation, grade: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="action">Action</Label>
+                    <Select 
+                      value={newRecommendation.action} 
+                      onValueChange={(value) => setNewRecommendation({...newRecommendation, action: value as any})}
                     >
-                      {rec.action}
-                    </Badge>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Strong Buy">Strong Buy</SelectItem>
+                        <SelectItem value="Buy">Buy</SelectItem>
+                        <SelectItem value="Hold">Hold</SelectItem>
+                        <SelectItem value="Sell">Sell</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Price Range</div>
-                      <div className="font-semibold">UGX {rec.priceRange}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Confidence</div>
-                      <div className="font-semibold flex items-center">
-                        {rec.confidence}%
-                        <div className="ml-2 w-16 bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-green-500 h-2 rounded-full" 
-                            style={{ width: `${rec.confidence}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Risk Level</div>
-                      <div className={`font-semibold ${
-                        rec.risk === 'Low' ? 'text-green-600' : 
-                        rec.risk === 'Medium' ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {rec.risk}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Timeframe</div>
-                      <div className="font-semibold">{rec.timeframe}</div>
-                    </div>
+                  <div>
+                    <Label htmlFor="priceRange">Price Range (UGX)</Label>
+                    <Input
+                      id="priceRange"
+                      placeholder="e.g., 8,400 - 8,600"
+                      value={newRecommendation.priceRange}
+                      onChange={(e) => setNewRecommendation({...newRecommendation, priceRange: e.target.value})}
+                    />
                   </div>
-                  <div className="p-3 bg-gray-50 rounded">
-                    <div className="text-sm font-medium mb-1">Analysis</div>
-                    <div className="text-sm text-muted-foreground">{rec.reasoning}</div>
+                  <div>
+                    <Label htmlFor="timeframe">Timeframe</Label>
+                    <Input
+                      id="timeframe"
+                      placeholder="e.g., Next 2 weeks"
+                      value={newRecommendation.timeframe}
+                      onChange={(e) => setNewRecommendation({...newRecommendation, timeframe: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="confidence">Confidence (%)</Label>
+                    <Input
+                      id="confidence"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={newRecommendation.confidence}
+                      onChange={(e) => setNewRecommendation({...newRecommendation, confidence: parseInt(e.target.value)})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="risk">Risk Level</Label>
+                    <Select 
+                      value={newRecommendation.risk} 
+                      onValueChange={(value) => setNewRecommendation({...newRecommendation, risk: value as any})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Low">Low</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="High">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="reasoning">Analysis & Reasoning</Label>
+                  <Textarea
+                    id="reasoning"
+                    placeholder="Provide detailed analysis for this recommendation..."
+                    value={newRecommendation.reasoning}
+                    onChange={(e) => setNewRecommendation({...newRecommendation, reasoning: e.target.value})}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleAddRecommendation}>Save Recommendation</Button>
+                  <Button variant="outline" onClick={() => setShowAddForm(false)}>Cancel</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-1 gap-4">
+            {recommendationsLoading ? (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center">Loading recommendations...</div>
+                </CardContent>
+              </Card>
+            ) : recommendations.length === 0 ? (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center text-muted-foreground">
+                    No recommendations yet. Add your first recommendation above.
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              recommendations.map((rec, index) => (
+                <Card key={rec.id || index} className="relative">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{rec.grade}</CardTitle>
+                      <Badge 
+                        variant={rec.action === 'Strong Buy' ? 'default' : 
+                                rec.action === 'Buy' ? 'secondary' : 'outline'}
+                        className={rec.action === 'Strong Buy' ? 'bg-green-500' : ''}
+                      >
+                        {rec.action}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Price Range</div>
+                        <div className="font-semibold">UGX {rec.priceRange}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Confidence</div>
+                        <div className="font-semibold flex items-center">
+                          {rec.confidence}%
+                          <div className="ml-2 w-16 bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-green-500 h-2 rounded-full" 
+                              style={{ width: `${rec.confidence}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Risk Level</div>
+                        <div className={`font-semibold ${
+                          rec.risk === 'Low' ? 'text-green-600' : 
+                          rec.risk === 'Medium' ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {rec.risk}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Timeframe</div>
+                        <div className="font-semibold">{rec.timeframe}</div>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded">
+                      <div className="text-sm font-medium mb-1">Analysis</div>
+                      <div className="text-sm text-muted-foreground">{rec.reasoning}</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Created by {rec.createdBy} • {new Date(rec.createdAt).toLocaleDateString()}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
 
@@ -241,6 +382,40 @@ const ProcurementAdvisory = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  <div>
+                    <Label htmlFor="moistureContent">Moisture Content (%)</Label>
+                    <Input
+                      id="moistureContent"
+                      type="number"
+                      step="0.1"
+                      placeholder="12.5"
+                      value={calculatorData.moistureContent}
+                      onChange={(e) => setCalculatorData({...calculatorData, moistureContent: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="screenSize">Screen Size</Label>
+                    <Input
+                      id="screenSize"
+                      placeholder="15"
+                      value={calculatorData.screenSize}
+                      onChange={(e) => setCalculatorData({...calculatorData, screenSize: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="defects">Defects (%)</Label>
+                    <Input
+                      id="defects"
+                      type="number"
+                      step="0.1"
+                      placeholder="2"
+                      value={calculatorData.defects}
+                      onChange={(e) => setCalculatorData({...calculatorData, defects: e.target.value})}
+                    />
+                  </div>
                 </div>
                 
                 <div className="space-y-4">
@@ -251,16 +426,37 @@ const ProcurementAdvisory = () => {
                     </h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span>Total Cost:</span>
-                        <span className="font-medium">UGX {profitability.totalCost.toLocaleString()}</span>
+                        <span>Purchase Cost:</span>
+                        <span className="font-medium">UGX {profitability.purchaseCost.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Processing Cost:</span>
                         <span className="font-medium">UGX {profitability.processingCost.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Expected Revenue:</span>
-                        <span className="font-medium">UGX {profitability.totalRevenue.toLocaleString()}</span>
+                        <span>Certification:</span>
+                        <span className="font-medium">UGX {profitability.certificationCost.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Transport:</span>
+                        <span className="font-medium">UGX {profitability.transportCost.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Export Tax:</span>
+                        <span className="font-medium">UGX {profitability.exportTax.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Financing Cost:</span>
+                        <span className="font-medium">UGX {profitability.financingCost.toLocaleString()}</span>
+                      </div>
+                      <hr />
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Total Cost:</span>
+                        <span className="font-semibold">UGX {profitability.totalCost.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Expected Revenue:</span>
+                        <span className="font-semibold">UGX {profitability.totalRevenue.toLocaleString()}</span>
                       </div>
                       <hr />
                       <div className="flex justify-between text-base">
@@ -275,6 +471,18 @@ const ProcurementAdvisory = () => {
                           {profitability.marginPercentage.toFixed(1)}%
                         </span>
                       </div>
+                      <div className="flex justify-between text-base">
+                        <span className="font-semibold">ROI:</span>
+                        <span className={`font-bold ${profitability.roiPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {profitability.roiPercentage.toFixed(1)}%
+                        </span>
+                      </div>
+                      {profitability.qualityAdjustment > 0 && (
+                        <div className="flex justify-between text-sm text-amber-600">
+                          <span>Quality Adjustment:</span>
+                          <span>-{profitability.qualityAdjustment.toFixed(1)}%</span>
+                        </div>
+                      )}
                     </div>
                     
                     {profitability.marginPercentage > 15 && (
@@ -306,52 +514,63 @@ const ProcurementAdvisory = () => {
 
         <TabsContent value="suppliers" className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
-            {suppliers.map((supplier, index) => (
-              <Card key={index}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{supplier.name}</CardTitle>
-                      <p className="text-muted-foreground">{supplier.location}</p>
-                    </div>
-                    <Badge variant={supplier.status === 'Preferred' ? 'default' : 'secondary'}>
-                      {supplier.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Rating</div>
-                      <div className="font-semibold flex items-center">
-                        ⭐ {supplier.rating}/5
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Reliability</div>
-                      <div className={`font-semibold ${
-                        supplier.reliability === 'High' ? 'text-green-600' : 'text-yellow-600'
-                      }`}>
-                        {supplier.reliability}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Price Range</div>
-                      <div className="font-semibold">UGX {supplier.priceRange}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Last Delivery</div>
-                      <div className="font-semibold">{supplier.lastDelivery}</div>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Button variant="outline" size="sm">
-                      Contact Supplier
-                    </Button>
+            {suppliersLoading ? (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center">Loading suppliers...</div>
+                </CardContent>
+              </Card>
+            ) : suppliers.length === 0 ? (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center text-muted-foreground">
+                    No suppliers found in database.
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              suppliers.map((supplier, index) => (
+                <Card key={supplier.id || index}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{supplier.name}</CardTitle>
+                        <p className="text-muted-foreground">{supplier.code}</p>
+                      </div>
+                      <Badge variant="secondary">
+                        Balance: UGX {supplier.opening_balance?.toLocaleString() || '0'}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Phone</div>
+                        <div className="font-semibold">{supplier.phone}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Origin</div>
+                        <div className="font-semibold">{supplier.origin}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Registered</div>
+                        <div className="font-semibold">
+                          {supplier.date_registered ? new Date(supplier.date_registered).toLocaleDateString() : 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      <Button variant="outline" size="sm">
+                        Contact Supplier
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        View History
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
       </Tabs>
