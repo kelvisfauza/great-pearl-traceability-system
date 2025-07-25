@@ -30,114 +30,70 @@ export const useInventoryManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch coffee records from Firebase
-      const { data: coffeeData, error: coffeeError } = await firebaseClient
+      // Fetch coffee_records from Firebase directly as inventory
+      const { data: coffeeRecords, error: coffeeError } = await firebaseClient
         .from('coffee_records')
         .select()
         .order('created_at', { ascending: false })
         .get();
 
       if (coffeeError) {
-        console.error('Error fetching coffee records:', coffeeError);
+        console.error('Error fetching coffee records from Firebase:', coffeeError);
         setInventoryItems([]);
-      } else if (coffeeData) {
-        console.log('Coffee data from Firebase:', coffeeData);
+      } else if (coffeeRecords && coffeeRecords.length > 0) {
+        console.log('Coffee records from Firebase:', coffeeRecords);
         
-        // Filter for records that represent current inventory
-        const inventoryRecords = coffeeData.filter((record: any) => 
-          record.status === 'received' || record.status === 'pending' || record.status === 'in_inventory'
-        );
-        
-        console.log('Filtered inventory records:', inventoryRecords);
-        
-        const transformedInventory: InventoryItem[] = inventoryRecords.map((record: any) => ({
+        // Transform coffee_records into inventory items
+        const transformedInventory: InventoryItem[] = coffeeRecords.map((record: any) => ({
           id: record.id,
           coffeeType: record.coffee_type || record.coffeeType || 'Arabica',
           totalBags: record.bags || record.quantity || 0,
           totalKilograms: record.kilograms || record.weight || 0,
           location: 'Store 1',
           status: record.status || 'in_stock',
-          batchNumbers: [record.batch_number || record.batchNumber || ''],
+          batchNumbers: [record.batch_number || record.batchNumber || 'N/A'],
           lastUpdated: record.updated_at || record.updatedAt || record.created_at || record.createdAt || new Date().toISOString()
         }));
         
-        console.log('Transformed inventory:', transformedInventory);
+        console.log('Transformed inventory from coffee records:', transformedInventory);
         setInventoryItems(transformedInventory);
       } else {
-        console.log('No coffee data found');
+        console.log('No coffee records found in Firebase');
         setInventoryItems([]);
       }
 
-      // Calculate total occupancy from inventory
-      const totalKilograms = inventoryItems.reduce((sum: number, item: InventoryItem) => 
-        sum + item.totalKilograms, 0
-      );
+      // Calculate total occupancy from all coffee records
+      const totalKilograms = coffeeRecords ? coffeeRecords.reduce((sum: number, record: any) => 
+        sum + (record.kilograms || record.weight || 0), 0
+      ) : 0;
 
-      // Check if storage locations exist in Firebase
-      const { data: storageData, error: storageError } = await firebaseClient
-        .from('storage_locations')
-        .select()
-        .order('created_at', { ascending: false })
-        .get();
+      console.log('Total kilograms calculated:', totalKilograms);
 
-      if (storageError || !storageData || storageData.length === 0) {
-        console.log('Creating default storage locations in Firebase...');
-        
-        // Create Store 1
-        await firebaseClient.from('storage_locations').insert({
+      // Create or update storage locations
+      const defaultStorageLocations: StorageLocation[] = [
+        {
+          id: '1',
           name: 'Store 1',
           capacity: 30000,
-          current_occupancy: totalKilograms,
-          occupancy_percentage: Math.round((totalKilograms / 30000) * 100)
-        });
-
-        // Create Store 2
-        await firebaseClient.from('storage_locations').insert({
-          name: 'Store 2', 
+          currentOccupancy: totalKilograms,
+          occupancyPercentage: Math.round((totalKilograms / 30000) * 100)
+        },
+        {
+          id: '2',
+          name: 'Store 2',
           capacity: 40000,
-          current_occupancy: 0,
-          occupancy_percentage: 0
-        });
-        
-        // Set default storage locations
-        const defaultStorageLocations: StorageLocation[] = [
-          {
-            id: '1',
-            name: 'Store 1',
-            capacity: 30000,
-            currentOccupancy: totalKilograms,
-            occupancyPercentage: Math.round((totalKilograms / 30000) * 100)
-          },
-          {
-            id: '2',
-            name: 'Store 2',
-            capacity: 40000,
-            currentOccupancy: 0,
-            occupancyPercentage: 0
-          }
-        ];
-        setStorageLocations(defaultStorageLocations);
-      } else {
-        const transformedStorage: StorageLocation[] = storageData.map((location: any) => {
-          // For now, put all inventory in Store 1
-          const occupancy = location.name === 'Store 1' ? totalKilograms : 0;
-          const occupancyPercentage = Math.round((occupancy / location.capacity) * 100);
-          
-          return {
-            id: location.id,
-            name: location.name,
-            capacity: location.capacity,
-            currentOccupancy: occupancy,
-            occupancyPercentage: occupancyPercentage
-          };
-        });
-        
-        setStorageLocations(transformedStorage);
-      }
+          currentOccupancy: 0,
+          occupancyPercentage: 0
+        }
+      ];
+      
+      setStorageLocations(defaultStorageLocations);
+      
     } catch (error) {
-      console.error('Error fetching inventory data:', error);
+      console.error('Error fetching inventory data from Firebase:', error);
       setInventoryItems([]);
-      // Set default storage locations on error
+      
+      // Set default empty storage locations on error
       const defaultStorageLocations: StorageLocation[] = [
         {
           id: '1',
