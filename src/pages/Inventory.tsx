@@ -170,11 +170,11 @@ const Inventory = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Occupied:</span>
-                        <span>{location.currentOccupancy.toLocaleString()} bags</span>
+                        <span>{location.currentOccupancy.toLocaleString()} kgs</span>
                       </div>
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Capacity:</span>
-                        <span>{location.capacity.toLocaleString()} bags</span>
+                        <span>{location.capacity.toLocaleString()} kgs</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
