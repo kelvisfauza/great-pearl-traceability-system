@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 import { 
   Plus, 
   FileText, 
@@ -13,13 +14,18 @@ import {
   Users,
   DollarSign,
   Coffee,
-  ShoppingCart
+  ShoppingCart,
+  Receipt
 } from "lucide-react";
+import SupplierAdvanceModal from "@/components/finance/SupplierAdvanceModal";
+import IssueReceiptModal from "@/components/finance/IssueReceiptModal";
 
 const QuickActions = () => {
   const navigate = useNavigate();
   const { employee } = useAuth();
   const access = useRoleBasedAccess();
+  const [showAdvanceModal, setShowAdvanceModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   if (!employee) return null;
 
@@ -79,6 +85,22 @@ const QuickActions = () => {
       color: "bg-pink-600 hover:bg-pink-700",
       route: "/sales-marketing",
       access: access.canViewSales
+    },
+    {
+      title: "Give Advance",
+      description: "Provide advance to supplier",
+      icon: DollarSign,
+      color: "bg-emerald-600 hover:bg-emerald-700",
+      action: () => setShowAdvanceModal(true),
+      access: access.canProcessPayments
+    },
+    {
+      title: "Issue Receipt",
+      description: "Generate payment receipt",
+      icon: Receipt,
+      color: "bg-cyan-600 hover:bg-cyan-700",
+      action: () => setShowReceiptModal(true),
+      access: access.canProcessPayments
     }
   ];
 
@@ -104,7 +126,7 @@ const QuickActions = () => {
                 key={index}
                 variant="outline"
                 className="h-auto p-4 flex flex-col items-start space-y-3 hover:shadow-md transition-all text-left"
-                onClick={() => navigate(action.route)}
+                onClick={() => action.action ? action.action() : navigate(action.route)}
               >
                 <div className="flex items-center space-x-3 w-full">
                   <div className={`p-2 rounded-lg ${action.color} text-white flex-shrink-0`}>
@@ -136,6 +158,16 @@ const QuickActions = () => {
           </div>
         )}
       </CardContent>
+      
+      <SupplierAdvanceModal 
+        open={showAdvanceModal}
+        onClose={() => setShowAdvanceModal(false)}
+      />
+      
+      <IssueReceiptModal
+        open={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+      />
     </Card>
   );
 };

@@ -649,24 +649,43 @@ export const useFirebaseFinance = () => {
     expectedDeliveryDate: string;
   }) => {
     try {
-      await addDoc(collection(db, 'supplier_advances'), {
+      console.log('Adding supplier advance:', advance);
+      
+      // Save advance to supplier_advances collection
+      const docRef = await addDoc(collection(db, 'supplier_advances'), {
         ...advance,
         status: 'Active',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
 
-      
-
-      // Add corresponding finance transaction
-      await addTransaction({
+      // Save as finance transaction for daily reports
+      await addDoc(collection(db, 'finance_transactions'), {
         type: 'Advance',
-        description: `Advance payment to ${advance.supplierName}`,
+        description: `Advance given to ${advance.supplierName} - ${advance.purpose}`,
         amount: advance.amount,
+        supplier_id: advance.supplierId,
+        supplier_name: advance.supplierName,
+        advance_id: docRef.id,
         time: new Date().toLocaleTimeString(),
-        date: new Date().toLocaleDateString()
+        date: new Date().toLocaleDateString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       });
 
+      // Record as daily task for reports
+      await addDoc(collection(db, 'daily_tasks'), {
+        task_type: 'Advance',
+        description: `Advance given to ${advance.supplierName} - UGX ${advance.amount.toLocaleString()}`,
+        amount: advance.amount,
+        supplier_name: advance.supplierName,
+        completed_by: 'Finance Department',
+        completed_at: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0],
+        created_at: new Date().toISOString()
+      });
+
+      console.log('Supplier advance saved successfully');
       await fetchFinanceData();
       return true;
     } catch (error) {
