@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { firebaseClient } from '@/lib/firebaseClient';
 import { useToast } from '@/hooks/use-toast';
 
 export interface FinanceTransaction {
@@ -44,6 +45,7 @@ interface FinanceStats {
   totalReceipts: number;  
   totalPayments: number;
   netCashFlow: number;
+  totalAdvancesGiven?: number;
 }
 
 interface ApprovalRequestDetails {
@@ -66,6 +68,7 @@ export const useFirebaseFinance = () => {
   const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
   const [expenses, setExpenses] = useState<FinanceExpense[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [supplierAdvances, setSupplierAdvances] = useState<any[]>([]);
   const [stats, setStats] = useState<FinanceStats>({
     monthlyRevenue: 0,
     pendingPayments: 0,
@@ -74,7 +77,8 @@ export const useFirebaseFinance = () => {
     currentFloat: 0,
     totalReceipts: 0,
     totalPayments: 0,
-    netCashFlow: 0
+    netCashFlow: 0,
+    totalAdvancesGiven: 0
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -117,6 +121,20 @@ export const useFirebaseFinance = () => {
       // Fetch payment records AND quality assessments to create payment records
       await fetchPaymentRecords();
 
+      // Fetch supplier advances
+      try {
+        const advancesQuery = query(collection(db, 'supplier_advances'), orderBy('created_at', 'desc'));
+        const advancesSnapshot = await getDocs(advancesQuery);
+        const advancesData = advancesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setSupplierAdvances(advancesData);
+      } catch (error) {
+        console.error('Error fetching advances:', error);
+        setSupplierAdvances([]);
+      }
+
       // Calculate stats (using sample data if collections are empty)
       const sampleStats: FinanceStats = {
         monthlyRevenue: 15750000,
@@ -126,7 +144,8 @@ export const useFirebaseFinance = () => {
         currentFloat: 500000,
         totalReceipts: 12450000,
         totalPayments: 6780000,
-        netCashFlow: 5670000
+        netCashFlow: 5670000,
+        totalAdvancesGiven: 0
       };
       
       setStats(sampleStats);
@@ -621,16 +640,53 @@ export const useFirebaseFinance = () => {
     fetchFinanceData();
   }, []);
 
+  // Add supplier advance function
+  const addSupplierAdvance = async (advance: {
+    supplierId: string;
+    supplierName: string;
+    amount: number;
+    purpose: string;
+    expectedDeliveryDate: string;
+  }) => {
+    try {
+      await addDoc(collection(db, 'supplier_advances'), {
+        ...advance,
+        status: 'Active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      
+
+      // Add corresponding finance transaction
+      await addTransaction({
+        type: 'Advance',
+        description: `Advance payment to ${advance.supplierName}`,
+        amount: advance.amount,
+        time: new Date().toLocaleTimeString(),
+        date: new Date().toLocaleDateString()
+      });
+
+      await fetchFinanceData();
+      return true;
+    } catch (error) {
+      console.error('Error adding supplier advance:', error);
+      return false;
+    }
+  };
+
   return {
     transactions,
     expenses,
     payments,
     stats,
     loading,
+    supplierAdvances,
     addTransaction,
     addExpense,
     processPayment,
     handleModifyPayment,
+    addSupplierAdvance,
     refetch: fetchFinanceData
   };
 };

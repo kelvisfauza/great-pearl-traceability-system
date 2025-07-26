@@ -16,6 +16,7 @@ import SalaryRequestsCard from "@/components/finance/SalaryRequestsCard";
 import DailyReportsCard from "@/components/finance/DailyReportsCard";
 import CashManagementCard from "@/components/finance/CashManagementCard";
 import ExpensesCard from "@/components/finance/ExpensesCard";
+import SupplierAdvanceModal from "@/components/finance/SupplierAdvanceModal";
 
 const Finance = () => {
   const {
@@ -24,6 +25,7 @@ const Finance = () => {
     payments,
     stats,
     loading,
+    supplierAdvances,
     addTransaction,
     addExpense,
     processPayment,
@@ -41,6 +43,7 @@ const Finance = () => {
   const [floatAmount, setFloatAmount] = useState("");
   const [receiptAmount, setReceiptAmount] = useState("");
   const [receiptDescription, setReceiptDescription] = useState("");
+  const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
 
   const canManageFloat = hasRole('Supervisor') || hasRole('Operations Manager') || employee?.position === 'Supervisor' || employee?.position === 'Operations Manager';
 
@@ -251,21 +254,50 @@ const Finance = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button variant="outline" className="h-20 flex-col">
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col"
+                onClick={() => {
+                  setReceiptAmount("");
+                  setReceiptDescription("");
+                  const cashTab = document.querySelector('[value="cash"]');
+                  if (cashTab) (cashTab as HTMLElement).click();
+                }}
+              >
                 <Receipt className="h-6 w-6 mb-2" />
                 Issue Receipt
               </Button>
-              <Button variant="outline" className="h-20 flex-col">
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col"
+                onClick={() => {
+                  const paymentsTab = document.querySelector('[value="payments"]');
+                  if (paymentsTab) (paymentsTab as HTMLElement).click();
+                }}
+              >
                 <CreditCard className="h-6 w-6 mb-2" />
                 Process Payment
               </Button>
-              <Button variant="outline" className="h-20 flex-col">
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col"
+                onClick={() => {
+                  setExpenseAmount("");
+                  setExpenseDescription("");
+                  const expensesTab = document.querySelector('[value="expenses"]');
+                  if (expensesTab) (expensesTab as HTMLElement).click();
+                }}
+              >
                 <FileText className="h-6 w-6 mb-2" />
                 Add Expense
               </Button>
-              <Button variant="outline" className="h-20 flex-col">
-                <Banknote className="h-6 w-6 mb-2" />
-                Manage Float
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col"
+                onClick={() => setAdvanceModalOpen(true)}
+              >
+                <DollarSign className="h-6 w-6 mb-2" />
+                Give Advance
               </Button>
             </div>
           </CardContent>
@@ -273,7 +305,7 @@ const Finance = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="payments" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 h-12">
+          <TabsList className="grid w-full grid-cols-7 h-12">
             <TabsTrigger value="payments" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
               Payments
@@ -281,6 +313,10 @@ const Finance = () => {
             <TabsTrigger value="salary-requests" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               HR Requests
+            </TabsTrigger>
+            <TabsTrigger value="advances" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Advances
             </TabsTrigger>
             <TabsTrigger value="daily" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
@@ -318,6 +354,84 @@ const Finance = () => {
               onApproveSalaryPayment={handleApproveSalaryPayment}
               onRejectSalaryPayment={handleRejectSalaryPayment}
             />
+          </TabsContent>
+
+          <TabsContent value="advances">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Supplier Advances
+                </CardTitle>
+                <CardDescription>
+                  Manage advances given to suppliers for coffee purchases
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center mb-6">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <p className="text-sm font-medium text-blue-700">Total Advances Given</p>
+                      <p className="text-2xl font-bold text-blue-900">{formatCurrency(supplierAdvances?.filter(a => a.status === 'Active').reduce((sum, a) => sum + (a.amount || 0), 0) || 0)}</p>
+                    </div>
+                    <div className="text-center p-4 bg-amber-50 rounded-lg">
+                      <p className="text-sm font-medium text-amber-700">Active Advances</p>
+                      <p className="text-2xl font-bold text-amber-900">{supplierAdvances?.filter(a => a.status === 'Active').length || 0}</p>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <p className="text-sm font-medium text-green-700">Completed</p>
+                      <p className="text-2xl font-bold text-green-900">{supplierAdvances?.filter(a => a.status === 'Completed').length || 0}</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => setAdvanceModalOpen(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    Give Advance
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  {supplierAdvances && supplierAdvances.length > 0 ? (
+                    supplierAdvances.map((advance) => (
+                      <Card key={advance.id} className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-semibold">{advance.supplierName}</h4>
+                            <p className="text-sm text-muted-foreground">{advance.purpose}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Expected delivery: {new Date(advance.expectedDeliveryDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold">{formatCurrency(advance.amount)}</p>
+                            <Badge 
+                              variant={advance.status === 'Active' ? 'default' : 'secondary'}
+                              className={advance.status === 'Active' ? 'bg-green-100 text-green-800' : ''}
+                            >
+                              {advance.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                      <p>No supplier advances found</p>
+                      <Button 
+                        variant="outline" 
+                        className="mt-4"
+                        onClick={() => setAdvanceModalOpen(true)}
+                      >
+                        Give First Advance
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="daily">
@@ -407,6 +521,11 @@ const Finance = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <SupplierAdvanceModal 
+        open={advanceModalOpen}
+        onClose={() => setAdvanceModalOpen(false)}
+      />
     </Layout>
   );
 };
