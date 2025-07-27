@@ -100,7 +100,8 @@ const QuickActions = () => {
       icon: Receipt,
       color: "bg-cyan-600 hover:bg-cyan-700",
       action: () => setShowReceiptModal(true),
-      access: access.canProcessPayments
+      access: access.canProcessPayments,
+      dataAction: "issue-receipt"
     }
   ];
 
@@ -127,6 +128,7 @@ const QuickActions = () => {
                 variant="outline"
                 className="h-auto p-4 flex flex-col items-start space-y-3 hover:shadow-md transition-all text-left"
                 onClick={() => action.action ? action.action() : navigate(action.route)}
+                {...(action.dataAction && { 'data-action': action.dataAction })}
               >
                 <div className="flex items-center space-x-3 w-full">
                   <div className={`p-2 rounded-lg ${action.color} text-white flex-shrink-0`}>

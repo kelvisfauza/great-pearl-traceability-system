@@ -258,10 +258,11 @@ const Finance = () => {
                 variant="outline" 
                 className="h-20 flex-col"
                 onClick={() => {
-                  setReceiptAmount("");
-                  setReceiptDescription("");
-                  const cashTab = document.querySelector('[value="cash"]');
-                  if (cashTab) (cashTab as HTMLElement).click();
+                  // Trigger the IssueReceiptModal from QuickActions
+                  const issueReceiptButton = document.querySelector('[data-action="issue-receipt"]');
+                  if (issueReceiptButton) {
+                    (issueReceiptButton as HTMLElement).click();
+                  }
                 }}
               >
                 <Receipt className="h-6 w-6 mb-2" />

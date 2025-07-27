@@ -6,6 +6,7 @@ import DashboardStats from '@/components/DashboardStats';
 import QuickActions from '@/components/QuickActions';
 import RecentActivity from '@/components/RecentActivity';
 import PerformanceOverview from '@/components/PerformanceOverview';
+import ApprovalRequests from '@/components/ApprovalRequests';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 
 const Index = () => {
@@ -45,6 +46,9 @@ const Index = () => {
           <RecentActivity />
           <PerformanceOverview />
         </div>
+
+        {/* Approval Requests Section */}
+        <ApprovalRequests />
       </div>
     </Layout>
   );
