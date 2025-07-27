@@ -83,16 +83,100 @@ export const useFirebaseFinance = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const calculateRealStats = (transactionsData: FinanceTransaction[], expensesData: FinanceExpense[], advancesData: any[]) => {
+    console.log('Calculating real stats from data...');
+    
+    // Calculate monthly revenue from transactions
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthlyRevenue = transactionsData
+      .filter(t => {
+        const transactionDate = new Date(t.date);
+        return transactionDate.getMonth() === currentMonth && 
+               transactionDate.getFullYear() === currentYear &&
+               t.type === 'Income';
+      })
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    // Calculate pending payments
+    const pendingPayments = payments
+      .filter(p => p.status === 'Pending')
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    // Calculate operating costs from expenses
+    const operatingCosts = expensesData
+      .filter(e => {
+        const expenseDate = new Date(e.date);
+        return expenseDate.getMonth() === currentMonth && 
+               expenseDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    // Calculate cash on hand from transactions
+    const totalIncome = transactionsData
+      .filter(t => t.type === 'Income')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    
+    const totalExpenses = transactionsData
+      .filter(t => t.type === 'Expense')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    const cashOnHand = totalIncome - totalExpenses;
+
+    // Calculate current float from transactions
+    const currentFloat = transactionsData
+      .filter(t => t.type === 'Float')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    // Calculate total receipts
+    const totalReceipts = transactionsData
+      .filter(t => t.type === 'Receipt')
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    // Calculate total payments made
+    const totalPayments = payments
+      .filter(p => p.status === 'Paid')
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    // Calculate net cash flow
+    const netCashFlow = totalIncome - totalExpenses - totalPayments;
+
+    // Calculate total advances given
+    const totalAdvancesGiven = advancesData
+      .filter(a => a.status === 'Active')
+      .reduce((sum, a) => sum + (a.amount || 0), 0);
+
+    const calculatedStats: FinanceStats = {
+      monthlyRevenue,
+      pendingPayments,
+      operatingCosts,
+      cashOnHand,
+      currentFloat,
+      totalReceipts,
+      totalPayments,
+      netCashFlow,
+      totalAdvancesGiven
+    };
+
+    console.log('Calculated stats:', calculatedStats);
+    setStats(calculatedStats);
+  };
+
   const fetchFinanceData = async () => {
     try {
       setLoading(true);
       console.log('Fetching finance data from Firebase...');
 
+      // Initialize data arrays
+      let transactionsData: FinanceTransaction[] = [];
+      let expensesData: FinanceExpense[] = [];
+      let advancesData: any[] = [];
+
       // Fetch transactions
       try {
         const transactionsQuery = query(collection(db, 'finance_transactions'), orderBy('created_at', 'desc'));
         const transactionsSnapshot = await getDocs(transactionsQuery);
-        const transactionsData = transactionsSnapshot.docs.map(doc => ({
+        transactionsData = transactionsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as FinanceTransaction[];
@@ -107,7 +191,7 @@ export const useFirebaseFinance = () => {
       try {
         const expensesQuery = query(collection(db, 'finance_expenses'), orderBy('created_at', 'desc'));
         const expensesSnapshot = await getDocs(expensesQuery);
-        const expensesData = expensesSnapshot.docs.map(doc => ({
+        expensesData = expensesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as FinanceExpense[];
@@ -125,7 +209,7 @@ export const useFirebaseFinance = () => {
       try {
         const advancesQuery = query(collection(db, 'supplier_advances'), orderBy('created_at', 'desc'));
         const advancesSnapshot = await getDocs(advancesQuery);
-        const advancesData = advancesSnapshot.docs.map(doc => ({
+        advancesData = advancesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
@@ -135,20 +219,12 @@ export const useFirebaseFinance = () => {
         setSupplierAdvances([]);
       }
 
-      // Calculate stats (using sample data if collections are empty)
-      const sampleStats: FinanceStats = {
-        monthlyRevenue: 15750000,
-        pendingPayments: 2340000,
-        operatingCosts: 8500000,
-        cashOnHand: 5200000,
-        currentFloat: 500000,
-        totalReceipts: 12450000,
-        totalPayments: 6780000,
-        netCashFlow: 5670000,
-        totalAdvancesGiven: 0
-      };
+      // Calculate real stats from actual data after everything is fetched
+      // Use a timeout to ensure payments state is updated
+      setTimeout(() => {
+        calculateRealStats(transactionsData, expensesData, advancesData);
+      }, 100);
       
-      setStats(sampleStats);
       console.log('Finance data loaded successfully');
 
     } catch (error) {
