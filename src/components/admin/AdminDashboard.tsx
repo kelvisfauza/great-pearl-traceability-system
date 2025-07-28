@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { PlusCircle, DollarSign, Users, Settings, FileText, Shield } from 'lucide-react';
 import CashManagementModal from './CashManagementModal';
+import DeletionRequestsManager from './DeletionRequestsManager';
 
 const AdminDashboard = () => {
   const [showCashModal, setShowCashModal] = useState(false);
@@ -90,6 +91,9 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Deletion Requests Section */}
+      <DeletionRequestsManager />
 
       <CashManagementModal 
         open={showCashModal}

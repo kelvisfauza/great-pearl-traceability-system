@@ -9,6 +9,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
+import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Employee } from '@/hooks/useFirebaseEmployees';
+import DeletionRequestModal from './DeletionRequestModal';
 
 interface EmployeeListProps {
   employees: any[];
@@ -19,6 +23,9 @@ interface EmployeeListProps {
 }
 
 const EmployeeList = ({ employees, onViewEmployee, onEditEmployee, onDeleteEmployee, onPrintCredentials }: EmployeeListProps) => {
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [showDeletionModal, setShowDeletionModal] = useState(false);
+  const { hasRole } = useAuth();
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'Administrator':
@@ -111,11 +118,18 @@ const EmployeeList = ({ employees, onViewEmployee, onEditEmployee, onDeleteEmplo
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem 
-                    onClick={() => onDeleteEmployee(employee.id)}
+                    onClick={() => {
+                      if (hasRole('Administrator')) {
+                        onDeleteEmployee(employee.id);
+                      } else {
+                        setSelectedEmployee(employee);
+                        setShowDeletionModal(true);
+                      }
+                    }}
                     className="text-red-600"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
+                    {hasRole('Administrator') ? 'Delete' : 'Request Delete'}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -123,6 +137,17 @@ const EmployeeList = ({ employees, onViewEmployee, onEditEmployee, onDeleteEmplo
           </div>
         </div>
       ))}
+      
+      {selectedEmployee && (
+        <DeletionRequestModal
+          open={showDeletionModal}
+          onClose={() => {
+            setShowDeletionModal(false);
+            setSelectedEmployee(null);
+          }}
+          employee={selectedEmployee}
+        />
+      )}
     </div>
   );
 };

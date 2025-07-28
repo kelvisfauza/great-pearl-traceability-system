@@ -464,11 +464,25 @@ export const useFirebaseFinance = () => {
         updated_at: new Date().toISOString()
       });
       
+      // Immediately update local state for instant feedback
+      const newTransaction = {
+        id: 'temp-' + Date.now(),
+        ...transaction,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      setTransactions(prev => [...prev, newTransaction]);
+      
+      // Recalculate stats immediately
+      const currentTransactions = [...transactions, newTransaction];
+      calculateRealStats(currentTransactions, expenses, supplierAdvances);
+      
       toast({
         title: "Success",
         description: "Transaction recorded successfully",
       });
       
+      // Fetch fresh data from Firebase
       await fetchFinanceData();
     } catch (error) {
       console.error('Error adding transaction:', error);

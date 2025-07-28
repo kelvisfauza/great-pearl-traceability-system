@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { TrendingUp, Users, DollarSign, Target, Plus, Search, Eye, Edit, Send } from "lucide-react";
 import { useState } from "react";
 import { useSalesMarketing } from "@/hooks/useSalesMarketing";
+import SalesForm from "@/components/sales/SalesForm";
 
 const SalesMarketing = () => {
   const {
@@ -147,13 +148,18 @@ const SalesMarketing = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="customers" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="sales-form" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="sales-form">Sales Form</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="contracts">Contracts</TabsTrigger>
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="sales-form" className="space-y-4">
+            <SalesForm />
+          </TabsContent>
 
           <TabsContent value="customers" className="space-y-4">
             <Card>
