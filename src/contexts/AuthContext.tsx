@@ -418,28 +418,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log('Auth state changed:', user ? user.uid : 'No user');
+    console.log('Setting up auth state listener...');
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('=== AUTH STATE CHANGED ===');
+      console.log('User:', user ? user.uid : 'No user');
+      console.log('User email:', user ? user.email : 'No email');
+      
       setUser(user);
-      setLoading(false);
+      
       if (!user) {
+        console.log('No user - clearing employee and stopping loading');
         setEmployee(null);
+        setLoading(false);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      } else {
+        console.log('User found - fetching employee data');
+        try {
+          const employeeData = await fetchEmployeeData(user.uid, user.email);
+          console.log('Employee data from auth state change:', employeeData);
+          setEmployee(employeeData);
+        } catch (error) {
+          console.error('Error fetching employee data in auth state change:', error);
+        } finally {
+          setLoading(false);
+        }
       }
     });
 
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (user && !loading) {
-      const loadEmployeeData = async () => {
-        const employeeData = await fetchEmployeeData(user.uid);
-        setEmployee(employeeData);
-      };
-      loadEmployeeData();
-    }
-  }, [user, loading]);
+  // Remove this duplicate effect since we're now handling employee data in the auth state change
 
   const value = {
     user,
