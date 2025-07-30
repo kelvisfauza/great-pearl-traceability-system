@@ -17,6 +17,7 @@ import DailyReportsCard from "@/components/finance/DailyReportsCard";
 import CashManagementCard from "@/components/finance/CashManagementCard";
 import ExpensesCard from "@/components/finance/ExpensesCard";
 import SupplierAdvanceModal from "@/components/finance/SupplierAdvanceModal";
+import ModificationRequestsManager from "@/components/finance/ModificationRequestsManager";
 
 const Finance = () => {
   const {
@@ -180,6 +181,9 @@ const Finance = () => {
       subtitle="Comprehensive financial management and reporting"
     >
       <div className="space-y-8">
+        {/* Modification Requests - High Priority */}
+        <ModificationRequestsManager />
+        
         {/* Key Metrics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">

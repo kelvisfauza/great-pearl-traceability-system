@@ -94,8 +94,8 @@ export const useApprovalRequests = () => {
       await trackWorkflowStep({
         paymentId: request.details?.paymentId || id,
         qualityAssessmentId: request.details?.qualityAssessmentId,
-        fromDepartment: 'Finance',
-        toDepartment: 'Operations',
+        fromDepartment: 'Admin',
+        toDepartment: status === 'Approved' ? 'Operations' : 'Finance',
         action: status === 'Approved' ? 'approved' : 'rejected',
         reason: rejectionReason,
         comments: rejectionComments,
@@ -132,20 +132,35 @@ export const useApprovalRequests = () => {
         });
       }
 
-      // If rejected, update payment record status
+      // If rejected, create modification request to route back to Finance for further action
       if (status === 'Rejected' && request.details?.paymentId) {
-        console.log('Updating payment record status for rejected request...');
+        console.log('Creating modification request for rejected approval...');
         
         try {
+          // Create modification request to route to Finance department
+          await addDoc(collection(db, 'modification_requests'), {
+            originalPaymentId: request.details.paymentId,
+            qualityAssessmentId: request.details.qualityAssessmentId,
+            batchNumber: request.details.batchNumber,
+            requestedBy: 'Operations Manager',
+            requestedByDepartment: 'Admin',
+            targetDepartment: 'Finance',
+            reason: rejectionReason || 'payment_rejected',
+            comments: rejectionComments || 'Payment approval was rejected by admin. Finance should review and determine next steps.',
+            status: 'pending',
+            createdAt: new Date().toISOString()
+          });
+          
+          // Update payment record status to indicate it needs review
           await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
-            status: 'Rejected',
+            status: 'needs_review',
             updated_at: new Date().toISOString(),
             rejection_reason: rejectionReason,
             rejection_comments: rejectionComments
           });
-          console.log('Payment record updated to Rejected in Firebase');
+          console.log('Modification request created and payment record updated');
         } catch (error) {
-          console.error('Error updating payment record:', error);
+          console.error('Error creating modification request:', error);
         }
       }
 
