@@ -42,6 +42,7 @@ export const useWorkflowTracking = () => {
   const fetchWorkflowData = async () => {
     try {
       setLoading(true);
+      console.log('=== FETCHING WORKFLOW DATA ===');
       
       // Fetch workflow steps
       const workflowQuery = query(
@@ -55,6 +56,7 @@ export const useWorkflowTracking = () => {
       })) as WorkflowStep[];
       
       // Fetch modification requests
+      console.log('Fetching modification_requests collection...');
       const modificationQuery = query(
         collection(db, 'modification_requests'),
         orderBy('createdAt', 'desc')
@@ -65,13 +67,23 @@ export const useWorkflowTracking = () => {
         ...doc.data()
       })) as ModificationRequest[];
       
-      console.log('Fetched workflow steps:', steps);
-      console.log('Fetched modification requests:', requests);
+      console.log('=== WORKFLOW DATA FETCHED ===');
+      console.log('Workflow steps count:', steps.length);
+      console.log('Workflow steps:', steps);
+      console.log('Modification requests count:', requests.length);
+      console.log('Modification requests:', requests);
+      
+      // Debug specific filtering
+      const qualityRequests = requests.filter(
+        request => request.targetDepartment === 'Quality' && request.status === 'pending'
+      );
+      console.log('Quality department pending requests:', qualityRequests);
       
       setWorkflowSteps(steps);
       setModificationRequests(requests);
     } catch (error) {
-      console.error('Error fetching workflow data:', error);
+      console.error('=== ERROR FETCHING WORKFLOW DATA ===');
+      console.error('Error details:', error);
       toast({
         title: "Error",
         description: "Failed to fetch workflow data",
