@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useWorkflowTracking } from '@/hooks/useWorkflowTracking';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { 
   AlertTriangle, 
   CheckCircle2, 
@@ -26,6 +29,7 @@ const ModificationRequestsManager = () => {
   } = useWorkflowTracking();
   
   const { toast } = useToast();
+  const { employee } = useAuth();
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [modificationModalOpen, setModificationModalOpen] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -35,20 +39,53 @@ const ModificationRequestsManager = () => {
     request => request.targetDepartment === 'Finance' && request.status === 'pending'
   );
 
-  const handleCompleteRequest = async (requestId: string) => {
-    setProcessingId(requestId);
+  const handleCompleteAndSubmitToManager = async (request: any) => {
+    setProcessingId(request.id);
     try {
-      await completeModificationRequest(requestId);
-      toast({
-        title: "Request Completed",
-        description: "Modification request has been marked as completed"
+      // Complete the modification request
+      await updateDoc(doc(db, 'modification_requests', request.id), {
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        completedBy: employee?.name || 'Finance'
       });
+
+      // Create a new approval request for the manager
+      const approvalRequestData = {
+        department: 'Finance',
+        type: 'Modification Request Approval',
+        title: `Modification Request - ${request.batchNumber || 'Payment'} Ready for Approval`,
+        description: `Modification request has been processed by Finance department. Original reason: ${request.reason}. Ready for manager approval and payment processing.`,
+        amount: 'Amount to be determined',
+        requestedby: employee?.name || 'Finance',
+        daterequested: new Date().toISOString().split('T')[0],
+        priority: 'Medium',
+        status: 'Pending',
+        details: {
+          paymentId: request.originalPaymentId,
+          qualityAssessmentId: request.qualityAssessmentId,
+          batchNumber: request.batchNumber,
+          originalModificationId: request.id,
+          modificationReason: request.reason,
+          financeNotes: 'Modification processed by Finance, ready for approval'
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      await addDoc(collection(db, 'approval_requests'), approvalRequestData);
+
+      toast({
+        title: "Request Submitted to Manager",
+        description: "Modification has been completed and submitted to manager for approval",
+      });
+
+      refetchWorkflow();
     } catch (error) {
-      console.error('Error completing request:', error);
+      console.error('Error completing and submitting request:', error);
       toast({
         title: "Error",
-        description: "Failed to complete modification request",
-        variant: "destructive"
+        description: "Failed to submit request to manager",
+        variant: "destructive",
       });
     } finally {
       setProcessingId(null);
@@ -226,11 +263,11 @@ const ModificationRequestsManager = () => {
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => handleCompleteRequest(request.id)}
+                          onClick={() => handleCompleteAndSubmitToManager(request)}
                           disabled={processingId === request.id}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-1" />
-                          Complete
+                          Complete & Submit to Manager
                         </Button>
                         {processingId === request.id && (
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
