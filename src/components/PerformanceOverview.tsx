@@ -44,32 +44,34 @@ const PerformanceOverview = () => {
   const processingEfficiency = coffeeData.total > 0 ? Math.round((coffeeData.processed / coffeeData.total) * 100) : 87;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <BarChart3 className="h-5 w-5 mr-2 text-green-600" />
+    <Card className="bg-gradient-to-br from-card to-card/80 backdrop-blur-sm border-border/50">
+      <CardHeader className="pb-6">
+        <CardTitle className="flex items-center text-xl">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary/70 to-primary/50 text-primary-foreground mr-3">
+            <BarChart3 className="h-5 w-5" />
+          </div>
           Performance Overview
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-base">
           Real-time performance indicators based on system data
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">{qualityData.avgScore.toFixed(1)}%</div>
-            <div className="text-sm text-gray-600">Quality Score</div>
-            <div className="text-xs text-gray-500 mt-1">{qualityData.assessments} assessments</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center p-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/20 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 group">
+            <div className="text-3xl font-bold text-primary group-hover:scale-110 transition-transform duration-300">{qualityData.avgScore.toFixed(1)}%</div>
+            <div className="text-sm font-semibold text-foreground mt-2">Quality Score</div>
+            <div className="text-xs text-muted-foreground mt-1">{qualityData.assessments} assessments</div>
           </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">{onTimeDelivery}%</div>
-            <div className="text-sm text-gray-600">Request Approval Rate</div>
-            <div className="text-xs text-gray-500 mt-1">{approvedRequests}/{totalRequests} approved</div>
+          <div className="text-center p-6 bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-2xl border border-secondary/20 hover:shadow-lg hover:shadow-secondary/10 transition-all duration-300 group">
+            <div className="text-3xl font-bold text-secondary group-hover:scale-110 transition-transform duration-300">{onTimeDelivery}%</div>
+            <div className="text-sm font-semibold text-foreground mt-2">Request Approval Rate</div>
+            <div className="text-xs text-muted-foreground mt-1">{approvedRequests}/{totalRequests} approved</div>
           </div>
-          <div className="text-center p-4 bg-amber-50 rounded-lg">
-            <div className="text-2xl font-bold text-amber-600">{processingEfficiency}%</div>
-            <div className="text-sm text-gray-600">Processing Efficiency</div>
-            <div className="text-xs text-gray-500 mt-1">{coffeeData.processed}/{coffeeData.total} batches</div>
+          <div className="text-center p-6 bg-gradient-to-br from-accent/10 to-accent/5 rounded-2xl border border-accent/20 hover:shadow-lg hover:shadow-accent/10 transition-all duration-300 group">
+            <div className="text-3xl font-bold text-accent-foreground group-hover:scale-110 transition-transform duration-300">{processingEfficiency}%</div>
+            <div className="text-sm font-semibold text-foreground mt-2">Processing Efficiency</div>
+            <div className="text-xs text-muted-foreground mt-1">{coffeeData.processed}/{coffeeData.total} batches</div>
           </div>
         </div>
       </CardContent>

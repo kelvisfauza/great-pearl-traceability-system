@@ -95,44 +95,48 @@ const RecentActivity = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
+    <Card className="bg-gradient-to-br from-card to-card/80 backdrop-blur-sm border-border/50 h-fit">
+      <CardHeader className="pb-6">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-secondary to-secondary/80 text-secondary-foreground">
+            <Clock className="h-5 w-5" />
+          </div>
           Recent Activity
         </CardTitle>
-        <CardDescription>Latest activities you can view</CardDescription>
+        <CardDescription className="text-base">Latest activities you can view</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {recentActivities.length > 0 ? (
             recentActivities.map((activity) => (
-              <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-lg border">
-                <div className="flex-shrink-0">
-                  <activity.icon className="h-5 w-5 text-gray-500" />
+              <div key={activity.id} className="group flex items-start space-x-4 p-4 rounded-xl border border-border/50 bg-gradient-to-r from-background to-muted/20 hover:border-primary/30 hover:shadow-md transition-all duration-300">
+                <div className="flex-shrink-0 p-2 rounded-lg bg-muted/50 group-hover:bg-primary/10 transition-colors duration-300">
+                  <activity.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                    <p className="text-sm font-semibold text-foreground truncate">
                       {activity.title}
                     </p>
-                    <Badge variant={getStatusColor(activity.status)}>
+                    <Badge variant={getStatusColor(activity.status)} className="ml-2">
                       {activity.status}
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-500 truncate">
+                  <p className="text-sm text-muted-foreground truncate">
                     {activity.description}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-muted-foreground/80">
                     {activity.time}
                   </p>
                 </div>
               </div>
             ))
           ) : (
-            <div className="text-center py-6">
-              <Shield className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm text-gray-500">No activities available for your role</p>
+            <div className="text-center py-12">
+              <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+                <Shield className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <p className="text-base font-medium text-muted-foreground">No activities available for your role</p>
             </div>
           )}
         </div>

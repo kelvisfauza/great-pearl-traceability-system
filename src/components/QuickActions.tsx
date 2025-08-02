@@ -109,52 +109,52 @@ const QuickActions = () => {
   const availableActions = allActions.filter(action => action.access);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <Plus className="h-5 w-5 mr-2 text-green-600" />
+    <Card className="bg-gradient-to-br from-card to-card/80 backdrop-blur-sm border-border/50">
+      <CardHeader className="pb-6">
+        <CardTitle className="flex items-center text-xl">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground mr-3">
+            <Plus className="h-5 w-5" />
+          </div>
           Quick Actions
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-base">
           Available actions for {employee.role} in {employee.department}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {availableActions.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {availableActions.map((action, index) => (
               <Button
                 key={index}
                 variant="outline"
-                className="h-auto p-4 flex flex-col items-start space-y-3 hover:shadow-md transition-all text-left"
+                className="group h-auto p-5 flex items-center space-x-4 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 text-left border-border/50 hover:border-primary/30 bg-gradient-to-r from-background to-muted/30 hover:scale-[1.02]"
                 onClick={() => action.action ? action.action() : navigate(action.route)}
                 {...(action.dataAction && { 'data-action': action.dataAction })}
               >
-                <div className="flex items-center space-x-3 w-full">
-                  <div className={`p-2 rounded-lg ${action.color} text-white flex-shrink-0`}>
-                    <action.icon className="h-5 w-5" />
+                <div className={`p-3 rounded-xl ${action.color} text-white flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-md`}>
+                  <action.icon className="h-6 w-6" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors duration-300">
+                    {action.title}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm text-gray-900 truncate">
-                      {action.title}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                      {action.description}
-                    </div>
+                  <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    {action.description}
                   </div>
                 </div>
               </Button>
             ))}
           </div>
         ) : (
-          <div className="text-center py-6">
-            <div className="text-gray-400 mb-2">
-              <Package className="h-12 w-12 mx-auto" />
+          <div className="text-center py-12">
+            <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+              <Package className="h-12 w-12 text-muted-foreground" />
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-base font-medium text-muted-foreground mb-2">
               No quick actions available for {employee.role} role
             </p>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-sm text-muted-foreground/80">
               Contact your administrator if you need additional access
             </p>
           </div>
