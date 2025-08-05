@@ -5,7 +5,9 @@ import KeyMetrics from "@/components/reports/KeyMetrics";
 import ReportGenerator from "@/components/reports/ReportGenerator";
 import PerformanceDashboard from "@/components/reports/PerformanceDashboard";
 import RecentReports from "@/components/reports/RecentReports";
-import { BarChart3, FileText, TrendingUp, History } from "lucide-react";
+import StoreReportForm from "@/components/reports/StoreReportForm";
+import StoreReportsList from "@/components/reports/StoreReportsList";
+import { BarChart3, FileText, TrendingUp, History, Store } from "lucide-react";
 
 const Reports = () => {
   return (
@@ -19,7 +21,7 @@ const Reports = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
@@ -35,6 +37,10 @@ const Reports = () => {
             <TabsTrigger value="history" className="flex items-center gap-2">
               <History className="h-4 w-4" />
               Report History
+            </TabsTrigger>
+            <TabsTrigger value="store" className="flex items-center gap-2">
+              <Store className="h-4 w-4" />
+              Store Reports
             </TabsTrigger>
           </TabsList>
 
@@ -52,6 +58,13 @@ const Reports = () => {
 
           <TabsContent value="history" className="space-y-6">
             <RecentReports />
+          </TabsContent>
+
+          <TabsContent value="store" className="space-y-6">
+            <div className="grid gap-6">
+              <StoreReportForm />
+              <StoreReportsList />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
