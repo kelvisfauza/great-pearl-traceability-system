@@ -4,17 +4,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useStoreReports } from '@/hooks/useStoreReports';
-import { Eye, FileText, Printer, Search, Calendar } from 'lucide-react';
+import { Eye, FileText, Printer, Search, Calendar, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const StoreReportsList = () => {
-  const { reports, loading } = useStoreReports();
+  const { reports, loading, requestDeleteReport } = useStoreReports();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState({
     start: '',
     end: ''
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = 
@@ -28,6 +34,28 @@ const StoreReportsList = () => {
     
     return matchesSearch && matchesDateRange;
   });
+
+  const handleDeleteRequest = (report: any) => {
+    setSelectedReport(report);
+    setDeleteDialogOpen(true);
+    setDeleteReason('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedReport || !deleteReason.trim()) return;
+
+    setSubmitting(true);
+    try {
+      await requestDeleteReport(selectedReport.id, deleteReason);
+      setDeleteDialogOpen(false);
+      setSelectedReport(null);
+      setDeleteReason('');
+    } catch (error) {
+      console.error('Error submitting delete request:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handlePrint = (report: any) => {
     const printWindow = window.open('', '_blank');
@@ -223,6 +251,13 @@ const StoreReportsList = () => {
                           >
                             <Printer className="h-4 w-4" />
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteRequest(report)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -263,6 +298,54 @@ const StoreReportsList = () => {
           )}
         </div>
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Report Deletion</DialogTitle>
+            <DialogDescription>
+              This will send a deletion request to the admin for approval. Please provide a reason for deleting this report.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedReport && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p><strong>Report Date:</strong> {format(new Date(selectedReport.date), 'MMMM d, yyyy')}</p>
+                <p><strong>Coffee Type:</strong> {selectedReport.coffee_type}</p>
+                <p><strong>Input By:</strong> {selectedReport.input_by}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Reason for deletion:</label>
+                <Textarea
+                  placeholder="Please explain why this report needs to be deleted..."
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDelete}
+              disabled={submitting || !deleteReason.trim()}
+            >
+              {submitting ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

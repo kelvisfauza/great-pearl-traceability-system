@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useApprovalSystem } from './useApprovalSystem';
 
 export interface StoreReport {
   id: string;
@@ -28,6 +29,7 @@ export const useStoreReports = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { employee } = useAuth();
+  const { createApprovalRequest } = useApprovalSystem();
 
   const fetchReports = async () => {
     try {
@@ -89,6 +91,70 @@ export const useStoreReports = () => {
     }
   };
 
+  const requestDeleteReport = async (reportId: string, reason: string) => {
+    try {
+      const reportToDelete = reports.find(r => r.id === reportId);
+      if (!reportToDelete) {
+        throw new Error('Report not found');
+      }
+
+      const success = await createApprovalRequest(
+        'Store Report Deletion',
+        `Delete Store Report - ${reportToDelete.date}`,
+        `Request to delete store report for ${reportToDelete.coffee_type} from ${reportToDelete.date}. Reason: ${reason}`,
+        0,
+        {
+          reportId,
+          reportDate: reportToDelete.date,
+          coffeeType: reportToDelete.coffee_type,
+          inputBy: reportToDelete.input_by,
+          deleteReason: reason,
+          action: 'delete_store_report'
+        }
+      );
+
+      if (success) {
+        toast({
+          title: "Deletion Request Submitted",
+          description: "Your request to delete the report has been sent to admin for approval"
+        });
+      }
+
+      return success;
+    } catch (error) {
+      console.error('Error requesting report deletion:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit deletion request",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const deleteStoreReport = async (reportId: string) => {
+    try {
+      await deleteDoc(doc(db, 'store_reports', reportId));
+      console.log('Store report deleted:', reportId);
+      
+      toast({
+        title: "Success",
+        description: "Store report deleted successfully"
+      });
+      
+      await fetchReports();
+      return true;
+    } catch (error) {
+      console.error('Error deleting store report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete store report",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchReports();
   }, []);
@@ -97,6 +163,8 @@ export const useStoreReports = () => {
     reports,
     loading,
     addStoreReport,
+    requestDeleteReport,
+    deleteStoreReport,
     refetch: fetchReports
   };
 };
