@@ -7,9 +7,11 @@ import CashManagementModal from './CashManagementModal';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import ApprovalRequests from '@/components/ApprovalRequests';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
+import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 
 const AdminDashboard = () => {
   const [showCashModal, setShowCashModal] = useState(false);
+  const roleData = useRoleBasedData();
 
   return (
     <div className="space-y-6">
@@ -97,14 +99,16 @@ const AdminDashboard = () => {
         <EUDRSummaryCard />
       </div>
 
-      {/* Approval Requests Section */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-foreground">Pending Approval Requests</h3>
-        <ApprovalRequests />
-      </div>
+      {/* Approval Requests Section - Admin Only */}
+      {roleData?.isAdmin && (
+        <div className="space-y-4">
+          <h3 className="text-xl font-semibold text-foreground">Pending Approval Requests</h3>
+          <ApprovalRequests />
+        </div>
+      )}
 
-      {/* Deletion Requests Section */}
-      <DeletionRequestsManager />
+      {/* Deletion Requests Section - Admin Only */}
+      {roleData?.isAdmin && <DeletionRequestsManager />}
 
       <CashManagementModal 
         open={showCashModal}
