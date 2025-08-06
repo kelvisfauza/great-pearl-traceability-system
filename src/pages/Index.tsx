@@ -8,6 +8,7 @@ import RecentActivity from '@/components/RecentActivity';
 import PerformanceOverview from '@/components/PerformanceOverview';
 import ApprovalRequests from '@/components/ApprovalRequests';
 import AdminDashboard from '@/components/admin/AdminDashboard';
+import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 
 const Index = () => {
   const { employee } = useAuth();
@@ -75,7 +76,7 @@ const Index = () => {
           </div>
 
           {/* Performance & Approvals */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             <div className="space-y-6">
               <div className="flex items-center gap-3">
                 <div className="h-6 w-1 bg-gradient-to-b from-primary/70 to-primary/30 rounded-full"></div>
@@ -91,6 +92,17 @@ const Index = () => {
               </div>
               <ApprovalRequests />
             </div>
+
+            {/* EUDR Compliance Section */}
+            {(employee.department === 'Store' || employee.role === 'Administrator') && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-6 w-1 bg-gradient-to-b from-green-500/70 to-green-500/30 rounded-full"></div>
+                  <h3 className="text-xl font-semibold text-foreground">EUDR Compliance</h3>
+                </div>
+                <EUDRSummaryCard />
+              </div>
+            )}
           </div>
         </div>
       </div>

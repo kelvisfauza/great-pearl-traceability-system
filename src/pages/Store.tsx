@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText } from "lucide-react";
 import { useStoreManagement } from "@/hooks/useStoreManagement";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import PriceTicker from "@/components/PriceTicker";
 import PricingGuidance from "@/components/PricingGuidance";
+import EUDRDocumentation from "@/components/store/EUDRDocumentation";
 
 const Store = () => {
   const [searchParams] = useSearchParams();
@@ -102,7 +103,7 @@ const Store = () => {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['suppliers', 'records', 'operations', 'pricing'].includes(tab)) {
+    if (tab && ['suppliers', 'records', 'operations', 'pricing', 'eudr'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -356,7 +357,7 @@ const Store = () => {
         <PriceTicker />
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="suppliers">
               <Users className="h-4 w-4 mr-2" />
               Supplier Management
@@ -372,6 +373,10 @@ const Store = () => {
             <TabsTrigger value="operations">
               <Scale className="h-4 w-4 mr-2" />
               Operations
+            </TabsTrigger>
+            <TabsTrigger value="eudr">
+              <FileText className="h-4 w-4 mr-2" />
+              EUDR Documentation
             </TabsTrigger>
           </TabsList>
 
@@ -1049,6 +1054,10 @@ const Store = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="eudr" className="space-y-6">
+            <EUDRDocumentation />
           </TabsContent>
         </Tabs>
       </div>

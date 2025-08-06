@@ -6,6 +6,7 @@ import { PlusCircle, DollarSign, Users, Settings, FileText, Shield } from 'lucid
 import CashManagementModal from './CashManagementModal';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import ApprovalRequests from '@/components/ApprovalRequests';
+import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 
 const AdminDashboard = () => {
   const [showCashModal, setShowCashModal] = useState(false);
@@ -91,6 +92,9 @@ const AdminDashboard = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {/* EUDR Summary */}
+        <EUDRSummaryCard />
       </div>
 
       {/* Approval Requests Section */}
