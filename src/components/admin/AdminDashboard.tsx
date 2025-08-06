@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, DollarSign, Users, Settings, FileText, Shield } from 'lucide-react';
 import CashManagementModal from './CashManagementModal';
 import DeletionRequestsManager from './DeletionRequestsManager';
+import ApprovalRequests from '@/components/ApprovalRequests';
 
 const AdminDashboard = () => {
   const [showCashModal, setShowCashModal] = useState(false);
@@ -90,6 +91,12 @@ const AdminDashboard = () => {
             </Button>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Approval Requests Section */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold text-foreground">Pending Approval Requests</h3>
+        <ApprovalRequests />
       </div>
 
       {/* Deletion Requests Section */}
