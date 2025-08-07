@@ -9,6 +9,7 @@ import PerformanceOverview from '@/components/PerformanceOverview';
 import ApprovalRequests from '@/components/ApprovalRequests';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
+import DynamicHeader from '@/components/DynamicHeader';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 
 const Index = () => {
@@ -21,91 +22,141 @@ const Index = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/20 space-y-8">
-        {/* Hero Header */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-3xl p-8 border border-border/50 backdrop-blur-sm">
-          <div className="relative z-10">
-            <h1 className="text-4xl font-bold text-foreground mb-2">Dashboard</h1>
-            <p className="text-lg text-muted-foreground">Welcome back, {employee.name}</p>
-            <div className="mt-4 inline-flex items-center px-4 py-2 bg-primary/10 rounded-full border border-primary/20">
-              <span className="text-sm font-medium text-primary">{employee.role} • {employee.department}</span>
-            </div>
-          </div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-primary/20 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/10 space-y-10 p-6">
+        {/* Dynamic Header */}
+        <DynamicHeader />
 
         {/* Admin Dashboard Section */}
         {employee.role === 'Administrator' && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-8 w-1 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-              <h2 className="text-2xl font-semibold text-foreground">Admin Controls</h2>
+          <div className="space-y-8 animate-fade-in">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="p-2 rounded-xl bg-gradient-to-r from-red-500 to-pink-600 shadow-lg">
+                <div className="h-6 w-6 bg-white rounded-md"></div>
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                  Admin Controls
+                </h2>
+                <p className="text-muted-foreground">Manage system settings and user permissions</p>
+              </div>
             </div>
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6">
+            <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 backdrop-blur-sm border border-border/50 rounded-3xl p-8 shadow-xl">
               <AdminDashboard />
             </div>
           </div>
         )}
 
         {/* Main Dashboard Grid */}
-        <div className="space-y-8">
+        <div className="space-y-12">
           {/* Stats Section */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-1 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-              <h2 className="text-2xl font-semibold text-foreground">Key Metrics</h2>
+          <div className="space-y-8 animate-fade-in">
+            <div className="flex items-center gap-4">
+              <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 shadow-lg">
+                <div className="h-6 w-6 bg-white rounded-md"></div>
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                  Key Metrics
+                </h2>
+                <p className="text-muted-foreground">Real-time performance indicators</p>
+              </div>
             </div>
             <DashboardStats />
           </div>
 
           {/* Quick Actions & Activities */}
-          <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
-            <div className="xl:col-span-3 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="h-6 w-1 bg-gradient-to-b from-accent to-accent/50 rounded-full"></div>
-                <h3 className="text-xl font-semibold text-foreground">Quick Actions</h3>
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-10 animate-fade-in">
+            <div className="xl:col-span-3 space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="p-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 shadow-lg">
+                  <div className="h-5 w-5 bg-white rounded-md"></div>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                    Quick Actions
+                  </h3>
+                  <p className="text-muted-foreground text-sm">Shortcuts to common tasks</p>
+                </div>
               </div>
-              <QuickActions />
+              <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
+                <QuickActions />
+              </div>
             </div>
             
-            <div className="xl:col-span-2 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="h-6 w-1 bg-gradient-to-b from-secondary to-secondary/50 rounded-full"></div>
-                <h3 className="text-xl font-semibold text-foreground">Recent Activity</h3>
+            <div className="xl:col-span-2 space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="p-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 shadow-lg">
+                  <div className="h-5 w-5 bg-white rounded-md"></div>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                    Recent Activity
+                  </h3>
+                  <p className="text-muted-foreground text-sm">Latest system updates</p>
+                </div>
               </div>
-              <RecentActivity />
+              <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
+                <RecentActivity />
+              </div>
             </div>
           </div>
 
           {/* Performance & Approvals */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="h-6 w-1 bg-gradient-to-b from-primary/70 to-primary/30 rounded-full"></div>
-                <h3 className="text-xl font-semibold text-foreground">Performance Overview</h3>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 animate-fade-in">
+            <div className="space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="p-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 shadow-lg">
+                  <div className="h-5 w-5 bg-white rounded-md"></div>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                    Performance
+                  </h3>
+                  <p className="text-muted-foreground text-sm">System analytics</p>
+                </div>
               </div>
-              <PerformanceOverview />
+              <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
+                <PerformanceOverview />
+              </div>
             </div>
             
             {/* Approval Requests Section - Admin Only */}
             {roleData?.isAdmin && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-6 w-1 bg-gradient-to-b from-destructive/70 to-destructive/30 rounded-full"></div>
-                  <h3 className="text-xl font-semibold text-foreground">Approval Requests</h3>
+              <div className="space-y-8">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 shadow-lg">
+                    <div className="h-5 w-5 bg-white rounded-md"></div>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+                      Approvals
+                    </h3>
+                    <p className="text-muted-foreground text-sm">Pending requests</p>
+                  </div>
                 </div>
-                <ApprovalRequests />
+                <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
+                  <ApprovalRequests />
+                </div>
               </div>
             )}
 
             {/* EUDR Compliance Section */}
             {(employee.department === 'Store' || employee.role === 'Administrator') && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-6 w-1 bg-gradient-to-b from-green-500/70 to-green-500/30 rounded-full"></div>
-                  <h3 className="text-xl font-semibold text-foreground">EUDR Compliance</h3>
+              <div className="space-y-8">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg">
+                    <div className="h-5 w-5 bg-white rounded-md"></div>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                      EUDR Compliance
+                    </h3>
+                    <p className="text-muted-foreground text-sm">Documentation status</p>
+                  </div>
                 </div>
-                <EUDRSummaryCard />
+                <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
+                  <EUDRSummaryCard />
+                </div>
               </div>
             )}
           </div>
