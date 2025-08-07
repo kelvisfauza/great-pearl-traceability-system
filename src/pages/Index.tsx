@@ -9,9 +9,11 @@ import PerformanceOverview from '@/components/PerformanceOverview';
 import ApprovalRequests from '@/components/ApprovalRequests';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
+import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 
 const Index = () => {
   const { employee } = useAuth();
+  const roleData = useRoleBasedData();
 
   if (!employee) {
     return <div>Loading...</div>;
@@ -85,13 +87,16 @@ const Index = () => {
               <PerformanceOverview />
             </div>
             
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="h-6 w-1 bg-gradient-to-b from-destructive/70 to-destructive/30 rounded-full"></div>
-                <h3 className="text-xl font-semibold text-foreground">Approval Requests</h3>
+            {/* Approval Requests Section - Admin Only */}
+            {roleData?.isAdmin && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-6 w-1 bg-gradient-to-b from-destructive/70 to-destructive/30 rounded-full"></div>
+                  <h3 className="text-xl font-semibold text-foreground">Approval Requests</h3>
+                </div>
+                <ApprovalRequests />
               </div>
-              <ApprovalRequests />
-            </div>
+            )}
 
             {/* EUDR Compliance Section */}
             {(employee.department === 'Store' || employee.role === 'Administrator') && (
