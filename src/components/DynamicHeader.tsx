@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Sun, Moon, Sunrise, Sunset, Calendar } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 
 const DynamicHeader = () => {
@@ -54,9 +55,17 @@ const DynamicHeader = () => {
 
       <div className="relative z-10 space-y-6">
         {/* Main Greeting */}
-        <div className="flex items-center gap-4">
-          <div className={`p-3 rounded-full bg-gradient-to-r ${greeting.color} shadow-lg animate-fade-in`}>
-            <GreetingIcon className="h-8 w-8 text-white" />
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-full bg-gradient-to-r ${greeting.color} shadow-lg animate-fade-in`}>
+              <GreetingIcon className="h-8 w-8 text-white" />
+            </div>
+            <Avatar className="h-16 w-16 border-4 border-white shadow-lg">
+              <AvatarImage src={employee?.avatar_url} alt={employee?.name} />
+              <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-primary to-primary-foreground text-white">
+                {employee?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+              </AvatarFallback>
+            </Avatar>
           </div>
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">

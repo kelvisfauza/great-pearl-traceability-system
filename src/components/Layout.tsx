@@ -3,6 +3,7 @@ import { useState } from "react";
 import Navigation from "./Navigation";
 import MessagingPanel from "./messaging/MessagingPanel";
 import MessageButton from "./messaging/MessageButton";
+import { ThemeToggle } from "./ThemeToggle";
 import { useMessages } from "@/hooks/useMessages";
 
 interface LayoutProps {
@@ -26,9 +27,12 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
       <main className="flex-1 ml-64 min-w-0">
         <div className="p-6 max-w-full">
           {title && (
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-              {subtitle && <p className="text-gray-600 mt-1 text-sm">{subtitle}</p>}
+            <div className="mb-6 flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+                {subtitle && <p className="text-muted-foreground mt-1 text-sm">{subtitle}</p>}
+              </div>
+              <ThemeToggle />
             </div>
           )}
           <div className="w-full">
