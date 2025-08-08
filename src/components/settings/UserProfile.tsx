@@ -142,22 +142,14 @@ const UserProfile = () => {
   };
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('=== PROFILE PHOTO UPLOAD STARTED ===');
     const file = event.target.files?.[0];
     
-    console.log('Selected file:', file);
-    console.log('Employee ID:', employee?.id);
-    console.log('Firebase storage instance:', storage);
-    
     if (!file || !employee?.id) {
-      console.log('Missing file or employee ID, aborting upload');
       return;
     }
 
     // Validate file type
-    console.log('File type:', file.type);
     if (!file.type.startsWith('image/')) {
-      console.log('Invalid file type detected');
       toast({
         title: "Error",
         description: "Please select a valid image file",
@@ -167,9 +159,7 @@ const UserProfile = () => {
     }
 
     // Validate file size (5MB limit)
-    console.log('File size:', file.size, 'bytes');
     if (file.size > 5 * 1024 * 1024) {
-      console.log('File too large');
       toast({
         title: "Error",
         description: "Image size should be less than 5MB",
@@ -178,83 +168,47 @@ const UserProfile = () => {
       return;
     }
 
-    console.log('Starting upload process...');
     setIsUploadingPhoto(true);
     
     try {
-      // Create a reference to the storage location
-      const fileName = `${Date.now()}_${file.name}`;
-      const storagePath = `avatars/${employee.id}/${fileName}`;
-      console.log('Storage path:', storagePath);
+      // Create a unique filename
+      const fileExtension = file.name.split('.').pop();
+      const fileName = `avatar_${employee.id}_${Date.now()}.${fileExtension}`;
+      const storagePath = `avatars/${fileName}`;
       
+      // Create storage reference
       const storageRef = ref(storage, storagePath);
-      console.log('Storage reference created:', storageRef);
       
-      // Upload the file
-      console.log('Uploading file to Firebase Storage...');
-      console.log('File object:', file);
-      console.log('Firebase app config:', storage.app.options);
-      
+      // Upload file
       const snapshot = await uploadBytes(storageRef, file);
-      console.log('File uploaded successfully:', snapshot);
-      console.log('Upload metadata:', snapshot.metadata);
       
-      // Get the download URL
-      console.log('Getting download URL...');
+      // Get download URL
       const downloadURL = await getDownloadURL(snapshot.ref);
-      console.log('Download URL obtained:', downloadURL);
       
-      // Update the employee record with the new avatar URL
-      console.log('Updating employee record in Firestore...');
-      const updateData = {
+      // Update employee record in Firestore
+      await updateDoc(doc(db, 'employees', employee.id), {
         avatar_url: downloadURL,
         updated_at: new Date().toISOString()
-      };
-      console.log('Update data:', updateData);
-      
-      await updateDoc(doc(db, 'employees', employee.id), updateData);
-      console.log('Employee record updated successfully');
+      });
       
       // Update local state
       setFormData(prev => ({ ...prev, avatar_url: downloadURL }));
-      console.log('Local state updated');
       
-      // Refresh employee data
-      console.log('Refreshing employee data...');
+      // Refresh employee data to update context
       await fetchEmployeeData();
-      console.log('Employee data refreshed');
       
       toast({
         title: "Success",
         description: "Profile picture updated successfully"
       });
       
-      console.log('=== PROFILE PHOTO UPLOAD COMPLETED SUCCESSFULLY ===');
-      
     } catch (error: any) {
-      console.error('=== PROFILE PHOTO UPLOAD ERROR ===');
-      console.error('Error type:', error.constructor.name);
-      console.error('Error message:', error.message);
-      console.error('Error code:', error.code);
-      console.error('Error details:', error);
-      console.error('Error stack:', error.stack);
+      console.error('Profile upload error:', error);
       
       let errorMessage = "Failed to upload profile picture. Please try again.";
       
-      // Provide more specific error messages
       if (error.code === 'storage/unauthorized') {
-        errorMessage = "Unauthorized to upload files. Please contact your administrator.";
-        console.error('Firebase Storage: Unauthorized access - check storage rules');
-      } else if (error.code === 'storage/canceled') {
-        errorMessage = "Upload was canceled. Please try again.";
-      } else if (error.code === 'storage/unknown') {
-        errorMessage = "Unknown storage error occurred. Please check your internet connection.";
-      } else if (error.code === 'storage/invalid-format') {
-        errorMessage = "Invalid file format. Please select a valid image.";
-      } else if (error.code === 'storage/quota-exceeded') {
-        errorMessage = "Storage quota exceeded. Please contact your administrator.";
-      } else if (error.message.includes('network')) {
-        errorMessage = "Network error. Please check your internet connection and try again.";
+        errorMessage = "Upload not allowed. Please check Firebase Storage rules.";
       }
       
       toast({
@@ -263,8 +217,9 @@ const UserProfile = () => {
         variant: "destructive"
       });
     } finally {
-      console.log('Upload process finished, resetting loading state');
       setIsUploadingPhoto(false);
+      // Reset the input
+      event.target.value = '';
     }
   };
 
