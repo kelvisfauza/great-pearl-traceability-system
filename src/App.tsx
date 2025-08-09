@@ -24,6 +24,7 @@ import Logistics from "./pages/Logistics";
 import DataAnalyst from "./pages/DataAnalyst";
 import FieldOperations from "./pages/FieldOperations";
 import Processing from "./pages/Processing";
+import ITDepartment from "./pages/ITDepartment";
 
 const App: React.FC = () => {
   const queryClient = new QueryClient();
@@ -101,6 +102,11 @@ const App: React.FC = () => {
                 <Route path="/processing" element={
                   <ProtectedRoute requiredPermissions={["Processing"]}>
                     <Processing />
+                  </ProtectedRoute>
+                } />
+                <Route path="/it-department" element={
+                  <ProtectedRoute requiredPermissions={["IT Management"]}>
+                    <ITDepartment />
                   </ProtectedRoute>
                 } />
                 <Route path="/settings" element={

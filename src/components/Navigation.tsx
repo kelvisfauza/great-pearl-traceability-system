@@ -85,6 +85,7 @@ const Navigation = () => {
         { name: "Finance", icon: DollarSign, path: "/finance", permission: "Finance" },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
         { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },
+        { name: "IT Department", icon: Settings, path: "/it-department", permission: "IT Management" },
       ]
     },
     {

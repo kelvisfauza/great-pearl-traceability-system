@@ -28,6 +28,7 @@ import EmployeeFilters from '@/components/hr/EmployeeFilters';
 import EmptyState from '@/components/hr/EmptyState';
 import RegistrationRequestsManager from '@/components/hr/RegistrationRequestsManager';
 import PrintCredentialsDialog from '@/components/hr/PrintCredentialsDialog';
+import PaymentHistory from '@/components/hr/PaymentHistory';
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -127,9 +128,10 @@ const HumanResources = () => {
         </div>
 
         <Tabs defaultValue="employees" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="employees">Employee Management</TabsTrigger>
             <TabsTrigger value="requests">Registration Requests</TabsTrigger>
+            <TabsTrigger value="payments">Salary Payments</TabsTrigger>
           </TabsList>
 
           <TabsContent value="employees" className="space-y-6">
@@ -204,6 +206,14 @@ const HumanResources = () => {
 
           <TabsContent value="requests">
             <RegistrationRequestsManager />
+          </TabsContent>
+          
+          <TabsContent value="payments">
+            <PaymentHistory 
+              payments={[]} 
+              loading={false} 
+              onProcessPayment={() => {}} 
+            />
           </TabsContent>
         </Tabs>
 

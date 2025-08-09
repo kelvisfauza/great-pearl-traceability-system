@@ -1,36 +1,50 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  User, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Shield,
+  Building,
+  Briefcase,
+  Edit,
+  Save,
+  X,
+  Camera,
+  Lock,
+  Key
+} from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { updatePassword } from 'firebase/auth';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, auth, storage } from '@/lib/firebase';
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Calendar, Shield, Camera, Key, Upload } from "lucide-react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db, storage } from "@/lib/firebase";
-import { updatePassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+interface UserProfileProps {
+  employee: any;
+}
 
-const UserProfile = () => {
-  const { employee, fetchEmployeeData } = useAuth();
-  const { toast } = useToast();
-  
+const UserProfile = ({ employee }: UserProfileProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  
+  const { fetchEmployeeData } = useAuth();
+  const { toast } = useToast();
+
   const [formData, setFormData] = useState({
-    name: employee?.name || '',
-    phone: employee?.phone || '',
-    address: employee?.address || '',
-    emergency_contact: employee?.emergency_contact || '',
-    avatar_url: employee?.avatar_url || ''
+    name: '',
+    phone: '',
+    address: '',
+    emergency_contact: '',
+    avatar_url: ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -40,54 +54,20 @@ const UserProfile = () => {
   });
 
   const handleSaveProfile = async () => {
-    if (!employee?.id) {
-      toast({
-        title: "Error",
-        description: "Employee ID not found",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!formData.name.trim()) {
-      toast({
-        title: "Error",
-        description: "Name is required",
-        variant: "destructive"
-      });
-      return;
-    }
-
+    if (!employee) return;
     setIsSaving(true);
     try {
-      console.log('Updating employee profile:', employee.id, formData);
-      
-      const updateData = {
-        name: formData.name.trim(),
-        phone: formData.phone?.trim() || "",
-        address: formData.address?.trim() || "",
-        emergency_contact: formData.emergency_contact?.trim() || "",
-        avatar_url: formData.avatar_url || "",
+      await updateDoc(doc(db, 'employees', employee.id), {
+        ...formData,
         updated_at: new Date().toISOString()
-      };
-
-      // Update in Firebase
-      await updateDoc(doc(db, 'employees', employee.id), updateData);
-      console.log('Profile updated successfully in Firebase');
-
-      // Refresh employee data to get updated information
-      await fetchEmployeeData();
-      
-      toast({
-        title: "Success",
-        description: "Profile updated successfully"
       });
       setIsEditing(false);
+      toast({ title: "Success", description: "Profile updated successfully!" });
+      if (fetchEmployeeData) await fetchEmployeeData();
     } catch (error) {
-      console.error('Error updating profile:', error);
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: "Failed to update profile",
         variant: "destructive"
       });
     } finally {
@@ -95,11 +75,51 @@ const UserProfile = () => {
     }
   };
 
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !employee) return;
+
+    setIsUploadingPhoto(true);
+    try {
+      if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Invalid file",
+          description: "Please select an image under 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const fileName = `profile_${employee.id}_${Date.now()}.${file.name.split('.').pop()}`;
+      const storageRef = ref(storage, `profile_pictures/${fileName}`);
+      const uploadResult = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(uploadResult.ref);
+
+      await updateDoc(doc(db, 'employees', employee.id), {
+        avatar_url: downloadURL,
+        updated_at: new Date().toISOString()
+      });
+
+      setFormData(prev => ({ ...prev, avatar_url: downloadURL }));
+      toast({ title: "Success", description: "Profile picture updated!" });
+      if (fetchEmployeeData) await fetchEmployeeData();
+    } catch (error) {
+      toast({
+        title: "Upload failed", 
+        description: "Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingPhoto(false);
+      event.target.value = '';
+    }
+  };
+
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast({
         title: "Error",
-        description: "New passwords don't match",
+        description: "Passwords don't match",
         variant: "destructive"
       });
       return;
@@ -107,138 +127,31 @@ const UserProfile = () => {
 
     if (passwordData.newPassword.length < 6) {
       toast({
-        title: "Error",
-        description: "Password must be at least 6 characters long",
+        title: "Error", 
+        description: "Password must be at least 6 characters",
         variant: "destructive"
       });
       return;
     }
 
-    setIsChangingPassword(true);
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error('No authenticated user found');
+      if (auth.currentUser) {
+        await updatePassword(auth.currentUser, passwordData.newPassword);
+        setShowPasswordForm(false);
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        toast({ title: "Success", description: "Password updated successfully!" });
       }
-
-      await updatePassword(currentUser, passwordData.newPassword);
-
-      toast({
-        title: "Success",
-        description: "Password changed successfully"
-      });
-      setShowPasswordForm(false);
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
-      console.error('Error changing password:', error);
       toast({
         title: "Error",
-        description: "Failed to change password. Please try again.",
+        description: "Failed to update password",
         variant: "destructive"
       });
-    } finally {
-      setIsChangingPassword(false);
     }
   };
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    
-    if (!file || !employee?.id) {
-      return;
-    }
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Error",
-        description: "Please select a valid image file",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "Error",
-        description: "Image size should be less than 5MB",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsUploadingPhoto(true);
-    
-    try {
-      // Create a unique filename
-      const fileExtension = file.name.split('.').pop();
-      const fileName = `avatar_${employee.id}_${Date.now()}.${fileExtension}`;
-      const storagePath = `avatars/${fileName}`;
-      
-      // Create storage reference
-      const storageRef = ref(storage, storagePath);
-      
-      // Upload file
-      const snapshot = await uploadBytes(storageRef, file);
-      
-      // Get download URL
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      
-      // Update employee record in Firestore
-      await updateDoc(doc(db, 'employees', employee.id), {
-        avatar_url: downloadURL,
-        updated_at: new Date().toISOString()
-      });
-      
-      // Update local state
-      setFormData(prev => ({ ...prev, avatar_url: downloadURL }));
-      
-      // Refresh employee data to update context
-      await fetchEmployeeData();
-      
-      toast({
-        title: "Success",
-        description: "Profile picture updated successfully"
-      });
-      
-    } catch (error: any) {
-      console.error('Profile upload error:', error);
-      
-      let errorMessage = "Failed to upload profile picture. Please try again.";
-      
-      if (error.code === 'storage/unauthorized') {
-        errorMessage = "Upload not allowed. Please check Firebase Storage rules.";
-      }
-      
-      toast({
-        title: "Upload Error",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    } finally {
-      setIsUploadingPhoto(false);
-      // Reset the input
-      event.target.value = '';
-    }
-  };
-
-  const handleCancel = () => {
-    // Reset form to original values
-    setFormData({
-      name: employee?.name || '',
-      phone: employee?.phone || '',
-      address: employee?.address || '',
-      emergency_contact: employee?.emergency_contact || '',
-      avatar_url: employee?.avatar_url || ''
-    });
-    setIsEditing(false);
-  };
-
-  // Update form data when employee data changes
   useEffect(() => {
     if (employee) {
-      console.log('Setting form data from employee:', employee);
       setFormData({
         name: employee.name || '',
         phone: employee.phone || '',
@@ -279,18 +192,18 @@ const UserProfile = () => {
               </Avatar>
               <input
                 type="file"
-                id="avatar-upload"
                 accept="image/*"
                 onChange={handlePhotoUpload}
                 className="hidden"
+                id="photo-upload"
                 disabled={isUploadingPhoto}
               />
               <label
-                htmlFor="avatar-upload"
-                className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
+                htmlFor="photo-upload"
+                className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors"
               >
                 {isUploadingPhoto ? (
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Camera className="h-4 w-4" />
                 )}
@@ -298,29 +211,25 @@ const UserProfile = () => {
             </div>
             
             <div className="flex-1">
-              <h3 className="text-xl font-semibold">{employee.name}</h3>
-              <p className="text-muted-foreground mb-2">{employee.position}</p>
-              <div className="flex gap-2 mb-4">
-                <Badge variant="secondary">{employee.department}</Badge>
-                <Badge variant="outline">{employee.role}</Badge>
+              <h2 className="text-2xl font-bold text-gray-900">{employee.name}</h2>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Briefcase className="h-4 w-4" />
+                  <span>{employee.position}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Building className="h-4 w-4" />
+                  <span>{employee.department}</span>
+                </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-4 mt-2">
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <Shield className="h-3 w-3" />
+                  {employee.role}
+                </Badge>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Mail className="h-4 w-4" />
                   <span>{employee.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{employee.phone || 'Not provided'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>Joined {employee.join_date ? new Date(employee.join_date).toLocaleDateString() : 'N/A'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-muted-foreground" />
-                  <span>{employee.status || 'Active'}</span>
                 </div>
               </div>
             </div>
@@ -330,132 +239,129 @@ const UserProfile = () => {
 
       {/* Personal Information */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Personal Information</CardTitle>
-            <CardDescription>Update your personal details</CardDescription>
-          </div>
-          <Button 
-            variant={isEditing ? "outline" : "default"} 
-            onClick={() => isEditing ? handleCancel() : setIsEditing(true)}
-            disabled={isSaving}
-          >
-            {isEditing ? "Cancel" : "Edit"}
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardHeader>
+          <div className="flex items-center justify-between">
             <div>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Personal Information
+              </CardTitle>
+              <CardDescription>Update your personal details and contact information</CardDescription>
+            </div>
+            {!isEditing ? (
+              <Button onClick={() => setIsEditing(true)} variant="outline">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button onClick={handleSaveProfile} disabled={isSaving}>
+                  {isSaving ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Save Changes
+                </Button>
+                <Button onClick={() => setIsEditing(false)} variant="outline">
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 disabled={!isEditing}
               />
             </div>
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <Input
                 id="phone"
                 value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 disabled={!isEditing}
               />
             </div>
-            <div>
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="address">Address</Label>
               <Input
                 id="address"
                 value={formData.address}
-                onChange={(e) => setFormData({...formData, address: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 disabled={!isEditing}
               />
             </div>
-            <div>
-              <Label htmlFor="emergency">Emergency Contact</Label>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="emergency_contact">Emergency Contact</Label>
               <Input
-                id="emergency"
+                id="emergency_contact"
                 value={formData.emergency_contact}
-                onChange={(e) => setFormData({...formData, emergency_contact: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
                 disabled={!isEditing}
               />
             </div>
           </div>
-          
-          {isEditing && (
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleSaveProfile} disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
-              <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
-                Cancel
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Password Change */}
+      {/* Password Management */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Password</CardTitle>
-            <CardDescription>Change your account password</CardDescription>
-          </div>
-          <Button 
-            variant={showPasswordForm ? "outline" : "default"}
-            onClick={() => setShowPasswordForm(!showPasswordForm)}
-            disabled={isChangingPassword}
-          >
-            <Key className="h-4 w-4 mr-2" />
-            {showPasswordForm ? "Cancel" : "Change Password"}
-          </Button>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Lock className="h-5 w-5" />
+            Password & Security
+          </CardTitle>
+          <CardDescription>Change your password and manage security settings</CardDescription>
         </CardHeader>
-        
-        {showPasswordForm && (
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="current-password">Current Password</Label>
-              <Input
-                id="current-password"
-                type="password"
-                value={passwordData.currentPassword}
-                onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
-                disabled={isChangingPassword}
-              />
+        <CardContent>
+          {!showPasswordForm ? (
+            <Button onClick={() => setShowPasswordForm(true)} variant="outline">
+              <Key className="h-4 w-4 mr-2" />
+              Change Password
+            </Button>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleChangePassword}>
+                  <Key className="h-4 w-4 mr-2" />
+                  Update Password
+                </Button>
+                <Button onClick={() => setShowPasswordForm(false)} variant="outline">
+                  Cancel
+                </Button>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="new-password">New Password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={passwordData.newPassword}
-                onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-                disabled={isChangingPassword}
-              />
-            </div>
-            <div>
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                value={passwordData.confirmPassword}
-                onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                disabled={isChangingPassword}
-              />
-            </div>
-            
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleChangePassword} disabled={isChangingPassword}>
-                {isChangingPassword ? "Updating..." : "Update Password"}
-              </Button>
-              <Button variant="outline" onClick={() => setShowPasswordForm(false)} disabled={isChangingPassword}>
-                Cancel
-              </Button>
-            </div>
-          </CardContent>
-        )}
+          )}
+        </CardContent>
       </Card>
     </div>
   );
