@@ -28,7 +28,7 @@ import EmployeeFilters from '@/components/hr/EmployeeFilters';
 import EmptyState from '@/components/hr/EmptyState';
 import RegistrationRequestsManager from '@/components/hr/RegistrationRequestsManager';
 import PrintCredentialsDialog from '@/components/hr/PrintCredentialsDialog';
-import PaymentHistory from '@/components/hr/PaymentHistory';
+import SalaryPaymentRequestsManager from '@/components/hr/SalaryPaymentRequestsManager';
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -209,11 +209,7 @@ const HumanResources = () => {
           </TabsContent>
           
           <TabsContent value="payments">
-            <PaymentHistory 
-              payments={[]} 
-              loading={false} 
-              onProcessPayment={() => {}} 
-            />
+            <SalaryPaymentRequestsManager />
           </TabsContent>
         </Tabs>
 

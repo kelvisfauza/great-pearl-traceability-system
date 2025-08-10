@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, doc, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useWorkflowTracking } from './useWorkflowTracking';
 
@@ -22,6 +22,20 @@ export interface ApprovalRequest {
     amount?: number;
     batchNumber?: string;
     qualityAssessmentId?: string;
+    action?: string;
+    reportId?: string;
+    employee_details?: any[];
+    month?: string;
+    employee_count?: number;
+    total_amount?: number;
+    bonuses?: number;
+    deductions?: number;
+    payment_method?: string;
+    notes?: string;
+    reportDate?: string;
+    coffeeType?: string;
+    inputBy?: string;
+    deleteReason?: string;
   };
   created_at: string;
   updated_at: string;
@@ -103,33 +117,71 @@ export const useApprovalRequests = () => {
         status: 'completed'
       });
 
-      // If approved and it's a bank transfer, update the payment record
-      if (status === 'Approved' && request.type === 'Bank Transfer' && request.details?.paymentId) {
-        console.log('Updating payment record status for approved bank transfer...');
-        
-        try {
-          await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
-            status: 'Paid',
-            method: 'Bank Transfer',
-            updated_at: new Date().toISOString()
-          });
-          console.log('Payment record updated to Paid in Firebase');
-        } catch (error) {
-          console.error('Error updating payment record:', error);
+      // Handle different types of approved requests
+      if (status === 'Approved') {
+        // Handle Store Report Deletion
+        if (request.type === 'Store Report Deletion' && request.details?.action === 'delete_store_report' && request.details?.reportId) {
+          console.log('Deleting store report:', request.details.reportId);
+          try {
+            await deleteDoc(doc(db, 'store_reports', request.details.reportId));
+            console.log('Store report deleted successfully');
+          } catch (error) {
+            console.error('Error deleting store report:', error);
+          }
         }
+        
+        // Handle Salary Payment
+        else if (request.type === 'Salary Payment' && request.details?.employee_details) {
+          console.log('Creating salary payment record...');
+          try {
+            await addDoc(collection(db, 'salary_payments'), {
+              month: request.details.month,
+              employee_count: request.details.employee_count,
+              total_pay: request.details.total_amount,
+              bonuses: request.details.bonuses || 0,
+              deductions: request.details.deductions || 0,
+              payment_method: request.details.payment_method,
+              employee_details: request.details.employee_details,
+              status: 'Approved',
+              processed_by: 'Admin',
+              processed_date: new Date().toISOString(),
+              notes: request.details.notes || '',
+              created_at: new Date().toISOString()
+            });
+            console.log('Salary payment record created');
+          } catch (error) {
+            console.error('Error creating salary payment record:', error);
+          }
+        }
+        
+        // Handle Bank Transfer
+        else if (request.type === 'Bank Transfer' && request.details?.paymentId) {
+          console.log('Updating payment record status for approved bank transfer...');
+          
+          try {
+            await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
+              status: 'Paid',
+              method: 'Bank Transfer',
+              updated_at: new Date().toISOString()
+            });
+            console.log('Payment record updated to Paid in Firebase');
+          } catch (error) {
+            console.error('Error updating payment record:', error);
+          }
 
-        // Record daily task
-        await addDoc(collection(db, 'daily_tasks'), {
-          task_type: 'Payment Approved',
-          description: `Bank transfer approved: ${request.details?.supplier} - UGX ${request.details?.amount?.toLocaleString()}`,
-          amount: request.details?.amount,
-          batch_number: request.details?.batchNumber,
-          completed_by: 'Operations Manager',
-          completed_at: new Date().toISOString(),
-          date: new Date().toISOString().split('T')[0],
-          department: 'Finance',
-          created_at: new Date().toISOString()
-        });
+          // Record daily task
+          await addDoc(collection(db, 'daily_tasks'), {
+            task_type: 'Payment Approved',
+            description: `Bank transfer approved: ${request.details?.supplier} - UGX ${request.details?.amount?.toLocaleString()}`,
+            amount: request.details?.amount,
+            batch_number: request.details?.batchNumber,
+            completed_by: 'Operations Manager',
+            completed_at: new Date().toISOString(),
+            date: new Date().toISOString().split('T')[0],
+            department: 'Finance',
+            created_at: new Date().toISOString()
+          });
+        }
       }
 
       // If rejected, create modification request to route back to Finance for further action

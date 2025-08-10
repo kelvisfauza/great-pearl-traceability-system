@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -19,26 +20,26 @@ export const useApprovalSystem = () => {
     try {
       setLoading(true);
       
-      const { error } = await supabase
-        .from('approval_requests')
-        .insert({
-          type,
-          title,
-          description,
-          amount: amount.toString(),
-          department: 'Finance',
-          requestedby: employee?.name || 'Unknown',
-          daterequested: new Date().toLocaleDateString(),
-          priority: 'High',
-          status: 'Pending',
-          details
-        });
+      const requestDoc = {
+        type,
+        title,
+        description,
+        amount: amount.toString(),
+        department: details.department || 'Finance',
+        requestedby: employee?.name || 'Unknown',
+        daterequested: new Date().toLocaleDateString(),
+        priority: details.priority || 'High',
+        status: 'Pending',
+        details,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-      if (error) throw error;
+      await addDoc(collection(db, 'approval_requests'), requestDoc);
 
       toast({
         title: "Approval Request Created",
-        description: "Bank transfer has been submitted for manager approval"
+        description: "Request has been submitted for admin approval"
       });
 
       return true;
