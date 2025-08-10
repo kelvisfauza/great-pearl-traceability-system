@@ -13,7 +13,7 @@ import ContractGenerator from '@/components/settings/ContractGenerator';
 import { useState } from 'react';
 
 const Settings = () => {
-  const { canManageEmployees, isAdmin } = useAuth();
+  const { canManageEmployees, isAdmin, employee } = useAuth();
   const { employees, addEmployee, updateEmployee, deleteEmployee } = useFirebaseEmployees();
   const [showPaymentSlipModal, setShowPaymentSlipModal] = useState(false);
   const [showContractModal, setShowContractModal] = useState(false);
@@ -54,7 +54,7 @@ const Settings = () => {
           </TabsList>
 
           <TabsContent value="profile" className="space-y-6">
-            <UserProfile />
+            <UserProfile employee={employee} />
           </TabsContent>
 
           {canManageEmployees() && (
