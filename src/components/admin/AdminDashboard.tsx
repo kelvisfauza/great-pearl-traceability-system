@@ -2,11 +2,12 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, DollarSign, Users, Settings, FileText, Shield } from 'lucide-react';
+import { PlusCircle, DollarSign, Users, Settings, FileText, Shield, UserPlus } from 'lucide-react';
 import CashManagementModal from './CashManagementModal';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import ApprovalRequests from '@/components/ApprovalRequests';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
+import RoleAssignmentManager from './RoleAssignmentManager';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 
 const AdminDashboard = () => {
@@ -95,6 +96,25 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Role Assignment */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Role Assignment
+            </CardTitle>
+            <CardDescription>
+              Assign approval powers to other users
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="w-full">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Manage Roles
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* EUDR Summary */}
         <EUDRSummaryCard />
       </div>
@@ -109,6 +129,9 @@ const AdminDashboard = () => {
 
       {/* Deletion Requests Section - Admin Only */}
       {roleData?.isAdmin && <DeletionRequestsManager />}
+
+      {/* Role Assignment Section - Admin Only */}
+      {roleData?.isAdmin && <RoleAssignmentManager />}
 
       <CashManagementModal 
         open={showCashModal}

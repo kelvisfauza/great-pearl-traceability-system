@@ -10,6 +10,7 @@ import ApprovalRequests from '@/components/ApprovalRequests';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import DynamicHeader from '@/components/DynamicHeader';
+import AssignedRoleNotification from '@/components/AssignedRoleNotification';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 
 const Index = () => {
@@ -25,6 +26,9 @@ const Index = () => {
       <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/10 space-y-10 p-6">
         {/* Dynamic Header */}
         <DynamicHeader />
+
+        {/* Assigned Role Notification */}
+        <AssignedRoleNotification />
 
         {/* Admin Dashboard Section */}
         {employee.role === 'Administrator' && (
@@ -120,8 +124,8 @@ const Index = () => {
               </div>
             </div>
             
-            {/* Approval Requests Section - Admin Only */}
-            {roleData?.isAdmin && (
+            {/* Approval Requests Section - Admin and Assigned Users */}
+            {roleData?.canApproveRequests && (
               <div className="space-y-8">
                 <div className="flex items-center gap-4">
                   <div className="p-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 shadow-lg">

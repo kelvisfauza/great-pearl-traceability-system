@@ -1,12 +1,17 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
+import { useRoleAssignment } from './useRoleAssignment';
 
 export const useRoleBasedData = () => {
   const { employee, hasPermission, hasRole, isAdmin } = useAuth();
+  const { hasAssignedRole } = useRoleAssignment();
 
   const dataFilters = useMemo(() => {
     if (!employee) return null;
+
+    const isAssignedApprover = hasAssignedRole(employee.id, 'approver');
+    const isAssignedAdminDelegate = hasAssignedRole(employee.id, 'admin_delegate');
 
     return {
       // Financial data access
@@ -35,11 +40,16 @@ export const useRoleBasedData = () => {
       userPermissions: employee.permissions || [],
       
       // Admin access
-      isAdmin: isAdmin(),
+      isAdmin: isAdmin() || isAssignedAdminDelegate,
       isManager: hasRole('Manager') || hasRole('Operations Manager'),
       isSupervisor: hasRole('Supervisor') || hasRole('Operations Manager'),
+      
+      // Assigned roles
+      isAssignedApprover,
+      isAssignedAdminDelegate,
+      canApproveRequests: isAdmin() || hasRole('Manager') || hasRole('Operations Manager') || isAssignedApprover || isAssignedAdminDelegate,
     };
-  }, [employee, hasPermission, hasRole, isAdmin]);
+  }, [employee, hasPermission, hasRole, isAdmin, hasAssignedRole]);
 
   return dataFilters;
 };
