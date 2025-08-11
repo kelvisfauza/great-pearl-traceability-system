@@ -46,15 +46,15 @@ export default function AddUserForm({ onSubmit }: AddUserFormProps) {
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      phone: "",
-      position: "",
-      department: "",
+      name: "Nicholas Scott Langz",
+      email: "nicholusscottlangz@gmail.com",
+      password: "Yedascott6730",
+      phone: "+256 700 000 000",
+      position: "Quality Controller",
+      department: "Quality Control",
       role: "User",
-      salary: 0,
-      permissions: [],
+      salary: 600000,
+      permissions: ["Quality Control", "Store Management"],
     },
   });
 
