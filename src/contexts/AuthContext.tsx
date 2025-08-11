@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import {
   User,
@@ -120,13 +121,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return null;
     }
 
+    // Normalize email consistently
+    const normalizedEmail = userEmail.toLowerCase().trim();
+    console.log('Normalized email in fetchEmployeeData:', normalizedEmail);
+
     // Check if this is the main admin account
-    if (userEmail === MAIN_ADMIN_EMAIL) {
+    if (normalizedEmail === MAIN_ADMIN_EMAIL) {
       console.log('Main admin account detected, creating admin profile');
       return {
         id: 'main-admin',
         name: 'Main Administrator',
-        email: userEmail,
+        email: normalizedEmail,
         position: 'System Administrator',
         department: 'Administration',
         salary: 0,
@@ -141,11 +146,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     try {
-      console.log('Fetching employee data for email:', userEmail);
+      console.log('Fetching employee data for normalized email:', normalizedEmail);
       console.log('Target user ID:', targetUserId);
       
       // First try to search by authUserId (for newly created users)
       if (targetUserId) {
+        console.log('Searching by authUserId:', targetUserId);
         const authUserQuery = query(collection(db, 'employees'), where('authUserId', '==', targetUserId));
         const authUserSnapshot = await getDocs(authUserQuery);
         
@@ -153,19 +159,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const docSnap = authUserSnapshot.docs[0];
           const employeeData = { id: docSnap.id, ...docSnap.data() } as Employee;
           console.log('Found employee by authUserId:', employeeData);
+          console.log('Employee email from record:', employeeData.email);
           return employeeData;
+        } else {
+          console.log('No employee found by authUserId');
         }
       }
       
       // Fallback to search by email (for existing users)
-      const normalizedEmail = userEmail.toLowerCase().trim();
+      console.log('Searching by email:', normalizedEmail);
       const employeesQuery = query(collection(db, 'employees'), where('email', '==', normalizedEmail));
       const employeeSnapshot = await getDocs(employeesQuery);
+
+      console.log('Email search query result count:', employeeSnapshot.docs.length);
 
       if (!employeeSnapshot.empty) {
         const docSnap = employeeSnapshot.docs[0];
         const employeeData = { id: docSnap.id, ...docSnap.data() } as Employee;
         console.log('Found employee by email:', employeeData);
+        console.log('Employee email from record:', employeeData.email);
         
         // Update the employee record with authUserId if it's missing
         if (!employeeData.authUserId && targetUserId) {
@@ -180,13 +192,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return employeeData;
       }
 
-      console.log('No employee record found for email:', userEmail);
+      console.log('No employee record found for email:', normalizedEmail);
+      
+      // Check if there are any employees with similar emails (debugging)
+      const allEmployeesQuery = query(collection(db, 'employees'));
+      const allEmployeesSnapshot = await getDocs(allEmployeesQuery);
+      console.log('=== ALL EMPLOYEE EMAILS IN DATABASE ===');
+      allEmployeesSnapshot.docs.forEach((doc, index) => {
+        const data = doc.data();
+        console.log(`${index + 1}. Email: "${data.email}" | ID: ${doc.id}`);
+      });
+      console.log('=== END ALL EMPLOYEE EMAILS ===');
       
       // If user exists in Firebase Auth but no employee record, create one
       if (targetUserId) {
         console.log('Creating missing employee record for authenticated user');
         const employeeData = {
-          name: userEmail.split('@')[0], // Use email prefix as name
+          name: normalizedEmail.split('@')[0], // Use email prefix as name
           email: normalizedEmail,
           phone: '',
           position: 'Staff',
@@ -237,7 +259,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       console.log('Firebase sign in successful!');
       console.log('User UID:', userCredential.user.uid);
-      console.log('User email:', userCredential.user.email);
+      console.log('User email from Firebase:', userCredential.user.email);
       console.log('Email verified:', userCredential.user.emailVerified);
       // Note: Firebase User object doesn't have disabled property in client SDK
 
