@@ -23,9 +23,9 @@ const Auth = () => {
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [showCreateAccount, setShowCreateAccount] = useState(false);
-  const [createEmail, setCreateEmail] = useState('keizyeda@gmail.com');
-  const [createPassword, setCreatePassword] = useState('Kusa2019');
-  const [createName, setCreateName] = useState('Keizyeda User');
+  const [createEmail, setCreateEmail] = useState('nicholusscottlangz@gmail.com');
+  const [createPassword, setCreatePassword] = useState('Yedascott6730');
+  const [createName, setCreateName] = useState('Nicholas Scott Langz');
   const [creating, setCreating] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -111,11 +111,11 @@ const Auth = () => {
         name: createName,
         email: normalizedEmail,
         phone: '+256 700 000 000',
-        position: 'Staff',
-        department: 'Operations',
-        salary: 500000,
-        role: 'User',
-        permissions: ['Operations', 'General Access', 'Store Management'],
+        position: 'Quality Controller',
+        department: 'Quality Control',
+        salary: 600000,
+        role: 'Quality Controller',
+        permissions: ['Quality Control', 'Store Management', 'General Access'],
         status: 'Active',
         join_date: new Date().toISOString(),
         created_at: new Date().toISOString(),
