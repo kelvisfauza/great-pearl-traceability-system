@@ -102,10 +102,11 @@ const Auth = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, createEmail, createPassword);
       console.log('Firebase Auth user created:', userCredential.user.uid);
       
-      // Create employee record
+      // Create employee record with normalized email
+      const normalizedEmail = createEmail.toLowerCase().trim();
       const employeeData = {
         name: createName,
-        email: createEmail.toLowerCase().trim(),
+        email: normalizedEmail,
         phone: '+256 700 000 000',
         position: 'Staff',
         department: 'Operations',
