@@ -222,15 +222,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      // Normalize email to match the format used during account creation
+      const normalizedEmail = email.toLowerCase().trim();
+      
       console.log('=== AUTH CONTEXT SIGNIN ===');
-      console.log('Attempting to sign in with email:', email);
+      console.log('Original email:', email);
+      console.log('Normalized email:', normalizedEmail);
       console.log('Password provided:', password ? 'Yes' : 'No');
       console.log('Password length:', password?.length || 0);
       console.log('Firebase Auth instance:', auth);
       console.log('Firebase project ID:', auth.app.options.projectId);
       
       console.log('Calling Firebase signInWithEmailAndPassword...');
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       console.log('Firebase sign in successful!');
       console.log('User UID:', userCredential.user.uid);
       console.log('User email:', userCredential.user.email);
@@ -243,11 +247,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Add a small delay to ensure user state is set
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Fetch employee data using the email and uid - pass email explicitly
-      const employeeData = await fetchEmployeeData(userCredential.user.uid, email);
+      // Fetch employee data using the email and uid - pass normalized email explicitly
+      const employeeData = await fetchEmployeeData(userCredential.user.uid, normalizedEmail);
       
       // Special handling for main admin account
-      if (email === MAIN_ADMIN_EMAIL) {
+      if (normalizedEmail === MAIN_ADMIN_EMAIL) {
         console.log('Main admin logged in successfully');
         setEmployee(employeeData);
         
@@ -270,7 +274,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Employee data undefined check:', employeeData === undefined);
       
       if (!employeeData) {
-        console.error('No employee record found for email:', email);
+        console.error('No employee record found for email:', normalizedEmail);
         console.error('User ID:', userCredential.user.uid);
         console.error('This should not happen if logs show employee was found');
         await firebaseSignOut(auth);
