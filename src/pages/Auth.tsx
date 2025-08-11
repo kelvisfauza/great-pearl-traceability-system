@@ -94,16 +94,19 @@ const Auth = () => {
     setError('');
     
     try {
+      // Normalize email BEFORE creating Firebase Auth account
+      const normalizedEmail = createEmail.toLowerCase().trim();
+      
       console.log('Creating Firebase Auth account...');
-      console.log('Email:', createEmail);
+      console.log('Original Email:', createEmail);
+      console.log('Normalized Email:', normalizedEmail);
       console.log('Password:', createPassword);
       
-      // Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(auth, createEmail, createPassword);
+      // Create Firebase Auth user with normalized email
+      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, createPassword);
       console.log('Firebase Auth user created:', userCredential.user.uid);
       
-      // Create employee record with normalized email
-      const normalizedEmail = createEmail.toLowerCase().trim();
+      // Create employee record with the same normalized email
       const employeeData = {
         name: createName,
         email: normalizedEmail,
@@ -133,8 +136,8 @@ const Auth = () => {
       
       setShowCreateAccount(false);
       
-      // Auto-fill login form
-      setEmail(createEmail);
+      // Auto-fill login form with normalized email
+      setEmail(normalizedEmail);
       setPassword(createPassword);
       
     } catch (error: any) {
