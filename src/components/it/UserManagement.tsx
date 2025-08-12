@@ -13,56 +13,16 @@ import {
   Edit,
   Trash2,
   UserCheck,
-  UserX
+  UserX,
+  Loader2
 } from 'lucide-react';
+import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
 
 const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const { employees, loading } = useFirebaseEmployees();
 
-  const users = [
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john.doe@company.com',
-      role: 'Admin',
-      department: 'IT',
-      status: 'active',
-      lastLogin: '2024-01-08 14:30',
-      permissions: ['Full Access', 'User Management', 'System Config']
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane.smith@company.com',
-      role: 'Manager',
-      department: 'Finance',
-      status: 'active',
-      lastLogin: '2024-01-08 09:15',
-      permissions: ['Finance', 'Reports', 'Employee View']
-    },
-    {
-      id: 3,
-      name: 'Mike Johnson',
-      email: 'mike.johnson@company.com',
-      role: 'User',
-      department: 'Quality Control',
-      status: 'inactive',
-      lastLogin: '2024-01-06 16:45',
-      permissions: ['Quality Control', 'Reports View']
-    },
-    {
-      id: 4,
-      name: 'Sarah Wilson',
-      email: 'sarah.wilson@company.com',
-      role: 'Supervisor',
-      department: 'Store Management',
-      status: 'active',
-      lastLogin: '2024-01-08 11:20',
-      permissions: ['Store Management', 'Inventory', 'Reports View']
-    }
-  ];
-
-  const filteredUsers = users.filter(user => 
+  const filteredUsers = employees.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.department.toLowerCase().includes(searchTerm.toLowerCase())
@@ -96,6 +56,17 @@ const UserManagement = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading users...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* User Stats */}
@@ -106,7 +77,7 @@ const UserManagement = () => {
               <Users className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold">{users.length}</p>
+                <p className="text-2xl font-bold">{employees.length}</p>
               </div>
             </div>
           </CardContent>
@@ -117,7 +88,7 @@ const UserManagement = () => {
               <UserCheck className="h-8 w-8 text-green-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Active Users</p>
-                <p className="text-2xl font-bold">{users.filter(u => u.status === 'active').length}</p>
+                <p className="text-2xl font-bold">{employees.filter(u => u.status === 'Active').length}</p>
               </div>
             </div>
           </CardContent>
@@ -128,7 +99,7 @@ const UserManagement = () => {
               <UserX className="h-8 w-8 text-red-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Inactive Users</p>
-                <p className="text-2xl font-bold">{users.filter(u => u.status === 'inactive').length}</p>
+                <p className="text-2xl font-bold">{employees.filter(u => u.status === 'Inactive').length}</p>
               </div>
             </div>
           </CardContent>
@@ -139,7 +110,7 @@ const UserManagement = () => {
               <Shield className="h-8 w-8 text-purple-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Admins</p>
-                <p className="text-2xl font-bold">{users.filter(u => u.role === 'Admin').length}</p>
+                <p className="text-2xl font-bold">{employees.filter(u => u.role === 'Administrator').length}</p>
               </div>
             </div>
           </CardContent>
@@ -204,8 +175,8 @@ const UserManagement = () => {
                       <p className="text-sm text-gray-600">{user.department}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-700">Last Login</p>
-                      <p className="text-sm text-gray-600">{user.lastLogin}</p>
+                      <p className="text-sm font-medium text-gray-700">Position</p>
+                      <p className="text-sm text-gray-600">{user.position}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-700">Permissions</p>

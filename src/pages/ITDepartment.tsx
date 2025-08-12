@@ -23,6 +23,9 @@ import {
   Lock
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
+import { useFirebaseTickets } from '@/hooks/useFirebaseTickets';
+import { useFirebaseSystemMetrics } from '@/hooks/useFirebaseSystemMetrics';
 
 // IT Components
 import SystemOverview from '@/components/it/SystemOverview';
@@ -35,6 +38,19 @@ import SystemMaintenance from '@/components/it/SystemMaintenance';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
+  const { employees } = useFirebaseEmployees();
+  const { tickets } = useFirebaseTickets();
+  const { services } = useFirebaseSystemMetrics();
+
+  // Calculate system uptime based on running services
+  const runningServices = services.filter(s => s.status === 'running');
+  const systemUptime = services.length > 0 ? ((runningServices.length / services.length) * 100).toFixed(1) : '0.0';
+  
+  // Count open tickets
+  const openTickets = tickets.filter(t => t.status === 'open' || t.status === 'in-progress').length;
+  
+  // Count active users
+  const activeUsers = employees.filter(e => e.status === 'Active').length;
 
   if (!hasPermission('IT Management')) {
     return (
@@ -74,7 +90,7 @@ const ITDepartment = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">System Uptime</p>
-                  <p className="text-xl font-bold">99.8%</p>
+                  <p className="text-xl font-bold">{systemUptime}%</p>
                 </div>
               </div>
             </CardContent>
@@ -102,7 +118,7 @@ const ITDepartment = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Open Tickets</p>
-                  <p className="text-xl font-bold">12</p>
+                  <p className="text-xl font-bold">{openTickets}</p>
                 </div>
               </div>
             </CardContent>
@@ -116,7 +132,7 @@ const ITDepartment = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Active Users</p>
-                  <p className="text-xl font-bold">247</p>
+                  <p className="text-xl font-bold">{activeUsers}</p>
                 </div>
               </div>
             </CardContent>

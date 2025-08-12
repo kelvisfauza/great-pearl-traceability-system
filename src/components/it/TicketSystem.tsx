@@ -13,62 +13,14 @@ import {
   AlertTriangle,
   CheckCircle,
   User,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
+import { useFirebaseTickets } from '@/hooks/useFirebaseTickets';
 
 const TicketSystem = () => {
   const [searchTerm, setSearchTerm] = useState('');
-
-  const tickets = [
-    {
-      id: 'IT-001',
-      title: 'Login Issues with Coffee ERP',
-      description: 'Unable to login to the system, getting authentication error',
-      submittedBy: 'Jane Smith',
-      department: 'Finance',
-      priority: 'high',
-      status: 'open',
-      created: '2024-01-08 09:30',
-      lastUpdate: '2024-01-08 14:20',
-      assignedTo: 'John Doe'
-    },
-    {
-      id: 'IT-002',
-      title: 'Printer Not Working',
-      description: 'Office printer is not responding to print commands',
-      submittedBy: 'Mike Johnson',
-      department: 'Quality Control',
-      priority: 'medium',
-      status: 'in-progress',
-      created: '2024-01-08 11:15',
-      lastUpdate: '2024-01-08 15:45',
-      assignedTo: 'Sarah Wilson'
-    },
-    {
-      id: 'IT-003',
-      title: 'Request for New Software',
-      description: 'Need access to new quality analysis software',
-      submittedBy: 'David Brown',
-      department: 'Quality Control',
-      priority: 'low',
-      status: 'resolved',
-      created: '2024-01-07 16:20',
-      lastUpdate: '2024-01-08 10:30',
-      assignedTo: 'John Doe'
-    },
-    {
-      id: 'IT-004',
-      title: 'Internet Connection Slow',
-      description: 'Very slow internet connection in the storage area',
-      submittedBy: 'Lisa Anderson',
-      department: 'Store Management',
-      priority: 'medium',
-      status: 'open',
-      created: '2024-01-08 08:45',
-      lastUpdate: '2024-01-08 12:15',
-      assignedTo: 'Sarah Wilson'
-    }
-  ];
+  const { tickets, loading, updateTicket } = useFirebaseTickets();
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
@@ -114,12 +66,23 @@ const TicketSystem = () => {
   const filteredTickets = tickets.filter(ticket => 
     ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.submittedBy.toLowerCase().includes(searchTerm.toLowerCase())
+    ticket.submitted_by.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getTicketsByStatus = (status: string) => {
     return filteredTickets.filter(ticket => ticket.status === status);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading tickets...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -261,7 +224,7 @@ const TicketSystem = () => {
             {getStatusIcon(ticket.status)}
             <div>
               <h4 className="font-medium">{ticket.title}</h4>
-              <p className="text-sm text-gray-500">#{ticket.id}</p>
+              <p className="text-sm text-gray-500">#{ticket.ticket_id}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -272,42 +235,51 @@ const TicketSystem = () => {
 
         <p className="text-sm text-gray-600 mb-3">{ticket.description}</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3 text-sm">
-          <div>
-            <p className="font-medium text-gray-700">Submitted By</p>
-            <p className="text-gray-600 flex items-center gap-1">
-              <User className="h-3 w-3" />
-              {ticket.submittedBy}
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3 text-sm">
+            <div>
+              <p className="font-medium text-gray-700">Submitted By</p>
+              <p className="text-gray-600 flex items-center gap-1">
+                <User className="h-3 w-3" />
+                {ticket.submitted_by}
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-gray-700">Department</p>
+              <p className="text-gray-600">{ticket.department}</p>
+            </div>
+            <div>
+              <p className="font-medium text-gray-700">Assigned To</p>
+              <p className="text-gray-600">{ticket.assigned_to || 'Unassigned'}</p>
+            </div>
+            <div>
+              <p className="font-medium text-gray-700">Created</p>
+              <p className="text-gray-600 flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {new Date(ticket.created_at).toLocaleDateString()}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-gray-700">Department</p>
-            <p className="text-gray-600">{ticket.department}</p>
-          </div>
-          <div>
-            <p className="font-medium text-gray-700">Assigned To</p>
-            <p className="text-gray-600">{ticket.assignedTo}</p>
-          </div>
-          <div>
-            <p className="font-medium text-gray-700">Last Update</p>
-            <p className="text-gray-600 flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {ticket.lastUpdate}
-            </p>
-          </div>
-        </div>
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" size="sm">
-            View Details
-          </Button>
-          <Button variant="outline" size="sm">
-            Update Status
-          </Button>
-          <Button variant="outline" size="sm">
-            Add Comment
-          </Button>
-        </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm">
+              View Details
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                const nextStatus = ticket.status === 'open' ? 'in-progress' : 
+                                 ticket.status === 'in-progress' ? 'resolved' : 'open';
+                updateTicket(ticket.id, { status: nextStatus });
+              }}
+            >
+              {ticket.status === 'open' ? 'Start' : 
+               ticket.status === 'in-progress' ? 'Resolve' : 'Reopen'}
+            </Button>
+            <Button variant="outline" size="sm">
+              Add Comment
+            </Button>
+          </div>
       </div>
     );
   }
