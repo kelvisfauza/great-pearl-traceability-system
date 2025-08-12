@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to get user employee record
+    function getUserEmployee() {
+      return get(/databases/$(database)/documents/employees/$(resource.id)).data;
+    }
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/employees/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/employees/$(request.auth.uid)).data.role == 'Administrator';
+    }
+    
+    // Helper function to check if user has HR permissions
+    function isHRPersonnel() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/employees/$(request.auth.uid)) &&
+             (get(/databases/$(database)/documents/employees/$(request.auth.uid)).data.permissions.hasAny(['Human Resources', 'HR Management']) ||
+              get(/databases/$(database)/documents/employees/$(request.auth.uid)).data.role in ['Administrator', 'Manager']);
+    }
+    
+    // Helper function to check if user can manage employees
+    function canManageEmployees() {
+      return isAdmin() || isHRPersonnel();
+    }
+    
+    // Helper function to check if accessing own record
+    function isOwnRecord() {
+      return isAuthenticated() && 
+             resource.data.authUserId == request.auth.uid;
+    }
+    
+    // Employees collection - SECURE ACCESS ONLY
+    match /employees/{employeeId} {
+      // Read access: Only admins, HR personnel, or user accessing their own basic info
+      allow read: if isAdmin() || 
+                     isHRPersonnel() || 
+                     (isAuthenticated() && resource.data.authUserId == request.auth.uid);
+      
+      // Create access: Only admins and HR personnel
+      allow create: if canManageEmployees() &&
+                       // Validate required fields
+                       resource.data.name is string &&
+                       resource.data.email is string &&
+                       resource.data.position is string &&
+                       resource.data.department is string &&
+                       resource.data.role is string &&
+                       // Only admins can create admin accounts
+                       (resource.data.role != 'Administrator' || isAdmin());
+      
+      // Update access: Only admins and HR personnel, or user updating their own limited fields
+      allow update: if canManageEmployees() ||
+                       (isAuthenticated() && 
+                        resource.data.authUserId == request.auth.uid &&
+                        // Users can only update limited fields on their own record
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['phone', 'address', 'emergency_contact', 'avatar_url', 'updated_at']));
+      
+      // Delete access: Only administrators
+      allow delete: if isAdmin();
+    }
+    
+    // Security audit log - Write access for system, read access for admins only
+    match /security_audit_log/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated(); // System can log events
+      allow update, delete: if false; // Audit logs should never be modified
+    }
+    
+    // Role assignments collection (if it exists)
+    match /role_assignments/{assignmentId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
