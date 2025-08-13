@@ -19,6 +19,7 @@ import ExpensesCard from "@/components/finance/ExpensesCard";
 import SupplierAdvanceModal from "@/components/finance/SupplierAdvanceModal";
 import AdvanceClearingModal from "@/components/finance/AdvanceClearingModal";
 import ModificationRequestsManager from "@/components/finance/ModificationRequestsManager";
+import CustomerBalancesCard from "@/components/finance/CustomerBalancesCard";
 
 const Finance = () => {
   const {
@@ -312,10 +313,14 @@ const Finance = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="payments" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 h-12">
+          <TabsList className="grid w-full grid-cols-8 h-12">
             <TabsTrigger value="payments" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
               Payments
+            </TabsTrigger>
+            <TabsTrigger value="balances" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Customer Balances
             </TabsTrigger>
             <TabsTrigger value="salary-requests" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
@@ -353,6 +358,10 @@ const Finance = () => {
               onModifyPayment={handlePaymentModification}
               formatCurrency={formatCurrency}
             />
+          </TabsContent>
+
+          <TabsContent value="balances">
+            <CustomerBalancesCard formatCurrency={formatCurrency} />
           </TabsContent>
 
           <TabsContent value="salary-requests">
