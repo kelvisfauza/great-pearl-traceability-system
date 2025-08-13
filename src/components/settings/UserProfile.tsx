@@ -93,72 +93,56 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         return;
       }
 
-      // Use a safer filename approach
-      const fileExtension = file.name.split('.').pop() || 'jpg';
-      const fileName = `${employee.id || 'user'}/${Date.now()}.${fileExtension}`;
+      // Convert image to base64 for direct Firebase storage
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64String = reader.result as string;
+          
+          // Store directly in Firebase employee record
+          if (employee.id && typeof employee.id === 'string') {
+            await updateDoc(doc(db, 'employees', employee.id), {
+              avatar_url: base64String,
+              updated_at: new Date().toISOString()
+            });
+            console.log('Firebase avatar update successful!');
+            
+            // Update local state with the new avatar URL
+            setFormData(prev => ({ ...prev, avatar_url: base64String }));
+            
+            // Force update the employee data
+            if (fetchEmployeeData) {
+              await fetchEmployeeData();
+            }
+            
+            toast({ title: "Success", description: "Profile picture saved successfully!" });
+          } else {
+            throw new Error('Invalid employee ID');
+          }
+        } catch (error: any) {
+          console.error('Upload error:', error);
+          toast({
+            title: "Upload failed", 
+            description: error.message || 'Please try again.',
+            variant: "destructive"
+          });
+        } finally {
+          setIsUploadingPhoto(false);
+          event.target.value = '';
+        }
+      };
       
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('profile_pictures')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true // Allow overwriting existing files
+      reader.onerror = () => {
+        toast({
+          title: "Upload failed",
+          description: "Failed to read image file",
+          variant: "destructive"
         });
-
-      if (uploadError) {
-        console.error('Supabase upload error:', uploadError);
-        throw new Error('Failed to upload image to storage');
-      }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile_pictures')
-        .getPublicUrl(fileName);
-
-      // Save to Supabase profiles table for reliable persistence
-      const { data: supabaseUser } = await supabase.auth.getUser();
-      if (supabaseUser.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            user_id: supabaseUser.user.id,
-            avatar_url: publicUrl,
-            name: employee.name,
-            phone: employee.phone,
-            address: employee.address,
-            emergency_contact: employee.emergency_contact,
-            updated_at: new Date().toISOString()
-          });
-
-        if (profileError) {
-          console.warn('Supabase profile update failed:', profileError);
-        } else {
-          console.log('Supabase profile updated successfully!');
-        }
-      }
-
-      // Try to update Firebase for backward compatibility (but don't fail if it doesn't work)
-      try {
-        if (employee.id && typeof employee.id === 'string') {
-          await updateDoc(doc(db, 'employees', employee.id), {
-            avatar_url: publicUrl,
-            updated_at: new Date().toISOString()
-          });
-          console.log('Firebase update successful!');
-        }
-      } catch (firebaseError) {
-        console.warn('Firebase update failed (continuing anyway):', firebaseError);
-      }
-
-      // Update local state with the new avatar URL
-      setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
+        setIsUploadingPhoto(false);
+        event.target.value = '';
+      };
       
-      // Force update the employee data
-      if (fetchEmployeeData) {
-        await fetchEmployeeData();
-      }
-      
-      toast({ title: "Success", description: "Profile picture saved successfully!" });
+      reader.readAsDataURL(file);
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
@@ -166,7 +150,6 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         description: error.message || 'Please try again.',
         variant: "destructive"
       });
-    } finally {
       setIsUploadingPhoto(false);
       event.target.value = '';
     }
