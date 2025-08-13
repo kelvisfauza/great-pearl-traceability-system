@@ -52,8 +52,13 @@ const Index = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative overflow-hidden">
-        {/* Sophisticated Background Elements */}
+      <div className="min-h-screen bg-red-100 relative overflow-hidden">
+        {/* VISIBLE TEST - This should make the background light red */}
+        <div className="absolute top-4 left-4 bg-blue-500 text-white p-4 rounded-lg z-50">
+          <h1 className="text-xl font-bold">🔴 TESTING - Can you see this blue box?</h1>
+        </div>
+        
+        {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-r from-blue-100/20 to-indigo-100/20 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 left-20 w-80 h-80 bg-gradient-to-r from-slate-100/30 to-gray-100/30 dark:from-slate-800/20 dark:to-gray-800/20 rounded-full blur-3xl"></div>
