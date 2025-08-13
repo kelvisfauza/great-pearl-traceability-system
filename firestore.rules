@@ -150,6 +150,25 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Backup collections - Admin/IT access
+    match /backup_stats/{docId} {
+      allow read: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow create, update: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow delete: if false;
+    }
+
+    match /backup_schedules/{docId} {
+      allow read: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow create, update: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow delete: if false;
+    }
+
+    match /backup_jobs/{docId} {
+      allow read: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow create, update: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow delete: if false;
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
