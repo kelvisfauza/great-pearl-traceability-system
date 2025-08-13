@@ -167,6 +167,9 @@ export const useNotifications = () => {
         
         // Show notifications targeted to user's department or permissions
         if (notification.targetDepartment) {
+          // Special handling for "All Departments" - show to everyone
+          if (notification.targetDepartment === 'All Departments') return true;
+          
           // Check exact department match
           if (notification.targetDepartment === employee.department) return true;
           
@@ -186,6 +189,9 @@ export const useNotifications = () => {
         
         // Show system notifications to everyone
         if (notification.type === 'system' && !notification.targetRole && !notification.targetDepartment) return true;
+        
+        // Show announcements without specific targets to everyone
+        if (notification.type === 'announcement' && !notification.targetRole && !notification.targetDepartment) return true;
         
         return false;
       });
