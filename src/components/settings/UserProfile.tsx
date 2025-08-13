@@ -55,6 +55,18 @@ const UserProfile = ({ employee }: UserProfileProps) => {
 
   const handleSaveProfile = async () => {
     if (!employee) return;
+    
+    // Check if this is the main admin with hardcoded ID
+    if (employee.id === 'main-admin') {
+      toast({
+        title: "Not Available",
+        description: "Admin profile editing is not available. Contact system administrator.",
+        variant: "destructive"
+      });
+      setIsEditing(false);
+      return;
+    }
+    
     setIsSaving(true);
     try {
       await updateDoc(doc(db, 'employees', employee.id), {
@@ -65,6 +77,7 @@ const UserProfile = ({ employee }: UserProfileProps) => {
       toast({ title: "Success", description: "Profile updated successfully!" });
       if (fetchEmployeeData) await fetchEmployeeData();
     } catch (error) {
+      console.error('Profile update error:', error);
       toast({
         title: "Error",
         description: "Failed to update profile",
@@ -98,6 +111,16 @@ const UserProfile = ({ employee }: UserProfileProps) => {
       reader.onload = async () => {
         try {
           const base64String = reader.result as string;
+          
+          // Check if this is the main admin with hardcoded ID
+          if (employee.id === 'main-admin') {
+            toast({
+              title: "Not Available",
+              description: "Admin profile picture update is not available. Contact system administrator.",
+              variant: "destructive"
+            });
+            return;
+          }
           
           // Store directly in Firebase employee record
           if (employee.id && typeof employee.id === 'string') {
