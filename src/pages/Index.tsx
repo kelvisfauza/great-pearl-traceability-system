@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardStats from '@/components/DashboardStats';
@@ -11,11 +11,14 @@ import AdminDashboard from '@/components/admin/AdminDashboard';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import DynamicHeader from '@/components/DynamicHeader';
 import AssignedRoleNotification from '@/components/AssignedRoleNotification';
+import NotificationWidget from '@/components/notifications/NotificationWidget';
+import NotificationPanel from '@/components/notifications/NotificationPanel';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 
 const Index = () => {
   const { employee } = useAuth();
   const roleData = useRoleBasedData();
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   if (!employee) {
     return <div>Loading...</div>;
@@ -144,6 +147,25 @@ const Index = () => {
               </div>
             )}
 
+            
+            {/* Notifications Section */}
+            <div className="space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="p-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 shadow-lg">
+                  <div className="h-5 w-5 bg-white rounded-md"></div>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                    Notifications
+                  </h3>
+                  <p className="text-muted-foreground text-sm">Recent alerts & updates</p>
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
+                <NotificationWidget onViewAll={() => setIsNotificationOpen(true)} />
+              </div>
+            </div>
+
             {/* EUDR Compliance Section */}
             {(employee.department === 'Store' || employee.role === 'Administrator') && (
               <div className="space-y-8">
@@ -165,6 +187,12 @@ const Index = () => {
             )}
           </div>
         </div>
+        
+        {/* Notification Panel */}
+        <NotificationPanel 
+          isOpen={isNotificationOpen}
+          onClose={() => setIsNotificationOpen(false)}
+        />
       </div>
     </Layout>
   );
