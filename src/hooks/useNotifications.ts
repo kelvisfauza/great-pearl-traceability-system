@@ -96,6 +96,7 @@ export const useNotifications = () => {
     priority: 'High' | 'Medium' | 'Low' = 'Medium'
   ) => {
     try {
+      console.log('Creating announcement:', { title, message, fromDepartment, targetDepartment, targetRole, priority });
       await addDoc(collection(db, 'notifications'), {
         type: 'announcement',
         title,
@@ -107,6 +108,7 @@ export const useNotifications = () => {
         targetDepartment,
         createdAt: new Date().toISOString()
       });
+      console.log('Announcement created successfully');
     } catch (error) {
       console.error('Error creating announcement:', error);
     }
@@ -159,40 +161,73 @@ export const useNotifications = () => {
 
       // Filter notifications based on user role and department
       const userNotifications = allNotifications.filter(notification => {
+        console.log('Filtering notification:', notification.id, 'targetDepartment:', notification.targetDepartment, 'type:', notification.type);
+        
         // Show all notifications to administrators
-        if (employee.role === 'Administrator') return true;
+        if (employee.role === 'Administrator') {
+          console.log('Showing to admin:', notification.id);
+          return true;
+        }
         
         // Show notifications targeted to user's role
-        if (notification.targetRole && notification.targetRole === employee.role) return true;
+        if (notification.targetRole && notification.targetRole === employee.role) {
+          console.log('Showing by role match:', notification.id);
+          return true;
+        }
         
         // Show notifications targeted to user's department or permissions
         if (notification.targetDepartment) {
           // Special handling for "All Departments" - show to everyone
-          if (notification.targetDepartment === 'All Departments') return true;
+          if (notification.targetDepartment === 'All Departments') {
+            console.log('Showing to all departments:', notification.id);
+            return true;
+          }
           
           // Check exact department match
-          if (notification.targetDepartment === employee.department) return true;
+          if (notification.targetDepartment === employee.department) {
+            console.log('Showing by department match:', notification.id);
+            return true;
+          }
           
           // Check if user has permissions for the target department
-          if (employee.permissions && employee.permissions.includes(notification.targetDepartment)) return true;
+          if (employee.permissions && employee.permissions.includes(notification.targetDepartment)) {
+            console.log('Showing by permission match:', notification.id);
+            return true;
+          }
           
           // Special case for Data Analysis permission mapping to Reports department
           if (notification.targetDepartment === 'Reports' && 
-              employee.permissions && employee.permissions.includes('Data Analysis')) return true;
+              employee.permissions && employee.permissions.includes('Data Analysis')) {
+            console.log('Showing by Data Analysis permission:', notification.id);
+            return true;
+          }
           
           // Special case for Data Analysis department mapping to Reports notifications
-          if (employee.department === 'Data Analysis' && notification.targetDepartment === 'Reports') return true;
+          if (employee.department === 'Data Analysis' && notification.targetDepartment === 'Reports') {
+            console.log('Showing to Data Analysis department:', notification.id);
+            return true;
+          }
         }
         
         // Show notifications from user's department (announcements from same department)
-        if (notification.department === employee.department && notification.type === 'announcement') return true;
+        if (notification.department === employee.department && notification.type === 'announcement') {
+          console.log('Showing by same department announcement:', notification.id);
+          return true;
+        }
         
         // Show system notifications to everyone
-        if (notification.type === 'system' && !notification.targetRole && !notification.targetDepartment) return true;
+        if (notification.type === 'system' && !notification.targetRole && !notification.targetDepartment) {
+          console.log('Showing system notification to everyone:', notification.id);
+          return true;
+        }
         
         // Show announcements without specific targets to everyone
-        if (notification.type === 'announcement' && !notification.targetRole && !notification.targetDepartment) return true;
+        if (notification.type === 'announcement' && !notification.targetRole && !notification.targetDepartment) {
+          console.log('Showing announcement without targets to everyone:', notification.id);
+          return true;
+        }
         
+        console.log('Filtering out notification:', notification.id);
         return false;
       });
       console.log('useNotifications - Filtered notifications:', userNotifications);
