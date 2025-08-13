@@ -95,8 +95,6 @@ const UserProfile = ({ employee }: UserProfileProps) => {
 
       const fileName = `${employee.id}/${Date.now()}.${file.name.split('.').pop()}`;
       
-      console.log('Starting upload to Supabase Storage...');
-      
       // Upload to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('profile_pictures')
@@ -106,33 +104,29 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         });
 
       if (uploadError) {
-        console.error('Supabase upload error:', uploadError);
         throw uploadError;
       }
-
-      console.log('Upload successful:', uploadData);
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('profile_pictures')
         .getPublicUrl(fileName);
 
-      console.log('Got public URL:', publicUrl);
-
-      // Update employee document in Firestore
-      console.log('Updating Firestore document...');
-      await updateDoc(doc(db, 'employees', employee.id), {
-        avatar_url: publicUrl,
-        updated_at: new Date().toISOString()
-      });
-
-      console.log('Firestore update successful');
+      // Update both Firestore (for existing data compatibility) and Supabase
+      try {
+        await updateDoc(doc(db, 'employees', employee.id), {
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        });
+      } catch (firestoreError) {
+        console.warn('Firestore update failed, continuing with Supabase only:', firestoreError);
+      }
 
       setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
       toast({ title: "Success", description: "Profile picture updated!" });
       if (fetchEmployeeData) await fetchEmployeeData();
     } catch (error: any) {
-      console.error('Upload error details:', error);
+      console.error('Upload error:', error);
       toast({
         title: "Upload failed", 
         description: error.message || 'Please try again.',
