@@ -4,11 +4,13 @@ import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export const useApprovalSystem = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { employee } = useAuth();
+  const { createApprovalNotification } = useNotifications();
 
   const createApprovalRequest = async (
     type: string,
@@ -35,7 +37,17 @@ export const useApprovalSystem = () => {
         updated_at: new Date().toISOString()
       };
 
-      await addDoc(collection(db, 'approval_requests'), requestDoc);
+      const docRef = await addDoc(collection(db, 'approval_requests'), requestDoc);
+
+      // Create notification for administrators
+      await createApprovalNotification({
+        id: docRef.id,
+        title,
+        amount: amount.toString(),
+        requestedBy: employee?.name || 'Unknown',
+        department: details.department || 'Finance',
+        priority: details.priority || 'High'
+      });
 
       toast({
         title: "Approval Request Created",
