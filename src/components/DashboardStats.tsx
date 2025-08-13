@@ -261,27 +261,27 @@ const DashboardStats = () => {
           className="group animate-scale-in"
           style={{ animationDelay: `${index * 150}ms` }}
         >
-          <Card className="relative overflow-hidden bg-gradient-to-br from-card/95 via-card to-card/90 backdrop-blur-xl border border-border/30 hover:border-primary/40 transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:shadow-primary/10 cursor-pointer">
-            {/* Animated background glow */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-accent/3 opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+          <Card className="relative overflow-hidden bg-gradient-to-br from-white/95 via-slate-50/90 to-gray-50/80 dark:from-slate-800/95 dark:via-slate-700/90 dark:to-slate-800/80 backdrop-blur-xl border border-slate-200/50 dark:border-slate-600/30 hover:border-slate-300/60 dark:hover:border-slate-500/40 transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:shadow-slate-200/20 dark:hover:shadow-slate-900/20 cursor-pointer">
+            {/* Sophisticated hover effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-100/40 via-transparent to-blue-50/30 dark:from-slate-700/40 dark:via-transparent dark:to-slate-600/30 opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
             
-            {/* Animated border effect */}
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
+            {/* Professional border glow */}
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-slate-300/30 via-blue-200/20 to-slate-300/30 dark:from-slate-600/30 dark:via-blue-800/20 dark:to-slate-600/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
             
             <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors duration-300">
+              <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors duration-300">
                 {stat.title}
               </CardTitle>
-              <div className="p-3 rounded-xl bg-gradient-to-br from-background/80 to-muted/50 border border-border/50 shadow-sm group-hover:shadow-lg group-hover:scale-110 transition-all duration-300 backdrop-blur-sm">
-                <stat.icon className={`h-5 w-5 ${stat.color} group-hover:scale-110 transition-all duration-300`} />
+              <div className="p-3 rounded-xl bg-gradient-to-br from-white/90 to-slate-100/70 dark:from-slate-700/90 dark:to-slate-600/70 border border-slate-200/50 dark:border-slate-600/50 shadow-sm group-hover:shadow-lg group-hover:scale-110 transition-all duration-300 backdrop-blur-sm">
+                <stat.icon className={`h-5 w-5 ${stat.color.replace('text-', 'text-').replace('-600', '-700')} group-hover:scale-110 transition-all duration-300`} />
               </div>
             </CardHeader>
             <CardContent className="relative z-10 space-y-4">
-              <div className="text-2xl md:text-3xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">
+              <div className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 group-hover:text-slate-900 dark:group-hover:text-white transition-colors duration-300">
                 {stat.value}
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-xs md:text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors duration-300 truncate">
+                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300 truncate">
                   {stat.change}
                 </p>
                 <Badge 

@@ -52,24 +52,18 @@ const Index = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/98 to-muted/5 relative overflow-hidden">
-        {/* Background Elements */}
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative overflow-hidden">
+        {/* Sophisticated Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 right-20 w-72 h-72 bg-gradient-to-r from-primary/5 to-accent/5 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-r from-secondary/3 to-primary/3 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-r from-blue-100/20 to-indigo-100/20 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 left-20 w-80 h-80 bg-gradient-to-r from-slate-100/30 to-gray-100/30 dark:from-slate-800/20 dark:to-gray-800/20 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-50/10 to-indigo-50/10 dark:from-blue-950/10 dark:to-indigo-950/10 rounded-full blur-3xl"></div>
         </div>
 
         <div className="relative z-10 space-y-8 md:space-y-12 p-4 md:p-8">
           {/* Dynamic Header */}
           <div className="animate-fade-in">
             <DynamicHeader />
-          </div>
-
-          {/* Premium Dashboard Badge */}
-          <div className="text-center">
-            <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <span className="text-lg font-bold">✨ Premium Dashboard - Enhanced UI ✨</span>
-            </div>
           </div>
 
           {/* Assigned Role Notification */}
@@ -82,11 +76,11 @@ const Index = () => {
             <div className="space-y-8 animate-fade-in delay-200">
               <SectionHeader 
                 icon={Settings}
-                title="Admin Controls"
-                subtitle="Manage system settings and user permissions"
-                gradient="from-red-500 to-pink-600"
+                title="Administration Center"
+                subtitle="System oversight and user management"
+                gradient="from-slate-600 to-slate-700"
               />
-              <div className="bg-gradient-to-br from-card via-card/98 to-card/95 backdrop-blur-xl border border-border/20 rounded-3xl p-6 md:p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] animate-glow">
+              <div className="bg-gradient-to-br from-white/80 via-gray-50/90 to-slate-50/80 dark:from-slate-800/80 dark:via-slate-700/90 dark:to-slate-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-slate-600/40 rounded-3xl p-6 md:p-8 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01]">
                 <AdminDashboard />
               </div>
             </div>
@@ -98,9 +92,9 @@ const Index = () => {
             <div className="space-y-8 animate-fade-in delay-300">
               <SectionHeader 
                 icon={BarChart3}
-                title="Key Metrics"
-                subtitle="Real-time performance indicators"
-                gradient="from-blue-500 to-cyan-600"
+                title="Performance Analytics"
+                subtitle="Key metrics and operational insights"
+                gradient="from-blue-600 to-blue-700"
               />
               <DashboardStats />
             </div>
@@ -110,11 +104,11 @@ const Index = () => {
               <div className="xl:col-span-3 space-y-6 md:space-y-8">
                 <SectionHeader 
                   icon={TrendingUp}
-                  title="Quick Actions"
-                  subtitle="Shortcuts to common tasks"
-                  gradient="from-emerald-500 to-teal-600"
+                  title="Quick Operations"
+                  subtitle="Streamlined workflow tools"
+                  gradient="from-emerald-600 to-teal-700"
                 />
-                <div className="bg-gradient-to-br from-card via-card/98 to-muted/5 rounded-3xl p-6 md:p-8 border border-border/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
+                <div className="bg-gradient-to-br from-white/90 via-emerald-50/50 to-teal-50/40 dark:from-slate-800/90 dark:via-emerald-950/30 dark:to-teal-950/20 rounded-3xl p-6 md:p-8 border border-emerald-200/40 dark:border-emerald-800/30 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
                   <QuickActions />
                 </div>
               </div>
@@ -122,9 +116,9 @@ const Index = () => {
               <div className="xl:col-span-2 space-y-6 md:space-y-8">
                 <SectionHeader 
                   icon={Activity}
-                  title="Recent Activity"
-                  subtitle="Latest system updates"
-                  gradient="from-purple-500 to-indigo-600"
+                  title="System Activity"
+                  subtitle="Recent operations and updates"
+                  gradient="from-indigo-600 to-purple-700"
                 />
                 <div className="animate-slide-up delay-500">
                   <RecentActivity />
