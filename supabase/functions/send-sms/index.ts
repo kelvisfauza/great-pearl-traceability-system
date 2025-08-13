@@ -46,9 +46,9 @@ serve(async (req) => {
     
     console.log('Formatted phone:', formattedPhone)
     
-    const apiKey = Deno.env.get('YEDA_SMS_API_KEY')
-    if (!apiKey) {
-      console.error('YEDA_SMS_API_KEY not configured')
+    const apiToken = Deno.env.get('YEDA_SMS_API_KEY') // This is your BulkSMS token
+    if (!apiToken) {
+      console.error('YEDA_SMS_API_KEY (BulkSMS token) not configured')
       return new Response(
         JSON.stringify({ error: 'SMS service not configured' }),
         { 
@@ -58,93 +58,60 @@ serve(async (req) => {
       )
     }
 
-    // Send SMS using the correct API endpoint
-    // Based on the token format, this appears to be for a different SMS service
+    // Send SMS using BulkSMS.com API
     try {
-      console.log('Sending SMS via SMS API...')
+      console.log('Sending SMS via BulkSMS.com API...')
       
-      // Try multiple possible endpoints for Yeda/African SMS services
-      const possibleEndpoints = [
-        'https://api.yeda.co.ug/v1/sms/send',
-        'https://sms.yeda.co.ug/api/send',
-        'https://api.africastalking.com/version1/messaging',
-        'https://api.hubtel.com/v1/messages/send'
-      ]
+      const smsResponse = await fetch('https://api.bulksms.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${btoa(apiToken + ':')}`, // BulkSMS uses Basic auth with token as username
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          to: formattedPhone,
+          body: message,
+          from: 'GreatPearl'
+        })
+      })
 
-      let smsSuccess = false
-      let lastError = null
+      console.log('BulkSMS response status:', smsResponse.status)
 
-      for (const endpoint of possibleEndpoints) {
-        try {
-          console.log(`Trying endpoint: ${endpoint}`)
-          
-          const smsResponse = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`,
-              'Accept': 'application/json',
-              'apikey': apiKey, // Some services use this header instead
-              'x-api-key': apiKey // Alternative header format
-            },
-            body: JSON.stringify({
-              to: formattedPhone,
-              message: message,
-              from: 'GreatPearl',
-              // Alternative parameter names
-              recipient: formattedPhone,
-              text: message,
-              sender: 'GreatPearl',
-              recipients: formattedPhone
-            })
-          })
+      if (smsResponse.ok) {
+        const smsResult = await smsResponse.json()
+        console.log('SMS sent successfully via BulkSMS:', smsResult)
 
-          console.log(`Response status for ${endpoint}:`, smsResponse.status)
-
-          if (smsResponse.ok) {
-            const smsResult = await smsResponse.json()
-            console.log('SMS sent successfully:', smsResult)
-            smsSuccess = true
-            
-            return new Response(
-              JSON.stringify({ 
-                success: true, 
-                message: 'SMS sent successfully',
-                phone: formattedPhone,
-                provider: 'SMS Service'
-              }),
-              { 
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-              }
-            )
-          } else {
-            const errorText = await smsResponse.text()
-            console.error(`${endpoint} error:`, errorText)
-            lastError = { endpoint, error: errorText }
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'SMS sent successfully',
+            phone: formattedPhone,
+            provider: 'BulkSMS',
+            details: smsResult
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           }
-        } catch (endpointError) {
-          console.error(`${endpoint} request failed:`, endpointError)
-          lastError = { endpoint, error: endpointError.message }
-        }
+        )
+      } else {
+        const errorText = await smsResponse.text()
+        console.error('BulkSMS error:', errorText)
+        
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to send SMS', 
+            details: errorText,
+            phone: formattedPhone 
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
       }
-
-      
-      // If all endpoints failed
-      console.error('All SMS endpoints failed:', lastError)
-      
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to send SMS via all endpoints', 
-          details: lastError,
-          phone: formattedPhone 
-        }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
     } catch (error) {
-      console.error('SMS service request failed:', error)
+      console.error('BulkSMS request failed:', error)
       
       return new Response(
         JSON.stringify({ 
