@@ -26,12 +26,15 @@ const SystemMaintenance = () => {
 
   // Maintenance action handlers
   const handleMaintenanceAction = async (actionName: string, actionType: 'success' | 'warning' | 'error' | 'info' = 'success') => {
+    console.log('🔧 Starting maintenance action:', actionName);
     setActionLoading(actionName);
     
     try {
+      console.log('⏳ Simulating maintenance action...');
       // Simulate maintenance action with delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      console.log('📝 Logging activity to database...');
       // Log the activity
       await addActivity({
         action: `${actionName} completed`,
@@ -39,17 +42,20 @@ const SystemMaintenance = () => {
         details: `Maintenance action: ${actionName} executed successfully`
       });
 
+      console.log('✅ Maintenance action completed successfully');
       toast({
         title: "Maintenance Complete",
         description: `${actionName} has been completed successfully.`,
       });
     } catch (error) {
+      console.error('❌ Maintenance action failed:', error);
       toast({
         title: "Maintenance Failed",
         description: `Failed to complete ${actionName}. Please try again.`,
         variant: "destructive"
       });
     } finally {
+      console.log('🏁 Resetting loading state');
       setActionLoading(null);
     }
   };
@@ -221,7 +227,10 @@ const SystemMaintenance = () => {
             <Button 
               variant="outline" 
               className="h-20 flex-col"
-              onClick={() => handleMaintenanceAction('Database Optimization')}
+              onClick={() => {
+                console.log('🖱️ Database Optimization button clicked');
+                handleMaintenanceAction('Database Optimization');
+              }}
               disabled={actionLoading === 'Database Optimization'}
             >
               {actionLoading === 'Database Optimization' ? (
@@ -234,7 +243,10 @@ const SystemMaintenance = () => {
             <Button 
               variant="outline" 
               className="h-20 flex-col"
-              onClick={() => handleMaintenanceAction('Clear Temporary Files')}
+              onClick={() => {
+                console.log('🖱️ Clear Temporary Files button clicked');
+                handleMaintenanceAction('Clear Temporary Files');
+              }}
               disabled={actionLoading === 'Clear Temporary Files'}
             >
               {actionLoading === 'Clear Temporary Files' ? (
