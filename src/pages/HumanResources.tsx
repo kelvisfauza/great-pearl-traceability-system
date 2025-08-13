@@ -18,7 +18,7 @@ import {
   UserCheck
 } from 'lucide-react';
 
-import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
+import { useCombinedEmployees } from '@/hooks/useCombinedEmployees';
 import { useAuth } from '@/contexts/AuthContext';
 import EmployeeList from '@/components/hr/EmployeeList';
 import EmployeeStatsCards from '@/components/hr/EmployeeStatsCards';
@@ -43,7 +43,7 @@ const HumanResources = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
 
-  const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useSupabaseEmployees();
+  const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useCombinedEmployees();
   const { canManageEmployees, isAdmin } = useAuth();
 
   const filteredEmployees = employees.filter(employee => {
