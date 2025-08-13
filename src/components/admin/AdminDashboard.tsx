@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, DollarSign, Users, Settings, FileText, Shield, UserPlus } from 'lucide-react';
@@ -13,6 +14,7 @@ import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 const AdminDashboard = () => {
   const [showCashModal, setShowCashModal] = useState(false);
   const roleData = useRoleBasedData();
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-6">
@@ -51,7 +53,11 @@ const AdminDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => navigate('/settings')}
+            >
               <Settings className="h-4 w-4 mr-2" />
               Manage Users
             </Button>
@@ -70,7 +76,11 @@ const AdminDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => navigate('/reports')}
+            >
               <FileText className="h-4 w-4 mr-2" />
               View Reports
             </Button>
@@ -89,7 +99,11 @@ const AdminDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => navigate('/it-department')}
+            >
               <Shield className="h-4 w-4 mr-2" />
               Security Settings
             </Button>
@@ -108,7 +122,11 @@ const AdminDashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => navigate('/human-resources')}
+            >
               <UserPlus className="h-4 w-4 mr-2" />
               Manage Roles
             </Button>
