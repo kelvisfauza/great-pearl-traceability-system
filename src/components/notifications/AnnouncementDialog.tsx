@@ -106,7 +106,7 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
           <Button size="sm" variant="secondary">New announcement</Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Send departmental announcement</DialogTitle>
           <DialogDescription>Target a department. Only intended recipients will see it.</DialogDescription>
