@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react'
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { db, auth } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -160,6 +161,103 @@ export const useFirebaseEmployees = () => {
     }
   }
 
+  const addEmployeeWithAuth = async (employeeData: Omit<Employee, 'id' | 'created_at' | 'updated_at'> & { password: string }) => {
+    if (!canManageEmployees()) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to add employees",
+        variant: "destructive"
+      })
+      throw new Error("Access denied")
+    }
+
+    const validationErrors = validateEmployeeData(employeeData)
+    if (validationErrors.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: validationErrors.join(', '),
+        variant: "destructive"
+      })
+      throw new Error("Validation failed")
+    }
+
+    if (!employeeData.password || employeeData.password.length < 6) {
+      toast({
+        title: "Validation Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive"
+      })
+      throw new Error("Password validation failed")
+    }
+
+    if (employeeData.role === 'Administrator' && !isAdmin()) {
+      toast({
+        title: "Access Denied",
+        description: "Only administrators can create admin accounts",
+        variant: "destructive"
+      })
+      throw new Error("Insufficient privileges")
+    }
+
+    try {
+      // Create Firebase Auth user first
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        employeeData.email.toLowerCase().trim(), 
+        employeeData.password
+      )
+
+      console.log('Firebase user created:', userCredential.user.uid)
+
+      const sanitizedData = {
+        ...employeeData,
+        name: employeeData.name.trim(),
+        email: employeeData.email.toLowerCase().trim(),
+        position: employeeData.position.trim(),
+        department: employeeData.department.trim(),
+        join_date: employeeData.join_date || new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        authUserId: userCredential.user.uid,
+        mustChangePassword: true,
+        isOneTimePassword: true
+      }
+
+      // Remove password from employee data
+      const { password, ...employeeDataWithoutPassword } = sanitizedData
+
+      const docRef = await addDoc(collection(db, 'employees'), employeeDataWithoutPassword);
+      const newEmployee = { id: docRef.id, ...employeeDataWithoutPassword };
+
+      setEmployees(prev => [newEmployee, ...prev])
+      await logSecurityEvent('employee_created', 'employees', docRef.id, null, newEmployee);
+      
+      toast({
+        title: "Success",
+        description: `Employee ${newEmployee.name} and login account created successfully`
+      })
+      return newEmployee
+    } catch (error: any) {
+      console.error('Error adding employee with auth:', error)
+      
+      let errorMessage = "Failed to create employee account"
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "An account with this email already exists"
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "Password is too weak"
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Invalid email address"
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      })
+      throw error
+    }
+  }
+
   const updateEmployee = async (id: string, updates: Partial<Employee>) => {
     if (!canManageEmployees()) {
       toast({
@@ -242,6 +340,7 @@ export const useFirebaseEmployees = () => {
     employees,
     loading,
     addEmployee,
+    addEmployeeWithAuth,
     updateEmployee,
     deleteEmployee,
     refetch: fetchEmployees

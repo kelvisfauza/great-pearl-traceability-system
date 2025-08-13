@@ -42,7 +42,7 @@ const HumanResources = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
 
-  const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useFirebaseEmployees();
+  const { employees, loading, addEmployee, addEmployeeWithAuth, updateEmployee, deleteEmployee } = useFirebaseEmployees();
   const { canManageEmployees, isAdmin } = useAuth();
 
   const filteredEmployees = employees.filter(employee => {
@@ -82,7 +82,8 @@ const HumanResources = () => {
       if (selectedEmployee) {
         await updateEmployee(selectedEmployee.id, employeeData);
       } else {
-        await addEmployee(employeeData);
+        // Use the new function that creates Firebase Auth user
+        await addEmployeeWithAuth(employeeData);
       }
       setShowAddModal(false);
       setSelectedEmployee(null);

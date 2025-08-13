@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 interface AddEmployeeModalProps {
   isOpen: boolean;
@@ -14,6 +17,7 @@ interface AddEmployeeModalProps {
 }
 
 const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmployeeModalProps) => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,7 +30,8 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmplo
     address: "",
     emergency_contact: "",
     role: "User",
-    permissions: [] as string[]
+    permissions: [] as string[],
+    password: ""
   });
 
   const departments = ["Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR"];
@@ -51,13 +56,14 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmplo
         address: employee.address || "",
         emergency_contact: employee.emergency_contact || "",
         role: employee.role || "User",
-        permissions: employee.permissions || []
+        permissions: employee.permissions || [],
+        password: "" // Never populate password field
       });
     } else {
       setFormData({
         name: "", email: "", phone: "", position: "", department: "", salary: "",
         join_date: "", employee_id: "", address: "", emergency_contact: "",
-        role: "User", permissions: []
+        role: "User", permissions: [], password: ""
       });
     }
   }, [employee]);
@@ -66,6 +72,20 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmplo
     e.preventDefault();
     
     if (!formData.name || !formData.email || !formData.department || !formData.position) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!employee && (!formData.password || formData.password.length < 6)) {
+      toast({
+        title: "Validation Error", 
+        description: "Password must be at least 6 characters long",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -76,8 +96,17 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmplo
       join_date: formData.join_date || new Date().toISOString()
     };
 
-    await onAddEmployee(employeeData);
-    onClose();
+    try {
+      await onAddEmployee(employeeData);
+      onClose();
+      setFormData({
+        name: "", email: "", phone: "", position: "", department: "", salary: "",
+        join_date: "", employee_id: "", address: "", emergency_contact: "",
+        role: "User", permissions: [], password: ""
+      });
+    } catch (error) {
+      console.error('Failed to add employee:', error);
+    }
   };
 
   const handlePermissionChange = (permission: string, checked: boolean) => {
@@ -243,6 +272,20 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmplo
               ))}
             </div>
           </div>
+
+          {!employee && (
+            <div>
+              <Label htmlFor="password">Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="Minimum 6 characters"
+                required
+              />
+            </div>
+          )}
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>

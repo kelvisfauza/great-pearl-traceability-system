@@ -216,7 +216,8 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
                             variant="ghost"
                             size="sm"
                             onClick={(e) => handleDeleteNotification(e, notification.id)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto w-auto hover:bg-red-50 hover:text-red-600"
+                            className="opacity-60 group-hover:opacity-100 transition-opacity p-1 h-auto w-auto hover:bg-red-50 hover:text-red-600 ml-1"
+                            title="Delete notification"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
