@@ -169,6 +169,23 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Network Monitoring collections - Admin/IT access
+    match /network_status/{docId} {
+      allow read: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow create, update: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow delete: if false;
+    }
+    match /network_devices/{docId} {
+      allow read: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow create, update: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow delete: if false;
+    }
+    match /network_traffic/{docId} {
+      allow read: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow create, update: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow delete: if false;
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

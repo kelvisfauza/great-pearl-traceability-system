@@ -12,55 +12,11 @@ import {
   Monitor,
   Server
 } from 'lucide-react';
+import { useNetworkMonitoring } from '@/hooks/useNetworkMonitoring';
+
 
 const NetworkMonitoring = () => {
-  const networkDevices = [
-    {
-      id: 1,
-      name: 'Main Router',
-      type: 'Router',
-      ip: '192.168.1.1',
-      status: 'online',
-      uptime: '45 days',
-      traffic: '85%'
-    },
-    {
-      id: 2,
-      name: 'Core Switch',
-      type: 'Switch',
-      ip: '192.168.1.2',
-      status: 'online',
-      uptime: '45 days',
-      traffic: '67%'
-    },
-    {
-      id: 3,
-      name: 'WiFi Access Point 1',
-      type: 'Access Point',
-      ip: '192.168.1.10',
-      status: 'online',
-      uptime: '30 days',
-      traffic: '45%'
-    },
-    {
-      id: 4,
-      name: 'WiFi Access Point 2',
-      type: 'Access Point',
-      ip: '192.168.1.11',
-      status: 'offline',
-      uptime: '0 minutes',
-      traffic: '0%'
-    }
-  ];
-
-  const trafficData = [
-    { time: '00:00', inbound: 45, outbound: 32 },
-    { time: '04:00', inbound: 23, outbound: 18 },
-    { time: '08:00', inbound: 78, outbound: 65 },
-    { time: '12:00', inbound: 92, outbound: 87 },
-    { time: '16:00', inbound: 85, outbound: 76 },
-    { time: '20:00', inbound: 67, outbound: 54 }
-  ];
+  const { status, devices, traffic, loading, runLatencyCheck } = useNetworkMonitoring();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -99,7 +55,10 @@ const NetworkMonitoring = () => {
               <Globe className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Internet Status</p>
-                <p className="text-2xl font-bold text-green-600">Online</p>
+                <div className="flex items-center gap-2">
+                  <p className={`text-2xl font-bold ${status?.online ? 'text-green-600' : 'text-red-600'}`}>{status?.online ? 'Online' : 'Offline'}</p>
+                  <Button variant="outline" size="sm" onClick={runLatencyCheck} disabled={loading}>Run Latency Check</Button>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -111,7 +70,7 @@ const NetworkMonitoring = () => {
               <TrendingUp className="h-8 w-8 text-green-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Download Speed</p>
-                <p className="text-2xl font-bold">89 Mbps</p>
+                <p className="text-2xl font-bold">{status?.download_mbps ? `${status.download_mbps} Mbps` : '—'}</p>
               </div>
             </div>
           </CardContent>
@@ -123,7 +82,7 @@ const NetworkMonitoring = () => {
               <TrendingDown className="h-8 w-8 text-orange-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Upload Speed</p>
-                <p className="text-2xl font-bold">67 Mbps</p>
+                <p className="text-2xl font-bold">{status?.upload_mbps ? `${status.upload_mbps} Mbps` : '—'}</p>
               </div>
             </div>
           </CardContent>
@@ -135,7 +94,7 @@ const NetworkMonitoring = () => {
               <Activity className="h-8 w-8 text-purple-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Latency</p>
-                <p className="text-2xl font-bold">12ms</p>
+                <p className="text-2xl font-bold">{status?.latency_ms ? `${status.latency_ms} ms` : '—'}</p>
               </div>
             </div>
           </CardContent>
@@ -153,7 +112,10 @@ const NetworkMonitoring = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {networkDevices.map((device) => (
+            {devices.length === 0 && (
+              <div className="p-4 border rounded-lg text-sm text-muted-foreground">No devices found.</div>
+            )}
+            {devices.map((device) => (
               <div key={device.id} className="p-4 border rounded-lg">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -179,13 +141,13 @@ const NetworkMonitoring = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700">Uptime</p>
-                    <p className="text-sm text-gray-600">{device.uptime}</p>
+                    <p className="text-sm text-gray-600">{device.uptime ?? '—'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700">Traffic Load</p>
                     <div className="mt-1">
-                      <Progress value={parseInt(device.traffic)} className="h-2" />
-                      <p className="text-xs text-gray-500 mt-1">{device.traffic}</p>
+                      <Progress value={parseInt(device.traffic || '0')} className="h-2" />
+                      <p className="text-xs text-gray-500 mt-1">{device.traffic ?? '—'}</p>
                     </div>
                   </div>
                 </div>
@@ -206,8 +168,11 @@ const NetworkMonitoring = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {trafficData.map((data, index) => (
-              <div key={index} className="p-3 border rounded">
+            {traffic.length === 0 && (
+              <div className="p-3 border rounded text-sm text-muted-foreground">No traffic data.</div>
+            )}
+            {traffic.map((data) => (
+              <div key={data.id} className="p-3 border rounded">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium">{data.time}</span>
                   <div className="flex gap-4 text-sm">
