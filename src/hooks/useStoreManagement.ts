@@ -3,6 +3,7 @@ import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy,
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export interface StoreRecord {
   id: string;
@@ -31,6 +32,7 @@ export const useStoreManagement = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { getActiveContractForSupplier } = useSupplierContracts();
+  const { createAnnouncement } = useNotifications();
 
   const fetchStoreData = async () => {
     try {
@@ -296,11 +298,35 @@ export const useStoreManagement = () => {
     try {
       console.log('Updating coffee record status in Firebase:', recordId, status);
       
+      const record = storeRecords.find(r => r.id === recordId);
+      
       const docRef = doc(db, 'coffee_records', recordId);
       await updateDoc(docRef, {
         status,
         updated_at: new Date().toISOString()
       });
+
+      // Departmental notifications based on status changes
+      if (record) {
+        if (status === 'quality_review') {
+          await createAnnouncement(
+            'Pending Quality Assessment',
+            `Batch ${record.batchNumber} from Store is awaiting quality assessment. Supplier: ${record.supplierName}.`,
+            'Store',
+            'Quality',
+            'High'
+          );
+        }
+        if (status === 'assessed') {
+          await createAnnouncement(
+            'Assessment Completed',
+            `Batch ${record.batchNumber} has been assessed. Pending finance processing.`,
+            'Quality',
+            'Finance',
+            'Medium'
+          );
+        }
+      }
 
       await fetchStoreData();
       

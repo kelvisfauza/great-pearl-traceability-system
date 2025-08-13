@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, doc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useWorkflowTracking } from './useWorkflowTracking';
+import { useNotifications } from './useNotifications';
 
 export interface ApprovalRequest {
   id: string;
@@ -47,6 +48,7 @@ export const useApprovalRequests = () => {
   const [requests, setRequests] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const { trackWorkflowStep } = useWorkflowTracking();
+  const { createAnnouncement } = useNotifications();
 
   const fetchRequests = async () => {
     try {
@@ -190,7 +192,7 @@ export const useApprovalRequests = () => {
         
         try {
           // Create modification request to route to Finance department
-          await addDoc(collection(db, 'modification_requests'), {
+          const modRef = await addDoc(collection(db, 'modification_requests'), {
             originalPaymentId: request.details.paymentId,
             qualityAssessmentId: request.details.qualityAssessmentId,
             batchNumber: request.details.batchNumber,
@@ -202,6 +204,15 @@ export const useApprovalRequests = () => {
             status: 'pending',
             createdAt: new Date().toISOString()
           });
+
+          // Notify target department
+          await createAnnouncement(
+            'Modification Request Pending',
+            `Payment ${request.details.paymentId} for batch ${request.details.batchNumber} requires modification: ${rejectionReason}`,
+            'Admin',
+            'Finance',
+            'High'
+          );
           
           // Update payment record status to indicate it needs review
           await updateDoc(doc(db, 'payment_records', request.details.paymentId), {

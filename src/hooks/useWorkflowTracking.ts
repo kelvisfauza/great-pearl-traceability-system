@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { collection, addDoc, query, where, getDocs, updateDoc, doc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export interface WorkflowStep {
   id: string;
@@ -38,6 +39,7 @@ export const useWorkflowTracking = () => {
   const [modificationRequests, setModificationRequests] = useState<ModificationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { createAnnouncement } = useNotifications();
 
   const fetchWorkflowData = async () => {
     try {
@@ -126,6 +128,15 @@ export const useWorkflowTracking = () => {
 
       const docRef = await addDoc(collection(db, 'modification_requests'), modificationRequestData);
       console.log('Modification request created with ID:', docRef.id);
+
+      // Notify target department
+      await createAnnouncement(
+        'Modification Request Pending',
+        `Batch ${modificationRequestData.batchNumber || ''} requires action: ${modificationRequestData.reason}`,
+        modificationRequestData.requestedByDepartment,
+        modificationRequestData.targetDepartment,
+        'High'
+      );
       
       await fetchWorkflowData();
       

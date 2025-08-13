@@ -4,6 +4,7 @@ import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } fr
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export interface StoreRecord {
   id: string;
@@ -45,6 +46,7 @@ export const useQualityControl = () => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { getContractPriceForSupplier } = useSupplierContracts();
+  const { createAnnouncement } = useNotifications();
 
   const loadStoreRecords = useCallback(async () => {
     try {
@@ -248,6 +250,15 @@ export const useQualityControl = () => {
         updated_at: new Date().toISOString()
       });
       
+      // Notify Finance about pending payment
+      await createAnnouncement(
+        'Pending Payment Processing',
+        `Assessment complete for batch ${assessment.batch_number}. Pending payment of UGX ${totalPaymentAmount.toLocaleString()}.`,
+        'Quality',
+        'Finance',
+        'High'
+      );
+      
       console.log('Payment record created successfully with amount:', totalPaymentAmount);
       
       // Update local state
@@ -315,6 +326,15 @@ export const useQualityControl = () => {
       await updateQualityAssessment(assessmentId, { 
         status: 'submitted_to_finance'
       });
+      
+      // Notify Finance submission
+      await createAnnouncement(
+        'Assessment Submitted to Finance',
+        `Quality assessment ${assessmentId} has been submitted to Finance for payment processing`,
+        'Quality',
+        'Finance',
+        'Medium'
+      );
       
       console.log('Assessment submitted to finance successfully');
       
