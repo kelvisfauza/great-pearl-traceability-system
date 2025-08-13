@@ -97,17 +97,26 @@ export const useNotifications = () => {
   ) => {
     try {
       console.log('Creating announcement:', { title, message, fromDepartment, targetDepartment, targetRole, priority });
-      await addDoc(collection(db, 'notifications'), {
+      
+      const notificationData: any = {
         type: 'announcement',
         title,
         message,
         department: fromDepartment,
         priority,
         isRead: false,
-        targetRole,
-        targetDepartment,
         createdAt: new Date().toISOString()
-      });
+      };
+
+      // Only add targetRole and targetDepartment if they are not undefined
+      if (targetRole !== undefined) {
+        notificationData.targetRole = targetRole;
+      }
+      if (targetDepartment !== undefined) {
+        notificationData.targetDepartment = targetDepartment;
+      }
+
+      await addDoc(collection(db, 'notifications'), notificationData);
       console.log('Announcement created successfully');
     } catch (error) {
       console.error('Error creating announcement:', error);
