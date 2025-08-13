@@ -5,6 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Buffer polyfill for Deno
+function bufferFrom(str: string): Uint8Array {
+  return new TextEncoder().encode(str);
+}
+
+function bufferToBase64(buffer: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < buffer.length; i++) {
+    binary += String.fromCharCode(buffer[i]);
+  }
+  return btoa(binary);
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -58,51 +71,46 @@ serve(async (req) => {
       )
     }
 
-    // Send SMS using BulkSMS.com API
+    // Send SMS using BulkSMS.com API (official format)
     try {
       console.log('Sending SMS via BulkSMS.com API...')
       
-      // Try different authentication methods for BulkSMS
-      const authMethods = [
-        // Method 1: Split token by dash (username-password format)
-        () => {
-          const parts = apiToken.split('-');
-          if (parts.length >= 2) {
-            const username = parts[0];
-            const password = parts.slice(1).join('-');
-            return `Basic ${btoa(`${username}:${password}`)}`;
+      // Try both possible token formats based on BulkSMS documentation
+      const authAttempts = [
+        // Attempt 1: Treat full token as username with empty password
+        { username: apiToken, password: '' },
+        // Attempt 2: Split token by dash (if it contains username:password)
+        ...(apiToken.includes('-') ? [
+          { 
+            username: apiToken.split('-')[0], 
+            password: apiToken.split('-').slice(1).join('-') 
           }
-          return null;
-        },
-        // Method 2: Token as username with empty password
-        () => `Basic ${btoa(`${apiToken}:`)}`,
-        // Method 3: Token directly as base64
-        () => `Basic ${btoa(apiToken)}`,
-        // Method 4: Bearer token
-        () => `Bearer ${apiToken}`
+        ] : [])
       ];
 
-      for (let i = 0; i < authMethods.length; i++) {
-        const authHeader = authMethods[i]();
-        if (!authHeader) continue;
+      for (let i = 0; i < authAttempts.length; i++) {
+        const { username, password } = authAttempts[i];
+        console.log(`Trying auth method ${i + 1}: username=${username.substring(0, 8)}...`);
         
-        console.log(`Trying authentication method ${i + 1}...`);
+        // Create Basic Auth header using BulkSMS format
+        const authString = bufferToBase64(bufferFrom(`${username}:${password}`));
         
+        const postData = JSON.stringify({
+          'to': [formattedPhone], // BulkSMS expects an array
+          'body': message
+        });
+
         const smsResponse = await fetch('https://api.bulksms.com/v1/messages', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': authHeader,
+            'Authorization': `Basic ${authString}`,
             'Accept': 'application/json'
           },
-          body: JSON.stringify({
-            to: formattedPhone,
-            body: message,
-            from: 'GreatPearl'
-          })
+          body: postData
         });
 
-        console.log(`Method ${i + 1} response status:`, smsResponse.status);
+        console.log(`Auth method ${i + 1} response status:`, smsResponse.status);
 
         if (smsResponse.ok) {
           const smsResult = await smsResponse.json();
@@ -123,18 +131,19 @@ serve(async (req) => {
           );
         } else {
           const errorText = await smsResponse.text();
-          console.error(`Method ${i + 1} error:`, errorText);
+          console.error(`Auth method ${i + 1} error:`, errorText);
           
           // If it's the last method, return the error
-          if (i === authMethods.length - 1) {
+          if (i === authAttempts.length - 1) {
             return new Response(
               JSON.stringify({ 
-                error: 'Failed to send SMS with all authentication methods', 
+                error: 'Authentication failed with all methods', 
                 details: errorText,
-                phone: formattedPhone 
+                phone: formattedPhone,
+                tokenFormat: `${apiToken.substring(0, 8)}...`
               }),
               { 
-                status: 500,
+                status: 401,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
               }
             );
