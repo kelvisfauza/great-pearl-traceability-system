@@ -275,6 +275,15 @@ export const useStoreManagement = () => {
       
       await fetchStoreData();
       
+      // Notify Quality department about new coffee record for assessment
+      await createAnnouncement(
+        'New Coffee Record for Quality Assessment',
+        `New coffee received: ${recordData.kilograms}kg from ${recordData.supplierName}. Batch: ${recordData.batchNumber}. Requires quality assessment.`,
+        'Store',
+        ['Quality'],
+        'Medium'
+      );
+      
       const contractMessage = contract ? 
         ` (Contract: ${contract.contractType} @ ${contract.pricePerKg}/kg)` : 
         ' (No active contract)';

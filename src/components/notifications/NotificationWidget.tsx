@@ -10,22 +10,7 @@ interface NotificationWidgetProps {
 }
 
 const NotificationWidget = ({ onViewAll }: NotificationWidgetProps) => {
-  const { notifications, unreadCount, markAsRead, createApprovalNotification, createSystemNotification } = useNotifications();
-  
-  console.log('NotificationWidget - notifications:', notifications);
-  console.log('NotificationWidget - unreadCount:', unreadCount);
-  
-  // Create a test notification for debugging
-  const createTestNotification = async () => {
-    console.log('Creating test notification...');
-    await createSystemNotification(
-      'Test Notification',
-      'This is a test notification to verify the system is working.',
-      undefined,
-      undefined,
-      'High'
-    );
-  };
+  const { notifications, unreadCount, markAsRead } = useNotifications();
   
   // Show only the most recent 3 notifications
   const recentNotifications = notifications.slice(0, 3);
@@ -60,14 +45,6 @@ const NotificationWidget = ({ onViewAll }: NotificationWidgetProps) => {
           >
             <Eye className="h-4 w-4 mr-1" />
             View All
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={createTestNotification}
-            className="ml-2"
-          >
-            Test
           </Button>
         </div>
       </CardHeader>
