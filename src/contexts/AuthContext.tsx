@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { seedFirebaseData } from '@/utils/seedFirebaseData';
 
 interface Employee {
@@ -178,6 +179,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const employeeData = { id: docSnap.id, ...docSnap.data() } as Employee;
         console.log('Found employee by email:', employeeData);
         console.log('Employee email from record:', employeeData.email);
+        
+        // Try to load additional profile data from Supabase (including avatar_url)
+        try {
+          const { data: supabaseUser } = await supabase.auth.getUser();
+          if (supabaseUser.user) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('avatar_url, name, phone, address, emergency_contact')
+              .eq('user_id', supabaseUser.user.id)
+              .single();
+            
+            if (profileData && profileData.avatar_url) {
+              console.log('Loading avatar from Supabase profile:', profileData.avatar_url);
+              employeeData.avatar_url = profileData.avatar_url;
+              // Also update other profile fields if they exist in Supabase
+              if (profileData.phone) employeeData.phone = profileData.phone;
+              if (profileData.address) employeeData.address = profileData.address;
+              if (profileData.emergency_contact) employeeData.emergency_contact = profileData.emergency_contact;
+            }
+          }
+        } catch (supabaseError) {
+          console.warn('Could not load Supabase profile data:', supabaseError);
+        }
         
         // Update the employee record with authUserId if it's missing
         if (!employeeData.authUserId && targetUserId) {
