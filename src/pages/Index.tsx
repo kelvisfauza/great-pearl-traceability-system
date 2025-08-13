@@ -65,6 +65,13 @@ const Index = () => {
             <DynamicHeader />
           </div>
 
+          {/* Premium Dashboard Badge */}
+          <div className="text-center">
+            <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <span className="text-lg font-bold">✨ Premium Dashboard - Enhanced UI ✨</span>
+            </div>
+          </div>
+
           {/* Assigned Role Notification */}
           <div className="animate-fade-in delay-100">
             <AssignedRoleNotification />
