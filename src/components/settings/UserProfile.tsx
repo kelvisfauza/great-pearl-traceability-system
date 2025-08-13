@@ -93,6 +93,7 @@ const UserProfile = ({ employee }: UserProfileProps) => {
           description: "Please select an image under 5MB",
           variant: "destructive"
         });
+        setIsUploadingPhoto(false);
         return;
       }
 
@@ -102,10 +103,16 @@ const UserProfile = ({ employee }: UserProfileProps) => {
       const storageRef = ref(storage, `profile_pictures/${fileName}`);
       console.log('🚀 Starting upload to Firebase Storage...');
       
-      const uploadResult = await uploadBytes(storageRef, file);
+      // Add timeout to prevent infinite loading
+      const uploadPromise = uploadBytes(storageRef, file);
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+      );
+      
+      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
       console.log('✅ File uploaded successfully:', uploadResult);
       
-      const downloadURL = await getDownloadURL(uploadResult.ref);
+      const downloadURL = await getDownloadURL(storageRef);
       console.log('🔗 Got download URL:', downloadURL);
 
       console.log('💾 Updating employee document in Firestore...');
@@ -120,9 +127,19 @@ const UserProfile = ({ employee }: UserProfileProps) => {
       if (fetchEmployeeData) await fetchEmployeeData();
     } catch (error) {
       console.error('❌ Upload error:', error);
+      let errorMessage = 'Please try again.';
+      
+      if (error.code === 'storage/unauthorized') {
+        errorMessage = 'Storage access denied. Please contact administrator.';
+      } else if (error.code === 'storage/unknown') {
+        errorMessage = 'Storage service unavailable. Please try again later.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Upload timed out. Please check your connection and try again.';
+      }
+      
       toast({
         title: "Upload failed", 
-        description: `Error: ${error.message || 'Please try again.'}`,
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
