@@ -31,6 +31,7 @@ import PrintCredentialsDialog from '@/components/hr/PrintCredentialsDialog';
 import SalaryPaymentRequestsManager from '@/components/hr/SalaryPaymentRequestsManager';
 import UserCreationForm from '@/components/hr/UserCreationForm';
 import PrintUserDetails from '@/components/hr/PrintUserDetails';
+import CreateTrainingAccountButton from '@/components/admin/CreateTrainingAccountButton';
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -210,7 +211,10 @@ const HumanResources = () => {
           </TabsContent>
 
           <TabsContent value="create">
-            <UserCreationForm />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <UserCreationForm />
+              <CreateTrainingAccountButton />
+            </div>
           </TabsContent>
 
           <TabsContent value="print-details">
