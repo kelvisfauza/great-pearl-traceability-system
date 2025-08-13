@@ -17,6 +17,7 @@ import DailyReportsCard from "@/components/finance/DailyReportsCard";
 import CashManagementCard from "@/components/finance/CashManagementCard";
 import ExpensesCard from "@/components/finance/ExpensesCard";
 import SupplierAdvanceModal from "@/components/finance/SupplierAdvanceModal";
+import AdvanceClearingModal from "@/components/finance/AdvanceClearingModal";
 import ModificationRequestsManager from "@/components/finance/ModificationRequestsManager";
 
 const Finance = () => {
@@ -45,6 +46,7 @@ const Finance = () => {
   const [receiptAmount, setReceiptAmount] = useState("");
   const [receiptDescription, setReceiptDescription] = useState("");
   const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
+  const [clearingModalOpen, setClearingModalOpen] = useState(false);
 
   const canManageFloat = hasRole('Supervisor') || hasRole('Operations Manager') || employee?.position === 'Supervisor' || employee?.position === 'Operations Manager';
 
@@ -388,13 +390,23 @@ const Finance = () => {
                       <p className="text-2xl font-bold text-green-900">{supplierAdvances?.filter(a => a.status === 'Completed').length || 0}</p>
                     </div>
                   </div>
-                  <Button 
-                    onClick={() => setAdvanceModalOpen(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                    Give Advance
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => setAdvanceModalOpen(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                      Give Advance
+                    </Button>
+                    <Button 
+                      onClick={() => setClearingModalOpen(true)}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      Clear Advance
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -530,6 +542,10 @@ const Finance = () => {
       <SupplierAdvanceModal 
         open={advanceModalOpen}
         onClose={() => setAdvanceModalOpen(false)}
+      />
+      <AdvanceClearingModal 
+        open={clearingModalOpen}
+        onClose={() => setClearingModalOpen(false)}
       />
     </Layout>
   );
