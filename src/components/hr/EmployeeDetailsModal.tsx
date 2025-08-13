@@ -30,7 +30,7 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
   const systemPermissions = [
     "Procurement Access", "Quality Control", "Processing", "Inventory Management",
     "Store Management", "Sales & Marketing", "Finance", "Field Operations",
-    "Human Resources", "Reports", "Settings", "Data Analytics", "Logistics", "Milling Operations"
+    "Human Resources", "Reports", "Settings", "Data Analytics", "Logistics", "Milling"
   ];
 
   useEffect(() => {

@@ -26,7 +26,7 @@ type EditUserFormValues = z.infer<typeof editUserFormSchema>;
 const availablePermissions = [
   "Human Resources", "Finance", "Procurement", "Quality Control",
   "Processing", "Store Management", "Inventory", "Sales & Marketing",
-  "Field Operations", "Data Analysis", "Reports", "Logistics", "Milling Operations"
+  "Field Operations", "Data Analysis", "Reports", "Logistics", "Milling"
 ];
 
 const departments = [
