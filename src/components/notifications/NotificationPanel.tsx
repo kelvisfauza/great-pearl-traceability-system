@@ -225,10 +225,19 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
                       </div>
                     </CardHeader>
                     
-                    {(notification.amount || notification.requestedBy || notification.department) && (
+                    {(notification.amount || notification.requestedBy || notification.department || notification.senderName) && (
                       <CardContent className="pt-0 pb-3">
                         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                          {notification.requestedBy && (
+                          {notification.senderName && (
+                            <div className="flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-1 rounded-md">
+                              <User className="h-3 w-3" />
+                              <span>{notification.senderName}</span>
+                              {notification.senderDepartment && notification.senderDepartment !== notification.department && (
+                                <span className="text-purple-500">({notification.senderDepartment})</span>
+                              )}
+                            </div>
+                          )}
+                          {notification.requestedBy && !notification.senderName && (
                             <div className="flex items-center gap-1 bg-muted/50 px-2 py-1 rounded-md">
                               <User className="h-3 w-3" />
                               <span>{notification.requestedBy}</span>

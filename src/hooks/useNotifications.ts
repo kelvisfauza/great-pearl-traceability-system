@@ -11,6 +11,8 @@ export interface Notification {
   amount?: number;
   department: string;
   requestedBy?: string;
+  senderName?: string;
+  senderDepartment?: string;
   priority: 'High' | 'Medium' | 'Low';
   isRead: boolean;
   targetRole?: string;
@@ -51,6 +53,8 @@ export const useNotifications = () => {
         amount: amount || 0,
         department: requestData.department,
         requestedBy: requestData.requestedBy,
+        senderName: requestData.requestedBy,
+        senderDepartment: requestData.department,
         priority: requestData.priority,
         isRead: false,
         targetRole: 'Administrator',
@@ -76,6 +80,8 @@ export const useNotifications = () => {
         title,
         message,
         department: 'IT',
+        senderName: employee?.name || 'System',
+        senderDepartment: employee?.department || 'IT',
         priority,
         isRead: false,
         targetRole,
@@ -104,6 +110,8 @@ export const useNotifications = () => {
         title,
         message,
         department: fromDepartment,
+        senderName: employee?.name || 'System',
+        senderDepartment: employee?.department || fromDepartment,
         priority,
         isRead: false,
         targetDepartments: targetDepartments, // Store as array
