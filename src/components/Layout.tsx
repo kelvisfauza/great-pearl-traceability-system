@@ -20,6 +20,7 @@ interface LayoutProps {
 const Layout = ({ children, title, subtitle }: LayoutProps) => {
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const { unreadCount } = useMessages();
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const { user } = useAuth();
@@ -31,12 +32,32 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
   const toggleNotifications = () => setIsNotificationOpen(!isNotificationOpen);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <aside className="fixed left-0 top-0 h-full w-64 z-30 bg-white border-r border-gray-200 overflow-y-auto">
+    <div className="min-h-screen bg-gray-50 flex relative">
+      {/* Hover trigger area */}
+      <div 
+        className="fixed left-0 top-0 w-4 h-full z-50"
+        onMouseEnter={() => setIsSidebarVisible(true)}
+      />
+      
+      {/* Sidebar */}
+      <aside 
+        className={`fixed left-0 top-0 h-full w-64 z-40 bg-white border-r border-gray-200 overflow-y-auto transition-transform duration-300 ease-in-out ${
+          isSidebarVisible ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        onMouseLeave={() => setIsSidebarVisible(false)}
+      >
         <Navigation />
       </aside>
       
-      <main className="flex-1 ml-64 min-w-0">
+      {/* Overlay when sidebar is visible */}
+      {isSidebarVisible && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-20 z-30"
+          onClick={() => setIsSidebarVisible(false)}
+        />
+      )}
+      
+      <main className="flex-1 min-w-0">
         <div className="p-6 max-w-full">
           {title && (
             <div className="mb-6 flex justify-between items-center">
