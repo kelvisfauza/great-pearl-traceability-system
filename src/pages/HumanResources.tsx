@@ -28,6 +28,7 @@ import EmployeeFilters from '@/components/hr/EmployeeFilters';
 import EmptyState from '@/components/hr/EmptyState';
 import RegistrationRequestsManager from '@/components/hr/RegistrationRequestsManager';
 import PrintCredentialsDialog from '@/components/hr/PrintCredentialsDialog';
+import MigrateUserButton from '@/components/debug/MigrateUserButton';
 import SalaryPaymentRequestsManager from '@/components/hr/SalaryPaymentRequestsManager';
 import UserCreationForm from '@/components/hr/UserCreationForm';
 import PrintUserDetails from '@/components/hr/PrintUserDetails';
@@ -156,8 +157,9 @@ const HumanResources = () => {
                   </div>
                   <Button onClick={() => setShowAddModal(true)}>
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Add Employee
-                  </Button>
+                Add Employee
+              </Button>
+              <MigrateUserButton />
                 </div>
               </CardHeader>
               <CardContent>
