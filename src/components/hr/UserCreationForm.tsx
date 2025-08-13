@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Key, Eye, EyeOff, UserPlus } from "lucide-react";
+import { Key, Eye, EyeOff, UserPlus, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,7 +16,7 @@ const userFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  phone: z.string().optional(),
+  phone: z.string().min(10, "Phone number is required for SMS notifications"),
   position: z.string().min(2, "Position is required"),
   department: z.string().min(2, "Department is required"),
   role: z.enum(["Administrator", "Manager", "Supervisor", "User", "Guest"]),
@@ -90,12 +90,51 @@ export default function UserCreationForm() {
         throw new Error(data.error || 'Failed to create user');
       }
 
+      // Send SMS with login credentials
+      if (employeeData.phone) {
+        const smsMessage = `Welcome to Great Pearl Coffee! Your login credentials:
+Email: ${employeeData.email}
+Password: ${employeeData.password}
+Please change your password on first login.`;
+
+        try {
+          const { data: smsData, error: smsError } = await supabase.functions.invoke('send-sms', {
+            body: {
+              phone: employeeData.phone,
+              message: smsMessage,
+              userName: employeeData.name
+            }
+          });
+
+          if (smsError) {
+            console.error('SMS error:', smsError);
+            toast({
+              title: "User Created",
+              description: `User ${employeeData.name} created successfully, but SMS notification failed.`,
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "User Created Successfully",
+              description: `User ${employeeData.name} created and SMS sent with login credentials.`
+            });
+          }
+        } catch (smsError) {
+          console.error('SMS sending failed:', smsError);
+          toast({
+            title: "User Created",
+            description: `User ${employeeData.name} created successfully, but SMS notification failed.`,
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "User Created Successfully",
+          description: `User ${employeeData.name} created successfully. No phone number provided for SMS.`
+        });
+      }
+
       form.reset();
-      
-      toast({
-        title: "User Created Successfully",
-        description: `User ${employeeData.name} has been created successfully.`
-      });
       
     } catch (error: any) {
       console.error('Error creating user:', error);
@@ -126,8 +165,8 @@ export default function UserCreationForm() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <UserPlus className="h-5 w-5" />
-          Create New User
+          <MessageSquare className="h-5 w-5" />
+          Create New User (with SMS Notification)
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -196,7 +235,7 @@ export default function UserCreationForm() {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone (Optional)</FormLabel>
+                    <FormLabel>Phone (Required for SMS)</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="+256 700 000 000" />
                     </FormControl>

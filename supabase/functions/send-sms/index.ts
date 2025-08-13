@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -13,14 +12,14 @@ serve(async (req) => {
   }
 
   try {
-    const { phone, code, userName } = await req.json()
+    const { phone, message, userName } = await req.json()
     
-    console.log('Received request:', { phone, code, userName })
+    console.log('Received SMS request:', { phone, userName, messageLength: message?.length })
     
-    if (!phone || !code) {
-      console.error('Missing required fields:', { phone: !!phone, code: !!code })
+    if (!phone || !message) {
+      console.error('Missing required fields:', { phone: !!phone, message: !!message })
       return new Response(
-        JSON.stringify({ error: 'Phone number and code are required' }),
+        JSON.stringify({ error: 'Phone number and message are required' }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -47,104 +46,91 @@ serve(async (req) => {
     
     console.log('Formatted phone:', formattedPhone)
     
-    // Personalize the message with user's name if available
-    const greeting = userName ? `Dear ${userName},` : 'Dear User,'
-    const message = `Great Pearl Coffee Factory - ${greeting} Please use code ${code} for logging in. This code expires in 5 minutes.`
-    
-    console.log('Sending SMS to:', formattedPhone, 'Message:', message)
-    
-    // Try multiple SMS providers for better reliability
-    const smsProviders = [
-      {
-        name: 'YoolaSMS',
-        url: 'https://yoolasms.com/api/send',
+    const apiKey = Deno.env.get('YEDA_SMS_API_KEY')
+    if (!apiKey) {
+      console.error('YEDA_SMS_API_KEY not configured')
+      return new Response(
+        JSON.stringify({ error: 'SMS service not configured' }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // Send SMS using Yeda SMS API
+    try {
+      console.log('Sending SMS via Yeda SMS API...')
+      
+      const smsResponse = await fetch('https://yeda.co.ug/api/sms/send', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
           'Accept': 'application/json'
         },
-        body: {
-          api_key: Deno.env.get('YOOLA_SMS_API_KEY') || 'xgpYr222zWMD4w5VIzUaZc5KYO5L1w8N38qBj1qPflwguq9PdJ545NTCSLTS7H00',
+        body: JSON.stringify({
           to: formattedPhone,
           message: message,
           from: 'GreatPearl'
-        }
-      },
-      {
-        name: 'Backup SMS Service',
-        url: 'https://api.textlocal.in/send/',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          apikey: Deno.env.get('TEXTLOCAL_API_KEY') || '',
-          numbers: formattedPhone,
-          message: message,
-          sender: 'GreatPearl'
-        }).toString()
-      }
-    ]
-
-    let lastError = null
-    
-    for (const provider of smsProviders) {
-      try {
-        console.log(`Trying ${provider.name}...`)
-        
-        const smsResponse = await fetch(provider.url, {
-          method: 'POST',
-          headers: provider.headers,
-          body: typeof provider.body === 'string' ? provider.body : JSON.stringify(provider.body)
         })
+      })
 
-        console.log(`${provider.name} response status:`, smsResponse.status)
+      console.log('Yeda SMS response status:', smsResponse.status)
 
-        if (smsResponse.ok) {
-          const smsResult = await smsResponse.json()
-          console.log(`SMS sent successfully via ${provider.name}:`, smsResult)
+      if (smsResponse.ok) {
+        const smsResult = await smsResponse.json()
+        console.log('SMS sent successfully via Yeda:', smsResult)
 
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              message: 'SMS sent successfully',
-              phone: formattedPhone,
-              provider: provider.name
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-          )
-        } else {
-          const errorText = await smsResponse.text()
-          console.error(`${provider.name} error:`, errorText)
-          lastError = { provider: provider.name, error: errorText }
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'SMS sent successfully',
+            phone: formattedPhone,
+            provider: 'Yeda SMS'
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      } else {
+        const errorText = await smsResponse.text()
+        console.error('Yeda SMS error:', errorText)
+        
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to send SMS', 
+            details: errorText,
+            phone: formattedPhone 
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+    } catch (error) {
+      console.error('Yeda SMS request failed:', error)
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'SMS service unavailable', 
+          details: error.message,
+          phone: formattedPhone 
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
-      } catch (error) {
-        console.error(`${provider.name} request failed:`, error)
-        lastError = { provider: provider.name, error: error.message }
-      }
+      )
     }
-
-    // If all providers failed, return error
-    console.error('All SMS providers failed:', lastError)
-    return new Response(
-      JSON.stringify({ 
-        error: 'Failed to send SMS via all providers', 
-        details: lastError,
-        phone: formattedPhone 
-      }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    )
 
   } catch (error) {
     console.error('Error in send-sms function:', error)
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
-        details: error.message,
-        stack: error.stack 
+        details: error.message
       }),
       { 
         status: 500,
