@@ -3,6 +3,7 @@ import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } fr
 import { db } from '@/lib/firebase';
 import { firebaseClient } from '@/lib/firebaseClient';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from './useNotifications';
 
 export interface FinanceTransaction {
   id: string;
@@ -82,6 +83,7 @@ export const useFirebaseFinance = () => {
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { createApprovalCompleteNotification } = useNotifications();
 
   const calculateRealStats = (transactionsData: FinanceTransaction[], expensesData: FinanceExpense[], advancesData: any[]) => {
     console.log('Calculating real stats from data...');
@@ -339,6 +341,15 @@ export const useFirebaseFinance = () => {
               // Update local state
               paymentToUpdate.status = 'Paid';
               console.log('Updated payment status to Paid for:', request.details.paymentId);
+              
+              // Create approval notification for store/supplier
+              await createApprovalCompleteNotification(
+                'Payment Approved & Processed',
+                `Payment for ${paymentToUpdate.supplier} (Batch: ${paymentToUpdate.batchNumber})`,
+                'Finance Administrator',
+                paymentToUpdate.amount,
+                'Store'
+              );
             } catch (error) {
               console.error('Error updating payment status:', error);
             }

@@ -93,6 +93,104 @@ export const useNotifications = () => {
     }
   };
 
+  // Create role assignment notification
+  const createRoleAssignmentNotification = async (
+    assignedToName: string,
+    role: string,
+    permissions: string[],
+    assignedBy: string
+  ) => {
+    try {
+      const permissionsList = permissions.length > 0 ? permissions.join(', ') : 'basic access';
+      await addDoc(collection(db, 'notifications'), {
+        type: 'system',
+        title: 'New Role Assigned',
+        message: `You have been assigned the role of ${role} by ${assignedBy}. You can now access: ${permissionsList}`,
+        department: 'Human Resources',
+        senderName: assignedBy,
+        senderDepartment: 'Human Resources',
+        priority: 'High',
+        isRead: false,
+        targetRole: undefined,
+        targetDepartment: undefined,
+        createdAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error creating role assignment notification:', error);
+    }
+  };
+
+  // Create workflow status notification
+  const createWorkflowNotification = async (
+    title: string,
+    message: string,
+    fromDepartment: string,
+    toDepartment: string,
+    priority: 'High' | 'Medium' | 'Low' = 'Medium',
+    metadata?: any
+  ) => {
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        type: 'system',
+        title,
+        message,
+        department: fromDepartment,
+        senderName: employee?.name || 'System',
+        senderDepartment: fromDepartment,
+        priority,
+        isRead: false,
+        targetDepartment: toDepartment,
+        metadata,
+        createdAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error creating workflow notification:', error);
+    }
+  };
+
+  // Create pricing notification
+  const createPricingNotification = async (
+    supplierName: string,
+    batchNumber: string,
+    price: number,
+    assessedBy: string
+  ) => {
+    try {
+      await createWorkflowNotification(
+        'Coffee Pricing Completed',
+        `Supplier ${supplierName} coffee (Batch ${batchNumber}) has been priced at UGX ${price.toLocaleString()}/kg by ${assessedBy}. Ready for payment processing.`,
+        'Quality',
+        'Store',
+        'Medium',
+        { supplierName, batchNumber, price, assessedBy }
+      );
+    } catch (error) {
+      console.error('Error creating pricing notification:', error);
+    }
+  };
+
+  // Create approval notification
+  const createApprovalCompleteNotification = async (
+    title: string,
+    approvedItem: string,
+    approvedBy: string,
+    amount?: number,
+    targetDepartment?: string
+  ) => {
+    try {
+      const amountText = amount ? ` for UGX ${amount.toLocaleString()}` : '';
+      await createWorkflowNotification(
+        title,
+        `${approvedItem} has been approved by ${approvedBy}${amountText}. You can now proceed with the next steps.`,
+        'Finance',
+        targetDepartment || 'Store',
+        'High'
+      );
+    } catch (error) {
+      console.error('Error creating approval notification:', error);
+    }
+  };
+
   // Create announcement notification - supports multiple departments
   const createAnnouncement = async (
     title: string,
@@ -305,6 +403,10 @@ export const useNotifications = () => {
     createApprovalNotification,
     createSystemNotification,
     createAnnouncement,
+    createRoleAssignmentNotification,
+    createWorkflowNotification,
+    createPricingNotification,
+    createApprovalCompleteNotification,
     markAsRead,
     markAllAsRead,
     clearAllNotifications,

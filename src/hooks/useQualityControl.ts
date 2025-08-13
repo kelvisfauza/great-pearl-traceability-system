@@ -46,7 +46,7 @@ export const useQualityControl = () => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { getContractPriceForSupplier } = useSupplierContracts();
-  const { createAnnouncement } = useNotifications();
+  const { createAnnouncement, createPricingNotification } = useNotifications();
 
   const loadStoreRecords = useCallback(async () => {
     try {
@@ -257,6 +257,14 @@ export const useQualityControl = () => {
         'Quality',
         ['Finance'],
         'High'
+      );
+      
+      // Notify Store about pricing completion
+      await createPricingNotification(
+        coffeeRecord.supplier_name,
+        assessment.batch_number,
+        assessment.suggested_price,
+        assessment.assessed_by
       );
       
       console.log('Payment record created successfully with amount:', totalPaymentAmount);

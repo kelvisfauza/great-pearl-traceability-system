@@ -3,6 +3,7 @@ import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'fireb
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from './useNotifications';
 
 export interface RoleAssignment {
   id: string;
@@ -23,6 +24,7 @@ export const useRoleAssignment = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { employee, isAdmin } = useAuth();
+  const { createRoleAssignmentNotification } = useNotifications();
 
   const fetchAssignments = async () => {
     try {
@@ -80,6 +82,14 @@ export const useRoleAssignment = () => {
       };
 
       await addDoc(collection(db, 'role_assignments'), assignmentData);
+      
+      // Create notification for the assigned user
+      await createRoleAssignmentNotification(
+        assignedToName,
+        role === 'admin_delegate' ? 'Admin Delegate' : 'Approver',
+        role === 'admin_delegate' ? ['Full administrative privileges', 'All department access'] : ['Approval permissions'],
+        employee?.name || 'Administrator'
+      );
       
       toast({
         title: "Role Assigned",

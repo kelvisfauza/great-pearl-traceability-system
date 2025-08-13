@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { db, auth } from '@/lib/firebase'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
+import { useNotifications } from './useNotifications'
 
 export interface Employee {
   id: string
@@ -45,7 +46,8 @@ export const useFirebaseEmployees = () => {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
-  const { canManageEmployees, isAdmin } = useAuth()
+  const { canManageEmployees, isAdmin, employee: currentUser } = useAuth()
+  const { createRoleAssignmentNotification } = useNotifications()
 
   const fetchEmployees = async () => {
     try {
@@ -269,6 +271,9 @@ export const useFirebaseEmployees = () => {
     }
 
     try {
+      // Get the current employee data to compare permissions
+      const currentEmployee = employees.find(emp => emp.id === id);
+      
       const sanitizedUpdates = {
         ...updates,
         ...(updates.name && { name: updates.name.trim() }),
@@ -283,6 +288,23 @@ export const useFirebaseEmployees = () => {
       setEmployees(prev => prev.map(emp => 
         emp.id === id ? { ...emp, ...sanitizedUpdates } : emp
       ));
+      
+      // Check if permissions or role changed and notify the user
+      if (currentEmployee && (updates.permissions || updates.role)) {
+        const oldPermissions = currentEmployee.permissions || [];
+        const newPermissions = updates.permissions || oldPermissions;
+        const roleChanged = updates.role && updates.role !== currentEmployee.role;
+        const permissionsChanged = JSON.stringify(oldPermissions.sort()) !== JSON.stringify(newPermissions.sort());
+        
+        if (roleChanged || permissionsChanged) {
+          await createRoleAssignmentNotification(
+            currentEmployee.name,
+            updates.role || currentEmployee.role,
+            newPermissions,
+            currentUser?.name || 'Administrator'
+          );
+        }
+      }
       
       await logSecurityEvent('employee_updated', 'employees', id, null, sanitizedUpdates);
       
