@@ -18,7 +18,7 @@ import {
   UserCheck
 } from 'lucide-react';
 
-import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
+import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
 import { useAuth } from '@/contexts/AuthContext';
 import EmployeeList from '@/components/hr/EmployeeList';
 import EmployeeStatsCards from '@/components/hr/EmployeeStatsCards';
@@ -43,7 +43,7 @@ const HumanResources = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
 
-  const { employees, loading, addEmployee, addEmployeeWithAuth, updateEmployee, deleteEmployee } = useFirebaseEmployees();
+  const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useSupabaseEmployees();
   const { canManageEmployees, isAdmin } = useAuth();
 
   const filteredEmployees = employees.filter(employee => {
@@ -83,8 +83,7 @@ const HumanResources = () => {
       if (selectedEmployee) {
         await updateEmployee(selectedEmployee.id, employeeData);
       } else {
-        // Use the new function that creates Firebase Auth user
-        await addEmployeeWithAuth(employeeData);
+        await addEmployee(employeeData);
       }
       setShowAddModal(false);
       setSelectedEmployee(null);
