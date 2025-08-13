@@ -158,7 +158,10 @@ export const useMillingData = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       toast({
         title: "Success",
@@ -171,7 +174,7 @@ export const useMillingData = () => {
       console.error('Error adding customer:', error);
       toast({
         title: "Error",
-        description: "Failed to add customer",
+        description: "Failed to add customer. Please try again.",
         variant: "destructive"
       });
       throw error;
@@ -193,7 +196,10 @@ export const useMillingData = () => {
         .select()
         .single();
 
-      if (transactionError) throw transactionError;
+      if (transactionError) {
+        console.error('Transaction error:', transactionError);
+        throw transactionError;
+      }
 
       // Update customer balance
       const customer = customers.find(c => c.id === transactionData.customer_id);
@@ -205,7 +211,10 @@ export const useMillingData = () => {
           .update({ current_balance: newBalance })
           .eq('id', transactionData.customer_id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Customer update error:', updateError);
+          throw updateError;
+        }
       }
 
       toast({
@@ -219,7 +228,7 @@ export const useMillingData = () => {
       console.error('Error adding transaction:', error);
       toast({
         title: "Error",
-        description: "Failed to record transaction",
+        description: "Failed to record transaction. Please try again.",
         variant: "destructive"
       });
       throw error;
@@ -229,10 +238,12 @@ export const useMillingData = () => {
   const addCashTransaction = async (cashData: Omit<MillingCashTransaction, 'id' | 'created_at' | 'previous_balance' | 'new_balance'>) => {
     try {
       const customer = customers.find(c => c.id === cashData.customer_id);
-      if (!customer) throw new Error('Customer not found');
+      if (!customer) {
+        throw new Error('Customer not found');
+      }
 
       const previousBalance = customer.current_balance;
-      const newBalance = previousBalance - cashData.amount_paid;
+      const newBalance = Math.max(0, previousBalance - cashData.amount_paid);
 
       // Add cash transaction
       const { data: cashResult, error: cashError } = await supabase
@@ -245,7 +256,10 @@ export const useMillingData = () => {
         .select()
         .single();
 
-      if (cashError) throw cashError;
+      if (cashError) {
+        console.error('Cash transaction error:', cashError);
+        throw cashError;
+      }
 
       // Update customer balance
       const { error: updateError } = await supabase
@@ -253,7 +267,10 @@ export const useMillingData = () => {
         .update({ current_balance: newBalance })
         .eq('id', cashData.customer_id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Customer balance update error:', updateError);
+        throw updateError;
+      }
 
       toast({
         title: "Success",
@@ -266,7 +283,7 @@ export const useMillingData = () => {
       console.error('Error adding cash transaction:', error);
       toast({
         title: "Error",
-        description: "Failed to record payment",
+        description: "Failed to record payment. Please try again.",
         variant: "destructive"
       });
       throw error;

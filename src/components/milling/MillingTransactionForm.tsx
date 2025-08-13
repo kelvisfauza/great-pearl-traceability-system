@@ -37,17 +37,27 @@ const MillingTransactionForm = ({ open, onClose }: MillingTransactionFormProps) 
 
   const handleSubmit = async (e: React.FormEvent, saveAndNew = false) => {
     e.preventDefault();
-    if (!formData.customer_id || !formData.kgs_hulled) return;
+    if (!formData.customer_id || !formData.kgs_hulled || formData.kgs_hulled <= 0) {
+      return;
+    }
 
     setLoading(true);
     try {
       await addTransaction({
-        ...formData,
+        customer_id: formData.customer_id,
+        customer_name: formData.customer_name,
         date: format(date, 'yyyy-MM-dd'),
+        kgs_hulled: formData.kgs_hulled,
+        rate_per_kg: formData.rate_per_kg,
+        total_amount: formData.total_amount,
+        amount_paid: formData.amount_paid,
+        notes: formData.notes.trim() || undefined,
+        transaction_type: formData.transaction_type,
         created_by: employee?.name || 'Unknown'
       });
 
       if (saveAndNew) {
+        // Reset form for new entry
         setFormData({
           customer_id: '',
           customer_name: '',

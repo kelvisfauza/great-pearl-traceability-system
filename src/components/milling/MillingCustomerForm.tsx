@@ -26,12 +26,22 @@ const MillingCustomerForm = ({ open, onClose }: MillingCustomerFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.full_name.trim()) return;
+    if (!formData.full_name.trim()) {
+      return;
+    }
 
     setLoading(true);
     try {
-      await addCustomer(formData);
+      await addCustomer({
+        full_name: formData.full_name.trim(),
+        opening_balance: formData.opening_balance,
+        phone: formData.phone.trim() || undefined,
+        address: formData.address.trim() || undefined,
+        status: formData.status
+      });
+      
       onClose();
+      // Reset form
       setFormData({
         full_name: '',
         opening_balance: 0,

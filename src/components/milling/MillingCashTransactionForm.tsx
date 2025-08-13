@@ -36,17 +36,30 @@ const MillingCashTransactionForm = ({ open, onClose }: MillingCashTransactionFor
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.customer_id || !formData.amount_paid) return;
+    if (!formData.customer_id || !formData.amount_paid || formData.amount_paid <= 0) {
+      return;
+    }
+
+    // Validate payment amount doesn't exceed balance
+    const selectedCustomer = customers.find(c => c.id === formData.customer_id);
+    if (selectedCustomer && formData.amount_paid > selectedCustomer.current_balance) {
+      return;
+    }
 
     setLoading(true);
     try {
       await addCashTransaction({
-        ...formData,
+        customer_id: formData.customer_id,
+        customer_name: formData.customer_name,
+        amount_paid: formData.amount_paid,
+        payment_method: formData.payment_method,
+        notes: formData.notes.trim() || undefined,
         date: format(date, 'yyyy-MM-dd'),
         created_by: employee?.name || 'Unknown'
       });
       
       onClose();
+      // Reset form
       setFormData({
         customer_id: '',
         customer_name: '',
