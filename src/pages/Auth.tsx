@@ -152,7 +152,7 @@ const Auth = () => {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm">
                 <Phone className="h-4 w-4 text-blue-600" />
-                <span>IT Support: +256 700 123 456</span>
+                <span>IT Support: +256773318456</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Mail className="h-4 w-4 text-blue-600" />
