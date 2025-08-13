@@ -52,17 +52,12 @@ const Index = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-red-100 relative overflow-hidden">
-        {/* VISIBLE TEST - This should make the background light red */}
-        <div className="absolute top-4 left-4 bg-blue-500 text-white p-4 rounded-lg z-50">
-          <h1 className="text-xl font-bold">🔴 TESTING - Can you see this blue box?</h1>
-        </div>
-        
-        {/* Background Elements */}
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative overflow-hidden">
+        {/* Sophisticated Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-r from-blue-100/20 to-indigo-100/20 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 left-20 w-80 h-80 bg-gradient-to-r from-slate-100/30 to-gray-100/30 dark:from-slate-800/20 dark:to-gray-800/20 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-50/10 to-indigo-50/10 dark:from-blue-950/10 dark:to-indigo-950/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-r from-blue-100/30 to-indigo-100/30 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 left-20 w-80 h-80 bg-gradient-to-r from-slate-100/40 to-gray-100/40 dark:from-slate-800/30 dark:to-gray-800/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-50/20 to-indigo-50/20 dark:from-blue-950/15 dark:to-indigo-950/15 rounded-full blur-3xl animate-pulse delay-500"></div>
         </div>
 
         <div className="relative z-10 space-y-8 md:space-y-12 p-4 md:p-8">
@@ -85,7 +80,7 @@ const Index = () => {
                 subtitle="System oversight and user management"
                 gradient="from-slate-600 to-slate-700"
               />
-              <div className="bg-gradient-to-br from-white/80 via-gray-50/90 to-slate-50/80 dark:from-slate-800/80 dark:via-slate-700/90 dark:to-slate-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-slate-600/40 rounded-3xl p-6 md:p-8 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01]">
+              <div className="bg-gradient-to-br from-white/95 via-slate-50/90 to-blue-50/70 dark:from-slate-800/95 dark:via-slate-700/90 dark:to-slate-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-slate-600/40 rounded-3xl p-6 md:p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] hover:border-blue-300/40 dark:hover:border-blue-700/40">
                 <AdminDashboard />
               </div>
             </div>
@@ -113,7 +108,7 @@ const Index = () => {
                   subtitle="Streamlined workflow tools"
                   gradient="from-emerald-600 to-teal-700"
                 />
-                <div className="bg-gradient-to-br from-white/90 via-emerald-50/50 to-teal-50/40 dark:from-slate-800/90 dark:via-emerald-950/30 dark:to-teal-950/20 rounded-3xl p-6 md:p-8 border border-emerald-200/40 dark:border-emerald-800/30 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
+                <div className="bg-gradient-to-br from-white/95 via-emerald-50/60 to-teal-50/50 dark:from-slate-800/95 dark:via-emerald-950/40 dark:to-teal-950/30 rounded-3xl p-6 md:p-8 border border-emerald-200/50 dark:border-emerald-800/40 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-xl hover:border-emerald-300/60 dark:hover:border-emerald-700/50">
                   <QuickActions />
                 </div>
               </div>
