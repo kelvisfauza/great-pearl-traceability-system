@@ -30,22 +30,8 @@ serve(async (req) => {
     const { employeeData } = await req.json()
     console.log('Creating user for employee:', employeeData.email)
 
-    // First check if user already exists
-    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(employeeData.email)
-    
-    if (existingUser.user) {
-      console.log('User already exists:', existingUser.user.id)
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `A user with email ${employeeData.email} already exists. Please use a different email address.` 
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    }
+    // First check if user already exists by trying to create with a duplicate check
+    // We'll rely on Supabase's built-in duplicate email handling during createUser
 
     // Create the authentication user
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -63,7 +49,9 @@ serve(async (req) => {
       let errorMessage = authError.message
       
       // Handle specific auth errors
-      if (authError.code === 'email_exists') {
+      if (authError.message?.includes('User already registered')) {
+        errorMessage = `A user with email ${employeeData.email} already exists. Please use a different email address.`
+      } else if (authError.message?.includes('email')) {
         errorMessage = `A user with email ${employeeData.email} already exists. Please use a different email address.`
       }
       
