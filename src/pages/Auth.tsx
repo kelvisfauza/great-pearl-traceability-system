@@ -7,15 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Coffee, AlertCircle } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, AlertCircle, Phone, Mail, MessageCircle } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
-import SignUpForm from '@/components/SignUpForm';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { addDoc, collection, query, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
-import { fixAuthenticationIssues, testSpecificAccount } from '@/utils/fixAuthenticationIssues';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -23,51 +16,31 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [showCreateAccount, setShowCreateAccount] = useState(false);
-  const [createEmail, setCreateEmail] = useState('kelviskusa@gmail.com');
-  const [createPassword, setCreatePassword] = useState('Kusa2019');
-  const [createName, setCreateName] = useState('Kelvis Kusa');
-  const [creating, setCreating] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    console.log('=== STARTING LOGIN ATTEMPT ===');
-    console.log('Email:', email);
-    console.log('Password length:', password.length);
-    // Firebase Auth debugging will be done in signIn function
-
     try {
-      console.log('Calling signIn function...');
       const result = await signIn(email, password);
-      console.log('SignIn result:', result);
       
       if (result.requiresPasswordChange) {
-        console.log('Password change required, showing modal');
         setShowPasswordChange(true);
       } else {
-        console.log('Login successful, navigating to home');
         navigate('/');
       }
     } catch (error: any) {
-      console.error('=== LOGIN ERROR ===');
-      console.error('Error object:', error);
-      console.error('Error message:', error.message);
-      console.error('Error code:', error.code);
-      console.error('Error details:', JSON.stringify(error, null, 2));
+      console.error('Login error:', error);
       
-      // More specific error handling
       let errorMessage = 'Login failed. Please check your credentials.';
       
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
         errorMessage = 'Invalid email or password. Please check your credentials and try again.';
       } else if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email address.';
+        errorMessage = 'No account found with this email address. Contact HR for account creation.';
       } else if (error.code === 'auth/wrong-password') {
         errorMessage = 'Incorrect password.';
       } else if (error.code === 'auth/user-disabled') {
@@ -81,154 +54,12 @@ const Auth = () => {
       setError(errorMessage);
     } finally {
       setLoading(false);
-      console.log('=== LOGIN ATTEMPT COMPLETE ===');
     }
   };
 
   const handlePasswordChangeComplete = () => {
     setShowPasswordChange(false);
     navigate('/');
-  };
-
-  const createAccount = async () => {
-    setCreating(true);
-    setError('');
-    
-    try {
-      // Normalize email BEFORE creating Firebase Auth account
-      const normalizedEmail = createEmail.toLowerCase().trim();
-      
-      console.log('=== CREATING ACCOUNT ===');
-      console.log('Original Email:', createEmail);
-      console.log('Normalized Email:', normalizedEmail);
-      console.log('Password:', createPassword);
-      console.log('Name:', createName);
-      
-      // First check if user already exists in Firebase Auth
-      try {
-        console.log('Checking if account already exists...');
-        await createUserWithEmailAndPassword(auth, normalizedEmail, createPassword);
-        console.log('✅ Firebase Auth account created successfully');
-      } catch (authError: any) {
-        if (authError.code === 'auth/email-already-in-use') {
-          console.log('ℹ️ Firebase Auth account already exists, continuing with employee record creation...');
-        } else {
-          throw authError; // Re-throw other auth errors
-        }
-      }
-      
-      // Get the current user (whether just created or already existed)
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        // If no current user, try to sign in to get the user
-        console.log('No current user, attempting sign in to verify credentials...');
-        const userCred = await createUserWithEmailAndPassword(auth, normalizedEmail, createPassword);
-        console.log('User credentials obtained:', userCred.user.uid);
-      }
-      
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
-        throw new Error('Failed to get user ID after account creation');
-      }
-      
-      console.log('User ID for employee record:', userId);
-      
-      // Create employee record with the same normalized email
-      const employeeData = {
-        name: createName,
-        email: normalizedEmail,
-        phone: '+256 700 000 000',
-        position: 'Quality Controller',
-        department: 'Quality Control',
-        salary: 600000,
-        role: 'Quality Controller',
-        permissions: ['Quality Control', 'Store Management', 'General Access'],
-        status: 'Active',
-        join_date: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        authUserId: userId,
-        isOneTimePassword: false,
-        mustChangePassword: false
-      };
-      
-      console.log('Creating employee record with data:', employeeData);
-      const docRef = await addDoc(collection(db, 'employees'), employeeData);
-      console.log('✅ Employee record created with ID:', docRef.id);
-      
-      // Sign out after account creation to ensure clean login
-      await auth.signOut();
-      console.log('✅ Signed out after account creation');
-      
-      toast({
-        title: "Account Created Successfully!",
-        description: `Account for ${normalizedEmail} has been created. You can now log in.`,
-      });
-      
-      setShowCreateAccount(false);
-      
-      // Auto-fill login form with normalized email
-      setEmail(normalizedEmail);
-      setPassword(createPassword);
-      
-      console.log('=== ACCOUNT CREATION COMPLETE ===');
-      
-    } catch (error: any) {
-      console.error('=== ACCOUNT CREATION ERROR ===');
-      console.error('Error object:', error);
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
-      
-      let errorMessage = 'Failed to create account';
-      
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'Email is already in use. Try logging in instead.';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password is too weak. Please use a stronger password.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address.';
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error. Please check your internet connection.';
-      }
-      
-      setError(errorMessage);
-      toast({
-        title: "Account Creation Failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const runDiagnostics = async () => {
-    console.log('🔧 Running authentication diagnostics...');
-    
-    // Test the specific failing account
-    const testResult = await testSpecificAccount('kelviskusa@gmail.com', 'Kusa2019');
-    
-    if (testResult.success) {
-      toast({
-        title: "Account Test Successful!",
-        description: "The account is working properly now. Try logging in.",
-      });
-    } else {
-      toast({
-        title: "Account Test Failed",
-        description: `Error: ${testResult.error}`,
-        variant: "destructive"
-      });
-      
-      // If the account doesn't exist, offer to create it
-      if (testResult.code === 'auth/user-not-found' || testResult.code === 'auth/invalid-credential') {
-        console.log('Account not found, attempting to create...');
-        setCreateEmail('kelviskusa@gmail.com');
-        setCreatePassword('Kusa2019');
-        setCreateName('Kelvis Kusa');
-        setShowCreateAccount(true);
-      }
-    }
   };
 
 
@@ -253,168 +84,89 @@ const Auth = () => {
           </p>
         </div>
 
-        {/* Account Creation Modal */}
-        {showCreateAccount && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md">
-              <CardHeader>
-                <CardTitle>Create New Account</CardTitle>
-                <CardDescription>
-                  This will create both Firebase Auth and Employee records
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="createEmail">Email</Label>
-                  <Input
-                    id="createEmail"
-                    value={createEmail}
-                    onChange={(e) => setCreateEmail(e.target.value)}
-                    disabled={creating}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="createPassword">Password</Label>
-                  <Input
-                    id="createPassword"
-                    type="password"
-                    value={createPassword}
-                    onChange={(e) => setCreatePassword(e.target.value)}
-                    disabled={creating}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="createName">Full Name</Label>
-                  <Input
-                    id="createName"
-                    value={createName}
-                    onChange={(e) => setCreateName(e.target.value)}
-                    disabled={creating}
-                  />
-                </div>
-                
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">Sign In</CardTitle>
+            <CardDescription>
+              Enter your credentials to access your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign In'
                 )}
-                
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={createAccount} 
-                    disabled={creating}
-                    className="flex-1"
-                  >
-                    {creating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      'Create Account'
-                    )}
-                  </Button>
-                  <Button 
-                    onClick={() => setShowCreateAccount(false)} 
-                    variant="outline"
-                    disabled={creating}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-        <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Request Access</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="login">
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="text-xl">Sign In</CardTitle>
-                <CardDescription>
-                  Enter your credentials to access your account
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Signing in...
-                      </>
-                    ) : (
-                      'Sign In'
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="signup">
-            <SignUpForm />
-          </TabsContent>
-        </Tabs>
-
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p>
-            Having trouble? Contact your administrator for assistance.
-          </p>
-          <div className="flex gap-2 justify-center mt-2">
-            <Button 
-              onClick={() => setShowCreateAccount(true)} 
-              variant="outline" 
-              size="sm"
-            >
-              Create Test Account
-            </Button>
-            <Button 
-              onClick={runDiagnostics} 
-              variant="outline" 
-              size="sm"
-            >
-              Fix Auth Issues
-            </Button>
-          </div>
-        </div>
+        {/* IT Support Contact */}
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Having Login Issues?
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Contact IT Department for technical support:
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="h-4 w-4 text-blue-600" />
+                <span>IT Support: +256 700 123 456</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="h-4 w-4 text-blue-600" />
+                <span>it.support@greatpearlcoffee.com</span>
+              </div>
+            </div>
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                New employees: Contact HR for account creation. Existing users with login issues: Contact IT Support.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
       </div>
 
       <PasswordChangeModal
