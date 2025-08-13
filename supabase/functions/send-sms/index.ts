@@ -62,54 +62,86 @@ serve(async (req) => {
     try {
       console.log('Sending SMS via BulkSMS.com API...')
       
-      const smsResponse = await fetch('https://api.bulksms.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${btoa(apiToken + ':')}`, // BulkSMS uses Basic auth with token as username
-          'Accept': 'application/json'
+      // Try different authentication methods for BulkSMS
+      const authMethods = [
+        // Method 1: Split token by dash (username-password format)
+        () => {
+          const parts = apiToken.split('-');
+          if (parts.length >= 2) {
+            const username = parts[0];
+            const password = parts.slice(1).join('-');
+            return `Basic ${btoa(`${username}:${password}`)}`;
+          }
+          return null;
         },
-        body: JSON.stringify({
-          to: formattedPhone,
-          body: message,
-          from: 'GreatPearl'
-        })
-      })
+        // Method 2: Token as username with empty password
+        () => `Basic ${btoa(`${apiToken}:`)}`,
+        // Method 3: Token directly as base64
+        () => `Basic ${btoa(apiToken)}`,
+        // Method 4: Bearer token
+        () => `Bearer ${apiToken}`
+      ];
 
-      console.log('BulkSMS response status:', smsResponse.status)
-
-      if (smsResponse.ok) {
-        const smsResult = await smsResponse.json()
-        console.log('SMS sent successfully via BulkSMS:', smsResult)
-
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'SMS sent successfully',
-            phone: formattedPhone,
-            provider: 'BulkSMS',
-            details: smsResult
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
-      } else {
-        const errorText = await smsResponse.text()
-        console.error('BulkSMS error:', errorText)
+      for (let i = 0; i < authMethods.length; i++) {
+        const authHeader = authMethods[i]();
+        if (!authHeader) continue;
         
-        return new Response(
-          JSON.stringify({ 
-            error: 'Failed to send SMS', 
-            details: errorText,
-            phone: formattedPhone 
-          }),
-          { 
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        console.log(`Trying authentication method ${i + 1}...`);
+        
+        const smsResponse = await fetch('https://api.bulksms.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader,
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            to: formattedPhone,
+            body: message,
+            from: 'GreatPearl'
+          })
+        });
+
+        console.log(`Method ${i + 1} response status:`, smsResponse.status);
+
+        if (smsResponse.ok) {
+          const smsResult = await smsResponse.json();
+          console.log('SMS sent successfully via BulkSMS:', smsResult);
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'SMS sent successfully',
+              phone: formattedPhone,
+              provider: 'BulkSMS',
+              authMethod: i + 1,
+              details: smsResult
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
+        } else {
+          const errorText = await smsResponse.text();
+          console.error(`Method ${i + 1} error:`, errorText);
+          
+          // If it's the last method, return the error
+          if (i === authMethods.length - 1) {
+            return new Response(
+              JSON.stringify({ 
+                error: 'Failed to send SMS with all authentication methods', 
+                details: errorText,
+                phone: formattedPhone 
+              }),
+              { 
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              }
+            );
           }
-        )
+        }
       }
+
     } catch (error) {
       console.error('BulkSMS request failed:', error)
       
