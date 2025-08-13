@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePresence } from "@/hooks/usePresence";
 import FeatureAnnouncementModal from "./FeatureAnnouncementModal";
 import AnnouncementDialog from "./notifications/AnnouncementDialog";
+import TrainingTour from "./training/TrainingTour";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -114,6 +115,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
       />
       
       <FeatureAnnouncementModal onOpenAnnouncement={handleOpenAnnouncement} />
+      <TrainingTour />
     </div>
   );
 };
