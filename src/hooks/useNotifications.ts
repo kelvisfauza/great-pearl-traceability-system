@@ -295,9 +295,11 @@ export const useNotifications = () => {
   };
 
   useEffect(() => {
+    console.log('useNotifications - useEffect triggered');
     console.log('useNotifications - employee:', employee);
     if (!employee) {
-      console.log('useNotifications - No employee found, skipping notification setup');
+      console.log('useNotifications - No employee found, notification system waiting for authentication');
+      setLoading(false);
       return;
     }
 
