@@ -12,59 +12,13 @@ import {
   Database,
   Server,
   HardDrive,
-  Cpu
+  Cpu,
+  Loader2
 } from 'lucide-react';
+import { useFirebaseSystemMetrics } from '@/hooks/useFirebaseSystemMetrics';
 
 const SystemMaintenance = () => {
-  const maintenanceTasks = [
-    {
-      id: 1,
-      title: 'Database Optimization',
-      description: 'Optimize database queries and rebuild indexes',
-      type: 'Database',
-      schedule: '2024-01-15 02:00',
-      duration: '2 hours',
-      status: 'scheduled',
-      impact: 'medium'
-    },
-    {
-      id: 2,
-      title: 'Security Updates',
-      description: 'Install latest security patches for all systems',
-      type: 'Security',
-      schedule: '2024-01-12 01:00',
-      duration: '1 hour',
-      status: 'scheduled',
-      impact: 'low'
-    },
-    {
-      id: 3,
-      title: 'Server Hardware Check',
-      description: 'Physical inspection and testing of server hardware',
-      type: 'Hardware',
-      schedule: '2024-01-20 03:00',
-      duration: '4 hours',
-      status: 'scheduled',
-      impact: 'high'
-    },
-    {
-      id: 4,
-      title: 'Backup System Test',
-      description: 'Test backup and recovery procedures',
-      type: 'Backup',
-      schedule: '2024-01-08 02:00',
-      duration: '3 hours',
-      status: 'completed',
-      impact: 'medium'
-    }
-  ];
-
-  const systemHealth = [
-    { component: 'CPU Usage', status: 'healthy', value: 45, threshold: 80 },
-    { component: 'Memory Usage', status: 'warning', value: 75, threshold: 80 },
-    { component: 'Disk Space', status: 'healthy', value: 60, threshold: 85 },
-    { component: 'Network Load', status: 'healthy', value: 35, threshold: 70 }
-  ];
+  const { metrics, loading } = useFirebaseSystemMetrics();
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -122,44 +76,75 @@ const SystemMaintenance = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading maintenance data...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* System Health Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
-            System Health Monitor
-          </CardTitle>
-          <CardDescription>Real-time system performance metrics</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {systemHealth.map((item) => {
-              const healthStatus = getHealthStatus(item.status);
-              return (
-                <div key={item.component} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      {healthStatus.icon}
-                      <h4 className="font-medium">{item.component}</h4>
+      {/* System Health Overview - Only show if metrics exist */}
+      {metrics.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Cpu className="h-5 w-5" />
+              System Health Monitor
+            </CardTitle>
+            <CardDescription>Real-time system performance metrics</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {metrics.map((metric) => {
+                const healthStatus = getHealthStatus(metric.status);
+                return (
+                  <div key={metric.name} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        {healthStatus.icon}
+                        <h4 className="font-medium">{metric.name}</h4>
+                      </div>
+                      <span className={`text-sm font-medium ${healthStatus.color}`}>
+                        {metric.value}%
+                      </span>
                     </div>
-                    <span className={`text-sm font-medium ${healthStatus.color}`}>
-                      {item.value}%
-                    </span>
+                    <Progress value={metric.value} className="mb-2" />
+                    <p className="text-xs text-gray-500">
+                      Status: {metric.status}
+                    </p>
                   </div>
-                  <Progress value={item.value} className="mb-2" />
-                  <p className="text-xs text-gray-500">
-                    Threshold: {item.threshold}% | Status: {item.status}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Cpu className="h-5 w-5" />
+              System Health Monitor
+            </CardTitle>
+            <CardDescription>Real-time system performance metrics</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <Cpu className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No System Metrics</h3>
+              <p className="text-gray-500 mb-4">No system performance data found in the database.</p>
+              <p className="text-sm text-gray-400">Add documents to the system_metrics collection to see health data here.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Maintenance Schedule */}
+      {/* Maintenance Schedule - Empty state as no real data */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -177,58 +162,11 @@ const SystemMaintenance = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {maintenanceTasks.map((task) => (
-              <div key={task.id} className="p-4 border rounded-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    {getTypeIcon(task.type)}
-                    <div>
-                      <h4 className="font-medium">{task.title}</h4>
-                      <p className="text-sm text-gray-500">{task.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(task.status)}
-                    {getImpactBadge(task.impact)}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 text-sm">
-                  <div>
-                    <p className="font-medium text-gray-700">Scheduled Time</p>
-                    <p className="text-gray-600 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {task.schedule}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">Duration</p>
-                    <p className="text-gray-600">{task.duration}</p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-700">Type</p>
-                    <p className="text-gray-600">{task.type}</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm">
-                    View Details
-                  </Button>
-                  {task.status === 'scheduled' && (
-                    <>
-                      <Button variant="outline" size="sm">
-                        Reschedule
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-red-600">
-                        Cancel
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="text-center py-8">
+            <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Maintenance Tasks</h3>
+            <p className="text-gray-500 mb-4">No maintenance tasks found in the database.</p>
+            <p className="text-sm text-gray-400">Add documents to the maintenance_tasks collection to see scheduled tasks here.</p>
           </div>
         </CardContent>
       </Card>
