@@ -165,8 +165,21 @@ export const useNotifications = () => {
         // Show notifications targeted to user's role
         if (notification.targetRole && notification.targetRole === employee.role) return true;
         
-        // Show notifications targeted to user's department
-        if (notification.targetDepartment && notification.targetDepartment === employee.department) return true;
+        // Show notifications targeted to user's department or permissions
+        if (notification.targetDepartment) {
+          // Check exact department match
+          if (notification.targetDepartment === employee.department) return true;
+          
+          // Check if user has permissions for the target department
+          if (employee.permissions && employee.permissions.includes(notification.targetDepartment)) return true;
+          
+          // Special case for Data Analysis permission mapping to Reports department
+          if (notification.targetDepartment === 'Reports' && 
+              employee.permissions && employee.permissions.includes('Data Analysis')) return true;
+          
+          // Special case for Data Analysis department mapping to Reports notifications
+          if (employee.department === 'Data Analysis' && notification.targetDepartment === 'Reports') return true;
+        }
         
         // Show notifications from user's department (announcements from same department)
         if (notification.department === employee.department && notification.type === 'announcement') return true;

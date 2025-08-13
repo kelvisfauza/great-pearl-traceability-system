@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +16,7 @@ interface AnnouncementDialogProps {
 
 const departments = [
   "Operations",
-  "Quality Control",
+  "Quality Control", 
   "Production",
   "Administration",
   "Finance",
@@ -24,6 +25,8 @@ const departments = [
   "Store",
   "Reports",
   "IT",
+  "Data Analysis",
+  "All Departments"
 ];
 
 export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps) {
@@ -34,9 +37,25 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [targetDepartment, setTargetDepartment] = useState<string>("");
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [priority, setPriority] = useState<"High" | "Medium" | "Low">("Medium");
   const [submitting, setSubmitting] = useState(false);
+
+  const handleDepartmentChange = (dept: string, checked: boolean) => {
+    if (dept === "All Departments") {
+      if (checked) {
+        setSelectedDepartments(departments.filter(d => d !== "All Departments"));
+      } else {
+        setSelectedDepartments([]);
+      }
+    } else {
+      if (checked) {
+        setSelectedDepartments(prev => [...prev, dept]);
+      } else {
+        setSelectedDepartments(prev => prev.filter(d => d !== dept));
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,25 +63,33 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
       toast({ title: "Not allowed", description: "Sign in to send announcements.", variant: "destructive" });
       return;
     }
-    if (!title.trim() || !message.trim() || !targetDepartment) {
-      toast({ title: "Missing info", description: "Please fill title, message and target department." });
+    if (!title.trim() || !message.trim() || selectedDepartments.length === 0) {
+      toast({ title: "Missing info", description: "Please fill title, message and select at least one department." });
       return;
     }
     try {
       setSubmitting(true);
-      await createAnnouncement(
-        title.trim(),
-        message.trim(),
-        employee.department,
-        targetDepartment,
-        undefined,
-        priority
-      );
-      toast({ title: "Announcement sent", description: `Sent to ${targetDepartment}` });
+      
+      // Send announcement to each selected department
+      for (const department of selectedDepartments) {
+        await createAnnouncement(
+          title.trim(),
+          message.trim(),
+          employee.department,
+          department,
+          undefined,
+          priority
+        );
+      }
+      
+      toast({ 
+        title: "Announcement sent", 
+        description: `Sent to ${selectedDepartments.length} department${selectedDepartments.length > 1 ? 's' : ''}` 
+      });
       setOpen(false);
       setTitle("");
       setMessage("");
-      setTargetDepartment("");
+      setSelectedDepartments([]);
       setPriority("Medium");
     } catch (err) {
       console.error(err);
@@ -94,17 +121,29 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
             <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Add more details..." rows={4} />
           </div>
           <div className="grid gap-2">
-            <Label>Target department</Label>
-            <Select value={targetDepartment} onValueChange={setTargetDepartment}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select department" />
-              </SelectTrigger>
-              <SelectContent>
-                {departments.map((d) => (
-                  <SelectItem key={d} value={d}>{d}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Target departments</Label>
+            <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
+              {departments.map((dept) => (
+                <div key={dept} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={dept}
+                    checked={dept === "All Departments" ? 
+                      selectedDepartments.length === departments.length - 1 : 
+                      selectedDepartments.includes(dept)
+                    }
+                    onCheckedChange={(checked) => handleDepartmentChange(dept, checked as boolean)}
+                  />
+                  <Label htmlFor={dept} className="text-sm cursor-pointer">
+                    {dept}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            {selectedDepartments.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Selected: {selectedDepartments.join(", ")}
+              </p>
+            )}
           </div>
           <div className="grid gap-2">
             <Label>Priority</Label>
