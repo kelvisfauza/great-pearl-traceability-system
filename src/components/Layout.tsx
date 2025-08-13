@@ -10,6 +10,8 @@ import { useMessages } from "@/hooks/useMessages";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePresence } from "@/hooks/usePresence";
+import FeatureAnnouncementModal from "./FeatureAnnouncementModal";
+import AnnouncementDialog from "./notifications/AnnouncementDialog";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -30,6 +32,10 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
 
   const toggleMessaging = () => setIsMessagingOpen(!isMessagingOpen);
   const toggleNotifications = () => setIsNotificationOpen(!isNotificationOpen);
+
+  const handleOpenAnnouncement = () => {
+    toggleNotifications();
+  };
 
   return (
     <div className="min-h-screen bg-background flex relative">
@@ -106,6 +112,8 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
         isOpen={isNotificationOpen}
         onClose={() => setIsNotificationOpen(false)}
       />
+      
+      <FeatureAnnouncementModal onOpenAnnouncement={handleOpenAnnouncement} />
     </div>
   );
 };
