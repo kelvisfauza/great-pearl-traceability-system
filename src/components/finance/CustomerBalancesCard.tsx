@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, CreditCard, AlertCircle, CheckCircle2 } from "lucide-react";
-import { useMillingData } from "@/hooks/useMillingData";
+import { Users, CreditCard, AlertCircle, CheckCircle2, Database } from "lucide-react";
+import { useCombinedCustomerBalances } from "@/hooks/useCombinedCustomerBalances";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,14 +15,15 @@ interface CustomerBalancesCardProps {
 }
 
 const CustomerBalancesCard = ({ formatCurrency }: CustomerBalancesCardProps) => {
-  const { customers, addCashTransaction, loading } = useMillingData();
+  const { customers, addPayment, loading, getStats } = useCombinedCustomerBalances();
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
 
-  // Filter customers with outstanding balances
+  // Get stats and filter customers with outstanding balances
+  const stats = getStats();
   const customersWithBalances = customers.filter(c => c.current_balance > 0);
 
   const handleCompletePayment = async () => {
@@ -40,9 +41,9 @@ const CustomerBalancesCard = ({ formatCurrency }: CustomerBalancesCardProps) => 
 
     setProcessing(true);
     try {
-      await addCashTransaction({
+      await addPayment({
         customer_id: selectedCustomer.id,
-        customer_name: selectedCustomer.full_name,
+        customer_name: selectedCustomer.name,
         amount_paid: amount,
         payment_method: "Cash",
         notes: "Payment completion via Finance dashboard",
@@ -52,7 +53,7 @@ const CustomerBalancesCard = ({ formatCurrency }: CustomerBalancesCardProps) => 
 
       toast({
         title: "Payment Completed",
-        description: `Payment of ${formatCurrency(amount)} recorded for ${selectedCustomer.full_name}`,
+        description: `Payment of ${formatCurrency(amount)} recorded for ${selectedCustomer.name}`,
       });
 
       setPaymentDialogOpen(false);
@@ -95,7 +96,7 @@ const CustomerBalancesCard = ({ formatCurrency }: CustomerBalancesCardProps) => 
       </CardHeader>
       <CardContent>
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="text-center p-4 bg-amber-50 rounded-lg">
             <p className="text-sm font-medium text-amber-700">Outstanding Balances</p>
             <p className="text-2xl font-bold text-amber-900">{customersWithBalances.length}</p>
@@ -103,8 +104,15 @@ const CustomerBalancesCard = ({ formatCurrency }: CustomerBalancesCardProps) => 
           <div className="text-center p-4 bg-red-50 rounded-lg">
             <p className="text-sm font-medium text-red-700">Total Amount Due</p>
             <p className="text-2xl font-bold text-red-900">
-              {formatCurrency(customersWithBalances.reduce((sum, c) => sum + c.current_balance, 0))}
+              {formatCurrency(stats.totalOutstanding)}
             </p>
+          </div>
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <p className="text-sm font-medium text-blue-700">Data Sources</p>
+            <div className="flex justify-center gap-2 mt-1">
+              <Badge variant="outline">{stats.supabaseCustomers} Supabase</Badge>
+              <Badge variant="outline">{stats.firebaseCustomers} Firebase</Badge>
+            </div>
           </div>
         </div>
 
@@ -116,6 +124,7 @@ const CustomerBalancesCard = ({ formatCurrency }: CustomerBalancesCardProps) => 
                 <TableHeader>
                   <TableRow>
                     <TableHead>Customer</TableHead>
+                    <TableHead>Source</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Outstanding Balance</TableHead>
                     <TableHead>Status</TableHead>
@@ -127,9 +136,18 @@ const CustomerBalancesCard = ({ formatCurrency }: CustomerBalancesCardProps) => 
                     <TableRow key={customer.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{customer.full_name}</p>
+                          <p className="font-medium">{customer.name}</p>
                           <p className="text-sm text-muted-foreground">{customer.address || 'No address'}</p>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={customer.source === 'supabase' ? 'default' : 'secondary'}
+                          className="flex items-center gap-1 w-fit"
+                        >
+                          <Database className="h-3 w-3" />
+                          {customer.source === 'supabase' ? 'Supabase' : 'Firebase'}
+                        </Badge>
                       </TableCell>
                       <TableCell>{customer.phone || 'N/A'}</TableCell>
                       <TableCell>
@@ -158,7 +176,7 @@ const CustomerBalancesCard = ({ formatCurrency }: CustomerBalancesCardProps) => 
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Complete Payment for {customer.full_name}</DialogTitle>
+                              <DialogTitle>Complete Payment for {customer.name}</DialogTitle>
                               <DialogDescription>
                                 Record a payment to reduce or clear the outstanding balance
                               </DialogDescription>
@@ -169,7 +187,7 @@ const CustomerBalancesCard = ({ formatCurrency }: CustomerBalancesCardProps) => 
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                   <div>
                                     <p className="font-medium">Customer:</p>
-                                    <p>{customer.full_name}</p>
+                                    <p>{customer.name}</p>
                                   </div>
                                   <div>
                                     <p className="font-medium">Current Balance:</p>
