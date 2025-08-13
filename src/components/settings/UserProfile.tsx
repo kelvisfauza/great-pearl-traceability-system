@@ -112,15 +112,13 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         .from('profile_pictures')
         .getPublicUrl(fileName);
 
-      // Update both Firestore (for existing data compatibility) and Supabase
-      try {
-        await updateDoc(doc(db, 'employees', employee.id), {
-          avatar_url: publicUrl,
-          updated_at: new Date().toISOString()
-        });
-      } catch (firestoreError) {
-        console.warn('Firestore update failed, continuing with Supabase only:', firestoreError);
-      }
+      // Update Firebase document (this is critical for persistence)
+      console.log('Updating Firebase document for employee:', employee.id);
+      await updateDoc(doc(db, 'employees', employee.id), {
+        avatar_url: publicUrl,
+        updated_at: new Date().toISOString()
+      });
+      console.log('Firebase update successful!');
 
       setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
       
