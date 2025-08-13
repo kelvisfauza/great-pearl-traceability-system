@@ -227,9 +227,13 @@ const SystemMaintenance = () => {
             <Button 
               variant="outline" 
               className="h-20 flex-col"
-              onClick={() => {
+              onClick={async () => {
                 console.log('🖱️ Database Optimization button clicked');
-                handleMaintenanceAction('Database Optimization');
+                try {
+                  await handleMaintenanceAction('Database Optimization');
+                } catch (error) {
+                  console.error('Error in button click:', error);
+                }
               }}
               disabled={actionLoading === 'Database Optimization'}
             >
