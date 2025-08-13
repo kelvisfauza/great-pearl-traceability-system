@@ -66,7 +66,12 @@ const DynamicHeader = () => {
               <GreetingIcon className="h-8 w-8 text-white" />
             </div>
             <Avatar className="h-16 w-16 border-4 border-white shadow-lg">
-              <AvatarImage src={employee?.avatar_url} alt={employee?.name} />
+              <AvatarImage 
+                src={employee?.avatar_url} 
+                alt={employee?.name}
+                key={employee?.avatar_url} // Force re-render when avatar URL changes
+                className="object-cover"
+              />
               <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-primary to-primary-foreground text-white">
                 {employee?.name?.split(' ').map(n => n[0]).join('') || 'U'}
               </AvatarFallback>
