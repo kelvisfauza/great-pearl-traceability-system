@@ -15,6 +15,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { addDoc, collection, query, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { fixAuthenticationIssues, testSpecificAccount } from '@/utils/fixAuthenticationIssues';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -23,9 +24,9 @@ const Auth = () => {
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [showCreateAccount, setShowCreateAccount] = useState(false);
-  const [createEmail, setCreateEmail] = useState('nicholusscottlangz@gmail.com');
-  const [createPassword, setCreatePassword] = useState('Yedascott6730');
-  const [createName, setCreateName] = useState('Nicholas Scott Langz');
+  const [createEmail, setCreateEmail] = useState('kelviskusa@gmail.com');
+  const [createPassword, setCreatePassword] = useState('Kusa2019');
+  const [createName, setCreateName] = useState('Kelvis Kusa');
   const [creating, setCreating] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -97,14 +98,40 @@ const Auth = () => {
       // Normalize email BEFORE creating Firebase Auth account
       const normalizedEmail = createEmail.toLowerCase().trim();
       
-      console.log('Creating Firebase Auth account...');
+      console.log('=== CREATING ACCOUNT ===');
       console.log('Original Email:', createEmail);
       console.log('Normalized Email:', normalizedEmail);
       console.log('Password:', createPassword);
+      console.log('Name:', createName);
       
-      // Create Firebase Auth user with normalized email
-      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, createPassword);
-      console.log('Firebase Auth user created:', userCredential.user.uid);
+      // First check if user already exists in Firebase Auth
+      try {
+        console.log('Checking if account already exists...');
+        await createUserWithEmailAndPassword(auth, normalizedEmail, createPassword);
+        console.log('✅ Firebase Auth account created successfully');
+      } catch (authError: any) {
+        if (authError.code === 'auth/email-already-in-use') {
+          console.log('ℹ️ Firebase Auth account already exists, continuing with employee record creation...');
+        } else {
+          throw authError; // Re-throw other auth errors
+        }
+      }
+      
+      // Get the current user (whether just created or already existed)
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        // If no current user, try to sign in to get the user
+        console.log('No current user, attempting sign in to verify credentials...');
+        const userCred = await createUserWithEmailAndPassword(auth, normalizedEmail, createPassword);
+        console.log('User credentials obtained:', userCred.user.uid);
+      }
+      
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        throw new Error('Failed to get user ID after account creation');
+      }
+      
+      console.log('User ID for employee record:', userId);
       
       // Create employee record with the same normalized email
       const employeeData = {
@@ -120,18 +147,22 @@ const Auth = () => {
         join_date: new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        authUserId: userCredential.user.uid,
+        authUserId: userId,
         isOneTimePassword: false,
         mustChangePassword: false
       };
       
-      console.log('Creating employee record...');
+      console.log('Creating employee record with data:', employeeData);
       const docRef = await addDoc(collection(db, 'employees'), employeeData);
-      console.log('Employee record created with ID:', docRef.id);
+      console.log('✅ Employee record created with ID:', docRef.id);
+      
+      // Sign out after account creation to ensure clean login
+      await auth.signOut();
+      console.log('✅ Signed out after account creation');
       
       toast({
         title: "Account Created Successfully!",
-        description: `Account for ${createEmail} has been created. You can now log in.`,
+        description: `Account for ${normalizedEmail} has been created. You can now log in.`,
       });
       
       setShowCreateAccount(false);
@@ -140,8 +171,14 @@ const Auth = () => {
       setEmail(normalizedEmail);
       setPassword(createPassword);
       
+      console.log('=== ACCOUNT CREATION COMPLETE ===');
+      
     } catch (error: any) {
-      console.error('Account creation error:', error);
+      console.error('=== ACCOUNT CREATION ERROR ===');
+      console.error('Error object:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      
       let errorMessage = 'Failed to create account';
       
       if (error.code === 'auth/email-already-in-use') {
@@ -150,6 +187,8 @@ const Auth = () => {
         errorMessage = 'Password is too weak. Please use a stronger password.';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Invalid email address.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection.';
       }
       
       setError(errorMessage);
@@ -160,6 +199,35 @@ const Auth = () => {
       });
     } finally {
       setCreating(false);
+    }
+  };
+
+  const runDiagnostics = async () => {
+    console.log('🔧 Running authentication diagnostics...');
+    
+    // Test the specific failing account
+    const testResult = await testSpecificAccount('kelviskusa@gmail.com', 'Kusa2019');
+    
+    if (testResult.success) {
+      toast({
+        title: "Account Test Successful!",
+        description: "The account is working properly now. Try logging in.",
+      });
+    } else {
+      toast({
+        title: "Account Test Failed",
+        description: `Error: ${testResult.error}`,
+        variant: "destructive"
+      });
+      
+      // If the account doesn't exist, offer to create it
+      if (testResult.code === 'auth/user-not-found' || testResult.code === 'auth/invalid-credential') {
+        console.log('Account not found, attempting to create...');
+        setCreateEmail('kelviskusa@gmail.com');
+        setCreatePassword('Kusa2019');
+        setCreateName('Kelvis Kusa');
+        setShowCreateAccount(true);
+      }
     }
   };
 
@@ -330,6 +398,22 @@ const Auth = () => {
           <p>
             Having trouble? Contact your administrator for assistance.
           </p>
+          <div className="flex gap-2 justify-center mt-2">
+            <Button 
+              onClick={() => setShowCreateAccount(true)} 
+              variant="outline" 
+              size="sm"
+            >
+              Create Test Account
+            </Button>
+            <Button 
+              onClick={runDiagnostics} 
+              variant="outline" 
+              size="sm"
+            >
+              Fix Auth Issues
+            </Button>
+          </div>
         </div>
       </div>
 
