@@ -383,6 +383,7 @@ export type Database = {
           emergency_contact: string | null
           employee_id: string | null
           id: string
+          is_training_account: boolean | null
           join_date: string
           name: string
           permissions: string[]
@@ -391,6 +392,7 @@ export type Database = {
           role: string
           salary: number
           status: string
+          training_progress: number | null
           updated_at: string
         }
         Insert: {
@@ -401,6 +403,7 @@ export type Database = {
           emergency_contact?: string | null
           employee_id?: string | null
           id?: string
+          is_training_account?: boolean | null
           join_date?: string
           name: string
           permissions?: string[]
@@ -409,6 +412,7 @@ export type Database = {
           role?: string
           salary?: number
           status?: string
+          training_progress?: number | null
           updated_at?: string
         }
         Update: {
@@ -419,6 +423,7 @@ export type Database = {
           emergency_contact?: string | null
           employee_id?: string | null
           id?: string
+          is_training_account?: boolean | null
           join_date?: string
           name?: string
           permissions?: string[]
@@ -427,6 +432,7 @@ export type Database = {
           role?: string
           salary?: number
           status?: string
+          training_progress?: number | null
           updated_at?: string
         }
         Relationships: []
