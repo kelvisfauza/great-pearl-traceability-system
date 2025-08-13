@@ -112,13 +112,22 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         .from('profile_pictures')
         .getPublicUrl(fileName);
 
+      console.log('Got public URL:', publicUrl);
+      console.log('Attempting to update Firebase for employee:', employee.id);
+
       // Update Firebase document (this is critical for persistence)
-      console.log('Updating Firebase document for employee:', employee.id);
-      await updateDoc(doc(db, 'employees', employee.id), {
-        avatar_url: publicUrl,
-        updated_at: new Date().toISOString()
-      });
-      console.log('Firebase update successful!');
+      try {
+        await updateDoc(doc(db, 'employees', employee.id), {
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        });
+        console.log('Firebase update successful!');
+      } catch (firebaseError) {
+        console.error('Firebase update failed:', firebaseError);
+        console.error('Employee ID:', employee.id);
+        console.error('Public URL:', publicUrl);
+        throw new Error(`Failed to save profile picture: ${firebaseError.message}`);
+      }
 
       setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
       
