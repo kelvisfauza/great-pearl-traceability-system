@@ -241,6 +241,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Ensure an index doc mapping auth uid to role/department/permissions for security rules
+  const upsertEmployeeIndex = async (uid: string, employeeData: Employee) => {
+    try {
+      await setDoc(doc(db, 'employee_index', uid), {
+        department: employeeData.department,
+        role: employeeData.role,
+        permissions: employeeData.permissions || [],
+        updated_at: new Date().toISOString()
+      }, { merge: true });
+    } catch (e) {
+      console.error('Failed to upsert employee_index:', e);
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
@@ -311,6 +325,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       console.log('Employee data found:', employeeData);
       setEmployee(employeeData);
+
+      await upsertEmployeeIndex(userCredential.user.uid, employeeData);
 
       // Check if user needs to change password
       if (employeeData.mustChangePassword) {
@@ -463,6 +479,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const employeeData = await fetchEmployeeData(user.uid, user.email);
           console.log('Employee data from auth state change:', employeeData);
           setEmployee(employeeData);
+          if (employeeData) {
+            await upsertEmployeeIndex(user.uid, employeeData);
+          }
         } catch (error) {
           console.error('Error fetching employee data in auth state change:', error);
         } finally {
