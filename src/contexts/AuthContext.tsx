@@ -314,9 +314,79 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Normalized email:', normalizedEmail);
       console.log('Password provided:', password ? 'Yes' : 'No');
       console.log('Password length:', password?.length || 0);
-      console.log('Firebase Auth instance:', auth);
-      console.log('Firebase project ID:', auth.app.options.projectId);
       
+      // Try Supabase authentication first
+      console.log('Attempting Supabase authentication...');
+      const { data: supabaseAuth, error: supabaseError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: password
+      });
+
+      if (supabaseAuth.user && !supabaseError) {
+        console.log('Supabase authentication successful!');
+        console.log('User ID:', supabaseAuth.user.id);
+        console.log('User email:', supabaseAuth.user.email);
+        
+        // Create a mock Firebase user object for compatibility
+        const mockFirebaseUser = {
+          uid: supabaseAuth.user.id,
+          email: supabaseAuth.user.email,
+          emailVerified: supabaseAuth.user.email_confirmed_at != null
+        } as User;
+        
+        setUser(mockFirebaseUser);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Fetch employee data from Supabase
+        const { data: employeeData, error: employeeError } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('email', normalizedEmail)
+          .single();
+
+        if (employeeError || !employeeData) {
+          console.error('No employee record found in Supabase:', employeeError);
+          await supabase.auth.signOut();
+          setUser(null);
+          toast({
+            title: "Access Denied",
+            description: "No employee record found. Contact your administrator.",
+            variant: "destructive"
+          });
+          return {};
+        }
+
+        const employee: Employee = {
+          id: employeeData.id,
+          name: employeeData.name,
+          email: employeeData.email,
+          phone: employeeData.phone || '',
+          position: employeeData.position,
+          department: employeeData.department,
+          salary: employeeData.salary || 0,
+          role: employeeData.role,
+          permissions: employeeData.permissions || [],
+          status: employeeData.status,
+          join_date: employeeData.join_date,
+          address: employeeData.address,
+          emergency_contact: employeeData.emergency_contact,
+          isOneTimePassword: false,
+          mustChangePassword: false,
+          authUserId: supabaseAuth.user.id
+        };
+
+        setEmployee(employee);
+
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${employee.name}!`
+        });
+
+        return {};
+      }
+
+      // Fallback to Firebase authentication if Supabase fails
+      console.log('Supabase auth failed, trying Firebase...', supabaseError?.message);
       console.log('Calling Firebase signInWithEmailAndPassword...');
       const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
       console.log('Firebase sign in successful!');
@@ -471,6 +541,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         timeoutRef.current = null;
       }
 
+      // Sign out from both Supabase and Firebase
+      await supabase.auth.signOut();
       await firebaseSignOut(auth);
       setUser(null);
       setEmployee(null);
