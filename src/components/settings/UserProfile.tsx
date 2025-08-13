@@ -24,8 +24,8 @@ import {
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, auth, storage } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfileProps {
   employee: any;
@@ -77,17 +77,14 @@ const UserProfile = ({ employee }: UserProfileProps) => {
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    console.log('📷 Photo upload initiated:', { file: file?.name, size: file?.size, type: file?.type });
     
     if (!file || !employee) {
-      console.log('❌ Upload cancelled - no file or no employee');
       return;
     }
 
     setIsUploadingPhoto(true);
     try {
       if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
-        console.log('❌ Invalid file:', { type: file.type, size: file.size });
         toast({
           title: "Invalid file",
           description: "Please select an image under 5MB",
@@ -97,49 +94,39 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         return;
       }
 
-      const fileName = `profile_${employee.id}_${Date.now()}.${file.name.split('.').pop()}`;
-      console.log('📝 Uploading file:', fileName);
+      const fileName = `${employee.id}/${Date.now()}.${file.name.split('.').pop()}`;
       
-      const storageRef = ref(storage, `profile_pictures/${fileName}`);
-      console.log('🚀 Starting upload to Firebase Storage...');
-      
-      // Add timeout to prevent infinite loading
-      const uploadPromise = uploadBytes(storageRef, file);
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
-      );
-      
-      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
-      console.log('✅ File uploaded successfully:', uploadResult);
-      
-      const downloadURL = await getDownloadURL(storageRef);
-      console.log('🔗 Got download URL:', downloadURL);
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('profile_pictures')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-      console.log('💾 Updating employee document in Firestore...');
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile_pictures')
+        .getPublicUrl(fileName);
+
+      // Update employee document in Firestore
       await updateDoc(doc(db, 'employees', employee.id), {
-        avatar_url: downloadURL,
+        avatar_url: publicUrl,
         updated_at: new Date().toISOString()
       });
 
-      setFormData(prev => ({ ...prev, avatar_url: downloadURL }));
-      console.log('✅ Profile picture updated successfully');
+      setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
       toast({ title: "Success", description: "Profile picture updated!" });
       if (fetchEmployeeData) await fetchEmployeeData();
-    } catch (error) {
-      console.error('❌ Upload error:', error);
-      let errorMessage = 'Please try again.';
-      
-      if (error.code === 'storage/unauthorized') {
-        errorMessage = 'Storage access denied. Please contact administrator.';
-      } else if (error.code === 'storage/unknown') {
-        errorMessage = 'Storage service unavailable. Please try again later.';
-      } else if (error.message?.includes('timeout')) {
-        errorMessage = 'Upload timed out. Please check your connection and try again.';
-      }
-      
+    } catch (error: any) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload failed", 
-        description: errorMessage,
+        description: error.message || 'Please try again.',
         variant: "destructive"
       });
     } finally {
