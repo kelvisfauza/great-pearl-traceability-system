@@ -26,6 +26,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
 import { useFirebaseTickets } from '@/hooks/useFirebaseTickets';
 import { useFirebaseSystemMetrics } from '@/hooks/useFirebaseSystemMetrics';
+import { usePresenceList } from '@/hooks/usePresenceList';
+
 
 // IT Components
 import SystemOverview from '@/components/it/SystemOverview';
@@ -41,6 +43,7 @@ const ITDepartment = () => {
   const { employees } = useFirebaseEmployees();
   const { tickets } = useFirebaseTickets();
   const { services } = useFirebaseSystemMetrics();
+  const { onlineCount } = usePresenceList();
 
   // Calculate system uptime based on running services
   const runningServices = services.filter(s => s.status === 'running');
@@ -131,8 +134,8 @@ const ITDepartment = () => {
                   <Users className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Active Users</p>
-                  <p className="text-xl font-bold">{activeUsers}</p>
+                  <p className="text-sm text-muted-foreground">Online Users</p>
+                  <p className="text-xl font-bold">{onlineCount}</p>
                 </div>
               </div>
             </CardContent>

@@ -45,51 +45,47 @@ export const useFirebaseSystemMetrics = () => {
   const { toast } = useToast();
   const { hasPermission } = useAuth();
 
-  // Fetch system metrics
-  const fetchMetrics = async () => {
-    if (!hasPermission('IT Management')) return;
+  // Realtime system metrics listener
+  const listenMetrics = () => {
+    if (!hasPermission('IT Management')) return () => {};
 
     try {
       const metricsQuery = query(collection(db, 'system_metrics'), orderBy('updated_at', 'desc'));
-      const querySnapshot = await getDocs(metricsQuery);
-      
-      const metricsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as SystemMetric[];
-      
-      setMetrics(metricsData);
-    } catch (error) {
-      console.error('Error fetching system metrics:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch system metrics",
-        variant: "destructive"
+      const unsubscribe = onSnapshot(metricsQuery, (snapshot) => {
+        const metricsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as SystemMetric[];
+        setMetrics(metricsData);
+        setLoading(false);
       });
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error listening to system metrics:', error);
+      toast({ title: 'Error', description: 'Failed to listen for system metrics', variant: 'destructive' });
+      return () => {};
     }
   };
 
-  // Fetch system services
-  const fetchServices = async () => {
-    if (!hasPermission('IT Management')) return;
+  // Realtime system services listener
+  const listenServices = () => {
+    if (!hasPermission('IT Management')) return () => {};
 
     try {
       const servicesQuery = query(collection(db, 'system_services'), orderBy('name', 'asc'));
-      const querySnapshot = await getDocs(servicesQuery);
-      
-      const servicesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as SystemService[];
-      
-      setServices(servicesData);
-    } catch (error) {
-      console.error('Error fetching system services:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch system services",
-        variant: "destructive"
+      const unsubscribe = onSnapshot(servicesQuery, (snapshot) => {
+        const servicesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as SystemService[];
+        setServices(servicesData);
+        setLoading(false);
       });
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error listening to system services:', error);
+      toast({ title: 'Error', description: 'Failed to listen for system services', variant: 'destructive' });
+      return () => {};
     }
   };
 
@@ -167,7 +163,7 @@ export const useFirebaseSystemMetrics = () => {
         description: "Service status updated successfully"
       });
 
-      fetchServices(); // Refresh services list
+      // Realtime listeners will reflect the change automatically
     } catch (error) {
       console.error('Error updating service status:', error);
       toast({
@@ -178,76 +174,25 @@ export const useFirebaseSystemMetrics = () => {
     }
   };
 
-  // Initialize default data if collections are empty
-  const initializeSystemData = async () => {
-    if (!hasPermission('IT Management')) return;
+  // Default data initialization removed to avoid dummy data. Expect real documents in
+  // 'system_metrics', 'system_services', and 'system_activities' collections.
 
-    try {
-      // Check if metrics exist
-      const metricsSnapshot = await getDocs(collection(db, 'system_metrics'));
-      if (metricsSnapshot.empty) {
-        const defaultMetrics = [
-          { name: 'CPU Usage', value: 45, status: 'normal', icon: 'Cpu' },
-          { name: 'Memory Usage', value: 67, status: 'warning', icon: 'Activity' },
-          { name: 'Disk Usage', value: 78, status: 'warning', icon: 'HardDrive' },
-          { name: 'Network Load', value: 32, status: 'normal', icon: 'Monitor' }
-        ];
-
-        for (const metric of defaultMetrics) {
-          await addDoc(collection(db, 'system_metrics'), {
-            ...metric,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-        }
-      }
-
-      // Check if services exist
-      const servicesSnapshot = await getDocs(collection(db, 'system_services'));
-      if (servicesSnapshot.empty) {
-        const defaultServices = [
-          { name: 'Database Server', status: 'running', uptime: '15 days', icon: 'Database', description: 'Firebase Firestore' },
-          { name: 'Web Server', status: 'running', uptime: '15 days', icon: 'Server', description: 'React Application' },
-          { name: 'Authentication Service', status: 'running', uptime: '30 days', icon: 'Shield', description: 'Firebase Auth' },
-          { name: 'Coffee ERP API', status: 'running', uptime: '15 days', icon: 'Server', description: 'Core API Services' },
-          { name: 'Backup Service', status: 'maintenance', uptime: '2 hours', icon: 'HardDrive', description: 'Data Backup System' },
-          { name: 'Email Service', status: 'running', uptime: '12 days', icon: 'Mail', description: 'Notification System' }
-        ];
-
-        for (const service of defaultServices) {
-          await addDoc(collection(db, 'system_services'), {
-            ...service,
-            last_check: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-        }
-      }
-
-      // Add initial activity
-      await addActivity({
-        action: 'System monitoring initialized',
-        type: 'success',
-        details: 'IT Department system monitoring has been configured'
-      });
-
-    } catch (error) {
-      console.error('Error initializing system data:', error);
-    }
-  };
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await initializeSystemData();
-      await fetchMetrics();
-      await fetchServices();
-      const unsubscribe = fetchActivities();
-      setLoading(false);
-      return unsubscribe;
+    setLoading(true);
+    const unsubs: Array<() => void> = [];
+    const u1 = listenMetrics();
+    const u2 = listenServices();
+    const u3 = fetchActivities();
+    if (u1) unsubs.push(u1);
+    if (u2) unsubs.push(u2);
+    if (u3) unsubs.push(u3);
+    setLoading(false);
+    return () => {
+      unsubs.forEach((u) => {
+        try { u && u(); } catch {}
+      });
     };
-
-    loadData();
   }, []);
 
   return {
@@ -257,9 +202,6 @@ export const useFirebaseSystemMetrics = () => {
     loading,
     updateServiceStatus,
     addActivity,
-    refetch: () => {
-      fetchMetrics();
-      fetchServices();
-    }
+    refetch: () => {}
   };
 };
