@@ -78,6 +78,50 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     
+    // Notifications collection - Department/role-scoped access
+    function userHasEmployeeDoc() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/employees/$(request.auth.uid));
+    }
+    function userDept() {
+      return get(/databases/$(database)/documents/employees/$(request.auth.uid)).data.department;
+    }
+    function userRole() {
+      return get(/databases/$(database)/documents/employees/$(request.auth.uid)).data.role;
+    }
+    function canViewNotification() {
+      return isAdmin() || (
+        userHasEmployeeDoc() && (
+          (resource.data.targetRole != null && resource.data.targetRole == userRole()) ||
+          (resource.data.targetDepartment != null && resource.data.targetDepartment == userDept()) ||
+          (resource.data.type == 'announcement' && resource.data.department == userDept()) ||
+          (resource.data.type == 'system' && resource.data.targetRole == null && resource.data.targetDepartment == null)
+        )
+      );
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && canViewNotification();
+
+      // Departmental users can create announcements for their own department; admins can create any
+      allow create: if isAuthenticated() && (
+        isAdmin() || (
+          userHasEmployeeDoc() &&
+          request.resource.data.type == 'announcement' &&
+          request.resource.data.department == userDept()
+        )
+      );
+
+      // Only allow recipients to mark as read; restrict updated fields
+      allow update: if isAuthenticated() && (
+        isAdmin() || (
+          canViewNotification() &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['isRead','readAt'])
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { formatDistanceToNow } from "date-fns";
+import AnnouncementDialog from "@/components/notifications/AnnouncementDialog";
 
 interface NotificationPanelProps {
   isOpen: boolean;
@@ -88,6 +89,7 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
               )}
             </div>
             <div className="flex items-center gap-2">
+              <AnnouncementDialog trigger={<Button size="sm" variant="secondary">New announcement</Button>} />
               {unreadCount > 0 && (
                 <Button
                   variant="outline"
