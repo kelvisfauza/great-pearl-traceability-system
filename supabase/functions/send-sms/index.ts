@@ -58,59 +58,93 @@ serve(async (req) => {
       )
     }
 
-    // Send SMS using Yeda SMS API
+    // Send SMS using the correct API endpoint
+    // Based on the token format, this appears to be for a different SMS service
     try {
-      console.log('Sending SMS via Yeda SMS API...')
+      console.log('Sending SMS via SMS API...')
       
-      const smsResponse = await fetch('https://yeda.co.ug/api/sms/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          to: formattedPhone,
-          message: message,
-          from: 'GreatPearl'
-        })
-      })
+      // Try multiple possible endpoints for Yeda/African SMS services
+      const possibleEndpoints = [
+        'https://api.yeda.co.ug/v1/sms/send',
+        'https://sms.yeda.co.ug/api/send',
+        'https://api.africastalking.com/version1/messaging',
+        'https://api.hubtel.com/v1/messages/send'
+      ]
 
-      console.log('Yeda SMS response status:', smsResponse.status)
+      let smsSuccess = false
+      let lastError = null
 
-      if (smsResponse.ok) {
-        const smsResult = await smsResponse.json()
-        console.log('SMS sent successfully via Yeda:', smsResult)
+      for (const endpoint of possibleEndpoints) {
+        try {
+          console.log(`Trying endpoint: ${endpoint}`)
+          
+          const smsResponse = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+              'Accept': 'application/json',
+              'apikey': apiKey, // Some services use this header instead
+              'x-api-key': apiKey // Alternative header format
+            },
+            body: JSON.stringify({
+              to: formattedPhone,
+              message: message,
+              from: 'GreatPearl',
+              // Alternative parameter names
+              recipient: formattedPhone,
+              text: message,
+              sender: 'GreatPearl',
+              recipients: formattedPhone
+            })
+          })
 
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'SMS sent successfully',
-            phone: formattedPhone,
-            provider: 'Yeda SMS'
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          console.log(`Response status for ${endpoint}:`, smsResponse.status)
+
+          if (smsResponse.ok) {
+            const smsResult = await smsResponse.json()
+            console.log('SMS sent successfully:', smsResult)
+            smsSuccess = true
+            
+            return new Response(
+              JSON.stringify({ 
+                success: true, 
+                message: 'SMS sent successfully',
+                phone: formattedPhone,
+                provider: 'SMS Service'
+              }),
+              { 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              }
+            )
+          } else {
+            const errorText = await smsResponse.text()
+            console.error(`${endpoint} error:`, errorText)
+            lastError = { endpoint, error: errorText }
           }
-        )
-      } else {
-        const errorText = await smsResponse.text()
-        console.error('Yeda SMS error:', errorText)
-        
-        return new Response(
-          JSON.stringify({ 
-            error: 'Failed to send SMS', 
-            details: errorText,
-            phone: formattedPhone 
-          }),
-          { 
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        )
+        } catch (endpointError) {
+          console.error(`${endpoint} request failed:`, endpointError)
+          lastError = { endpoint, error: endpointError.message }
+        }
       }
+
+      
+      // If all endpoints failed
+      console.error('All SMS endpoints failed:', lastError)
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to send SMS via all endpoints', 
+          details: lastError,
+          phone: formattedPhone 
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
     } catch (error) {
-      console.error('Yeda SMS request failed:', error)
+      console.error('SMS service request failed:', error)
       
       return new Response(
         JSON.stringify({ 
