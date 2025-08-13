@@ -123,8 +123,13 @@ const UserProfile = ({ employee }: UserProfileProps) => {
       }
 
       setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
+      
+      // Force update the employee data in the context
+      if (fetchEmployeeData) {
+        await fetchEmployeeData();
+      }
+      
       toast({ title: "Success", description: "Profile picture updated!" });
-      if (fetchEmployeeData) await fetchEmployeeData();
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
