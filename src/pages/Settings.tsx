@@ -34,27 +34,27 @@ const Settings = () => {
 
   return (
     <Layout>
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">Manage your account settings and system preferences</p>
+      <div className="p-3 md:p-6 max-w-7xl mx-auto">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground text-sm md:text-base">Manage your account settings and system preferences</p>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
+        <Tabs defaultValue="profile" className="space-y-4 md:space-y-6">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+            <TabsTrigger value="profile" className="text-xs md:text-sm px-2 py-2">Profile</TabsTrigger>
             {canManageEmployees() && (
-              <TabsTrigger value="users">User Management</TabsTrigger>
+              <TabsTrigger value="users" className="text-xs md:text-sm px-2 py-2">Users</TabsTrigger>
             )}
             {canManageEmployees() && (
-              <TabsTrigger value="documents">Documents</TabsTrigger>
+              <TabsTrigger value="documents" className="text-xs md:text-sm px-2 py-2">Docs</TabsTrigger>
             )}
             {isAdmin() && (
-              <TabsTrigger value="admin">Admin Tools</TabsTrigger>
+              <TabsTrigger value="admin" className="text-xs md:text-sm px-2 py-2">Admin</TabsTrigger>
             )}
           </TabsList>
 
-          <TabsContent value="profile" className="space-y-6">
+          <TabsContent value="profile" className="space-y-4 md:space-y-6">
             <UserProfile employee={employee} />
           </TabsContent>
 
@@ -77,23 +77,27 @@ const Settings = () => {
                   <CardDescription>Generate and print employee documents</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <Card>
                       <CardContent className="p-4">
-                        <h3 className="font-semibold mb-2">Payment Slips</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
+                        <h3 className="font-semibold mb-2 text-sm md:text-base">Payment Slips</h3>
+                        <p className="text-xs md:text-sm text-muted-foreground mb-4">
                           Generate salary payment slips with deductions, bonuses, and allowances
                         </p>
-                        <Button onClick={() => setShowPaymentSlipModal(true)}>Generate Payment Slip</Button>
+                        <Button onClick={() => setShowPaymentSlipModal(true)} size="sm" className="w-full md:w-auto">
+                          Generate Payment Slip
+                        </Button>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="p-4">
-                        <h3 className="font-semibold mb-2">Employment Contracts</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
+                        <h3 className="font-semibold mb-2 text-sm md:text-base">Employment Contracts</h3>
+                        <p className="text-xs md:text-sm text-muted-foreground mb-4">
                           Create employment contracts with terms and conditions
                         </p>
-                        <Button onClick={() => setShowContractModal(true)}>Generate Contract</Button>
+                        <Button onClick={() => setShowContractModal(true)} size="sm" className="w-full md:w-auto">
+                          Generate Contract
+                        </Button>
                       </CardContent>
                     </Card>
                   </div>

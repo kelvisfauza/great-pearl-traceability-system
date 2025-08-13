@@ -101,5 +101,26 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    /* Improve text rendering on mobile */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Better mobile scrolling */
+    overscroll-behavior: none;
+  }
+
+  /* Ensure proper mobile viewport behavior */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Better mobile touch targets */
+  button, [role="button"], input, select, textarea {
+    touch-action: manipulation;
+  }
+
+  /* Prevent horizontal scrolling on mobile */
+  body, html {
+    overflow-x: hidden;
+    width: 100%;
   }
 }
