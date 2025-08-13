@@ -30,7 +30,7 @@ import RegistrationRequestsManager from '@/components/hr/RegistrationRequestsMan
 import PrintCredentialsDialog from '@/components/hr/PrintCredentialsDialog';
 import SalaryPaymentRequestsManager from '@/components/hr/SalaryPaymentRequestsManager';
 import UserCreationForm from '@/components/hr/UserCreationForm';
-import TestSMSPanel from '@/components/hr/TestSMSPanel';
+import PrintUserDetails from '@/components/hr/PrintUserDetails';
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -133,7 +133,7 @@ const HumanResources = () => {
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="employees">Employee Management</TabsTrigger>
             <TabsTrigger value="create">Create User</TabsTrigger>
-            <TabsTrigger value="test-sms">Test SMS</TabsTrigger>
+            <TabsTrigger value="print-details">Print Details</TabsTrigger>
             <TabsTrigger value="requests">Registration Requests</TabsTrigger>
             <TabsTrigger value="payments">Salary Payments</TabsTrigger>
           </TabsList>
@@ -212,8 +212,8 @@ const HumanResources = () => {
             <UserCreationForm />
           </TabsContent>
 
-          <TabsContent value="test-sms">
-            <TestSMSPanel />
+          <TabsContent value="print-details">
+            <PrintUserDetails employees={employees} />
           </TabsContent>
 
           <TabsContent value="requests">
