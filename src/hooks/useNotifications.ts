@@ -298,50 +298,14 @@ export const useNotifications = () => {
     console.log('useNotifications - useEffect triggered');
     console.log('useNotifications - employee:', employee);
     if (!employee) {
-      console.log('useNotifications - No employee found, notification system waiting for authentication');
+      console.log('useNotifications - No employee found, clearing notifications and waiting for authentication');
+      setNotifications([]);
+      setUnreadCount(0);
       setLoading(false);
       return;
     }
 
     console.log('useNotifications - Setting up notification listener for employee:', employee.name);
-
-    // Create a test notification only once for debugging
-    const createTestNotificationOnce = async () => {
-      try {
-        // Check if test notifications already exist
-        const testQuery = query(
-          collection(db, 'notifications'),
-          where('title', '==', 'Test Notification'),
-          where('targetUser', '==', employee.name)
-        );
-        const testSnapshot = await getDocs(testQuery);
-        
-        if (testSnapshot.empty) {
-          await addDoc(collection(db, 'notifications'), {
-            type: 'system',
-            title: 'Test Notification',
-            message: `Hello ${employee.name}! This is a test notification to verify the system is working.`,
-            department: 'IT',
-            senderName: 'System',
-            senderDepartment: 'IT',
-            priority: 'Low',
-            isRead: false,
-            targetUser: employee.name,
-            createdAt: new Date().toISOString()
-          });
-          console.log('Test notification created for:', employee.name);
-        } else {
-          console.log('Test notification already exists for:', employee.name);
-        }
-      } catch (error) {
-        console.error('Error creating test notification:', error);
-      }
-    };
-    
-    // Create test notification after a delay to ensure everything is set up
-    setTimeout(() => {
-      createTestNotificationOnce();
-    }, 2000);
 
     const notificationsQuery = query(
       collection(db, 'notifications')
