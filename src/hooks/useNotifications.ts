@@ -15,6 +15,7 @@ export interface Notification {
   isRead: boolean;
   targetRole?: string;
   targetDepartment?: string;
+  targetDepartments?: string[]; // New array format for multi-department announcements
   approvalRequestId?: string;
   metadata?: any;
   createdAt: string;
@@ -86,17 +87,17 @@ export const useNotifications = () => {
     }
   };
 
-  // Create announcement notification
+  // Create announcement notification - supports multiple departments
   const createAnnouncement = async (
     title: string,
     message: string,
     fromDepartment: string,
-    targetDepartment?: string,
+    targetDepartments: string[],
     targetRole?: string,
     priority: 'High' | 'Medium' | 'Low' = 'Medium'
   ) => {
     try {
-      console.log('Creating announcement:', { title, message, fromDepartment, targetDepartment, targetRole, priority });
+      console.log('Creating announcement:', { title, message, fromDepartment, targetDepartments, targetRole, priority });
       
       const notificationData: any = {
         type: 'announcement',
@@ -105,21 +106,34 @@ export const useNotifications = () => {
         department: fromDepartment,
         priority,
         isRead: false,
+        targetDepartments: targetDepartments, // Store as array
         createdAt: new Date().toISOString()
       };
 
-      // Only add targetRole and targetDepartment if they are not undefined
+      // Only add targetRole if it is not undefined
       if (targetRole !== undefined) {
         notificationData.targetRole = targetRole;
-      }
-      if (targetDepartment !== undefined) {
-        notificationData.targetDepartment = targetDepartment;
       }
 
       await addDoc(collection(db, 'notifications'), notificationData);
       console.log('Announcement created successfully');
     } catch (error) {
       console.error('Error creating announcement:', error);
+    }
+  };
+
+  // Clear all notifications for current user only
+  const clearAllNotifications = async () => {
+    try {
+      const promises = notifications.map(notification =>
+        updateDoc(doc(db, 'notifications', notification.id), {
+          isRead: true,
+          readAt: new Date().toISOString()
+        })
+      );
+      await Promise.all(promises);
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
     }
   };
 
@@ -217,6 +231,23 @@ export const useNotifications = () => {
             return true;
           }
         }
+
+        // Check multiple target departments (new array format)
+        if (notification.targetDepartments && Array.isArray(notification.targetDepartments)) {
+          const isTargeted = notification.targetDepartments.some(targetDept => {
+            if (targetDept === 'All Departments') return true;
+            if (targetDept === employee.department) return true;
+            if (employee.permissions && employee.permissions.includes(targetDept)) return true;
+            if (targetDept === 'Reports' && employee.permissions && employee.permissions.includes('Data Analysis')) return true;
+            if (employee.department === 'Data Analysis' && targetDept === 'Reports') return true;
+            return false;
+          });
+          
+          if (isTargeted) {
+            console.log('Showing by targetDepartments match:', notification.id);
+            return true;
+          }
+        }
         
         // Show notifications from user's department (announcements from same department)
         if (notification.department === employee.department && notification.type === 'announcement') {
@@ -259,6 +290,7 @@ export const useNotifications = () => {
     createSystemNotification,
     createAnnouncement,
     markAsRead,
-    markAllAsRead
+    markAllAsRead,
+    clearAllNotifications
   };
 };

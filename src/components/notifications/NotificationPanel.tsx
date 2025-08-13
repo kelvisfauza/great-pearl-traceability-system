@@ -37,6 +37,7 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
     unreadCount, 
     markAsRead, 
     markAllAsRead,
+    clearAllNotifications,
     loading 
   } = useNotifications();
 
@@ -90,6 +91,16 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
             </div>
             <div className="flex items-center gap-2">
               <AnnouncementDialog trigger={<Button size="sm" variant="secondary">New announcement</Button>} />
+              {notifications.length > 0 && (
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={clearAllNotifications}
+                  className="text-xs"
+                >
+                  Clear all
+                </Button>
+              )}
               {unreadCount > 0 && (
                 <Button
                   variant="outline"

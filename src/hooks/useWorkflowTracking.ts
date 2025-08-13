@@ -134,7 +134,7 @@ export const useWorkflowTracking = () => {
         'Modification Request Pending',
         `Batch ${modificationRequestData.batchNumber || ''} requires action: ${modificationRequestData.reason}`,
         modificationRequestData.requestedByDepartment,
-        modificationRequestData.targetDepartment,
+        [modificationRequestData.targetDepartment],
         'High'
       );
       

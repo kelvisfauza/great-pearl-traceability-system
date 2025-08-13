@@ -255,7 +255,7 @@ export const useQualityControl = () => {
         'Pending Payment Processing',
         `Assessment complete for batch ${assessment.batch_number}. Pending payment of UGX ${totalPaymentAmount.toLocaleString()}.`,
         'Quality',
-        'Finance',
+        ['Finance'],
         'High'
       );
       
@@ -332,7 +332,7 @@ export const useQualityControl = () => {
         'Assessment Submitted to Finance',
         `Quality assessment ${assessmentId} has been submitted to Finance for payment processing`,
         'Quality',
-        'Finance',
+        ['Finance'],
         'Medium'
       );
       

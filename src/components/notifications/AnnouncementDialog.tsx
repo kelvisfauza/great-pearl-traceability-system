@@ -70,19 +70,16 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
     try {
       setSubmitting(true);
       
-      // Send announcement to each selected department
-      console.log('Sending announcements to departments:', selectedDepartments);
-      for (const department of selectedDepartments) {
-        console.log('Creating announcement for department:', department);
-        await createAnnouncement(
-          title.trim(),
-          message.trim(),
-          employee.department,
-          department,
-          undefined,
-          priority
-        );
-      }
+      // Send single announcement to all selected departments
+      console.log('Sending announcement to departments:', selectedDepartments);
+      await createAnnouncement(
+        title.trim(),
+        message.trim(),
+        employee.department,
+        selectedDepartments,
+        undefined,
+        priority
+      );
       
       toast({ 
         title: "Announcement sent", 

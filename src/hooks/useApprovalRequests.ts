@@ -210,7 +210,7 @@ export const useApprovalRequests = () => {
             'Modification Request Pending',
             `Payment ${request.details.paymentId} for batch ${request.details.batchNumber} requires modification: ${rejectionReason}`,
             'Admin',
-            'Finance',
+            ['Finance'],
             'High'
           );
           

@@ -313,7 +313,7 @@ export const useStoreManagement = () => {
             'Pending Quality Assessment',
             `Batch ${record.batchNumber} from Store is awaiting quality assessment. Supplier: ${record.supplierName}.`,
             'Store',
-            'Quality',
+            ['Quality'],
             'High'
           );
         }
@@ -322,7 +322,7 @@ export const useStoreManagement = () => {
             'Assessment Completed',
             `Batch ${record.batchNumber} has been assessed. Pending finance processing.`,
             'Quality',
-            'Finance',
+            ['Finance'],
             'Medium'
           );
         }
