@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Wrench, 
   Calendar, 
@@ -16,9 +17,42 @@ import {
   Loader2
 } from 'lucide-react';
 import { useFirebaseSystemMetrics } from '@/hooks/useFirebaseSystemMetrics';
+import { useState } from 'react';
 
 const SystemMaintenance = () => {
-  const { metrics, loading } = useFirebaseSystemMetrics();
+  const { metrics, loading, addActivity } = useFirebaseSystemMetrics();
+  const { toast } = useToast();
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Maintenance action handlers
+  const handleMaintenanceAction = async (actionName: string, actionType: 'success' | 'warning' | 'error' | 'info' = 'success') => {
+    setActionLoading(actionName);
+    
+    try {
+      // Simulate maintenance action with delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Log the activity
+      await addActivity({
+        action: `${actionName} completed`,
+        type: actionType,
+        details: `Maintenance action: ${actionName} executed successfully`
+      });
+
+      toast({
+        title: "Maintenance Complete",
+        description: `${actionName} has been completed successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Maintenance Failed",
+        description: `Failed to complete ${actionName}. Please try again.`,
+        variant: "destructive"
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -65,10 +99,12 @@ const SystemMaintenance = () => {
 
   const getHealthStatus = (status: string) => {
     switch (status) {
+      case 'normal':
       case 'healthy':
         return { icon: <CheckCircle className="h-4 w-4 text-green-500" />, color: 'text-green-600' };
       case 'warning':
         return { icon: <AlertTriangle className="h-4 w-4 text-yellow-500" />, color: 'text-yellow-600' };
+      case 'error':
       case 'critical':
         return { icon: <AlertTriangle className="h-4 w-4 text-red-500" />, color: 'text-red-600' };
       default:
@@ -182,28 +218,82 @@ const SystemMaintenance = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" className="h-20 flex-col">
-              <Database className="h-6 w-6 mb-2" />
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col"
+              onClick={() => handleMaintenanceAction('Database Optimization')}
+              disabled={actionLoading === 'Database Optimization'}
+            >
+              {actionLoading === 'Database Optimization' ? (
+                <Loader2 className="h-6 w-6 mb-2 animate-spin" />
+              ) : (
+                <Database className="h-6 w-6 mb-2" />
+              )}
               Optimize Database
             </Button>
-            <Button variant="outline" className="h-20 flex-col">
-              <HardDrive className="h-6 w-6 mb-2" />
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col"
+              onClick={() => handleMaintenanceAction('Clear Temporary Files')}
+              disabled={actionLoading === 'Clear Temporary Files'}
+            >
+              {actionLoading === 'Clear Temporary Files' ? (
+                <Loader2 className="h-6 w-6 mb-2 animate-spin" />
+              ) : (
+                <HardDrive className="h-6 w-6 mb-2" />
+              )}
               Clear Temporary Files
             </Button>
-            <Button variant="outline" className="h-20 flex-col">
-              <Server className="h-6 w-6 mb-2" />
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col"
+              onClick={() => handleMaintenanceAction('Restart Services')}
+              disabled={actionLoading === 'Restart Services'}
+            >
+              {actionLoading === 'Restart Services' ? (
+                <Loader2 className="h-6 w-6 mb-2 animate-spin" />
+              ) : (
+                <Server className="h-6 w-6 mb-2" />
+              )}
               Restart Services
             </Button>
-            <Button variant="outline" className="h-20 flex-col">
-              <Settings className="h-6 w-6 mb-2" />
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col"
+              onClick={() => handleMaintenanceAction('Update System')}
+              disabled={actionLoading === 'Update System'}
+            >
+              {actionLoading === 'Update System' ? (
+                <Loader2 className="h-6 w-6 mb-2 animate-spin" />
+              ) : (
+                <Settings className="h-6 w-6 mb-2" />
+              )}
               Update System
             </Button>
-            <Button variant="outline" className="h-20 flex-col">
-              <CheckCircle className="h-6 w-6 mb-2" />
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col"
+              onClick={() => handleMaintenanceAction('Run Diagnostics')}
+              disabled={actionLoading === 'Run Diagnostics'}
+            >
+              {actionLoading === 'Run Diagnostics' ? (
+                <Loader2 className="h-6 w-6 mb-2 animate-spin" />
+              ) : (
+                <CheckCircle className="h-6 w-6 mb-2" />
+              )}
               Run Diagnostics
             </Button>
-            <Button variant="outline" className="h-20 flex-col">
-              <Wrench className="h-6 w-6 mb-2" />
+            <Button 
+              variant="outline" 
+              className="h-20 flex-col"
+              onClick={() => handleMaintenanceAction('System Cleanup')}
+              disabled={actionLoading === 'System Cleanup'}
+            >
+              {actionLoading === 'System Cleanup' ? (
+                <Loader2 className="h-6 w-6 mb-2 animate-spin" />
+              ) : (
+                <Wrench className="h-6 w-6 mb-2" />
+              )}
               System Cleanup
             </Button>
           </div>
