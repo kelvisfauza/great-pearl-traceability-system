@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import {
   User,
@@ -114,8 +113,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('=== FETCH EMPLOYEE DATA ===');
     console.log('Target User ID:', targetUserId);
     console.log('User Email:', userEmail);
-    console.log('user?.email:', user?.email);
-    console.log('passed email:', email);
     
     if (!userEmail) {
       console.log('No user email available');
@@ -129,7 +126,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Check if this is the main admin account
     if (normalizedEmail === MAIN_ADMIN_EMAIL) {
       console.log('Main admin account detected, creating admin profile');
-      let adminProfile: Employee = {
+      const adminProfile: Employee = {
         id: 'main-admin',
         name: 'Main Administrator',
         email: normalizedEmail,
@@ -145,162 +142,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         authUserId: targetUserId || ''
       };
 
-      // Load profile data from Supabase (including avatar_url)
-      try {
-        const { data: supabaseUser } = await supabase.auth.getUser();
-        if (supabaseUser.user) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('avatar_url, name, phone, address, emergency_contact')
-            .eq('user_id', supabaseUser.user.id)
-            .single();
-          
-          if (profileData) {
-            console.log('Loading admin profile data from Supabase:', profileData);
-            if (profileData.avatar_url) adminProfile.avatar_url = profileData.avatar_url;
-            if (profileData.phone) adminProfile.phone = profileData.phone;
-            if (profileData.address) adminProfile.address = profileData.address;
-            if (profileData.emergency_contact) adminProfile.emergency_contact = profileData.emergency_contact;
-          }
-        }
-      } catch (supabaseError) {
-        console.warn('Could not load admin Supabase profile data:', supabaseError);
-      }
-
       return adminProfile;
     }
 
-    try {
-      console.log('Fetching employee data for normalized email:', normalizedEmail);
-      console.log('Target user ID:', targetUserId);
-      
-      // First try to search by authUserId (for newly created users)
-      if (targetUserId) {
-        console.log('Searching by authUserId:', targetUserId);
-        const authUserQuery = query(collection(db, 'employees'), where('authUserId', '==', targetUserId));
-        const authUserSnapshot = await getDocs(authUserQuery);
-        
-        if (!authUserSnapshot.empty) {
-          const docSnap = authUserSnapshot.docs[0];
-          const employeeData = { id: docSnap.id, ...docSnap.data() } as Employee;
-          console.log('Found employee by authUserId:', employeeData);
-          console.log('Employee email from record:', employeeData.email);
-          return employeeData;
-        } else {
-          console.log('No employee found by authUserId');
-        }
-      }
-      
-      // Fallback to search by email (for existing users)
-      console.log('Searching by email:', normalizedEmail);
-      const employeesQuery = query(collection(db, 'employees'), where('email', '==', normalizedEmail));
-      const employeeSnapshot = await getDocs(employeesQuery);
-
-      console.log('Email search query result count:', employeeSnapshot.docs.length);
-
-      if (!employeeSnapshot.empty) {
-        const docSnap = employeeSnapshot.docs[0];
-        const employeeData = { id: docSnap.id, ...docSnap.data() } as Employee;
-        console.log('Found employee by email:', employeeData);
-        console.log('Employee email from record:', employeeData.email);
-        
-        // Try to load additional profile data from Supabase (including avatar_url)
-        try {
-          const { data: supabaseUser } = await supabase.auth.getUser();
-          if (supabaseUser.user) {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('avatar_url, name, phone, address, emergency_contact')
-              .eq('user_id', supabaseUser.user.id)
-              .single();
-            
-            if (profileData && profileData.avatar_url) {
-              console.log('Loading avatar from Supabase profile:', profileData.avatar_url);
-              employeeData.avatar_url = profileData.avatar_url;
-              // Also update other profile fields if they exist in Supabase
-              if (profileData.phone) employeeData.phone = profileData.phone;
-              if (profileData.address) employeeData.address = profileData.address;
-              if (profileData.emergency_contact) employeeData.emergency_contact = profileData.emergency_contact;
-            }
-          }
-        } catch (supabaseError) {
-          console.warn('Could not load Supabase profile data:', supabaseError);
-        }
-        
-        // Update the employee record with authUserId if it's missing
-        if (!employeeData.authUserId && targetUserId) {
-          console.log('Updating employee record with authUserId');
-          await updateDoc(doc(db, 'employees', docSnap.id), {
-            authUserId: targetUserId,
-            updated_at: new Date().toISOString()
-          });
-          employeeData.authUserId = targetUserId;
-        }
-        
-        return employeeData;
-      }
-
-      console.log('No employee record found for email:', normalizedEmail);
-      
-      // Check if there are any employees with similar emails (debugging)
-      const allEmployeesQuery = query(collection(db, 'employees'));
-      const allEmployeesSnapshot = await getDocs(allEmployeesQuery);
-      console.log('=== ALL EMPLOYEE EMAILS IN DATABASE ===');
-      allEmployeesSnapshot.docs.forEach((doc, index) => {
-        const data = doc.data();
-        console.log(`${index + 1}. Email: "${data.email}" | ID: ${doc.id}`);
-      });
-      console.log('=== END ALL EMPLOYEE EMAILS ===');
-      
-      // If user exists in Firebase Auth but no employee record, create one
-      if (targetUserId) {
-        console.log('Creating missing employee record for authenticated user');
-        const employeeData = {
-          name: normalizedEmail.split('@')[0], // Use email prefix as name
-          email: normalizedEmail,
-          phone: '',
-          position: 'Staff',
-          department: 'General',
-          salary: 0,
-          role: 'User',
-          permissions: ['General Access'],
-          status: 'Active',
-          join_date: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          authUserId: targetUserId,
-          isOneTimePassword: false,
-          mustChangePassword: false
-        };
-
-        try {
-          const docRef = await addDoc(collection(db, 'employees'), employeeData);
-          console.log('Created employee record with ID:', docRef.id);
-          return { id: docRef.id, ...employeeData } as Employee;
-        } catch (error) {
-          console.error('Error creating employee record:', error);
-        }
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error in fetchEmployeeData:', error);
-      return null;
-    }
-  };
-
-  // Ensure an index doc mapping auth uid to role/department/permissions for security rules
-  const upsertEmployeeIndex = async (uid: string, employeeData: Employee) => {
-    try {
-      await setDoc(doc(db, 'employee_index', uid), {
-        department: employeeData.department,
-        role: employeeData.role,
-        permissions: employeeData.permissions || [],
-        updated_at: new Date().toISOString()
-      }, { merge: true });
-    } catch (e) {
-      console.error('Failed to upsert employee_index:', e);
-    }
+    return null;
   };
 
   const signIn = async (email: string, password: string) => {
@@ -315,99 +160,56 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Password provided:', password ? 'Yes' : 'No');
       console.log('Password length:', password?.length || 0);
       
-      // Try Supabase authentication first
+      // Use Supabase authentication only
       console.log('Attempting Supabase authentication...');
       const { data: supabaseAuth, error: supabaseError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password: password
       });
 
-      if (supabaseAuth.user && !supabaseError) {
-        console.log('Supabase authentication successful!');
-        console.log('User ID:', supabaseAuth.user.id);
-        console.log('User email:', supabaseAuth.user.email);
-        
-        // Create a mock Firebase user object for compatibility
-        const mockFirebaseUser = {
-          uid: supabaseAuth.user.id,
-          email: supabaseAuth.user.email,
-          emailVerified: supabaseAuth.user.email_confirmed_at != null
-        } as User;
-        
-        setUser(mockFirebaseUser);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Fetch employee data from Supabase
-        const { data: employeeData, error: employeeError } = await supabase
-          .from('employees')
-          .select('*')
-          .eq('email', normalizedEmail)
-          .single();
+      if (supabaseError) {
+        console.error('Supabase authentication failed:', supabaseError);
+        throw supabaseError;
+      }
 
-        if (employeeError || !employeeData) {
-          console.error('No employee record found in Supabase:', employeeError);
-          await supabase.auth.signOut();
-          setUser(null);
-          toast({
-            title: "Access Denied",
-            description: "No employee record found. Contact your administrator.",
-            variant: "destructive"
-          });
-          return {};
-        }
+      if (!supabaseAuth.user) {
+        throw new Error('Authentication failed - no user returned');
+      }
 
-        const employee: Employee = {
-          id: employeeData.id,
-          name: employeeData.name,
-          email: employeeData.email,
-          phone: employeeData.phone || '',
-          position: employeeData.position,
-          department: employeeData.department,
-          salary: employeeData.salary || 0,
-          role: employeeData.role,
-          permissions: employeeData.permissions || [],
-          status: employeeData.status,
-          join_date: employeeData.join_date,
-          address: employeeData.address,
-          emergency_contact: employeeData.emergency_contact,
+      console.log('Supabase authentication successful!');
+      console.log('User ID:', supabaseAuth.user.id);
+      console.log('User email:', supabaseAuth.user.email);
+      
+      // Create a compatible user object for the app
+      const appUser = {
+        uid: supabaseAuth.user.id,
+        email: supabaseAuth.user.email,
+        emailVerified: supabaseAuth.user.email_confirmed_at != null
+      } as User;
+      
+      setUser(appUser);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Check if this is the main admin account
+      if (normalizedEmail === MAIN_ADMIN_EMAIL) {
+        console.log('Main admin logged in successfully');
+        const adminProfile: Employee = {
+          id: 'main-admin',
+          name: 'Main Administrator',
+          email: normalizedEmail,
+          position: 'System Administrator',
+          department: 'Administration',
+          salary: 0,
+          role: 'Administrator',
+          permissions: ['*'],
+          status: 'Active',
+          join_date: new Date().toISOString(),
           isOneTimePassword: false,
           mustChangePassword: false,
           authUserId: supabaseAuth.user.id
         };
-
-        setEmployee(employee);
-
-        toast({
-          title: "Login Successful",
-          description: `Welcome back, ${employee.name}!`
-        });
-
-        return {};
-      }
-
-      // Fallback to Firebase authentication if Supabase fails
-      console.log('Supabase auth failed, trying Firebase...', supabaseError?.message);
-      console.log('Calling Firebase signInWithEmailAndPassword...');
-      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-      console.log('Firebase sign in successful!');
-      console.log('User UID:', userCredential.user.uid);
-      console.log('User email from Firebase:', userCredential.user.email);
-      console.log('Email verified:', userCredential.user.emailVerified);
-      // Note: Firebase User object doesn't have disabled property in client SDK
-
-      // Set user first so fetchEmployeeData can access user.email
-      setUser(userCredential.user);
-      
-      // Add a small delay to ensure user state is set
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Fetch employee data using the email and uid - pass normalized email explicitly
-      const employeeData = await fetchEmployeeData(userCredential.user.uid, normalizedEmail);
-      
-      // Special handling for main admin account
-      if (normalizedEmail === MAIN_ADMIN_EMAIL) {
-        console.log('Main admin logged in successfully');
-        setEmployee(employeeData);
+        
+        setEmployee(adminProfile);
         
         setTimeout(async () => {
           await seedFirebaseData();
@@ -421,17 +223,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return {};
       }
       
-      // Regular employee login flow
-      console.log('Checking employee data after fetch:', employeeData);
-      console.log('Employee data type:', typeof employeeData);
-      console.log('Employee data null check:', employeeData === null);
-      console.log('Employee data undefined check:', employeeData === undefined);
-      
-      if (!employeeData) {
-        console.error('No employee record found for email:', normalizedEmail);
-        console.error('User ID:', userCredential.user.uid);
-        console.error('This should not happen if logs show employee was found');
-        await firebaseSignOut(auth);
+      // Fetch employee data from Supabase
+      console.log('Fetching employee data from Supabase...');
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('email', normalizedEmail)
+        .single();
+
+      if (employeeError || !employeeData) {
+        console.error('No employee record found in Supabase:', employeeError);
+        await supabase.auth.signOut();
         setUser(null);
         toast({
           title: "Access Denied",
@@ -442,29 +244,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       console.log('Employee data found:', employeeData);
-      setEmployee(employeeData);
 
-      await upsertEmployeeIndex(userCredential.user.uid, employeeData);
+      const employee: Employee = {
+        id: employeeData.id,
+        name: employeeData.name,
+        email: employeeData.email,
+        phone: employeeData.phone || '',
+        position: employeeData.position,
+        department: employeeData.department,
+        salary: employeeData.salary || 0,
+        role: employeeData.role,
+        permissions: employeeData.permissions || [],
+        status: employeeData.status,
+        join_date: employeeData.join_date,
+        address: employeeData.address,
+        emergency_contact: employeeData.emergency_contact,
+        isOneTimePassword: false,
+        mustChangePassword: false,
+        authUserId: supabaseAuth.user.id
+      };
 
-      // Check if user needs to change password
-      if (employeeData.mustChangePassword) {
-        console.log('User must change password, returning requiresPasswordChange flag');
-        toast({
-          title: "Password Change Required",
-          description: "You must change your password before continuing.",
-          variant: "destructive"
-        });
-        return { requiresPasswordChange: true };
-      }
+      setEmployee(employee);
 
-      console.log('Login successful, no password change required');
+      console.log('Login successful');
       setTimeout(async () => {
         await seedFirebaseData();
       }, 1000);
 
       toast({
         title: "Login Successful",
-        description: `Welcome back, ${employeeData.name}!`
+        description: `Welcome back, ${employee.name}!`
       });
 
       return {};
@@ -473,16 +282,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error('Sign in error:', error);
       
       let errorMessage = "Failed to sign in";
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = "No account found with this email address";
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = "Incorrect password";
-      } else if (error.code === 'auth/invalid-credential') {
+      if (error.message?.includes('Invalid login credentials')) {
         errorMessage = "Invalid email or password";
-      } else if (error.code === 'auth/user-disabled') {
-        errorMessage = "This account has been disabled";
-      } else if (error.code === 'auth/too-many-requests') {
+      } else if (error.message?.includes('Email not confirmed')) {
+        errorMessage = "Please confirm your email address";
+      } else if (error.message?.includes('Too many requests')) {
         errorMessage = "Too many failed attempts. Please try again later";
+      } else if (error.message) {
+        errorMessage = error.message;
       }
       
       toast({
@@ -500,24 +307,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       if (!user) throw new Error('No user logged in');
       
-      await updatePassword(user, newPassword);
-      
-      // Update employee record to remove one-time password flag
-      if (employee) {
-        const employeeRef = doc(db, 'employees', employee.id);
-        await updateDoc(employeeRef, {
-          isOneTimePassword: false,
-          mustChangePassword: false,
-          updated_at: new Date().toISOString()
-        });
-        
-        // Update local state
-        setEmployee(prev => prev ? {
-          ...prev,
-          isOneTimePassword: false,
-          mustChangePassword: false
-        } : null);
-      }
+      // Use Supabase to change password
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
       
       toast({
         title: "Password Changed",
@@ -541,9 +336,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         timeoutRef.current = null;
       }
 
-      // Sign out from both Supabase and Firebase
+      // Sign out from Supabase
       await supabase.auth.signOut();
-      await firebaseSignOut(auth);
       setUser(null);
       setEmployee(null);
       toast({
@@ -580,40 +374,104 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    console.log('Setting up auth state listener...');
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('=== AUTH STATE CHANGED ===');
-      console.log('User:', user ? user.uid : 'No user');
-      console.log('User email:', user ? user.email : 'No email');
-      
-      setUser(user);
-      
-      if (!user) {
-        console.log('No user - clearing employee and stopping loading');
-        setEmployee(null);
-        setLoading(false);
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      } else {
-        console.log('User found - fetching employee data');
-        try {
-          const employeeData = await fetchEmployeeData(user.uid, user.email);
-          console.log('Employee data from auth state change:', employeeData);
-          setEmployee(employeeData);
-          if (employeeData) {
-            await upsertEmployeeIndex(user.uid, employeeData);
-          }
-        } catch (error) {
-          console.error('Error fetching employee data in auth state change:', error);
-        } finally {
-          setLoading(false);
+    console.log('=== SUPABASE AUTH STATE LISTENER SETUP ===');
+    
+    // Set up Supabase auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Supabase auth state changed:', event, session?.user?.email);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          const appUser = {
+            uid: session.user.id,
+            email: session.user.email,
+            emailVerified: session.user.email_confirmed_at != null
+          } as User;
+          
+          setUser(appUser);
+          
+          // Don't fetch employee data here to avoid duplicate fetches
+          // This will be handled by the signIn method
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setEmployee(null);
         }
       }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const appUser = {
+          uid: session.user.id,
+          email: session.user.email,
+          emailVerified: session.user.email_confirmed_at != null
+        } as User;
+        
+        setUser(appUser);
+        
+        // Fetch employee data for existing session
+        const fetchEmployeeForSession = async () => {
+          const normalizedEmail = session.user.email?.toLowerCase().trim();
+          if (!normalizedEmail) return;
+          
+          if (normalizedEmail === MAIN_ADMIN_EMAIL) {
+            const adminProfile: Employee = {
+              id: 'main-admin',
+              name: 'Main Administrator',
+              email: normalizedEmail,
+              position: 'System Administrator',
+              department: 'Administration',
+              salary: 0,
+              role: 'Administrator',
+              permissions: ['*'],
+              status: 'Active',
+              join_date: new Date().toISOString(),
+              isOneTimePassword: false,
+              mustChangePassword: false,
+              authUserId: session.user.id
+            };
+            setEmployee(adminProfile);
+          } else {
+            const { data: employeeData } = await supabase
+              .from('employees')
+              .select('*')
+              .eq('email', normalizedEmail)
+              .single();
+              
+            if (employeeData) {
+              const employee: Employee = {
+                id: employeeData.id,
+                name: employeeData.name,
+                email: employeeData.email,
+                phone: employeeData.phone || '',
+                position: employeeData.position,
+                department: employeeData.department,
+                salary: employeeData.salary || 0,
+                role: employeeData.role,
+                permissions: employeeData.permissions || [],
+                status: employeeData.status,
+                join_date: employeeData.join_date,
+                address: employeeData.address,
+                emergency_contact: employeeData.emergency_contact,
+                isOneTimePassword: false,
+                mustChangePassword: false,
+                authUserId: session.user.id
+              };
+              setEmployee(employee);
+            }
+          }
+        };
+        
+        fetchEmployeeForSession();
+      }
+      setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, []);
-
-  // Remove this duplicate effect since we're now handling employee data in the auth state change
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [toast]);
 
   const value = {
     user,
