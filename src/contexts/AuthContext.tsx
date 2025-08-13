@@ -129,7 +129,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Check if this is the main admin account
     if (normalizedEmail === MAIN_ADMIN_EMAIL) {
       console.log('Main admin account detected, creating admin profile');
-      return {
+      let adminProfile: Employee = {
         id: 'main-admin',
         name: 'Main Administrator',
         email: normalizedEmail,
@@ -142,8 +142,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         join_date: new Date().toISOString(),
         isOneTimePassword: false,
         mustChangePassword: false,
-        authUserId: targetUserId
+        authUserId: targetUserId || ''
       };
+
+      // Load profile data from Supabase (including avatar_url)
+      try {
+        const { data: supabaseUser } = await supabase.auth.getUser();
+        if (supabaseUser.user) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('avatar_url, name, phone, address, emergency_contact')
+            .eq('user_id', supabaseUser.user.id)
+            .single();
+          
+          if (profileData) {
+            console.log('Loading admin profile data from Supabase:', profileData);
+            if (profileData.avatar_url) adminProfile.avatar_url = profileData.avatar_url;
+            if (profileData.phone) adminProfile.phone = profileData.phone;
+            if (profileData.address) adminProfile.address = profileData.address;
+            if (profileData.emergency_contact) adminProfile.emergency_contact = profileData.emergency_contact;
+          }
+        }
+      } catch (supabaseError) {
+        console.warn('Could not load admin Supabase profile data:', supabaseError);
+      }
+
+      return adminProfile;
     }
 
     try {
