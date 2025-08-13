@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +13,7 @@ import AssignedRoleNotification from '@/components/AssignedRoleNotification';
 import NotificationWidget from '@/components/notifications/NotificationWidget';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
+import { Coffee, TrendingUp, Users, Shield, Bell, Activity, Settings, BarChart3 } from 'lucide-react';
 
 const Index = () => {
   const { employee } = useAuth();
@@ -21,178 +21,176 @@ const Index = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   if (!employee) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10 flex items-center justify-center">
+        <div className="animate-scale-in">
+          <div className="w-16 h-16 bg-gradient-to-r from-primary to-primary/80 rounded-full animate-pulse mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
+
+  const SectionHeader = ({ icon: Icon, title, subtitle, gradient }: { 
+    icon: any, 
+    title: string, 
+    subtitle: string, 
+    gradient: string 
+  }) => (
+    <div className="flex items-center gap-4 mb-6 md:mb-8 animate-slide-up">
+      <div className={`p-3 rounded-2xl bg-gradient-to-r ${gradient} shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105`}>
+        <Icon className="h-6 w-6 text-white" />
+      </div>
+      <div>
+        <h2 className={`text-2xl md:text-3xl font-bold bg-gradient-to-r ${gradient.replace('to-', 'to-').replace('from-', 'from-')} bg-clip-text text-transparent`}>
+          {title}
+        </h2>
+        <p className="text-muted-foreground text-sm md:text-base">{subtitle}</p>
+      </div>
+    </div>
+  );
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-muted/10 space-y-10 p-6">
-        {/* Dynamic Header */}
-        <DynamicHeader />
-
-        {/* Assigned Role Notification */}
-        <AssignedRoleNotification />
-
-        {/* Admin Dashboard Section */}
-        {employee.role === 'Administrator' && (
-          <div className="space-y-8 animate-fade-in">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="p-2 rounded-xl bg-gradient-to-r from-red-500 to-pink-600 shadow-lg">
-                <div className="h-6 w-6 bg-white rounded-md"></div>
-              </div>
-              <div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
-                  Admin Controls
-                </h2>
-                <p className="text-muted-foreground">Manage system settings and user permissions</p>
-              </div>
-            </div>
-            <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 backdrop-blur-sm border border-border/50 rounded-3xl p-8 shadow-xl">
-              <AdminDashboard />
-            </div>
-          </div>
-        )}
-
-        {/* Main Dashboard Grid */}
-        <div className="space-y-12">
-          {/* Stats Section */}
-          <div className="space-y-8 animate-fade-in">
-            <div className="flex items-center gap-4">
-              <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 shadow-lg">
-                <div className="h-6 w-6 bg-white rounded-md"></div>
-              </div>
-              <div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                  Key Metrics
-                </h2>
-                <p className="text-muted-foreground">Real-time performance indicators</p>
-              </div>
-            </div>
-            <DashboardStats />
-          </div>
-
-          {/* Quick Actions & Activities */}
-          <div className="grid grid-cols-1 xl:grid-cols-5 gap-10 animate-fade-in">
-            <div className="xl:col-span-3 space-y-8">
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 shadow-lg">
-                  <div className="h-5 w-5 bg-white rounded-md"></div>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                    Quick Actions
-                  </h3>
-                  <p className="text-muted-foreground text-sm">Shortcuts to common tasks</p>
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
-                <QuickActions />
-              </div>
-            </div>
-            
-            <div className="xl:col-span-2 space-y-8">
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 shadow-lg">
-                  <div className="h-5 w-5 bg-white rounded-md"></div>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                    Recent Activity
-                  </h3>
-                  <p className="text-muted-foreground text-sm">Latest system updates</p>
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
-                <RecentActivity />
-              </div>
-            </div>
-          </div>
-
-          {/* Performance & Approvals */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 animate-fade-in">
-            <div className="space-y-8">
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 shadow-lg">
-                  <div className="h-5 w-5 bg-white rounded-md"></div>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                    Performance
-                  </h3>
-                  <p className="text-muted-foreground text-sm">System analytics</p>
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
-                <PerformanceOverview />
-              </div>
-            </div>
-            
-            {/* Approval Requests Section - Admin and Assigned Users */}
-            {roleData?.canApproveRequests && (
-              <div className="space-y-8">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 shadow-lg">
-                    <div className="h-5 w-5 bg-white rounded-md"></div>
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
-                      Approvals
-                    </h3>
-                    <p className="text-muted-foreground text-sm">Pending requests</p>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
-                  <ApprovalRequests />
-                </div>
-              </div>
-            )}
-
-            
-            {/* Notifications Section */}
-            <div className="space-y-8">
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 shadow-lg">
-                  <div className="h-5 w-5 bg-white rounded-md"></div>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                    Notifications
-                  </h3>
-                  <p className="text-muted-foreground text-sm">Recent alerts & updates</p>
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
-                <NotificationWidget onViewAll={() => setIsNotificationOpen(true)} />
-              </div>
-            </div>
-
-            {/* EUDR Compliance Section */}
-            {(employee.department === 'Store' || employee.role === 'Administrator') && (
-              <div className="space-y-8">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg">
-                    <div className="h-5 w-5 bg-white rounded-md"></div>
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                      EUDR Compliance
-                    </h3>
-                    <p className="text-muted-foreground text-sm">Documentation status</p>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-card via-card/95 to-muted/20 rounded-3xl p-8 border border-border/50 shadow-lg">
-                  <EUDRSummaryCard />
-                </div>
-              </div>
-            )}
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background/98 to-muted/5 relative overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 right-20 w-72 h-72 bg-gradient-to-r from-primary/5 to-accent/5 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-r from-secondary/3 to-primary/3 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
-        
-        {/* Notification Panel */}
-        <NotificationPanel 
-          isOpen={isNotificationOpen}
-          onClose={() => setIsNotificationOpen(false)}
-        />
+
+        <div className="relative z-10 space-y-8 md:space-y-12 p-4 md:p-8">
+          {/* Dynamic Header */}
+          <div className="animate-fade-in">
+            <DynamicHeader />
+          </div>
+
+          {/* Assigned Role Notification */}
+          <div className="animate-fade-in delay-100">
+            <AssignedRoleNotification />
+          </div>
+
+          {/* Admin Dashboard Section */}
+          {employee.role === 'Administrator' && (
+            <div className="space-y-8 animate-fade-in delay-200">
+              <SectionHeader 
+                icon={Settings}
+                title="Admin Controls"
+                subtitle="Manage system settings and user permissions"
+                gradient="from-red-500 to-pink-600"
+              />
+              <div className="bg-gradient-to-br from-card via-card/98 to-card/95 backdrop-blur-xl border border-border/20 rounded-3xl p-6 md:p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] animate-glow">
+                <AdminDashboard />
+              </div>
+            </div>
+          )}
+
+          {/* Main Dashboard Grid */}
+          <div className="space-y-8 md:space-y-12">
+            {/* Stats Section */}
+            <div className="space-y-8 animate-fade-in delay-300">
+              <SectionHeader 
+                icon={BarChart3}
+                title="Key Metrics"
+                subtitle="Real-time performance indicators"
+                gradient="from-blue-500 to-cyan-600"
+              />
+              <DashboardStats />
+            </div>
+
+            {/* Quick Actions & Activities */}
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 md:gap-8 animate-fade-in delay-400">
+              <div className="xl:col-span-3 space-y-6 md:space-y-8">
+                <SectionHeader 
+                  icon={TrendingUp}
+                  title="Quick Actions"
+                  subtitle="Shortcuts to common tasks"
+                  gradient="from-emerald-500 to-teal-600"
+                />
+                <div className="bg-gradient-to-br from-card via-card/98 to-muted/5 rounded-3xl p-6 md:p-8 border border-border/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
+                  <QuickActions />
+                </div>
+              </div>
+              
+              <div className="xl:col-span-2 space-y-6 md:space-y-8">
+                <SectionHeader 
+                  icon={Activity}
+                  title="Recent Activity"
+                  subtitle="Latest system updates"
+                  gradient="from-purple-500 to-indigo-600"
+                />
+                <div className="animate-slide-up delay-500">
+                  <RecentActivity />
+                </div>
+              </div>
+            </div>
+
+            {/* Performance & Additional Sections */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 animate-fade-in delay-500">
+              {/* Performance Section */}
+              <div className="space-y-6 md:space-y-8">
+                <SectionHeader 
+                  icon={BarChart3}
+                  title="Performance"
+                  subtitle="System analytics"
+                  gradient="from-amber-500 to-orange-600"
+                />
+                <div className="bg-gradient-to-br from-card via-card/98 to-muted/5 rounded-3xl p-6 md:p-8 border border-border/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
+                  <PerformanceOverview />
+                </div>
+              </div>
+              
+              {/* Approval Requests Section - Admin and Assigned Users */}
+              {roleData?.canApproveRequests && (
+                <div className="space-y-6 md:space-y-8">
+                  <SectionHeader 
+                    icon={Shield}
+                    title="Approvals"
+                    subtitle="Pending requests"
+                    gradient="from-red-500 to-rose-600"
+                  />
+                  <div className="bg-gradient-to-br from-card via-card/98 to-muted/5 rounded-3xl p-6 md:p-8 border border-border/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
+                    <ApprovalRequests />
+                  </div>
+                </div>
+              )}
+              
+              {/* Notifications Section */}
+              <div className="space-y-6 md:space-y-8">
+                <SectionHeader 
+                  icon={Bell}
+                  title="Notifications"
+                  subtitle="Recent alerts & updates"
+                  gradient="from-violet-500 to-purple-600"
+                />
+                <div className="bg-gradient-to-br from-card via-card/98 to-muted/5 rounded-3xl p-6 md:p-8 border border-border/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
+                  <NotificationWidget onViewAll={() => setIsNotificationOpen(true)} />
+                </div>
+              </div>
+
+              {/* EUDR Compliance Section */}
+              {(employee.department === 'Store' || employee.role === 'Administrator') && (
+                <div className="space-y-6 md:space-y-8 md:col-span-2 xl:col-span-1">
+                  <SectionHeader 
+                    icon={Coffee}
+                    title="EUDR Compliance"
+                    subtitle="Documentation status"
+                    gradient="from-green-500 to-emerald-600"
+                  />
+                  <div className="bg-gradient-to-br from-card via-card/98 to-muted/5 rounded-3xl p-6 md:p-8 border border-border/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
+                    <EUDRSummaryCard />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Notification Panel */}
+          <NotificationPanel 
+            isOpen={isNotificationOpen}
+            onClose={() => setIsNotificationOpen(false)}
+          />
+        </div>
       </div>
     </Layout>
   );

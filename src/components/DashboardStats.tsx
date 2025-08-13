@@ -254,33 +254,46 @@ const DashboardStats = () => {
   const stats = getStatsForRole();
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
       {stats.map((stat, index) => (
-        <Card key={index} className="group relative overflow-hidden bg-gradient-to-br from-card to-card/80 backdrop-blur-sm border-border/50 hover:border-primary/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-              {stat.title}
-            </CardTitle>
-            <div className="p-3 rounded-xl bg-gradient-to-br from-background to-muted border border-border/50 shadow-sm group-hover:shadow-md transition-all duration-300">
-              <stat.icon className={`h-5 w-5 ${stat.color} group-hover:scale-110 transition-transform duration-300`} />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10 space-y-4">
-            <div className="text-3xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">
-              {stat.value}
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">{stat.change}</p>
-              <Badge 
-                variant={stat.trend === 'positive' ? 'default' : stat.trend === 'attention' ? 'destructive' : 'secondary'}
-                className="text-xs font-medium"
-              >
-                {stat.trend === 'positive' ? '↗ Good' : stat.trend === 'attention' ? '⚠ Action' : '→ Stable'}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+        <div 
+          key={index} 
+          className="group animate-scale-in"
+          style={{ animationDelay: `${index * 150}ms` }}
+        >
+          <Card className="relative overflow-hidden bg-gradient-to-br from-card/95 via-card to-card/90 backdrop-blur-xl border border-border/30 hover:border-primary/40 transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:shadow-primary/10 cursor-pointer">
+            {/* Animated background glow */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-accent/3 opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+            
+            {/* Animated border effect */}
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
+            
+            <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors duration-300">
+                {stat.title}
+              </CardTitle>
+              <div className="p-3 rounded-xl bg-gradient-to-br from-background/80 to-muted/50 border border-border/50 shadow-sm group-hover:shadow-lg group-hover:scale-110 transition-all duration-300 backdrop-blur-sm">
+                <stat.icon className={`h-5 w-5 ${stat.color} group-hover:scale-110 transition-all duration-300`} />
+              </div>
+            </CardHeader>
+            <CardContent className="relative z-10 space-y-4">
+              <div className="text-2xl md:text-3xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">
+                {stat.value}
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs md:text-sm text-muted-foreground group-hover:text-muted-foreground/80 transition-colors duration-300 truncate">
+                  {stat.change}
+                </p>
+                <Badge 
+                  variant={stat.trend === 'positive' ? 'default' : stat.trend === 'attention' ? 'destructive' : 'secondary'}
+                  className="text-xs font-medium shrink-0 ml-2 group-hover:scale-105 transition-transform duration-300"
+                >
+                  {stat.trend === 'positive' ? '↗ Good' : stat.trend === 'attention' ? '⚠ Action' : '→ Stable'}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       ))}
     </div>
   );

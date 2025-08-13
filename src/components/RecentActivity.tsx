@@ -95,30 +95,37 @@ const RecentActivity = () => {
   };
 
   return (
-    <Card className="bg-gradient-to-br from-card to-card/80 backdrop-blur-sm border-border/50 h-fit">
+    <Card className="bg-gradient-to-br from-card/95 via-card to-card/90 backdrop-blur-xl border border-border/30 hover:border-primary/20 transition-all duration-500 hover:shadow-xl h-fit group">
       <CardHeader className="pb-6">
-        <CardTitle className="flex items-center gap-3 text-xl">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-secondary to-secondary/80 text-secondary-foreground">
+        <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-secondary/80 to-secondary/60 text-secondary-foreground group-hover:scale-105 transition-transform duration-300 backdrop-blur-sm">
             <Clock className="h-5 w-5" />
           </div>
           Recent Activity
         </CardTitle>
-        <CardDescription className="text-base">Latest activities you can view</CardDescription>
+        <CardDescription className="text-sm md:text-base">Latest activities you can view</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           {recentActivities.length > 0 ? (
-            recentActivities.map((activity) => (
-              <div key={activity.id} className="group flex items-start space-x-4 p-4 rounded-xl border border-border/50 bg-gradient-to-r from-background to-muted/20 hover:border-primary/30 hover:shadow-md transition-all duration-300">
-                <div className="flex-shrink-0 p-2 rounded-lg bg-muted/50 group-hover:bg-primary/10 transition-colors duration-300">
-                  <activity.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
+            recentActivities.map((activity, index) => (
+              <div 
+                key={activity.id} 
+                className="group/item flex items-start space-x-4 p-4 rounded-xl border border-border/30 bg-gradient-to-r from-background/80 to-muted/10 hover:border-primary/40 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm animate-slide-up"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="flex-shrink-0 p-2 rounded-lg bg-muted/30 group-hover/item:bg-primary/10 group-hover/item:scale-105 transition-all duration-300 backdrop-blur-sm">
+                  <activity.icon className="h-5 w-5 text-muted-foreground group-hover/item:text-primary transition-colors duration-300" />
                 </div>
                 <div className="flex-1 min-w-0 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-foreground truncate">
+                    <p className="text-sm font-semibold text-foreground truncate group-hover/item:text-primary transition-colors duration-300">
                       {activity.title}
                     </p>
-                    <Badge variant={getStatusColor(activity.status)} className="ml-2">
+                    <Badge 
+                      variant={getStatusColor(activity.status)} 
+                      className="ml-2 group-hover/item:scale-105 transition-transform duration-300 text-xs"
+                    >
                       {activity.status}
                     </Badge>
                   </div>
@@ -132,11 +139,12 @@ const RecentActivity = () => {
               </div>
             ))
           ) : (
-            <div className="text-center py-12">
-              <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+            <div className="text-center py-12 animate-fade-in">
+              <div className="p-4 rounded-full bg-gradient-to-br from-muted/30 to-muted/50 w-fit mx-auto mb-4 backdrop-blur-sm">
                 <Shield className="h-12 w-12 text-muted-foreground" />
               </div>
               <p className="text-base font-medium text-muted-foreground">No activities available for your role</p>
+              <p className="text-sm text-muted-foreground/80 mt-2">Check back later for updates</p>
             </div>
           )}
         </div>
