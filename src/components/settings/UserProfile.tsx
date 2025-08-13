@@ -93,18 +93,21 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         return;
       }
 
-      const fileName = `${employee.id}/${Date.now()}.${file.name.split('.').pop()}`;
+      // Use a safer filename approach
+      const fileExtension = file.name.split('.').pop() || 'jpg';
+      const fileName = `${employee.id || 'user'}/${Date.now()}.${fileExtension}`;
       
       // Upload to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('profile_pictures')
         .upload(fileName, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true // Allow overwriting existing files
         });
 
       if (uploadError) {
-        throw uploadError;
+        console.error('Supabase upload error:', uploadError);
+        throw new Error('Failed to upload image to storage');
       }
 
       // Get public URL
@@ -112,31 +115,54 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         .from('profile_pictures')
         .getPublicUrl(fileName);
 
-      console.log('Got public URL:', publicUrl);
-      console.log('Attempting to update Firebase for employee:', employee.id);
-
-      // Update Firebase document (this is critical for persistence)
-      try {
-        await updateDoc(doc(db, 'employees', employee.id), {
-          avatar_url: publicUrl,
-          updated_at: new Date().toISOString()
-        });
-        console.log('Firebase update successful!');
-      } catch (firebaseError) {
-        console.error('Firebase update failed:', firebaseError);
-        console.error('Employee ID:', employee.id);
-        console.error('Public URL:', publicUrl);
-        throw new Error(`Failed to save profile picture: ${firebaseError.message}`);
+      // Try multiple approaches to save the avatar URL
+      let saveSuccessful = false;
+      
+      // Approach 1: Update Firebase document if employee has valid ID
+      if (employee.id && typeof employee.id === 'string') {
+        try {
+          await updateDoc(doc(db, 'employees', employee.id), {
+            avatar_url: publicUrl,
+            updated_at: new Date().toISOString()
+          });
+          console.log('Firebase update successful!');
+          saveSuccessful = true;
+        } catch (firebaseError) {
+          console.warn('Firebase update failed:', firebaseError);
+        }
       }
 
+      // Approach 2: Update using authUserId if available
+      if (!saveSuccessful && employee.authUserId) {
+        try {
+          await updateDoc(doc(db, 'employees', employee.authUserId), {
+            avatar_url: publicUrl,
+            updated_at: new Date().toISOString()
+          });
+          console.log('Firebase update with authUserId successful!');
+          saveSuccessful = true;
+        } catch (firebaseError) {
+          console.warn('Firebase update with authUserId failed:', firebaseError);
+        }
+      }
+
+      // Update local state regardless of Firebase success
       setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
       
-      // Force update the employee data in the context
+      // Force update the employee data
       if (fetchEmployeeData) {
         await fetchEmployeeData();
       }
       
-      toast({ title: "Success", description: "Profile picture updated!" });
+      if (saveSuccessful) {
+        toast({ title: "Success", description: "Profile picture updated and saved!" });
+      } else {
+        toast({ 
+          title: "Partially successful", 
+          description: "Image uploaded but may not persist. Please contact support.",
+          variant: "destructive" 
+        });
+      }
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
