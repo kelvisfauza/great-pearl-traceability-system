@@ -20,7 +20,7 @@ import { useFirebaseTickets } from '@/hooks/useFirebaseTickets';
 
 const TicketSystem = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { tickets, loading, updateTicket } = useFirebaseTickets();
+  const { tickets, loading, updateTicket, deleteTicket } = useFirebaseTickets();
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
@@ -79,6 +79,22 @@ const TicketSystem = () => {
         <div className="flex items-center justify-center p-8">
           <Loader2 className="h-8 w-8 animate-spin" />
           <span className="ml-2">Loading tickets...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (tickets.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <Bug className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No IT Tickets</h3>
+          <p className="text-gray-500 mb-4">No support tickets found in the system.</p>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Create First Ticket
+          </Button>
         </div>
       </div>
     );
@@ -181,33 +197,43 @@ const TicketSystem = () => {
               </TabsList>
 
               <TabsContent value="all" className="space-y-3 mt-4">
-                {filteredTickets.map((ticket) => (
-                  <TicketCard key={ticket.id} ticket={ticket} />
-                ))}
+                {filteredTickets.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No tickets match your search.</div>
+                ) : (
+                  filteredTickets.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)
+                )}
               </TabsContent>
 
               <TabsContent value="open" className="space-y-3 mt-4">
-                {getTicketsByStatus('open').map((ticket) => (
-                  <TicketCard key={ticket.id} ticket={ticket} />
-                ))}
+                {getTicketsByStatus('open').length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No open tickets.</div>
+                ) : (
+                  getTicketsByStatus('open').map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)
+                )}
               </TabsContent>
 
               <TabsContent value="in-progress" className="space-y-3 mt-4">
-                {getTicketsByStatus('in-progress').map((ticket) => (
-                  <TicketCard key={ticket.id} ticket={ticket} />
-                ))}
+                {getTicketsByStatus('in-progress').length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No tickets in progress.</div>
+                ) : (
+                  getTicketsByStatus('in-progress').map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)
+                )}
               </TabsContent>
 
               <TabsContent value="resolved" className="space-y-3 mt-4">
-                {getTicketsByStatus('resolved').map((ticket) => (
-                  <TicketCard key={ticket.id} ticket={ticket} />
-                ))}
+                {getTicketsByStatus('resolved').length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No resolved tickets.</div>
+                ) : (
+                  getTicketsByStatus('resolved').map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)
+                )}
               </TabsContent>
 
               <TabsContent value="closed" className="space-y-3 mt-4">
-                {getTicketsByStatus('closed').map((ticket) => (
-                  <TicketCard key={ticket.id} ticket={ticket} />
-                ))}
+                {getTicketsByStatus('closed').length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No closed tickets.</div>
+                ) : (
+                  getTicketsByStatus('closed').map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)
+                )}
               </TabsContent>
             </Tabs>
           </div>
@@ -278,6 +304,17 @@ const TicketSystem = () => {
             </Button>
             <Button variant="outline" size="sm">
               Add Comment
+            </Button>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={() => {
+                if (confirm('Are you sure you want to delete this ticket?')) {
+                  deleteTicket(ticket.id);
+                }
+              }}
+            >
+              Delete
             </Button>
           </div>
       </div>

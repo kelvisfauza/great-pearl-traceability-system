@@ -67,100 +67,114 @@ const SystemOverview = () => {
     );
   }
 
+  if (metrics.length === 0 && services.length === 0 && activities.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <Shield className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No System Data</h3>
+          <p className="text-gray-500 mb-4">No system metrics, services, or activities found in the database.</p>
+          <p className="text-sm text-gray-400">Add documents to system_metrics, system_services, and system_activities collections to see data here.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* System Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {metrics.map((metric) => {
-          const IconComponent = getIconComponent(metric.icon);
-          return (
-            <Card key={metric.name}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <IconComponent className="h-4 w-4" />
-                    <span className="text-sm font-medium">{metric.name}</span>
+      {metrics.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {metrics.map((metric) => {
+            const IconComponent = getIconComponent(metric.icon);
+            return (
+              <Card key={metric.name}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <IconComponent className="h-4 w-4" />
+                      <span className="text-sm font-medium">{metric.name}</span>
+                    </div>
+                    {metric.status === 'warning' ? (
+                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    ) : metric.status === 'error' ? (
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    )}
                   </div>
-                  {metric.status === 'warning' ? (
-                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                  ) : metric.status === 'error' ? (
-                    <AlertTriangle className="h-4 w-4 text-red-500" />
-                  ) : (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Usage</span>
-                    <span>{metric.value}%</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Usage</span>
+                      <span>{metric.value}%</span>
+                    </div>
+                    <Progress value={metric.value} className="h-2" />
                   </div>
-                  <Progress value={metric.value} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Services Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Server className="h-5 w-5" />
-            System Services
-          </CardTitle>
-          <CardDescription>Current status of all system services</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {services.map((service) => {
-              const IconComponent = getIconComponent(service.icon);
-              return (
-                <div key={service.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${getStatusColor(service.status)}`} />
-                    <IconComponent className="h-4 w-4" />
-                    <div>
-                      <p className="font-medium">{service.name}</p>
-                      <p className="text-sm text-gray-500">{service.description}</p>
-                      <p className="text-sm text-gray-500">Uptime: {service.uptime}</p>
+      {/* System Services */}
+      {services.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5" />
+              System Services
+            </CardTitle>
+            <CardDescription>Current status of all system services</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {services.map((service) => {
+                const IconComponent = getIconComponent(service.icon);
+                return (
+                  <div key={service.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${getStatusColor(service.status)}`} />
+                      <IconComponent className="h-4 w-4" />
+                      <div>
+                        <p className="font-medium">{service.name}</p>
+                        <p className="text-sm text-gray-500">{service.description}</p>
+                        <p className="text-sm text-gray-500">Uptime: {service.uptime}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(service.status)}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          const newStatus = service.status === 'running' ? 'maintenance' : 'running';
+                          updateServiceStatus(service.id, newStatus);
+                        }}
+                      >
+                        {service.status === 'running' ? 'Stop' : 'Start'}
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(service.status)}
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        const newStatus = service.status === 'running' ? 'maintenance' : 'running';
-                        updateServiceStatus(service.id, newStatus);
-                      }}
-                    >
-                      {service.status === 'running' ? 'Stop' : 'Start'}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Active Users */}
-      <ActiveUsers />
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Recent System Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {activities.length > 0 ? (
-              activities.map((activity) => (
+      {/* System Activities */}
+      {activities.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Recent System Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {activities.map((activity) => (
                 <div key={activity.id} className="flex items-center gap-3 p-2 border-l-2 border-l-blue-500 pl-3">
                   <div className="text-sm">
                     <p className="font-medium">{activity.action}</p>
@@ -172,15 +186,14 @@ const SystemOverview = () => {
                     )}
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-4 text-gray-500">
-                No recent activities
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Active Users - Always show */}
+      <ActiveUsers />
     </div>
   );
 };

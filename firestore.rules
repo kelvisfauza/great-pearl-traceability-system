@@ -186,6 +186,35 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // System collections - Admin/IT access
+    match /system_metrics/{docId} {
+      allow read: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow create, update: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow delete: if false;
+    }
+    match /system_services/{docId} {
+      allow read: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow create, update: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow delete: if false;
+    }
+    match /system_activities/{docId} {
+      allow read: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow create, update: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow delete: if false;
+    }
+
+    // IT Tickets - can be viewed by submitters and IT/Admins
+    match /it_tickets/{ticketId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        hasPermission('IT Management') ||
+        resource.data.submitted_by_id == request.auth.uid
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow delete: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

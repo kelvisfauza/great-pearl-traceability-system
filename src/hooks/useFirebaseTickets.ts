@@ -251,73 +251,9 @@ export const useFirebaseTickets = () => {
     return tickets.filter(ticket => ticket.priority === priority);
   };
 
-  // Initialize with sample data if collection is empty
-  const initializeSampleTickets = async () => {
-    if (!hasPermission('IT Management')) return;
-
-    try {
-      const ticketsSnapshot = await getDocs(collection(db, 'it_tickets'));
-      if (ticketsSnapshot.empty) {
-        const sampleTickets = [
-          {
-            title: 'Login Issues with Coffee ERP',
-            description: 'Unable to login to the system, getting authentication error',
-            department: 'Finance',
-            priority: 'high' as const,
-            status: 'open' as const,
-            category: 'Authentication',
-            tags: ['login', 'authentication', 'urgent']
-          },
-          {
-            title: 'Printer Not Working',
-            description: 'Office printer is not responding to print commands',
-            department: 'Quality Control',
-            priority: 'medium' as const,
-            status: 'in-progress' as const,
-            category: 'Hardware',
-            tags: ['printer', 'hardware']
-          },
-          {
-            title: 'Request for New Software',
-            description: 'Need access to new quality analysis software',
-            department: 'Quality Control',
-            priority: 'low' as const,
-            status: 'resolved' as const,
-            category: 'Software Request',
-            tags: ['software', 'request']
-          },
-          {
-            title: 'Internet Connection Slow',
-            description: 'Very slow internet connection in the storage area',
-            department: 'Store Management',
-            priority: 'medium' as const,
-            status: 'open' as const,
-            category: 'Network',
-            tags: ['network', 'performance']
-          }
-        ];
-
-        for (const ticketData of sampleTickets) {
-          await createTicket({
-            ...ticketData,
-            submitted_by: 'System Administrator'
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error initializing sample tickets:', error);
-    }
-  };
-
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await initializeSampleTickets();
-      const unsubscribe = fetchTickets();
-      return unsubscribe;
-    };
-
-    loadData();
+    const unsubscribe = fetchTickets();
+    return unsubscribe;
   }, []);
 
   return {
