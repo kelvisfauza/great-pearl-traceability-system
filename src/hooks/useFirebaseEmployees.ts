@@ -296,13 +296,29 @@ export const useFirebaseEmployees = () => {
         const roleChanged = updates.role && updates.role !== currentEmployee.role;
         const permissionsChanged = JSON.stringify(oldPermissions.sort()) !== JSON.stringify(newPermissions.sort());
         
+        console.log('Checking for role/permission changes:', {
+          employeeName: currentEmployee.name,
+          oldRole: currentEmployee.role,
+          newRole: updates.role,
+          oldPermissions,
+          newPermissions,
+          roleChanged,
+          permissionsChanged
+        });
+        
         if (roleChanged || permissionsChanged) {
-          await createRoleAssignmentNotification(
-            currentEmployee.name,
-            updates.role || currentEmployee.role,
-            newPermissions,
-            currentUser?.name || 'Administrator'
-          );
+          console.log('Creating role assignment notification for:', currentEmployee.name);
+          try {
+            await createRoleAssignmentNotification(
+              currentEmployee.name,
+              updates.role || currentEmployee.role,
+              newPermissions,
+              currentUser?.name || 'Administrator'
+            );
+            console.log('Notification created successfully');
+          } catch (error) {
+            console.error('Error creating role assignment notification:', error);
+          }
         }
       }
       

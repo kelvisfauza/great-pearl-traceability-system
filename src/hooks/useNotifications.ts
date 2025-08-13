@@ -18,6 +18,7 @@ export interface Notification {
   targetRole?: string;
   targetDepartment?: string;
   targetDepartments?: string[]; // New array format for multi-department announcements
+  targetUser?: string; // Target specific user by name
   approvalRequestId?: string;
   metadata?: any;
   createdAt: string;
@@ -101,8 +102,16 @@ export const useNotifications = () => {
     assignedBy: string
   ) => {
     try {
+      console.log('createRoleAssignmentNotification called with:', {
+        assignedToName,
+        role,
+        permissions,
+        assignedBy,
+        currentEmployee: employee?.name
+      });
+      
       const permissionsList = permissions.length > 0 ? permissions.join(', ') : 'basic access';
-      await addDoc(collection(db, 'notifications'), {
+      const notificationData = {
         type: 'system',
         title: 'New Role Assigned',
         message: `You have been assigned the role of ${role} by ${assignedBy}. You can now access: ${permissionsList}`,
@@ -113,8 +122,14 @@ export const useNotifications = () => {
         isRead: false,
         targetRole: undefined,
         targetDepartment: undefined,
+        targetUser: assignedToName, // Target specifically this user
         createdAt: new Date().toISOString()
-      });
+      };
+      
+      console.log('Creating notification with data:', notificationData);
+      
+      await addDoc(collection(db, 'notifications'), notificationData);
+      console.log('Role assignment notification created successfully');
     } catch (error) {
       console.error('Error creating role assignment notification:', error);
     }
@@ -298,11 +313,17 @@ export const useNotifications = () => {
 
       // Filter notifications based on user role and department
       const userNotifications = allNotifications.filter(notification => {
-        console.log('Filtering notification:', notification.id, 'targetDepartment:', notification.targetDepartment, 'type:', notification.type);
+        console.log('Filtering notification:', notification.id, 'targetDepartment:', notification.targetDepartment, 'targetUser:', notification.targetUser, 'type:', notification.type);
         
         // Show all notifications to administrators
         if (employee.role === 'Administrator') {
           console.log('Showing to admin:', notification.id);
+          return true;
+        }
+        
+        // Show notifications targeted to specific user by name
+        if (notification.targetUser && notification.targetUser === employee.name) {
+          console.log('Showing by target user match:', notification.id);
           return true;
         }
         
@@ -370,7 +391,7 @@ export const useNotifications = () => {
         }
         
         // Show system notifications to everyone
-        if (notification.type === 'system' && !notification.targetRole && !notification.targetDepartment) {
+        if (notification.type === 'system' && !notification.targetRole && !notification.targetDepartment && !notification.targetUser) {
           console.log('Showing system notification to everyone:', notification.id);
           return true;
         }
