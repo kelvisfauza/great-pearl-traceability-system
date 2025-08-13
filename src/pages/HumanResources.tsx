@@ -155,11 +155,13 @@ const HumanResources = () => {
                       Manage employee information and access controls
                     </CardDescription>
                   </div>
-                  <Button onClick={() => setShowAddModal(true)}>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                Add Employee
-              </Button>
-              <MigrateUserButton />
+                  <div className="flex items-center gap-2">
+                    <Button onClick={() => setShowAddModal(true)}>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Employee
+                    </Button>
+                    <MigrateUserButton />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
