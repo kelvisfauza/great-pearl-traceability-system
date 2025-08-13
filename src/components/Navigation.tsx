@@ -74,6 +74,7 @@ const Navigation = () => {
         { name: "Dashboard", icon: BarChart3, path: "/", permission: null }, // Everyone can see dashboard
         { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permission: "Quality Control" },
         { name: "Store Management", icon: Shield, path: "/store", permission: "Store Management" },
+        { name: "Milling", icon: Coffee, path: "/milling", permission: "Milling" },
         { name: "Inventory", icon: Package, path: "/inventory", permission: "Inventory" },
         { name: "Field Operations", icon: MapPin, path: "/field-operations", permission: "Field Operations" },
       ]

@@ -780,6 +780,151 @@ export type Database = {
         }
         Relationships: []
       }
+      milling_cash_transactions: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          created_by: string
+          customer_id: string
+          customer_name: string
+          date: string
+          id: string
+          new_balance: number
+          notes: string | null
+          payment_method: string
+          previous_balance: number
+        }
+        Insert: {
+          amount_paid: number
+          created_at?: string
+          created_by: string
+          customer_id: string
+          customer_name: string
+          date?: string
+          id?: string
+          new_balance: number
+          notes?: string | null
+          payment_method?: string
+          previous_balance: number
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          customer_name?: string
+          date?: string
+          id?: string
+          new_balance?: number
+          notes?: string | null
+          payment_method?: string
+          previous_balance?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milling_cash_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "milling_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      milling_customers: {
+        Row: {
+          address: string | null
+          created_at: string
+          current_balance: number
+          full_name: string
+          id: string
+          opening_balance: number
+          phone: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          current_balance?: number
+          full_name: string
+          id?: string
+          opening_balance?: number
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          current_balance?: number
+          full_name?: string
+          id?: string
+          opening_balance?: number
+          phone?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      milling_transactions: {
+        Row: {
+          amount_paid: number
+          balance: number
+          created_at: string
+          created_by: string
+          customer_id: string
+          customer_name: string
+          date: string
+          id: string
+          kgs_hulled: number
+          notes: string | null
+          rate_per_kg: number
+          total_amount: number
+          transaction_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          balance?: number
+          created_at?: string
+          created_by: string
+          customer_id: string
+          customer_name: string
+          date?: string
+          id?: string
+          kgs_hulled: number
+          notes?: string | null
+          rate_per_kg?: number
+          total_amount: number
+          transaction_type?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          balance?: number
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          customer_name?: string
+          date?: string
+          id?: string
+          kgs_hulled?: number
+          notes?: string | null
+          rate_per_kg?: number
+          total_amount?: number
+          transaction_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milling_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "milling_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_records: {
         Row: {
           amount: number
