@@ -11,6 +11,7 @@ import QuickEmployeeUpdate from '@/components/admin/QuickEmployeeUpdate';
 import PaymentSlipGenerator from '@/components/settings/PaymentSlipGenerator';
 import ContractGenerator from '@/components/settings/ContractGenerator';
 import { useState } from 'react';
+import UserPresencePanel from '@/components/admin/UserPresencePanel';
 
 const Settings = () => {
   const { canManageEmployees, isAdmin, employee } = useAuth();
@@ -103,6 +104,15 @@ const Settings = () => {
 
           {isAdmin() && (
             <TabsContent value="admin" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>System Presence</CardTitle>
+                  <CardDescription>See who is online and their last activity</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <UserPresencePanel />
+                </CardContent>
+              </Card>
               <Card>
                 <CardHeader>
                   <CardTitle>Quick Employee Role Update</CardTitle>

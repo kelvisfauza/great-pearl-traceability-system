@@ -122,6 +122,20 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Presence tracking - users can write their own presence, authenticated users can read
+    match /presence/{uid} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // Employee index - users can upsert their own index document
+    match /employee_index/{uid} {
+      allow read: if isAuthenticated() && request.auth.uid == uid || isAdmin();
+      allow create, update: if isAuthenticated() && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

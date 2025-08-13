@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "./Navigation";
 import MessagingPanel from "./messaging/MessagingPanel";
 import MessageButton from "./messaging/MessageButton";
@@ -8,6 +8,8 @@ import NotificationPanel from "./notifications/NotificationPanel";
 import { ThemeToggle } from "./ThemeToggle";
 import { useMessages } from "@/hooks/useMessages";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePresence } from "@/hooks/usePresence";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,6 +22,8 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const { unreadCount } = useMessages();
   const { unreadCount: notificationUnreadCount } = useNotifications();
+  const { user } = useAuth();
+  usePresence(user?.uid);
   
   console.log('Layout - notification unread count:', notificationUnreadCount);
 

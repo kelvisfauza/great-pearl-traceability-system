@@ -17,6 +17,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useFirebaseSystemMetrics } from '@/hooks/useFirebaseSystemMetrics';
+import ActiveUsers from '@/components/it/ActiveUsers';
 
 const SystemOverview = () => {
   const { metrics, services, activities, loading, updateServiceStatus } = useFirebaseSystemMetrics();
@@ -144,6 +145,9 @@ const SystemOverview = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Active Users */}
+      <ActiveUsers />
 
       {/* Recent Activity */}
       <Card>

@@ -1,25 +1,49 @@
 
-import { useEffect, useCallback } from 'react';
-// Remove supabase import - will be handled by compatibility layer
+import { useEffect, useCallback, useRef } from 'react';
+import { db } from '@/lib/firebase';
+import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const usePresence = (userId?: string) => {
+  const { user, employee } = useAuth();
+  const hasSetLoginTime = useRef<boolean>(false);
+
   const updatePresence = useCallback(async (status: 'online' | 'away' | 'offline' = 'online') => {
-    if (!userId) return;
+    const uid = userId || user?.uid;
+    if (!uid) return;
 
     try {
-      // Temporarily do nothing - will be implemented with Firebase later
-      console.log('Would update presence:', { userId, status });
+      const presenceRef = doc(db, 'presence', uid);
+
+      // Build base payload
+      const payload: Record<string, any> = {
+        status,
+        last_seen: serverTimestamp(),
+        name: employee?.name || user?.displayName || user?.email || 'User',
+        email: user?.email ?? null,
+        department: employee?.department ?? null,
+        role: employee?.role ?? null,
+      };
+
+      // Set login_time once per session when going online
+      if (status === 'online' && !hasSetLoginTime.current) {
+        payload.login_time = serverTimestamp();
+        hasSetLoginTime.current = true;
+      }
+
+      await setDoc(presenceRef, payload, { merge: true });
     } catch (error) {
       console.error('Error updating presence:', error);
     }
-  }, [userId]); // Use Firebase User.uid
+  }, [userId, user?.uid, user?.email, user?.displayName, employee?.name, employee?.department, employee?.role]);
 
   const setOffline = useCallback(async () => {
     await updatePresence('offline');
   }, [updatePresence]);
 
   useEffect(() => {
-    if (!userId) return;
+    const uid = userId || user?.uid;
+    if (!uid) return;
 
     // Set user as online when hook mounts
     updatePresence('online');
@@ -45,7 +69,7 @@ export const usePresence = (userId?: string) => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       setOffline();
     };
-  }, [userId, updatePresence, setOffline]);
+  }, [userId, user?.uid, updatePresence, setOffline]);
 
   return { updatePresence };
 };
