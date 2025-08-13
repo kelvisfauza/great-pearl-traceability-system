@@ -147,6 +147,16 @@ export const useNotifications = () => {
     }
   };
 
+  // Delete individual notification
+  const deleteNotification = async (notificationId: string) => {
+    try {
+      await deleteDoc(doc(db, 'notifications', notificationId));
+      console.log('Notification deleted successfully');
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
@@ -289,6 +299,7 @@ export const useNotifications = () => {
     createAnnouncement,
     markAsRead,
     markAllAsRead,
-    clearAllNotifications
+    clearAllNotifications,
+    deleteNotification
   };
 };

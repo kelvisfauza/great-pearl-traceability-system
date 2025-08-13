@@ -20,7 +20,8 @@ import {
   User, 
   DollarSign,
   Calendar,
-  Building
+  Building,
+  Trash2
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { formatDistanceToNow } from "date-fns";
@@ -38,6 +39,7 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
     markAsRead, 
     markAllAsRead,
     clearAllNotifications,
+    deleteNotification,
     loading 
   } = useNotifications();
 
@@ -69,6 +71,11 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
     if (!notification.isRead) {
       await markAsRead(notification.id);
     }
+  };
+
+  const handleDeleteNotification = async (e: React.MouseEvent, notificationId: string) => {
+    e.stopPropagation();
+    await deleteNotification(notificationId);
   };
 
   const formatAmount = (amount: number) => {
@@ -198,12 +205,22 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
                             </p>
                           </div>
                         </div>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs flex-shrink-0 transition-colors ${getPriorityColor(notification.priority)}`}
-                        >
-                          {notification.priority}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs flex-shrink-0 transition-colors ${getPriorityColor(notification.priority)}`}
+                          >
+                            {notification.priority}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => handleDeleteNotification(e, notification.id)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto w-auto hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     
