@@ -77,11 +77,17 @@ const UserProfile = ({ employee }: UserProfileProps) => {
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !employee) return;
+    console.log('📷 Photo upload initiated:', { file: file?.name, size: file?.size, type: file?.type });
+    
+    if (!file || !employee) {
+      console.log('❌ Upload cancelled - no file or no employee');
+      return;
+    }
 
     setIsUploadingPhoto(true);
     try {
       if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+        console.log('❌ Invalid file:', { type: file.type, size: file.size });
         toast({
           title: "Invalid file",
           description: "Please select an image under 5MB",
@@ -91,22 +97,32 @@ const UserProfile = ({ employee }: UserProfileProps) => {
       }
 
       const fileName = `profile_${employee.id}_${Date.now()}.${file.name.split('.').pop()}`;
+      console.log('📝 Uploading file:', fileName);
+      
       const storageRef = ref(storage, `profile_pictures/${fileName}`);
+      console.log('🚀 Starting upload to Firebase Storage...');
+      
       const uploadResult = await uploadBytes(storageRef, file);
+      console.log('✅ File uploaded successfully:', uploadResult);
+      
       const downloadURL = await getDownloadURL(uploadResult.ref);
+      console.log('🔗 Got download URL:', downloadURL);
 
+      console.log('💾 Updating employee document in Firestore...');
       await updateDoc(doc(db, 'employees', employee.id), {
         avatar_url: downloadURL,
         updated_at: new Date().toISOString()
       });
 
       setFormData(prev => ({ ...prev, avatar_url: downloadURL }));
+      console.log('✅ Profile picture updated successfully');
       toast({ title: "Success", description: "Profile picture updated!" });
       if (fetchEmployeeData) await fetchEmployeeData();
     } catch (error) {
+      console.error('❌ Upload error:', error);
       toast({
         title: "Upload failed", 
-        description: "Please try again.",
+        description: `Error: ${error.message || 'Please try again.'}`,
         variant: "destructive"
       });
     } finally {
