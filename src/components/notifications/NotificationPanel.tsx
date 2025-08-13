@@ -77,93 +77,130 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[400px] sm:w-[540px]">
-        <SheetHeader>
+      <SheetContent className="w-[400px] sm:w-[540px] bg-gradient-to-br from-background to-muted/20">
+        <SheetHeader className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              <SheetTitle>Notifications</SheetTitle>
-              {unreadCount > 0 && (
-                <Badge variant="destructive" className="ml-2">
-                  {unreadCount} new
-                </Badge>
-              )}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Bell className="h-6 w-6 text-primary" />
+                {unreadCount > 0 && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                )}
+              </div>
+              <div>
+                <SheetTitle className="text-xl font-semibold">Notifications</SheetTitle>
+                {unreadCount > 0 && (
+                  <Badge variant="destructive" className="mt-1 animate-fade-in">
+                    {unreadCount} new
+                  </Badge>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <AnnouncementDialog trigger={<Button size="sm" variant="secondary">New announcement</Button>} />
-              {notifications.length > 0 && (
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={clearAllNotifications}
-                  className="text-xs"
-                >
-                  Clear all
-                </Button>
-              )}
-              {unreadCount > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={markAllAsRead}
-                >
-                  <CheckCheck className="h-4 w-4 mr-1" />
-                  Mark all read
-                </Button>
-              )}
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button variant="ghost" size="sm" onClick={onClose} className="hover:bg-muted">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          <SheetDescription>
+          
+          <div className="flex items-center gap-2 flex-wrap">
+            <AnnouncementDialog trigger={
+              <Button size="sm" variant="secondary" className="hover-scale">
+                <Bell className="h-4 w-4 mr-2" />
+                New announcement
+              </Button>
+            } />
+            {notifications.length > 0 && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={clearAllNotifications}
+                className="text-xs hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear all
+              </Button>
+            )}
+            {unreadCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={markAllAsRead}
+                className="hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors"
+              >
+                <CheckCheck className="h-4 w-4 mr-1" />
+                Mark all read
+              </Button>
+            )}
+          </div>
+          
+          <SheetDescription className="text-muted-foreground">
             Stay updated with approvals, announcements, and system alerts
           </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6">
           {loading ? (
-            <div className="flex items-center justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="flex items-center justify-center p-12">
+              <div className="relative">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/20 border-t-primary"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Bell className="h-5 w-5 text-primary animate-pulse" />
+                </div>
+              </div>
             </div>
           ) : notifications.length === 0 ? (
-            <div className="text-center py-8">
-              <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No notifications</h3>
-              <p className="text-muted-foreground">You're all caught up!</p>
+            <div className="text-center py-12 animate-fade-in">
+              <div className="relative mb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-primary/10 to-primary/20 rounded-full mx-auto flex items-center justify-center">
+                  <Bell className="h-8 w-8 text-primary/60" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                  <CheckCheck className="h-3 w-3 text-white" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold mb-2 text-foreground">You're all caught up!</h3>
+              <p className="text-muted-foreground">No new notifications at the moment</p>
             </div>
           ) : (
-            <ScrollArea className="h-[calc(100vh-200px)]">
-              <div className="space-y-3">
-                {notifications.map((notification) => (
+            <ScrollArea className="h-[calc(100vh-280px)]">
+              <div className="space-y-3 pr-2">
+                {notifications.map((notification, index) => (
                   <Card 
                     key={notification.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${
+                    className={`group cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02] border-l-4 animate-fade-in ${
                       !notification.isRead 
-                        ? 'bg-primary/5 border-primary/20' 
-                        : 'bg-background'
+                        ? 'bg-gradient-to-r from-primary/5 via-primary/3 to-transparent border-primary shadow-sm border-l-primary' 
+                        : 'bg-background border-l-gray-200 hover:border-l-primary/50'
                     }`}
+                    style={{ animationDelay: `${index * 0.1}s` }}
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3 flex-1">
-                          {getNotificationIcon(notification.type, notification.priority)}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className={`p-2 rounded-full transition-colors ${
+                            !notification.isRead ? 'bg-primary/10' : 'bg-muted'
+                          }`}>
+                            {getNotificationIcon(notification.type, notification.priority)}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-medium text-sm">{notification.title}</h4>
+                              <h4 className={`font-medium text-sm leading-tight ${
+                                !notification.isRead ? 'text-foreground' : 'text-muted-foreground'
+                              }`}>
+                                {notification.title}
+                              </h4>
                               {!notification.isRead && (
-                                <div className="w-2 h-2 bg-primary rounded-full"></div>
+                                <div className="w-2 h-2 bg-primary rounded-full animate-pulse flex-shrink-0"></div>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground line-clamp-2">
+                            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                               {notification.message}
                             </p>
                           </div>
                         </div>
                         <Badge 
                           variant="outline" 
-                          className={`text-xs ${getPriorityColor(notification.priority)}`}
+                          className={`text-xs flex-shrink-0 transition-colors ${getPriorityColor(notification.priority)}`}
                         >
                           {notification.priority}
                         </Badge>
@@ -172,28 +209,28 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
                     
                     {(notification.amount || notification.requestedBy || notification.department) && (
                       <CardContent className="pt-0 pb-3">
-                        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                           {notification.requestedBy && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 bg-muted/50 px-2 py-1 rounded-md">
                               <User className="h-3 w-3" />
                               <span>{notification.requestedBy}</span>
                             </div>
                           )}
                           {notification.amount && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-md">
                               <DollarSign className="h-3 w-3" />
-                              <span className="font-medium text-foreground">
+                              <span className="font-medium">
                                 {formatAmount(notification.amount)}
                               </span>
                             </div>
                           )}
                           {notification.department && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-md">
                               <Building className="h-3 w-3" />
                               <span>{notification.department}</span>
                             </div>
                           )}
-                          <div className="flex items-center gap-1 ml-auto">
+                          <div className="flex items-center gap-1 ml-auto text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
                             <span>
                               {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}

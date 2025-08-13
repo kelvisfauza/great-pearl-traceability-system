@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -126,12 +126,10 @@ export const useNotifications = () => {
   const clearAllNotifications = async () => {
     try {
       const promises = notifications.map(notification =>
-        updateDoc(doc(db, 'notifications', notification.id), {
-          isRead: true,
-          readAt: new Date().toISOString()
-        })
+        deleteDoc(doc(db, 'notifications', notification.id))
       );
       await Promise.all(promises);
+      console.log('All notifications cleared successfully');
     } catch (error) {
       console.error('Error clearing notifications:', error);
     }
