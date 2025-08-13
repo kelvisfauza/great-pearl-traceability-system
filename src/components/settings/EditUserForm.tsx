@@ -31,7 +31,7 @@ const availablePermissions = [
 
 const departments = [
   "Human Resources", "Finance", "Operations", "Quality Control",
-  "Sales", "Procurement", "Administration", "Field Operations"
+  "Sales", "Procurement", "Administration", "Field Operations", "Milling"
 ];
 
 interface EditUserFormProps {

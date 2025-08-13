@@ -76,7 +76,8 @@ const RegistrationRequestsManager = () => {
     'Store Management',
     'Sales',
     'Field Operations',
-    'Administration'
+    'Administration',
+    'Milling'
   ];
 
   const roles = [

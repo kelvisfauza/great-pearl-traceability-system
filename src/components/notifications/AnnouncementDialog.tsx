@@ -26,6 +26,7 @@ const departments = [
   "Reports",
   "IT",
   "Data Analysis",
+  "Milling",
   "All Departments"
 ];
 

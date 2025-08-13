@@ -47,7 +47,8 @@ const SignUpForm = () => {
     'Sales',
     'Field Operations',
     'Operations',
-    'Administration'
+    'Administration',
+    'Milling'
   ];
 
   const roles = [

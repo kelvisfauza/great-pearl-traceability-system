@@ -25,12 +25,12 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
 
-  const departments = ["Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR"];
+  const departments = ["Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR", "Milling"];
   const roles = ["Administrator", "Manager", "Supervisor", "User", "Guest"];
   const systemPermissions = [
     "Procurement Access", "Quality Control", "Processing", "Inventory Management",
     "Store Management", "Sales & Marketing", "Finance", "Field Operations",
-    "Human Resources", "Reports", "Settings", "Data Analytics", "Logistics"
+    "Human Resources", "Reports", "Settings", "Data Analytics", "Logistics", "Milling Operations"
   ];
 
   useEffect(() => {

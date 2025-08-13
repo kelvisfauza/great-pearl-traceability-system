@@ -23,7 +23,7 @@ const EmployeeFilters = ({
   onStatusChange,
   onReset
 }: EmployeeFiltersProps) => {
-  const departments = ["all", "Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR"];
+  const departments = ["all", "Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR", "Milling"];
   const roles = ["all", "Administrator", "Manager", "Supervisor", "User", "Guest"];
   const statuses = ["all", "Active", "On Leave", "Inactive", "Terminated"];
 
