@@ -136,6 +136,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Security alerts - visible and manageable by Admins and IT Management
+    function hasPermission(perm) {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/employee_index/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/employee_index/$(request.auth.uid)).data.permissions.hasAny([perm]);
+    }
+
+    match /security_alerts/{alertId} {
+      allow read: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow create: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow update: if isAuthenticated() && (isAdmin() || hasPermission('IT Management'));
+      allow delete: if false;
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
