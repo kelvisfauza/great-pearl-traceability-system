@@ -141,6 +141,7 @@ export const useNotifications = () => {
   };
 
   useEffect(() => {
+    console.log('useNotifications - employee:', employee);
     if (!employee) return;
 
     const notificationsQuery = query(
@@ -149,10 +150,12 @@ export const useNotifications = () => {
     );
 
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+      console.log('useNotifications - Raw snapshot docs:', snapshot.docs.length);
       const allNotifications = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Notification[];
+      console.log('useNotifications - All notifications:', allNotifications);
 
       // Filter notifications based on user role and department
       const userNotifications = allNotifications.filter(notification => {
@@ -173,9 +176,12 @@ export const useNotifications = () => {
         
         return false;
       });
+      console.log('useNotifications - Filtered notifications:', userNotifications);
+      console.log('useNotifications - Employee role/department:', employee.role, employee.department);
 
       setNotifications(userNotifications);
       setUnreadCount(userNotifications.filter(n => !n.isRead).length);
+      console.log('useNotifications - Unread count:', userNotifications.filter(n => !n.isRead).length);
       setLoading(false);
     });
 

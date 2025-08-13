@@ -20,6 +20,8 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const { unreadCount } = useMessages();
   const { unreadCount: notificationUnreadCount } = useNotifications();
+  
+  console.log('Layout - notification unread count:', notificationUnreadCount);
 
   const toggleMessaging = () => setIsMessagingOpen(!isMessagingOpen);
   const toggleNotifications = () => setIsNotificationOpen(!isNotificationOpen);
