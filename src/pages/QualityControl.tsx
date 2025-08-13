@@ -31,8 +31,8 @@ import { useWorkflowTracking } from "@/hooks/useWorkflowTracking";
 import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
-
 const QualityControl = () => {
   const {
     storeRecords,
@@ -58,7 +58,8 @@ const QualityControl = () => {
   const { prices, refreshPrices } = usePrices();
   const { toast } = useToast();
   const { hasPermission } = useAuth();
-
+  const access = useRoleBasedAccess();
+  const readOnly = !access.canManageQuality;
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("pending");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -150,6 +151,14 @@ const QualityControl = () => {
 
   const handleStartAssessment = (record: any) => {
     console.log('Starting assessment for record:', record);
+    if (readOnly) {
+      toast({
+        title: 'View-only mode',
+        description: "You can't perform Quality tasks. You may view and approve only.",
+        variant: 'destructive'
+      });
+      return;
+    }
     setSelectedRecord(record);
     setAssessmentForm({
       moisture: '',
@@ -167,6 +176,14 @@ const QualityControl = () => {
 
   const handleStartModification = async (modificationRequest: any) => {
     console.log('Starting modification for request:', modificationRequest);
+    if (readOnly) {
+      toast({
+        title: 'View-only mode',
+        description: "You can't perform Quality tasks. You may view and approve only.",
+        variant: 'destructive'
+      });
+      return;
+    }
     console.log('Available store records:', storeRecords);
     console.log('Available quality assessments:', qualityAssessments);
     
@@ -291,6 +308,14 @@ const QualityControl = () => {
   };
 
   const handleSubmitAssessment = async () => {
+    if (readOnly) {
+      toast({
+        title: 'View-only mode',
+        description: "You can't perform Quality tasks. You may view and approve only.",
+        variant: 'destructive'
+      });
+      return;
+    }
     if (!selectedRecord) {
       toast({
         title: "Error",
@@ -385,6 +410,14 @@ const QualityControl = () => {
   };
 
   const handleSubmitToFinance = async (assessmentId: string) => {
+    if (readOnly) {
+      toast({
+        title: 'View-only mode',
+        description: "You can't perform Quality tasks. You may view and approve only.",
+        variant: 'destructive'
+      });
+      return;
+    }
     try {
       await submitToFinance(assessmentId);
     } catch (error) {
@@ -393,6 +426,14 @@ const QualityControl = () => {
   };
 
   const handleSendToDrier = async (assessmentId: string) => {
+    if (readOnly) {
+      toast({
+        title: 'View-only mode',
+        description: "You can't perform Quality tasks. You may view and approve only.",
+        variant: 'destructive'
+      });
+      return;
+    }
     try {
       const assessment = qualityAssessments.find(a => a.id === assessmentId);
       if (!assessment) return;
@@ -466,24 +507,6 @@ const QualityControl = () => {
     }
   };
 
-  if (!hasPermission('Quality Control')) {
-    return (
-      <Layout>
-        <div className="p-6">
-          <Card>
-            <CardContent className="text-center py-8">
-              <div className="mb-4">
-                <CheckCircle2 className="h-12 w-12 mx-auto text-gray-400" />
-              </div>
-              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-              <p className="text-gray-600">You don't have permission to access Quality Control management.</p>
-            </CardContent>
-          </Card>
-        </div>
-      </Layout>
-    );
-  }
-
   if (loading) {
     return (
       <Layout title="Quality Control" subtitle="Loading quality control data...">
@@ -535,6 +558,14 @@ const QualityControl = () => {
       subtitle={`Coffee quality assessment and management - ${currentDate}`}
     >
       <div className="space-y-6">
+        {readOnly && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              View-only mode: you can review and approve, but cannot perform Quality tasks.
+            </AlertDescription>
+          </Alert>
+        )}
         {/* Current Prices Display */}
         <Card>
           <CardHeader>
@@ -641,6 +672,7 @@ const QualityControl = () => {
                               size="sm" 
                               onClick={() => handleStartAssessment(record)}
                               className="mr-2"
+                              disabled={readOnly}
                             >
                               <Eye className="h-4 w-4 mr-1" />
                               Assess
@@ -696,6 +728,7 @@ const QualityControl = () => {
                             <Button 
                               size="sm" 
                               onClick={() => handleStartModification(request)}
+                              disabled={readOnly}
                             >
                               <Edit className="h-4 w-4 mr-1" />
                               Modify
@@ -763,6 +796,7 @@ const QualityControl = () => {
                                 <Button 
                                   size="sm" 
                                   onClick={() => handleSubmitToFinance(assessment.id)}
+                                  disabled={readOnly}
                                 >
                                   <Send className="h-4 w-4 mr-1" />
                                   Send to Finance
@@ -773,6 +807,7 @@ const QualityControl = () => {
                                   size="sm" 
                                   variant="outline"
                                   onClick={() => handleSendToDrier(assessment.id)}
+                                  disabled={readOnly}
                                 >
                                   <Factory className="h-4 w-4 mr-1" />
                                   Send to Drier
@@ -832,6 +867,7 @@ const QualityControl = () => {
                           value={assessmentForm.moisture}
                           onChange={(e) => setAssessmentForm({...assessmentForm, moisture: e.target.value})}
                           placeholder="12.0"
+                          disabled={readOnly}
                         />
                       </div>
                       
@@ -844,6 +880,7 @@ const QualityControl = () => {
                           value={assessmentForm.group1_defects}
                           onChange={(e) => setAssessmentForm({...assessmentForm, group1_defects: e.target.value})}
                           placeholder="0.0"
+                          disabled={readOnly}
                         />
                       </div>
                       
@@ -856,6 +893,7 @@ const QualityControl = () => {
                           value={assessmentForm.group2_defects}
                           onChange={(e) => setAssessmentForm({...assessmentForm, group2_defects: e.target.value})}
                           placeholder="0.0"
+                          disabled={readOnly}
                         />
                       </div>
                       
@@ -868,6 +906,7 @@ const QualityControl = () => {
                           value={assessmentForm.below12}
                           onChange={(e) => setAssessmentForm({...assessmentForm, below12: e.target.value})}
                           placeholder="0.0"
+                          disabled={readOnly}
                         />
                       </div>
                     </div>
@@ -882,6 +921,7 @@ const QualityControl = () => {
                           value={assessmentForm.pods}
                           onChange={(e) => setAssessmentForm({...assessmentForm, pods: e.target.value})}
                           placeholder="0.0"
+                          disabled={readOnly}
                         />
                       </div>
                       
@@ -894,6 +934,7 @@ const QualityControl = () => {
                           value={assessmentForm.husks}
                           onChange={(e) => setAssessmentForm({...assessmentForm, husks: e.target.value})}
                           placeholder="0.0"
+                          disabled={readOnly}
                         />
                       </div>
                       
@@ -906,6 +947,7 @@ const QualityControl = () => {
                           value={assessmentForm.stones}
                           onChange={(e) => setAssessmentForm({...assessmentForm, stones: e.target.value})}
                           placeholder="0.0"
+                          disabled={readOnly}
                         />
                       </div>
                       
@@ -927,14 +969,15 @@ const QualityControl = () => {
                   <div className="space-y-4">
                     <div>
                       <Label htmlFor="manual_price">Final Price (Manual Override)</Label>
-                      <Input
-                        id="manual_price"
-                        type="number"
-                        step="1"
-                        value={assessmentForm.manual_price}
-                        onChange={(e) => setAssessmentForm({...assessmentForm, manual_price: e.target.value})}
-                        placeholder={`Enter price or leave blank to use suggested: ${calculateSuggestedPrice().toLocaleString()}`}
-                      />
+                        <Input
+                          id="manual_price"
+                          type="number"
+                          step="1"
+                          value={assessmentForm.manual_price}
+                          onChange={(e) => setAssessmentForm({...assessmentForm, manual_price: e.target.value})}
+                          placeholder={`Enter price or leave blank to use suggested: ${calculateSuggestedPrice().toLocaleString()}`}
+                          disabled={readOnly}
+                        />
                       <p className="text-sm text-gray-500 mt-1">
                         Leave blank to use suggested price, or enter your own price
                       </p>
@@ -948,28 +991,29 @@ const QualityControl = () => {
                         onChange={(e) => setAssessmentForm({...assessmentForm, comments: e.target.value})}
                         placeholder="Additional observations or notes..."
                         rows={3}
+                        disabled={readOnly}
                       />
                     </div>
                   </div>
                   
-                  <div className="flex gap-4">
-                    <Button onClick={handleSubmitAssessment} className="flex-1">
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      {selectedRecord.isModification 
-                        ? 'Complete Modification & Submit to Finance' 
-                        : 'Complete Assessment & Submit to Finance'
-                      }
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setSelectedRecord(null);
-                        setActiveTab("pending");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
+                    <div className="flex gap-4">
+                      <Button onClick={handleSubmitAssessment} className="flex-1" disabled={readOnly}>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        {selectedRecord.isModification 
+                          ? 'Complete Modification & Submit to Finance' 
+                          : 'Complete Assessment & Submit to Finance'
+                        }
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setSelectedRecord(null);
+                          setActiveTab("pending");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                 </CardContent>
               </Card>
             )}
