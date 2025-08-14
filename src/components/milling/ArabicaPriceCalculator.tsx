@@ -32,9 +32,10 @@ interface CalculationResults {
 
 interface ArabicaPriceCalculatorProps {
   onPriceChange?: (finalPrice: number | null) => void;
+  onCalculationChange?: (results: CalculationResults) => void;
 }
 
-const ArabicaPriceCalculator = ({ onPriceChange }: ArabicaPriceCalculatorProps) => {
+const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange }: ArabicaPriceCalculatorProps) => {
   const [state, setState] = useState<PriceCalculatorState>({
     refPrice: '',
     moisture: '',
@@ -176,6 +177,11 @@ const ArabicaPriceCalculator = ({ onPriceChange }: ArabicaPriceCalculatorProps) 
     if (onPriceChange) {
       const numericFinalPrice = typeof finalPrice === 'number' ? finalPrice : null;
       onPriceChange(numericFinalPrice);
+    }
+    
+    // Notify parent of all calculation results
+    if (onCalculationChange) {
+      onCalculationChange(newResults);
     }
   };
 

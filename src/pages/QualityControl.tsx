@@ -65,6 +65,7 @@ const QualityControl = () => {
   const [activeTab, setActiveTab] = useState("pending");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [assessmentForm, setAssessmentForm] = useState({
+    // Quality parameters from calculator
     moisture: '',
     group1_defects: '',
     group2_defects: '',
@@ -72,6 +73,21 @@ const QualityControl = () => {
     pods: '',
     husks: '',
     stones: '',
+    discretion: '',
+    ref_price: '',
+    
+    // Calculated results from calculator
+    fm: 0,
+    actual_ott: 0,
+    clean_d14: 0,
+    outturn: 0,
+    outturn_price: 0,
+    final_price: 0,
+    quality_note: '',
+    reject_outturn_price: false,
+    reject_final: false,
+    
+    // Manual override and comments
     manual_price: '',
     comments: ''
   });
@@ -169,6 +185,17 @@ const QualityControl = () => {
       pods: '',
       husks: '',
       stones: '',
+      discretion: '',
+      ref_price: '',
+      fm: 0,
+      actual_ott: 0,
+      clean_d14: 0,
+      outturn: 0,
+      outturn_price: 0,
+      final_price: 0,
+      quality_note: '',
+      reject_outturn_price: false,
+      reject_final: false,
       manual_price: '',
       comments: ''
     });
@@ -260,6 +287,17 @@ const QualityControl = () => {
       pods: '',
       husks: '',
       stones: '',
+      discretion: '',
+      ref_price: '',
+      fm: 0,
+      actual_ott: 0,
+      clean_d14: 0,
+      outturn: 0,
+      outturn_price: 0,
+      final_price: 0,
+      quality_note: '',
+      reject_outturn_price: false,
+      reject_final: false,
       manual_price: '',
       comments: `Modification requested due to: ${modificationRequest.reason}${modificationRequest.comments ? '. Additional notes: ' + modificationRequest.comments : ''}`
     });
@@ -343,6 +381,7 @@ const QualityControl = () => {
       const assessment = {
         store_record_id: selectedRecord.id,
         batch_number: selectedRecord.batch_number,
+        // Quality parameters
         moisture: parseFloat(assessmentForm.moisture) || 0,
         group1_defects: parseFloat(assessmentForm.group1_defects) || 0,
         group2_defects: parseFloat(assessmentForm.group2_defects) || 0,
@@ -350,6 +389,19 @@ const QualityControl = () => {
         pods: parseFloat(assessmentForm.pods) || 0,
         husks: parseFloat(assessmentForm.husks) || 0,
         stones: parseFloat(assessmentForm.stones) || 0,
+        discretion: parseFloat(assessmentForm.discretion) || 0,
+        ref_price: parseFloat(assessmentForm.ref_price) || 0,
+        // Calculated results from Arabica Price Calculator
+        fm: assessmentForm.fm,
+        actual_ott: assessmentForm.actual_ott,
+        clean_d14: assessmentForm.clean_d14,
+        outturn: assessmentForm.outturn,
+        outturn_price: assessmentForm.outturn_price,
+        final_price: assessmentForm.final_price,
+        quality_note: assessmentForm.quality_note,
+        reject_outturn_price: assessmentForm.reject_outturn_price,
+        reject_final: assessmentForm.reject_final,
+        // Final values
         suggested_price: finalPrice,
         status: 'assessed' as const,
         comments: assessmentForm.comments,
@@ -388,6 +440,17 @@ const QualityControl = () => {
         pods: '',
         husks: '',
         stones: '',
+        discretion: '',
+        ref_price: '',
+        fm: 0,
+        actual_ott: 0,
+        clean_d14: 0,
+        outturn: 0,
+        outturn_price: 0,
+        final_price: 0,
+        quality_note: '',
+        reject_outturn_price: false,
+        reject_final: false,
         manual_price: '',
         comments: ''
       });
@@ -843,12 +906,28 @@ const QualityControl = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <ArabicaPriceCalculator onPriceChange={(price) => {
-                    setAssessmentForm(prev => ({
-                      ...prev,
-                      manual_price: price ? price.toString() : ''
-                    }));
-                  }} />
+                  <ArabicaPriceCalculator 
+                    onPriceChange={(price) => {
+                      setAssessmentForm(prev => ({
+                        ...prev,
+                        manual_price: price ? price.toString() : ''
+                      }));
+                    }}
+                    onCalculationChange={(results) => {
+                      setAssessmentForm(prev => ({
+                        ...prev,
+                        fm: results.fm,
+                        actual_ott: results.actualOtt,
+                        clean_d14: results.cleanD14,
+                        outturn: typeof results.outturn === 'number' ? results.outturn : 0,
+                        outturn_price: typeof results.outturnPrice === 'number' ? results.outturnPrice : 0,
+                        final_price: typeof results.finalPrice === 'number' ? results.finalPrice : 0,
+                        quality_note: results.qualityNote,
+                        reject_outturn_price: results.rejectOutturnPrice,
+                        reject_final: results.rejectFinal
+                      }));
+                    }}
+                  />
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                     <div>
