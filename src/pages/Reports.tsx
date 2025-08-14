@@ -3,11 +3,12 @@ import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KeyMetrics from "@/components/reports/KeyMetrics";
 import ReportGenerator from "@/components/reports/ReportGenerator";
+import PrintReportGenerator from "@/components/reports/PrintReportGenerator";
 import PerformanceDashboard from "@/components/reports/PerformanceDashboard";
 import RecentReports from "@/components/reports/RecentReports";
 import StoreReportForm from "@/components/reports/StoreReportForm";
 import StoreReportsList from "@/components/reports/StoreReportsList";
-import { BarChart3, FileText, TrendingUp, History, Store } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, History, Store, Printer } from "lucide-react";
 
 const Reports = () => {
   return (
@@ -21,7 +22,7 @@ const Reports = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
@@ -29,6 +30,10 @@ const Reports = () => {
             <TabsTrigger value="generator" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Generate Reports
+            </TabsTrigger>
+            <TabsTrigger value="print" className="flex items-center gap-2">
+              <Printer className="h-4 w-4" />
+              Print Reports
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -50,6 +55,10 @@ const Reports = () => {
 
           <TabsContent value="generator" className="space-y-6">
             <ReportGenerator />
+          </TabsContent>
+
+          <TabsContent value="print" className="space-y-6">
+            <PrintReportGenerator />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
