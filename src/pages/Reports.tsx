@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KeyMetrics from "@/components/reports/KeyMetrics";
 import ReportGenerator from "@/components/reports/ReportGenerator";
 import PrintReportGenerator from "@/components/reports/PrintReportGenerator";
+import StorePrintReportGenerator from "@/components/reports/StorePrintReportGenerator";
 import PerformanceDashboard from "@/components/reports/PerformanceDashboard";
 import RecentReports from "@/components/reports/RecentReports";
 import StoreReportForm from "@/components/reports/StoreReportForm";
@@ -72,6 +73,7 @@ const Reports = () => {
           <TabsContent value="store" className="space-y-6">
             <div className="grid gap-6">
               <StoreReportForm />
+              <StorePrintReportGenerator />
               <StoreReportsList />
             </div>
           </TabsContent>
