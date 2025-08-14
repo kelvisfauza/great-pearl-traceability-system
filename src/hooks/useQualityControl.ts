@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -71,18 +72,39 @@ export const useQualityControl = () => {
 
   const loadQualityAssessments = useCallback(async () => {
     try {
-      console.log('Loading quality assessments from Firebase...');
+      console.log('Loading quality assessments from Supabase...');
       
-      const qualityQuery = query(collection(db, 'quality_assessments'), orderBy('created_at', 'desc'));
-      const qualitySnapshot = await getDocs(qualityQuery);
-      const qualityData = qualitySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as QualityAssessment[];
+      // Fetch quality assessments with joined coffee records data
+      const { data: qualityData, error: qualityError } = await supabase
+        .from('quality_assessments')
+        .select(`
+          *,
+          coffee_records!store_record_id (
+            supplier_name,
+            coffee_type,
+            kilograms,
+            batch_number
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-      console.log('Loaded quality assessments:', qualityData.length, 'assessments');
-      setQualityAssessments(qualityData || []);
-      return qualityData;
+      if (qualityError) {
+        console.error('Error fetching quality assessments:', qualityError);
+        throw qualityError;
+      }
+
+      // Transform the data to flatten the joined fields
+      const transformedData = (qualityData || []).map(assessment => ({
+        ...assessment,
+        supplier_name: assessment.coffee_records?.supplier_name || 'Unknown',
+        coffee_type: assessment.coffee_records?.coffee_type || 'Unknown',
+        kilograms: assessment.coffee_records?.kilograms || 0,
+        batch_number: assessment.coffee_records?.batch_number || assessment.batch_number
+      }));
+
+      console.log('Loaded quality assessments from Supabase:', transformedData.length, 'assessments');
+      setQualityAssessments(transformedData);
+      return transformedData;
     } catch (error) {
       console.error('Error loading quality assessments:', error);
       setQualityAssessments([]);
@@ -166,9 +188,9 @@ export const useQualityControl = () => {
     }
   };
 
-  const addQualityAssessment = async (assessment: Omit<QualityAssessment, 'id' | 'created_at' | 'updated_at'>) => {
+  const addQualityAssessment = async (assessment: any) => {
     try {
-      console.log('Adding quality assessment to Firebase:', assessment);
+      console.log('Adding quality assessment to Supabase:', assessment);
       
       // Find the coffee record to get supplier info
       const coffeeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
@@ -176,110 +198,81 @@ export const useQualityControl = () => {
         throw new Error('Coffee record not found');
       }
 
-      // Get supplier from suppliers collection to get the supplier ID
-      const suppliersQuery = query(
-        collection(db, 'suppliers'),
-        where('name', '==', coffeeRecord.supplier_name)
-      );
-      const suppliersSnapshot = await getDocs(suppliersQuery);
-      
-      let contractPrice: number | null = null;
-      if (!suppliersSnapshot.empty) {
-        const supplierDoc = suppliersSnapshot.docs[0];
-        const supplierId = supplierDoc.id;
-        contractPrice = getContractPriceForSupplier(supplierId);
+      // Create assessment record in Supabase
+      const { data: newAssessment, error: insertError } = await supabase
+        .from('quality_assessments')
+        .insert([{
+          store_record_id: assessment.store_record_id,
+          batch_number: assessment.batch_number,
+          moisture: assessment.moisture || 0,
+          group1_defects: assessment.group1_defects || 0,
+          group2_defects: assessment.group2_defects || 0,
+          below12: assessment.below12 || 0,
+          pods: assessment.pods || 0,
+          husks: assessment.husks || 0,
+          stones: assessment.stones || 0,
+          discretion: assessment.discretion || 0,
+          ref_price: assessment.ref_price || 0,
+          fm: assessment.fm || 0,
+          actual_ott: assessment.actual_ott || 0,
+          clean_d14: assessment.clean_d14 || 0,
+          outturn: assessment.outturn || 0,
+          outturn_price: assessment.outturn_price || 0,
+          final_price: assessment.final_price || 0,
+          quality_note: assessment.quality_note || '',
+          reject_outturn_price: assessment.reject_outturn_price || false,
+          reject_final: assessment.reject_final || false,
+          suggested_price: assessment.manual_price ? parseFloat(assessment.manual_price) : assessment.final_price || 0,
+          status: 'assessed',
+          comments: assessment.comments || null,
+          date_assessed: assessment.date_assessed || new Date().toISOString().split('T')[0],
+          assessed_by: assessment.assessed_by || 'Quality Controller'
+        }])
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error inserting quality assessment:', insertError);
+        throw insertError;
       }
 
-      // Validate price against contract if contract exists
-      if (contractPrice && assessment.suggested_price > contractPrice) {
-        toast({
-          title: "Price Validation Error",
-          description: `Suggested price (${assessment.suggested_price}) exceeds contract price (${contractPrice}). Please adjust.`,
-          variant: "destructive"
-        });
-        throw new Error('Price exceeds contract limit');
-      }
-
-      const assessmentToAdd = {
-        store_record_id: assessment.store_record_id,
-        batch_number: assessment.batch_number,
-        moisture: assessment.moisture,
-        group1_defects: assessment.group1_defects || 0,
-        group2_defects: assessment.group2_defects || 0,
-        below12: assessment.below12 || 0,
-        pods: assessment.pods || 0,
-        husks: assessment.husks || 0,
-        stones: assessment.stones || 0,
-        suggested_price: assessment.suggested_price,
-        status: 'assessed',
-        comments: assessment.comments || null,
-        date_assessed: assessment.date_assessed,
-        assessed_by: assessment.assessed_by,
-        contract_price: contractPrice,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      const docRef = await addDoc(collection(db, 'quality_assessments'), assessmentToAdd);
-      console.log('Quality assessment added successfully:', docRef.id);
+      console.log('Quality assessment added to Supabase successfully:', newAssessment);
       
       // Calculate total payment amount: kilograms × price per kg
       const kilograms = coffeeRecord?.kilograms || 0;
-      const totalPaymentAmount = kilograms * assessment.suggested_price;
+      const finalPrice = assessment.manual_price ? parseFloat(assessment.manual_price) : assessment.final_price || 0;
+      const totalPaymentAmount = kilograms * finalPrice;
       
       console.log('Payment calculation:', {
         kilograms,
-        pricePerKg: assessment.suggested_price,
-        totalAmount: totalPaymentAmount,
-        contractPrice: contractPrice || 'No contract'
+        pricePerKg: finalPrice,
+        totalAmount: totalPaymentAmount
       });
       
-      // Create payment record in Firebase with calculated amount
-      console.log('Creating payment record for assessment:', docRef.id);
+      // Create payment record in Supabase
+      const { error: paymentError } = await supabase
+        .from('payment_records')
+        .insert([{
+          supplier: coffeeRecord.supplier_name,
+          amount: totalPaymentAmount,
+          status: 'Pending',
+          method: 'Bank Transfer',
+          date: new Date().toISOString().split('T')[0],
+          batch_number: assessment.batch_number,
+          quality_assessment_id: newAssessment.id
+        }]);
+
+      if (paymentError) {
+        console.error('Error creating payment record:', paymentError);
+        throw paymentError;
+      }
       
-      await addDoc(collection(db, 'payment_records'), {
-        supplier: coffeeRecord.supplier_name,
-        amount: totalPaymentAmount,
-        status: 'Pending',
-        method: 'Bank Transfer',
-        date: new Date().toISOString().split('T')[0],
-        batchNumber: assessment.batch_number,
-        qualityAssessmentId: docRef.id,
-        contractPrice: contractPrice,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-      
-      // Notify Finance about pending payment
-      await createAnnouncement(
-        'Pending Payment Processing',
-        `Assessment complete for batch ${assessment.batch_number}. Pending payment of UGX ${totalPaymentAmount.toLocaleString()}.`,
-        'Quality',
-        ['Finance'],
-        'High'
-      );
-      
-      // Notify Store about pricing completion
-      await createPricingNotification(
-        coffeeRecord.supplier_name,
-        assessment.batch_number,
-        assessment.suggested_price,
-        assessment.assessed_by
-      );
-      
-      console.log('Payment record created successfully with amount:', totalPaymentAmount);
-      
-      // Update local state
-      const newAssessment = { id: docRef.id, ...assessmentToAdd };
-      setQualityAssessments(prev => [newAssessment, ...prev]);
-      
-      const contractMessage = contractPrice ? 
-        ` (Contract price: ${contractPrice}/kg)` : 
-        ' (No active contract)';
+      // Refresh quality assessments to get the updated data with joins
+      await loadQualityAssessments();
       
       toast({
         title: "Success",
-        description: `Quality assessment saved and payment record created for ${totalPaymentAmount.toLocaleString()} UGX${contractMessage}`
+        description: `Quality assessment saved and payment record created for UGX ${totalPaymentAmount.toLocaleString()}`
       });
       
       return newAssessment;
