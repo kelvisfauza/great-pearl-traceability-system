@@ -23,7 +23,7 @@ import EUDRDocumentation from "@/components/store/EUDRDocumentation";
 
 const Store = () => {
   const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'suppliers';
+  const initialTab = searchParams.get('tab') || 'records'; // Start with coffee records
   
   const {
     coffeeRecords,
@@ -58,8 +58,8 @@ const Store = () => {
   const [newRecord, setNewRecord] = useState({
     coffeeType: '',
     date: new Date().toISOString().split('T')[0],
-    kilograms: 0,
-    bags: 0,
+    kilograms: '', // Remove default zero
+    bags: '', // Remove default zero
     supplierName: '',
     batchNumber: `BATCH${Date.now()}`,
     status: 'pending'
@@ -93,8 +93,8 @@ const Store = () => {
   const [editFormData, setEditFormData] = useState({
     coffeeType: '',
     date: '',
-    kilograms: 0,
-    bags: 0,
+    kilograms: '',
+    bags: '',
     supplierName: '',
     batchNumber: ''
   });
@@ -103,7 +103,7 @@ const Store = () => {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['suppliers', 'records', 'operations', 'pricing', 'eudr'].includes(tab)) {
+    if (tab && ['records', 'eudr', 'pricing', 'operations', 'suppliers'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -127,7 +127,8 @@ const Store = () => {
   };
 
   const handleSubmitRecord = async () => {
-    if (!newRecord.coffeeType || !newRecord.supplierName || newRecord.kilograms <= 0 || newRecord.bags <= 0) {
+    if (!newRecord.coffeeType || !newRecord.supplierName || !newRecord.kilograms || !newRecord.bags || 
+        Number(newRecord.kilograms) <= 0 || Number(newRecord.bags) <= 0) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -136,13 +137,15 @@ const Store = () => {
     try {
       await addCoffeeRecord({
         ...newRecord,
+        kilograms: Number(newRecord.kilograms),
+        bags: Number(newRecord.bags),
         batchNumber: `BATCH${Date.now()}`
       });
       setNewRecord({ 
         coffeeType: '', 
         date: new Date().toISOString().split('T')[0], 
-        kilograms: 0, 
-        bags: 0, 
+        kilograms: '', 
+        bags: '', 
         supplierName: '',
         batchNumber: '',
         status: 'pending'
@@ -260,8 +263,8 @@ const Store = () => {
     setEditFormData({
       coffeeType: record.coffeeType,
       date: record.date,
-      kilograms: record.kilograms,
-      bags: record.bags,
+      kilograms: record.kilograms.toString(),
+      bags: record.bags.toString(),
       supplierName: record.supplierName,
       batchNumber: record.batchNumber
     });
@@ -271,7 +274,11 @@ const Store = () => {
     if (!editingRecord) return;
 
     try {
-      await updateCoffeeRecord(editingRecord.id, editFormData);
+      await updateCoffeeRecord(editingRecord.id, {
+        ...editFormData,
+        kilograms: Number(editFormData.kilograms),
+        bags: Number(editFormData.bags)
+      });
       setEditingRecord(null);
       toast.success("Record updated successfully");
     } catch (error) {
@@ -358,13 +365,13 @@ const Store = () => {
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="suppliers">
-              <Users className="h-4 w-4 mr-2" />
-              Supplier Management
-            </TabsTrigger>
             <TabsTrigger value="records">
               <Package className="h-4 w-4 mr-2" />
               Coffee Records
+            </TabsTrigger>
+            <TabsTrigger value="eudr">
+              <FileText className="h-4 w-4 mr-2" />
+              EUDR Documentation
             </TabsTrigger>
             <TabsTrigger value="pricing">
               <DollarSign className="h-4 w-4 mr-2" />
@@ -374,13 +381,275 @@ const Store = () => {
               <Scale className="h-4 w-4 mr-2" />
               Operations
             </TabsTrigger>
-            <TabsTrigger value="eudr">
-              <FileText className="h-4 w-4 mr-2" />
-              EUDR Documentation
+            <TabsTrigger value="suppliers">
+              <Users className="h-4 w-4 mr-2" />
+              Supplier Management
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="records" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Coffee Records</CardTitle>
+                    <CardDescription>
+                      {coffeeRecords.length > 0 
+                        ? `${coffeeRecords.length} coffee delivery records in the system` 
+                        : "No coffee records yet. Add your first delivery record below."
+                      }
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Print GRN
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Print Selected
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Print All
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {coffeeRecords.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Batch Number</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Coffee Type</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Kilograms</TableHead>
+                        <TableHead>Bags</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {coffeeRecords.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell className="font-mono">{record.batchNumber}</TableCell>
+                          <TableCell>{record.date}</TableCell>
+                          <TableCell className="capitalize">{record.coffeeType}</TableCell>
+                          <TableCell>{record.supplierName}</TableCell>
+                          <TableCell>{Number(record.kilograms).toLocaleString()}kg</TableCell>
+                          <TableCell>{record.bags}</TableCell>
+                          <TableCell>
+                            <Badge {...getStatusBadge(record.status)}>
+                              {getStatusBadge(record.status).label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {canEditOrDelete(record) ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleEditRecord(record)}
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button size="sm" variant="outline">
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Coffee Record</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Are you sure you want to delete this coffee record? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteRecord(record.id)}>
+                                          Delete
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => requestManagerApproval('Edit', record.id)}
+                                  >
+                                    Request Edit
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => requestManagerApproval('Delete', record.id)}
+                                  >
+                                    Request Delete
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No coffee records yet</p>
+                    <p className="text-sm">Add your first coffee delivery record below</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Add Coffee Delivery Record</CardTitle>
+                <CardDescription>Record new coffee delivery from suppliers</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="coffee-type">Coffee Type *</Label>
+                    <Select value={newRecord.coffeeType} onValueChange={(value) => setNewRecord({...newRecord, coffeeType: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select coffee type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="arabica">Arabica</SelectItem>
+                        <SelectItem value="robusta">Robusta</SelectItem>
+                        <SelectItem value="mixed">Mixed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="supplier-name">Supplier Name *</Label>
+                    <Select value={newRecord.supplierName} onValueChange={(value) => setNewRecord({...newRecord, supplierName: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select supplier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.name}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="delivery-date">Delivery Date *</Label>
+                    <Input
+                      id="delivery-date"
+                      type="date"
+                      value={newRecord.date}
+                      onChange={(e) => setNewRecord({...newRecord, date: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="kilograms">Kilograms *</Label>
+                    <Input
+                      id="kilograms"
+                      type="number"
+                      value={newRecord.kilograms}
+                      onChange={(e) => setNewRecord({...newRecord, kilograms: e.target.value})}
+                      placeholder="Enter weight in kg"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="bags">Number of Bags *</Label>
+                    <Input
+                      id="bags"
+                      type="number"
+                      value={newRecord.bags}
+                      onChange={(e) => setNewRecord({...newRecord, bags: e.target.value})}
+                      placeholder="Enter number of bags"
+                    />
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleSubmitRecord} 
+                  className="w-full md:w-auto"
+                  disabled={submittingRecord}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {submittingRecord ? "Saving..." : "Add Coffee Record"}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="eudr" className="space-y-6">
+            <EUDRDocumentation />
+          </TabsContent>
+
           <TabsContent value="suppliers" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Supplier Management</CardTitle>
+                    <CardDescription>
+                      {suppliers.length > 0 
+                        ? `${suppliers.length} suppliers registered in the system` 
+                        : "No suppliers registered yet. Add your first supplier below."
+                      }
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => setActiveTab('add-supplier')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Supplier
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {suppliers.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Supplier Code</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Origin</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Opening Balance</TableHead>
+                        <TableHead>Date Registered</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {suppliers.map((supplier) => (
+                        <TableRow key={supplier.id}>
+                          <TableCell className="font-mono">{supplier.code}</TableCell>
+                          <TableCell className="font-medium">{supplier.name}</TableCell>
+                          <TableCell>{supplier.origin}</TableCell>
+                          <TableCell>{supplier.phone || 'N/A'}</TableCell>
+                          <TableCell>UGX {Number(supplier.opening_balance).toLocaleString()}</TableCell>
+                          <TableCell>{supplier.date_registered}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No suppliers registered yet</p>
+                    <p className="text-sm">Add your first supplier using the button above</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="add-supplier" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Register New Supplier</CardTitle>
@@ -426,60 +695,21 @@ const Store = () => {
                     />
                   </div>
                 </div>
-                <Button 
-                  onClick={handleSaveSupplier} 
-                  className="w-full md:w-auto"
-                  disabled={submittingSupplier}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {submittingSupplier ? "Saving..." : "Save Supplier"}
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Registered Suppliers</CardTitle>
-                <CardDescription>
-                  {suppliers.length > 0 
-                    ? `${suppliers.length} suppliers registered in the system` 
-                    : "No suppliers registered yet. Add your first supplier above."
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {suppliers.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Supplier Code</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Origin</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Opening Balance</TableHead>
-                        <TableHead>Date Registered</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {suppliers.map((supplier) => (
-                        <TableRow key={supplier.id}>
-                          <TableCell className="font-mono">{supplier.code}</TableCell>
-                          <TableCell className="font-medium">{supplier.name}</TableCell>
-                          <TableCell>{supplier.origin}</TableCell>
-                          <TableCell>{supplier.phone || 'N/A'}</TableCell>
-                          <TableCell>UGX {Number(supplier.opening_balance).toLocaleString()}</TableCell>
-                          <TableCell>{supplier.date_registered}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No suppliers registered yet</p>
-                    <p className="text-sm">Add your first supplier using the form above</p>
-                  </div>
-                )}
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleSaveSupplier} 
+                    disabled={submittingSupplier}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {submittingSupplier ? "Saving..." : "Save Supplier"}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab('suppliers')}
+                  >
+                    Back to List
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -520,7 +750,7 @@ const Store = () => {
                       id="kilograms"
                       type="number"
                       value={newRecord.kilograms}
-                      onChange={(e) => setNewRecord({...newRecord, kilograms: Number(e.target.value)})}
+                      onChange={(e) => setNewRecord({...newRecord, kilograms: e.target.value})}
                       placeholder="0"
                     />
                   </div>
@@ -530,7 +760,7 @@ const Store = () => {
                       id="bags"
                       type="number"
                       value={newRecord.bags}
-                      onChange={(e) => setNewRecord({...newRecord, bags: Number(e.target.value)})}
+                      onChange={(e) => setNewRecord({...newRecord, bags: e.target.value})}
                       placeholder="0"
                     />
                   </div>
@@ -671,7 +901,7 @@ const Store = () => {
                                               id="edit-kilograms"
                                               type="number"
                                               value={editFormData.kilograms}
-                                              onChange={(e) => setEditFormData({...editFormData, kilograms: Number(e.target.value)})}
+                                              onChange={(e) => setEditFormData({...editFormData, kilograms: e.target.value})}
                                             />
                                           </div>
                                           <div>
@@ -680,7 +910,7 @@ const Store = () => {
                                               id="edit-bags"
                                               type="number"
                                               value={editFormData.bags}
-                                              onChange={(e) => setEditFormData({...editFormData, bags: Number(e.target.value)})}
+                                              onChange={(e) => setEditFormData({...editFormData, bags: e.target.value})}
                                             />
                                           </div>
                                         </div>
