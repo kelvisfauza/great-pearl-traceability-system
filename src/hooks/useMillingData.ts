@@ -135,7 +135,11 @@ export const useMillingData = () => {
     
     const totalKgsHulled = monthlyTransactions.reduce((sum, t) => sum + (t.kgs_hulled || 0), 0);
     const monthlyRevenue = monthlyTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
-    const cashReceived = monthlyCashTransactions.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
+    
+    // Cash received = sum of amount_paid from milling transactions + cash transactions in current month
+    const cashFromTransactions = monthlyTransactions.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
+    const cashFromPayments = monthlyCashTransactions.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
+    const cashReceived = cashFromTransactions + cashFromPayments;
 
     setStats({
       totalCustomers,
