@@ -7,6 +7,7 @@ import { PlusCircle, DollarSign, Users, Settings, FileText, Shield, UserPlus } f
 import CashManagementModal from './CashManagementModal';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import ApprovalRequests from '@/components/ApprovalRequests';
+import ModificationRequestsManager from '@/components/finance/ModificationRequestsManager';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import RoleAssignmentManager from './RoleAssignmentManager';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
@@ -18,6 +19,9 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* Pending Approval Requests - Top Priority */}
+      <ModificationRequestsManager />
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Cash Management */}
         <Card>

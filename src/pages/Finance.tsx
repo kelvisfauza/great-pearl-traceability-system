@@ -16,7 +16,6 @@ import CashManagementCard from "@/components/finance/CashManagementCard";
 import ExpensesCard from "@/components/finance/ExpensesCard";
 import SupplierAdvanceModal from "@/components/finance/SupplierAdvanceModal";
 import AdvanceClearingModal from "@/components/finance/AdvanceClearingModal";
-import ModificationRequestsManager from "@/components/finance/ModificationRequestsManager";
 import CustomerBalancesCard from "@/components/finance/CustomerBalancesCard";
 import QualityAssessmentReports from "@/components/finance/QualityAssessmentReports";
 import CashManagementDashboard from "@/components/finance/CashManagementDashboard";
@@ -423,10 +422,6 @@ const Finance = () => {
 
           {/* Content Area */}
           <div className="flex-1 p-6">
-            {/* Modification Requests - High Priority */}
-            <div className="mb-6">
-              <ModificationRequestsManager />
-            </div>
             
             {/* Key Metrics Dashboard */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
