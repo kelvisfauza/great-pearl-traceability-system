@@ -24,19 +24,26 @@ export const useProcurementRecommendations = () => {
   const fetchRecommendations = async () => {
     try {
       setLoading(true);
+      console.log('Fetching procurement recommendations from Firebase...');
+      
       const result = await firebaseClient
         .from('procurement_recommendations')
         .select()
         .order('created_at', { ascending: false })
         .get();
 
+      console.log('Procurement recommendations fetch result:', result);
+
       if (result.data) {
+        console.log('Fetched procurement recommendations:', result.data.length, 'recommendations');
         setRecommendations(result.data);
       } else if (result.error) {
         console.error('Error fetching recommendations:', result.error);
+        setRecommendations([]);
       }
     } catch (error) {
       console.error('Error fetching recommendations:', error);
+      setRecommendations([]);
     } finally {
       setLoading(false);
     }
