@@ -14,8 +14,7 @@ import {
   query,
   where,
   getDocs,
-  updateDoc,
-  addDoc
+  onSnapshot
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -626,6 +625,88 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const isAdmin = (): boolean => {
     return hasRole('Administrator');
   };
+
+  // Real-time employee data listener
+  useEffect(() => {
+    if (!user?.email) return;
+
+    console.log('=== SETTING UP REAL-TIME EMPLOYEE LISTENER ===');
+    
+    // Set up Firebase real-time listener for employee data
+    const unsubscribeEmployee = onSnapshot(
+      query(collection(db, 'employees'), where('email', '==', user.email.toLowerCase())),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const employeeDoc = snapshot.docs[0];
+          const employeeData = employeeDoc.data();
+          
+          const updatedEmployee: Employee = {
+            id: employeeDoc.id,
+            name: employeeData.name,
+            email: employeeData.email,
+            phone: employeeData.phone || '',
+            position: employeeData.position,
+            department: employeeData.department,
+            salary: employeeData.salary || 0,
+            role: employeeData.role || 'User',
+            permissions: employeeData.permissions || ['General Access'],
+            status: employeeData.status || 'Active',
+            join_date: employeeData.join_date,
+            address: employeeData.address,
+            emergency_contact: employeeData.emergency_contact,
+            isOneTimePassword: false,
+            mustChangePassword: false,
+            authUserId: user.uid
+          };
+
+          // Check if permissions changed
+          const currentPermissions = employee?.permissions || [];
+          const newPermissions = updatedEmployee.permissions || [];
+          const permissionsChanged = JSON.stringify(currentPermissions.sort()) !== JSON.stringify(newPermissions.sort());
+          const roleChanged = employee?.role !== updatedEmployee.role;
+
+          setEmployee(updatedEmployee);
+
+          // Show notification if permissions or role changed
+          if (employee && (permissionsChanged || roleChanged)) {
+            console.log('🔔 Role/permissions changed, showing notification');
+            
+            let notificationMessage = '';
+            if (roleChanged) {
+              notificationMessage = `Your role has been updated to: ${updatedEmployee.role}`;
+            }
+            if (permissionsChanged) {
+              const addedPermissions = newPermissions.filter(p => !currentPermissions.includes(p));
+              const removedPermissions = currentPermissions.filter(p => !newPermissions.includes(p));
+              
+              if (addedPermissions.length > 0) {
+                notificationMessage += `${notificationMessage ? ' | ' : ''}New permissions: ${addedPermissions.join(', ')}`;
+              }
+              if (removedPermissions.length > 0) {
+                notificationMessage += `${notificationMessage ? ' | ' : ''}Removed permissions: ${removedPermissions.join(', ')}`;
+              }
+            }
+
+            if (notificationMessage) {
+              toast({
+                title: "Permissions Updated",
+                description: notificationMessage,
+                duration: 5000,
+              });
+            }
+          }
+        }
+      },
+      (error) => {
+        console.error('Error in employee listener:', error);
+      }
+    );
+
+    return () => {
+      console.log('Cleaning up employee listener');
+      unsubscribeEmployee();
+    };
+  }, [user?.email, employee?.role, employee?.permissions, toast]);
 
   useEffect(() => {
     console.log('=== SUPABASE AUTH STATE LISTENER SETUP ===');

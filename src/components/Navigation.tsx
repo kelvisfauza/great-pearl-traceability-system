@@ -19,15 +19,17 @@ import {
   LogOut
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { RoleNotificationWidget } from '@/components/notifications/RoleNotificationWidget';
 
 const Navigation = () => {
   const location = useLocation();
   const { signOut, employee, hasPermission, hasRole, isAdmin } = useAuth();
   const { toast } = useToast();
+  const [lastKnownPermissions, setLastKnownPermissions] = useState<string[]>([]);
 
   // Auto-update permissions for keizyeda@gmail.com if needed
   useEffect(() => {
@@ -179,8 +181,13 @@ const Navigation = () => {
       <div className="p-3 border-t border-gray-200">
         {employee && (
           <div className="mb-3">
-            <p className="text-sm font-medium text-gray-800 truncate">{employee.name}</p>
-            <p className="text-xs text-gray-500 truncate">{employee.position}</p>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-800 truncate">{employee.name}</p>
+                <p className="text-xs text-gray-500 truncate">{employee.position}</p>
+              </div>
+              <RoleNotificationWidget />
+            </div>
           </div>
         )}
         <Button
