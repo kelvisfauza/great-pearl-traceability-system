@@ -84,7 +84,15 @@ const MillingTransactionForm = ({ open, onClose }: MillingTransactionFormProps) 
     
     // Auto-calculate total amount when kgs or rate changes
     if (field === 'kgs_hulled' || field === 'rate_per_kg') {
-      newData.total_amount = (newData.kgs_hulled || 0) * (newData.rate_per_kg || 150);
+      const kgs = newData.kgs_hulled || 0;
+      const ratePerKg = newData.rate_per_kg || 150;
+      
+      // For kilograms below 20kg, base price is 3000
+      if (kgs < 20) {
+        newData.total_amount = 3000;
+      } else {
+        newData.total_amount = kgs * ratePerKg;
+      }
     }
     
     setFormData(newData);
