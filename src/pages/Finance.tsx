@@ -376,7 +376,7 @@ const Finance = () => {
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full bg-background">
         <FinanceSidebar 
           currentSection={currentSection}
@@ -387,7 +387,6 @@ const Finance = () => {
           {/* Header */}
           <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-6">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className="md:hidden" />
               <div>
                 <h1 className="text-2xl font-bold">Finance Dashboard</h1>
                 <p className="text-sm text-muted-foreground">Comprehensive financial management and reporting</p>
