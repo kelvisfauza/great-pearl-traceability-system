@@ -280,11 +280,12 @@ const StorePrintReportGenerator = () => {
           </head>
           <body>
             <div class="company-header">
-              <div class="company-name">COMPANY NAME LTD</div>
+              <div class="company-name">GREAT PEARL COFFEE FACTORY</div>
               <div class="company-details">
-                P.O. Box 1234, Kampala, Uganda<br>
-                Tel: +256 123 456 789 | Email: info@company.com<br>
-                TIN: 123456789 | Registration: 12345678
+                Specialty Coffee Processing & Export<br>
+                Tel: +256 781 121 639 | Web: www.greatpearlcoffee.com<br>
+                Email: info@greatpearlcoffee.com<br>
+                Uganda Coffee Development Authority Licensed
               </div>
             </div>
 
@@ -503,7 +504,7 @@ const StorePrintReportGenerator = () => {
 
             <div class="footer">
               <p>Store Report generated on ${format(new Date(), 'MMMM dd, yyyy HH:mm')}</p>
-              <p>This report is confidential and proprietary to COMPANY NAME LTD</p>
+              <p>This report is confidential and proprietary to Great Pearl Coffee Factory</p>
             </div>
           </body>
         </html>
