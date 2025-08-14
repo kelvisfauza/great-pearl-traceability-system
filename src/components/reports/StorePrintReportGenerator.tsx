@@ -164,7 +164,353 @@ const StorePrintReportGenerator = () => {
   };
 
   const printReport = () => {
-    window.print();
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Store Operations Report - ${dateFrom} to ${dateTo}</title>
+            <style>
+              @page {
+                margin: 0.5in;
+                size: A4;
+              }
+              body { 
+                font-family: Arial, sans-serif; 
+                margin: 0; 
+                padding: 20px;
+                line-height: 1.4;
+                color: #333;
+              }
+              .company-header {
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #333;
+                padding-bottom: 20px;
+              }
+              .company-name {
+                font-size: 24px;
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: #1a365d;
+              }
+              .company-details {
+                font-size: 12px;
+                color: #666;
+                margin-bottom: 10px;
+              }
+              .report-title {
+                font-size: 20px;
+                font-weight: bold;
+                margin: 20px 0;
+                text-align: center;
+                background: #f8f9fa;
+                padding: 15px;
+                border: 1px solid #ddd;
+              }
+              .section {
+                margin: 30px 0;
+                break-inside: avoid;
+              }
+              .section-title {
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 15px;
+                padding: 10px;
+                background: #e9ecef;
+                border-left: 4px solid #007bff;
+              }
+              .summary-table, .breakdown-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+              }
+              .summary-table th, .summary-table td,
+              .breakdown-table th, .breakdown-table td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+              }
+              .summary-table th, .breakdown-table th {
+                background-color: #f8f9fa;
+                font-weight: bold;
+              }
+              .amount {
+                text-align: right;
+                font-weight: 500;
+              }
+              .positive { color: #28a745; }
+              .negative { color: #dc3545; }
+              .neutral { color: #6c757d; }
+              .grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin: 20px 0;
+              }
+              .card {
+                border: 1px solid #ddd;
+                padding: 15px;
+                border-radius: 5px;
+                background: #f8f9fa;
+              }
+              .metric {
+                display: flex;
+                justify-content: space-between;
+                margin: 8px 0;
+                padding: 5px 0;
+                border-bottom: 1px dotted #ccc;
+              }
+              .total-row {
+                background-color: #f1f3f4;
+                font-weight: bold;
+              }
+              .footer {
+                margin-top: 40px;
+                text-align: center;
+                font-size: 10px;
+                color: #666;
+                border-top: 1px solid #ddd;
+                padding-top: 15px;
+              }
+              .page-break {
+                page-break-before: always;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="company-header">
+              <div class="company-name">COMPANY NAME LTD</div>
+              <div class="company-details">
+                P.O. Box 1234, Kampala, Uganda<br>
+                Tel: +256 123 456 789 | Email: info@company.com<br>
+                TIN: 123456789 | Registration: 12345678
+              </div>
+            </div>
+
+            <div class="report-title">
+              STORE OPERATIONS REPORT<br>
+              <small>Period: ${format(parseISO(reportData.dateRange.from), 'MMMM dd, yyyy')} - ${format(parseISO(reportData.dateRange.to), 'MMMM dd, yyyy')}</small>
+            </div>
+
+            <!-- Store Balance Sheet -->
+            <div class="section">
+              <div class="section-title">STORE BALANCE SHEET</div>
+              <table class="summary-table">
+                <thead>
+                  <tr>
+                    <th colspan="2">INVENTORY ASSETS</th>
+                    <th>QUANTITY</th>
+                    <th>VALUE (UGX)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="2">Coffee Inventory</td>
+                    <td class="amount">${reportData.summary.totalKgLeft.toLocaleString()} kg</td>
+                    <td class="amount">${(reportData.summary.totalKgLeft * reportData.summary.averageBuyingPrice).toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-left: 20px;">Coffee (Bought)</td>
+                    <td></td>
+                    <td class="amount">${(reportData.summary.totalKgLeft - reportData.summary.totalKgUnbought).toLocaleString()} kg</td>
+                    <td class="amount">${((reportData.summary.totalKgLeft - reportData.summary.totalKgUnbought) * reportData.summary.averageBuyingPrice).toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-left: 20px;">Coffee (Unbought)</td>
+                    <td></td>
+                    <td class="amount">${reportData.summary.totalKgUnbought.toLocaleString()} kg</td>
+                    <td class="amount">0</td>
+                  </tr>
+                  <tr>
+                    <td colspan="2">Bag Inventory</td>
+                    <td class="amount">${reportData.summary.totalBagsLeft.toLocaleString()} bags</td>
+                    <td class="amount">-</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td colspan="2"><strong>Total Inventory Value</strong></td>
+                    <td class="amount"><strong>${reportData.summary.totalKgLeft.toLocaleString()} kg</strong></td>
+                    <td class="amount"><strong>${(reportData.summary.totalKgLeft * reportData.summary.averageBuyingPrice).toLocaleString()}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <table class="summary-table" style="margin-top: 20px;">
+                <thead>
+                  <tr>
+                    <th colspan="2">LIABILITIES & ADVANCES</th>
+                    <th>AMOUNT (UGX)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="2">Advances Given to Suppliers</td>
+                    <td class="amount">${reportData.summary.totalAdvancesGiven.toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td colspan="2">Estimated Coffee Purchase Value</td>
+                    <td class="amount">${(reportData.summary.totalKgBought * reportData.summary.averageBuyingPrice).toLocaleString()}</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td colspan="2"><strong>Total Outgoing Value</strong></td>
+                    <td class="amount"><strong>${(reportData.summary.totalAdvancesGiven + (reportData.summary.totalKgBought * reportData.summary.averageBuyingPrice)).toLocaleString()}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Store Trial Balance -->
+            <div class="section">
+              <div class="section-title">STORE TRIAL BALANCE</div>
+              <table class="summary-table">
+                <thead>
+                  <tr>
+                    <th>Account</th>
+                    <th>Debit (UGX)</th>
+                    <th>Credit (UGX)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Coffee Inventory</td>
+                    <td class="amount">${(reportData.summary.totalKgLeft * reportData.summary.averageBuyingPrice).toLocaleString()}</td>
+                    <td class="amount">-</td>
+                  </tr>
+                  <tr>
+                    <td>Coffee Purchases</td>
+                    <td class="amount">${(reportData.summary.totalKgBought * reportData.summary.averageBuyingPrice).toLocaleString()}</td>
+                    <td class="amount">-</td>
+                  </tr>
+                  <tr>
+                    <td>Advances to Suppliers</td>
+                    <td class="amount">${reportData.summary.totalAdvancesGiven.toLocaleString()}</td>
+                    <td class="amount">-</td>
+                  </tr>
+                  <tr>
+                    <td>Sales Revenue (Estimated)</td>
+                    <td class="amount">-</td>
+                    <td class="amount">${(reportData.summary.totalKgSold * reportData.summary.averageBuyingPrice * 1.2).toLocaleString()}</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td><strong>TOTALS</strong></td>
+                    <td class="amount"><strong>${(reportData.summary.totalKgLeft * reportData.summary.averageBuyingPrice + reportData.summary.totalKgBought * reportData.summary.averageBuyingPrice + reportData.summary.totalAdvancesGiven).toLocaleString()}</strong></td>
+                    <td class="amount"><strong>${(reportData.summary.totalKgSold * reportData.summary.averageBuyingPrice * 1.2).toLocaleString()}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Summary Statistics -->
+            <div class="section page-break">
+              <div class="section-title">OPERATIONAL SUMMARY</div>
+              <div class="grid">
+                <div class="card">
+                  <h4>Purchase Analysis</h4>
+                  <div class="metric">
+                    <span>Total Kgs Bought:</span>
+                    <span class="positive">${reportData.summary.totalKgBought.toLocaleString()} kg</span>
+                  </div>
+                  <div class="metric">
+                    <span>Average Buying Price:</span>
+                    <span>${reportData.summary.averageBuyingPrice.toLocaleString()}/kg</span>
+                  </div>
+                  <div class="metric">
+                    <span>Total Purchase Value:</span>
+                    <span class="negative">${(reportData.summary.totalKgBought * reportData.summary.averageBuyingPrice).toLocaleString()}</span>
+                  </div>
+                  <div class="metric">
+                    <span>Total Advances:</span>
+                    <span class="negative">${reportData.summary.totalAdvancesGiven.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div class="card">
+                  <h4>Sales & Inventory</h4>
+                  <div class="metric">
+                    <span>Total Kgs Sold:</span>
+                    <span class="positive">${reportData.summary.totalKgSold.toLocaleString()} kg</span>
+                  </div>
+                  <div class="metric">
+                    <span>Total Bags Sold:</span>
+                    <span>${reportData.summary.totalBagsSold.toLocaleString()}</span>
+                  </div>
+                  <div class="metric">
+                    <span>Kgs Left in Store:</span>
+                    <span class="neutral">${reportData.summary.totalKgLeft.toLocaleString()} kg</span>
+                  </div>
+                  <div class="metric">
+                    <span>Kgs Unbought:</span>
+                    <span class="neutral">${reportData.summary.totalKgUnbought.toLocaleString()} kg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Coffee Type Analysis -->
+            <div class="section">
+              <div class="section-title">COFFEE TYPE BREAKDOWN</div>
+              <table class="breakdown-table">
+                <thead>
+                  <tr>
+                    <th>Coffee Type</th>
+                    <th>Bought (kg)</th>
+                    <th>Sold (kg)</th>
+                    <th>Left (kg)</th>
+                    <th>Avg Price (UGX/kg)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${Object.entries(reportData.coffeeTypeAnalysis).map(([type, data]) => `
+                    <tr>
+                      <td><strong>${type}</strong></td>
+                      <td class="amount positive">${data.totalBought.toLocaleString()}</td>
+                      <td class="amount neutral">${data.totalSold.toLocaleString()}</td>
+                      <td class="amount neutral">${data.leftInStore.toLocaleString()}</td>
+                      <td class="amount">${data.avgPrice.toLocaleString()}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Daily Breakdown -->
+            <div class="section page-break">
+              <div class="section-title">DAILY OPERATIONS BREAKDOWN</div>
+              <table class="breakdown-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Kgs Bought</th>
+                    <th>Kgs Sold</th>
+                    <th>Advances Given (UGX)</th>
+                    <th>Transactions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${Object.entries(reportData.dailyBreakdown)
+                    .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+                    .map(([date, data]) => `
+                      <tr>
+                        <td>${format(parseISO(date), 'MMM dd, yyyy')}</td>
+                        <td class="amount positive">${data.kgBought.toLocaleString()}</td>
+                        <td class="amount neutral">${data.kgSold.toLocaleString()}</td>
+                        <td class="amount negative">${data.advancesGiven.toLocaleString()}</td>
+                        <td class="amount">${data.transactions}</td>
+                      </tr>
+                    `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="footer">
+              <p>Store Report generated on ${format(new Date(), 'MMMM dd, yyyy HH:mm')}</p>
+              <p>This report is confidential and proprietary to COMPANY NAME LTD</p>
+            </div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
   };
 
   const exportReport = () => {

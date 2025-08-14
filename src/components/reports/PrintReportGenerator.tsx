@@ -185,7 +185,355 @@ const PrintReportGenerator = () => {
   };
 
   const printReport = () => {
-    window.print();
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Business Report - ${dateFrom} to ${dateTo}</title>
+            <style>
+              @page {
+                margin: 0.5in;
+                size: A4;
+              }
+              body { 
+                font-family: Arial, sans-serif; 
+                margin: 0; 
+                padding: 20px;
+                line-height: 1.4;
+                color: #333;
+              }
+              .company-header {
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #333;
+                padding-bottom: 20px;
+              }
+              .company-name {
+                font-size: 24px;
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: #1a365d;
+              }
+              .company-details {
+                font-size: 12px;
+                color: #666;
+                margin-bottom: 10px;
+              }
+              .report-title {
+                font-size: 20px;
+                font-weight: bold;
+                margin: 20px 0;
+                text-align: center;
+                background: #f8f9fa;
+                padding: 15px;
+                border: 1px solid #ddd;
+              }
+              .section {
+                margin: 30px 0;
+                break-inside: avoid;
+              }
+              .section-title {
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 15px;
+                padding: 10px;
+                background: #e9ecef;
+                border-left: 4px solid #007bff;
+              }
+              .balance-sheet, .trial-balance {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+              }
+              .balance-sheet th, .balance-sheet td,
+              .trial-balance th, .trial-balance td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+              }
+              .balance-sheet th, .trial-balance th {
+                background-color: #f8f9fa;
+                font-weight: bold;
+              }
+              .amount {
+                text-align: right;
+                font-weight: 500;
+              }
+              .total-row {
+                background-color: #f1f3f4;
+                font-weight: bold;
+              }
+              .grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin: 20px 0;
+              }
+              .card {
+                border: 1px solid #ddd;
+                padding: 15px;
+                border-radius: 5px;
+              }
+              .metric {
+                display: flex;
+                justify-content: space-between;
+                margin: 8px 0;
+                padding: 5px 0;
+                border-bottom: 1px dotted #ccc;
+              }
+              .positive { color: #28a745; }
+              .negative { color: #dc3545; }
+              .footer {
+                margin-top: 40px;
+                text-align: center;
+                font-size: 10px;
+                color: #666;
+                border-top: 1px solid #ddd;
+                padding-top: 15px;
+              }
+              .page-break {
+                page-break-before: always;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="company-header">
+              <div class="company-name">COMPANY NAME LTD</div>
+              <div class="company-details">
+                P.O. Box 1234, Kampala, Uganda<br>
+                Tel: +256 123 456 789 | Email: info@company.com<br>
+                TIN: 123456789 | Registration: 12345678
+              </div>
+            </div>
+
+            <div class="report-title">
+              COMPREHENSIVE BUSINESS REPORT<br>
+              <small>Period: ${format(parseISO(reportData.dateRange.from), 'MMMM dd, yyyy')} - ${format(parseISO(reportData.dateRange.to), 'MMMM dd, yyyy')}</small>
+            </div>
+
+            <!-- Balance Sheet Section -->
+            <div class="section">
+              <div class="section-title">BALANCE SHEET</div>
+              <table class="balance-sheet">
+                <thead>
+                  <tr>
+                    <th colspan="2">ASSETS</th>
+                    <th>AMOUNT (UGX)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="2">Current Assets</td>
+                    <td class="amount">${reportData.balanceSheet.cashOnHand.toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-left: 20px;">Cash on Hand</td>
+                    <td></td>
+                    <td class="amount">${reportData.balanceSheet.cashOnHand.toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-left: 20px;">Accounts Receivable</td>
+                    <td></td>
+                    <td class="amount">${reportData.balanceSheet.pendingPayments.toLocaleString()}</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td colspan="2"><strong>Total Assets</strong></td>
+                    <td class="amount"><strong>${(reportData.balanceSheet.cashOnHand + reportData.balanceSheet.pendingPayments).toLocaleString()}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <table class="balance-sheet" style="margin-top: 20px;">
+                <thead>
+                  <tr>
+                    <th colspan="2">LIABILITIES & EQUITY</th>
+                    <th>AMOUNT (UGX)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="2">Current Liabilities</td>
+                    <td class="amount">${reportData.balanceSheet.totalAdvances.toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-left: 20px;">Advances Payable</td>
+                    <td></td>
+                    <td class="amount">${reportData.balanceSheet.totalAdvances.toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td colspan="2">Equity</td>
+                    <td class="amount">${reportData.balanceSheet.netIncome.toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-left: 20px;">Retained Earnings</td>
+                    <td></td>
+                    <td class="amount">${reportData.balanceSheet.netIncome.toLocaleString()}</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td colspan="2"><strong>Total Liabilities & Equity</strong></td>
+                    <td class="amount"><strong>${(reportData.balanceSheet.totalAdvances + reportData.balanceSheet.netIncome).toLocaleString()}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Trial Balance Section -->
+            <div class="section page-break">
+              <div class="section-title">TRIAL BALANCE</div>
+              <table class="trial-balance">
+                <thead>
+                  <tr>
+                    <th>Account</th>
+                    <th>Debit (UGX)</th>
+                    <th>Credit (UGX)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Cash Account</td>
+                    <td class="amount">${reportData.balanceSheet.cashOnHand.toLocaleString()}</td>
+                    <td class="amount">-</td>
+                  </tr>
+                  <tr>
+                    <td>Accounts Receivable</td>
+                    <td class="amount">${reportData.balanceSheet.pendingPayments.toLocaleString()}</td>
+                    <td class="amount">-</td>
+                  </tr>
+                  <tr>
+                    <td>Revenue Account</td>
+                    <td class="amount">-</td>
+                    <td class="amount">${reportData.balanceSheet.totalRevenue.toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <td>Expense Account</td>
+                    <td class="amount">${reportData.balanceSheet.totalExpenses.toLocaleString()}</td>
+                    <td class="amount">-</td>
+                  </tr>
+                  <tr>
+                    <td>Advances Payable</td>
+                    <td class="amount">-</td>
+                    <td class="amount">${reportData.balanceSheet.totalAdvances.toLocaleString()}</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td><strong>TOTALS</strong></td>
+                    <td class="amount"><strong>${(reportData.balanceSheet.cashOnHand + reportData.balanceSheet.pendingPayments + reportData.balanceSheet.totalExpenses).toLocaleString()}</strong></td>
+                    <td class="amount"><strong>${(reportData.balanceSheet.totalRevenue + reportData.balanceSheet.totalAdvances).toLocaleString()}</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Financial Summary -->
+            <div class="section">
+              <div class="section-title">FINANCIAL SUMMARY</div>
+              <div class="grid">
+                <div class="card">
+                  <h4>Income Statement</h4>
+                  <div class="metric">
+                    <span>Total Revenue:</span>
+                    <span class="positive">${reportData.balanceSheet.totalRevenue.toLocaleString()}</span>
+                  </div>
+                  <div class="metric">
+                    <span>Total Expenses:</span>
+                    <span class="negative">${reportData.balanceSheet.totalExpenses.toLocaleString()}</span>
+                  </div>
+                  <div class="metric">
+                    <span><strong>Net Income:</strong></span>
+                    <span class="${reportData.balanceSheet.netIncome >= 0 ? 'positive' : 'negative'}"><strong>${reportData.balanceSheet.netIncome.toLocaleString()}</strong></span>
+                  </div>
+                </div>
+                <div class="card">
+                  <h4>Cash Flow</h4>
+                  <div class="metric">
+                    <span>Cash on Hand:</span>
+                    <span>${reportData.balanceSheet.cashOnHand.toLocaleString()}</span>
+                  </div>
+                  <div class="metric">
+                    <span>Pending Payments:</span>
+                    <span class="negative">${reportData.balanceSheet.pendingPayments.toLocaleString()}</span>
+                  </div>
+                  <div class="metric">
+                    <span>Total Advances:</span>
+                    <span>${reportData.balanceSheet.totalAdvances.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Average Prices -->
+            <div class="section">
+              <div class="section-title">PRICING ANALYSIS</div>
+              <div class="grid">
+                <div class="card">
+                  <div class="metric">
+                    <span>Average Buying Price:</span>
+                    <span>${reportData.averagePrices.averageBuyingPrice.toLocaleString()}/kg</span>
+                  </div>
+                  <div class="metric">
+                    <span>Average Selling Price:</span>
+                    <span>${reportData.averagePrices.averageSellingPrice.toLocaleString()}/kg</span>
+                  </div>
+                  <div class="metric">
+                    <span>Price Variance:</span>
+                    <span class="${reportData.averagePrices.priceVariance >= 0 ? 'positive' : 'negative'}">${reportData.averagePrices.priceVariance.toLocaleString()}/kg</span>
+                  </div>
+                </div>
+                <div class="card">
+                  <h4>Operational Metrics</h4>
+                  <div class="metric">
+                    <span>Total Kgs Processed:</span>
+                    <span>${reportData.operationalData.totalKgsProcessed.toLocaleString()} kg</span>
+                  </div>
+                  <div class="metric">
+                    <span>Total Customers:</span>
+                    <span>${reportData.operationalData.totalCustomers}</span>
+                  </div>
+                  <div class="metric">
+                    <span>Milling Revenue:</span>
+                    <span class="positive">${reportData.operationalData.millingRevenue.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Daily Summary -->
+            <div class="section page-break">
+              <div class="section-title">DAILY TRANSACTION SUMMARY</div>
+              <table class="trial-balance">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Income (UGX)</th>
+                    <th>Expenses (UGX)</th>
+                    <th>Net (UGX)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${Object.entries(reportData.dayBook.dailySummary)
+                    .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+                    .map(([date, data]) => `
+                      <tr>
+                        <td>${format(parseISO(date), 'MMM dd, yyyy')}</td>
+                        <td class="amount positive">${data.income.toLocaleString()}</td>
+                        <td class="amount negative">${data.expenses.toLocaleString()}</td>
+                        <td class="amount ${data.net >= 0 ? 'positive' : 'negative'}">${data.net.toLocaleString()}</td>
+                      </tr>
+                    `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="footer">
+              <p>Report generated on ${format(new Date(), 'MMMM dd, yyyy HH:mm')}</p>
+              <p>This report is confidential and proprietary to COMPANY NAME LTD</p>
+            </div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
   };
 
   const exportReport = () => {
