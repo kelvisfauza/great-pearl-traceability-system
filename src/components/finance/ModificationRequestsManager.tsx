@@ -189,95 +189,123 @@ const ModificationRequestsManager = () => {
 
   return (
     <>
-      <Card>
-        <CardHeader>
+      <Card className="border-2 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 border-b">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-orange-500" />
-                Modification Requests
+              <CardTitle className="flex items-center gap-3 text-2xl">
+                <AlertTriangle className="h-7 w-7 text-orange-500" />
+                Pending Approval Requests
               </CardTitle>
-              <CardDescription>
-                Review and handle modification requests from other departments
+              <CardDescription className="text-lg mt-2">
+                Review and approve requests from various departments
               </CardDescription>
             </div>
-            <Button onClick={handleRefresh} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
+            <Button onClick={handleRefresh} variant="outline" size="lg" className="text-lg px-6">
+              <RefreshCw className="h-5 w-5 mr-3" />
               Refresh
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-8">
           {financeModificationRequests.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Pending Requests</h3>
-              <p className="text-muted-foreground">All modification requests have been processed.</p>
+            <div className="text-center py-16 px-8">
+              <div className="max-w-md mx-auto">
+                <CheckCircle2 className="h-24 w-24 text-green-500 mx-auto mb-8" />
+                <h3 className="text-3xl font-bold mb-4 text-foreground">No Pending Requests</h3>
+                <p className="text-xl text-muted-foreground leading-relaxed">
+                  All approval requests have been processed.
+                </p>
+                <div className="mt-8 p-6 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-lg font-medium text-green-800 mb-2">Great Job! 🎉</p>
+                  <p className="text-green-700">
+                    You're all caught up with approval requests. Check back later for new submissions.
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Batch Number</TableHead>
-                  <TableHead>From Department</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Comments</TableHead>
-                  <TableHead>Requested</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {financeModificationRequests.map((request) => (
-                  <TableRow key={request.id}>
-                    <TableCell className="font-medium">
-                      {request.batchNumber || 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{request.requestedByDepartment}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {getReasonBadge(request.reason)}
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {request.comments || 'No additional comments'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div className="font-medium">{request.requestedBy}</div>
-                        <div className="text-muted-foreground">
-                          {formatDate(request.createdAt)}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleForwardToQuality(request)}
-                          disabled={processingId === request.id}
-                        >
-                          <Send className="h-4 w-4 mr-1" />
-                          Forward
-                        </Button>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => handleCompleteAndSubmitToManager(request)}
-                          disabled={processingId === request.id}
-                        >
-                          <CheckCircle2 className="h-4 w-4 mr-1" />
-                          Complete & Submit to Manager
-                        </Button>
-                        {processingId === request.id && (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                        )}
-                      </div>
-                    </TableCell>
+            <div className="space-y-6">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <Clock className="h-6 w-6 text-amber-600" />
+                  <h4 className="text-xl font-semibold text-amber-800">
+                    {financeModificationRequests.length} Request{financeModificationRequests.length !== 1 ? 's' : ''} Awaiting Review
+                  </h4>
+                </div>
+                <p className="text-amber-700">
+                  These requests require your immediate attention for processing and approval.
+                </p>
+              </div>
+              
+              <Table className="text-lg">
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="text-lg font-semibold">Batch Number</TableHead>
+                    <TableHead className="text-lg font-semibold">From Department</TableHead>
+                    <TableHead className="text-lg font-semibold">Reason</TableHead>
+                    <TableHead className="text-lg font-semibold">Comments</TableHead>
+                    <TableHead className="text-lg font-semibold">Requested</TableHead>
+                    <TableHead className="text-lg font-semibold">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {financeModificationRequests.map((request) => (
+                    <TableRow key={request.id} className="hover:bg-muted/30 transition-colors">
+                      <TableCell className="font-bold text-lg py-4">
+                        {request.batchNumber || 'N/A'}
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <Badge variant="outline" className="text-sm px-3 py-1">{request.requestedByDepartment}</Badge>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        {getReasonBadge(request.reason)}
+                      </TableCell>
+                      <TableCell className="max-w-xs py-4">
+                        <div className="text-base">
+                          {request.comments || 'No additional comments'}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <div className="text-base">
+                          <div className="font-semibold">{request.requestedBy}</div>
+                          <div className="text-muted-foreground text-sm">
+                            {formatDate(request.createdAt)}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-3">
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            onClick={() => handleForwardToQuality(request)}
+                            disabled={processingId === request.id}
+                            className="text-base px-4"
+                          >
+                            <Send className="h-5 w-5 mr-2" />
+                            Forward
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="lg"
+                            onClick={() => handleCompleteAndSubmitToManager(request)}
+                            disabled={processingId === request.id}
+                            className="text-base px-4 bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle2 className="h-5 w-5 mr-2" />
+                            Complete & Submit
+                          </Button>
+                          {processingId === request.id && (
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
