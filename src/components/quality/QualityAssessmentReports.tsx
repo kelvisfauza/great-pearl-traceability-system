@@ -39,9 +39,9 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
     if (!assessment) return false;
     if (filters.startDate && assessment.date_assessed && new Date(assessment.date_assessed) < new Date(filters.startDate)) return false;
     if (filters.endDate && assessment.date_assessed && new Date(assessment.date_assessed) > new Date(filters.endDate)) return false;
-    if (filters.supplier && assessment.supplier_name !== filters.supplier) return false;
-    if (filters.coffeeType && assessment.coffee_type !== filters.coffeeType) return false;
-    if (filters.status && assessment.status !== filters.status) return false;
+    if (filters.supplier && filters.supplier !== 'all' && assessment.supplier_name !== filters.supplier) return false;
+    if (filters.coffeeType && filters.coffeeType !== 'all' && assessment.coffee_type !== filters.coffeeType) return false;
+    if (filters.status && filters.status !== 'all' && assessment.status !== filters.status) return false;
     return true;
   });
 
@@ -396,7 +396,7 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
                   <SelectValue placeholder="All Suppliers" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Suppliers</SelectItem>
+                  <SelectItem value="all">All Suppliers</SelectItem>
                   {uniqueSuppliers.map(supplier => (
                     <SelectItem key={supplier} value={supplier}>{supplier}</SelectItem>
                   ))}
@@ -410,7 +410,7 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
                   {uniqueCoffeeTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
