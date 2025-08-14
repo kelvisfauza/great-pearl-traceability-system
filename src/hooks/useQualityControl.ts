@@ -72,10 +72,10 @@ export const useQualityControl = () => {
 
   const loadQualityAssessments = useCallback(async () => {
     try {
-      console.log('Loading quality assessments from Supabase...');
+      console.log('Loading quality assessments from both Supabase and Firebase...');
       
-      // Fetch quality assessments with joined coffee records data
-      const { data: qualityData, error: qualityError } = await supabase
+      // Fetch from Supabase with joined coffee records data
+      const { data: supabaseQualityData, error: qualityError } = await supabase
         .from('quality_assessments')
         .select(`
           *,
@@ -89,22 +89,63 @@ export const useQualityControl = () => {
         .order('created_at', { ascending: false });
 
       if (qualityError) {
-        console.error('Error fetching quality assessments:', qualityError);
-        throw qualityError;
+        console.error('Error fetching quality assessments from Supabase:', qualityError);
       }
 
-      // Transform the data to flatten the joined fields
-      const transformedData = (qualityData || []).map(assessment => ({
+      // Fetch from Firebase
+      let firebaseQualityData = [];
+      try {
+        const firebaseQuery = query(collection(db, 'quality_assessments'), orderBy('created_at', 'desc'));
+        const firebaseSnapshot = await getDocs(firebaseQuery);
+        firebaseQualityData = firebaseSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          source: 'firebase'
+        }));
+        console.log('Loaded quality assessments from Firebase:', firebaseQualityData.length, 'assessments');
+      } catch (firebaseError) {
+        console.error('Error fetching quality assessments from Firebase:', firebaseError);
+      }
+
+      // Transform Supabase data to flatten the joined fields
+      const transformedSupabaseData = (supabaseQualityData || []).map(assessment => ({
         ...assessment,
         supplier_name: assessment.coffee_records?.supplier_name || 'Unknown',
         coffee_type: assessment.coffee_records?.coffee_type || 'Unknown',
         kilograms: assessment.coffee_records?.kilograms || 0,
-        batch_number: assessment.coffee_records?.batch_number || assessment.batch_number
+        batch_number: assessment.coffee_records?.batch_number || assessment.batch_number,
+        source: 'supabase'
       }));
 
-      console.log('Loaded quality assessments from Supabase:', transformedData.length, 'assessments');
-      setQualityAssessments(transformedData);
-      return transformedData;
+      // Combine data from both sources, removing duplicates by batch_number
+      const batchMap = new Map();
+      
+      // Add Supabase data first (priority)
+      transformedSupabaseData.forEach(assessment => {
+        if (assessment.batch_number) {
+          batchMap.set(assessment.batch_number, assessment);
+        }
+      });
+      
+      // Add Firebase data only if batch_number doesn't exist
+      firebaseQualityData.forEach(assessment => {
+        if (assessment.batch_number && !batchMap.has(assessment.batch_number)) {
+          batchMap.set(assessment.batch_number, assessment);
+        }
+      });
+
+      const combinedData = Array.from(batchMap.values()).sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      console.log('Combined quality assessments:', {
+        supabase: transformedSupabaseData.length,
+        firebase: firebaseQualityData.length,
+        total: combinedData.length
+      });
+      
+      setQualityAssessments(combinedData);
+      return combinedData;
     } catch (error) {
       console.error('Error loading quality assessments:', error);
       setQualityAssessments([]);
