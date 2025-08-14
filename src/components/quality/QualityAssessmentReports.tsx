@@ -29,9 +29,25 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
   const [selectedAssessments, setSelectedAssessments] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  console.log('QualityAssessmentReports render:', { assessments: assessments?.length || 0 });
+
+  // Ensure assessments is an array and has valid data
+  const safeAssessments = Array.isArray(assessments) ? assessments : [];
+
+  // Filter assessments based on criteria
+  const filteredAssessments = safeAssessments.filter(assessment => {
+    if (!assessment) return false;
+    if (filters.startDate && assessment.date_assessed && new Date(assessment.date_assessed) < new Date(filters.startDate)) return false;
+    if (filters.endDate && assessment.date_assessed && new Date(assessment.date_assessed) > new Date(filters.endDate)) return false;
+    if (filters.supplier && assessment.supplier_name !== filters.supplier) return false;
+    if (filters.coffeeType && assessment.coffee_type !== filters.coffeeType) return false;
+    if (filters.status && assessment.status !== filters.status) return false;
+    return true;
+  });
+
   // Get unique values for filters
-  const uniqueSuppliers = [...new Set(assessments.map(a => a.supplier_name || 'Unknown'))].filter(Boolean);
-  const uniqueCoffeeTypes = [...new Set(assessments.map(a => a.coffee_type || 'Unknown'))].filter(Boolean);
+  const uniqueSuppliers = [...new Set(safeAssessments.map(a => a?.supplier_name || 'Unknown'))].filter(Boolean);
+  const uniqueCoffeeTypes = [...new Set(safeAssessments.map(a => a?.coffee_type || 'Unknown'))].filter(Boolean);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -52,16 +68,6 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
       setSelectedAssessments([]);
     }
   };
-
-  // Filter assessments based on criteria
-  const filteredAssessments = assessments.filter(assessment => {
-    if (filters.startDate && new Date(assessment.date_assessed) < new Date(filters.startDate)) return false;
-    if (filters.endDate && new Date(assessment.date_assessed) > new Date(filters.endDate)) return false;
-    if (filters.supplier && assessment.supplier_name !== filters.supplier) return false;
-    if (filters.coffeeType && assessment.coffee_type !== filters.coffeeType) return false;
-    if (filters.status && assessment.status !== filters.status) return false;
-    return true;
-  });
 
   const generateReport = async () => {
     setIsGenerating(true);
@@ -179,8 +185,8 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
     const totalAssessments = data.length;
     const acceptedAssessments = data.filter(d => !d.reject_final).length;
     const rejectedAssessments = data.filter(d => d.reject_final).length;
-    const avgOutturn = data.reduce((sum, d) => sum + (typeof d.outturn === 'number' ? d.outturn : 0), 0) / totalAssessments;
-    const avgFinalPrice = data.reduce((sum, d) => sum + (d.final_price || 0), 0) / totalAssessments;
+    const avgOutturn = totalAssessments > 0 ? data.reduce((sum, d) => sum + (typeof d.outturn === 'number' ? d.outturn : 0), 0) / totalAssessments : 0;
+    const avgFinalPrice = totalAssessments > 0 ? data.reduce((sum, d) => sum + (d.final_price || 0), 0) / totalAssessments : 0;
     const totalKgs = data.reduce((sum, d) => sum + (d.kilograms || 0), 0);
 
     return `
@@ -227,12 +233,12 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
         <tbody>
           ${data.map(assessment => `
             <tr>
-              <td>${assessment.date_assessed}</td>
-              <td>${assessment.batch_number}</td>
+              <td>${assessment.date_assessed || 'N/A'}</td>
+              <td>${assessment.batch_number || 'N/A'}</td>
               <td>${assessment.supplier_name || 'N/A'}</td>
               <td>${assessment.coffee_type || 'N/A'}</td>
               <td>${(assessment.kilograms || 0).toLocaleString()}</td>
-              <td>${typeof assessment.outturn === 'number' ? assessment.outturn.toFixed(1) : assessment.outturn}</td>
+              <td>${typeof assessment.outturn === 'number' ? assessment.outturn.toFixed(1) : (assessment.outturn || 'N/A')}</td>
               <td>${(assessment.final_price || 0).toLocaleString()}</td>
               <td class="${assessment.reject_final ? 'reject' : 'accept'}">
                 ${assessment.reject_final ? 'REJECTED' : 'ACCEPTED'}
@@ -270,8 +276,8 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
         <tbody>
           ${data.map(assessment => `
             <tr>
-              <td>${assessment.date_assessed}</td>
-              <td>${assessment.batch_number}</td>
+              <td>${assessment.date_assessed || 'N/A'}</td>
+              <td>${assessment.batch_number || 'N/A'}</td>
               <td>${assessment.supplier_name || 'N/A'}</td>
               <td>${assessment.coffee_type || 'N/A'}</td>
               <td>${(assessment.kilograms || 0).toLocaleString()}</td>
@@ -281,7 +287,7 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
               <td>${(assessment.below12 || 0).toFixed(1)}</td>
               <td>${(assessment.fm || 0).toFixed(1)}</td>
               <td>${(assessment.clean_d14 || 0).toFixed(1)}</td>
-              <td>${typeof assessment.outturn === 'number' ? assessment.outturn.toFixed(1) : assessment.outturn}</td>
+              <td>${typeof assessment.outturn === 'number' ? assessment.outturn.toFixed(1) : (assessment.outturn || 'N/A')}</td>
               <td>${(assessment.outturn_price || 0).toLocaleString()}</td>
               <td>${(assessment.final_price || 0).toLocaleString()}</td>
               <td class="${assessment.reject_final ? 'reject' : 'accept'}">
@@ -298,7 +304,7 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
   const generateMonthlyReport = (data: any[]) => {
     // Group by month
     const monthlyData = data.reduce((acc, assessment) => {
-      const month = new Date(assessment.date_assessed).toISOString().substring(0, 7); // YYYY-MM
+      const month = assessment.date_assessed ? new Date(assessment.date_assessed).toISOString().substring(0, 7) : 'Unknown'; // YYYY-MM
       if (!acc[month]) {
         acc[month] = {
           assessments: [],
@@ -475,12 +481,12 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
                           onCheckedChange={(checked) => handleAssessmentSelect(assessment.id, checked as boolean)}
                         />
                       </td>
-                      <td className="p-2">{assessment.date_assessed}</td>
-                      <td className="p-2">{assessment.batch_number}</td>
+                      <td className="p-2">{assessment.date_assessed || 'N/A'}</td>
+                      <td className="p-2">{assessment.batch_number || 'N/A'}</td>
                       <td className="p-2">{assessment.supplier_name || 'N/A'}</td>
                       <td className="p-2">{assessment.coffee_type || 'N/A'}</td>
                       <td className="p-2">
-                        {typeof assessment.outturn === 'number' ? `${assessment.outturn.toFixed(1)}%` : assessment.outturn}
+                        {typeof assessment.outturn === 'number' ? `${assessment.outturn.toFixed(1)}%` : (assessment.outturn || 'N/A')}
                       </td>
                       <td className="p-2">UGX {(assessment.final_price || 0).toLocaleString()}</td>
                       <td className="p-2">
