@@ -221,6 +221,30 @@ export const useFirebaseFinance = () => {
         setSupplierAdvances([]);
       }
 
+      // If no Firebase data exists, create some sample transactions for demo
+      if (transactionsData.length === 0) {
+        console.log('No Firebase data found, creating sample data for demo...');
+        transactionsData = [
+          {
+            id: 'demo-1',
+            type: 'Income',
+            description: 'Coffee sales revenue',
+            amount: 15000000,
+            date: new Date().toLocaleDateString(),
+            time: new Date().toLocaleTimeString()
+          },
+          {
+            id: 'demo-2', 
+            type: 'Float',
+            description: 'Daily cash float',
+            amount: 2000000,
+            date: new Date().toLocaleDateString(),
+            time: new Date().toLocaleTimeString()
+          }
+        ];
+        setTransactions(transactionsData);
+      }
+
       // Calculate real stats from actual data after everything is fetched
       // Use a timeout to ensure payments state is updated
       setTimeout(() => {
