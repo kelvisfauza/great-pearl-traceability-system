@@ -1,4 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
+import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export const updateEmployeePermissions = async (email: string, updates: {
   role?: string;
@@ -6,35 +8,63 @@ export const updateEmployeePermissions = async (email: string, updates: {
   position?: string;
   department?: string;
 }) => {
+  const results = { supabase: false, firebase: false };
+  
   try {
     console.log('Updating employee permissions for:', email);
     
-    // Find employee by email
-    const { data: employee, error: findError } = await supabase
-      .from('employees')
-      .select('*')
-      .eq('email', email)
-      .single();
-    
-    if (findError || !employee) {
-      throw new Error('Employee not found');
+    // Try updating in Supabase first
+    try {
+      const { data: employee, error: findError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+      
+      if (employee && !findError) {
+        const { error: updateError } = await supabase
+          .from('employees')
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString()
+          })
+          .eq('email', email);
+        
+        if (!updateError) {
+          results.supabase = true;
+          console.log('Employee updated in Supabase successfully');
+        }
+      }
+    } catch (supabaseError) {
+      console.warn('Supabase update failed:', supabaseError);
     }
     
-    // Update the employee record
-    const { error: updateError } = await supabase
-      .from('employees')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
-      .eq('email', email);
-    
-    if (updateError) {
-      throw updateError;
+    // Try updating in Firebase
+    try {
+      const employeesQuery = query(collection(db, 'employees'), where('email', '==', email));
+      const employeeSnapshot = await getDocs(employeesQuery);
+      
+      if (!employeeSnapshot.empty) {
+        const employeeDoc = employeeSnapshot.docs[0];
+        const employeeRef = doc(db, 'employees', employeeDoc.id);
+        
+        await updateDoc(employeeRef, {
+          ...updates,
+          updated_at: new Date().toISOString()
+        });
+        
+        results.firebase = true;
+        console.log('Employee updated in Firebase successfully');
+      }
+    } catch (firebaseError) {
+      console.warn('Firebase update failed:', firebaseError);
     }
     
-    console.log('Employee permissions updated successfully');
-    return { success: true, message: 'Employee permissions updated successfully' };
+    if (results.supabase || results.firebase) {
+      return { success: true, message: 'Employee permissions updated successfully', results };
+    } else {
+      throw new Error('Employee not found in either system');
+    }
     
   } catch (error) {
     console.error('Error updating employee permissions:', error);
