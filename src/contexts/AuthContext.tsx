@@ -61,8 +61,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Auto logout after 5 minutes of inactivity
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
 
-// Main admin account that bypasses employee record checks
-const MAIN_ADMIN_EMAIL = 'kelvifauza@gmail.com';
+// Admin accounts that bypass employee record checks
+const ADMIN_EMAILS = ['kelvifauza@gmail.com', 'bwambaledenis8@gmail.com'];
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -123,8 +123,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const normalizedEmail = userEmail.toLowerCase().trim();
     console.log('Normalized email in fetchEmployeeData:', normalizedEmail);
 
-    // Check if this is the main admin account
-    if (normalizedEmail === MAIN_ADMIN_EMAIL) {
+    // Check if this is an admin account
+    if (ADMIN_EMAILS.includes(normalizedEmail)) {
       console.log('Main admin account detected, creating admin profile');
       const adminProfile: Employee = {
         id: 'main-admin',
@@ -190,8 +190,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(appUser);
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Check if this is the main admin account
-      if (normalizedEmail === MAIN_ADMIN_EMAIL) {
+      // Check if this is an admin account
+      if (ADMIN_EMAILS.includes(normalizedEmail)) {
         console.log('Main admin logged in successfully');
         const adminProfile: Employee = {
           id: 'main-admin',
@@ -233,13 +233,63 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (employeeError || !employeeData) {
         console.error('No employee record found in Supabase:', employeeError);
-        await supabase.auth.signOut();
-        setUser(null);
+        
+        // Create a basic employee record for authenticated users
+        console.log('Creating basic employee record for authenticated user');
+        const { data: newEmployee, error: createError } = await supabase
+          .from('employees')
+          .insert({
+            name: normalizedEmail.split('@')[0], // Use email prefix as default name
+            email: normalizedEmail,
+            position: 'Staff',
+            department: 'General',
+            role: 'User',
+            permissions: ['General Access'],
+            status: 'Active',
+            join_date: new Date().toISOString(),
+            salary: 0
+          })
+          .select()
+          .single();
+        
+        if (createError || !newEmployee) {
+          console.error('Failed to create employee record:', createError);
+          await supabase.auth.signOut();
+          setUser(null);
+          toast({
+            title: "Access Denied",
+            description: "Unable to create employee record. Contact your administrator.",
+            variant: "destructive"
+          });
+          return {};
+        }
+        
+        // Use the newly created employee record
+        const employee: Employee = {
+          id: newEmployee.id,
+          name: newEmployee.name,
+          email: newEmployee.email,
+          phone: newEmployee.phone || '',
+          position: newEmployee.position,
+          department: newEmployee.department,
+          salary: newEmployee.salary || 0,
+          role: newEmployee.role,
+          permissions: newEmployee.permissions || [],
+          status: newEmployee.status,
+          join_date: newEmployee.join_date,
+          isOneTimePassword: false,
+          mustChangePassword: false,
+          authUserId: supabaseAuth.user.id
+        };
+
+        setEmployee(employee);
+
         toast({
-          title: "Access Denied",
-          description: "No employee record found. Contact your administrator.",
-          variant: "destructive"
+          title: "Welcome!",
+          description: "Your account has been set up. Please contact HR to complete your profile.",
+          variant: "default"
         });
+
         return {};
       }
 
@@ -415,7 +465,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const normalizedEmail = session.user.email?.toLowerCase().trim();
           if (!normalizedEmail) return;
           
-          if (normalizedEmail === MAIN_ADMIN_EMAIL) {
+          if (ADMIN_EMAILS.includes(normalizedEmail)) {
             const adminProfile: Employee = {
               id: 'main-admin',
               name: 'Main Administrator',
