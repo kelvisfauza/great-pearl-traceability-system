@@ -160,123 +160,147 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Password provided:', password ? 'Yes' : 'No');
       console.log('Password length:', password?.length || 0);
       
-      // Use Supabase authentication only
+      // First try Supabase authentication
       console.log('Attempting Supabase authentication...');
       const { data: supabaseAuth, error: supabaseError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password: password
       });
 
-      if (supabaseError) {
-        console.error('Supabase authentication failed:', supabaseError);
-        throw supabaseError;
-      }
-
-      if (!supabaseAuth.user) {
-        throw new Error('Authentication failed - no user returned');
-      }
-
-      console.log('Supabase authentication successful!');
-      console.log('User ID:', supabaseAuth.user.id);
-      console.log('User email:', supabaseAuth.user.email);
-      
-      // Create a compatible user object for the app
-      const appUser = {
-        uid: supabaseAuth.user.id,
-        email: supabaseAuth.user.email,
-        emailVerified: supabaseAuth.user.email_confirmed_at != null
-      } as User;
-      
-      setUser(appUser);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Check if this is an admin account
-      if (ADMIN_EMAILS.includes(normalizedEmail)) {
-        console.log('Main admin logged in successfully');
-        const adminProfile: Employee = {
-          id: 'main-admin',
-          name: 'Main Administrator',
-          email: normalizedEmail,
-          position: 'System Administrator',
-          department: 'Administration',
-          salary: 0,
-          role: 'Administrator',
-          permissions: ['*'],
-          status: 'Active',
-          join_date: new Date().toISOString(),
-          isOneTimePassword: false,
-          mustChangePassword: false,
-          authUserId: supabaseAuth.user.id
-        };
+      if (!supabaseError && supabaseAuth.user) {
+        console.log('Supabase authentication successful!');
+        console.log('User ID:', supabaseAuth.user.id);
+        console.log('User email:', supabaseAuth.user.email);
         
-        setEmployee(adminProfile);
+        // Create a compatible user object for the app
+        const appUser = {
+          uid: supabaseAuth.user.id,
+          email: supabaseAuth.user.email,
+          emailVerified: supabaseAuth.user.email_confirmed_at != null
+        } as User;
         
-        setTimeout(async () => {
-          await seedFirebaseData();
-        }, 1000);
-
-        toast({
-          title: "Login Successful",
-          description: "Welcome back, Administrator!"
-        });
-
-        return {};
-      }
-      
-      // Fetch employee data from Supabase
-      console.log('Fetching employee data from Supabase...');
-      const { data: employeeData, error: employeeError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('email', normalizedEmail)
-        .single();
-
-      if (employeeError || !employeeData) {
-        console.error('No employee record found in Supabase:', employeeError);
+        setUser(appUser);
+        await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Create a basic employee record for authenticated users
-        console.log('Creating basic employee record for authenticated user');
-        const { data: newEmployee, error: createError } = await supabase
-          .from('employees')
-          .insert({
-            name: normalizedEmail.split('@')[0], // Use email prefix as default name
+        // Check if this is an admin account
+        if (ADMIN_EMAILS.includes(normalizedEmail)) {
+          console.log('Main admin logged in successfully');
+          const adminProfile: Employee = {
+            id: 'main-admin',
+            name: 'Main Administrator',
             email: normalizedEmail,
-            position: 'Staff',
-            department: 'General',
-            role: 'User',
-            permissions: ['General Access'],
+            position: 'System Administrator',
+            department: 'Administration',
+            salary: 0,
+            role: 'Administrator',
+            permissions: ['*'],
             status: 'Active',
             join_date: new Date().toISOString(),
-            salary: 0
-          })
-          .select()
-          .single();
-        
-        if (createError || !newEmployee) {
-          console.error('Failed to create employee record:', createError);
-          await supabase.auth.signOut();
-          setUser(null);
+            isOneTimePassword: false,
+            mustChangePassword: false,
+            authUserId: supabaseAuth.user.id
+          };
+          
+          setEmployee(adminProfile);
+          
+          setTimeout(async () => {
+            await seedFirebaseData();
+          }, 1000);
+
           toast({
-            title: "Access Denied",
-            description: "Unable to create employee record. Contact your administrator.",
-            variant: "destructive"
+            title: "Login Successful",
+            description: "Welcome back, Administrator!"
           });
+
           return {};
         }
         
-        // Use the newly created employee record
+        // Fetch employee data from Supabase
+        console.log('Fetching employee data from Supabase...');
+        const { data: employeeData, error: employeeError } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('email', normalizedEmail)
+          .single();
+
+        if (employeeError || !employeeData) {
+          console.error('No employee record found in Supabase:', employeeError);
+          
+          // Create a basic employee record for authenticated users
+          console.log('Creating basic employee record for authenticated user');
+          const { data: newEmployee, error: createError } = await supabase
+            .from('employees')
+            .insert({
+              name: normalizedEmail.split('@')[0], // Use email prefix as default name
+              email: normalizedEmail,
+              position: 'Staff',
+              department: 'General',
+              role: 'User',
+              permissions: ['General Access'],
+              status: 'Active',
+              join_date: new Date().toISOString(),
+              salary: 0
+            })
+            .select()
+            .single();
+          
+          if (createError || !newEmployee) {
+            console.error('Failed to create employee record:', createError);
+            await supabase.auth.signOut();
+            setUser(null);
+            toast({
+              title: "Access Denied",
+              description: "Unable to create employee record. Contact your administrator.",
+              variant: "destructive"
+            });
+            return {};
+          }
+          
+          // Use the newly created employee record
+          const employee: Employee = {
+            id: newEmployee.id,
+            name: newEmployee.name,
+            email: newEmployee.email,
+            phone: newEmployee.phone || '',
+            position: newEmployee.position,
+            department: newEmployee.department,
+            salary: newEmployee.salary || 0,
+            role: newEmployee.role,
+            permissions: newEmployee.permissions || [],
+            status: newEmployee.status,
+            join_date: newEmployee.join_date,
+            isOneTimePassword: false,
+            mustChangePassword: false,
+            authUserId: supabaseAuth.user.id
+          };
+
+          setEmployee(employee);
+
+          toast({
+            title: "Welcome!",
+            description: "Your account has been set up. Please contact HR to complete your profile.",
+            variant: "default"
+          });
+
+          return {};
+        }
+
+        console.log('Employee data found:', employeeData);
+
         const employee: Employee = {
-          id: newEmployee.id,
-          name: newEmployee.name,
-          email: newEmployee.email,
-          phone: newEmployee.phone || '',
-          position: newEmployee.position,
-          department: newEmployee.department,
-          salary: newEmployee.salary || 0,
-          role: newEmployee.role,
-          permissions: newEmployee.permissions || [],
-          status: newEmployee.status,
-          join_date: newEmployee.join_date,
+          id: employeeData.id,
+          name: employeeData.name,
+          email: employeeData.email,
+          phone: employeeData.phone || '',
+          position: employeeData.position,
+          department: employeeData.department,
+          salary: employeeData.salary || 0,
+          role: employeeData.role,
+          permissions: employeeData.permissions || [],
+          status: employeeData.status,
+          join_date: employeeData.join_date,
+          address: employeeData.address,
+          emergency_contact: employeeData.emergency_contact,
           isOneTimePassword: false,
           mustChangePassword: false,
           authUserId: supabaseAuth.user.id
@@ -284,61 +308,236 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         setEmployee(employee);
 
+        console.log('Login successful');
+        setTimeout(async () => {
+          await seedFirebaseData();
+        }, 1000);
+
         toast({
-          title: "Welcome!",
-          description: "Your account has been set up. Please contact HR to complete your profile.",
-          variant: "default"
+          title: "Login Successful",
+          description: `Welcome back, ${employee.name}!`
         });
 
         return {};
       }
 
-      console.log('Employee data found:', employeeData);
-
-      const employee: Employee = {
-        id: employeeData.id,
-        name: employeeData.name,
-        email: employeeData.email,
-        phone: employeeData.phone || '',
-        position: employeeData.position,
-        department: employeeData.department,
-        salary: employeeData.salary || 0,
-        role: employeeData.role,
-        permissions: employeeData.permissions || [],
-        status: employeeData.status,
-        join_date: employeeData.join_date,
-        address: employeeData.address,
-        emergency_contact: employeeData.emergency_contact,
-        isOneTimePassword: false,
-        mustChangePassword: false,
-        authUserId: supabaseAuth.user.id
-      };
-
-      setEmployee(employee);
-
-      console.log('Login successful');
-      setTimeout(async () => {
-        await seedFirebaseData();
-      }, 1000);
-
-      toast({
-        title: "Login Successful",
-        description: `Welcome back, ${employee.name}!`
-      });
-
-      return {};
+      // If Supabase fails, try Firebase authentication for legacy users
+      console.log('Supabase authentication failed, trying Firebase...');
+      console.log('Supabase error:', supabaseError);
+      
+      try {
+        const firebaseCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+        console.log('Firebase authentication successful!');
+        console.log('Firebase User ID:', firebaseCredential.user.uid);
+        
+        // Create compatible user object
+        const appUser = {
+          uid: firebaseCredential.user.uid,
+          email: firebaseCredential.user.email,
+          emailVerified: firebaseCredential.user.emailVerified
+        } as User;
+        
+        setUser(appUser);
+        
+        // Check for Firebase employee data
+        const employeeQuery = query(
+          collection(db, 'employees'),
+          where('email', '==', normalizedEmail)
+        );
+        
+        const employeeSnapshot = await getDocs(employeeQuery);
+        
+        if (employeeSnapshot.empty) {
+          console.log('No Firebase employee record found');
+          
+          // Check if admin
+          if (ADMIN_EMAILS.includes(normalizedEmail)) {
+            const adminProfile: Employee = {
+              id: 'main-admin',
+              name: 'Main Administrator',
+              email: normalizedEmail,
+              position: 'System Administrator',
+              department: 'Administration',
+              salary: 0,
+              role: 'Administrator',
+              permissions: ['*'],
+              status: 'Active',
+              join_date: new Date().toISOString(),
+              isOneTimePassword: false,
+              mustChangePassword: false,
+              authUserId: firebaseCredential.user.uid
+            };
+            
+            setEmployee(adminProfile);
+            
+            toast({
+              title: "Login Successful",
+              description: "Welcome back, Administrator! (Firebase)"
+            });
+            
+            // Migrate to Supabase
+            setTimeout(async () => {
+              try {
+                const { error } = await supabase.auth.signUp({
+                  email: normalizedEmail,
+                  password: password
+                });
+                if (!error) {
+                  console.log('User migrated to Supabase successfully');
+                }
+              } catch (migrationError) {
+                console.log('Migration to Supabase failed:', migrationError);
+              }
+            }, 2000);
+            
+            return {};
+          }
+          
+          // Create basic employee record for Firebase user
+          const newEmployee: Employee = {
+            id: firebaseCredential.user.uid,
+            name: normalizedEmail.split('@')[0],
+            email: normalizedEmail,
+            position: 'Staff',
+            department: 'General',
+            salary: 0,
+            role: 'User',
+            permissions: ['General Access'],
+            status: 'Active',
+            join_date: new Date().toISOString(),
+            isOneTimePassword: false,
+            mustChangePassword: false,
+            authUserId: firebaseCredential.user.uid
+          };
+          
+          setEmployee(newEmployee);
+          
+          toast({
+            title: "Welcome!",
+            description: "Logged in with Firebase. Your account will be migrated to the new system.",
+            variant: "default"
+          });
+          
+          // Attempt to migrate user to Supabase in background
+          setTimeout(async () => {
+            try {
+              const { error } = await supabase.auth.signUp({
+                email: normalizedEmail,
+                password: password
+              });
+              if (!error) {
+                console.log('User migrated to Supabase successfully');
+                // Also create employee record in Supabase
+                await supabase.from('employees').insert({
+                  name: newEmployee.name,
+                  email: newEmployee.email,
+                  position: newEmployee.position,
+                  department: newEmployee.department,
+                  role: newEmployee.role,
+                  permissions: newEmployee.permissions,
+                  status: newEmployee.status,
+                  join_date: newEmployee.join_date,
+                  salary: newEmployee.salary
+                });
+              }
+            } catch (migrationError) {
+              console.log('Migration to Supabase failed:', migrationError);
+            }
+          }, 2000);
+          
+          return {};
+        }
+        
+        // Use Firebase employee data
+        const firebaseEmployeeData = employeeSnapshot.docs[0].data();
+        const employee: Employee = {
+          id: firebaseEmployeeData.id || firebaseCredential.user.uid,
+          name: firebaseEmployeeData.name || normalizedEmail.split('@')[0],
+          email: firebaseEmployeeData.email || normalizedEmail,
+          phone: firebaseEmployeeData.phone || '',
+          position: firebaseEmployeeData.position || 'Staff',
+          department: firebaseEmployeeData.department || 'General',
+          salary: firebaseEmployeeData.salary || 0,
+          role: firebaseEmployeeData.role || 'User',
+          permissions: firebaseEmployeeData.permissions || ['General Access'],
+          status: firebaseEmployeeData.status || 'Active',
+          join_date: firebaseEmployeeData.join_date || new Date().toISOString(),
+          address: firebaseEmployeeData.address,
+          emergency_contact: firebaseEmployeeData.emergency_contact,
+          isOneTimePassword: firebaseEmployeeData.isOneTimePassword || false,
+          mustChangePassword: firebaseEmployeeData.mustChangePassword || false,
+          authUserId: firebaseCredential.user.uid
+        };
+        
+        setEmployee(employee);
+        
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${employee.name}! (Firebase)`
+        });
+        
+        // Attempt to migrate user to Supabase in background
+        setTimeout(async () => {
+          try {
+            const { error } = await supabase.auth.signUp({
+              email: normalizedEmail,
+              password: password
+            });
+            if (!error) {
+              console.log('User migrated to Supabase successfully');
+              // Also migrate employee record to Supabase
+              await supabase.from('employees').insert({
+                name: employee.name,
+                email: employee.email,
+                phone: employee.phone,
+                position: employee.position,
+                department: employee.department,
+                role: employee.role,
+                permissions: employee.permissions,
+                status: employee.status,
+                join_date: employee.join_date,
+                salary: employee.salary,
+                address: employee.address,
+                emergency_contact: employee.emergency_contact
+              });
+            }
+          } catch (migrationError) {
+            console.log('Migration to Supabase failed:', migrationError);
+          }
+        }, 2000);
+        
+        return {};
+        
+      } catch (firebaseError: any) {
+        console.error('Firebase authentication also failed:', firebaseError);
+        
+        // Both authentication methods failed
+        let errorMessage = "Login failed. Please check your credentials.";
+        
+        if (supabaseError?.message?.includes('Invalid login credentials') || 
+            firebaseError?.code === 'auth/invalid-credential') {
+          errorMessage = 'Invalid email or password. If you don\'t have an account, please sign up first.';
+        } else if (supabaseError?.message?.includes('Email not confirmed')) {
+          errorMessage = 'Please check your email and click the verification link before signing in.';
+        } else if (supabaseError?.message?.includes('Too many requests') || 
+                   firebaseError?.code === 'auth/too-many-requests') {
+          errorMessage = 'Too many failed login attempts. Please try again later.';
+        } else if (firebaseError?.code === 'auth/user-not-found') {
+          errorMessage = 'No account found with this email address. Please sign up or contact your administrator.';
+        } else if (firebaseError?.code === 'auth/wrong-password') {
+          errorMessage = 'Incorrect password.';
+        } else if (firebaseError?.code === 'auth/user-disabled') {
+          errorMessage = 'This account has been disabled. Contact your administrator.';
+        }
+        
+        throw new Error(errorMessage);
+      }
 
     } catch (error: any) {
       console.error('Sign in error:', error);
       
       let errorMessage = "Failed to sign in";
-      if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = "Invalid email or password";
-      } else if (error.message?.includes('Email not confirmed')) {
-        errorMessage = "Please confirm your email address";
-      } else if (error.message?.includes('Too many requests')) {
-        errorMessage = "Too many failed attempts. Please try again later";
-      } else if (error.message) {
+      if (error.message) {
         errorMessage = error.message;
       }
       
