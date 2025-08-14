@@ -172,7 +172,7 @@ const QualityControl = () => {
       manual_price: '',
       comments: ''
     });
-    setActiveTab("assessment-form");
+    setActiveTab("price-calculator");
   };
 
   const handleStartModification = async (modificationRequest: any) => {
@@ -264,7 +264,7 @@ const QualityControl = () => {
       comments: `Modification requested due to: ${modificationRequest.reason}${modificationRequest.comments ? '. Additional notes: ' + modificationRequest.comments : ''}`
     });
     
-    setActiveTab("assessment-form");
+    setActiveTab("price-calculator");
     
     toast({
       title: "Modification Started",
@@ -620,13 +620,12 @@ const QualityControl = () => {
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="pending">Pending Assessment ({pendingRecords.length})</TabsTrigger>
             <TabsTrigger value="modifications">Modification Requests ({pendingModificationRequests.length})</TabsTrigger>
             <TabsTrigger value="assessments">Quality Assessments ({qualityAssessments.length})</TabsTrigger>
-            <TabsTrigger value="price-calculator">Arabica Price Calculator</TabsTrigger>
-            <TabsTrigger value="assessment-form" disabled={!selectedRecord}>
-              {selectedRecord ? 'Assessment Form' : 'Select Record First'}
+            <TabsTrigger value="price-calculator" disabled={!selectedRecord}>
+              {selectedRecord ? 'Price Assessment' : 'Select Record First'}
             </TabsTrigger>
           </TabsList>
 
@@ -835,205 +834,76 @@ const QualityControl = () => {
           </TabsContent>
 
           <TabsContent value="price-calculator">
-            <Card>
-              <CardHeader>
-                <CardTitle>Arabica Price Calculator</CardTitle>
-                <CardDescription>
-                  Professional coffee quality assessment and pricing calculation tool
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ArabicaPriceCalculator />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="assessment-form">
             {selectedRecord && (
               <Card>
                 <CardHeader>
-                  <CardTitle>
-                    {selectedRecord.isModification ? 'Quality Modification Form' : 'Quality Assessment Form'}
-                  </CardTitle>
+                  <CardTitle>Price Assessment - {selectedRecord.batch_number}</CardTitle>
                   <CardDescription>
-                    {selectedRecord.isModification ? 'Modifying: ' : 'Assessing: '}
-                    {selectedRecord.batch_number} - {selectedRecord.supplier_name} ({selectedRecord.coffee_type})
-                    {selectedRecord.isModification && (
-                      <div className="mt-2 p-2 bg-orange-50 rounded-lg">
-                        <Badge variant="outline" className="text-orange-600">
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Modification Request
-                        </Badge>
-                        <p className="text-sm text-orange-600 mt-1">
-                          Reason: {selectedRecord.modificationReason}
-                        </p>
-                      </div>
-                    )}
+                    Supplier: {selectedRecord.supplier_name} | Coffee Type: {selectedRecord.coffee_type} | Weight: {selectedRecord.kilograms} kg
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="moisture">Moisture Content (%)</Label>
-                        <Input
-                          id="moisture"
-                          type="number"
-                          step="0.1"
-                          value={assessmentForm.moisture}
-                          onChange={(e) => setAssessmentForm({...assessmentForm, moisture: e.target.value})}
-                          placeholder="12.0"
-                          disabled={readOnly}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="group1">Group 1 Defects (%)</Label>
-                        <Input
-                          id="group1"
-                          type="number"
-                          step="0.1"
-                          value={assessmentForm.group1_defects}
-                          onChange={(e) => setAssessmentForm({...assessmentForm, group1_defects: e.target.value})}
-                          placeholder="0.0"
-                          disabled={readOnly}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="group2">Group 2 Defects (%)</Label>
-                        <Input
-                          id="group2"
-                          type="number"
-                          step="0.1"
-                          value={assessmentForm.group2_defects}
-                          onChange={(e) => setAssessmentForm({...assessmentForm, group2_defects: e.target.value})}
-                          placeholder="0.0"
-                          disabled={readOnly}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="below12">Below 12 Screen (%)</Label>
-                        <Input
-                          id="below12"
-                          type="number"
-                          step="0.1"
-                          value={assessmentForm.below12}
-                          onChange={(e) => setAssessmentForm({...assessmentForm, below12: e.target.value})}
-                          placeholder="0.0"
-                          disabled={readOnly}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="pods">Pods (%)</Label>
-                        <Input
-                          id="pods"
-                          type="number"
-                          step="0.1"
-                          value={assessmentForm.pods}
-                          onChange={(e) => setAssessmentForm({...assessmentForm, pods: e.target.value})}
-                          placeholder="0.0"
-                          disabled={readOnly}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="husks">Husks (%)</Label>
-                        <Input
-                          id="husks"
-                          type="number"
-                          step="0.1"
-                          value={assessmentForm.husks}
-                          onChange={(e) => setAssessmentForm({...assessmentForm, husks: e.target.value})}
-                          placeholder="0.0"
-                          disabled={readOnly}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="stones">Stones (%)</Label>
-                        <Input
-                          id="stones"
-                          type="number"
-                          step="0.1"
-                          value={assessmentForm.stones}
-                          onChange={(e) => setAssessmentForm({...assessmentForm, stones: e.target.value})}
-                          placeholder="0.0"
-                          disabled={readOnly}
-                        />
-                      </div>
-                      
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Scale className="h-5 w-5 text-blue-600" />
-                          <span className="font-semibold text-blue-800">Suggested Price</span>
-                        </div>
-                        <p className="text-lg font-bold text-blue-600 mb-2">
-                          UGX {calculateSuggestedPrice().toLocaleString()}
-                        </p>
-                        <p className="text-sm text-blue-600">
-                          Based on current market rates and quality parameters
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <ArabicaPriceCalculator onPriceChange={(price) => {
+                    setAssessmentForm(prev => ({
+                      ...prev,
+                      manual_price: price ? price.toString() : ''
+                    }));
+                  }} />
                   
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                     <div>
-                      <Label htmlFor="manual_price">Final Price (Manual Override)</Label>
-                        <Input
-                          id="manual_price"
-                          type="number"
-                          step="1"
-                          value={assessmentForm.manual_price}
-                          onChange={(e) => setAssessmentForm({...assessmentForm, manual_price: e.target.value})}
-                          placeholder={`Enter price or leave blank to use suggested: ${calculateSuggestedPrice().toLocaleString()}`}
-                          disabled={readOnly}
-                        />
+                      <Label htmlFor="offered_price">Offered Price (UGX)</Label>
+                      <Input
+                        id="offered_price"
+                        type="number"
+                        step="1"
+                        value={assessmentForm.manual_price}
+                        onChange={(e) => setAssessmentForm({...assessmentForm, manual_price: e.target.value})}
+                        placeholder="Enter final offered price"
+                        disabled={readOnly}
+                      />
                       <p className="text-sm text-gray-500 mt-1">
-                        Leave blank to use suggested price, or enter your own price
+                        You can manually adjust the price if needed
                       </p>
                     </div>
                     
                     <div>
-                      <Label htmlFor="comments">Comments</Label>
+                      <Label htmlFor="assessment_comments">Assessment Comments</Label>
                       <Textarea
-                        id="comments"
+                        id="assessment_comments"
                         value={assessmentForm.comments}
                         onChange={(e) => setAssessmentForm({...assessmentForm, comments: e.target.value})}
-                        placeholder="Additional observations or notes..."
+                        placeholder="Quality assessment notes..."
                         rows={3}
                         disabled={readOnly}
                       />
                     </div>
                   </div>
                   
-                    <div className="flex gap-4">
-                      <Button onClick={handleSubmitAssessment} className="flex-1" disabled={readOnly}>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        {selectedRecord.isModification 
-                          ? 'Complete Modification & Submit to Finance' 
-                          : 'Complete Assessment & Submit to Finance'
-                        }
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setSelectedRecord(null);
-                          setActiveTab("pending");
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
+                  <div className="flex gap-4">
+                    <Button 
+                      onClick={handleSubmitAssessment} 
+                      className="flex-1"
+                      disabled={readOnly || !assessmentForm.manual_price}
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Save Assessment & Send to Finance
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setSelectedRecord(null);
+                        setActiveTab("pending");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             )}
           </TabsContent>
+
         </Tabs>
         
         {/* GRN Print Modal */}
