@@ -1,11 +1,9 @@
-import Layout from "@/components/Layout";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle, Users, AlertTriangle, Clock, CheckCircle, Activity, Target, Wallet } from "lucide-react";
-import { useState } from "react";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useDailyTasks } from "@/hooks/useDailyTasks";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +20,8 @@ import ModificationRequestsManager from "@/components/finance/ModificationReques
 import CustomerBalancesCard from "@/components/finance/CustomerBalancesCard";
 import QualityAssessmentReports from "@/components/finance/QualityAssessmentReports";
 import CashManagementDashboard from "@/components/finance/CashManagementDashboard";
+import { FinanceSidebar } from "@/components/finance/FinanceSidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 const Finance = () => {
   const {
@@ -43,6 +43,7 @@ const Finance = () => {
   const { employee, hasRole, hasPermission } = useAuth();
   const { toast } = useToast();
 
+  const [currentSection, setCurrentSection] = useState("quality-reports");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseDescription, setExpenseDescription] = useState("");
   const [floatAmount, setFloatAmount] = useState("");
@@ -55,19 +56,17 @@ const Finance = () => {
 
   if (!hasPermission('Finance')) {
     return (
-      <Layout>
-        <div className="p-6">
-          <Card>
-            <CardContent className="text-center py-8">
-              <div className="mb-4">
-                <DollarSign className="h-12 w-12 mx-auto text-gray-400" />
-              </div>
-              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-              <p className="text-gray-600">You don't have permission to access Finance management.</p>
-            </CardContent>
-          </Card>
-        </div>
-      </Layout>
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <Card className="max-w-md w-full">
+          <CardContent className="text-center py-8">
+            <div className="mb-4">
+              <DollarSign className="h-12 w-12 mx-auto text-muted-foreground" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground">You don't have permission to access Finance management.</p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -114,7 +113,6 @@ const Finance = () => {
     try {
       await processPayment(paymentId, method, actualAmount);
       console.log('Finance page - Payment processed, refreshing data...');
-      // The processPayment function now updates local state immediately, so no need to refetch
     } catch (error) {
       console.error('Finance page - Error processing payment:', error);
       toast({
@@ -145,11 +143,9 @@ const Finance = () => {
 
   if (loading) {
     return (
-      <Layout title="Finance Management" subtitle="Loading...">
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </Layout>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
@@ -180,399 +176,340 @@ const Finance = () => {
     }
   };
 
+  const renderMainContent = () => {
+    switch (currentSection) {
+      case "quality-reports":
+        return (
+          <QualityAssessmentReports
+            onProcessPayment={(paymentData) => {
+              console.log('Processing payment from quality report:', paymentData);
+              handleProcessPayment(paymentData.id, paymentData.method, paymentData.paid_amount);
+            }}
+            formatCurrency={formatCurrency}
+          />
+        );
+
+      case "payments":
+        return (
+          <PaymentProcessingCard 
+            pendingPayments={pendingPayments}
+            processingPayments={processingPayments}
+            completedPayments={completedPayments}
+            rejectedPayments={rejectedPayments}
+            onProcessPayment={handleProcessPayment}
+            onModifyPayment={handlePaymentModification}
+            formatCurrency={formatCurrency}
+          />
+        );
+
+      case "balances":
+        return <CustomerBalancesCard formatCurrency={formatCurrency} />;
+
+      case "salary-requests":
+        return (
+          <SalaryRequestsCard 
+            pendingSalaryRequests={pendingSalaryRequests}
+            onApproveSalaryPayment={handleApproveSalaryPayment}
+            onRejectSalaryPayment={handleRejectSalaryPayment}
+          />
+        );
+
+      case "advances":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Supplier Advances
+              </CardTitle>
+              <CardDescription>
+                Manage advances given to suppliers for coffee purchases
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center mb-6">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm font-medium text-blue-700">Total Advances Given</p>
+                    <p className="text-2xl font-bold text-blue-900">{formatCurrency(supplierAdvances?.filter(a => a.status === 'Active').reduce((sum, a) => sum + (a.amount || 0), 0) || 0)}</p>
+                  </div>
+                  <div className="text-center p-4 bg-amber-50 rounded-lg">
+                    <p className="text-sm font-medium text-amber-700">Active Advances</p>
+                    <p className="text-2xl font-bold text-amber-900">{supplierAdvances?.filter(a => a.status === 'Active').length || 0}</p>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <p className="text-sm font-medium text-green-700">Completed</p>
+                    <p className="text-2xl font-bold text-green-900">{supplierAdvances?.filter(a => a.status === 'Completed').length || 0}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => setAdvanceModalOpen(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    Give Advance
+                  </Button>
+                  <Button 
+                    onClick={() => setClearingModalOpen(true)}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Clear Advance
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case "daily":
+        return (
+          <DailyReportsCard 
+            dailyTasks={dailyTasks}
+            tasksLoading={tasksLoading}
+            transactions={transactions}
+            stats={stats}
+            formatCurrency={formatCurrency}
+          />
+        );
+
+      case "cash":
+        return (
+          <CashManagementDashboard 
+            formatCurrency={formatCurrency}
+            availableCash={stats.cashOnHand}
+            onCashTransaction={(transaction) => {
+              console.log('Cash transaction processed:', transaction);
+              toast({
+                title: "Transaction Processed",
+                description: `${transaction.type} of ${formatCurrency(transaction.amount)} processed`
+              });
+            }}
+          />
+        );
+
+      case "expenses":
+        return (
+          <ExpensesCard 
+            expenses={expenses}
+            expenseAmount={expenseAmount}
+            setExpenseAmount={setExpenseAmount}
+            expenseDescription={expenseDescription}
+            setExpenseDescription={setExpenseDescription}
+            onExpenseSubmit={handleExpenseSubmit}
+            formatCurrency={formatCurrency}
+          />
+        );
+
+      case "analytics":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Financial Analytics
+                </CardTitle>
+                <CardDescription>
+                  Comprehensive financial performance insights and trends
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-green-700">Revenue Growth</p>
+                        <p className="text-2xl font-bold text-green-900">+12.5%</p>
+                        <p className="text-xs text-green-600">vs last month</p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-green-600" />
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-blue-700">Payment Efficiency</p>
+                        <p className="text-2xl font-bold text-blue-900">94.2%</p>
+                        <p className="text-xs text-blue-600">on-time payments</p>
+                      </div>
+                      <CheckCircle className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-purple-700">Cash Turnover</p>
+                        <p className="text-2xl font-bold text-purple-900">8.3x</p>
+                        <p className="text-xs text-purple-600">monthly rate</p>
+                      </div>
+                      <Activity className="h-8 w-8 text-purple-600" />
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg border border-amber-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-amber-700">Cost Reduction</p>
+                        <p className="text-2xl font-bold text-amber-900">-5.8%</p>
+                        <p className="text-xs text-amber-600">operational costs</p>
+                      </div>
+                      <TrendingDown className="h-8 w-8 text-amber-600" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Select a section from the sidebar to begin</p>
+          </div>
+        );
+    }
+  };
+
   return (
-    <Layout 
-      title="Finance Dashboard" 
-      subtitle="Comprehensive financial management and reporting"
-    >
-      <div className="space-y-8">
-        {/* Modification Requests - High Priority */}
-        <ModificationRequestsManager />
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <FinanceSidebar 
+          currentSection={currentSection}
+          onSectionChange={setCurrentSection}
+        />
         
-        {/* Key Metrics Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">Monthly Revenue</p>
-                  <p className="text-2xl font-bold text-green-900">{formatCurrency(stats.monthlyRevenue)}</p>
-                  <p className="text-xs text-green-600 mt-1">+12.5% from last month</p>
-                </div>
-                <div className="h-12 w-12 bg-green-500 rounded-full flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
+        <main className="flex-1 flex flex-col">
+          {/* Header */}
+          <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-6">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="md:hidden" />
+              <div>
+                <h1 className="text-2xl font-bold">Finance Dashboard</h1>
+                <p className="text-sm text-muted-foreground">Comprehensive financial management and reporting</p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-amber-700">Pending Payments</p>
-                  <p className="text-2xl font-bold text-amber-900">{formatCurrency(stats.pendingPayments)}</p>
-                  <p className="text-xs text-amber-600 mt-1">{pendingPayments.length} transactions</p>
-                </div>
-                <div className="h-12 w-12 bg-amber-500 rounded-full flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">Cash Flow</p>
-                  <p className="text-2xl font-bold text-blue-900">{formatCurrency(stats.netCashFlow)}</p>
-                  <p className="text-xs text-blue-600 mt-1">Net flow today</p>
-                </div>
-                <div className="h-12 w-12 bg-blue-500 rounded-full flex items-center justify-center">
-                  <Activity className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-purple-700">Available Cash</p>
-                  <p className="text-2xl font-bold text-purple-900">{formatCurrency(stats.cashOnHand)}</p>
-                  <p className="text-xs text-purple-600 mt-1">Including float</p>
-                </div>
-                <div className="h-12 w-12 bg-purple-500 rounded-full flex items-center justify-center">
-                  <Wallet className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Quick Actions
-            </CardTitle>
-            <CardDescription>Frequently used financial operations</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button 
-                variant="outline" 
-                className="h-20 flex-col"
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <Button
+                size="sm"
                 onClick={() => {
-                  // Trigger the IssueReceiptModal from QuickActions
                   const issueReceiptButton = document.querySelector('[data-action="issue-receipt"]');
                   if (issueReceiptButton) {
                     (issueReceiptButton as HTMLElement).click();
                   }
                 }}
+                className="hidden md:flex items-center gap-2"
               >
-                <Receipt className="h-6 w-6 mb-2" />
+                <Receipt className="h-4 w-4" />
                 Issue Receipt
               </Button>
-              <Button 
-                variant="outline" 
-                className="h-20 flex-col"
-                onClick={() => {
-                  const paymentsTab = document.querySelector('[value="payments"]');
-                  if (paymentsTab) (paymentsTab as HTMLElement).click();
-                }}
-              >
-                <CreditCard className="h-6 w-6 mb-2" />
-                Process Payment
-              </Button>
-              <Button 
-                variant="outline" 
-                className="h-20 flex-col"
-                onClick={() => {
-                  setExpenseAmount("");
-                  setExpenseDescription("");
-                  const expensesTab = document.querySelector('[value="expenses"]');
-                  if (expensesTab) (expensesTab as HTMLElement).click();
-                }}
-              >
-                <FileText className="h-6 w-6 mb-2" />
-                Add Expense
-              </Button>
-              <Button 
-                variant="outline" 
-                className="h-20 flex-col"
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => setAdvanceModalOpen(true)}
+                className="hidden md:flex items-center gap-2"
               >
-                <DollarSign className="h-6 w-6 mb-2" />
+                <DollarSign className="h-4 w-4" />
                 Give Advance
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </header>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="quality-reports" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-9 h-12">
-            <TabsTrigger value="quality-reports" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Quality Reports
-            </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Payments
-            </TabsTrigger>
-            <TabsTrigger value="balances" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Customer Balances
-            </TabsTrigger>
-            <TabsTrigger value="salary-requests" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              HR Requests
-            </TabsTrigger>
-            <TabsTrigger value="advances" className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Advances
-            </TabsTrigger>
-            <TabsTrigger value="daily" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Daily Reports
-            </TabsTrigger>
-            <TabsTrigger value="cash" className="flex items-center gap-2">
-              <Banknote className="h-4 w-4" />
-              Cash Mgmt
-            </TabsTrigger>
-            <TabsTrigger value="expenses" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Expenses
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="quality-reports">
-            <QualityAssessmentReports
-              onProcessPayment={(paymentData) => {
-                console.log('Processing payment from quality report:', paymentData);
-                // Add the payment to local state or process it
-                handleProcessPayment(paymentData.id, paymentData.method, paymentData.paid_amount);
-              }}
-              formatCurrency={formatCurrency}
-            />
-          </TabsContent>
-
-          <TabsContent value="payments">
-            <PaymentProcessingCard 
-              pendingPayments={pendingPayments}
-              processingPayments={processingPayments}
-              completedPayments={completedPayments}
-              rejectedPayments={rejectedPayments}
-              onProcessPayment={handleProcessPayment}
-              onModifyPayment={handlePaymentModification}
-              formatCurrency={formatCurrency}
-            />
-          </TabsContent>
-
-          <TabsContent value="balances">
-            <CustomerBalancesCard formatCurrency={formatCurrency} />
-          </TabsContent>
-
-          <TabsContent value="salary-requests">
-            <SalaryRequestsCard 
-              pendingSalaryRequests={pendingSalaryRequests}
-              onApproveSalaryPayment={handleApproveSalaryPayment}
-              onRejectSalaryPayment={handleRejectSalaryPayment}
-            />
-          </TabsContent>
-
-          <TabsContent value="advances">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Supplier Advances
-                </CardTitle>
-                <CardDescription>
-                  Manage advances given to suppliers for coffee purchases
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center mb-6">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <p className="text-sm font-medium text-blue-700">Total Advances Given</p>
-                      <p className="text-2xl font-bold text-blue-900">{formatCurrency(supplierAdvances?.filter(a => a.status === 'Active').reduce((sum, a) => sum + (a.amount || 0), 0) || 0)}</p>
+          {/* Content Area */}
+          <div className="flex-1 p-6">
+            {/* Modification Requests - High Priority */}
+            <div className="mb-6">
+              <ModificationRequestsManager />
+            </div>
+            
+            {/* Key Metrics Dashboard */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-700">Monthly Revenue</p>
+                      <p className="text-2xl font-bold text-green-900">{formatCurrency(stats.monthlyRevenue)}</p>
+                      <p className="text-xs text-green-600 mt-1">+12.5% from last month</p>
                     </div>
-                    <div className="text-center p-4 bg-amber-50 rounded-lg">
-                      <p className="text-sm font-medium text-amber-700">Active Advances</p>
-                      <p className="text-2xl font-bold text-amber-900">{supplierAdvances?.filter(a => a.status === 'Active').length || 0}</p>
+                    <div className="h-12 w-12 bg-green-500 rounded-full flex items-center justify-center">
+                      <TrendingUp className="h-6 w-6 text-white" />
                     </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <p className="text-sm font-medium text-green-700">Completed</p>
-                      <p className="text-2xl font-bold text-green-900">{supplierAdvances?.filter(a => a.status === 'Completed').length || 0}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => setAdvanceModalOpen(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <PlusCircle className="h-4 w-4" />
-                      Give Advance
-                    </Button>
-                    <Button 
-                      onClick={() => setClearingModalOpen(true)}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                    >
-                      <CreditCard className="h-4 w-4" />
-                      Clear Advance
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  {supplierAdvances && supplierAdvances.length > 0 ? (
-                    supplierAdvances.map((advance) => (
-                      <Card key={advance.id} className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-semibold">{advance.supplierName}</h4>
-                            <p className="text-sm text-muted-foreground">{advance.purpose}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Expected delivery: {new Date(advance.expectedDeliveryDate).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold">{formatCurrency(advance.amount)}</p>
-                            <Badge 
-                              variant={advance.status === 'Active' ? 'default' : 'secondary'}
-                              className={advance.status === 'Active' ? 'bg-green-100 text-green-800' : ''}
-                            >
-                              {advance.status}
-                            </Badge>
-                          </div>
-                        </div>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                      <p>No supplier advances found</p>
-                      <Button 
-                        variant="outline" 
-                        className="mt-4"
-                        onClick={() => setAdvanceModalOpen(true)}
-                      >
-                        Give First Advance
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="daily">
-            <DailyReportsCard 
-              transactions={transactions}
-              dailyTasks={dailyTasks}
-              tasksLoading={tasksLoading}
-              stats={stats}
-              formatCurrency={formatCurrency}
-            />
-          </TabsContent>
-
-          <TabsContent value="cash">
-            <CashManagementDashboard 
-              formatCurrency={formatCurrency}
-              availableCash={stats.cashOnHand}
-              onCashTransaction={(transaction) => {
-                console.log('Cash transaction processed:', transaction);
-                // Handle cash transaction logic here
-                toast({
-                  title: "Transaction Processed",
-                  description: `${transaction.type} of ${formatCurrency(transaction.amount)} processed`
-                });
-              }}
-            />
-          </TabsContent>
-
-          <TabsContent value="expenses">
-            <ExpensesCard 
-              expenses={expenses}
-              expenseAmount={expenseAmount}
-              setExpenseAmount={setExpenseAmount}
-              expenseDescription={expenseDescription}
-              setExpenseDescription={setExpenseDescription}
-              onExpenseSubmit={handleExpenseSubmit}
-              formatCurrency={formatCurrency}
-            />
-          </TabsContent>
-
-          <TabsContent value="analytics">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Financial Performance</CardTitle>
-                  <CardDescription>Key performance indicators</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
-                    <span className="font-medium">Revenue Growth</span>
-                    <span className="text-xl font-bold text-green-600">+12.5%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
-                    <span className="font-medium">Profit Margin</span>
-                    <span className="text-xl font-bold text-blue-600">
-                      {stats.monthlyRevenue > 0 ? ((stats.monthlyRevenue - stats.operatingCosts) / stats.monthlyRevenue * 100).toFixed(1) : 0}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-purple-50 rounded-lg">
-                    <span className="font-medium">Efficiency Score</span>
-                    <span className="text-xl font-bold text-purple-600">87%</span>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Monthly Summary</CardTitle>
-                  <CardDescription>Financial overview for this month</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                    <span className="font-medium">Total Transactions</span>
-                    <span className="text-xl font-bold text-gray-600">{transactions.length + payments.length}</span>
+              <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-amber-700">Pending Payments</p>
+                      <p className="text-2xl font-bold text-amber-900">{formatCurrency(stats.pendingPayments)}</p>
+                      <p className="text-xs text-amber-600 mt-1">{pendingPayments.length} transactions</p>
+                    </div>
+                    <div className="h-12 w-12 bg-amber-500 rounded-full flex items-center justify-center">
+                      <Clock className="h-6 w-6 text-white" />
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center p-4 bg-amber-50 rounded-lg">
-                    <span className="font-medium">Pending Approvals</span>
-                    <span className="text-xl font-bold text-amber-600">{pendingSalaryRequests.length}</span>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-700">Cash Flow</p>
+                      <p className="text-2xl font-bold text-blue-900">{formatCurrency(stats.netCashFlow)}</p>
+                      <p className="text-xs text-blue-600 mt-1">Net flow today</p>
+                    </div>
+                    <div className="h-12 w-12 bg-blue-500 rounded-full flex items-center justify-center">
+                      <Activity className="h-6 w-6 text-white" />
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center p-4 bg-indigo-50 rounded-lg">
-                    <span className="font-medium">Daily Tasks</span>
-                    <span className="text-xl font-bold text-indigo-600">{dailyTasks.length}</span>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-purple-700">Available Cash</p>
+                      <p className="text-2xl font-bold text-purple-900">{formatCurrency(stats.cashOnHand)}</p>
+                      <p className="text-xs text-purple-600 mt-1">Including float</p>
+                    </div>
+                    <div className="h-12 w-12 bg-purple-500 rounded-full flex items-center justify-center">
+                      <Wallet className="h-6 w-6 text-white" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-        </Tabs>
-      </div>
 
-      <SupplierAdvanceModal 
-        open={advanceModalOpen}
-        onClose={() => setAdvanceModalOpen(false)}
-      />
-      <AdvanceClearingModal 
-        open={clearingModalOpen}
-        onClose={() => setClearingModalOpen(false)}
-      />
-    </Layout>
+            {/* Main Content */}
+            <div className="space-y-6">
+              {renderMainContent()}
+            </div>
+          </div>
+        </main>
+
+        {/* Modals */}
+        <SupplierAdvanceModal 
+          open={advanceModalOpen}
+          onClose={() => setAdvanceModalOpen(false)}
+        />
+        
+        <AdvanceClearingModal 
+          open={clearingModalOpen}
+          onClose={() => setClearingModalOpen(false)}
+        />
+      </div>
+    </SidebarProvider>
   );
 };
 
