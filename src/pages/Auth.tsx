@@ -7,14 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Loader2, AlertCircle, Phone, Mail, MessageCircle } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -24,37 +27,77 @@ const Auth = () => {
     setError('');
     setLoading(true);
 
-    try {
-      const result = await signIn(email, password);
-      
-      if (result.requiresPasswordChange) {
-        setShowPasswordChange(true);
-      } else {
-        navigate('/');
+    if (isSignUp) {
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        setLoading(false);
+        return;
       }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      
-      let errorMessage = 'Login failed. Please check your credentials.';
-      
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
-        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
-      } else if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email address. Contact HR for account creation.';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Incorrect password.';
-      } else if (error.code === 'auth/user-disabled') {
-        errorMessage = 'This account has been disabled. Contact your administrator.';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many failed login attempts. Please try again later.';
-      } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error. Please check your internet connection.';
+
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email: email.toLowerCase().trim(),
+          password: password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`
+          }
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data.user && !data.session) {
+          setError('Please check your email for a verification link before signing in.');
+          setIsSignUp(false);
+        } else if (data.session) {
+          navigate('/');
+        }
+      } catch (error: any) {
+        console.error('Sign up error:', error);
+        
+        let errorMessage = 'Account creation failed. Please try again.';
+        
+        if (error.message?.includes('User already registered')) {
+          errorMessage = 'An account with this email already exists. Try signing in instead.';
+          setIsSignUp(false);
+        } else if (error.message?.includes('Password should be at least')) {
+          errorMessage = 'Password should be at least 6 characters long.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        setError(errorMessage);
       }
-      
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+    } else {
+      try {
+        const result = await signIn(email, password);
+        
+        if (result.requiresPasswordChange) {
+          setShowPasswordChange(true);
+        } else {
+          navigate('/');
+        }
+      } catch (error: any) {
+        console.error('Login error:', error);
+        
+        let errorMessage = 'Login failed. Please check your credentials.';
+        
+        if (error.message?.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. If you don\'t have an account, please sign up first.';
+        } else if (error.message?.includes('Email not confirmed')) {
+          errorMessage = 'Please check your email and click the verification link before signing in.';
+        } else if (error.message?.includes('Too many requests')) {
+          errorMessage = 'Too many failed login attempts. Please try again later.';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        setError(errorMessage);
+      }
     }
+
+    setLoading(false);
   };
 
   const handlePasswordChangeComplete = () => {
@@ -86,9 +129,14 @@ const Auth = () => {
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-xl">Sign In</CardTitle>
+            <CardTitle className="text-xl">
+              {isSignUp ? 'Create Account' : 'Sign In'}
+            </CardTitle>
             <CardDescription>
-              Enter your credentials to access your account
+              {isSignUp 
+                ? 'Create a new account to access the system'
+                : 'Enter your credentials to access your account'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -110,13 +158,28 @@ const Auth = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder={isSignUp ? "Choose a password (min 6 characters)" : "Enter your password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
+                  minLength={isSignUp ? 6 : undefined}
                 />
               </div>
+              {isSignUp && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+              )}
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -127,12 +190,30 @@ const Auth = () => {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Signing in...
+                    {isSignUp ? 'Creating Account...' : 'Signing in...'}
                   </>
                 ) : (
-                  'Sign In'
+                  isSignUp ? 'Create Account' : 'Sign In'
                 )}
               </Button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setError('');
+                    setPassword('');
+                    setConfirmPassword('');
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  disabled={loading}
+                >
+                  {isSignUp 
+                    ? 'Already have an account? Sign in' 
+                    : 'Need an account? Sign up'
+                  }
+                </button>
+              </div>
             </form>
           </CardContent>
         </Card>
