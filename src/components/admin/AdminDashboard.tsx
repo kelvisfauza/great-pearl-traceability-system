@@ -137,13 +137,6 @@ const AdminDashboard = () => {
         <EUDRSummaryCard />
       </div>
 
-      {/* Approval Requests Section - Admin Only */}
-      {roleData?.isAdmin && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-foreground">Pending Approval Requests</h3>
-          <ApprovalRequests />
-        </div>
-      )}
 
       {/* Deletion Requests Section - Admin Only */}
       {roleData?.isAdmin && <DeletionRequestsManager />}
