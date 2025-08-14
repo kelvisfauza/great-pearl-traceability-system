@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
 export interface Employee {
   id: string;
@@ -10,140 +9,73 @@ export interface Employee {
   position: string;
   department: string;
   salary: number;
-  employee_id?: string;
-  address?: string;
-  emergency_contact?: string;
   role: string;
   permissions: string[];
   status: string;
   join_date: string;
-  created_at: string;
-  updated_at: string;
+  employee_id?: string;
+  address?: string;
+  emergency_contact?: string;
   is_training_account?: boolean;
   training_progress?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const useSupabaseEmployees = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
 
   const fetchEmployees = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('name');
 
       if (error) {
         console.error('Error fetching employees:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch employees",
-          variant: "destructive"
-        });
+        setError(error.message);
         return;
       }
 
-      setEmployees(data || []);
+      // Transform Supabase data to match Employee interface
+      const transformedEmployees: Employee[] = (data || []).map(emp => ({
+        id: emp.id,
+        name: emp.name,
+        email: emp.email,
+        phone: emp.phone || '',
+        position: emp.position,
+        department: emp.department,
+        salary: emp.salary || 0,
+        role: emp.role || 'User',
+        permissions: emp.permissions || ['General Access'],
+        status: emp.status || 'Active',
+        join_date: emp.join_date,
+        employee_id: emp.employee_id,
+        address: emp.address,
+        emergency_contact: emp.emergency_contact,
+        is_training_account: emp.is_training_account || false,
+        training_progress: emp.training_progress || 0,
+        created_at: emp.created_at,
+        updated_at: emp.updated_at
+      }));
+
+      setEmployees(transformedEmployees);
     } catch (error) {
-      console.error('Error fetching employees:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch employees",
-        variant: "destructive"
-      });
+      console.error('Error in fetchEmployees:', error);
+      setError('Failed to fetch employees');
     } finally {
       setLoading(false);
     }
   };
 
-  const addEmployee = async (employeeData: Omit<Employee, 'id' | 'created_at' | 'updated_at'>) => {
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .insert([employeeData])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding employee:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add employee",
-          variant: "destructive"
-        });
-        throw error;
-      }
-
-      await fetchEmployees();
-      toast({
-        title: "Success",
-        description: "Employee added successfully"
-      });
-
-      return data;
-    } catch (error) {
-      console.error('Error adding employee:', error);
-      throw error;
-    }
-  };
-
-  const updateEmployee = async (id: string, employeeData: Partial<Employee>) => {
-    try {
-      const { error } = await supabase
-        .from('employees')
-        .update(employeeData)
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error updating employee:', error);
-        toast({
-          title: "Error",
-          description: "Failed to update employee",
-          variant: "destructive"
-        });
-        throw error;
-      }
-
-      await fetchEmployees();
-      toast({
-        title: "Success",
-        description: "Employee updated successfully"
-      });
-    } catch (error) {
-      console.error('Error updating employee:', error);
-      throw error;
-    }
-  };
-
-  const deleteEmployee = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('employees')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error deleting employee:', error);
-        toast({
-          title: "Error",
-          description: "Failed to delete employee",
-          variant: "destructive"
-        });
-        throw error;
-      }
-
-      await fetchEmployees();
-      toast({
-        title: "Success",
-        description: "Employee deleted successfully"
-      });
-    } catch (error) {
-      console.error('Error deleting employee:', error);
-      throw error;
-    }
+  const refetch = async () => {
+    await fetchEmployees();
   };
 
   useEffect(() => {
@@ -153,9 +85,7 @@ export const useSupabaseEmployees = () => {
   return {
     employees,
     loading,
-    addEmployee,
-    updateEmployee,
-    deleteEmployee,
-    refetch: fetchEmployees
+    error,
+    refetch
   };
 };

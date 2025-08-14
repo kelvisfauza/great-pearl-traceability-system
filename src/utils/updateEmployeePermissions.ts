@@ -1,5 +1,4 @@
-import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 export const updateEmployeePermissions = async (email: string, updates: {
   role?: string;
@@ -11,21 +10,28 @@ export const updateEmployeePermissions = async (email: string, updates: {
     console.log('Updating employee permissions for:', email);
     
     // Find employee by email
-    const employeesQuery = query(collection(db, 'employees'), where('email', '==', email));
-    const employeeSnapshot = await getDocs(employeesQuery);
+    const { data: employee, error: findError } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('email', email)
+      .single();
     
-    if (employeeSnapshot.empty) {
+    if (findError || !employee) {
       throw new Error('Employee not found');
     }
     
-    const employeeDoc = employeeSnapshot.docs[0];
-    const employeeRef = doc(db, 'employees', employeeDoc.id);
-    
     // Update the employee record
-    await updateDoc(employeeRef, {
-      ...updates,
-      updated_at: new Date().toISOString()
-    });
+    const { error: updateError } = await supabase
+      .from('employees')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', email);
+    
+    if (updateError) {
+      throw updateError;
+    }
     
     console.log('Employee permissions updated successfully');
     return { success: true, message: 'Employee permissions updated successfully' };

@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCombinedEmployees } from '@/hooks/useCombinedEmployees';
+import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
 import { updateEmployeePermissions, setEmployeeRole, PERMISSION_SETS } from '@/utils/updateEmployeePermissions';
 import RoleAssignmentManager from '@/components/admin/RoleAssignmentManager';
 import { 
@@ -25,7 +25,7 @@ import {
 const RoleManagement = () => {
   const { toast } = useToast();
   const { isAdmin } = useAuth();
-  const { employees, loading, refetch } = useCombinedEmployees();
+  const { employees, loading, refetch } = useSupabaseEmployees();
   
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [selectedRole, setSelectedRole] = useState('');

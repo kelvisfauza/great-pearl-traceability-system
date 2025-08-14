@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Printer, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Employee } from "@/hooks/useEmployees";
+import { Employee } from "@/hooks/useSupabaseEmployees";
 
 interface PrintUserDetailsProps {
   employees: Employee[];

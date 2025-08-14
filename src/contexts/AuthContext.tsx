@@ -40,6 +40,11 @@ interface Employee {
   isOneTimePassword?: boolean;
   mustChangePassword?: boolean;
   authUserId?: string;
+  employee_id?: string;
+  is_training_account?: boolean;
+  training_progress?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface AuthContextType {
@@ -697,15 +702,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 position: employeeData.position,
                 department: employeeData.department,
                 salary: employeeData.salary || 0,
-                role: employeeData.role,
-                permissions: employeeData.permissions || [],
-                status: employeeData.status,
+                role: employeeData.role || 'User',
+                permissions: employeeData.permissions || ['General Access'],
+                status: employeeData.status || 'Active',
                 join_date: employeeData.join_date,
-                address: employeeData.address,
-                emergency_contact: employeeData.emergency_contact,
                 isOneTimePassword: false,
                 mustChangePassword: false,
-                authUserId: session.user.id
+                authUserId: session.user.id,
+                address: employeeData.address,
+                emergency_contact: employeeData.emergency_contact
               };
               setEmployee(employee);
             }

@@ -18,7 +18,7 @@ import {
   UserCheck
 } from 'lucide-react';
 
-import { useCombinedEmployees } from '@/hooks/useCombinedEmployees';
+import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
 import { useAuth } from '@/contexts/AuthContext';
 import EmployeeList from '@/components/hr/EmployeeList';
 import EmployeeStatsCards from '@/components/hr/EmployeeStatsCards';
@@ -44,7 +44,7 @@ const HumanResources = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
 
-  const { employees, loading, addEmployee, updateEmployee, deleteEmployee } = useCombinedEmployees();
+  const { employees, loading, refetch } = useSupabaseEmployees();
   const { canManageEmployees, isAdmin } = useAuth();
 
   const filteredEmployees = employees.filter(employee => {
@@ -72,7 +72,9 @@ const HumanResources = () => {
   const handleDeleteEmployee = async (employeeId: string) => {
     if (window.confirm('Are you sure you want to delete this employee?')) {
       try {
-        await deleteEmployee(employeeId);
+        // TODO: Implement delete employee functionality with Supabase
+        console.log('Delete employee:', employeeId);
+        await refetch();
       } catch (error) {
         console.error('Error deleting employee:', error);
       }
@@ -81,13 +83,11 @@ const HumanResources = () => {
 
   const handleAddEmployee = async (employeeData: any) => {
     try {
-      if (selectedEmployee) {
-        await updateEmployee(selectedEmployee.id, employeeData);
-      } else {
-        await addEmployee(employeeData);
-      }
+      // TODO: Implement add/update employee functionality with Supabase
+      console.log('Add/Update employee:', employeeData);
       setShowAddModal(false);
       setSelectedEmployee(null);
+      await refetch();
     } catch (error) {
       console.error('Error saving employee:', error);
     }
