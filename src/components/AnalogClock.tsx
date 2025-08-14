@@ -32,147 +32,137 @@ const AnalogClock: React.FC<AnalogClockProps> = ({ size = 120, className = '' })
     <div className={`flex flex-col items-center gap-3 ${className}`}>
       {/* Analog Clock */}
       <div className="relative" style={{ width: size, height: size }}>
-        {/* Rolex-Style Clock Face */}
+        {/* Elegant Watch Face */}
         <div 
-          className="relative rounded-full bg-gradient-to-br from-amber-50 via-amber-100 to-amber-200 dark:from-amber-900/20 dark:via-amber-800/30 dark:to-amber-700/40 shadow-2xl"
+          className="relative rounded-full shadow-2xl border-4 border-gradient-to-r from-slate-300 to-slate-400 dark:from-slate-600 dark:to-slate-700"
           style={{ 
             width: size, 
             height: size,
-            background: 'radial-gradient(circle at 30% 30%, #ffd700, #ffed4e, #f7f7f7)',
-            border: '6px solid',
-            borderImage: 'linear-gradient(45deg, #ffd700, #ffed4e, #ddd) 1'
+            background: `
+              radial-gradient(circle at 30% 30%, 
+                hsl(var(--background)) 0%, 
+                hsl(var(--muted)) 50%, 
+                hsl(var(--background)) 100%
+              )
+            `,
+            boxShadow: `
+              inset 0 2px 10px rgba(0,0,0,0.1),
+              0 10px 30px rgba(0,0,0,0.2),
+              0 0 0 1px hsl(var(--border))
+            `
           }}
         >
-          {/* Outer Ring */}
+          {/* Inner Bezel */}
           <div 
-            className="absolute inset-1 rounded-full shadow-inner"
-            style={{
-              background: 'conic-gradient(from 0deg, #ffd700 0deg, #ffed4e 90deg, #ffd700 180deg, #ffed4e 270deg, #ffd700 360deg)',
-              padding: '2px'
-            }}
+            className="absolute inset-2 rounded-full bg-gradient-to-br from-background via-muted/50 to-background border border-border/20 shadow-inner"
           >
-            {/* Inner Face */}
-            <div 
-              className="w-full h-full rounded-full bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-800 dark:via-slate-700 dark:to-slate-600 shadow-inner relative"
-            >
-              {/* Rolex Crown Logo */}
-              <div 
-                className="absolute top-6 left-1/2 transform -translate-x-1/2 text-amber-600 dark:text-amber-400 text-xs font-bold"
-                style={{ fontSize: `${size * 0.08}px` }}
-              >
-                ♔
-              </div>
+            {/* Refined Hour Markers */}
+            {[...Array(12)].map((_, i) => {
+              const isMainHour = i % 3 === 0; // 12, 3, 6, 9 positions
+              return (
+                <div
+                  key={i}
+                  className={`absolute ${isMainHour ? 'w-1 h-6 bg-primary' : 'w-0.5 h-3 bg-muted-foreground'} rounded-full`}
+                  style={{
+                    top: isMainHour ? '10px' : '12px',
+                    left: '50%',
+                    transformOrigin: `50% ${size / 2 - (isMainHour ? 10 : 12)}px`,
+                    transform: `translateX(-50%) rotate(${i * 30}deg)`,
+                  }}
+                />
+              );
+            })}
+
+            {/* Clean Numbers */}
+            {[12, 3, 6, 9].map((num, i) => {
+              const angle = i * 90 - 90;
+              const radius = size / 2 - 24;
+              const x = Math.cos((angle * Math.PI) / 180) * radius;
+              const y = Math.sin((angle * Math.PI) / 180) * radius;
               
-              {/* ROLEX Text */}
-              <div 
-                className="absolute left-1/2 transform -translate-x-1/2 text-amber-700 dark:text-amber-300 font-serif font-bold tracking-wider"
-                style={{ 
-                  top: `${size * 0.25}px`,
-                  fontSize: `${size * 0.06}px`,
-                  letterSpacing: '0.2em'
-                }}
-              >
-                ROLEX
-              </div>
+              return (
+                <div
+                  key={num}
+                  className="absolute text-foreground font-medium flex items-center justify-center"
+                  style={{
+                    left: `calc(50% + ${x}px - 8px)`,
+                    top: `calc(50% + ${y}px - 8px)`,
+                    fontSize: `${size * 0.08}px`,
+                    width: '16px',
+                    height: '16px',
+                  }}
+                >
+                  {num}
+                </div>
+              );
+            })}
 
-              {/* Premium Hour Markers */}
-              {[...Array(12)].map((_, i) => {
-                const isMainHour = i % 3 === 0; // 12, 3, 6, 9 positions
-                return (
-                  <div
-                    key={i}
-                    className={`absolute ${isMainHour ? 'w-1.5 h-8 bg-gradient-to-b from-amber-600 to-amber-800' : 'w-0.5 h-4 bg-amber-700'} dark:${isMainHour ? 'from-amber-400 to-amber-600' : 'bg-amber-500'} rounded-full shadow-sm`}
-                    style={{
-                      top: '6px',
-                      left: '50%',
-                      transformOrigin: `50% ${size / 2 - 6}px`,
-                      transform: `translateX(-50%) rotate(${i * 30}deg)`,
-                    }}
-                  />
-                );
-              })}
+            {/* Smaller hour dots */}
+            {[1, 2, 4, 5, 7, 8, 10, 11].map((num, i) => {
+              const actualIndex = num === 1 ? 0 : num === 2 ? 1 : num === 4 ? 3 : num === 5 ? 4 : num === 7 ? 6 : num === 8 ? 7 : num === 10 ? 9 : 10;
+              const angle = actualIndex * 30 - 90;
+              const radius = size / 2 - 20;
+              const x = Math.cos((angle * Math.PI) / 180) * radius;
+              const y = Math.sin((angle * Math.PI) / 180) * radius;
+              
+              return (
+                <div
+                  key={num}
+                  className="absolute w-1 h-1 bg-muted-foreground rounded-full"
+                  style={{
+                    left: `calc(50% + ${x}px - 2px)`,
+                    top: `calc(50% + ${y}px - 2px)`,
+                  }}
+                />
+              );
+            })}
 
-              {/* Roman Numerals for main hours */}
-              {['XII', 'III', 'VI', 'IX'].map((numeral, i) => {
-                const angle = i * 90 - 90;
-                const radius = size / 2 - 28;
-                const x = Math.cos((angle * Math.PI) / 180) * radius;
-                const y = Math.sin((angle * Math.PI) / 180) * radius;
-                
-                return (
-                  <div
-                    key={numeral}
-                    className="absolute text-amber-800 dark:text-amber-200 font-serif font-bold flex items-center justify-center"
-                    style={{
-                      left: `calc(50% + ${x}px - 12px)`,
-                      top: `calc(50% + ${y}px - 8px)`,
-                      fontSize: `${size * 0.08}px`,
-                      width: '24px',
-                      height: '16px',
-                    }}
-                  >
-                    {numeral}
-                  </div>
-                );
-              })}
+            {/* Center Hub */}
+            <div 
+              className="absolute w-3 h-3 bg-foreground rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 shadow-sm border border-background"
+            />
 
-              {/* Center Crown */}
-              <div 
-                className="absolute w-4 h-4 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 shadow-lg"
-                style={{
-                  background: 'radial-gradient(circle, #ffd700, #ffed4e)',
-                  border: '1px solid #daa520'
-                }}
-              />
+            {/* Elegant Hour Hand */}
+            <div
+              className="absolute bg-foreground rounded-sm origin-bottom z-20 shadow-sm"
+              style={{
+                width: '3px',
+                height: size * 0.25,
+                top: '50%',
+                left: '50%',
+                transformOrigin: '50% 100%',
+                transform: `translate(-50%, -100%) rotate(${hourAngle}deg)`,
+                transition: 'transform 0.5s ease-in-out',
+              }}
+            />
 
-              {/* Luxury Hour Hand */}
-              <div
-                className="absolute rounded-full origin-bottom z-20 shadow-lg"
-                style={{
-                  width: '4px',
-                  height: size * 0.25,
-                  top: '50%',
-                  left: '50%',
-                  transformOrigin: '50% 100%',
-                  transform: `translate(-50%, -100%) rotate(${hourAngle}deg)`,
-                  transition: 'transform 0.5s ease-in-out',
-                  background: 'linear-gradient(to bottom, #2c3e50, #34495e)',
-                  border: '0.5px solid #1a252f'
-                }}
-              />
+            {/* Elegant Minute Hand */}
+            <div
+              className="absolute bg-foreground rounded-sm origin-bottom z-20 shadow-sm"
+              style={{
+                width: '2px',
+                height: size * 0.35,
+                top: '50%',
+                left: '50%',
+                transformOrigin: '50% 100%',
+                transform: `translate(-50%, -100%) rotate(${minuteAngle}deg)`,
+                transition: 'transform 0.5s ease-in-out',
+              }}
+            />
 
-              {/* Luxury Minute Hand */}
-              <div
-                className="absolute rounded-full origin-bottom z-20 shadow-lg"
-                style={{
-                  width: '3px',
-                  height: size * 0.35,
-                  top: '50%',
-                  left: '50%',
-                  transformOrigin: '50% 100%',
-                  transform: `translate(-50%, -100%) rotate(${minuteAngle}deg)`,
-                  transition: 'transform 0.5s ease-in-out',
-                  background: 'linear-gradient(to bottom, #2c3e50, #34495e)',
-                  border: '0.5px solid #1a252f'
-                }}
-              />
-
-              {/* Precision Second Hand */}
-              <div
-                className="absolute rounded-full origin-bottom z-10"
-                style={{
-                  width: '1px',
-                  height: size * 0.38,
-                  top: '50%',
-                  left: '50%',
-                  transformOrigin: '50% 100%',
-                  transform: `translate(-50%, -100%) rotate(${secondAngle}deg)`,
-                  transition: time.getSeconds() === 0 ? 'none' : 'transform 0.1s ease-out',
-                  background: 'linear-gradient(to bottom, #e74c3c, #c0392b)',
-                  boxShadow: '0 0 3px rgba(231, 76, 60, 0.5)'
-                }}
-              />
-            </div>
+            {/* Refined Second Hand */}
+            <div
+              className="absolute bg-destructive rounded-full origin-bottom z-10"
+              style={{
+                width: '1px',
+                height: size * 0.38,
+                top: '50%',
+                left: '50%',
+                transformOrigin: '50% 100%',
+                transform: `translate(-50%, -100%) rotate(${secondAngle}deg)`,
+                transition: time.getSeconds() === 0 ? 'none' : 'transform 0.1s ease-out',
+              }}
+            />
           </div>
         </div>
       </div>
