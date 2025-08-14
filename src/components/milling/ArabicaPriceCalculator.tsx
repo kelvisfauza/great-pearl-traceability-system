@@ -401,23 +401,6 @@ const ArabicaPriceCalculator = ({ onPriceChange }: ArabicaPriceCalculatorProps) 
         </Card>
       </div>
 
-      {/* Rules */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Rules (exactly as implemented)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="text-sm space-y-2 list-disc list-inside text-muted-foreground">
-            <li>Quality Note shows REJECT if any: Moisture&gt;16.5, GP1&gt;10, GP2&gt;25, Less‑12&gt;3, FM&gt;6 (and for Final Price also any single of Pods/Husks/Stones &gt; 6).</li>
-            <li>CLEAN (D14) = 100 − over‑tolerance parts of Moisture (&gt;14), GP1 (&gt;4), GP2 (&gt;10), Less‑12 (&gt;1).</li>
-            <li>OUTTURN = if Less‑12&gt;3 → REJECT; else 100 minus: Moisture (&gt;14 part), GP1 (&gt;4 part), GP2 (&gt;10 part), all FM (pods+husks+stones if &gt;0), and Less‑12 (&gt;1 part).</li>
-            <li>Premium (cap 2,000 UGX): For Outturn Price: GP1≤1, GP2≤5, Moisture≤13, D14≥80, Less‑12≤1 (FM not required to be 0). For Final Price: same as above and Pods=Husks=Stones=0. Within the same cap, add 50 UGX/pt when D14&gt;82.</li>
-            <li>Penalties/bonuses (both prices): Moisture ≥14 → 2% of base per pt; GP1 &gt;4 → −50/pt; GP2 &gt;10 → −20/pt; D14 &lt;78 → −50/pt; D14 &gt;82 → +50/pt.</li>
-            <li>Less‑12 &gt;1: Outturn Price → −30/pt; Final Price → −40/pt.</li>
-            <li>Final Price includes FM cash penalties: Pods −100/%, Husks −150/%, Stones −150/%.</li>
-          </ul>
-        </CardContent>
-      </Card>
     </div>
   );
 };
