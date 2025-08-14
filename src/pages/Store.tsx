@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText } from "lucide-react";
+import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText, Printer } from "lucide-react";
 import { useStoreManagement } from "@/hooks/useStoreManagement";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -20,10 +20,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import PriceTicker from "@/components/PriceTicker";
 import PricingGuidance from "@/components/PricingGuidance";
 import EUDRDocumentation from "@/components/store/EUDRDocumentation";
+import GRNPrintModal from "@/components/quality/GRNPrintModal";
 
 const Store = () => {
   const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'records'; // Start with coffee records
+  const initialTab = searchParams.get('tab') || 'records';
   
   const {
     coffeeRecords,
@@ -31,9 +32,7 @@ const Store = () => {
     addCoffeeRecord,
     updateCoffeeRecordStatus,
     updateCoffeeRecord,
-    deleteCoffeeRecord,
-    todaysSummary,
-    pendingActions
+    deleteCoffeeRecord
   } = useStoreManagement();
 
   const {
@@ -58,37 +57,16 @@ const Store = () => {
   const [newRecord, setNewRecord] = useState({
     coffeeType: '',
     date: new Date().toISOString().split('T')[0],
-    kilograms: '', // Remove default zero
-    bags: '', // Remove default zero
+    kilograms: '',
+    bags: '',
     supplierName: '',
     batchNumber: `BATCH${Date.now()}`,
     status: 'pending'
   });
 
-  const [transferData, setTransferData] = useState({
-    batchNumber: '',
-    destination: 'Drying Facility A',
-    transferredBy: '',
-    notes: ''
-  });
-
-  const [dispatchData, setDispatchData] = useState({
-    batchNumber: '',
-    weight: 0,
-    truckNumber: '',
-    approvedByQuality: '',
-    approvedByManager: '',
-    destination: '',
-    notes: ''
-  });
-
   const [submittingSupplier, setSubmittingSupplier] = useState(false);
   const [submittingRecord, setSubmittingRecord] = useState(false);
-  const [submittingTransfer, setSubmittingTransfer] = useState(false);
-  const [submittingDispatch, setSubmittingDispatch] = useState(false);
-
   const [activeTab, setActiveTab] = useState(initialTab);
-
   const [editingRecord, setEditingRecord] = useState(null);
   const [editFormData, setEditFormData] = useState({
     coffeeType: '',
@@ -98,6 +76,10 @@ const Store = () => {
     supplierName: '',
     batchNumber: ''
   });
+
+  // GRN Print Modal State
+  const [showGRNModal, setShowGRNModal] = useState(false);
+  const [selectedGRNData, setSelectedGRNData] = useState(null);
 
   const loading = storeLoading || suppliersLoading || qualityLoading;
 
@@ -167,72 +149,6 @@ const Store = () => {
     }
   };
 
-  const handleTransferToDrier = async () => {
-    if (!transferData.batchNumber || !transferData.transferredBy) {
-      toast.error("Please fill in required fields");
-      return;
-    }
-
-    setSubmittingTransfer(true);
-    try {
-      const record = coffeeRecords.find(r => r.batchNumber === transferData.batchNumber);
-      if (!record) {
-        toast.error("Batch not found");
-        return;
-      }
-
-      // Check if batch has quality assessment
-      const hasQualityAssessment = qualityAssessments.some(qa => qa.batch_number === transferData.batchNumber);
-      if (!hasQualityAssessment) {
-        toast.error("Batch must have quality assessment before transfer to drier");
-        return;
-      }
-
-      await updateCoffeeRecordStatus(record.id, 'drying');
-      setTransferData({ batchNumber: '', destination: 'Drying Facility A', transferredBy: '', notes: '' });
-      toast.success("Coffee transferred to drier successfully");
-    } catch (error) {
-      toast.error("Failed to transfer coffee to drier");
-    } finally {
-      setSubmittingTransfer(false);
-    }
-  };
-
-  const handleDispatchForSale = async () => {
-    if (!dispatchData.batchNumber || !dispatchData.weight || !dispatchData.truckNumber || 
-        !dispatchData.approvedByQuality || !dispatchData.approvedByManager) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    setSubmittingDispatch(true);
-    try {
-      const record = coffeeRecords.find(r => r.batchNumber === dispatchData.batchNumber);
-      if (!record) {
-        toast.error("Batch not found");
-        return;
-      }
-
-      // Check if batch has quality assessment and pricing
-      const qualityAssessment = qualityAssessments.find(qa => qa.batch_number === dispatchData.batchNumber);
-      if (!qualityAssessment) {
-        toast.error("Batch must have quality assessment and pricing before dispatch");
-        return;
-      }
-
-      await updateCoffeeRecordStatus(record.id, 'sales');
-      setDispatchData({ 
-        batchNumber: '', weight: 0, truckNumber: '', approvedByQuality: '', 
-        approvedByManager: '', destination: '', notes: '' 
-      });
-      toast.success("Coffee dispatched for sale successfully");
-    } catch (error) {
-      toast.error("Failed to dispatch coffee for sale");
-    } finally {
-      setSubmittingDispatch(false);
-    }
-  };
-
   const getStatusBadge = (status: any) => {
     const statusConfig = {
       pending: { label: 'Pending', variant: 'secondary' as const },
@@ -244,18 +160,6 @@ const Store = () => {
       inventory: { label: 'In Inventory', variant: 'default' as const }
     };
     return statusConfig[status] || statusConfig.pending;
-  };
-
-  const getAssessedRecords = () => {
-    return coffeeRecords.filter(record => 
-      qualityAssessments.some(qa => qa.batch_number === record.batchNumber)
-    );
-  };
-
-  const getQualityApprovedRecords = () => {
-    return coffeeRecords.filter(record => 
-      qualityAssessments.some(qa => qa.batch_number === record.batchNumber && qa.status === 'approved')
-    );
   };
 
   const handleEditRecord = (record) => {
@@ -296,32 +200,120 @@ const Store = () => {
   };
 
   const canEditOrDelete = (record) => {
-    // Check if record has been paid by looking for payment records
-    // For now, we'll check if status is not 'sales' (assuming sales means paid)
     return record.status !== 'sales' && record.status !== 'paid';
   };
 
-  const requestManagerApproval = async (action, recordId) => {
-    try {
-      // Submit approval request to manager
-      const approvalData = {
-        type: 'Record Modification',
-        title: `${action} Coffee Record`,
-        description: `Request to ${action.toLowerCase()} coffee record ${recordId}`,
-        department: 'Store',
-        requestedby: 'Store Personnel',
-        amount: '0',
-        priority: 'Medium',
-        status: 'Pending',
-        daterequested: new Date().toISOString(),
-        details: { recordId, action }
-      };
+  const handlePrintGRN = (record) => {
+    // Find quality assessment for this record
+    const qualityAssessment = qualityAssessments.find(qa => qa.batch_number === record.batchNumber);
+    
+    const grnData = {
+      grnNumber: record.batchNumber,
+      supplierName: record.supplierName,
+      coffeeType: record.coffeeType,
+      qualityAssessment: qualityAssessment ? 'Assessed' : 'Pending Assessment',
+      numberOfBags: record.bags,
+      totalKgs: record.kilograms,
+      unitPrice: qualityAssessment?.suggested_price || 0,
+      assessedBy: qualityAssessment?.assessed_by || 'N/A',
+      createdAt: record.date,
+      moisture: qualityAssessment?.moisture,
+      group1_defects: qualityAssessment?.group1_defects,
+      group2_defects: qualityAssessment?.group2_defects,
+      below12: qualityAssessment?.below12,
+      pods: qualityAssessment?.pods,
+      husks: qualityAssessment?.husks,
+      stones: qualityAssessment?.stones
+    };
+    
+    setSelectedGRNData(grnData);
+    setShowGRNModal(true);
+  };
 
-      // You would submit this to your approval system
-      toast.info(`${action} request sent to manager for approval`);
-    } catch (error) {
-      toast.error(`Failed to send ${action.toLowerCase()} request`);
-    }
+  const handlePrintAllRecords = () => {
+    const printContent = coffeeRecords.map(record => {
+      const qualityAssessment = qualityAssessments.find(qa => qa.batch_number === record.batchNumber);
+      return {
+        ...record,
+        qualityAssessment,
+        unitPrice: qualityAssessment?.suggested_price || 0,
+        totalAmount: (qualityAssessment?.suggested_price || 0) * record.kilograms
+      };
+    });
+
+    const printWindow = window.open('', '', 'width=1200,height=800');
+    if (!printWindow) return;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>All Coffee Records - Great Pearl Coffee Factory</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            .total-row { font-weight: bold; background-color: #f0f0f0; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-name">GREAT PEARL COFFEE FACTORY</div>
+            <div>Coffee Records Report - ${new Date().toLocaleDateString()}</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Batch Number</th>
+                <th>Date</th>
+                <th>Coffee Type</th>
+                <th>Supplier</th>
+                <th>Bags</th>
+                <th>Kilograms</th>
+                <th>Unit Price (UGX)</th>
+                <th>Total Amount (UGX)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${printContent.map(record => `
+                <tr>
+                  <td>${record.batchNumber}</td>
+                  <td>${record.date}</td>
+                  <td>${record.coffeeType}</td>
+                  <td>${record.supplierName}</td>
+                  <td>${record.bags}</td>
+                  <td>${record.kilograms.toLocaleString()}kg</td>
+                  <td>${record.unitPrice.toLocaleString()}</td>
+                  <td>${record.totalAmount.toLocaleString()}</td>
+                  <td>${record.status}</td>
+                </tr>
+              `).join('')}
+              <tr class="total-row">
+                <td colspan="4">TOTALS</td>
+                <td>${printContent.reduce((sum, r) => sum + r.bags, 0)}</td>
+                <td>${printContent.reduce((sum, r) => sum + r.kilograms, 0).toLocaleString()}kg</td>
+                <td>-</td>
+                <td>${printContent.reduce((sum, r) => sum + r.totalAmount, 0).toLocaleString()}</td>
+                <td>-</td>
+              </tr>
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   if (!hasPermission('Store Management')) {
@@ -387,6 +379,7 @@ const Store = () => {
             </TabsTrigger>
           </TabsList>
 
+          {/* Coffee Records Tab */}
           <TabsContent value="records" className="space-y-6">
             <Card>
               <CardHeader>
@@ -401,17 +394,14 @@ const Store = () => {
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Print GRN
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Print Selected
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Print All
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handlePrintAllRecords}
+                      disabled={coffeeRecords.length === 0}
+                    >
+                      <Printer className="h-4 w-4 mr-2" />
+                      Print All Records
                     </Button>
                   </div>
                 </div>
@@ -447,7 +437,15 @@ const Store = () => {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              {canEditOrDelete(record) ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handlePrintGRN(record)}
+                              >
+                                <Printer className="h-3 w-3 mr-1" />
+                                GRN
+                              </Button>
+                              {canEditOrDelete(record) && (
                                 <>
                                   <Button
                                     size="sm"
@@ -477,23 +475,6 @@ const Store = () => {
                                       </AlertDialogFooter>
                                     </AlertDialogContent>
                                   </AlertDialog>
-                                </>
-                              ) : (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => requestManagerApproval('Edit', record.id)}
-                                  >
-                                    Request Edit
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => requestManagerApproval('Delete', record.id)}
-                                  >
-                                    Request Delete
-                                  </Button>
                                 </>
                               )}
                             </div>
@@ -589,10 +570,34 @@ const Store = () => {
             </Card>
           </TabsContent>
 
+          {/* EUDR Documentation Tab */}
           <TabsContent value="eudr" className="space-y-6">
             <EUDRDocumentation />
           </TabsContent>
 
+          {/* Pricing & Assessment Tab */}
+          <TabsContent value="pricing" className="space-y-6">
+            <PricingGuidance coffeeType="arabica" suggestedPrice={0} />
+          </TabsContent>
+
+          {/* Operations Tab */}
+          <TabsContent value="operations" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Operations Management</CardTitle>
+                <CardDescription>Transfer and dispatch operations for coffee processing</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-gray-500">
+                  <Scale className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Operations features coming soon</p>
+                  <p className="text-sm">Transfer to drying, dispatch for sales, and more</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Supplier Management Tab */}
           <TabsContent value="suppliers" className="space-y-6">
             <Card>
               <CardHeader>
@@ -606,10 +611,73 @@ const Store = () => {
                       }
                     </CardDescription>
                   </div>
-                  <Button onClick={() => setActiveTab('add-supplier')}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Supplier
-                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Supplier
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Register New Supplier</DialogTitle>
+                        <DialogDescription>
+                          Add a new coffee supplier to the system
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="supplier-name">Supplier Name *</Label>
+                            <Input
+                              id="supplier-name"
+                              value={newSupplier.name}
+                              onChange={(e) => setNewSupplier({...newSupplier, name: e.target.value})}
+                              placeholder="Enter supplier name"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="supplier-phone">Phone Number</Label>
+                            <Input
+                              id="supplier-phone"
+                              value={newSupplier.phone}
+                              onChange={(e) => setNewSupplier({...newSupplier, phone: e.target.value})}
+                              placeholder="+256..."
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="supplier-origin">Origin *</Label>
+                            <Input
+                              id="supplier-origin"
+                              value={newSupplier.origin}
+                              onChange={(e) => setNewSupplier({...newSupplier, origin: e.target.value})}
+                              placeholder="e.g., Mount Elgon"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="opening-balance">Opening Balance (UGX)</Label>
+                            <Input
+                              id="opening-balance"
+                              type="number"
+                              value={newSupplier.opening_balance}
+                              onChange={(e) => setNewSupplier({...newSupplier, opening_balance: Number(e.target.value)})}
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button 
+                          onClick={handleSaveSupplier} 
+                          disabled={submittingSupplier}
+                        >
+                          {submittingSupplier ? "Saving..." : "Save Supplier"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardHeader>
               <CardContent>
@@ -642,654 +710,101 @@ const Store = () => {
                   <div className="text-center py-8 text-gray-500">
                     <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No suppliers registered yet</p>
-                    <p className="text-sm">Add your first supplier using the button above</p>
+                    <p className="text-sm">Click "Add Supplier" to register your first supplier</p>
                   </div>
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="add-supplier" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Register New Supplier</CardTitle>
-                <CardDescription>Add a new coffee supplier to the system</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="supplier-name">Supplier Name *</Label>
-                    <Input
-                      id="supplier-name"
-                      value={newSupplier.name}
-                      onChange={(e) => setNewSupplier({...newSupplier, name: e.target.value})}
-                      placeholder="Enter supplier name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="supplier-phone">Phone Number (Optional)</Label>
-                    <Input
-                      id="supplier-phone"
-                      value={newSupplier.phone}
-                      onChange={(e) => setNewSupplier({...newSupplier, phone: e.target.value})}
-                      placeholder="+256..."
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="supplier-origin">Origin *</Label>
-                    <Input
-                      id="supplier-origin"
-                      value={newSupplier.origin}
-                      onChange={(e) => setNewSupplier({...newSupplier, origin: e.target.value})}
-                      placeholder="e.g., Mount Elgon"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="opening-balance">Opening Balance (UGX)</Label>
-                    <Input
-                      id="opening-balance"
-                      type="number"
-                      value={newSupplier.opening_balance}
-                      onChange={(e) => setNewSupplier({...newSupplier, opening_balance: Number(e.target.value)})}
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handleSaveSupplier} 
-                    disabled={submittingSupplier}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {submittingSupplier ? "Saving..." : "Save Supplier"}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setActiveTab('suppliers')}
-                  >
-                    Back to List
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="records" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Record Coffee Delivery</CardTitle>
-                <CardDescription>Register new coffee deliveries from suppliers</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="coffee-type">Coffee Type *</Label>
-                    <Select value={newRecord.coffeeType} onValueChange={(value) => setNewRecord({...newRecord, coffeeType: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select coffee type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Drugar">Drugar</SelectItem>
-                        <SelectItem value="Wugar">Wugar</SelectItem>
-                        <SelectItem value="Robusta">Robusta</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="delivery-date">Date *</Label>
-                    <Input
-                      id="delivery-date"
-                      type="date"
-                      value={newRecord.date}
-                      onChange={(e) => setNewRecord({...newRecord, date: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="kilograms">Kilograms Weighed *</Label>
-                    <Input
-                      id="kilograms"
-                      type="number"
-                      value={newRecord.kilograms}
-                      onChange={(e) => setNewRecord({...newRecord, kilograms: e.target.value})}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="bags">Number of Bags *</Label>
-                    <Input
-                      id="bags"
-                      type="number"
-                      value={newRecord.bags}
-                      onChange={(e) => setNewRecord({...newRecord, bags: e.target.value})}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="record-supplier">Select Supplier *</Label>
-                    <Select value={newRecord.supplierName} onValueChange={(value) => setNewRecord({...newRecord, supplierName: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select supplier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.length > 0 ? (
-                          suppliers.map((supplier) => (
-                            <SelectItem key={supplier.id} value={supplier.name}>
-                              {supplier.name} ({supplier.code})
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no-suppliers" disabled>No suppliers available</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <Button 
-                  onClick={handleSubmitRecord} 
-                  className="w-full md:w-auto"
-                  disabled={suppliers.length === 0 || submittingRecord}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {submittingRecord ? "Submitting..." : "Submit Record"}
-                </Button>
-                {suppliers.length === 0 && (
-                  <p className="text-sm text-amber-600">Please register a supplier first before recording deliveries.</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Coffee Records</CardTitle>
-                <CardDescription>
-                  {coffeeRecords.length > 0 
-                    ? `${coffeeRecords.length} coffee delivery records` 
-                    : "No coffee records yet. Record your first delivery above."
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {coffeeRecords.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Batch #</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Supplier</TableHead>
-                        <TableHead>Kilograms</TableHead>
-                        <TableHead>Bags</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {coffeeRecords.map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-mono">{record.batchNumber}</TableCell>
-                          <TableCell>{record.date}</TableCell>
-                          <TableCell>{record.coffeeType}</TableCell>
-                          <TableCell>{record.supplierName}</TableCell>
-                          <TableCell>{Number(record.kilograms).toLocaleString()} kg</TableCell>
-                          <TableCell>{record.bags}</TableCell>
-                          <TableCell>
-                            <Badge variant={getStatusBadge(record.status).variant}>
-                              {getStatusBadge(record.status).label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              {record.status === 'pending' && (
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => handleStatusUpdate(record.id, 'quality_review')}
-                                >
-                                  <Send className="h-3 w-3 mr-1" />
-                                  To Quality
-                                </Button>
-                              )}
-                              
-                              {canEditOrDelete(record) ? (
-                                <>
-                                  <Dialog>
-                                    <DialogTrigger asChild>
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        onClick={() => handleEditRecord(record)}
-                                      >
-                                        <Edit className="h-3 w-3 mr-1" />
-                                        Edit
-                                      </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                      <DialogHeader>
-                                        <DialogTitle>Edit Coffee Record</DialogTitle>
-                                        <DialogDescription>
-                                          Modify the details of this coffee delivery record.
-                                        </DialogDescription>
-                                      </DialogHeader>
-                                      <div className="grid gap-4 py-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                          <div>
-                                            <Label htmlFor="edit-coffee-type">Coffee Type</Label>
-                                            <Select value={editFormData.coffeeType} onValueChange={(value) => setEditFormData({...editFormData, coffeeType: value})}>
-                                              <SelectTrigger>
-                                                <SelectValue />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="Drugar">Drugar</SelectItem>
-                                                <SelectItem value="Wugar">Wugar</SelectItem>
-                                                <SelectItem value="Robusta">Robusta</SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                          </div>
-                                          <div>
-                                            <Label htmlFor="edit-date">Date</Label>
-                                            <Input
-                                              id="edit-date"
-                                              type="date"
-                                              value={editFormData.date}
-                                              onChange={(e) => setEditFormData({...editFormData, date: e.target.value})}
-                                            />
-                                          </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                          <div>
-                                            <Label htmlFor="edit-kilograms">Kilograms</Label>
-                                            <Input
-                                              id="edit-kilograms"
-                                              type="number"
-                                              value={editFormData.kilograms}
-                                              onChange={(e) => setEditFormData({...editFormData, kilograms: e.target.value})}
-                                            />
-                                          </div>
-                                          <div>
-                                            <Label htmlFor="edit-bags">Bags</Label>
-                                            <Input
-                                              id="edit-bags"
-                                              type="number"
-                                              value={editFormData.bags}
-                                              onChange={(e) => setEditFormData({...editFormData, bags: e.target.value})}
-                                            />
-                                          </div>
-                                        </div>
-                                        <div>
-                                          <Label htmlFor="edit-supplier">Supplier</Label>
-                                          <Select value={editFormData.supplierName} onValueChange={(value) => setEditFormData({...editFormData, supplierName: value})}>
-                                            <SelectTrigger>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {suppliers.map((supplier) => (
-                                                <SelectItem key={supplier.id} value={supplier.name}>
-                                                  {supplier.name} ({supplier.code})
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      </div>
-                                      <DialogFooter>
-                                        <Button variant="outline" onClick={() => setEditingRecord(null)}>
-                                          Cancel
-                                        </Button>
-                                        <Button onClick={handleUpdateRecord}>
-                                          Update Record
-                                        </Button>
-                                      </DialogFooter>
-                                    </DialogContent>
-                                  </Dialog>
-
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button size="sm" variant="destructive">
-                                        <Trash2 className="h-3 w-3 mr-1" />
-                                        Delete
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete Coffee Record</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Are you sure you want to delete this coffee record? This action cannot be undone.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction 
-                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                          onClick={() => handleDeleteRecord(record.id)}
-                                        >
-                                          Delete
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </>
-                              ) : (
-                                <>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    onClick={() => requestManagerApproval('Edit', record.id)}
-                                  >
-                                    <AlertTriangle className="h-3 w-3 mr-1" />
-                                    Request Edit
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    onClick={() => requestManagerApproval('Delete', record.id)}
-                                  >
-                                    <AlertTriangle className="h-3 w-3 mr-1" />
-                                    Request Delete
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No coffee records yet</p>
-                    <p className="text-sm">Record your first delivery using the form above</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="pricing" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pricing & Quality Assessment View</CardTitle>
-                <CardDescription>View pricing information for assessed coffee batches</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {getAssessedRecords().length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Batch #</TableHead>
-                        <TableHead>Coffee Type</TableHead>
-                        <TableHead>Supplier</TableHead>
-                        <TableHead>Weight (kg)</TableHead>
-                        <TableHead>Suggested Price (UGX/kg)</TableHead>
-                        <TableHead>Total Value (UGX)</TableHead>
-                        <TableHead>Quality Status</TableHead>
-                        <TableHead>Assessment Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {getAssessedRecords().map((record) => {
-                        const assessment = qualityAssessments.find(qa => qa.batch_number === record.batchNumber);
-                        const totalValue = assessment ? (assessment.suggested_price * record.kilograms) : 0;
-                        return (
-                          <TableRow key={record.id}>
-                            <TableCell className="font-mono">{record.batchNumber}</TableCell>
-                            <TableCell>{record.coffeeType}</TableCell>
-                            <TableCell>{record.supplierName}</TableCell>
-                            <TableCell>{Number(record.kilograms).toLocaleString()} kg</TableCell>
-                            <TableCell className="font-semibold text-green-600">
-                              UGX {assessment ? Number(assessment.suggested_price).toLocaleString() : 'N/A'}
-                            </TableCell>
-                            <TableCell className="font-semibold">
-                              UGX {totalValue.toLocaleString()}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={assessment?.status === 'approved' ? 'default' : 'secondary'}>
-                                {assessment?.status === 'approved' ? 'Approved' : 'Assessed'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{assessment?.date_assessed}</TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No assessed batches with pricing yet</p>
-                    <p className="text-sm">Batches will appear here after quality assessment and pricing</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {getAssessedRecords().length > 0 && (
-              <PricingGuidance 
-                coffeeType={getAssessedRecords()[0]?.coffeeType || 'Drugar'}
-                suggestedPrice={qualityAssessments.find(qa => qa.batch_number === getAssessedRecords()[0]?.batchNumber)?.suggested_price || 0}
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="operations" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Transfer to Drier */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Transfer Coffee to Drier</CardTitle>
-                  <CardDescription>Transfer quality-approved batches to drying facility</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="transfer-batch">Select Batch *</Label>
-                    <Select value={transferData.batchNumber} onValueChange={(value) => setTransferData({...transferData, batchNumber: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select batch for transfer" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getQualityApprovedRecords().map((record) => (
-                          <SelectItem key={record.id} value={record.batchNumber}>
-                            {record.batchNumber} - {record.coffeeType} ({record.kilograms}kg)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="drying-destination">Destination *</Label>
-                    <Select value={transferData.destination} onValueChange={(value) => setTransferData({...transferData, destination: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select drying facility" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Drying Facility A">Drying Facility A</SelectItem>
-                        <SelectItem value="Drying Facility B">Drying Facility B</SelectItem>
-                        <SelectItem value="Main Drying Unit">Main Drying Unit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="transferred-by">Transferred By *</Label>
-                    <Input
-                      id="transferred-by"
-                      value={transferData.transferredBy}
-                      onChange={(e) => setTransferData({...transferData, transferredBy: e.target.value})}
-                      placeholder="Enter your name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="transfer-notes">Notes (Optional)</Label>
-                    <Input
-                      id="transfer-notes"
-                      value={transferData.notes}
-                      onChange={(e) => setTransferData({...transferData, notes: e.target.value})}
-                      placeholder="Additional notes"
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleTransferToDrier}
-                    className="w-full"
-                    disabled={submittingTransfer}
-                  >
-                    <Factory className="h-4 w-4 mr-2" />
-                    {submittingTransfer ? "Transferring..." : "Transfer to Drier"}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Dispatch for Sale */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Dispatch for Sale</CardTitle>
-                  <CardDescription>Dispatch processed coffee for sale with approvals</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="dispatch-batch">Select Batch *</Label>
-                    <Select value={dispatchData.batchNumber} onValueChange={(value) => setDispatchData({...dispatchData, batchNumber: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select batch for dispatch" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getQualityApprovedRecords().map((record) => (
-                          <SelectItem key={record.id} value={record.batchNumber}>
-                            {record.batchNumber} - {record.coffeeType} ({record.kilograms}kg)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="dispatch-weight">Weight (kg) *</Label>
-                      <Input
-                        id="dispatch-weight"
-                        type="number"
-                        value={dispatchData.weight}
-                        onChange={(e) => setDispatchData({...dispatchData, weight: Number(e.target.value)})}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="truck-number">Truck Number *</Label>
-                      <Input
-                        id="truck-number"
-                        value={dispatchData.truckNumber}
-                        onChange={(e) => setDispatchData({...dispatchData, truckNumber: e.target.value})}
-                        placeholder="e.g., UBE 001A"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="quality-approval">Approved by Quality *</Label>
-                    <Input
-                      id="quality-approval"
-                      value={dispatchData.approvedByQuality}
-                      onChange={(e) => setDispatchData({...dispatchData, approvedByQuality: e.target.value})}
-                      placeholder="Quality control officer name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="manager-approval">Approved by Manager *</Label>
-                    <Input
-                      id="manager-approval"
-                      value={dispatchData.approvedByManager}
-                      onChange={(e) => setDispatchData({...dispatchData, approvedByManager: e.target.value})}
-                      placeholder="Manager name"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="dispatch-destination">Destination</Label>
-                    <Input
-                      id="dispatch-destination"
-                      value={dispatchData.destination}
-                      onChange={(e) => setDispatchData({...dispatchData, destination: e.target.value})}
-                      placeholder="Destination location"
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleDispatchForSale}
-                    className="w-full"
-                    disabled={submittingDispatch}
-                  >
-                    <Truck className="h-4 w-4 mr-2" />
-                    {submittingDispatch ? "Dispatching..." : "Dispatch for Sale"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button className="w-full justify-start" variant="outline">
-                    <Truck className="h-4 w-4 mr-2" />
-                    Dispatch to Dryers
-                  </Button>
-                  <Button className="w-full justify-start" variant="outline">
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Dispatch to Sales
-                  </Button>
-                  <Button className="w-full justify-start" variant="outline">
-                    <Package className="h-4 w-4 mr-2" />
-                    Update Inventory
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Today's Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Total Received:</span>
-                      <span className="font-medium">{todaysSummary.totalReceived} kg</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Total Bags:</span>
-                      <span className="font-medium">{todaysSummary.totalBags}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Active Suppliers:</span>
-                      <span className="font-medium">{todaysSummary.activeSuppliers}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pending Actions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Quality Review:</span>
-                      <Badge variant="secondary">{pendingActions.qualityReview}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Awaiting Pricing:</span>
-                      <Badge variant="secondary">{pendingActions.awaitingPricing}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Ready for Dispatch:</span>
-                      <Badge variant="secondary">{pendingActions.readyForDispatch}</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="eudr" className="space-y-6">
-            <EUDRDocumentation />
           </TabsContent>
         </Tabs>
+
+        {/* Edit Record Modal */}
+        <Dialog open={!!editingRecord} onOpenChange={() => setEditingRecord(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Coffee Record</DialogTitle>
+              <DialogDescription>
+                Update the coffee delivery record details
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-coffee-type">Coffee Type</Label>
+                  <Select value={editFormData.coffeeType} onValueChange={(value) => setEditFormData({...editFormData, coffeeType: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="arabica">Arabica</SelectItem>
+                      <SelectItem value="robusta">Robusta</SelectItem>
+                      <SelectItem value="mixed">Mixed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-date">Date</Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editFormData.date}
+                    onChange={(e) => setEditFormData({...editFormData, date: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-kilograms">Kilograms</Label>
+                  <Input
+                    id="edit-kilograms"
+                    type="number"
+                    value={editFormData.kilograms}
+                    onChange={(e) => setEditFormData({...editFormData, kilograms: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-bags">Bags</Label>
+                  <Input
+                    id="edit-bags"
+                    type="number"
+                    value={editFormData.bags}
+                    onChange={(e) => setEditFormData({...editFormData, bags: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="edit-supplier">Supplier</Label>
+                <Select value={editFormData.supplierName} onValueChange={(value) => setEditFormData({...editFormData, supplierName: value})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.name}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingRecord(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateRecord}>
+                Update Record
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* GRN Print Modal */}
+        <GRNPrintModal 
+          open={showGRNModal}
+          onClose={() => setShowGRNModal(false)}
+          grnData={selectedGRNData}
+        />
       </div>
     </Layout>
   );
