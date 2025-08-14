@@ -34,6 +34,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
 import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator";
+import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
 const QualityControl = () => {
   const {
     storeRecords,
@@ -683,10 +684,11 @@ const QualityControl = () => {
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="pending">Pending Assessment ({pendingRecords.length})</TabsTrigger>
             <TabsTrigger value="modifications">Modification Requests ({pendingModificationRequests.length})</TabsTrigger>
             <TabsTrigger value="assessments">Quality Assessments ({qualityAssessments.length})</TabsTrigger>
+            <TabsTrigger value="reports">Assessment Reports</TabsTrigger>
             <TabsTrigger value="price-calculator" disabled={!selectedRecord}>
               {selectedRecord ? 'Price Assessment' : 'Select Record First'}
             </TabsTrigger>
@@ -981,6 +983,10 @@ const QualityControl = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <QualityAssessmentReports assessments={qualityAssessments} />
           </TabsContent>
 
         </Tabs>
