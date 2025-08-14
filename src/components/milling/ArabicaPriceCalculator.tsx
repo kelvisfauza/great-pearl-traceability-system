@@ -7,15 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { RefreshCw } from 'lucide-react';
 
 interface PriceCalculatorState {
-  refPrice: number;
-  moisture: number;
-  gp1: number;
-  gp2: number;
-  less12: number;
-  pods: number;
-  husks: number;
-  stones: number;
-  discretion: number;
+  refPrice: string;
+  moisture: string;
+  gp1: string;
+  gp2: string;
+  less12: string;
+  pods: string;
+  husks: string;
+  stones: string;
+  discretion: string;
 }
 
 interface CalculationResults {
@@ -36,15 +36,15 @@ interface ArabicaPriceCalculatorProps {
 
 const ArabicaPriceCalculator = ({ onPriceChange }: ArabicaPriceCalculatorProps) => {
   const [state, setState] = useState<PriceCalculatorState>({
-    refPrice: 14300,
-    moisture: 12.5,
-    gp1: 0,
-    gp2: 23,
-    less12: 0,
-    pods: 0,
-    husks: 0,
-    stones: 0,
-    discretion: 0
+    refPrice: '',
+    moisture: '',
+    gp1: '',
+    gp2: '',
+    less12: '',
+    pods: '',
+    husks: '',
+    stones: '',
+    discretion: ''
   });
 
   const [results, setResults] = useState<CalculationResults>({
@@ -62,9 +62,24 @@ const ArabicaPriceCalculator = ({ onPriceChange }: ArabicaPriceCalculatorProps) 
   const over = (x: number, lim: number) => Math.max(0, x - lim);
   const fmt = (n: number) => isFinite(n) ? n.toLocaleString('en-UG', { maximumFractionDigits: 0 }) : '—';
   const pct = (n: number) => isFinite(n) ? n.toFixed(1) + '%' : '—';
+  
+  // Helper function to parse string values to numbers, defaulting to 0 for empty strings
+  const parseValue = (value: string): number => {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? 0 : parsed;
+  };
 
   const calculate = () => {
-    const { refPrice, moisture, gp1, gp2, less12, pods, husks, stones, discretion } = state;
+    // Parse all string values to numbers
+    const refPrice = parseValue(state.refPrice);
+    const moisture = parseValue(state.moisture);
+    const gp1 = parseValue(state.gp1);
+    const gp2 = parseValue(state.gp2);
+    const less12 = parseValue(state.less12);
+    const pods = parseValue(state.pods);
+    const husks = parseValue(state.husks);
+    const stones = parseValue(state.stones);
+    const discretion = parseValue(state.discretion);
 
     // Derived calculations
     const fm = pods + husks + stones;
@@ -169,21 +184,20 @@ const ArabicaPriceCalculator = ({ onPriceChange }: ArabicaPriceCalculatorProps) 
   }, [state]);
 
   const handleInputChange = (field: keyof PriceCalculatorState, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setState(prev => ({ ...prev, [field]: numValue }));
+    setState(prev => ({ ...prev, [field]: value }));
   };
 
   const resetAll = () => {
     setState({
-      refPrice: 14300,
-      moisture: 12.5,
-      gp1: 0,
-      gp2: 23,
-      less12: 0,
-      pods: 0,
-      husks: 0,
-      stones: 0,
-      discretion: 0
+      refPrice: '',
+      moisture: '',
+      gp1: '',
+      gp2: '',
+      less12: '',
+      pods: '',
+      husks: '',
+      stones: '',
+      discretion: ''
     });
   };
 
