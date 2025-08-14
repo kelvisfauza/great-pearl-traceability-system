@@ -20,6 +20,8 @@ import SupplierAdvanceModal from "@/components/finance/SupplierAdvanceModal";
 import AdvanceClearingModal from "@/components/finance/AdvanceClearingModal";
 import ModificationRequestsManager from "@/components/finance/ModificationRequestsManager";
 import CustomerBalancesCard from "@/components/finance/CustomerBalancesCard";
+import QualityAssessmentReports from "@/components/finance/QualityAssessmentReports";
+import CashManagementDashboard from "@/components/finance/CashManagementDashboard";
 
 const Finance = () => {
   const {
@@ -312,8 +314,12 @@ const Finance = () => {
         </Card>
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="payments" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8 h-12">
+        <Tabs defaultValue="quality-reports" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-9 h-12">
+            <TabsTrigger value="quality-reports" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Quality Reports
+            </TabsTrigger>
             <TabsTrigger value="payments" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
               Payments
@@ -347,6 +353,17 @@ const Finance = () => {
               Analytics
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="quality-reports">
+            <QualityAssessmentReports
+              onProcessPayment={(paymentData) => {
+                console.log('Processing payment from quality report:', paymentData);
+                // Add the payment to local state or process it
+                handleProcessPayment(paymentData.id, paymentData.method, paymentData.paid_amount);
+              }}
+              formatCurrency={formatCurrency}
+            />
+          </TabsContent>
 
           <TabsContent value="payments">
             <PaymentProcessingCard 
@@ -471,18 +488,17 @@ const Finance = () => {
           </TabsContent>
 
           <TabsContent value="cash">
-            <CashManagementCard 
-              canManageFloat={canManageFloat}
-              floatAmount={floatAmount}
-              setFloatAmount={setFloatAmount}
-              receiptAmount={receiptAmount}
-              setReceiptAmount={setReceiptAmount}
-              receiptDescription={receiptDescription}
-              setReceiptDescription={setReceiptDescription}
-              onFloatSubmit={handleFloatSubmit}
-              onReceiptIssue={handleReceiptIssue}
-              stats={stats}
+            <CashManagementDashboard 
               formatCurrency={formatCurrency}
+              availableCash={stats.cashOnHand}
+              onCashTransaction={(transaction) => {
+                console.log('Cash transaction processed:', transaction);
+                // Handle cash transaction logic here
+                toast({
+                  title: "Transaction Processed",
+                  description: `${transaction.type} of ${formatCurrency(transaction.amount)} processed`
+                });
+              }}
             />
           </TabsContent>
 
