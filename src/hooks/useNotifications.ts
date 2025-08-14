@@ -295,17 +295,14 @@ export const useNotifications = () => {
   };
 
   useEffect(() => {
-    console.log('useNotifications - useEffect triggered');
-    console.log('useNotifications - employee:', employee);
-    if (!employee) {
-      console.log('useNotifications - No employee found, clearing notifications and waiting for authentication');
+    let mounted = true;
+    
+    if (!employee?.id) {
       setNotifications([]);
       setUnreadCount(0);
       setLoading(false);
       return;
     }
-
-    console.log('useNotifications - Setting up notification listener for employee:', employee.name);
 
     const notificationsQuery = query(
       collection(db, 'notifications')
@@ -314,33 +311,27 @@ export const useNotifications = () => {
     );
 
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-      console.log('useNotifications - Raw snapshot docs:', snapshot.docs.length);
-      console.log('useNotifications - Current employee:', employee);
+      if (!mounted) return;
+      
       const allNotifications = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Notification[];
-      console.log('useNotifications - All notifications:', allNotifications);
 
       // Filter notifications based on user role and department
       const userNotifications = allNotifications.filter(notification => {
-        console.log('Filtering notification:', notification.id, 'targetDepartment:', notification.targetDepartment, 'targetUser:', notification.targetUser, 'type:', notification.type);
-        
         // Show all notifications to administrators
         if (employee.role === 'Administrator') {
-          console.log('Showing to admin:', notification.id);
           return true;
         }
         
         // Show notifications targeted to specific user by name
         if (notification.targetUser && notification.targetUser === employee.name) {
-          console.log('Showing by target user match:', notification.id);
           return true;
         }
         
         // Show notifications targeted to user's role
         if (notification.targetRole && notification.targetRole === employee.role) {
-          console.log('Showing by role match:', notification.id);
           return true;
         }
         
@@ -348,32 +339,27 @@ export const useNotifications = () => {
         if (notification.targetDepartment) {
           // Special handling for "All Departments" - show to everyone
           if (notification.targetDepartment === 'All Departments') {
-            console.log('Showing to all departments:', notification.id);
             return true;
           }
           
           // Check exact department match
           if (notification.targetDepartment === employee.department) {
-            console.log('Showing by department match:', notification.id);
             return true;
           }
           
           // Check if user has permissions for the target department
           if (employee.permissions && employee.permissions.includes(notification.targetDepartment)) {
-            console.log('Showing by permission match:', notification.id);
             return true;
           }
           
           // Special case for Data Analysis permission mapping to Reports department
           if (notification.targetDepartment === 'Reports' && 
               employee.permissions && employee.permissions.includes('Data Analysis')) {
-            console.log('Showing by Data Analysis permission:', notification.id);
             return true;
           }
           
           // Special case for Data Analysis department mapping to Reports notifications
           if (employee.department === 'Data Analysis' && notification.targetDepartment === 'Reports') {
-            console.log('Showing to Data Analysis department:', notification.id);
             return true;
           }
         }
@@ -390,45 +376,41 @@ export const useNotifications = () => {
           });
           
           if (isTargeted) {
-            console.log('Showing by targetDepartments match:', notification.id);
             return true;
           }
         }
         
         // Show notifications from user's department (announcements from same department)
         if (notification.department === employee.department && notification.type === 'announcement') {
-          console.log('Showing by same department announcement:', notification.id);
           return true;
         }
         
         // Show system notifications to everyone
         if (notification.type === 'system' && !notification.targetRole && !notification.targetDepartment && !notification.targetUser) {
-          console.log('Showing system notification to everyone:', notification.id);
           return true;
         }
         
         // Show announcements without specific targets to everyone
         if (notification.type === 'announcement' && !notification.targetRole && !notification.targetDepartment) {
-          console.log('Showing announcement without targets to everyone:', notification.id);
           return true;
         }
         
-        console.log('Filtering out notification:', notification.id);
         return false;
       });
-      console.log('useNotifications - Filtered notifications:', userNotifications);
-      console.log('useNotifications - Employee role/department:', employee?.role, employee?.department);
-      console.log('useNotifications - Employee name:', employee?.name);
 
+      if (!mounted) return;
+      
       setNotifications(userNotifications);
       const unreadCount = userNotifications.filter(n => !n.isRead).length;
       setUnreadCount(unreadCount);
-      console.log('useNotifications - Final unread count:', unreadCount);
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [employee]);
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, [employee?.id]);
 
   return {
     notifications,
