@@ -21,6 +21,7 @@ import QualityAssessmentReports from "@/components/finance/QualityAssessmentRepo
 import CashManagementDashboard from "@/components/finance/CashManagementDashboard";
 import { FinanceSidebar } from "@/components/finance/FinanceSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import Layout from "@/components/Layout";
 
 const Finance = () => {
   const {
@@ -376,134 +377,138 @@ const Finance = () => {
   };
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full bg-background">
-        <FinanceSidebar 
-          currentSection={currentSection}
-          onSectionChange={setCurrentSection}
-        />
-        
-        <main className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-6">
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className="text-2xl font-bold">Finance Dashboard</h1>
-                <p className="text-sm text-muted-foreground">Comprehensive financial management and reporting</p>
+    <Layout title="Finance Dashboard" subtitle="Comprehensive financial management and reporting">
+      <SidebarProvider defaultOpen={true}>
+        <div className="min-h-screen flex w-full bg-background">
+          <FinanceSidebar 
+            currentSection={currentSection}
+            onSectionChange={setCurrentSection}
+          />
+          
+          <main className="flex-1 flex flex-col">
+            {/* Header */}
+            <header className="h-16 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-6">
+              <div className="flex items-center gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold">Finance Management</h1>
+                  <p className="text-sm text-muted-foreground">Financial operations and control center</p>
+                </div>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <Button
-                size="sm"
-                onClick={() => {
-                  const issueReceiptButton = document.querySelector('[data-action="issue-receipt"]');
-                  if (issueReceiptButton) {
-                    (issueReceiptButton as HTMLElement).click();
-                  }
-                }}
-                className="hidden md:flex items-center gap-2"
-              >
-                <Receipt className="h-4 w-4" />
-                Issue Receipt
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setAdvanceModalOpen(true)}
-                className="hidden md:flex items-center gap-2"
-              >
-                <DollarSign className="h-4 w-4" />
-                Give Advance
-              </Button>
-            </div>
-          </header>
+              
+              <div className="flex items-center gap-4">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const issueReceiptButton = document.querySelector('[data-action="issue-receipt"]');
+                    if (issueReceiptButton) {
+                      (issueReceiptButton as HTMLElement).click();
+                    }
+                  }}
+                  className="hidden md:flex items-center gap-2"
+                >
+                  <Receipt className="h-4 w-4" />
+                  Issue Receipt
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setAdvanceModalOpen(true)}
+                  className="hidden md:flex items-center gap-2"
+                >
+                  <DollarSign className="h-4 w-4" />
+                  Give Advance
+                </Button>
+              </div>
+            </header>
 
-          {/* Content Area */}
-          <div className="flex-1 p-6">
-            
-            {/* Key Metrics Dashboard */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-green-700">Monthly Revenue</p>
-                      <p className="text-2xl font-bold text-green-900">{formatCurrency(stats.monthlyRevenue)}</p>
-                      <p className="text-xs text-green-600 mt-1">+12.5% from last month</p>
+            {/* Content Area */}
+            <div className="flex-1 p-6">
+              
+              {/* Key Metrics Dashboard */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-green-700">Monthly Revenue</p>
+                        <p className="text-2xl font-bold text-green-900">{formatCurrency(stats.monthlyRevenue)}</p>
+                        <p className="text-xs text-green-600 flex items-center mt-1">
+                          <TrendingUp className="h-3 w-3 mr-1" />
+                          +15.2%
+                        </p>
+                      </div>
+                      <DollarSign className="h-8 w-8 text-green-600" />
                     </div>
-                    <div className="h-12 w-12 bg-green-500 rounded-full flex items-center justify-center">
-                      <TrendingUp className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-amber-700">Pending Payments</p>
-                      <p className="text-2xl font-bold text-amber-900">{formatCurrency(stats.pendingPayments)}</p>
-                      <p className="text-xs text-amber-600 mt-1">{pendingPayments.length} transactions</p>
+                <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-amber-700">Pending Payments</p>
+                        <p className="text-2xl font-bold text-amber-900">{pendingPayments.length}</p>
+                        <p className="text-xs text-amber-600 flex items-center mt-1">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatCurrency(pendingPayments.reduce((sum, p) => sum + (p.paid_amount || p.amount || 0), 0))}
+                        </p>
+                      </div>
+                      <CreditCard className="h-8 w-8 text-amber-600" />
                     </div>
-                    <div className="h-12 w-12 bg-amber-500 rounded-full flex items-center justify-center">
-                      <Clock className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-blue-700">Cash Flow</p>
-                      <p className="text-2xl font-bold text-blue-900">{formatCurrency(stats.netCashFlow)}</p>
-                      <p className="text-xs text-blue-600 mt-1">Net flow today</p>
+                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-blue-700">Cash Flow</p>
+                        <p className="text-2xl font-bold text-blue-900">{formatCurrency(stats.netCashFlow || 0)}</p>
+                        <p className="text-xs text-blue-600 flex items-center mt-1">
+                          <Activity className="h-3 w-3 mr-1" />
+                          Weekly avg
+                        </p>
+                      </div>
+                      <TrendingUp className="h-8 w-8 text-blue-600" />
                     </div>
-                    <div className="h-12 w-12 bg-blue-500 rounded-full flex items-center justify-center">
-                      <Activity className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-purple-700">Available Cash</p>
-                      <p className="text-2xl font-bold text-purple-900">{formatCurrency(stats.cashOnHand)}</p>
-                      <p className="text-xs text-purple-600 mt-1">Including float</p>
+                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-purple-700">Available Cash</p>
+                        <p className="text-2xl font-bold text-purple-900">{formatCurrency(stats.cashOnHand)}</p>
+                        <p className="text-xs text-purple-600 flex items-center mt-1">
+                          <Wallet className="h-3 w-3 mr-1" />
+                          On hand
+                        </p>
+                      </div>
+                      <Banknote className="h-8 w-8 text-purple-600" />
                     </div>
-                    <div className="h-12 w-12 bg-purple-500 rounded-full flex items-center justify-center">
-                      <Wallet className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-            {/* Main Content */}
-            <div className="space-y-6">
+              {/* Main Content */}
               {renderMainContent()}
             </div>
-          </div>
-        </main>
+          </main>
+        </div>
 
         {/* Modals */}
         <SupplierAdvanceModal 
           open={advanceModalOpen}
           onClose={() => setAdvanceModalOpen(false)}
         />
-        
+
         <AdvanceClearingModal 
           open={clearingModalOpen}
           onClose={() => setClearingModalOpen(false)}
         />
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </Layout>
   );
 };
 
