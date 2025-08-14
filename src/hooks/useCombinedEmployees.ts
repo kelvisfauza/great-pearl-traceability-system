@@ -31,7 +31,7 @@ export const useCombinedEmployees = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Get data from both sources
+  // Primary: Firebase (more reliable for role management)
   const { 
     employees: firebaseEmployees, 
     loading: firebaseLoading,
@@ -40,18 +40,22 @@ export const useCombinedEmployees = () => {
     deleteEmployee: deleteFirebaseEmployee
   } = useFirebaseEmployees();
   
+  // Secondary: Supabase (for data sync)
   const { 
     employees: supabaseEmployees, 
     loading: supabaseLoading,
     refetch: refetchSupabase
   } = useSupabaseEmployees();
 
-  // Combine and deduplicate employees from both sources
+  // Prioritize Firebase data, supplement with Supabase
   useEffect(() => {
-    if (!firebaseLoading && !supabaseLoading) {
+    if (!firebaseLoading) {
+      console.log('🔥 Firebase employees loaded:', firebaseEmployees.length);
+      
+      // Use Firebase as primary data source
       const emailMap = new Map<string, CombinedEmployee>();
       
-      // Add Firebase employees first
+      // Add Firebase employees first (they have priority)
       firebaseEmployees.forEach(emp => {
         emailMap.set(emp.email.toLowerCase(), {
           ...emp,
@@ -60,61 +64,55 @@ export const useCombinedEmployees = () => {
         } as CombinedEmployee);
       });
       
-      // Add or merge Supabase employees
-      supabaseEmployees.forEach(emp => {
-        const emailKey = emp.email.toLowerCase();
-        const existingEmp = emailMap.get(emailKey);
+      // Add Supabase employees only if not in Firebase
+      if (!supabaseLoading) {
+        console.log('📊 Supabase employees loaded:', supabaseEmployees.length);
         
-        if (existingEmp) {
-          // Merge data from both sources, prioritizing Supabase for newer data
-          emailMap.set(emailKey, {
-            ...existingEmp,
-            ...emp,
-            source: 'both',
-            // Keep the more recent data based on updated_at
-            ...(emp.updated_at && existingEmp.updated_at && 
-               new Date(emp.updated_at) > new Date(existingEmp.updated_at) ? emp : {})
-          });
-        } else {
-          emailMap.set(emailKey, {
-            ...emp,
-            source: 'supabase'
-          } as CombinedEmployee);
-        }
-      });
+        supabaseEmployees.forEach(emp => {
+          const emailKey = emp.email.toLowerCase();
+          const existingEmp = emailMap.get(emailKey);
+          
+          if (existingEmp) {
+            // Mark as existing in both systems
+            emailMap.set(emailKey, {
+              ...existingEmp,
+              source: 'both'
+            });
+          } else {
+            // Only in Supabase
+            emailMap.set(emailKey, {
+              ...emp,
+              source: 'supabase'
+            } as CombinedEmployee);
+          }
+        });
+      }
       
       const merged = Array.from(emailMap.values()).sort((a, b) => 
         a.name.localeCompare(b.name)
       );
       
+      console.log('👥 Combined employees:', merged.length);
       setCombinedEmployees(merged);
       setLoading(false);
     }
   }, [firebaseEmployees, supabaseEmployees, firebaseLoading, supabaseLoading]);
 
-  // Dual-write operations - write to both systems for redundancy
+  // Use Firebase for all employee operations (more reliable)
   const addEmployee = async (employeeData: any) => {
-    const results = [];
-    
     try {
-      // Try both systems simultaneously
-      const [supabaseResult, firebaseResult] = await Promise.allSettled([
-        // Supabase add (would need to implement)
-        Promise.resolve(), // Placeholder for now
-        addFirebaseEmployee(employeeData)
-      ]);
+      console.log('➕ Adding employee via Firebase...');
+      await addFirebaseEmployee(employeeData);
       
-      if (supabaseResult.status === 'fulfilled' || firebaseResult.status === 'fulfilled') {
-        toast({
-          title: "Success",
-          description: "Employee added successfully",
-        });
-        await refetchSupabase();
-      } else {
-        throw new Error('Failed to add to both systems');
-      }
+      toast({
+        title: "Success",
+        description: "Employee added successfully",
+      });
+      
+      // Optional: Try to sync to Supabase
+      await refetchSupabase();
     } catch (error) {
-      console.error('Error adding employee:', error);
+      console.error('❌ Error adding employee:', error);
       toast({
         title: "Error",
         description: "Failed to add employee",
@@ -125,31 +123,19 @@ export const useCombinedEmployees = () => {
   };
 
   const updateEmployee = async (id: string, employeeData: any) => {
-    const employee = combinedEmployees.find(emp => emp.id === id);
-    const source = employee?.source;
-    
     try {
-      if (source === 'both') {
-        // Update in both systems
-        await Promise.allSettled([
-          updateFirebaseEmployee(id, employeeData),
-          // Supabase update (would need to implement)
-          Promise.resolve()
-        ]);
-      } else if (source === 'firebase') {
-        await updateFirebaseEmployee(id, employeeData);
-      } else {
-        // Supabase only (would need to implement)
-        console.log('Update Supabase employee:', id, employeeData);
-      }
+      console.log('📝 Updating employee via Firebase...', id);
+      await updateFirebaseEmployee(id, employeeData);
       
       toast({
         title: "Success",
         description: "Employee updated successfully",
       });
+      
+      // Optional: Try to sync to Supabase
       await refetchSupabase();
     } catch (error) {
-      console.error('Error updating employee:', error);
+      console.error('❌ Error updating employee:', error);
       toast({
         title: "Error",
         description: "Failed to update employee",
@@ -160,31 +146,19 @@ export const useCombinedEmployees = () => {
   };
 
   const deleteEmployee = async (id: string) => {
-    const employee = combinedEmployees.find(emp => emp.id === id);
-    const source = employee?.source;
-    
     try {
-      if (source === 'both') {
-        // Delete from both systems
-        await Promise.allSettled([
-          deleteFirebaseEmployee(id),
-          // Supabase delete (would need to implement)
-          Promise.resolve()
-        ]);
-      } else if (source === 'firebase') {
-        await deleteFirebaseEmployee(id);
-      } else {
-        // Supabase only (would need to implement)
-        console.log('Delete Supabase employee:', id);
-      }
+      console.log('🗑️ Deleting employee via Firebase...', id);
+      await deleteFirebaseEmployee(id);
       
       toast({
         title: "Success",
         description: "Employee deleted successfully",
       });
+      
+      // Optional: Try to sync to Supabase
       await refetchSupabase();
     } catch (error) {
-      console.error('Error deleting employee:', error);
+      console.error('❌ Error deleting employee:', error);
       toast({
         title: "Error",
         description: "Failed to delete employee",
@@ -194,7 +168,7 @@ export const useCombinedEmployees = () => {
     }
   };
 
-  // Fast search function that searches both datasets
+  // Fast search function
   const searchEmployees = (query: string) => {
     const lowercaseQuery = query.toLowerCase();
     return combinedEmployees.filter(emp => 
@@ -205,7 +179,7 @@ export const useCombinedEmployees = () => {
     );
   };
 
-  // Get employee by email from either system
+  // Get employee by email
   const getEmployeeByEmail = (email: string) => {
     return combinedEmployees.find(emp => 
       emp.email.toLowerCase() === email.toLowerCase()
@@ -214,15 +188,15 @@ export const useCombinedEmployees = () => {
 
   return {
     employees: combinedEmployees,
-    loading: loading || firebaseLoading || supabaseLoading,
+    loading: loading || firebaseLoading,
     addEmployee,
     updateEmployee,
     deleteEmployee,
     searchEmployees,
     getEmployeeByEmail,
     refetch: async () => {
+      // Firebase will auto-refresh through real-time listeners
       await refetchSupabase();
-      // Firebase will auto-refresh through its real-time listeners
     },
     // Stats for debugging
     stats: {
