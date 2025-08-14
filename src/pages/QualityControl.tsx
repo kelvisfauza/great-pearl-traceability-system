@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
+import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator";
 const QualityControl = () => {
   const {
     storeRecords,
@@ -619,10 +620,11 @@ const QualityControl = () => {
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="pending">Pending Assessment ({pendingRecords.length})</TabsTrigger>
             <TabsTrigger value="modifications">Modification Requests ({pendingModificationRequests.length})</TabsTrigger>
             <TabsTrigger value="assessments">Quality Assessments ({qualityAssessments.length})</TabsTrigger>
+            <TabsTrigger value="price-calculator">Arabica Price Calculator</TabsTrigger>
             <TabsTrigger value="assessment-form" disabled={!selectedRecord}>
               {selectedRecord ? 'Assessment Form' : 'Select Record First'}
             </TabsTrigger>
@@ -828,6 +830,20 @@ const QualityControl = () => {
                     </TableBody>
                   </Table>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="price-calculator">
+            <Card>
+              <CardHeader>
+                <CardTitle>Arabica Price Calculator</CardTitle>
+                <CardDescription>
+                  Professional coffee quality assessment and pricing calculation tool
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ArabicaPriceCalculator />
               </CardContent>
             </Card>
           </TabsContent>
