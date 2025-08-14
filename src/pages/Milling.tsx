@@ -12,6 +12,7 @@ import MillingCashTransactionForm from '@/components/milling/MillingCashTransact
 import MillingReports from '@/components/milling/MillingReports';
 import MillingTransactionsList from '@/components/milling/MillingTransactionsList';
 import MillingCustomersList from '@/components/milling/MillingCustomersList';
+import MillingPrintReportModal from '@/components/milling/MillingPrintReportModal';
 
 const Milling = () => {
   const { stats, loading, customers, transactions, getReportData } = useMillingData();
@@ -19,6 +20,7 @@ const Milling = () => {
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showCashTransactionForm, setShowCashTransactionForm] = useState(false);
   const [showReports, setShowReports] = useState(false);
+  const [showPrintReport, setShowPrintReport] = useState(false);
 
   const statsCards = [
     {
@@ -152,38 +154,8 @@ const Milling = () => {
                   Generate Report
                 </Button>
                 <Button 
+                  onClick={() => setShowPrintReport(true)}
                   variant="outline" 
-                  onClick={() => {
-                    const reportData = getReportData('monthly');
-                    const printContent = `
-MILLING DEPARTMENT REPORT
-=========================
-Generated: ${new Date().toLocaleString()}
-
-SUMMARY:
-- Total Customers: ${stats.totalCustomers}
-- Active Customers: ${stats.activeCustomers}
-- Total Debts: UGX ${stats.totalDebts.toLocaleString()}
-- Cash Received (This Month): UGX ${stats.cashReceived.toLocaleString()}
-- KGs Hulled (This Month): ${stats.totalKgsHulled.toLocaleString()} kg
-
-RECENT TRANSACTIONS:
-${transactions.slice(0, 10).map(t => 
-  `${t.date} - ${t.customer_name} - ${t.kgs_hulled}kg - UGX ${t.total_amount.toLocaleString()}`
-).join('\n')}
-
-CUSTOMER BALANCES:
-${customers.filter(c => c.current_balance > 0).map(c => 
-  `${c.full_name} - UGX ${c.current_balance.toLocaleString()}`
-).join('\n')}
-                    `;
-                    const printWindow = window.open('', '_blank');
-                    if (printWindow) {
-                      printWindow.document.write(`<pre style="font-family: monospace; white-space: pre-wrap;">${printContent}</pre>`);
-                      printWindow.document.close();
-                      printWindow.print();
-                    }
-                  }}
                   className="flex items-center gap-2"
                 >
                   <FileText className="h-4 w-4" />
@@ -214,6 +186,13 @@ ${customers.filter(c => c.current_balance > 0).map(c =>
           <MillingCashTransactionForm
             open={showCashTransactionForm}
             onClose={() => setShowCashTransactionForm(false)}
+          />
+        )}
+
+        {showPrintReport && (
+          <MillingPrintReportModal
+            open={showPrintReport}
+            onClose={() => setShowPrintReport(false)}
           />
         )}
       </div>
