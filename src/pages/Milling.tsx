@@ -14,7 +14,7 @@ import MillingTransactionsList from '@/components/milling/MillingTransactionsLis
 import MillingCustomersList from '@/components/milling/MillingCustomersList';
 
 const Milling = () => {
-  const { stats, loading } = useMillingData();
+  const { stats, loading, customers, transactions, getReportData } = useMillingData();
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showCashTransactionForm, setShowCashTransactionForm] = useState(false);
@@ -100,10 +100,10 @@ const Milling = () => {
         {/* Main Tabs */}
         <Tabs defaultValue="transactions" className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="customers">Customers</TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
+            <TabsTrigger value="transactions" className="font-bold">Transactions</TabsTrigger>
+            <TabsTrigger value="customers" className="font-bold">Customers</TabsTrigger>
+            <TabsTrigger value="payments" className="font-bold">Payments</TabsTrigger>
+            <TabsTrigger value="reports" className="font-bold">Reports</TabsTrigger>
           </TabsList>
 
           <TabsContent value="transactions" className="space-y-4">
@@ -146,10 +146,50 @@ const Milling = () => {
           <TabsContent value="reports" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Reports & Analytics</h2>
-              <Button onClick={() => setShowReports(true)} className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Generate Report
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowReports(true)} className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Generate Report
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    const reportData = getReportData('monthly');
+                    const printContent = `
+MILLING DEPARTMENT REPORT
+=========================
+Generated: ${new Date().toLocaleString()}
+
+SUMMARY:
+- Total Customers: ${stats.totalCustomers}
+- Active Customers: ${stats.activeCustomers}
+- Total Debts: UGX ${stats.totalDebts.toLocaleString()}
+- Cash Received (This Month): UGX ${stats.cashReceived.toLocaleString()}
+- KGs Hulled (This Month): ${stats.totalKgsHulled.toLocaleString()} kg
+
+RECENT TRANSACTIONS:
+${transactions.slice(0, 10).map(t => 
+  `${t.date} - ${t.customer_name} - ${t.kgs_hulled}kg - UGX ${t.total_amount.toLocaleString()}`
+).join('\n')}
+
+CUSTOMER BALANCES:
+${customers.filter(c => c.current_balance > 0).map(c => 
+  `${c.full_name} - UGX ${c.current_balance.toLocaleString()}`
+).join('\n')}
+                    `;
+                    const printWindow = window.open('', '_blank');
+                    if (printWindow) {
+                      printWindow.document.write(`<pre style="font-family: monospace; white-space: pre-wrap;">${printContent}</pre>`);
+                      printWindow.document.close();
+                      printWindow.print();
+                    }
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Print Report
+                </Button>
+              </div>
             </div>
             <MillingReports />
           </TabsContent>
