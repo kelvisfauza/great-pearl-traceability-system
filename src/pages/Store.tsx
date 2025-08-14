@@ -77,7 +77,8 @@ const Store = () => {
     batchNumber: ''
   });
 
-  // GRN Print Modal State
+  // Modal states
+  const [showAddRecordModal, setShowAddRecordModal] = useState(false);
   const [showGRNModal, setShowGRNModal] = useState(false);
   const [selectedGRNData, setSelectedGRNData] = useState(null);
 
@@ -395,6 +396,12 @@ const Store = () => {
                   </div>
                   <div className="flex gap-2">
                     <Button 
+                      onClick={() => setShowAddRecordModal(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Coffee Delivery Record
+                    </Button>
+                    <Button 
                       variant="outline" 
                       size="sm"
                       onClick={handlePrintAllRecords}
@@ -493,81 +500,6 @@ const Store = () => {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Add Coffee Delivery Record</CardTitle>
-                <CardDescription>Record new coffee delivery from suppliers</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="coffee-type">Coffee Type *</Label>
-                    <Select value={newRecord.coffeeType} onValueChange={(value) => setNewRecord({...newRecord, coffeeType: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select coffee type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="arabica">Arabica</SelectItem>
-                        <SelectItem value="robusta">Robusta</SelectItem>
-                        <SelectItem value="mixed">Mixed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="supplier-name">Supplier Name *</Label>
-                    <Select value={newRecord.supplierName} onValueChange={(value) => setNewRecord({...newRecord, supplierName: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select supplier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {suppliers.map((supplier) => (
-                          <SelectItem key={supplier.id} value={supplier.name}>
-                            {supplier.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="delivery-date">Delivery Date *</Label>
-                    <Input
-                      id="delivery-date"
-                      type="date"
-                      value={newRecord.date}
-                      onChange={(e) => setNewRecord({...newRecord, date: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="kilograms">Kilograms *</Label>
-                    <Input
-                      id="kilograms"
-                      type="number"
-                      value={newRecord.kilograms}
-                      onChange={(e) => setNewRecord({...newRecord, kilograms: e.target.value})}
-                      placeholder="Enter weight in kg"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="bags">Number of Bags *</Label>
-                    <Input
-                      id="bags"
-                      type="number"
-                      value={newRecord.bags}
-                      onChange={(e) => setNewRecord({...newRecord, bags: e.target.value})}
-                      placeholder="Enter number of bags"
-                    />
-                  </div>
-                </div>
-                <Button 
-                  onClick={handleSubmitRecord} 
-                  className="w-full md:w-auto"
-                  disabled={submittingRecord}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {submittingRecord ? "Saving..." : "Add Coffee Record"}
-                </Button>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* EUDR Documentation Tab */}
@@ -794,6 +726,96 @@ const Store = () => {
               </Button>
               <Button onClick={handleUpdateRecord}>
                 Update Record
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Coffee Delivery Record Modal */}
+        <Dialog open={showAddRecordModal} onOpenChange={setShowAddRecordModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Coffee Delivery Record</DialogTitle>
+              <DialogDescription>
+                Record new coffee delivery from suppliers
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="coffee-type">Coffee Type *</Label>
+                  <Select value={newRecord.coffeeType} onValueChange={(value) => setNewRecord({...newRecord, coffeeType: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select coffee type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="arabica">Arabica</SelectItem>
+                      <SelectItem value="robusta">Robusta</SelectItem>
+                      <SelectItem value="mixed">Mixed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="supplier-name">Supplier Name *</Label>
+                  <Select value={newRecord.supplierName} onValueChange={(value) => setNewRecord({...newRecord, supplierName: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.name}>
+                          {supplier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="delivery-date">Delivery Date *</Label>
+                  <Input
+                    id="delivery-date"
+                    type="date"
+                    value={newRecord.date}
+                    onChange={(e) => setNewRecord({...newRecord, date: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="kilograms">Kilograms *</Label>
+                  <Input
+                    id="kilograms"
+                    type="number"
+                    value={newRecord.kilograms}
+                    onChange={(e) => setNewRecord({...newRecord, kilograms: e.target.value})}
+                    placeholder="Enter weight in kg"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="bags">Number of Bags *</Label>
+                  <Input
+                    id="bags"
+                    type="number"
+                    value={newRecord.bags}
+                    onChange={(e) => setNewRecord({...newRecord, bags: e.target.value})}
+                    placeholder="Enter number of bags"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAddRecordModal(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={async () => {
+                  await handleSubmitRecord();
+                  if (!submittingRecord) {
+                    setShowAddRecordModal(false);
+                  }
+                }}
+                disabled={submittingRecord}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {submittingRecord ? "Saving..." : "Add Coffee Record"}
               </Button>
             </DialogFooter>
           </DialogContent>
