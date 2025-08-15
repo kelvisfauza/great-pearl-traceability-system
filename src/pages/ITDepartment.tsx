@@ -37,6 +37,7 @@ import BackupManagement from '@/components/it/BackupManagement';
 import NetworkMonitoring from '@/components/it/NetworkMonitoring';
 import TicketSystem from '@/components/it/TicketSystem';
 import SystemMaintenance from '@/components/it/SystemMaintenance';
+import DeletionRequestsManager from '@/components/admin/DeletionRequestsManager';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
@@ -144,8 +145,9 @@ const ITDepartment = () => {
 
         <Tabs defaultValue="errors" className="space-y-6">
 
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="errors">Error Dashboard</TabsTrigger>
+            <TabsTrigger value="deletions">Deletions</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="backup">Backup</TabsTrigger>
@@ -156,6 +158,10 @@ const ITDepartment = () => {
 
           <TabsContent value="errors" className="space-y-4">
             <ErrorDashboard />
+          </TabsContent>
+
+          <TabsContent value="deletions" className="space-y-4">
+            <DeletionRequestsManager />
           </TabsContent>
 
           <TabsContent value="security">

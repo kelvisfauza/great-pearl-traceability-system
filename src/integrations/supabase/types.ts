@@ -374,6 +374,57 @@ export type Database = {
         }
         Relationships: []
       }
+      deletion_requests: {
+        Row: {
+          admin_comments: string | null
+          created_at: string | null
+          id: string
+          reason: string
+          record_data: Json
+          record_id: string
+          requested_at: string | null
+          requested_by: string
+          requested_by_department: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          table_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_comments?: string | null
+          created_at?: string | null
+          id?: string
+          reason: string
+          record_data: Json
+          record_id: string
+          requested_at?: string | null
+          requested_by: string
+          requested_by_department: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          table_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_comments?: string | null
+          created_at?: string | null
+          id?: string
+          reason?: string
+          record_data?: Json
+          record_id?: string
+          requested_at?: string | null
+          requested_by?: string
+          requested_by_department?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          table_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           address: string | null
@@ -1633,6 +1684,10 @@ export type Database = {
     Functions: {
       "great pearl": {
         Args: { conversation_id: string }
+        Returns: boolean
+      }
+      is_current_user_admin: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
     }
