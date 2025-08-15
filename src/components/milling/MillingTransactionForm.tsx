@@ -26,6 +26,7 @@ const MillingTransactionForm = ({ open, onClose }: MillingTransactionFormProps) 
   const [loading, setLoading] = useState(false);
   const [showNewForm, setShowNewForm] = useState(false);
   const [date, setDate] = useState<Date>(new Date());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [formData, setFormData] = useState({
     customer_id: '',
     customer_name: '',
@@ -167,7 +168,7 @@ const MillingTransactionForm = ({ open, onClose }: MillingTransactionFormProps) 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="date">Date *</Label>
-                  <Popover>
+                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -184,20 +185,14 @@ const MillingTransactionForm = ({ open, onClose }: MillingTransactionFormProps) 
                       <Calendar
                         mode="single"
                         selected={date}
-                        onSelect={(date) => {
-                          if (date) {
-                            setDate(date);
-                            // Close the popover after selection
-                            setTimeout(() => {
-                              const popoverTrigger = document.querySelector('[data-state="open"][role="button"]');
-                              if (popoverTrigger) {
-                                (popoverTrigger as HTMLElement).click();
-                              }
-                            }, 100);
+                        onSelect={(selectedDate) => {
+                          if (selectedDate) {
+                            setDate(selectedDate);
+                            setDatePickerOpen(false);
                           }
                         }}
                         initialFocus
-                        className="pointer-events-auto"
+                        className="p-3 pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
