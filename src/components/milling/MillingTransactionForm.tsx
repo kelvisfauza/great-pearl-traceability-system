@@ -184,7 +184,18 @@ const MillingTransactionForm = ({ open, onClose }: MillingTransactionFormProps) 
                       <Calendar
                         mode="single"
                         selected={date}
-                        onSelect={(date) => date && setDate(date)}
+                        onSelect={(date) => {
+                          if (date) {
+                            setDate(date);
+                            // Close the popover after selection
+                            setTimeout(() => {
+                              const popoverTrigger = document.querySelector('[data-state="open"][role="button"]');
+                              if (popoverTrigger) {
+                                (popoverTrigger as HTMLElement).click();
+                              }
+                            }, 100);
+                          }
+                        }}
                         initialFocus
                         className="pointer-events-auto"
                       />

@@ -1,11 +1,17 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { useMillingData } from '@/hooks/useMillingData';
+import MillingTransactionEditModal from './MillingTransactionEditModal';
 
 const MillingTransactionsList = () => {
   const { transactions, loading } = useMillingData();
+  const [editTransaction, setEditTransaction] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   if (loading) {
     return (
@@ -40,6 +46,7 @@ const MillingTransactionsList = () => {
                   <TableHead>Amount Paid</TableHead>
                   <TableHead>Balance</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -65,6 +72,19 @@ const MillingTransactionsList = () => {
                         {transaction.balance > 0 ? 'Pending' : 'Paid'}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditTransaction(transaction);
+                          setEditModalOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -72,6 +92,15 @@ const MillingTransactionsList = () => {
           </div>
         )}
       </CardContent>
+      
+      <MillingTransactionEditModal
+        open={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setEditTransaction(null);
+        }}
+        transaction={editTransaction}
+      />
     </Card>
   );
 };
