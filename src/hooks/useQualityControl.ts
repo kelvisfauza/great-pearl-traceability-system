@@ -239,11 +239,49 @@ export const useQualityControl = () => {
         throw new Error('Coffee record not found');
       }
 
+      // First, ensure the coffee record exists in Supabase
+      const { data: existingCoffeeRecord, error: checkError } = await supabase
+        .from('coffee_records')
+        .select('id')
+        .eq('id', assessment.store_record_id)
+        .single();
+
+      let coffeeRecordId = assessment.store_record_id;
+
+      // If coffee record doesn't exist in Supabase, create it
+      if (checkError && checkError.code === 'PGRST116') {
+        console.log('Coffee record not found in Supabase, creating it...');
+        const { data: newCoffeeRecord, error: createError } = await supabase
+          .from('coffee_records')
+          .insert([{
+            id: coffeeRecord.id,
+            date: coffeeRecord.date,
+            kilograms: coffeeRecord.kilograms,
+            bags: coffeeRecord.bags,
+            supplier_name: coffeeRecord.supplier_name,
+            coffee_type: coffeeRecord.coffee_type,
+            batch_number: coffeeRecord.batch_number,
+            status: coffeeRecord.status
+          }])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating coffee record in Supabase:', createError);
+          throw createError;
+        }
+        coffeeRecordId = newCoffeeRecord.id;
+        console.log('Coffee record created in Supabase successfully');
+      } else if (checkError) {
+        console.error('Error checking coffee record:', checkError);
+        throw checkError;
+      }
+
       // Create assessment record in Supabase
       const { data: newAssessment, error: insertError } = await supabase
         .from('quality_assessments')
         .insert([{
-          store_record_id: assessment.store_record_id,
+          store_record_id: coffeeRecordId,
           batch_number: assessment.batch_number,
           moisture: assessment.moisture || 0,
           group1_defects: assessment.group1_defects || 0,
@@ -252,17 +290,6 @@ export const useQualityControl = () => {
           pods: assessment.pods || 0,
           husks: assessment.husks || 0,
           stones: assessment.stones || 0,
-          discretion: assessment.discretion || 0,
-          ref_price: assessment.ref_price || 0,
-          fm: assessment.fm || 0,
-          actual_ott: assessment.actual_ott || 0,
-          clean_d14: assessment.clean_d14 || 0,
-          outturn: assessment.outturn || 0,
-          outturn_price: assessment.outturn_price || 0,
-          final_price: assessment.final_price || 0,
-          quality_note: assessment.quality_note || '',
-          reject_outturn_price: assessment.reject_outturn_price || false,
-          reject_final: assessment.reject_final || false,
           suggested_price: assessment.manual_price ? parseFloat(assessment.manual_price) : assessment.final_price || 0,
           status: 'assessed',
           comments: assessment.comments || null,
@@ -365,9 +392,26 @@ export const useQualityControl = () => {
     try {
       console.log('Submitting assessment to finance:', assessmentId);
       
-      await updateQualityAssessment(assessmentId, { 
-        status: 'submitted_to_finance'
-      });
+      // Update assessment status in Supabase
+      const { error: updateError } = await supabase
+        .from('quality_assessments')
+        .update({ 
+          status: 'submitted_to_finance',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', assessmentId);
+
+      if (updateError) {
+        console.error('Error updating assessment status:', updateError);
+        throw updateError;
+      }
+      
+      // Update local state
+      setQualityAssessments(assessments => 
+        assessments.map(assessment => 
+          assessment.id === assessmentId ? { ...assessment, status: 'submitted_to_finance' } : assessment
+        )
+      );
       
       // Notify Finance submission
       await createAnnouncement(
