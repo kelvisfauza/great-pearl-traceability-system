@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useProcurementRecommendations } from '@/hooks/useProcurementRecommendations';
 import { RejectionModal } from './workflow/RejectionModal';
 import { WorkflowTracker } from './workflow/WorkflowTracker';
-import { DetailedWorkflowView } from './workflow/DetailedWorkflowView';
+import { DynamicDetailedView } from './workflow/DynamicDetailedView';
 import { AuditPrintModal } from './workflow/AuditPrintModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -410,9 +410,8 @@ const ApprovalCenter = () => {
             <DialogTitle>Complete Request Review</DialogTitle>
           </DialogHeader>
           {selectedRequest && (
-            <DetailedWorkflowView
-              requestId={selectedRequest.id}
-              paymentId={selectedPaymentId || undefined}
+            <DynamicDetailedView
+              request={selectedRequest}
               onApprove={handleDetailedApproval}
               onReject={handleDetailedRejection}
               onPrint={handlePrintAudit}
