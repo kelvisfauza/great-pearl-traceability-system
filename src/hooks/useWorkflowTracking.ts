@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { collection, addDoc, query, where, getDocs, updateDoc, doc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/hooks/useNotifications';
 
@@ -91,6 +92,33 @@ export const useWorkflowTracking = () => {
       });
       
       console.log('Workflow step tracked with ID:', docRef.id);
+      
+      // Also try to save to Supabase workflow_steps table
+      try {
+        const { data, error } = await supabase
+          .from('workflow_steps')
+          .insert({
+            payment_id: stepData.paymentId,
+            quality_assessment_id: stepData.qualityAssessmentId,
+            from_department: stepData.fromDepartment,
+            to_department: stepData.toDepartment,
+            action: stepData.action,
+            reason: stepData.reason,
+            comments: stepData.comments,
+            processed_by: stepData.processedBy,
+            status: stepData.status,
+            timestamp: new Date().toISOString()
+          });
+        
+        if (error) {
+          console.warn('Failed to save workflow step to Supabase:', error);
+        } else {
+          console.log('Workflow step also saved to Supabase');
+        }
+      } catch (supabaseError) {
+        console.warn('Supabase workflow tracking error:', supabaseError);
+      }
+      
       await fetchWorkflowData();
     } catch (error) {
       console.error('Error tracking workflow step:', error);

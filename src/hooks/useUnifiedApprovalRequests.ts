@@ -243,18 +243,24 @@ export const useUnifiedApprovalRequests = () => {
         }
       }
 
-      // Track workflow step
-      await trackWorkflowStep({
-        paymentId: request.originalPaymentId || request.details?.paymentId || request.id,
-        qualityAssessmentId: request.qualityAssessmentId || request.details?.qualityAssessmentId,
-        fromDepartment: 'Admin',
-        toDepartment: status === 'Approved' ? 'Operations' : request.department,
-        action: status === 'Approved' ? 'approved' : 'rejected',
-        reason: rejectionReason,
-        comments: rejectionComments,
-        processedBy: 'Operations Manager',
-        status: 'completed'
-      });
+      // Track workflow step with error handling
+      try {
+        await trackWorkflowStep({
+          paymentId: request.originalPaymentId || request.details?.paymentId || request.id,
+          qualityAssessmentId: request.qualityAssessmentId || request.details?.qualityAssessmentId,
+          fromDepartment: 'Admin',
+          toDepartment: status === 'Approved' ? 'Operations' : request.department,
+          action: status === 'Approved' ? 'approved' : 'rejected',
+          reason: rejectionReason,
+          comments: rejectionComments,
+          processedBy: 'Operations Manager',
+          status: 'completed'
+        });
+        console.log('Workflow step tracked successfully');
+      } catch (error) {
+        console.error('Warning: Failed to track workflow step:', error);
+        // Don't fail the approval process if workflow tracking fails
+      }
 
       // Remove from local state
       setRequests(prev => prev.filter(req => req.id !== request.id));
