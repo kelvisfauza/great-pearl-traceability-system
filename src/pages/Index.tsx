@@ -5,7 +5,7 @@ import DashboardStats from '@/components/DashboardStats';
 import QuickActions from '@/components/QuickActions';
 import RecentActivity from '@/components/RecentActivity';
 import PerformanceOverview from '@/components/PerformanceOverview';
-import ApprovalRequests from '@/components/ApprovalRequests';
+import ApprovalCenter from '@/components/ApprovalCenter';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import DynamicHeader from '@/components/DynamicHeader';
@@ -136,7 +136,7 @@ const Index = () => {
                   gradient="from-red-500 to-rose-600"
                 />
                 <div className="bg-gradient-to-br from-white/95 via-red-50/60 to-rose-50/50 dark:from-slate-800/95 dark:via-red-950/40 dark:to-rose-950/30 backdrop-blur-xl border border-red-200/60 dark:border-red-800/40 rounded-3xl p-6 md:p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.005] hover:border-red-300/60 dark:hover:border-red-700/50">
-                  <ApprovalRequests />
+                  <ApprovalCenter />
                 </div>
               </div>
             )}

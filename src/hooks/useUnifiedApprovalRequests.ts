@@ -1,0 +1,280 @@
+import { useState, useEffect } from 'react';
+import { collection, getDocs, query, orderBy, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
+import { useWorkflowTracking } from './useWorkflowTracking';
+import { useNotifications } from './useNotifications';
+
+export interface UnifiedApprovalRequest {
+  id: string;
+  type: 'general' | 'modification' | 'deletion';
+  source: 'supabase' | 'firebase';
+  department: string;
+  requestType: string;
+  title: string;
+  description: string;
+  amount: string | number;
+  requestedBy: string;
+  dateRequested: string;
+  priority: string;
+  status: string;
+  details?: any;
+  createdAt: string;
+  updatedAt: string;
+  batchNumber?: string;
+  targetDepartment?: string;
+  reason?: string;
+  comments?: string;
+  originalPaymentId?: string;
+  qualityAssessmentId?: string;
+}
+
+export const useUnifiedApprovalRequests = () => {
+  const [requests, setRequests] = useState<UnifiedApprovalRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { trackWorkflowStep } = useWorkflowTracking();
+  const { createAnnouncement } = useNotifications();
+
+  const fetchAllRequests = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching all approval requests...');
+      
+      const allRequests: UnifiedApprovalRequest[] = [];
+
+      // 1. Fetch Supabase approval requests
+      try {
+        const { data: supabaseRequests, error } = await supabase
+          .from('approval_requests')
+          .select('*')
+          .eq('status', 'Pending')
+          .order('created_at', { ascending: false });
+        
+        if (!error && supabaseRequests) {
+          const transformedSupabase = supabaseRequests.map(req => ({
+            id: req.id,
+            type: 'general' as const,
+            source: 'supabase' as const,
+            department: req.department,
+            requestType: req.type,
+            title: req.title,
+            description: req.description,
+            amount: req.amount,
+            requestedBy: req.requestedby,
+            dateRequested: req.daterequested,
+            priority: req.priority,
+            status: req.status,
+            details: req.details ? JSON.parse(JSON.stringify(req.details)) : undefined,
+            createdAt: req.created_at,
+            updatedAt: req.updated_at
+          }));
+          allRequests.push(...transformedSupabase);
+          console.log('Fetched Supabase requests:', transformedSupabase.length);
+        }
+      } catch (error) {
+        console.error('Error fetching Supabase requests:', error);
+      }
+
+      // 2. Fetch Firebase modification requests
+      try {
+        const modQuery = query(collection(db, 'modification_requests'), orderBy('createdAt', 'desc'));
+        const modSnapshot = await getDocs(modQuery);
+        const modRequests = modSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as any[];
+
+        const pendingModRequests = modRequests.filter(req => req.status === 'pending');
+        const transformedMod = pendingModRequests.map(req => ({
+          id: req.id,
+          type: 'modification' as const,
+          source: 'firebase' as const,
+          department: req.targetDepartment || 'Finance',
+          requestType: 'Modification Request',
+          title: `Modification Request - Batch ${req.batchNumber || 'N/A'}`,
+          description: `${req.reason || 'No reason provided'}: ${req.comments || 'No comments'}`,
+          amount: '0',
+          requestedBy: req.requestedBy || 'Unknown',
+          dateRequested: req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'Unknown',
+          priority: 'Medium',
+          status: 'Pending',
+          details: req,
+          createdAt: req.createdAt || new Date().toISOString(),
+          updatedAt: req.updatedAt || req.createdAt || new Date().toISOString(),
+          batchNumber: req.batchNumber,
+          targetDepartment: req.targetDepartment,
+          reason: req.reason,
+          comments: req.comments,
+          originalPaymentId: req.originalPaymentId,
+          qualityAssessmentId: req.qualityAssessmentId
+        }));
+        allRequests.push(...transformedMod);
+        console.log('Fetched Firebase modification requests:', transformedMod.length);
+      } catch (error) {
+        console.error('Error fetching modification requests:', error);
+      }
+
+      // Sort all requests by creation date (newest first)
+      allRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      console.log('Total unified requests:', allRequests.length);
+      setRequests(allRequests);
+    } catch (error) {
+      console.error('Error fetching unified approval requests:', error);
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateRequestStatus = async (
+    request: UnifiedApprovalRequest,
+    status: 'Approved' | 'Rejected',
+    rejectionReason?: string,
+    rejectionComments?: string
+  ) => {
+    try {
+      console.log('Updating unified request status:', request.id, status);
+
+      if (request.source === 'supabase') {
+        // Handle Supabase approval requests
+        const updateData: any = {
+          status,
+          updated_at: new Date().toISOString()
+        };
+
+        if (status === 'Rejected' && rejectionReason) {
+          updateData.rejection_reason = rejectionReason;
+          updateData.rejection_comments = rejectionComments || '';
+        }
+
+        const { error } = await supabase
+          .from('approval_requests')
+          .update(updateData)
+          .eq('id', request.id);
+
+        if (error) {
+          console.error('Supabase update error:', error);
+          return false;
+        }
+
+        // Handle specific Supabase request types
+        if (status === 'Approved') {
+          if (request.requestType === 'Store Report Deletion' && request.details?.action === 'delete_store_report' && request.details?.reportId) {
+            try {
+              await deleteDoc(doc(db, 'store_reports', request.details.reportId));
+              console.log('Store report deleted successfully');
+            } catch (error) {
+              console.error('Error deleting store report:', error);
+            }
+          }
+          
+          else if (request.requestType === 'Salary Payment' && request.details?.employee_details) {
+            try {
+              await addDoc(collection(db, 'salary_payments'), {
+                month: request.details.month,
+                employee_count: request.details.employee_count,
+                total_pay: request.details.total_amount,
+                bonuses: request.details.bonuses || 0,
+                deductions: request.details.deductions || 0,
+                payment_method: request.details.payment_method,
+                employee_details: request.details.employee_details,
+                status: 'Approved',
+                processed_by: 'Admin',
+                processed_date: new Date().toISOString(),
+                notes: request.details.notes || '',
+                created_at: new Date().toISOString()
+              });
+              console.log('Salary payment record created');
+            } catch (error) {
+              console.error('Error creating salary payment record:', error);
+            }
+          }
+          
+          else if (request.requestType === 'Bank Transfer' && request.details?.paymentId) {
+            try {
+              await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
+                status: 'Paid',
+                method: 'Bank Transfer',
+                updated_at: new Date().toISOString()
+              });
+              
+              await addDoc(collection(db, 'daily_tasks'), {
+                task_type: 'Payment Approved',
+                description: `Bank transfer approved: ${request.details?.supplier} - UGX ${request.details?.amount?.toLocaleString()}`,
+                amount: request.details?.amount,
+                batch_number: request.details?.batchNumber,
+                completed_by: 'Operations Manager',
+                completed_at: new Date().toISOString(),
+                date: new Date().toISOString().split('T')[0],
+                department: 'Finance',
+                created_at: new Date().toISOString()
+              });
+            } catch (error) {
+              console.error('Error updating payment record:', error);
+            }
+          }
+        }
+
+      } else if (request.source === 'firebase') {
+        // Handle Firebase modification requests
+        const updateData: any = {
+          status: status === 'Approved' ? 'completed' : 'rejected',
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        if (status === 'Rejected' && rejectionReason) {
+          updateData.rejectionReason = rejectionReason;
+          updateData.rejectionComments = rejectionComments || '';
+        }
+
+        await updateDoc(doc(db, 'modification_requests', request.id), updateData);
+
+        if (status === 'Approved') {
+          // Create announcement for completion
+          await createAnnouncement(
+            'Modification Request Completed',
+            `Modification request for batch ${request.batchNumber} has been completed`,
+            'Admin',
+            [request.targetDepartment || 'Finance'],
+            'Medium'
+          );
+        }
+      }
+
+      // Track workflow step
+      await trackWorkflowStep({
+        paymentId: request.originalPaymentId || request.details?.paymentId || request.id,
+        qualityAssessmentId: request.qualityAssessmentId || request.details?.qualityAssessmentId,
+        fromDepartment: 'Admin',
+        toDepartment: status === 'Approved' ? 'Operations' : request.department,
+        action: status === 'Approved' ? 'approved' : 'rejected',
+        reason: rejectionReason,
+        comments: rejectionComments,
+        processedBy: 'Operations Manager',
+        status: 'completed'
+      });
+
+      // Remove from local state
+      setRequests(prev => prev.filter(req => req.id !== request.id));
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating unified request:', error);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    fetchAllRequests();
+  }, []);
+
+  return {
+    requests,
+    loading,
+    updateRequestStatus,
+    refetch: fetchAllRequests,
+    fetchRequests: fetchAllRequests
+  };
+};

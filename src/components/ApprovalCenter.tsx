@@ -1,0 +1,436 @@
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye, FileText, TrendingUp, AlertTriangle, Package, Settings } from 'lucide-react';
+import { useUnifiedApprovalRequests, UnifiedApprovalRequest } from '@/hooks/useUnifiedApprovalRequests';
+import { useToast } from '@/hooks/use-toast';
+import { useProcurementRecommendations } from '@/hooks/useProcurementRecommendations';
+import { RejectionModal } from './workflow/RejectionModal';
+import { WorkflowTracker } from './workflow/WorkflowTracker';
+import { DetailedWorkflowView } from './workflow/DetailedWorkflowView';
+import { AuditPrintModal } from './workflow/AuditPrintModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const ApprovalCenter = () => {
+  const { requests, loading, updateRequestStatus, fetchRequests } = useUnifiedApprovalRequests();
+  const { recommendations, loading: recommendationsLoading } = useProcurementRecommendations();
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<UnifiedApprovalRequest | null>(null);
+  const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  const [detailedViewModalOpen, setDetailedViewModalOpen] = useState(false);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [workflowDataForPrint, setWorkflowDataForPrint] = useState<any>(null);
+  const { toast } = useToast();
+
+  const handleApproval = async (request: UnifiedApprovalRequest) => {
+    setProcessingId(request.id);
+    try {
+      const success = await updateRequestStatus(request, 'Approved');
+      if (success) {
+        toast({
+          title: "Request Approved",
+          description: `${request.title} has been approved successfully.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error processing approval:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to process the approval request.',
+        variant: 'destructive'
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleRejection = (request: UnifiedApprovalRequest) => {
+    setSelectedRequest(request);
+    setRejectionModalOpen(true);
+  };
+
+  const handleRejectionConfirm = async (reason: string, comments?: string) => {
+    if (!selectedRequest) return;
+    
+    setProcessingId(selectedRequest.id);
+    try {
+      const success = await updateRequestStatus(selectedRequest, 'Rejected', reason, comments);
+      if (success) {
+        toast({
+          title: "Request Rejected",
+          description: `${selectedRequest.title} has been rejected and sent back for modification.`,
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error('Error processing rejection:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to process the rejection.',
+        variant: 'destructive'
+      });
+    } finally {
+      setProcessingId(null);
+      setSelectedRequest(null);
+    }
+  };
+
+  const handleViewWorkflow = (paymentId: string) => {
+    setSelectedPaymentId(paymentId);
+    setWorkflowModalOpen(true);
+  };
+
+  const handleViewDetailedWorkflow = (request: UnifiedApprovalRequest) => {
+    setSelectedRequest(request);
+    setSelectedPaymentId(request.originalPaymentId || request.details?.paymentId || null);
+    setDetailedViewModalOpen(true);
+  };
+
+  const handleDetailedApproval = async () => {
+    if (!selectedRequest) return;
+    await handleApproval(selectedRequest);
+    setDetailedViewModalOpen(false);
+  };
+
+  const handleDetailedRejection = () => {
+    setDetailedViewModalOpen(false);
+    if (selectedRequest) {
+      handleRejection(selectedRequest);
+    }
+  };
+
+  const handlePrintAudit = (workflowData: any) => {
+    setWorkflowDataForPrint(workflowData);
+    setPrintModalOpen(true);
+  };
+
+  const handleRefresh = async () => {
+    await fetchRequests();
+    toast({
+      title: "Refreshed",
+      description: "All approval requests have been refreshed"
+    });
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
+    }
+  };
+
+  const getTypeIcon = (type: string, requestType: string) => {
+    if (type === 'modification') return Settings;
+    if (requestType === 'Store Report Deletion') return FileText;
+    if (requestType === 'User Registration') return User;
+    if (requestType === 'Salary Payment') return DollarSign;
+    if (requestType === 'Bank Transfer') return DollarSign;
+    return Package;
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'general': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      case 'modification': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+      case 'deletion': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
+    }
+  };
+
+  const formatAmount = (amount: string | number) => {
+    if (!amount || amount === 0 || amount === '0') return 'N/A';
+    const numericAmount = typeof amount === 'string' ? parseFloat(amount.replace(/[^\d.-]/g, '')) : amount;
+    
+    if (isNaN(numericAmount)) {
+      return amount;
+    }
+    
+    return `UGX ${numericAmount.toLocaleString()}`;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Unified Approval Center</h2>
+          <p className="text-muted-foreground">
+            Review all approval requests, modifications, and procurement recommendations from one place
+          </p>
+        </div>
+        <Button onClick={handleRefresh} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh All
+        </Button>
+      </div>
+
+      {/* Procurement Recommendations Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-blue-600" />
+            <CardTitle>Latest Procurement Recommendations</CardTitle>
+          </div>
+          <CardDescription>
+            Strategic buying recommendations from data analysts
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {recommendationsLoading ? (
+            <div className="flex items-center justify-center p-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          ) : recommendations.length === 0 ? (
+            <div className="text-center text-muted-foreground py-4">
+              No procurement recommendations available
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recommendations.slice(0, 3).map((rec, index) => (
+                <div key={rec.id || index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <h4 className="font-medium">{rec.grade}</h4>
+                        <p className="text-sm text-muted-foreground">UGX {rec.priceRange}</p>
+                      </div>
+                      <Badge 
+                        variant={rec.action === 'Strong Buy' ? 'default' : 
+                                rec.action === 'Buy' ? 'secondary' : 'outline'}
+                        className={rec.action === 'Strong Buy' ? 'bg-green-500' : ''}
+                      >
+                        {rec.action}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="text-center">
+                      <div className="font-medium">{rec.confidence}%</div>
+                      <div className="text-muted-foreground">Confidence</div>
+                    </div>
+                    <div className="text-center">
+                      <div className={`font-medium ${
+                        rec.risk === 'Low' ? 'text-green-600' : 
+                        rec.risk === 'Medium' ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {rec.risk}
+                      </div>
+                      <div className="text-muted-foreground">Risk</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-medium">{rec.timeframe}</div>
+                      <div className="text-muted-foreground">Timeframe</div>
+                    </div>
+                  </div>
+                  {rec.risk === 'High' && (
+                    <AlertTriangle className="h-4 w-4 text-red-500 ml-2" />
+                  )}
+                </div>
+              ))}
+              {recommendations.length > 3 && (
+                <div className="text-center pt-2">
+                  <Badge variant="outline">
+                    +{recommendations.length - 3} more recommendations
+                  </Badge>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* All Approval Requests Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>All Pending Requests ({requests.length})</CardTitle>
+          <CardDescription>
+            General approvals, modification requests, and other pending items
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {requests.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Pending Requests</h3>
+              <p className="text-muted-foreground">All approval requests have been processed.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {requests.map((request) => {
+                const TypeIcon = getTypeIcon(request.type, request.requestType);
+                return (
+                  <Card key={request.id} className="transition-all hover:shadow-md">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <TypeIcon className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle className="text-lg">{request.title}</CardTitle>
+                            <Badge className={getTypeColor(request.type)}>
+                              {request.type === 'modification' ? 'Modification' : request.requestType}
+                            </Badge>
+                          </div>
+                          <CardDescription>{request.description}</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getPriorityColor(request.priority)}>
+                            {request.priority}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetailedWorkflow(request)}
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            Review Details
+                          </Button>
+                          {(request.originalPaymentId || request.details?.paymentId) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewWorkflow(request.originalPaymentId || request.details?.paymentId || '')}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Workflow
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">{request.requestedBy}</p>
+                            <p className="text-xs text-muted-foreground">{request.department}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">{request.dateRequested}</p>
+                            <p className="text-xs text-muted-foreground">Requested</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">{formatAmount(request.amount)}</p>
+                            <p className="text-xs text-muted-foreground">Amount</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">{request.source}</p>
+                            <p className="text-xs text-muted-foreground">Source</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {request.batchNumber && (
+                        <div className="mb-4 p-2 bg-muted rounded">
+                          <p className="text-sm"><strong>Batch:</strong> {request.batchNumber}</p>
+                          {request.reason && <p className="text-sm"><strong>Reason:</strong> {request.reason}</p>}
+                          {request.comments && <p className="text-sm"><strong>Comments:</strong> {request.comments}</p>}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-3">
+                        <Button
+                          onClick={() => handleApproval(request)}
+                          disabled={processingId === request.id}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Approve
+                        </Button>
+                        <Button
+                          onClick={() => handleRejection(request)}
+                          disabled={processingId === request.id}
+                          variant="destructive"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Reject
+                        </Button>
+                        {processingId === request.id && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                            Processing...
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <RejectionModal
+        open={rejectionModalOpen}
+        onClose={() => {
+          setRejectionModalOpen(false);
+          setSelectedRequest(null);
+        }}
+        onConfirm={handleRejectionConfirm}
+        title="Reject Request"
+        description="Please provide a reason for rejecting this request. This will help the requesting department understand what needs to be modified."
+      />
+
+      <Dialog open={workflowModalOpen} onOpenChange={setWorkflowModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Workflow History</DialogTitle>
+          </DialogHeader>
+          {selectedPaymentId && (
+            <WorkflowTracker paymentId={selectedPaymentId} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={detailedViewModalOpen} onOpenChange={setDetailedViewModalOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Complete Request Review</DialogTitle>
+          </DialogHeader>
+          {selectedRequest && (
+            <DetailedWorkflowView
+              requestId={selectedRequest.id}
+              paymentId={selectedPaymentId || undefined}
+              onApprove={handleDetailedApproval}
+              onReject={handleDetailedRejection}
+              onPrint={handlePrintAudit}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {printModalOpen && workflowDataForPrint && selectedRequest && (
+        <AuditPrintModal
+          open={printModalOpen}
+          onClose={() => setPrintModalOpen(false)}
+          workflowData={workflowDataForPrint}
+          requestId={selectedRequest.id}
+        />
+      )}
+    </div>
+  );
+};
+
+export default ApprovalCenter;
