@@ -29,8 +29,8 @@ import { formatDistanceToNow } from 'date-fns';
 const SystemConsoleMonitor = () => {
   const { logs, loading, fetchLogs, getLogStats, clearOldLogs } = useSystemConsoleMonitor();
   const [filters, setFilters] = useState({
-    level: '',
-    department: '',
+    level: 'all',
+    department: 'all',
     timeRange: '24', // hours
     search: ''
   });
@@ -39,8 +39,8 @@ const SystemConsoleMonitor = () => {
 
   useEffect(() => {
     fetchLogs({
-      level: filters.level || undefined,
-      department: filters.department || undefined,
+      level: filters.level !== 'all' ? filters.level : undefined,
+      department: filters.department !== 'all' ? filters.department : undefined,
       timeRange: parseInt(filters.timeRange),
       limit: 500
     });
@@ -48,8 +48,8 @@ const SystemConsoleMonitor = () => {
 
   const handleRefresh = () => {
     fetchLogs({
-      level: filters.level || undefined,
-      department: filters.department || undefined,
+      level: filters.level !== 'all' ? filters.level : undefined,
+      department: filters.department !== 'all' ? filters.department : undefined,
       timeRange: parseInt(filters.timeRange),
       limit: 500
     });
@@ -240,7 +240,7 @@ const SystemConsoleMonitor = () => {
                   <SelectValue placeholder="All levels" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All levels</SelectItem>
+                  <SelectItem value="all">All levels</SelectItem>
                   <SelectItem value="error">Error</SelectItem>
                   <SelectItem value="warn">Warning</SelectItem>
                   <SelectItem value="info">Info</SelectItem>
@@ -257,7 +257,7 @@ const SystemConsoleMonitor = () => {
                   <SelectValue placeholder="All departments" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All departments</SelectItem>
+                  <SelectItem value="all">All departments</SelectItem>
                   {Object.keys(stats.byDepartment).map(dept => (
                     <SelectItem key={dept} value={dept}>
                       {dept} ({stats.byDepartment[dept]})
