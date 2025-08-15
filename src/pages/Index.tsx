@@ -126,8 +126,23 @@ const Index = () => {
               </div>
             </div>
 
+            {/* Approval Requests Section - Make it prominent for authorized users */}
+            {roleData?.canApproveRequests && (
+              <div className="space-y-8 animate-fade-in delay-500">
+                <SectionHeader 
+                  icon={Shield}
+                  title="Approval Management Center"
+                  subtitle="Review and process pending requests from all departments"
+                  gradient="from-red-500 to-rose-600"
+                />
+                <div className="bg-gradient-to-br from-white/95 via-red-50/60 to-rose-50/50 dark:from-slate-800/95 dark:via-red-950/40 dark:to-rose-950/30 backdrop-blur-xl border border-red-200/60 dark:border-red-800/40 rounded-3xl p-6 md:p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.005] hover:border-red-300/60 dark:hover:border-red-700/50">
+                  <ApprovalRequests />
+                </div>
+              </div>
+            )}
+
             {/* Performance & Additional Sections */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 animate-fade-in delay-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 animate-fade-in delay-600">
               {/* Performance Section */}
               <div className="space-y-6 md:space-y-8">
                 <SectionHeader 
@@ -140,21 +155,6 @@ const Index = () => {
                   <PerformanceOverview />
                 </div>
               </div>
-              
-              {/* Approval Requests Section - Admin and Assigned Users */}
-              {roleData?.canApproveRequests && (
-                <div className="space-y-6 md:space-y-8">
-                  <SectionHeader 
-                    icon={Shield}
-                    title="Approvals"
-                    subtitle="Pending requests"
-                    gradient="from-red-500 to-rose-600"
-                  />
-                  <div className="bg-gradient-to-br from-card via-card/98 to-muted/5 rounded-3xl p-6 md:p-8 border border-border/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
-                    <ApprovalRequests />
-                  </div>
-                </div>
-              )}
               
               {/* Notifications Section */}
               <div className="space-y-6 md:space-y-8">
@@ -171,7 +171,7 @@ const Index = () => {
 
               {/* EUDR Compliance Section */}
               {(employee.department === 'Store' || employee.role === 'Administrator') && (
-                <div className="space-y-6 md:space-y-8 md:col-span-2 xl:col-span-1">
+                <div className="space-y-6 md:space-y-8">
                   <SectionHeader 
                     icon={Coffee}
                     title="EUDR Compliance"
