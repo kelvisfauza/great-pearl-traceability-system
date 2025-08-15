@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { collection, addDoc, query, orderBy, getDocs, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { useErrorReporting } from '@/hooks/useErrorReporting';
 
 export interface ConsoleLog {
   id: string;
@@ -23,18 +22,6 @@ export const useSystemConsoleMonitor = () => {
   const [logs, setLogs] = useState<ConsoleLog[]>([]);
   const [loading, setLoading] = useState(false);
   const { employee } = useAuth();
-  
-  // Batch console logs to reduce database writes
-  const [logBatch, setLogBatch] = useState<Omit<ConsoleLog, 'id'>[]>([]);
-  
-  // Get error reporting system to create system errors from console errors
-  let reportError: any = null;
-  try {
-    const errorReporting = useErrorReporting();
-    reportError = errorReporting.reportError;
-  } catch (error) {
-    console.log('Error reporting not available');
-  }
 
   // Original console methods
   const originalConsole = {
@@ -45,7 +32,7 @@ export const useSystemConsoleMonitor = () => {
     debug: console.debug
   };
 
-  const captureLogs = useCallback((level: string, args: any[]) => {
+  const captureLogs = useCallback(async (level: string, args: any[]) => {
     try {
       const message = args.map(arg => {
         if (typeof arg === 'object') {
@@ -59,10 +46,7 @@ export const useSystemConsoleMonitor = () => {
       }).join(' ');
 
       // Don't log our own logging operations to prevent infinite loops
-      if (message.includes('system_console_logs') || 
-          message.includes('Console captured') ||
-          message.includes('system_errors') ||
-          message.includes('Error reporting not available')) {
+      if (message.includes('system_console_logs') || message.includes('Console captured')) {
         return;
       }
 
@@ -71,38 +55,21 @@ export const useSystemConsoleMonitor = () => {
         level: level as any,
         message,
         source: 'browser-console',
-        userId: employee?.id || undefined,
-        userName: employee?.name || undefined,
-        userDepartment: employee?.department || undefined,
+        userId: employee?.id,
+        userName: employee?.name,
+        userDepartment: employee?.department,
         url: window.location.href,
         userAgent: navigator.userAgent,
         stackTrace: level === 'error' ? new Error().stack : undefined
       };
 
-      // Add to batch instead of immediate write
-      setLogBatch(prev => [...prev, logEntry]);
-      
-      // If this is an error, create a system error report immediately
-      if (level === 'error' && reportError) {
-        try {
-          reportError(
-            'Console Error Detected',
-            message,
-            'system',
-            `${employee?.department || 'Unknown'} - Console`,
-            logEntry.stackTrace,
-            employee?.id
-          );
-        } catch (errorReportingError) {
-          // Silently fail to avoid infinite loops
-          originalConsole.error('Failed to create system error report:', errorReportingError);
-        }
-      }
+      // Store in Firebase for IT monitoring
+      await addDoc(collection(db, 'system_console_logs'), logEntry);
     } catch (error) {
       // Silently fail to avoid console spam
       originalConsole.error('Failed to capture console log:', error);
     }
-  }, [employee, reportError]);
+  }, [employee]);
 
   const initializeConsoleCapture = useCallback(() => {
     // Override console methods to capture all logs
@@ -133,14 +100,12 @@ export const useSystemConsoleMonitor = () => {
 
     // Capture unhandled errors
     window.addEventListener('error', (event) => {
-      const errorMessage = `Unhandled Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`;
-      captureLogs('error', [errorMessage, event.error]);
+      captureLogs('error', [`Unhandled Error: ${event.message}`, event.error]);
     });
 
     // Capture unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
-      const errorMessage = `Unhandled Promise Rejection: ${event.reason}`;
-      captureLogs('error', [errorMessage]);
+      captureLogs('error', [`Unhandled Promise Rejection: ${event.reason}`]);
     });
   }, [captureLogs]);
 
@@ -161,7 +126,7 @@ export const useSystemConsoleMonitor = () => {
       if (filters?.limit) {
         logsQuery = query(logsQuery, limit(filters.limit));
       } else {
-        logsQuery = query(logsQuery, limit(10)); // Default limit reduced for performance
+        logsQuery = query(logsQuery, limit(1000)); // Default limit
       }
 
       const snapshot = await getDocs(logsQuery);
@@ -244,26 +209,6 @@ export const useSystemConsoleMonitor = () => {
       originalConsole.error('Failed to clear old logs:', error);
     }
   };
-
-  // Batch write logs to Firebase every 5 seconds
-  useEffect(() => {
-    const batchInterval = setInterval(async () => {
-      if (logBatch.length > 0) {
-        try {
-          // Write batch to Firebase
-          for (const logEntry of logBatch) {
-            await addDoc(collection(db, 'system_console_logs'), logEntry);
-          }
-          // Clear the batch
-          setLogBatch([]);
-        } catch (error) {
-          originalConsole.error('Failed to write log batch:', error);
-        }
-      }
-    }, 5000); // Every 5 seconds
-
-    return () => clearInterval(batchInterval);
-  }, [logBatch]);
 
   // Initialize console capture on mount
   useEffect(() => {
