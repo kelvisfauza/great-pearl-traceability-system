@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PriceProvider } from "@/contexts/PriceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -27,12 +28,24 @@ import Processing from "./pages/Processing";
 import ITDepartment from "./pages/ITDepartment";
 import Milling from "./pages/Milling";
 
+// Error Handler Component
+const ErrorHandlerInitializer = () => {
+  const { initializeErrorHandlers } = useGlobalErrorHandler();
+  
+  useEffect(() => {
+    initializeErrorHandlers();
+  }, []);
+  
+  return null;
+};
+
 const App: React.FC = () => {
   const queryClient = new QueryClient();
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <ErrorHandlerInitializer />
         <PriceProvider>
           <TooltipProvider>
             <Toaster />

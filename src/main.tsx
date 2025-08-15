@@ -21,7 +21,6 @@ const ErrorHandlerInitializer = () => {
 const AppWithErrorHandling = () => {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-      <ErrorHandlerInitializer />
       <App />
     </ThemeProvider>
   );
