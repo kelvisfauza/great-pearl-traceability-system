@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { collection, addDoc, query, orderBy, getDocs, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useErrorReporting } from '@/hooks/useErrorReporting';
 
 export interface ConsoleLog {
   id: string;
@@ -22,6 +23,15 @@ export const useSystemConsoleMonitor = () => {
   const [logs, setLogs] = useState<ConsoleLog[]>([]);
   const [loading, setLoading] = useState(false);
   const { employee } = useAuth();
+  
+  // Get error reporting system to create system errors from console errors
+  let reportError: any = null;
+  try {
+    const errorReporting = useErrorReporting();
+    reportError = errorReporting.reportError;
+  } catch (error) {
+    console.log('Error reporting not available');
+  }
 
   // Original console methods
   const originalConsole = {
@@ -46,7 +56,10 @@ export const useSystemConsoleMonitor = () => {
       }).join(' ');
 
       // Don't log our own logging operations to prevent infinite loops
-      if (message.includes('system_console_logs') || message.includes('Console captured')) {
+      if (message.includes('system_console_logs') || 
+          message.includes('Console captured') ||
+          message.includes('system_errors') ||
+          message.includes('Error reporting not available')) {
         return;
       }
 
@@ -65,11 +78,28 @@ export const useSystemConsoleMonitor = () => {
 
       // Store in Firebase for IT monitoring
       await addDoc(collection(db, 'system_console_logs'), logEntry);
+      
+      // If this is an error, also create a system error report
+      if (level === 'error' && reportError) {
+        try {
+          await reportError(
+            'Console Error Detected',
+            message,
+            'system',
+            `${employee?.department || 'Unknown'} - Console`,
+            logEntry.stackTrace,
+            employee?.id
+          );
+        } catch (errorReportingError) {
+          // Silently fail to avoid infinite loops
+          originalConsole.error('Failed to create system error report:', errorReportingError);
+        }
+      }
     } catch (error) {
       // Silently fail to avoid console spam
       originalConsole.error('Failed to capture console log:', error);
     }
-  }, [employee]);
+  }, [employee, reportError]);
 
   const initializeConsoleCapture = useCallback(() => {
     // Override console methods to capture all logs
@@ -100,12 +130,14 @@ export const useSystemConsoleMonitor = () => {
 
     // Capture unhandled errors
     window.addEventListener('error', (event) => {
-      captureLogs('error', [`Unhandled Error: ${event.message}`, event.error]);
+      const errorMessage = `Unhandled Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`;
+      captureLogs('error', [errorMessage, event.error]);
     });
 
     // Capture unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
-      captureLogs('error', [`Unhandled Promise Rejection: ${event.reason}`]);
+      const errorMessage = `Unhandled Promise Rejection: ${event.reason}`;
+      captureLogs('error', [errorMessage]);
     });
   }, [captureLogs]);
 
