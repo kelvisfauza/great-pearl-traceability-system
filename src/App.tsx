@@ -58,7 +58,7 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ErrorHandlerInitializer />
-        <ConsoleMonitorInitializer />
+        {/* <ConsoleMonitorInitializer /> Temporarily disabled for performance */}
         <PriceProvider>
           <TooltipProvider>
             <Toaster />
