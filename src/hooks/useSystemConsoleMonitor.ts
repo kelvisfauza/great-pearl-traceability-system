@@ -24,6 +24,9 @@ export const useSystemConsoleMonitor = () => {
   const [loading, setLoading] = useState(false);
   const { employee } = useAuth();
   
+  // Batch console logs to reduce database writes
+  const [logBatch, setLogBatch] = useState<Omit<ConsoleLog, 'id'>[]>([]);
+  
   // Get error reporting system to create system errors from console errors
   let reportError: any = null;
   try {
@@ -42,7 +45,7 @@ export const useSystemConsoleMonitor = () => {
     debug: console.debug
   };
 
-  const captureLogs = useCallback(async (level: string, args: any[]) => {
+  const captureLogs = useCallback((level: string, args: any[]) => {
     try {
       const message = args.map(arg => {
         if (typeof arg === 'object') {
@@ -68,21 +71,21 @@ export const useSystemConsoleMonitor = () => {
         level: level as any,
         message,
         source: 'browser-console',
-        userId: employee?.id,
-        userName: employee?.name,
-        userDepartment: employee?.department,
+        userId: employee?.id || undefined,
+        userName: employee?.name || undefined,
+        userDepartment: employee?.department || undefined,
         url: window.location.href,
         userAgent: navigator.userAgent,
         stackTrace: level === 'error' ? new Error().stack : undefined
       };
 
-      // Store in Firebase for IT monitoring
-      await addDoc(collection(db, 'system_console_logs'), logEntry);
+      // Add to batch instead of immediate write
+      setLogBatch(prev => [...prev, logEntry]);
       
-      // If this is an error, also create a system error report
+      // If this is an error, create a system error report immediately
       if (level === 'error' && reportError) {
         try {
-          await reportError(
+          reportError(
             'Console Error Detected',
             message,
             'system',
@@ -158,7 +161,7 @@ export const useSystemConsoleMonitor = () => {
       if (filters?.limit) {
         logsQuery = query(logsQuery, limit(filters.limit));
       } else {
-        logsQuery = query(logsQuery, limit(1000)); // Default limit
+        logsQuery = query(logsQuery, limit(10)); // Default limit reduced for performance
       }
 
       const snapshot = await getDocs(logsQuery);
@@ -241,6 +244,26 @@ export const useSystemConsoleMonitor = () => {
       originalConsole.error('Failed to clear old logs:', error);
     }
   };
+
+  // Batch write logs to Firebase every 5 seconds
+  useEffect(() => {
+    const batchInterval = setInterval(async () => {
+      if (logBatch.length > 0) {
+        try {
+          // Write batch to Firebase
+          for (const logEntry of logBatch) {
+            await addDoc(collection(db, 'system_console_logs'), logEntry);
+          }
+          // Clear the batch
+          setLogBatch([]);
+        } catch (error) {
+          originalConsole.error('Failed to write log batch:', error);
+        }
+      }
+    }, 5000); // Every 5 seconds
+
+    return () => clearInterval(batchInterval);
+  }, [logBatch]);
 
   // Initialize console capture on mount
   useEffect(() => {
