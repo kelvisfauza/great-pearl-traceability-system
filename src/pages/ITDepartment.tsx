@@ -30,7 +30,7 @@ import { usePresenceList } from '@/hooks/usePresenceList';
 
 
 // IT Components
-import SystemOverview from '@/components/it/SystemOverview';
+import ErrorDashboard from '@/components/it/ErrorDashboard';
 import SecurityMonitoring from '@/components/it/SecurityMonitoring';
 import UserManagement from '@/components/it/UserManagement';
 import BackupManagement from '@/components/it/BackupManagement';
@@ -142,10 +142,10 @@ const ITDepartment = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue="errors" className="space-y-6">
 
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="errors">Error Dashboard</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="backup">Backup</TabsTrigger>
@@ -154,8 +154,8 @@ const ITDepartment = () => {
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview">
-            <SystemOverview />
+          <TabsContent value="errors" className="space-y-4">
+            <ErrorDashboard />
           </TabsContent>
 
           <TabsContent value="security">

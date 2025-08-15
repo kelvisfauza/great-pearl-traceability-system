@@ -4,6 +4,7 @@ import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkflowTracking } from './useWorkflowTracking';
 import { useNotifications } from './useNotifications';
+import { useGlobalErrorHandler } from './useGlobalErrorHandler';
 
 export interface UnifiedApprovalRequest {
   id: string;
@@ -34,6 +35,7 @@ export const useUnifiedApprovalRequests = () => {
   const [loading, setLoading] = useState(true);
   const { trackWorkflowStep } = useWorkflowTracking();
   const { createAnnouncement } = useNotifications();
+  const { reportDatabaseError, reportWorkflowError } = useGlobalErrorHandler();
 
   const fetchAllRequests = async () => {
     try {
@@ -73,6 +75,7 @@ export const useUnifiedApprovalRequests = () => {
         }
       } catch (error) {
         console.error('Error fetching Supabase requests:', error);
+        reportDatabaseError(error, 'fetch approval_requests', 'approval_requests');
       }
 
       // 2. Fetch Firebase modification requests
@@ -112,6 +115,7 @@ export const useUnifiedApprovalRequests = () => {
         console.log('Fetched Firebase modification requests:', transformedMod.length);
       } catch (error) {
         console.error('Error fetching modification requests:', error);
+        reportDatabaseError(error, 'fetch modification_requests', 'modification_requests');
       }
 
       // Sort all requests by creation date (newest first)
@@ -259,6 +263,7 @@ export const useUnifiedApprovalRequests = () => {
         console.log('Workflow step tracked successfully');
       } catch (error) {
         console.error('Warning: Failed to track workflow step:', error);
+        reportWorkflowError(error, 'track approval workflow step');
         // Don't fail the approval process if workflow tracking fails
       }
 
