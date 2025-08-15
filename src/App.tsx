@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PriceProvider } from "@/contexts/PriceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
+import { useSystemConsoleMonitor } from "@/hooks/useSystemConsoleMonitor";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -39,6 +40,17 @@ const ErrorHandlerInitializer = () => {
   return null;
 };
 
+// Console Monitor Initializer
+const ConsoleMonitorInitializer = () => {
+  const { initializeConsoleCapture } = useSystemConsoleMonitor();
+  
+  useEffect(() => {
+    initializeConsoleCapture();
+  }, [initializeConsoleCapture]);
+  
+  return null;
+};
+
 const App: React.FC = () => {
   const queryClient = new QueryClient();
 
@@ -46,6 +58,7 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ErrorHandlerInitializer />
+        <ConsoleMonitorInitializer />
         <PriceProvider>
           <TooltipProvider>
             <Toaster />

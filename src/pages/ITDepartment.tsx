@@ -37,6 +37,7 @@ import BackupManagement from '@/components/it/BackupManagement';
 import NetworkMonitoring from '@/components/it/NetworkMonitoring';
 import TicketSystem from '@/components/it/TicketSystem';
 import SystemMaintenance from '@/components/it/SystemMaintenance';
+import SystemConsoleMonitor from '@/components/it/SystemConsoleMonitor';
 import DeletionRequestsManager from '@/components/admin/DeletionRequestsManager';
 
 const ITDepartment = () => {
@@ -145,8 +146,9 @@ const ITDepartment = () => {
 
         <Tabs defaultValue="errors" className="space-y-6">
 
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="errors">Error Dashboard</TabsTrigger>
+            <TabsTrigger value="console">Console Monitor</TabsTrigger>
             <TabsTrigger value="deletions">Deletions</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
@@ -158,6 +160,10 @@ const ITDepartment = () => {
 
           <TabsContent value="errors" className="space-y-4">
             <ErrorDashboard />
+          </TabsContent>
+
+          <TabsContent value="console" className="space-y-4">
+            <SystemConsoleMonitor />
           </TabsContent>
 
           <TabsContent value="deletions" className="space-y-4">
