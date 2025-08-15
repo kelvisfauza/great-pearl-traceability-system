@@ -1,3 +1,4 @@
+// Firebase-based workflow tracking hook
 import { useState, useEffect } from 'react';
 import { collection, addDoc, query, where, getDocs, updateDoc, doc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
