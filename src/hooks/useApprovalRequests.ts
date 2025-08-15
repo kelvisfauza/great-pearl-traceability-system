@@ -68,12 +68,19 @@ export const useApprovalRequests = () => {
         return;
       }
       
-      console.log('Supabase approval requests:', supabaseRequests?.length || 0);
+      console.log('Raw Supabase approval requests:', supabaseRequests);
+      console.log('Number of requests fetched:', supabaseRequests?.length || 0);
+      
       // Transform Supabase data to match our interface
-      const transformedRequests = supabaseRequests?.map(req => ({
-        ...req,
-        details: req.details ? JSON.parse(JSON.stringify(req.details)) : undefined
-      })) as ApprovalRequest[];
+      const transformedRequests = supabaseRequests?.map(req => {
+        console.log('Transforming request:', req.id, req.title);
+        return {
+          ...req,
+          details: req.details ? JSON.parse(JSON.stringify(req.details)) : undefined
+        };
+      }) as ApprovalRequest[];
+      
+      console.log('Final transformed requests:', transformedRequests);
       setRequests(transformedRequests || []);
     } catch (error) {
       console.error('Error fetching approval requests:', error);
