@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, doc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useWorkflowTracking } from './useWorkflowTracking';
 import { useNotifications } from './useNotifications';
 
@@ -53,20 +54,27 @@ export const useApprovalRequests = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      console.log('Fetching approval requests from Firebase...');
+      console.log('Fetching approval requests from Supabase...');
       
-      const firebaseQuery = query(collection(db, 'approval_requests'), orderBy('created_at', 'desc'));
-      const firebaseSnapshot = await getDocs(firebaseQuery);
-      const firebaseRequests = firebaseSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      const { data: supabaseRequests, error } = await supabase
+        .from('approval_requests')
+        .select('*')
+        .eq('status', 'Pending')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        setRequests([]);
+        return;
+      }
+      
+      console.log('Supabase approval requests:', supabaseRequests?.length || 0);
+      // Transform Supabase data to match our interface
+      const transformedRequests = supabaseRequests?.map(req => ({
+        ...req,
+        details: req.details ? JSON.parse(JSON.stringify(req.details)) : undefined
       })) as ApprovalRequest[];
-      
-      console.log('Firebase approval requests:', firebaseRequests.length);
-      
-      // Only show pending requests
-      const pendingRequests = firebaseRequests.filter(req => req.status === 'Pending');
-      setRequests(pendingRequests);
+      setRequests(transformedRequests || []);
     } catch (error) {
       console.error('Error fetching approval requests:', error);
       setRequests([]);
@@ -100,11 +108,18 @@ export const useApprovalRequests = () => {
         updateData.rejection_comments = rejectionComments || '';
       }
 
-      console.log('Updating Firebase approval request...');
-      const firebaseDoc = doc(db, 'approval_requests', id);
-      await updateDoc(firebaseDoc, updateData);
+      console.log('Updating Supabase approval request...');
+      const { error } = await supabase
+        .from('approval_requests')
+        .update(updateData)
+        .eq('id', id);
       
-      console.log('Firebase approval request updated');
+      if (error) {
+        console.error('Supabase update error:', error);
+        return false;
+      }
+      
+      console.log('Supabase approval request updated');
 
       // Track workflow step
       await trackWorkflowStep({
