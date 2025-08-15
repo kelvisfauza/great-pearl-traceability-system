@@ -87,7 +87,16 @@ const ERROR_RECOMMENDATIONS = {
 export const useErrorReporting = () => {
   const [errors, setErrors] = useState<SystemError[]>([]);
   const [loading, setLoading] = useState(true);
-  const { createAnnouncement } = useNotifications();
+  
+  // Make notifications optional to avoid dependency issues
+  let createAnnouncement: any = null;
+  try {
+    const notifications = useNotifications();
+    createAnnouncement = notifications.createAnnouncement;
+  } catch (error) {
+    console.log('Notifications not available, continuing without notifications');
+  }
+  
   const { toast } = useToast();
 
   const getRecommendation = (errorType: string, errorMessage: string): string => {
@@ -178,13 +187,15 @@ export const useErrorReporting = () => {
 
       // Notify IT department immediately for high/critical errors
       if (severity === 'high' || severity === 'critical') {
-        await createAnnouncement(
-          `${severity.toUpperCase()} System Error Reported`,
-          `${title}: ${description}`,
-          'System',
-          ['IT Management'],
-          severity === 'critical' ? 'High' : 'Medium'
-        );
+        if (createAnnouncement) {
+          await createAnnouncement(
+            `${severity.toUpperCase()} System Error Reported`,
+            `${title}: ${description}`,
+            'System',
+            ['IT Management'],
+            severity === 'critical' ? 'High' : 'Medium'
+          );
+        }
       }
 
       // Show toast to user (but don't overwhelm them)
