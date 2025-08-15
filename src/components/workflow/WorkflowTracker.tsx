@@ -88,12 +88,12 @@ export const WorkflowTracker: React.FC<WorkflowTrackerProps> = ({ paymentId, cla
                         {step.action.replace('_', ' ').toUpperCase()}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        {step.fromDepartment} → {step.toDepartment}
+                        {step.from_department} → {step.to_department}
                       </span>
                     </div>
                     <div className="text-sm text-muted-foreground mb-1">
                       <User className="h-3 w-3 inline mr-1" />
-                      {step.processedBy}
+                      {step.processed_by}
                     </div>
                     <div className="text-xs text-muted-foreground mb-2">
                       {new Date(step.timestamp).toLocaleString()}

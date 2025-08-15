@@ -934,6 +934,54 @@ export type Database = {
           },
         ]
       }
+      modification_requests: {
+        Row: {
+          batch_number: string | null
+          comments: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          original_payment_id: string
+          quality_assessment_id: string | null
+          reason: string
+          requested_by: string
+          requested_by_department: string
+          status: string
+          target_department: string
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: string | null
+          comments?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          original_payment_id: string
+          quality_assessment_id?: string | null
+          reason: string
+          requested_by: string
+          requested_by_department: string
+          status?: string
+          target_department: string
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string | null
+          comments?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          original_payment_id?: string
+          quality_assessment_id?: string | null
+          reason?: string
+          requested_by?: string
+          requested_by_department?: string
+          status?: string
+          target_department?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_records: {
         Row: {
           amount: number
@@ -1527,6 +1575,54 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      workflow_steps: {
+        Row: {
+          action: string
+          comments: string | null
+          created_at: string
+          from_department: string
+          id: string
+          payment_id: string
+          processed_by: string
+          quality_assessment_id: string | null
+          reason: string | null
+          status: string
+          timestamp: string
+          to_department: string
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          comments?: string | null
+          created_at?: string
+          from_department: string
+          id?: string
+          payment_id: string
+          processed_by: string
+          quality_assessment_id?: string | null
+          reason?: string | null
+          status?: string
+          timestamp?: string
+          to_department: string
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          comments?: string | null
+          created_at?: string
+          from_department?: string
+          id?: string
+          payment_id?: string
+          processed_by?: string
+          quality_assessment_id?: string | null
+          reason?: string | null
+          status?: string
+          timestamp?: string
+          to_department?: string
+          updated_at?: string
         }
         Relationships: []
       }
