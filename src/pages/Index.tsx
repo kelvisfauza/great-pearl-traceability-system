@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import FinancialDashboard from '@/components/FinancialDashboard';
+import ModernDashboard from '@/components/ModernDashboard';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 
 const Index = () => {
@@ -41,7 +41,7 @@ const Index = () => {
 
   return (
     <Layout>
-      <FinancialDashboard />
+      <ModernDashboard />
     </Layout>
   );
 };
