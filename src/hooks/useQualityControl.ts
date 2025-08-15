@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useGlobalErrorHandler } from '@/hooks/useGlobalErrorHandler';
 
 export interface StoreRecord {
   id: string;
@@ -48,6 +49,7 @@ export const useQualityControl = () => {
   const { toast } = useToast();
   const { getContractPriceForSupplier } = useSupplierContracts();
   const { createAnnouncement, createPricingNotification } = useNotifications();
+  const { reportDatabaseError, reportWorkflowError } = useGlobalErrorHandler();
 
   const loadStoreRecords = useCallback(async () => {
     try {
@@ -403,6 +405,8 @@ export const useQualityControl = () => {
 
       if (updateError) {
         console.error('Error updating assessment status:', updateError);
+        // Report database error to IT
+        reportDatabaseError(updateError, 'Update Quality Assessment Status', 'quality_assessments');
         throw updateError;
       }
       
@@ -414,13 +418,19 @@ export const useQualityControl = () => {
       );
       
       // Notify Finance submission
-      await createAnnouncement(
-        'Assessment Submitted to Finance',
-        `Quality assessment ${assessmentId} has been submitted to Finance for payment processing`,
-        'Quality',
-        ['Finance'],
-        'Medium'
-      );
+      try {
+        await createAnnouncement(
+          'Assessment Submitted to Finance',
+          `Quality assessment ${assessmentId} has been submitted to Finance for payment processing`,
+          'Quality',
+          ['Finance'],
+          'Medium'
+        );
+      } catch (notificationError) {
+        console.error('Error creating notification:', notificationError);
+        // Report workflow error to IT
+        reportWorkflowError(notificationError, 'Create Finance Notification');
+      }
       
       console.log('Assessment submitted to finance successfully');
       
@@ -430,11 +440,15 @@ export const useQualityControl = () => {
       });
     } catch (error) {
       console.error('Error submitting to finance:', error);
+      // Report the overall workflow error to IT
+      reportWorkflowError(error, 'Submit Assessment to Finance');
+      
       toast({
         title: "Error",
-        description: "Failed to submit to finance",
+        description: "Failed to submit to finance. IT has been notified of the issue.",
         variant: "destructive"
       });
+      throw error; // Re-throw to ensure calling code knows about the error
     }
   };
 
