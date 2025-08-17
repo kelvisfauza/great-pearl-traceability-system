@@ -62,8 +62,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Auto logout after 5 minutes of inactivity
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000;
+// Auto logout after 20 minutes of inactivity
+const INACTIVITY_TIMEOUT = 20 * 60 * 1000;
 
 // Admin accounts that bypass employee record checks
 const ADMIN_EMAILS = ['kelvifauza@gmail.com', 'bwambaledenis8@gmail.com'];
