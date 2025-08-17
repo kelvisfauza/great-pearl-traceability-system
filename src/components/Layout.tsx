@@ -31,6 +31,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
   usePresence(user?.uid);
   
   console.log('Layout - notification unread count:', notificationUnreadCount);
+  console.log('Layout - user:', user);
 
   const toggleMessaging = () => setIsMessagingOpen(!isMessagingOpen);
   const toggleNotifications = () => setIsNotificationOpen(!isNotificationOpen);
@@ -86,7 +87,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <AccountButton />
-                  <NotificationButton 
+                  <NotificationButton
                     onToggle={toggleNotifications}
                     unreadCount={notificationUnreadCount}
                   />
