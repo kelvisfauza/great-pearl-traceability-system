@@ -21,7 +21,7 @@ export interface ConsoleLog {
 export const useSystemConsoleMonitor = () => {
   const [logs, setLogs] = useState<ConsoleLog[]>([]);
   const [loading, setLoading] = useState(false);
-  const { employee } = useAuth();
+  const { employee, user } = useAuth();
 
   // Original console methods
   const originalConsole = {
@@ -55,7 +55,7 @@ export const useSystemConsoleMonitor = () => {
         level: level as any,
         message,
         source: 'browser-console',
-        userId: employee?.id,
+        userId: employee?.id || user?.uid || 'anonymous',
         userName: employee?.name,
         userDepartment: employee?.department,
         url: window.location.href,
@@ -69,7 +69,7 @@ export const useSystemConsoleMonitor = () => {
       // Silently fail to avoid console spam
       originalConsole.error('Failed to capture console log:', error);
     }
-  }, [employee]);
+  }, [employee, user]);
 
   const initializeConsoleCapture = useCallback(() => {
     // Override console methods to capture all logs
