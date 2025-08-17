@@ -14,10 +14,8 @@ import PasswordChangeModal from '@/components/PasswordChangeModal';
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -27,74 +25,30 @@ const Auth = () => {
     setError('');
     setLoading(true);
 
-    if (isSignUp) {
-      if (password !== confirmPassword) {
-        setError('Passwords do not match');
-        setLoading(false);
-        return;
+    try {
+      const result = await signIn(email, password);
+      
+      if (result.requiresPasswordChange) {
+        setShowPasswordChange(true);
+      } else {
+        navigate('/');
       }
-
-      try {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.toLowerCase().trim(),
-          password: password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`
-          }
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        if (data.user && !data.session) {
-          setError('Please check your email for a verification link before signing in.');
-          setIsSignUp(false);
-        } else if (data.session) {
-          navigate('/');
-        }
-      } catch (error: any) {
-        console.error('Sign up error:', error);
-        
-        let errorMessage = 'Account creation failed. Please try again.';
-        
-        if (error.message?.includes('User already registered')) {
-          errorMessage = 'An account with this email already exists. Try signing in instead.';
-          setIsSignUp(false);
-        } else if (error.message?.includes('Password should be at least')) {
-          errorMessage = 'Password should be at least 6 characters long.';
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        
-        setError(errorMessage);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      let errorMessage = 'Login failed. Please check your credentials.';
+      
+      if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password.';
+      } else if (error.message?.includes('Email not confirmed')) {
+        errorMessage = 'Please check your email and click the verification link before signing in.';
+      } else if (error.message?.includes('Too many requests')) {
+        errorMessage = 'Too many failed login attempts. Please try again later.';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
-    } else {
-      try {
-        const result = await signIn(email, password);
-        
-        if (result.requiresPasswordChange) {
-          setShowPasswordChange(true);
-        } else {
-          navigate('/');
-        }
-      } catch (error: any) {
-        console.error('Login error:', error);
-        
-        let errorMessage = 'Login failed. Please check your credentials.';
-        
-        if (error.message?.includes('Invalid login credentials')) {
-          errorMessage = 'Invalid email or password. If you don\'t have an account, please sign up first.';
-        } else if (error.message?.includes('Email not confirmed')) {
-          errorMessage = 'Please check your email and click the verification link before signing in.';
-        } else if (error.message?.includes('Too many requests')) {
-          errorMessage = 'Too many failed login attempts. Please try again later.';
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        
-        setError(errorMessage);
-      }
+      
+      setError(errorMessage);
     }
 
     setLoading(false);
@@ -130,13 +84,10 @@ const Auth = () => {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-xl">
-              {isSignUp ? 'Create Account' : 'Sign In'}
+              Sign In
             </CardTitle>
             <CardDescription>
-              {isSignUp 
-                ? 'Create a new account to access the system'
-                : 'Enter your credentials to access your account'
-              }
+              Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -158,28 +109,13 @@ const Auth = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder={isSignUp ? "Choose a password (min 6 characters)" : "Enter your password"}
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  minLength={isSignUp ? 6 : undefined}
                 />
               </div>
-              {isSignUp && (
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              )}
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -190,30 +126,12 @@ const Auth = () => {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {isSignUp ? 'Creating Account...' : 'Signing in...'}
+                    Signing in...
                   </>
                 ) : (
-                  isSignUp ? 'Create Account' : 'Sign In'
+                  'Sign In'
                 )}
               </Button>
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSignUp(!isSignUp);
-                    setError('');
-                    setPassword('');
-                    setConfirmPassword('');
-                  }}
-                  className="text-sm text-blue-600 hover:text-blue-800 underline"
-                  disabled={loading}
-                >
-                  {isSignUp 
-                    ? 'Already have an account? Sign in' 
-                    : 'Need an account? Sign up'
-                  }
-                </button>
-              </div>
             </form>
           </CardContent>
         </Card>
