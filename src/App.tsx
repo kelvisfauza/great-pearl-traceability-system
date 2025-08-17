@@ -28,6 +28,7 @@ import FieldOperations from "./pages/FieldOperations";
 import Processing from "./pages/Processing";
 import ITDepartment from "./pages/ITDepartment";
 import Milling from "./pages/Milling";
+import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 
 // Error Handler Component
 const ErrorHandlerInitializer = () => {
@@ -59,6 +60,7 @@ const App: React.FC = () => {
       <AuthProvider>
         <ErrorHandlerInitializer />
         <ConsoleMonitorInitializer />
+        <GlobalActivityTracker />
         <PriceProvider>
           <TooltipProvider>
             <Toaster />

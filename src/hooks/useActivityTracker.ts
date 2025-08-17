@@ -21,7 +21,7 @@ export const useActivityTracker = () => {
         }]);
 
       // Check if user should get reward for this activity
-      const { data, error } = await supabase.rpc('award_activity_reward', {
+      const { data, error } = await supabase.rpc('award_activity_reward' as any, {
         user_uuid: user.uid,
         activity_name: activityType
       });

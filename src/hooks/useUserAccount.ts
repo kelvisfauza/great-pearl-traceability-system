@@ -152,8 +152,8 @@ export const useUserAccount = () => {
           activity_date: new Date().toISOString().split('T')[0]
         }]);
 
-      // Check for daily reward eligibility
-      const { data, error } = await supabase.rpc('award_daily_login_reward', {
+      // Check for daily reward eligibility (now just for login tracking)
+      const { data, error } = await supabase.rpc('award_daily_login_reward' as any, {
         user_uuid: user.uid
       });
 
@@ -167,8 +167,8 @@ export const useUserAccount = () => {
 
       if (rewardData?.rewarded) {
         toast({
-          title: "Daily Reward!",
-          description: `You've earned UGX ${rewardData.amount?.toLocaleString()} for being active today!`,
+          title: "Daily Login Reward! 🎉",
+          description: `You've earned UGX ${rewardData.amount?.toLocaleString()} for logging in 3 times today!`,
           duration: 5000,
         });
         // Refresh account data
