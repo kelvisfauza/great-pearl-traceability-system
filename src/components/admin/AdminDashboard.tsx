@@ -8,6 +8,7 @@ import CashManagementModal from './CashManagementModal';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import RoleAssignmentManager from './RoleAssignmentManager';
+import MoneyRequestsFinalApproval from './MoneyRequestsFinalApproval';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 
 const AdminDashboard = () => {
@@ -143,7 +144,10 @@ const AdminDashboard = () => {
       {/* Role Assignment Section - Admin Only */}
       {roleData?.isAdmin && <RoleAssignmentManager />}
 
-      <CashManagementModal 
+      {/* Money Requests Final Approval - Admin Only */}
+      {roleData?.isAdmin && <MoneyRequestsFinalApproval />}
+
+      <CashManagementModal
         open={showCashModal}
         onClose={() => setShowCashModal(false)}
       />

@@ -1035,11 +1035,18 @@ export type Database = {
       }
       money_requests: {
         Row: {
+          admin_approved_at: string | null
+          admin_approved_by: string | null
           amount: number
+          approval_stage: string
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          finance_approved_at: string | null
+          finance_approved_by: string | null
           id: string
+          payment_slip_generated: boolean | null
+          payment_slip_number: string | null
           reason: string
           rejection_reason: string | null
           request_type: string
@@ -1049,11 +1056,18 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
           amount: number
+          approval_stage?: string
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          finance_approved_at?: string | null
+          finance_approved_by?: string | null
           id?: string
+          payment_slip_generated?: boolean | null
+          payment_slip_number?: string | null
           reason: string
           rejection_reason?: string | null
           request_type?: string
@@ -1063,11 +1077,18 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
           amount?: number
+          approval_stage?: string
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          finance_approved_at?: string | null
+          finance_approved_by?: string | null
           id?: string
+          payment_slip_generated?: boolean | null
+          payment_slip_number?: string | null
           reason?: string
           rejection_reason?: string | null
           request_type?: string

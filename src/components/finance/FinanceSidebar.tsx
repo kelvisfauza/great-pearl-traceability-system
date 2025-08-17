@@ -56,6 +56,12 @@ const financeNavItems = [
     description: "Approve salary payment requests"
   },
   {
+    title: "Money Requests",
+    key: "money-requests",
+    icon: DollarSign,
+    description: "Review employee money requests"
+  },
+  {
     title: "Supplier Advances",
     key: "advances",
     icon: DollarSign,

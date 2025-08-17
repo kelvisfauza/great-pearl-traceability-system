@@ -19,6 +19,7 @@ import AdvanceClearingModal from "@/components/finance/AdvanceClearingModal";
 import CustomerBalancesCard from "@/components/finance/CustomerBalancesCard";
 import QualityAssessmentReports from "@/components/finance/QualityAssessmentReports";
 import CashManagementDashboard from "@/components/finance/CashManagementDashboard";
+import MoneyRequestsManager from "@/components/finance/MoneyRequestsManager";
 import { FinanceSidebar } from "@/components/finance/FinanceSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import Layout from "@/components/Layout";
@@ -213,6 +214,9 @@ const Finance = () => {
             onRejectSalaryPayment={handleRejectSalaryPayment}
           />
         );
+
+      case "money-requests":
+        return <MoneyRequestsManager />;
 
       case "advances":
         return (
