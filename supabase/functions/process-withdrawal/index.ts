@@ -97,8 +97,8 @@ serve(async (req) => {
       msisdn: withdrawalRequest.phone_number,
       amount: withdrawalRequest.amount,
       external_reference: `WD-${withdrawalRequestId}`,
-      narration: `Mobile Money Withdrawal - ${withdrawalRequest.amount} UGX`,
-      use_contact: false
+      narration: `Payout - ${withdrawalRequest.amount}`,
+      use_contact: "false"  // String, not boolean as per API docs
     }
 
     console.log('Initiating Zengapay transfer:', transferData)
