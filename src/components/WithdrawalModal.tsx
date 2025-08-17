@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label';
 import { useUserAccount } from '@/hooks/useUserAccount';
 import { Smartphone, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface WithdrawalModalProps {
   open: boolean;
@@ -26,7 +28,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
-  const { createWithdrawalRequest } = useUserAccount();
+  const { createWithdrawalRequest, refreshAccount } = useUserAccount();
+  const { toast } = useToast();
 
   const formatCurrency = (amount: number) => {
     return `UGX ${amount.toLocaleString()}`;
