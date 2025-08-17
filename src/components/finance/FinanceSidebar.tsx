@@ -62,6 +62,12 @@ const financeNavItems = [
     description: "Review employee money requests"
   },
   {
+    title: "Withdrawal Processing",
+    key: "withdrawals",
+    icon: Banknote,
+    description: "Process user withdrawal requests"
+  },
+  {
     title: "Supplier Advances",
     key: "advances",
     icon: DollarSign,
