@@ -1033,6 +1033,51 @@ export type Database = {
         }
         Relationships: []
       }
+      money_requests: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          reason: string
+          rejection_reason: string | null
+          request_type: string
+          requested_by: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          reason: string
+          rejection_reason?: string | null
+          request_type?: string
+          requested_by: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          reason?: string
+          rejection_reason?: string | null
+          request_type?: string
+          requested_by?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payment_records: {
         Row: {
           amount: number
@@ -1608,6 +1653,66 @@ export type Database = {
         }
         Relationships: []
       }
+      user_accounts: {
+        Row: {
+          created_at: string
+          current_balance: number
+          id: string
+          salary_approved: number
+          total_earned: number
+          total_withdrawn: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_balance?: number
+          id?: string
+          salary_approved?: number
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_balance?: number
+          id?: string
+          salary_approved?: number
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_activity: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          created_at: string
+          id: string
+          reward_amount: number | null
+          user_id: string
+        }
+        Insert: {
+          activity_date?: string
+          activity_type: string
+          created_at?: string
+          id?: string
+          reward_amount?: number | null
+          user_id: string
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          created_at?: string
+          id?: string
+          reward_amount?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_presence: {
         Row: {
           last_seen: string
@@ -1624,6 +1729,42 @@ export type Database = {
         Update: {
           last_seen?: string
           status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      withdrawal_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          phone_number: string
+          processed_at: string | null
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          phone_number: string
+          processed_at?: string | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          phone_number?: string
+          processed_at?: string | null
+          status?: string
+          transaction_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1682,6 +1823,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_daily_login_reward: {
+        Args: { user_uuid: string }
+        Returns: Json
+      }
       "great pearl": {
         Args: { conversation_id: string }
         Returns: boolean

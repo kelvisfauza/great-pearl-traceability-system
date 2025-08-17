@@ -4,6 +4,7 @@ import Navigation from "./Navigation";
 import MessagingPanel from "./messaging/MessagingPanel";
 import MessageButton from "./messaging/MessageButton";
 import NotificationButton from "./notifications/NotificationButton";
+import { AccountButton } from "./AccountButton";
 import NotificationPanel from "./notifications/NotificationPanel";
 import { ThemeToggle } from "./ThemeToggle";
 import { useMessages } from "@/hooks/useMessages";
@@ -84,6 +85,7 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
                   {subtitle && <p className="text-muted-foreground mt-1 text-sm">{subtitle}</p>}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  <AccountButton />
                   <NotificationButton 
                     onToggle={toggleNotifications}
                     unreadCount={notificationUnreadCount}
