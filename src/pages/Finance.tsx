@@ -20,6 +20,7 @@ import CustomerBalancesCard from "@/components/finance/CustomerBalancesCard";
 import QualityAssessmentReports from "@/components/finance/QualityAssessmentReports";
 import CashManagementDashboard from "@/components/finance/CashManagementDashboard";
 import MoneyRequestsManager from "@/components/finance/MoneyRequestsManager";
+import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { FinanceSidebar } from "@/components/finance/FinanceSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import Layout from "@/components/Layout";
@@ -42,6 +43,7 @@ const Finance = () => {
   const { tasks: dailyTasks, loading: tasksLoading } = useDailyTasks();
   const { requests: approvalRequests, updateRequestStatus } = useApprovalRequests();
   const { employee, hasRole, hasPermission } = useAuth();
+  const { trackActivity } = useActivityTracker();
   const { toast } = useToast();
 
   const [currentSection, setCurrentSection] = useState("quality-reports");
@@ -421,6 +423,15 @@ const Finance = () => {
                 >
                   <DollarSign className="h-4 w-4" />
                   Give Advance
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => trackActivity('test_activity', 'testing the reward system')}
+                  className="hidden md:flex items-center gap-2 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                >
+                  <DollarSign className="h-4 w-4" />
+                  Test Activity Reward
                 </Button>
               </div>
             </header>

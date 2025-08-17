@@ -8,17 +8,29 @@ export const useActivityTracker = () => {
   const { toast } = useToast();
 
   const trackActivity = useCallback(async (activityType: string, description?: string) => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      console.log('No user found for activity tracking');
+      return;
+    }
+
+    console.log('Tracking activity:', activityType, 'for user:', user.uid);
 
     try {
       // Record the activity
-      await supabase
+      const { error: activityError } = await supabase
         .from('user_activity')
         .insert([{
           user_id: user.uid,
           activity_type: activityType,
           activity_date: new Date().toISOString().split('T')[0]
         }]);
+
+      if (activityError) {
+        console.error('Error recording activity:', activityError);
+        return;
+      }
+
+      console.log('Activity recorded successfully, checking for reward...');
 
       // Check if user should get reward for this activity
       const { data, error } = await supabase.rpc('award_activity_reward' as any, {
@@ -31,6 +43,8 @@ export const useActivityTracker = () => {
         return;
       }
 
+      console.log('Reward check response:', data);
+
       // Type guard for the response data
       const rewardData = data as { rewarded?: boolean; amount?: number; reason?: string } | null;
 
@@ -40,6 +54,9 @@ export const useActivityTracker = () => {
           description: `You've earned UGX ${rewardData.amount?.toLocaleString()} for ${description || activityType}!`,
           duration: 5000,
         });
+        console.log('Reward awarded:', rewardData.amount);
+      } else {
+        console.log('No reward awarded. Reason:', rewardData?.reason);
       }
     } catch (error: any) {
       console.error('Error tracking activity:', error);
