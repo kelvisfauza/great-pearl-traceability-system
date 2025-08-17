@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -96,7 +96,7 @@ serve(async (req) => {
     // Get user account to verify balance
     const { data: userAccount, error: accountError } = await supabaseClient
       .from('user_accounts')
-      .select('current_balance')
+      .select('current_balance, total_withdrawn')
       .eq('user_id', withdrawalRequest.user_id)
       .maybeSingle();
 
@@ -192,7 +192,7 @@ serve(async (req) => {
         .from('user_accounts')
         .update({
           current_balance: userAccount.current_balance - withdrawalRequest.amount,
-          total_withdrawn: userAccount.total_withdrawn + withdrawalRequest.amount,
+          total_withdrawn: (userAccount.total_withdrawn || 0) + withdrawalRequest.amount,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', withdrawalRequest.user_id);
