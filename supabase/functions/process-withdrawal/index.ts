@@ -13,19 +13,27 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Process withdrawal function called with method:', req.method);
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    console.log('Supabase client created successfully');
+
     if (req.method !== 'POST') {
+      console.log('Invalid method:', req.method);
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    const { withdrawalRequestId } = await req.json()
+    const requestBody = await req.json();
+    console.log('Request body:', requestBody);
+    
+    const { withdrawalRequestId } = requestBody;
 
     if (!withdrawalRequestId) {
       return new Response(JSON.stringify({ error: 'Withdrawal request ID is required' }), {

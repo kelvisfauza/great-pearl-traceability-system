@@ -50,11 +50,16 @@ export const WithdrawalProcessingManager: React.FC = () => {
   const processWithdrawal = async (withdrawalId: string) => {
     setProcessing(withdrawalId);
     try {
+      console.log('Processing withdrawal ID:', withdrawalId);
+      
       const { data, error } = await supabase.functions.invoke('process-withdrawal', {
         body: { withdrawalRequestId: withdrawalId }
       });
 
+      console.log('Edge function response:', { data, error });
+
       if (error) {
+        console.error('Edge function error:', error);
         throw error;
       }
 
