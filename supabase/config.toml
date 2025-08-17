@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.check-withdrawal-status]
 verify_jwt = false
+
+[functions.test-function]
+verify_jwt = false

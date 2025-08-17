@@ -81,6 +81,16 @@ export const WithdrawalProcessingManager: React.FC = () => {
     }
   };
 
+  const testEdgeFunction = async () => {
+    try {
+      alert('Testing edge function...');
+      const { data, error } = await supabase.functions.invoke('test-function');
+      alert(`Test result - Data: ${JSON.stringify(data)}, Error: ${JSON.stringify(error)}`);
+    } catch (error: any) {
+      alert(`Test failed: ${error.message}`);
+    }
+  };
+
   const checkWithdrawalStatus = async (transactionReference: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('check-withdrawal-status', {
@@ -172,15 +182,24 @@ export const WithdrawalProcessingManager: React.FC = () => {
             <Smartphone className="h-5 w-5" />
             Withdrawal Processing ({withdrawalRequests.length})
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={fetchWithdrawalRequests}
-            disabled={loading}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={testEdgeFunction}
+            >
+              Test Function
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchWithdrawalRequests}
+              disabled={loading}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
