@@ -41,3 +41,9 @@ port = 54329
 
 [analytics]
 enabled = false
+
+[functions.process-withdrawal]
+verify_jwt = false
+
+[functions.check-withdrawal-status]
+verify_jwt = false
