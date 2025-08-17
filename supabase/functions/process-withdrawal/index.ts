@@ -3,7 +3,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-authorization",
 };
 
 function normalizeMsisdn(input: string) {
@@ -18,7 +20,7 @@ function normalizeMsisdn(input: string) {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
@@ -40,7 +42,17 @@ serve(async (req) => {
       });
     }
 
-    const { withdrawalRequestId } = await req.json();
+    let requestBody: any;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { withdrawalRequestId } = requestBody;
     if (!withdrawalRequestId) {
       return new Response(JSON.stringify({ error: "Withdrawal request ID is required" }), {
         status: 400,
