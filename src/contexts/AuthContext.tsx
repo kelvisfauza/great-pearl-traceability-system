@@ -61,7 +61,7 @@ interface AuthContextType {
   fetchEmployeeData: (userId?: string) => Promise<Employee | null>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auto logout after 20 minutes of inactivity
 const INACTIVITY_TIMEOUT = 20 * 60 * 1000;

@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useContext } from 'react';
+import { AuthContext } from '@/contexts/AuthContext';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 
-export const GlobalActivityTracker = () => {
+// Internal component that uses the hook
+const ActivityTrackerInternal = () => {
   const { trackDataEntry, trackFormSubmission } = useActivityTracker();
 
   useEffect(() => {
@@ -42,5 +44,17 @@ export const GlobalActivityTracker = () => {
     };
   }, [trackDataEntry, trackFormSubmission]);
 
-  return null; // This component doesn't render anything
+  return null;
+};
+
+// Main component that conditionally renders based on auth context
+export const GlobalActivityTracker = () => {
+  const authContext = useContext(AuthContext);
+  
+  // Only render the activity tracker if auth context is available
+  if (!authContext) {
+    return null;
+  }
+
+  return <ActivityTrackerInternal />;
 };
