@@ -282,6 +282,19 @@ export const useUnifiedApprovalRequests = () => {
             }
           }
           
+          else if (request.requestType === 'Store Report Edit' && request.details?.action === 'edit_store_report' && request.details?.reportId) {
+            try {
+              const { updatedData } = request.details;
+              await updateDoc(doc(db, 'store_reports', request.details.reportId), {
+                ...updatedData,
+                updated_at: new Date().toISOString()
+              });
+              console.log('Store report updated successfully');
+            } catch (error) {
+              console.error('Error updating store report:', error);
+            }
+          }
+          
           else if (request.requestType === 'Salary Payment' && request.details?.employee_details) {
             try {
               await addDoc(collection(db, 'salary_payments'), {
@@ -356,24 +369,28 @@ export const useUnifiedApprovalRequests = () => {
         }
       }
 
-      // Track workflow step with error handling
-      try {
-        await trackWorkflowStep({
-          paymentId: request.originalPaymentId || request.details?.paymentId || request.id,
-          qualityAssessmentId: request.qualityAssessmentId || request.details?.qualityAssessmentId,
-          fromDepartment: 'Admin',
-          toDepartment: status === 'Approved' ? 'Operations' : request.department,
-          action: status === 'Approved' ? 'approved' : 'rejected',
-          reason: rejectionReason,
-          comments: rejectionComments,
-          processedBy: 'Operations Manager',
-          status: 'completed'
-        });
-        console.log('Workflow step tracked successfully');
-      } catch (error) {
-        console.error('Warning: Failed to track workflow step:', error);
-        reportWorkflowError(error, 'track approval workflow step');
-        // Don't fail the approval process if workflow tracking fails
+      // Track workflow step with error handling - only for non-store-report requests
+      if (!request.requestType.includes('Store Report')) {
+        try {
+          await trackWorkflowStep({
+            paymentId: request.originalPaymentId || request.details?.paymentId || request.id,
+            qualityAssessmentId: request.qualityAssessmentId || request.details?.qualityAssessmentId,
+            fromDepartment: 'Admin',
+            toDepartment: status === 'Approved' ? 'Operations' : request.department,
+            action: status === 'Approved' ? 'approved' : 'rejected',
+            reason: rejectionReason,
+            comments: rejectionComments,
+            processedBy: 'Operations Manager',
+            status: 'completed'
+          });
+          console.log('Workflow step tracked successfully');
+        } catch (error) {
+          console.error('Warning: Failed to track workflow step:', error);
+          reportWorkflowError(error, 'track approval workflow step');
+          // Don't fail the approval process if workflow tracking fails
+        }
+      } else {
+        console.log('Skipping workflow tracking for store report request');
       }
 
       // Remove from local state
