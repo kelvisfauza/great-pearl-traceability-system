@@ -7,20 +7,25 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useStoreReports } from '@/hooks/useStoreReports';
-import { Eye, FileText, Printer, Search, Calendar, Trash2 } from 'lucide-react';
+import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 
 const StoreReportsList = () => {
-  const { reports, loading, requestDeleteReport } = useStoreReports();
+  const { reports, loading, requestDeleteReport, requestEditReport } = useStoreReports();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState({
     start: '',
     end: ''
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [deleteReason, setDeleteReason] = useState('');
+  const [editReason, setEditReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editFormData, setEditFormData] = useState<any>({});
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = 
@@ -41,6 +46,27 @@ const StoreReportsList = () => {
     setDeleteReason('');
   };
 
+  const handleEditRequest = (report: any) => {
+    setSelectedReport(report);
+    setEditFormData({
+      date: report.date,
+      coffee_type: report.coffee_type,
+      kilograms_bought: report.kilograms_bought,
+      average_buying_price: report.average_buying_price,
+      kilograms_sold: report.kilograms_sold,
+      bags_sold: report.bags_sold,
+      sold_to: report.sold_to,
+      bags_left: report.bags_left,
+      kilograms_left: report.kilograms_left,
+      kilograms_unbought: report.kilograms_unbought,
+      advances_given: report.advances_given,
+      comments: report.comments,
+      input_by: report.input_by
+    });
+    setEditDialogOpen(true);
+    setEditReason('');
+  };
+
   const handleConfirmDelete = async () => {
     if (!selectedReport || !deleteReason.trim()) return;
 
@@ -52,6 +78,23 @@ const StoreReportsList = () => {
       setDeleteReason('');
     } catch (error) {
       console.error('Error submitting delete request:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleConfirmEdit = async () => {
+    if (!selectedReport || !editReason.trim()) return;
+
+    setSubmitting(true);
+    try {
+      await requestEditReport(selectedReport.id, editFormData, editReason);
+      setEditDialogOpen(false);
+      setSelectedReport(null);
+      setEditReason('');
+      setEditFormData({});
+    } catch (error) {
+      console.error('Error submitting edit request:', error);
     } finally {
       setSubmitting(false);
     }
@@ -254,6 +297,13 @@ const StoreReportsList = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => handleEditRequest(report)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleDeleteRequest(report)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -342,6 +392,202 @@ const StoreReportsList = () => {
               disabled={submitting || !deleteReason.trim()}
             >
               {submitting ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Report Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Request Report Edit</DialogTitle>
+            <DialogDescription>
+              This will send an edit request to the admin for approval. Make your changes and provide a reason for editing this report.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedReport && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p><strong>Original Report Date:</strong> {format(new Date(selectedReport.date), 'MMMM d, yyyy')}</p>
+                <p><strong>Coffee Type:</strong> {selectedReport.coffee_type}</p>
+                <p><strong>Input By:</strong> {selectedReport.input_by}</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit_date">Date</Label>
+                  <Input
+                    id="edit_date"
+                    type="date"
+                    value={editFormData.date || ''}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, date: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_coffee_type">Coffee Type</Label>
+                  <Select 
+                    value={editFormData.coffee_type || ''} 
+                    onValueChange={(value) => setEditFormData(prev => ({ ...prev, coffee_type: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select coffee type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Arabica">Arabica</SelectItem>
+                      <SelectItem value="Robusta">Robusta</SelectItem>
+                      <SelectItem value="Mixed">Mixed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_kilograms_bought">Kilograms Bought</Label>
+                  <Input
+                    id="edit_kilograms_bought"
+                    type="number"
+                    step="0.01"
+                    value={editFormData.kilograms_bought || 0}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, kilograms_bought: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_average_buying_price">Average Buying Price (UGX/kg)</Label>
+                  <Input
+                    id="edit_average_buying_price"
+                    type="number"
+                    step="0.01"
+                    value={editFormData.average_buying_price || 0}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, average_buying_price: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_kilograms_sold">Kilograms Sold</Label>
+                  <Input
+                    id="edit_kilograms_sold"
+                    type="number"
+                    step="0.01"
+                    value={editFormData.kilograms_sold || 0}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, kilograms_sold: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_bags_sold">Number of Bags Sold</Label>
+                  <Input
+                    id="edit_bags_sold"
+                    type="number"
+                    value={editFormData.bags_sold || 0}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, bags_sold: parseInt(e.target.value) || 0 }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_sold_to">Sold To</Label>
+                  <Input
+                    id="edit_sold_to"
+                    type="text"
+                    value={editFormData.sold_to || ''}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, sold_to: e.target.value }))}
+                    placeholder="Customer/buyer name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_bags_left">Bags Left in Store</Label>
+                  <Input
+                    id="edit_bags_left"
+                    type="number"
+                    value={editFormData.bags_left || 0}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, bags_left: parseInt(e.target.value) || 0 }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_kilograms_left">Kilograms Left in Store</Label>
+                  <Input
+                    id="edit_kilograms_left"
+                    type="number"
+                    step="0.01"
+                    value={editFormData.kilograms_left || 0}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, kilograms_left: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_kilograms_unbought">Kilograms Unbought in Store</Label>
+                  <Input
+                    id="edit_kilograms_unbought"
+                    type="number"
+                    step="0.01"
+                    value={editFormData.kilograms_unbought || 0}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, kilograms_unbought: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_advances_given">Advances Given (UGX)</Label>
+                  <Input
+                    id="edit_advances_given"
+                    type="number"
+                    step="0.01"
+                    value={editFormData.advances_given || 0}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, advances_given: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit_input_by">Input By</Label>
+                  <Input
+                    id="edit_input_by"
+                    type="text"
+                    value={editFormData.input_by || ''}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, input_by: e.target.value }))}
+                    placeholder="Your name"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit_comments">Comments</Label>
+                <Textarea
+                  id="edit_comments"
+                  value={editFormData.comments || ''}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, comments: e.target.value }))}
+                  placeholder="Additional notes or observations"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Reason for editing:</Label>
+                <Textarea
+                  placeholder="Please explain why this report needs to be edited..."
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmEdit}
+              disabled={submitting || !editReason.trim()}
+            >
+              {submitting ? 'Submitting...' : 'Submit Edit Request'}
             </Button>
           </DialogFooter>
         </DialogContent>

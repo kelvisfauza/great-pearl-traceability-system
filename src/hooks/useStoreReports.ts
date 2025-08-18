@@ -132,6 +132,46 @@ export const useStoreReports = () => {
     }
   };
 
+  const requestEditReport = async (reportId: string, updatedData: Omit<StoreReport, 'id' | 'created_at' | 'updated_at'>, reason: string) => {
+    try {
+      const reportToEdit = reports.find(r => r.id === reportId);
+      if (!reportToEdit) {
+        throw new Error('Report not found');
+      }
+
+      const success = await createApprovalRequest(
+        'Store Report Edit',
+        `Edit Store Report - ${reportToEdit.date}`,
+        `Request to edit store report for ${reportToEdit.coffee_type} from ${reportToEdit.date}. Reason: ${reason}`,
+        0,
+        {
+          reportId,
+          originalData: reportToEdit,
+          updatedData,
+          editReason: reason,
+          action: 'edit_store_report'
+        }
+      );
+
+      if (success) {
+        toast({
+          title: "Edit Request Submitted",
+          description: "Your request to edit the report has been sent to admin for approval"
+        });
+      }
+
+      return success;
+    } catch (error) {
+      console.error('Error requesting report edit:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit edit request",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   const deleteStoreReport = async (reportId: string) => {
     try {
       await deleteDoc(doc(db, 'store_reports', reportId));
@@ -163,6 +203,7 @@ export const useStoreReports = () => {
     reports,
     loading,
     addStoreReport,
+    requestEditReport,
     requestDeleteReport,
     deleteStoreReport,
     refetch: fetchReports
