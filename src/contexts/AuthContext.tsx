@@ -20,6 +20,7 @@ import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { seedFirebaseData } from '@/utils/seedFirebaseData';
+import { useSessionManager } from '@/hooks/useSessionManager';
 
 interface Employee {
   id: string;
@@ -73,6 +74,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Session management
+  const { createSession, validateSession, invalidateSession } = useSessionManager(user?.uid || null);
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
@@ -167,6 +171,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         setUser(appUser);
         await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Create session for single-device login enforcement
+        try {
+          await createSession(supabaseAuth.user.id);
+        } catch (sessionError) {
+          console.error('Session creation failed:', sessionError);
+          // Continue with login even if session creation fails
+        }
         
         // Check if this is an admin account
         if (ADMIN_EMAILS.includes(normalizedEmail)) {
@@ -310,6 +322,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } as User;
         
         setUser(appUser);
+        
+        // Create session for single-device login enforcement
+        try {
+          await createSession(firebaseCredential.user.uid);
+        } catch (sessionError) {
+          console.error('Session creation failed:', sessionError);
+          // Continue with login even if session creation fails
+        }
         
         // Check for Firebase employee data
         const employeeQuery = query(
@@ -605,6 +625,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async (): Promise<void> => {
     try {
+      // Invalidate current session before signing out
+      if (user?.uid) {
+        await invalidateSession(user.uid);
+      }
+      
       // Sign out from both Firebase and Supabase
       await Promise.all([
         firebaseSignOut(auth),

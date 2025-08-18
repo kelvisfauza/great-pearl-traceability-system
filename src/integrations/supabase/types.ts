@@ -1871,6 +1871,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          created_at: string
+          device_info: string | null
+          id: string
+          ip_address: string | null
+          is_active: boolean
+          last_activity: string
+          session_token: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          last_activity?: string
+          session_token: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_info?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          last_activity?: string
+          session_token?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           amount: number
@@ -1968,9 +2004,17 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: Json
       }
+      cleanup_inactive_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       "great pearl": {
         Args: { conversation_id: string }
         Returns: boolean
+      }
+      invalidate_other_sessions: {
+        Args: { p_current_session_token: string; p_user_id: string }
+        Returns: undefined
       }
       is_current_user_admin: {
         Args: Record<PropertyKey, never>
