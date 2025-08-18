@@ -134,11 +134,13 @@ export const useStoreReports = () => {
 
   const requestEditReport = async (reportId: string, updatedData: Omit<StoreReport, 'id' | 'created_at' | 'updated_at'>, reason: string) => {
     try {
+      console.log('Starting edit request for report:', reportId);
       const reportToEdit = reports.find(r => r.id === reportId);
       if (!reportToEdit) {
         throw new Error('Report not found');
       }
 
+      console.log('Creating approval request...');
       const success = await createApprovalRequest(
         'Store Report Edit',
         `Edit Store Report - ${reportToEdit.date}`,
@@ -149,10 +151,12 @@ export const useStoreReports = () => {
           originalData: reportToEdit,
           updatedData,
           editReason: reason,
-          action: 'edit_store_report'
+          action: 'edit_store_report',
+          department: 'Store'
         }
       );
 
+      console.log('Approval request result:', success);
       if (success) {
         toast({
           title: "Edit Request Submitted",
@@ -165,10 +169,10 @@ export const useStoreReports = () => {
       console.error('Error requesting report edit:', error);
       toast({
         title: "Error",
-        description: "Failed to submit edit request",
+        description: "Failed to submit edit request. Please try again.",
         variant: "destructive"
       });
-      throw error;
+      return false; // Return false instead of throwing to prevent further errors
     }
   };
 

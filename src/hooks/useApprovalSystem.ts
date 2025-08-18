@@ -38,16 +38,23 @@ export const useApprovalSystem = () => {
       };
 
       const docRef = await addDoc(collection(db, 'approval_requests'), requestDoc);
+      console.log('Approval request created with ID:', docRef.id);
 
-      // Create notification for administrators
-      await createApprovalNotification({
-        id: docRef.id,
-        title,
-        amount: amount.toString(),
-        requestedBy: employee?.name || 'Unknown',
-        department: details.department || 'Finance',
-        priority: details.priority || 'High'
-      });
+      // Create notification for administrators - wrap in try-catch to prevent blocking
+      try {
+        await createApprovalNotification({
+          id: docRef.id,
+          title,
+          amount: amount.toString(),
+          requestedBy: employee?.name || 'Unknown',
+          department: details.department || 'Finance',
+          priority: details.priority || 'High'
+        });
+        console.log('Notification created successfully');
+      } catch (notificationError) {
+        console.error('Error creating notification (non-blocking):', notificationError);
+        // Don't fail the entire request if notification fails
+      }
 
       toast({
         title: "Approval Request Created",
