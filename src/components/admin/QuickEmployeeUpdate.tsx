@@ -5,12 +5,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { setEmployeeRole, PERMISSION_SETS } from '@/utils/updateEmployeePermissions';
+import { fixDenisPermissions } from '@/utils/fixDenisPermissions';
 
 const QuickEmployeeUpdate = () => {
   const [email, setEmail] = useState('bwambaledenis8@gmail.com');
-  const [roleType, setRoleType] = useState<keyof typeof PERMISSION_SETS>('DATA_ANALYST');
+  const [roleType, setRoleType] = useState<keyof typeof PERMISSION_SETS>('USER');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  const handleFixDenis = async () => {
+    setLoading(true);
+    try {
+      await fixDenisPermissions();
+      toast({
+        title: "Success",
+        description: "Denis permissions fixed to User level",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fix Denis permissions",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleUpdate = async () => {
     if (!email) {
@@ -86,6 +106,15 @@ const QuickEmployeeUpdate = () => {
           className="w-full"
         >
           {loading ? 'Updating...' : 'Update Employee Role'}
+        </Button>
+        
+        <Button 
+          onClick={handleFixDenis} 
+          disabled={loading}
+          variant="destructive"
+          className="w-full"
+        >
+          {loading ? 'Fixing...' : 'Fix Denis Permissions (Set to User)'}
         </Button>
       </CardContent>
     </Card>

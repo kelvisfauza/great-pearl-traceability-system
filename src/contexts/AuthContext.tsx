@@ -66,7 +66,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const INACTIVITY_TIMEOUT = 20 * 60 * 1000;
 
 // Admin accounts that bypass employee record checks
-const ADMIN_EMAILS = ['kelvifauza@gmail.com', 'bwambaledenis8@gmail.com'];
+const ADMIN_EMAILS = ['kelvifauza@gmail.com'];
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
