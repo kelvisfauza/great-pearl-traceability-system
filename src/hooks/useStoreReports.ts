@@ -3,7 +3,7 @@ import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from 'fir
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useApprovalSystem } from './useApprovalSystem';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface StoreReport {
   id: string;
@@ -29,7 +29,6 @@ export const useStoreReports = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { employee } = useAuth();
-  const { createApprovalRequest } = useApprovalSystem();
 
   const fetchReports = async () => {
     try {
@@ -98,29 +97,39 @@ export const useStoreReports = () => {
         throw new Error('Report not found');
       }
 
-      const success = await createApprovalRequest(
-        'Store Report Deletion',
-        `Delete Store Report - ${reportToDelete.date}`,
-        `Request to delete store report for ${reportToDelete.coffee_type} from ${reportToDelete.date}. Reason: ${reason}`,
-        0,
-        {
-          reportId,
-          reportDate: reportToDelete.date,
-          coffeeType: reportToDelete.coffee_type,
-          inputBy: reportToDelete.input_by,
-          deleteReason: reason,
-          action: 'delete_store_report'
-        }
-      );
-
-      if (success) {
-        toast({
-          title: "Deletion Request Submitted",
-          description: "Your request to delete the report has been sent to admin for approval"
+      // Create deletion request directly in Supabase
+      const { error } = await supabase
+        .from('approval_requests')
+        .insert({
+          type: 'Store Report Deletion',
+          title: `Delete Store Report - ${reportToDelete.date}`,
+          description: `Request to delete store report for ${reportToDelete.coffee_type} from ${reportToDelete.date}. Reason: ${reason}`,
+          amount: '0',
+          department: 'Store',
+          requestedby: employee?.name || 'Unknown User',
+          daterequested: new Date().toLocaleDateString(),
+          priority: 'High',
+          status: 'Pending',
+          details: JSON.stringify({
+            reportId,
+            reportDate: reportToDelete.date,
+            coffeeType: reportToDelete.coffee_type,
+            inputBy: reportToDelete.input_by,
+            deleteReason: reason,
+            action: 'delete_store_report'
+          })
         });
+
+      if (error) {
+        throw error;
       }
 
-      return success;
+      toast({
+        title: "Deletion Request Submitted",
+        description: "Your request to delete the report has been sent to admin for approval"
+      });
+
+      return true;
     } catch (error) {
       console.error('Error requesting report deletion:', error);
       toast({
@@ -128,43 +137,50 @@ export const useStoreReports = () => {
         description: "Failed to submit deletion request",
         variant: "destructive"
       });
-      throw error;
+      return false;
     }
   };
 
   const requestEditReport = async (reportId: string, updatedData: Omit<StoreReport, 'id' | 'created_at' | 'updated_at'>, reason: string) => {
     try {
-      console.log('Starting edit request for report:', reportId);
       const reportToEdit = reports.find(r => r.id === reportId);
       if (!reportToEdit) {
         throw new Error('Report not found');
       }
 
-      console.log('Creating approval request...');
-      const success = await createApprovalRequest(
-        'Store Report Edit',
-        `Edit Store Report - ${reportToEdit.date}`,
-        `Request to edit store report for ${reportToEdit.coffee_type} from ${reportToEdit.date}. Reason: ${reason}`,
-        0,
-        {
-          reportId,
-          originalData: reportToEdit,
-          updatedData,
-          editReason: reason,
-          action: 'edit_store_report',
-          department: 'Store'
-        }
-      );
-
-      console.log('Approval request result:', success);
-      if (success) {
-        toast({
-          title: "Edit Request Submitted",
-          description: "Your request to edit the report has been sent to admin for approval"
+      // Create edit request directly in Supabase
+      const { error } = await supabase
+        .from('approval_requests')
+        .insert({
+          type: 'Store Report Edit',
+          title: `Edit Store Report - ${reportToEdit.date}`,
+          description: `Request to edit store report for ${reportToEdit.coffee_type} from ${reportToEdit.date}. Reason: ${reason}`,
+          amount: '0',
+          department: 'Store',
+          requestedby: employee?.name || 'Unknown User',
+          daterequested: new Date().toLocaleDateString(),
+          priority: 'High',
+          status: 'Pending',
+          details: JSON.stringify({
+            reportId,
+            originalData: reportToEdit,
+            updatedData,
+            editReason: reason,
+            action: 'edit_store_report',
+            department: 'Store'
+          })
         });
+
+      if (error) {
+        throw error;
       }
 
-      return success;
+      toast({
+        title: "Edit Request Submitted",
+        description: "Your request to edit the report has been sent to admin for approval"
+      });
+
+      return true;
     } catch (error) {
       console.error('Error requesting report edit:', error);
       toast({
@@ -172,7 +188,7 @@ export const useStoreReports = () => {
         description: "Failed to submit edit request. Please try again.",
         variant: "destructive"
       });
-      return false; // Return false instead of throwing to prevent further errors
+      return false;
     }
   };
 

@@ -86,11 +86,9 @@ const StoreReportsList = () => {
   const handleConfirmEdit = async () => {
     if (!selectedReport || !editReason.trim()) return;
 
-    console.log('Starting edit confirmation for report:', selectedReport.id);
     setSubmitting(true);
     try {
       const result = await requestEditReport(selectedReport.id, editFormData, editReason);
-      console.log('Edit request completed with result:', result);
       
       if (result) {
         setEditDialogOpen(false);
@@ -101,7 +99,6 @@ const StoreReportsList = () => {
     } catch (error) {
       console.error('Error submitting edit request:', error);
     } finally {
-      console.log('Setting submitting to false');
       setSubmitting(false);
     }
   };
