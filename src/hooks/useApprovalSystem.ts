@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -28,29 +27,33 @@ export const useApprovalSystem = () => {
         description,
         amount: amount.toString(),
         department: details.department || 'Finance',
-        requestedby: employee?.name || 'Unknown',
+        requestedby: employee?.name || 'Unknown User',
         daterequested: new Date().toLocaleDateString(),
         priority: details.priority || 'High',
         status: 'Pending',
-        details,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        details: JSON.stringify(details), // Stringify details for Supabase
       };
 
-      const docRef = await addDoc(collection(db, 'approval_requests'), requestDoc);
-      console.log('Approval request created with ID:', docRef.id);
+      const { data, error } = await supabase
+        .from('approval_requests')
+        .insert(requestDoc)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
 
       // Create notification for administrators - wrap in try-catch to prevent blocking
       try {
         await createApprovalNotification({
-          id: docRef.id,
+          id: data.id,
           title,
           amount: amount.toString(),
-          requestedBy: employee?.name || 'Unknown',
+          requestedBy: employee?.name || 'Unknown User',
           department: details.department || 'Finance',
           priority: details.priority || 'High'
         });
-        console.log('Notification created successfully');
       } catch (notificationError) {
         console.error('Error creating notification (non-blocking):', notificationError);
         // Don't fail the entire request if notification fails
