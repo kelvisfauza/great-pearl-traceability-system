@@ -425,6 +425,48 @@ export type Database = {
         }
         Relationships: []
       }
+      edit_requests: {
+        Row: {
+          created_at: string
+          id: string
+          original_data: Json
+          proposed_changes: Json
+          reason: string
+          record_id: string
+          requested_by: string
+          requested_by_department: string
+          status: string
+          table_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          original_data: Json
+          proposed_changes: Json
+          reason: string
+          record_id: string
+          requested_by: string
+          requested_by_department?: string
+          status?: string
+          table_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          original_data?: Json
+          proposed_changes?: Json
+          reason?: string
+          record_id?: string
+          requested_by?: string
+          requested_by_department?: string
+          status?: string
+          table_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           address: string | null
@@ -1577,6 +1619,80 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      store_records: {
+        Row: {
+          batch_number: string | null
+          buyer_name: string | null
+          created_at: string
+          created_by: string
+          from_location: string | null
+          id: string
+          inventory_item_id: string | null
+          notes: string | null
+          price_per_kg: number | null
+          quantity_bags: number
+          quantity_kg: number
+          reference_number: string | null
+          status: string
+          supplier_name: string | null
+          to_location: string | null
+          total_value: number | null
+          transaction_date: string
+          transaction_type: string
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: string | null
+          buyer_name?: string | null
+          created_at?: string
+          created_by: string
+          from_location?: string | null
+          id?: string
+          inventory_item_id?: string | null
+          notes?: string | null
+          price_per_kg?: number | null
+          quantity_bags?: number
+          quantity_kg?: number
+          reference_number?: string | null
+          status?: string
+          supplier_name?: string | null
+          to_location?: string | null
+          total_value?: number | null
+          transaction_date?: string
+          transaction_type?: string
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string | null
+          buyer_name?: string | null
+          created_at?: string
+          created_by?: string
+          from_location?: string | null
+          id?: string
+          inventory_item_id?: string | null
+          notes?: string | null
+          price_per_kg?: number | null
+          quantity_bags?: number
+          quantity_kg?: number
+          reference_number?: string | null
+          status?: string
+          supplier_name?: string | null
+          to_location?: string | null
+          total_value?: number | null
+          transaction_date?: string
+          transaction_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_records_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       supplier_contracts: {
         Row: {

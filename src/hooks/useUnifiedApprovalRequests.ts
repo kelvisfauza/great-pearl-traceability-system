@@ -78,7 +78,84 @@ export const useUnifiedApprovalRequests = () => {
         reportDatabaseError(error, 'fetch approval_requests', 'approval_requests');
       }
 
-      // 2. Fetch Firebase modification requests
+      // 2. Fetch Supabase deletion requests
+      try {
+        const { data: deletionRequests, error: deletionError } = await supabase
+          .from('deletion_requests')
+          .select('*')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+        
+        if (!deletionError && deletionRequests) {
+          const transformedDeletion = deletionRequests.map(req => ({
+            id: req.id,
+            type: 'deletion' as const,
+            source: 'supabase' as const,
+            department: req.requested_by_department,
+            requestType: 'Deletion Request',
+            title: `Delete ${req.table_name} Record`,
+            description: req.reason,
+            amount: '0',
+            requestedBy: req.requested_by,
+            dateRequested: new Date(req.created_at).toLocaleDateString(),
+            priority: 'High',
+            status: 'Pending',
+            details: {
+              table_name: req.table_name,
+              record_id: req.record_id,
+              record_data: req.record_data
+            },
+            createdAt: req.created_at,
+            updatedAt: req.updated_at
+          }));
+          allRequests.push(...transformedDeletion);
+          console.log('Fetched Supabase deletion requests:', transformedDeletion.length);
+        }
+      } catch (error) {
+        console.error('Error fetching deletion requests:', error);
+        reportDatabaseError(error, 'fetch deletion_requests', 'deletion_requests');
+      }
+
+      // 3. Fetch Supabase edit requests
+      try {
+        const { data: editRequests, error: editError } = await supabase
+          .from('edit_requests')
+          .select('*')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+        
+        if (!editError && editRequests) {
+          const transformedEdit = editRequests.map(req => ({
+            id: req.id,
+            type: 'modification' as const,
+            source: 'supabase' as const,
+            department: req.requested_by_department,
+            requestType: 'Edit Request',
+            title: `Edit ${req.table_name} Record`,
+            description: req.reason,
+            amount: '0',
+            requestedBy: req.requested_by,
+            dateRequested: new Date(req.created_at).toLocaleDateString(),
+            priority: 'Medium',
+            status: 'Pending',
+            details: {
+              table_name: req.table_name,
+              record_id: req.record_id,
+              original_data: req.original_data,
+              proposed_changes: req.proposed_changes
+            },
+            createdAt: req.created_at,
+            updatedAt: req.updated_at
+          }));
+          allRequests.push(...transformedEdit);
+          console.log('Fetched Supabase edit requests:', transformedEdit.length);
+        }
+      } catch (error) {
+        console.error('Error fetching edit requests:', error);
+        reportDatabaseError(error, 'fetch edit_requests', 'edit_requests');
+      }
+
+      // 4. Fetch Firebase modification requests
       try {
         const modQuery = query(collection(db, 'modification_requests'), orderBy('createdAt', 'desc'));
         const modSnapshot = await getDocs(modQuery);
@@ -164,7 +241,39 @@ export const useUnifiedApprovalRequests = () => {
 
         // Handle specific Supabase request types
         if (status === 'Approved') {
-          if (request.requestType === 'Store Report Deletion' && request.details?.action === 'delete_store_report' && request.details?.reportId) {
+          // Handle deletion requests
+          if (request.type === 'deletion' && request.details?.table_name && request.details?.record_id) {
+            try {
+              const { error: deleteError } = await supabase
+                .from(request.details.table_name)
+                .delete()
+                .eq('id', request.details.record_id);
+              
+              if (!deleteError) {
+                console.log(`${request.details.table_name} record deleted successfully`);
+              }
+            } catch (error) {
+              console.error(`Error deleting ${request.details.table_name} record:`, error);
+            }
+          }
+          
+          // Handle edit requests
+          else if (request.requestType === 'Edit Request' && request.details?.table_name && request.details?.record_id) {
+            try {
+              const { error: updateError } = await supabase
+                .from(request.details.table_name)
+                .update(request.details.proposed_changes)
+                .eq('id', request.details.record_id);
+              
+              if (!updateError) {
+                console.log(`${request.details.table_name} record updated successfully`);
+              }
+            } catch (error) {
+              console.error(`Error updating ${request.details.table_name} record:`, error);
+            }
+          }
+
+          else if (request.requestType === 'Store Report Deletion' && request.details?.action === 'delete_store_report' && request.details?.reportId) {
             try {
               await deleteDoc(doc(db, 'store_reports', request.details.reportId));
               console.log('Store report deleted successfully');

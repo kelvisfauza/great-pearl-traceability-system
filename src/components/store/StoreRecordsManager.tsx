@@ -1,0 +1,530 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Plus, Edit, Trash2, Package, Calendar, User, MapPin } from 'lucide-react';
+
+interface StoreRecord {
+  id: string;
+  inventory_item_id: string;
+  transaction_type: string;
+  quantity_bags: number;
+  quantity_kg: number;
+  batch_number?: string;
+  supplier_name?: string;
+  buyer_name?: string;
+  price_per_kg?: number;
+  total_value?: number;
+  transaction_date: string;
+  from_location?: string;
+  to_location?: string;
+  reference_number?: string;
+  notes?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  status: string;
+}
+
+interface InventoryItem {
+  id: string;
+  coffee_type: string;
+  location: string;
+}
+
+export const StoreRecordsManager = () => {
+  const [records, setRecords] = useState<StoreRecord[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<StoreRecord | null>(null);
+  const [formData, setFormData] = useState({
+    inventory_item_id: '',
+    transaction_type: 'received',
+    quantity_bags: 0,
+    quantity_kg: 0,
+    batch_number: '',
+    supplier_name: '',
+    buyer_name: '',
+    price_per_kg: 0,
+    total_value: 0,
+    transaction_date: new Date().toISOString().split('T')[0],
+    from_location: '',
+    to_location: '',
+    reference_number: '',
+    notes: ''
+  });
+  
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchRecords();
+    fetchInventoryItems();
+  }, []);
+
+  const fetchRecords = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('store_records')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setRecords(data || []);
+    } catch (error) {
+      console.error('Error fetching store records:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch store records',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchInventoryItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('id, coffee_type, location')
+        .eq('status', 'available');
+
+      if (error) throw error;
+      setInventoryItems(data || []);
+    } catch (error) {
+      console.error('Error fetching inventory items:', error);
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const recordData = {
+        ...formData,
+        created_by: user?.email || 'Unknown',
+        total_value: formData.quantity_kg * formData.price_per_kg
+      };
+
+      if (editMode && selectedRecord) {
+        // Create edit request instead of direct update
+        const { error } = await supabase
+          .from('edit_requests')
+          .insert({
+            table_name: 'store_records',
+            record_id: selectedRecord.id,
+            original_data: JSON.parse(JSON.stringify(selectedRecord)),
+            proposed_changes: JSON.parse(JSON.stringify(recordData)),
+            reason: 'Transaction modification requested',
+            requested_by: user?.email || 'Unknown',
+            requested_by_department: 'Store'
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: 'Edit Request Submitted',
+          description: 'Your edit request has been submitted for admin approval',
+        });
+      } else {
+        const { error } = await supabase
+          .from('store_records')
+          .insert(recordData);
+
+        if (error) throw error;
+
+        toast({
+          title: 'Record Created',
+          description: 'Store record has been created successfully',
+        });
+        
+        fetchRecords();
+      }
+
+      setFormOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error submitting record:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to submit record',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDelete = async (record: StoreRecord) => {
+    try {
+      const { error } = await supabase
+        .from('deletion_requests')
+        .insert({
+          table_name: 'store_records',
+          record_id: record.id,
+          record_data: JSON.parse(JSON.stringify(record)),
+          reason: 'Store record deletion requested',
+          requested_by: user?.email || 'Unknown',
+          requested_by_department: 'Store'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Deletion Request Submitted',
+        description: 'Your deletion request has been submitted for admin approval',
+      });
+    } catch (error) {
+      console.error('Error submitting deletion request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to submit deletion request',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const openEditForm = (record: StoreRecord) => {
+    setSelectedRecord(record);
+    setFormData({
+      inventory_item_id: record.inventory_item_id || '',
+      transaction_type: record.transaction_type,
+      quantity_bags: record.quantity_bags,
+      quantity_kg: record.quantity_kg,
+      batch_number: record.batch_number || '',
+      supplier_name: record.supplier_name || '',
+      buyer_name: record.buyer_name || '',
+      price_per_kg: record.price_per_kg || 0,
+      total_value: record.total_value || 0,
+      transaction_date: record.transaction_date,
+      from_location: record.from_location || '',
+      to_location: record.to_location || '',
+      reference_number: record.reference_number || '',
+      notes: record.notes || ''
+    });
+    setEditMode(true);
+    setFormOpen(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      inventory_item_id: '',
+      transaction_type: 'received',
+      quantity_bags: 0,
+      quantity_kg: 0,
+      batch_number: '',
+      supplier_name: '',
+      buyer_name: '',
+      price_per_kg: 0,
+      total_value: 0,
+      transaction_date: new Date().toISOString().split('T')[0],
+      from_location: '',
+      to_location: '',
+      reference_number: '',
+      notes: ''
+    });
+    setEditMode(false);
+    setSelectedRecord(null);
+  };
+
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case 'received': return '📥';
+      case 'dispatched': return '📤';
+      case 'transferred': return '🔄';
+      case 'adjusted': return '⚖️';
+      default: return '📦';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'pending_deletion': return 'bg-red-100 text-red-800';
+      case 'pending_edit': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Store Records Management</h2>
+          <p className="text-muted-foreground">
+            Manage inventory transactions and submit requests for changes
+          </p>
+        </div>
+        
+        <Dialog open={formOpen} onOpenChange={setFormOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={resetForm}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Record
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editMode ? 'Request Edit for Store Record' : 'Add New Store Record'}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="inventory_item">Inventory Item</Label>
+                <Select value={formData.inventory_item_id} onValueChange={(value) => 
+                  setFormData({...formData, inventory_item_id: value})
+                }>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select inventory item" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {inventoryItems.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.coffee_type} - {item.location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="transaction_type">Transaction Type</Label>
+                <Select value={formData.transaction_type} onValueChange={(value) => 
+                  setFormData({...formData, transaction_type: value})
+                }>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="received">Received</SelectItem>
+                    <SelectItem value="dispatched">Dispatched</SelectItem>
+                    <SelectItem value="transferred">Transferred</SelectItem>
+                    <SelectItem value="adjusted">Adjusted</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="quantity_bags">Quantity (Bags)</Label>
+                <Input
+                  type="number"
+                  value={formData.quantity_bags}
+                  onChange={(e) => setFormData({...formData, quantity_bags: parseInt(e.target.value) || 0})}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="quantity_kg">Quantity (KG)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.quantity_kg}
+                  onChange={(e) => setFormData({...formData, quantity_kg: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="batch_number">Batch Number</Label>
+                <Input
+                  value={formData.batch_number}
+                  onChange={(e) => setFormData({...formData, batch_number: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="transaction_date">Transaction Date</Label>
+                <Input
+                  type="date"
+                  value={formData.transaction_date}
+                  onChange={(e) => setFormData({...formData, transaction_date: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="supplier_name">Supplier Name</Label>
+                <Input
+                  value={formData.supplier_name}
+                  onChange={(e) => setFormData({...formData, supplier_name: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="buyer_name">Buyer Name</Label>
+                <Input
+                  value={formData.buyer_name}
+                  onChange={(e) => setFormData({...formData, buyer_name: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="price_per_kg">Price per KG</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.price_per_kg}
+                  onChange={(e) => setFormData({...formData, price_per_kg: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="reference_number">Reference Number</Label>
+                <Input
+                  value={formData.reference_number}
+                  onChange={(e) => setFormData({...formData, reference_number: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="from_location">From Location</Label>
+                <Input
+                  value={formData.from_location}
+                  onChange={(e) => setFormData({...formData, from_location: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="to_location">To Location</Label>
+                <Input
+                  value={formData.to_location}
+                  onChange={(e) => setFormData({...formData, to_location: e.target.value})}
+                />
+              </div>
+
+              <div className="col-span-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setFormOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit}>
+                {editMode ? 'Submit Edit Request' : 'Create Record'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid gap-4">
+        {records.map((record) => (
+          <Card key={record.id} className="transition-all hover:shadow-md">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <span className="text-2xl">{getTransactionIcon(record.transaction_type)}</span>
+                    {record.transaction_type.toUpperCase()} - {record.batch_number || 'No Batch'}
+                  </CardTitle>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Package className="h-4 w-4" />
+                      {record.quantity_bags} bags / {record.quantity_kg} kg
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {record.transaction_date}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      {record.created_by}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className={getStatusColor(record.status)}>
+                    {record.status.replace('_', ' ')}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditForm(record)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(record)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                {record.supplier_name && (
+                  <div>
+                    <span className="font-medium">Supplier:</span>
+                    <p>{record.supplier_name}</p>
+                  </div>
+                )}
+                {record.buyer_name && (
+                  <div>
+                    <span className="font-medium">Buyer:</span>
+                    <p>{record.buyer_name}</p>
+                  </div>
+                )}
+                {record.price_per_kg && (
+                  <div>
+                    <span className="font-medium">Price/KG:</span>
+                    <p>UGX {record.price_per_kg.toLocaleString()}</p>
+                  </div>
+                )}
+                {record.total_value && (
+                  <div>
+                    <span className="font-medium">Total Value:</span>
+                    <p>UGX {record.total_value.toLocaleString()}</p>
+                  </div>
+                )}
+                {(record.from_location || record.to_location) && (
+                  <div className="col-span-2">
+                    <span className="font-medium flex items-center gap-1">
+                      <MapPin className="h-4 w-4" />
+                      Location:
+                    </span>
+                    <p>
+                      {record.from_location && `From: ${record.from_location}`}
+                      {record.from_location && record.to_location && ' → '}
+                      {record.to_location && `To: ${record.to_location}`}
+                    </p>
+                  </div>
+                )}
+                {record.notes && (
+                  <div className="col-span-2">
+                    <span className="font-medium">Notes:</span>
+                    <p>{record.notes}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};

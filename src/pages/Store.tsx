@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import PriceTicker from "@/components/PriceTicker";
 import PricingGuidance from "@/components/PricingGuidance";
 import EUDRDocumentation from "@/components/store/EUDRDocumentation";
+import { StoreRecordsManager } from "@/components/store/StoreRecordsManager";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
 
 const Store = () => {
@@ -86,7 +87,7 @@ const Store = () => {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['records', 'eudr', 'pricing', 'operations', 'suppliers'].includes(tab)) {
+    if (tab && ['records', 'store-records', 'eudr', 'pricing', 'operations', 'suppliers'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -357,10 +358,14 @@ const Store = () => {
         <PriceTicker />
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="records">
               <Package className="h-4 w-4 mr-2" />
               Coffee Records
+            </TabsTrigger>
+            <TabsTrigger value="store-records">
+              <Package className="h-4 w-4 mr-2" />
+              Store Records
             </TabsTrigger>
             <TabsTrigger value="eudr">
               <FileText className="h-4 w-4 mr-2" />
@@ -500,6 +505,11 @@ const Store = () => {
               </CardContent>
             </Card>
 
+          </TabsContent>
+
+          {/* Store Records Tab */}
+          <TabsContent value="store-records" className="space-y-6">
+            <StoreRecordsManager />
           </TabsContent>
 
           {/* EUDR Documentation Tab */}
