@@ -51,7 +51,7 @@ const Index = () => {
   );
 
   return (
-    <Layout title="Dashboard" subtitle="Welcome to your workspace">
+    <Layout title="Dashboard" subtitle="Welcome to your workspace" showMessageButton={false}>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative overflow-hidden">
         {/* Sophisticated Background Elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">

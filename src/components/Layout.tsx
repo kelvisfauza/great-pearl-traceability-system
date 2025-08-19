@@ -19,9 +19,10 @@ interface LayoutProps {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
+  showMessageButton?: boolean;
 }
 
-const Layout = ({ children, title, subtitle }: LayoutProps) => {
+const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutProps) => {
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
@@ -102,10 +103,12 @@ const Layout = ({ children, title, subtitle }: LayoutProps) => {
         </div>
       </main>
 
-      <MessageButton 
-        onToggleMessaging={toggleMessaging}
-        unreadCount={unreadCount}
-      />
+      {showMessageButton && (
+        <MessageButton 
+          onToggleMessaging={toggleMessaging}
+          unreadCount={unreadCount}
+        />
+      )}
       
       <MessagingPanel 
         isOpen={isMessagingOpen}
