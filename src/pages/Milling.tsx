@@ -12,6 +12,7 @@ import MillingCashTransactionForm from '@/components/milling/MillingCashTransact
 import MillingReports from '@/components/milling/MillingReports';
 import MillingTransactionsList from '@/components/milling/MillingTransactionsList';
 import MillingCustomersList from '@/components/milling/MillingCustomersList';
+import MillingCustomerLedger from '@/components/milling/MillingCustomerLedger';
 import MillingPrintReportModal from '@/components/milling/MillingPrintReportModal';
 
 const Milling = () => {
@@ -101,9 +102,10 @@ const Milling = () => {
 
         {/* Main Tabs */}
         <Tabs defaultValue="transactions" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="transactions" className="font-bold">Transactions</TabsTrigger>
             <TabsTrigger value="customers" className="font-bold">Customers</TabsTrigger>
+            <TabsTrigger value="ledger" className="font-bold">Customer Ledger</TabsTrigger>
             <TabsTrigger value="payments" className="font-bold">Payments</TabsTrigger>
             <TabsTrigger value="reports" className="font-bold">Reports</TabsTrigger>
           </TabsList>
@@ -128,6 +130,10 @@ const Milling = () => {
               </Button>
             </div>
             <MillingCustomersList />
+          </TabsContent>
+
+          <TabsContent value="ledger" className="space-y-4">
+            <MillingCustomerLedger />
           </TabsContent>
 
           <TabsContent value="payments" className="space-y-4">
