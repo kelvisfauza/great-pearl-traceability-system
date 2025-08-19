@@ -2,6 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Printer, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import StandardPrintHeader from "@/components/print/StandardPrintHeader";
+import { getStandardPrintStyles } from "@/utils/printStyles";
 
 interface ReceiptPrintModalProps {
   isOpen: boolean;
@@ -24,23 +26,7 @@ const ReceiptPrintModal = ({ isOpen, onClose, payment, formatCurrency }: Receipt
           <html>
             <head>
               <title>Receipt - ${payment.id}</title>
-              <style>
-                body { font-family: Arial, sans-serif; margin: 20px; }
-                .receipt { max-width: 600px; margin: 0 auto; }
-                .header { text-align: center; margin-bottom: 30px; }
-                .company-name { font-size: 24px; font-weight: bold; color: #16a34a; }
-                .company-details { font-size: 14px; color: #666; margin-top: 10px; }
-                .receipt-details { border: 1px solid #ddd; padding: 20px; margin: 20px 0; }
-                .detail-row { display: flex; justify-content: space-between; margin: 10px 0; }
-                .detail-label { font-weight: bold; }
-                .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
-                .signature { margin-top: 40px; }
-                .signature-line { border-top: 1px solid #000; width: 200px; margin: 20px auto; }
-                @media print {
-                  body { margin: 0; }
-                  .no-print { display: none; }
-                }
-              </style>
+              <style>${getStandardPrintStyles()}</style>
             </head>
             <body>
               ${printContent.innerHTML}
@@ -63,19 +49,7 @@ const ReceiptPrintModal = ({ isOpen, onClose, payment, formatCurrency }: Receipt
         <html>
           <head>
             <title>Receipt - ${payment.id}</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              .receipt { max-width: 600px; margin: 0 auto; }
-              .header { text-align: center; margin-bottom: 30px; }
-              .company-name { font-size: 24px; font-weight: bold; color: #16a34a; }
-              .company-details { font-size: 14px; color: #666; margin-top: 10px; }
-              .receipt-details { border: 1px solid #ddd; padding: 20px; margin: 20px 0; }
-              .detail-row { display: flex; justify-content: space-between; margin: 10px 0; }
-              .detail-label { font-weight: bold; }
-              .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
-              .signature { margin-top: 40px; }
-              .signature-line { border-top: 1px solid #000; width: 200px; margin: 20px auto; }
-            </style>
+            <style>${getStandardPrintStyles()}</style>
           </head>
           <body>
             ${printContent}
@@ -103,17 +77,14 @@ const ReceiptPrintModal = ({ isOpen, onClose, payment, formatCurrency }: Receipt
         
         <div className="space-y-4">
           <div id="receipt-content" className="receipt">
-            <div className="header">
-              <div className="company-name">Great Pearl Coffee Factory</div>
-              <div className="company-details">
-                <div>P.O. Box 1234, Kampala, Uganda</div>
-                <div>Tel: +256-XXX-XXXXXX | Email: info@greatpearl.com</div>
-                <div>TIN: 1234567890</div>
-              </div>
-            </div>
+            <StandardPrintHeader
+              title="Payment Receipt"
+              documentNumber={payment.id}
+              additionalInfo={`Time: ${new Date().toLocaleTimeString()}`}
+            />
 
-            <div className="receipt-details">
-              <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>PAYMENT RECEIPT</h3>
+            <div className="content-section receipt-details">
+              <h3 className="section-title">Payment Details</h3>
               
               <div className="detail-row">
                 <span className="detail-label">Receipt No:</span>
