@@ -233,84 +233,107 @@ export const useQualityControl = () => {
 
   const addQualityAssessment = async (assessment: any) => {
     try {
-      console.log('Adding quality assessment to Supabase:', assessment);
+      console.log('=== STARTING QUALITY ASSESSMENT SAVE ===');
+      console.log('Assessment data received:', JSON.stringify(assessment, null, 2));
       
       // Find the coffee record to get supplier info
       const coffeeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
+      console.log('Found coffee record:', coffeeRecord);
+      
       if (!coffeeRecord) {
-        throw new Error('Coffee record not found');
+        const error = new Error(`Coffee record not found for ID: ${assessment.store_record_id}`);
+        console.error(error.message);
+        throw error;
       }
 
       // First, ensure the coffee record exists in Supabase
+      console.log('Checking if coffee record exists in Supabase...');
       const { data: existingCoffeeRecord, error: checkError } = await supabase
         .from('coffee_records')
         .select('id')
         .eq('id', assessment.store_record_id)
-        .single();
+        .maybeSingle();
 
       let coffeeRecordId = assessment.store_record_id;
 
       // If coffee record doesn't exist in Supabase, create it
-      if (checkError && checkError.code === 'PGRST116') {
+      if (!existingCoffeeRecord && !checkError) {
         console.log('Coffee record not found in Supabase, creating it...');
+        const coffeeRecordData = {
+          id: coffeeRecord.id,
+          date: coffeeRecord.date,
+          kilograms: Number(coffeeRecord.kilograms) || 0,
+          bags: Number(coffeeRecord.bags) || 0,
+          supplier_name: coffeeRecord.supplier_name || 'Unknown',
+          coffee_type: coffeeRecord.coffee_type || 'Unknown',
+          batch_number: coffeeRecord.batch_number || '',
+          status: coffeeRecord.status || 'pending'
+        };
+        
+        console.log('Creating coffee record with data:', coffeeRecordData);
+        
         const { data: newCoffeeRecord, error: createError } = await supabase
           .from('coffee_records')
-          .insert([{
-            id: coffeeRecord.id,
-            date: coffeeRecord.date,
-            kilograms: coffeeRecord.kilograms,
-            bags: coffeeRecord.bags,
-            supplier_name: coffeeRecord.supplier_name,
-            coffee_type: coffeeRecord.coffee_type,
-            batch_number: coffeeRecord.batch_number,
-            status: coffeeRecord.status
-          }])
+          .insert([coffeeRecordData])
           .select()
           .single();
 
         if (createError) {
           console.error('Error creating coffee record in Supabase:', createError);
-          throw createError;
+          throw new Error(`Failed to create coffee record: ${createError.message}`);
         }
+        
         coffeeRecordId = newCoffeeRecord.id;
-        console.log('Coffee record created in Supabase successfully');
+        console.log('Coffee record created in Supabase successfully:', newCoffeeRecord);
       } else if (checkError) {
         console.error('Error checking coffee record:', checkError);
-        throw checkError;
+        throw new Error(`Failed to check coffee record: ${checkError.message}`);
+      } else {
+        console.log('Coffee record already exists in Supabase');
       }
 
+      // Prepare assessment data with proper validation
+      const finalPrice = assessment.manual_price 
+        ? Number(assessment.manual_price) 
+        : (assessment.final_price || assessment.suggested_price || 0);
+        
+      const assessmentData = {
+        store_record_id: coffeeRecordId,
+        batch_number: assessment.batch_number || coffeeRecord.batch_number,
+        moisture: Number(assessment.moisture) || 0,
+        group1_defects: Number(assessment.group1_defects) || 0,
+        group2_defects: Number(assessment.group2_defects) || 0,
+        below12: Number(assessment.below12) || 0,
+        pods: Number(assessment.pods) || 0,
+        husks: Number(assessment.husks) || 0,
+        stones: Number(assessment.stones) || 0,
+        suggested_price: finalPrice,
+        status: 'assessed',
+        comments: assessment.comments || null,
+        date_assessed: assessment.date_assessed || new Date().toISOString().split('T')[0],
+        assessed_by: assessment.assessed_by || 'Quality Controller'
+      };
+      
+      console.log('Prepared assessment data:', JSON.stringify(assessmentData, null, 2));
+
       // Create assessment record in Supabase
+      console.log('Inserting quality assessment into Supabase...');
       const { data: newAssessment, error: insertError } = await supabase
         .from('quality_assessments')
-        .insert([{
-          store_record_id: coffeeRecordId,
-          batch_number: assessment.batch_number,
-          moisture: assessment.moisture || 0,
-          group1_defects: assessment.group1_defects || 0,
-          group2_defects: assessment.group2_defects || 0,
-          below12: assessment.below12 || 0,
-          pods: assessment.pods || 0,
-          husks: assessment.husks || 0,
-          stones: assessment.stones || 0,
-          suggested_price: assessment.manual_price ? parseFloat(assessment.manual_price) : assessment.final_price || 0,
-          status: 'assessed',
-          comments: assessment.comments || null,
-          date_assessed: assessment.date_assessed || new Date().toISOString().split('T')[0],
-          assessed_by: assessment.assessed_by || 'Quality Controller'
-        }])
+        .insert([assessmentData])
         .select()
         .single();
 
       if (insertError) {
         console.error('Error inserting quality assessment:', insertError);
-        throw insertError;
+        console.error('Insert error details:', JSON.stringify(insertError, null, 2));
+        throw new Error(`Failed to save quality assessment: ${insertError.message}`);
       }
 
-      console.log('Quality assessment added to Supabase successfully:', newAssessment);
+      console.log('Quality assessment saved successfully:', newAssessment);
       
       // Calculate total payment amount: kilograms × price per kg
       const kilograms = coffeeRecord?.kilograms || 0;
-      const finalPrice = assessment.manual_price ? parseFloat(assessment.manual_price) : assessment.final_price || 0;
       const totalPaymentAmount = kilograms * finalPrice;
       
       console.log('Payment calculation:', {
