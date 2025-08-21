@@ -24,18 +24,19 @@ export const useSessionManager = (userId: string | null) => {
     return `${platform} - ${language}`;
   }, []);
 
-  // Create a new session record
+  // Create a new session record (less aggressive session invalidation)
   const createSession = useCallback(async (userId: string): Promise<string> => {
     const sessionToken = generateSessionToken();
     const deviceInfo = getDeviceInfo();
     const userAgent = navigator.userAgent;
 
     try {
-      // First, invalidate all other sessions for this user
-      await supabase.rpc('invalidate_other_sessions', {
-        p_user_id: userId,
-        p_current_session_token: sessionToken
-      });
+      // Only invalidate old sessions (older than 24 hours) to allow multiple tabs
+      await supabase
+        .from('user_sessions')
+        .update({ is_active: false })
+        .eq('user_id', userId)
+        .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
       // Create new session record
       const { error } = await supabase
@@ -63,7 +64,7 @@ export const useSessionManager = (userId: string | null) => {
     }
   }, [generateSessionToken, getDeviceInfo]);
 
-  // Validate current session
+  // Validate current session (more forgiving)
   const validateSession = useCallback(async (userId: string): Promise<boolean> => {
     const storedToken = localStorage.getItem('session_token');
     
@@ -81,19 +82,33 @@ export const useSessionManager = (userId: string | null) => {
         .single();
 
       if (error || !sessionData) {
-        return false;
+        // Check if it's just a network error or temporary issue
+        if (error?.code === 'PGRST116') {
+          // No rows found - session genuinely doesn't exist
+          return false;
+        }
+        
+        // For other errors (network issues, etc.), assume session is still valid
+        console.warn('Session validation warning (treating as valid):', error);
+        return true;
       }
 
-      // Update last activity
-      await supabase
-        .from('user_sessions')
-        .update({ last_activity: new Date().toISOString() })
-        .eq('id', sessionData.id);
+      // Update last activity (but don't fail if this update fails)
+      try {
+        await supabase
+          .from('user_sessions')
+          .update({ last_activity: new Date().toISOString() })
+          .eq('id', sessionData.id);
+      } catch (updateError) {
+        console.warn('Failed to update last activity:', updateError);
+        // Still return true since the session exists
+      }
 
       return true;
     } catch (error) {
-      console.error('Session validation error:', error);
-      return false;
+      console.warn('Session validation error (treating as valid):', error);
+      // On network errors or other issues, assume session is still valid
+      return true;
     }
   }, []);
 
@@ -155,24 +170,34 @@ export const useSessionManager = (userId: string | null) => {
     };
   }, [userId, toast]);
 
-  // Periodic session validation
+  // Periodic session validation (less aggressive)
   useEffect(() => {
     if (!userId) return;
 
+    let failureCount = 0;
     const validateInterval = setInterval(async () => {
       const isValid = await validateSession(userId);
       
       if (!isValid) {
-        toast({
-          title: "Session Expired",
-          description: "Your session has expired. Please log in again.",
-          variant: "destructive"
-        });
+        failureCount++;
         
-        localStorage.removeItem('session_token');
-        window.location.reload();
+        // Only log out after 3 consecutive failures to avoid network-related logouts
+        if (failureCount >= 3) {
+          console.log('Session validation failed multiple times, logging out');
+          toast({
+            title: "Session Expired",
+            description: "Your session has expired. Please log in again.",
+            variant: "destructive"
+          });
+          
+          localStorage.removeItem('session_token');
+          window.location.reload();
+        }
+      } else {
+        // Reset failure count on successful validation
+        failureCount = 0;
       }
-    }, 60000); // Check every minute
+    }, 300000); // Check every 5 minutes instead of every minute
 
     return () => clearInterval(validateInterval);
   }, [userId, validateSession, toast]);
