@@ -181,8 +181,8 @@ export const useSessionManager = (userId: string | null) => {
       if (!isValid) {
         failureCount++;
         
-        // Only log out after 3 consecutive failures to avoid network-related logouts
-        if (failureCount >= 3) {
+        // Only log out after 5 consecutive failures to avoid network-related logouts
+        if (failureCount >= 5) {
           console.log('Session validation failed multiple times, logging out');
           toast({
             title: "Session Expired",
@@ -197,7 +197,7 @@ export const useSessionManager = (userId: string | null) => {
         // Reset failure count on successful validation
         failureCount = 0;
       }
-    }, 300000); // Check every 5 minutes instead of every minute
+    }, 900000); // Check every 15 minutes (much less aggressive)
 
     return () => clearInterval(validateInterval);
   }, [userId, validateSession, toast]);
