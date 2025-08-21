@@ -56,8 +56,8 @@ export const useSystemConsoleMonitor = () => {
         message,
         source: 'browser-console',
         userId: employee?.id || user?.uid || 'anonymous',
-        userName: employee?.name,
-        userDepartment: employee?.department,
+        userName: employee?.name || 'Unknown',
+        userDepartment: employee?.department || 'Unknown',
         url: window.location.href,
         userAgent: navigator.userAgent,
         stackTrace: level === 'error' ? new Error().stack : undefined
