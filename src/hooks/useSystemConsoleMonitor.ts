@@ -32,7 +32,29 @@ export const useSystemConsoleMonitor = () => {
     debug: console.debug
   };
 
+  // Rate limiting variables
+  let lastCaptureTime = 0;
+  let captureCount = 0;
+  const MAX_CAPTURES_PER_MINUTE = 5;
+
   const captureLogs = useCallback(async (level: string, args: any[]) => {
+    // Rate limiting: only allow 5 captures per minute to prevent quota exhaustion
+    const now = Date.now();
+    if (now - lastCaptureTime < 60000) {
+      if (captureCount >= MAX_CAPTURES_PER_MINUTE) {
+        return;
+      }
+      captureCount++;
+    } else {
+      lastCaptureTime = now;
+      captureCount = 1;
+    }
+
+    // Only capture errors and critical warnings to prevent quota issues
+    if (level === 'log' || level === 'info' || level === 'debug') {
+      return; // Skip regular logs completely
+    }
+
     try {
       const message = args.map(arg => {
         if (typeof arg === 'object') {
@@ -50,24 +72,35 @@ export const useSystemConsoleMonitor = () => {
         return;
       }
 
+      // Filter out known non-critical errors to save quota
+      if (
+        message.includes('DataCloneError') ||
+        message.includes('postMessage') ||
+        message.includes('Failed to send message') ||
+        message.includes('Session validation warning') ||
+        message.includes('Failed to update last activity') ||
+        message.includes('Maximum backoff delay')
+      ) {
+        return;
+      }
+
       const logEntry: Omit<ConsoleLog, 'id'> = {
         timestamp: new Date().toISOString(),
         level: level as any,
-        message,
+        message: message.substring(0, 500), // Limit message length
         source: 'browser-console',
         userId: employee?.id || user?.uid || 'anonymous',
         userName: employee?.name || 'Unknown',
         userDepartment: employee?.department || 'Unknown',
         url: window.location.href,
-        userAgent: navigator.userAgent,
-        stackTrace: level === 'error' ? new Error().stack : undefined
+        userAgent: navigator.userAgent.substring(0, 200), // Limit user agent length
+        stackTrace: level === 'error' ? new Error().stack?.substring(0, 1000) : undefined
       };
 
       // Store in Firebase for IT monitoring
       await addDoc(collection(db, 'system_console_logs'), logEntry);
     } catch (error) {
-      // Silently fail to avoid console spam
-      originalConsole.error('Failed to capture console log:', error);
+      // Silently fail to avoid console spam and quota issues
     }
   }, [employee, user]);
 
