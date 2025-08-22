@@ -15,15 +15,16 @@ export const getStandardPrintStyles = () => `
   .print-header {
     text-align: center;
     border-bottom: 2px solid #333;
-    padding-bottom: 20px;
-    margin-bottom: 30px;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
   }
   
-  .company-logo {
-    height: 60px;
-    width: auto;
-    max-width: 120px;
-    margin: 0 auto 10px;
+  .company-logo, img {
+    height: 40px !important;
+    width: auto !important;
+    max-width: 80px !important;
+    margin: 0 auto 8px !important;
+    display: block !important;
   }
   
   .company-name {
