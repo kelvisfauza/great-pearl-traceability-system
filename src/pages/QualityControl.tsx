@@ -365,12 +365,22 @@ const QualityControl = () => {
       return;
     }
 
-    const finalPrice = parseFloat(assessmentForm.manual_price) || calculateSuggestedPrice();
+    // Validate required fields
+    if (!assessmentForm.moisture || parseFloat(assessmentForm.moisture) <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid moisture percentage.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const finalPrice = parseFloat(assessmentForm.manual_price) || assessmentForm.final_price || calculateSuggestedPrice();
     
     if (finalPrice <= 0) {
       toast({
         title: "Error",
-        description: "Please enter a valid price for the assessment.",
+        description: "Please calculate or enter a valid price for the assessment.",
         variant: "destructive"
       });
       return;
@@ -378,10 +388,12 @@ const QualityControl = () => {
 
     try {
       console.log('Submitting quality assessment...');
+      console.log('Selected record:', selectedRecord);
+      console.log('Assessment form data:', assessmentForm);
       
       const assessment = {
         store_record_id: selectedRecord.id,
-        batch_number: selectedRecord.batch_number,
+        batch_number: selectedRecord.batch_number || `BATCH-${Date.now()}`,
         // Quality parameters
         moisture: parseFloat(assessmentForm.moisture) || 0,
         group1_defects: parseFloat(assessmentForm.group1_defects) || 0,
@@ -393,26 +405,27 @@ const QualityControl = () => {
         discretion: parseFloat(assessmentForm.discretion) || 0,
         ref_price: parseFloat(assessmentForm.ref_price) || 0,
         // Calculated results from Arabica Price Calculator
-        fm: assessmentForm.fm,
-        actual_ott: assessmentForm.actual_ott,
-        clean_d14: assessmentForm.clean_d14,
-        outturn: assessmentForm.outturn,
-        outturn_price: assessmentForm.outturn_price,
-        final_price: assessmentForm.final_price,
-        quality_note: assessmentForm.quality_note,
-        reject_outturn_price: assessmentForm.reject_outturn_price,
-        reject_final: assessmentForm.reject_final,
+        fm: Number(assessmentForm.fm) || 0,
+        actual_ott: Number(assessmentForm.actual_ott) || 0,
+        clean_d14: Number(assessmentForm.clean_d14) || 0,
+        outturn: Number(assessmentForm.outturn) || 0,
+        outturn_price: Number(assessmentForm.outturn_price) || 0,
+        final_price: Number(assessmentForm.final_price) || finalPrice,
+        quality_note: assessmentForm.quality_note || '',
+        reject_outturn_price: Boolean(assessmentForm.reject_outturn_price),
+        reject_final: Boolean(assessmentForm.reject_final),
         // Final values
         suggested_price: finalPrice,
         status: 'assessed' as const,
-        comments: assessmentForm.comments,
+        comments: assessmentForm.comments || '',
         date_assessed: new Date().toISOString().split('T')[0],
         assessed_by: 'Quality Controller',
       };
 
-      console.log('Assessment data:', assessment);
+      console.log('Final assessment data to submit:', assessment);
       
-      await addQualityAssessment(assessment);
+      const result = await addQualityAssessment(assessment);
+      console.log('Assessment submission result:', result);
       
       if (selectedRecord.isModification) {
         await completeModificationRequest(selectedRecord.modificationRequestId);
@@ -529,14 +542,14 @@ const QualityControl = () => {
         open: true,
         grnData: {
           grnNumber: `GRN-${assessment.batch_number}`,
-          supplierName: storeRecord.supplier_name,
-          coffeeType: storeRecord.coffee_type,
+          supplierName: storeRecord.supplier_name || 'Unknown Supplier',
+          coffeeType: storeRecord.coffee_type || 'Unknown Coffee Type', 
           qualityAssessment: qualityResult,
-          numberOfBags: storeRecord.bags,
-          totalKgs: storeRecord.kilograms,
-          unitPrice: assessment.suggested_price,
-          assessedBy: assessment.assessed_by,
-          createdAt: assessment.date_assessed,
+          numberOfBags: storeRecord.bags || 0,
+          totalKgs: storeRecord.kilograms || 0,
+          unitPrice: assessment.suggested_price || 0,
+          assessedBy: assessment.assessed_by || 'Quality Controller',
+          createdAt: assessment.date_assessed || new Date().toISOString(),
           moisture: assessment.moisture,
           group1_defects: assessment.group1_defects,
           group2_defects: assessment.group2_defects,
@@ -545,6 +558,12 @@ const QualityControl = () => {
           husks: assessment.husks,
           stones: assessment.stones
         }
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Could not find store record for this assessment",
+        variant: "destructive"
       });
     }
   };
@@ -729,8 +748,8 @@ const QualityControl = () => {
                           <TableCell>
                             <Badge variant="outline">{record.coffee_type}</Badge>
                           </TableCell>
-                          <TableCell>{record.kilograms?.toLocaleString()}</TableCell>
-                          <TableCell>{record.bags}</TableCell>
+                        <TableCell>{record.kilograms?.toLocaleString()}</TableCell>
+                        <TableCell>{record.bags}</TableCell>
                           <TableCell>{record.date}</TableCell>
                           <TableCell>{getStatusBadge(record.status)}</TableCell>
                           <TableCell>
