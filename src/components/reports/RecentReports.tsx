@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, Download, Search, Eye, Trash2, RefreshCw } from 'lucide-react';
-import { useReports } from '@/hooks/useReports';
+import { useSupabaseReports } from '@/hooks/useSupabaseReports';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 
@@ -15,7 +15,7 @@ const RecentReports = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  const { reports, loading } = useReports();
+  const { reports, loading, deleteReport, updateReportDownloads } = useSupabaseReports();
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = report.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -35,8 +35,9 @@ const RecentReports = () => {
     }
   };
 
-  const handleDownload = (reportId: string) => {
+  const handleDownload = async (reportId: string) => {
     console.log(`Downloading report ${reportId}`);
+    await updateReportDownloads(reportId);
     // Here you would implement actual file download logic
   };
 
@@ -47,7 +48,7 @@ const RecentReports = () => {
 
   const handleDelete = async (reportId: string) => {
     console.log(`Deleting report ${reportId}`);
-    // Implement delete logic using Firebase
+    await deleteReport(reportId);
   };
 
   const handleRegenerate = (reportId: string) => {
