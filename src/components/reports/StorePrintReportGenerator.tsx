@@ -96,8 +96,10 @@ const StorePrintReportGenerator = () => {
       const totalBagsLeft = filteredReports.reduce((sum, r) => sum + r.bags_left, 0);
       const totalBagsSold = filteredReports.reduce((sum, r) => sum + r.bags_sold, 0);
       
-      const averageBuyingPrice = filteredReports.length > 0 
-        ? filteredReports.reduce((sum, r) => sum + r.average_buying_price, 0) / filteredReports.length
+      // Calculate weighted average buying price based on quantity bought
+      const totalWeightedPrice = filteredReports.reduce((sum, r) => sum + (r.kilograms_bought * r.average_buying_price), 0);
+      const averageBuyingPrice = totalKgBought > 0 
+        ? totalWeightedPrice / totalKgBought
         : 0;
 
       const netInventoryChange = totalKgBought - totalKgSold;
@@ -129,11 +131,13 @@ const StorePrintReportGenerator = () => {
         coffeeTypeAnalysis[type].leftInStore += r.kilograms_left;
       });
 
-      // Calculate average prices for each coffee type
+      // Calculate weighted average prices for each coffee type
       Object.keys(coffeeTypeAnalysis).forEach(type => {
         const typeReports = filteredReports.filter(r => r.coffee_type === type);
-        coffeeTypeAnalysis[type].avgPrice = typeReports.length > 0
-          ? typeReports.reduce((sum, r) => sum + r.average_buying_price, 0) / typeReports.length
+        const totalTypeWeightedPrice = typeReports.reduce((sum, r) => sum + (r.kilograms_bought * r.average_buying_price), 0);
+        const totalTypeBought = typeReports.reduce((sum, r) => sum + r.kilograms_bought, 0);
+        coffeeTypeAnalysis[type].avgPrice = totalTypeBought > 0
+          ? totalTypeWeightedPrice / totalTypeBought
           : 0;
       });
 
@@ -280,6 +284,11 @@ const StorePrintReportGenerator = () => {
           </head>
           <body>
             <div class="company-header">
+              <div style="text-align: center; margin-bottom: 15px;">
+                <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+                     alt="Great Pearl Coffee Factory Logo" 
+                     style="height: 60px; width: auto; margin-bottom: 10px;" />
+              </div>
               <div class="company-name">GREAT PEARL COFFEE FACTORY</div>
               <div class="company-details">
                 Specialty Coffee Processing & Export<br>
