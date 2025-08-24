@@ -90,11 +90,15 @@ const StorePrintReportGenerator = () => {
       // Calculate summary statistics
       const totalKgBought = filteredReports.reduce((sum, r) => sum + r.kilograms_bought, 0);
       const totalKgSold = filteredReports.reduce((sum, r) => sum + r.kilograms_sold, 0);
-      const totalKgLeft = filteredReports.reduce((sum, r) => sum + r.kilograms_left, 0);
-      const totalKgUnbought = filteredReports.reduce((sum, r) => sum + r.kilograms_unbought, 0);
-      const totalAdvancesGiven = filteredReports.reduce((sum, r) => sum + r.advances_given, 0);
-      const totalBagsLeft = filteredReports.reduce((sum, r) => sum + r.bags_left, 0);
       const totalBagsSold = filteredReports.reduce((sum, r) => sum + r.bags_sold, 0);
+      const totalAdvancesGiven = filteredReports.reduce((sum, r) => sum + r.advances_given, 0);
+      
+      // Get the latest inventory levels (most recent report in the period)
+      const sortedReports = [...filteredReports].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const latestReport = sortedReports[0];
+      const totalKgLeft = latestReport ? latestReport.kilograms_left : 0;
+      const totalKgUnbought = latestReport ? latestReport.kilograms_unbought : 0;
+      const totalBagsLeft = latestReport ? latestReport.bags_left : 0;
       
       // Calculate weighted average buying price based on quantity bought
       const totalWeightedPrice = filteredReports.reduce((sum, r) => sum + (r.kilograms_bought * r.average_buying_price), 0);
@@ -128,7 +132,12 @@ const StorePrintReportGenerator = () => {
         }
         coffeeTypeAnalysis[type].totalBought += r.kilograms_bought;
         coffeeTypeAnalysis[type].totalSold += r.kilograms_sold;
-        coffeeTypeAnalysis[type].leftInStore += r.kilograms_left;
+      });
+
+      // For leftInStore, get the latest value for each coffee type
+      Object.keys(coffeeTypeAnalysis).forEach(type => {
+        const typeReports = filteredReports.filter(r => r.coffee_type === type).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        coffeeTypeAnalysis[type].leftInStore = typeReports.length > 0 ? typeReports[0].kilograms_left : 0;
       });
 
       // Calculate weighted average prices for each coffee type
