@@ -294,7 +294,7 @@ const StorePrintReportGenerator = () => {
           <body>
             <div class="company-header">
               <div style="text-align: center; margin-bottom: 15px;">
-                <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+                <img src="${window.location.origin}/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
                      alt="Great Pearl Coffee Factory Logo" 
                      style="height: 60px; width: auto; margin-bottom: 10px;" />
               </div>
