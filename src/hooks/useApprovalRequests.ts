@@ -38,6 +38,9 @@ export interface ApprovalRequest {
     coffeeType?: string;
     inputBy?: string;
     deleteReason?: string;
+    originalModificationId?: string;
+    modificationReason?: string;
+    financeNotes?: string;
   };
   created_at: string;
   updated_at: string;
@@ -141,10 +144,79 @@ export const useApprovalRequests = () => {
         status: 'completed'
       });
 
-      // Handle different types of approved requests
-      if (status === 'Approved') {
-        // Handle Store Report Deletion
-        if (request.type === 'Store Report Deletion' && request.details?.action === 'delete_store_report' && request.details?.reportId) {
+        // Handle different types of approved requests
+        if (status === 'Approved') {
+           // Handle Modification Request Approval
+           if (request.type === 'Modification Request Approval' && request.details?.originalModificationId) {
+             console.log('Processing approved modification request:', request.details.originalModificationId);
+             try {
+               // Update payment records if paymentId exists
+               if (request.details.paymentId) {
+                 let newStatus = 'Approved';
+                 if (request.details.modificationReason === 'payment_rejected') {
+                   newStatus = 'Rejected';
+                 } else if (request.details.modificationReason === 'price_adjustment') {
+                   newStatus = 'Price Adjusted';
+                 } else if (request.details.modificationReason === 'quality_issues') {
+                   newStatus = 'Quality Review Required';
+                 }
+                 
+                 await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
+                   status: newStatus,
+                   updated_at: new Date().toISOString(),
+                   modification_approved: true,
+                   modification_reason: request.details.modificationReason
+                 });
+                 console.log('Payment record updated after modification approval');
+               }
+               
+               // Update store records if this is a store modification
+               if (request.details.batchNumber && request.details.modificationReason) {
+                 console.log('Updating store records for batch:', request.details.batchNumber);
+                 try {
+                   // Update store_records in Supabase based on modification reason
+                   if (request.details.modificationReason === 'price_adjustment') {
+                     // For price adjustments, update the price_per_kg if available
+                     const { error: storeError } = await supabase
+                       .from('store_records')
+                       .update({
+                         notes: `Price adjustment approved via modification request. Original reason: ${request.details.modificationReason}`,
+                         updated_at: new Date().toISOString()
+                       })
+                       .eq('batch_number', request.details.batchNumber);
+                     
+                     if (storeError) {
+                       console.error('Error updating store records:', storeError);
+                     } else {
+                       console.log('Store records updated in Supabase');
+                     }
+                   } else if (request.details.modificationReason === 'quantity_adjustment') {
+                     // Mark records as modified for quantity adjustments
+                     const { error: storeError } = await supabase
+                       .from('store_records')
+                       .update({
+                         notes: `Quantity adjustment approved via modification request. Manual review required.`,
+                         updated_at: new Date().toISOString()
+                       })
+                       .eq('batch_number', request.details.batchNumber);
+                     
+                     if (storeError) {
+                       console.error('Error updating store records:', storeError);
+                     } else {
+                       console.log('Store records marked for quantity adjustment');
+                     }
+                   }
+                 } catch (supabaseError) {
+                   console.error('Error updating store records in Supabase:', supabaseError);
+                 }
+               }
+             } catch (error) {
+               console.error('Error processing modification request approval:', error);
+             }
+           }
+          
+          // Handle Store Report Deletion
+          else if (request.type === 'Store Report Deletion' && request.details?.action === 'delete_store_report' && request.details?.reportId) {
           console.log('Deleting store report:', request.details.reportId);
           try {
             await deleteDoc(doc(db, 'store_reports', request.details.reportId));
