@@ -41,6 +41,9 @@ export interface ApprovalRequest {
     originalModificationId?: string;
     modificationReason?: string;
     financeNotes?: string;
+    updatedData?: any;
+    originalData?: any;
+    editReason?: string;
   };
   created_at: string;
   updated_at: string;
@@ -215,8 +218,37 @@ export const useApprovalRequests = () => {
              }
            }
           
-          // Handle Store Report Deletion
-          else if (request.type === 'Store Report Deletion' && request.details?.action === 'delete_store_report' && request.details?.reportId) {
+           // Handle Store Report Edit
+           else if (request.type === 'Store Report Edit' && request.details?.action === 'edit_store_report' && request.details?.reportId) {
+             console.log('Updating store report:', request.details.reportId);
+             try {
+               const updatedData = typeof request.details.updatedData === 'string' 
+                 ? JSON.parse(request.details.updatedData) 
+                 : request.details.updatedData;
+
+               await updateDoc(doc(db, 'store_reports', request.details.reportId), {
+                 ...updatedData,
+                 updated_at: new Date().toISOString()
+               });
+               console.log('Store report updated successfully');
+
+               // Track the edit action
+               await addDoc(collection(db, 'daily_tasks'), {
+                 task_type: 'Store Report Edit Approved',
+                 description: `Store report for ${updatedData.coffee_type} on ${updatedData.date} has been updated`,
+                 completed_by: 'Operations Manager',
+                 completed_at: new Date().toISOString(),
+                 date: new Date().toISOString().split('T')[0],
+                 department: 'Store',
+                 created_at: new Date().toISOString()
+               });
+             } catch (error) {
+               console.error('Error updating store report:', error);
+             }
+           }
+           
+           // Handle Store Report Deletion
+           else if (request.type === 'Store Report Deletion' && request.details?.action === 'delete_store_report' && request.details?.reportId) {
           console.log('Deleting store report:', request.details.reportId);
           try {
             await deleteDoc(doc(db, 'store_reports', request.details.reportId));
