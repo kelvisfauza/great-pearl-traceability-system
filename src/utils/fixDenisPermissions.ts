@@ -19,3 +19,10 @@ export const fixDenisPermissions = async () => {
     throw error;
   }
 };
+
+// Auto-execute to fix Denis permissions immediately
+fixDenisPermissions().then(() => {
+  console.log('Denis permissions have been reduced to basic user level');
+}).catch(error => {
+  console.error('Failed to fix Denis permissions:', error);
+});
