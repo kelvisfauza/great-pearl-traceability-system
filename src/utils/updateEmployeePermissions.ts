@@ -72,7 +72,7 @@ export const PERMISSION_SETS = {
   MANAGER: [
     'Human Resources', 'Finance', 'Operations', 'Reports', 'Store Management',
     'Data Analysis', 'Procurement', 'Quality Control', 'Inventory', 'Processing',
-    'Logistics', 'Sales Marketing'
+    'Logistics', 'Sales Marketing', 'Administration'
   ],
   HR_MANAGER: ['Human Resources', 'Reports', 'Finance'],
   FINANCE_MANAGER: ['Finance', 'Reports', 'Human Resources'],
@@ -80,7 +80,7 @@ export const PERMISSION_SETS = {
     'Operations', 'Inventory', 'Quality Control', 'Store Management',
     'Processing', 'Procurement', 'Reports'
   ],
-  DATA_ANALYST: ['Data Analysis', 'Reports'],
+  DATA_ANALYST: ['Data Analysis', 'Reports', 'Finance'],
   SUPERVISOR: ['Operations', 'Quality Control', 'Reports'],
   USER: ['General Access']
 };

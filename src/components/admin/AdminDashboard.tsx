@@ -1,151 +1,177 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, DollarSign, Users, Settings, FileText, Shield, UserPlus } from 'lucide-react';
-import CashManagementModal from './CashManagementModal';
+import { Shield, Users, Settings, BarChart3, UserCog, Eye } from 'lucide-react';
+import UserRegistrationRequests from '@/components/UserRegistrationRequests';
 import DeletionRequestsManager from './DeletionRequestsManager';
-import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
-import RoleAssignmentManager from './RoleAssignmentManager';
 import MoneyRequestsFinalApproval from './MoneyRequestsFinalApproval';
-import { useRoleBasedData } from '@/hooks/useRoleBasedData';
+import { WithdrawalProcessingManager } from './WithdrawalProcessingManager';
+import RoleAssignmentManager from './RoleAssignmentManager';
+import CashManagementModal from './CashManagementModal';
+import UserPresencePanel from './UserPresencePanel';
+import CreateTrainingAccountButton from './CreateTrainingAccountButton';
+import QuickEmployeeUpdate from './QuickEmployeeUpdate';
+import UserPermissionManager from './UserPermissionManager';
+import PermissionOverview from './PermissionOverview';
 
 const AdminDashboard = () => {
+  const [activeTab, setActiveTab] = useState('overview');
   const [showCashModal, setShowCashModal] = useState(false);
-  const roleData = useRoleBasedData();
-  const navigate = useNavigate();
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Cash Management */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Cash Management
-            </CardTitle>
-            <CardDescription>
-              Add cash or float to finance department
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => setShowCashModal(true)}
-              className="w-full"
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add Cash/Float
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* User Management */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              User Management
-            </CardTitle>
-            <CardDescription>
-              Manage employee accounts and permissions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => navigate('/settings')}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Manage Users
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* System Reports */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              System Reports
-            </CardTitle>
-            <CardDescription>
-              Generate administrative reports
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => navigate('/reports')}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              View Reports
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Security & Access */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Security & Access
-            </CardTitle>
-            <CardDescription>
-              Manage system security and access controls
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => navigate('/it-department')}
-            >
-              <Shield className="h-4 w-4 mr-2" />
-              Security Settings
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Role Assignment */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Role Assignment
-            </CardTitle>
-            <CardDescription>
-              Assign approval powers to other users
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => navigate('/human-resources')}
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Manage Roles
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* EUDR Summary */}
-        <EUDRSummaryCard />
+      <div className="flex items-center gap-3">
+        <Shield className="h-8 w-8 text-primary" />
+        <div>
+          <h1 className="text-3xl font-bold">Administrator Dashboard</h1>
+          <p className="text-muted-foreground">Manage users, permissions, and system settings</p>
+        </div>
       </div>
 
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid grid-cols-6 lg:w-auto">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <Eye className="h-4 w-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="permissions" className="flex items-center gap-2">
+            <UserCog className="h-4 w-4" />
+            Permissions
+          </TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Users
+          </TabsTrigger>
+          <TabsTrigger value="approvals" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Approvals
+          </TabsTrigger>
+          <TabsTrigger value="system" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            System
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Deletion Requests Section - Admin Only */}
-      {roleData?.isAdmin && <DeletionRequestsManager />}
+        <TabsContent value="overview" className="space-y-6">
+          <PermissionOverview />
+        </TabsContent>
 
-      {/* Role Assignment Section - Admin Only */}
-      {roleData?.isAdmin && <RoleAssignmentManager />}
+        <TabsContent value="permissions" className="space-y-6">
+          <UserPermissionManager />
+        </TabsContent>
 
-      {/* Money Requests Final Approval - Admin Only */}
-      {roleData?.isAdmin && <MoneyRequestsFinalApproval />}
+        <TabsContent value="users" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>User Registration Requests</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <UserRegistrationRequests />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick User Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <QuickEmployeeUpdate />
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>User Presence & Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <UserPresencePanel />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="approvals" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Money Requests - Final Approval</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MoneyRequestsFinalApproval />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Withdrawal Processing</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <WithdrawalProcessingManager />
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Deletion Requests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DeletionRequestsManager />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Role Assignments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RoleAssignmentManager />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="system" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cash Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={() => setShowCashModal(true)} className="w-full">
+                  Add Cash/Float
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Training Accounts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CreateTrainingAccountButton />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>System Analytics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Analytics dashboard coming soon...</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <CashManagementModal
         open={showCashModal}
