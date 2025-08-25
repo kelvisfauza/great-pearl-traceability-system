@@ -1,28 +1,23 @@
-import { updateEmployeePermissions } from './updateEmployeePermissions';
+import { setEmployeeRole } from './updateEmployeePermissions';
 
 export const fixDenisPermissions = async () => {
   try {
-    console.log('Fixing Denis permissions...');
+    console.log('Setting Denis as Data Analyst with proper permissions...');
     
-    // Update Denis to have only basic user permissions
-    await updateEmployeePermissions('bwambaledenis8@gmail.com', {
-      role: 'User',
-      permissions: ['General Access'],
-      position: 'Staff',
-      department: 'General'
-    });
+    // Set Denis as Data Analyst with proper permissions for data analysis and reports
+    await setEmployeeRole('bwambaledenis8@gmail.com', 'DATA_ANALYST');
     
-    console.log('✅ Denis permissions fixed successfully');
-    return { success: true, message: 'Denis permissions updated to User level' };
+    console.log('✅ Denis permissions set as Data Analyst successfully');
+    return { success: true, message: 'Denis permissions updated to Data Analyst level' };
   } catch (error) {
-    console.error('❌ Error fixing Denis permissions:', error);
+    console.error('❌ Error setting Denis as Data Analyst:', error);
     throw error;
   }
 };
 
-// Auto-execute to fix Denis permissions immediately
+// Auto-execute to set Denis as Data Analyst immediately
 fixDenisPermissions().then(() => {
-  console.log('Denis permissions have been reduced to basic user level');
+  console.log('Denis has been properly set as Data Analyst with correct permissions');
 }).catch(error => {
-  console.error('Failed to fix Denis permissions:', error);
+  console.error('Failed to set Denis as Data Analyst:', error);
 });
