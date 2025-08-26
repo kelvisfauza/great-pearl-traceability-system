@@ -1,23 +1,28 @@
-import { setEmployeeRole } from './updateEmployeePermissions';
+import { updateEmployeePermissions } from './updateEmployeePermissions';
 
 export const fixDenisPermissions = async () => {
   try {
-    console.log('Setting Denis as Data Analyst with proper permissions...');
+    console.log('Normalizing Denis account to regular user...');
     
-    // Set Denis as Data Analyst with proper permissions for data analysis and reports
-    await setEmployeeRole('bwambaledenis8@gmail.com', 'DATA_ANALYST');
+    // Make Denis a regular user account that can be managed through admin interface
+    await updateEmployeePermissions('bwambaledenis8@gmail.com', {
+      role: 'User',
+      permissions: ['General Access'],
+      position: 'Data Analyst',
+      department: 'Data Analysis'
+    });
     
-    console.log('✅ Denis permissions set as Data Analyst successfully');
-    return { success: true, message: 'Denis permissions updated to Data Analyst level' };
+    console.log('✅ Denis account normalized successfully');
+    return { success: true, message: 'Denis account is now a regular user account' };
   } catch (error) {
-    console.error('❌ Error setting Denis as Data Analyst:', error);
+    console.error('❌ Error normalizing Denis account:', error);
     throw error;
   }
 };
 
-// Auto-execute to set Denis as Data Analyst immediately
+// Auto-execute to normalize Denis account immediately
 fixDenisPermissions().then(() => {
-  console.log('Denis has been properly set as Data Analyst with correct permissions');
+  console.log('Denis account has been normalized and can now be managed through admin interface');
 }).catch(error => {
-  console.error('Failed to set Denis as Data Analyst:', error);
+  console.error('Failed to normalize Denis account:', error);
 });

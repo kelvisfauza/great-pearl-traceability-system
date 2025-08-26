@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 
 const StoreReportsList = () => {
-  const { reports, loading, requestDeleteReport, requestEditReport } = useStoreReports();
+  const { reports, loading, directDeleteReport, directEditReport } = useStoreReports();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState({
     start: '',
@@ -72,12 +72,12 @@ const StoreReportsList = () => {
 
     setSubmitting(true);
     try {
-      await requestDeleteReport(selectedReport.id, deleteReason);
+      await directDeleteReport(selectedReport.id, deleteReason);
       setDeleteDialogOpen(false);
       setSelectedReport(null);
       setDeleteReason('');
     } catch (error) {
-      console.error('Error submitting delete request:', error);
+      console.error('Error deleting report:', error);
     } finally {
       setSubmitting(false);
     }
@@ -88,7 +88,7 @@ const StoreReportsList = () => {
 
     setSubmitting(true);
     try {
-      const result = await requestEditReport(selectedReport.id, editFormData, editReason);
+      const result = await directEditReport(selectedReport.id, editFormData, editReason);
       
       if (result) {
         setEditDialogOpen(false);
@@ -97,7 +97,7 @@ const StoreReportsList = () => {
         setEditFormData({});
       }
     } catch (error) {
-      console.error('Error submitting edit request:', error);
+      console.error('Error updating report:', error);
     } finally {
       setSubmitting(false);
     }
@@ -356,9 +356,9 @@ const StoreReportsList = () => {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Request Report Deletion</DialogTitle>
+            <DialogTitle>Delete Report</DialogTitle>
             <DialogDescription>
-              This will send a deletion request to the admin for approval. Please provide a reason for deleting this report.
+              This will permanently delete the report and log the action for audit purposes. Please provide a reason for deleting this report.
             </DialogDescription>
           </DialogHeader>
           
@@ -394,7 +394,7 @@ const StoreReportsList = () => {
               onClick={handleConfirmDelete}
               disabled={submitting || !deleteReason.trim()}
             >
-              {submitting ? 'Submitting...' : 'Submit Request'}
+              {submitting ? 'Deleting...' : 'Delete Report'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -404,9 +404,9 @@ const StoreReportsList = () => {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Request Report Edit</DialogTitle>
+            <DialogTitle>Edit Report</DialogTitle>
             <DialogDescription>
-              This will send an edit request to the admin for approval. Make your changes and provide a reason for editing this report.
+              This will update the report immediately and log the action for audit purposes. Make your changes and provide a reason for editing this report.
             </DialogDescription>
           </DialogHeader>
           

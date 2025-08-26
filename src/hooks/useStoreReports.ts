@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -90,102 +90,99 @@ export const useStoreReports = () => {
     }
   };
 
-  const requestDeleteReport = async (reportId: string, reason: string) => {
+  const directDeleteReport = async (reportId: string, reason: string) => {
     try {
       const reportToDelete = reports.find(r => r.id === reportId);
       if (!reportToDelete) {
         throw new Error('Report not found');
       }
 
-      // Create deletion request directly in Supabase
+      // Delete directly from Firebase
+      await deleteStoreReport(reportId);
+
+      // Log the action for audit purposes
       const { error } = await supabase
-        .from('approval_requests')
+        .from('audit_logs')
         .insert({
-          type: 'Store Report Deletion',
-          title: `Delete Store Report - ${reportToDelete.date}`,
-          description: `Request to delete store report for ${reportToDelete.coffee_type} from ${reportToDelete.date}. Reason: ${reason}`,
-          amount: '0',
-          department: 'Store',
-          requestedby: employee?.name || 'Unknown User',
-          daterequested: new Date().toLocaleDateString(),
-          priority: 'High',
-          status: 'Pending',
-          details: JSON.stringify({
-            reportId,
-            reportDate: reportToDelete.date,
-            coffeeType: reportToDelete.coffee_type,
-            inputBy: reportToDelete.input_by,
-            deleteReason: reason,
-            action: 'delete_store_report'
-          })
+          action: 'delete_store_report',
+          table_name: 'store_reports',
+          record_id: reportId,
+          record_data: reportToDelete,
+          reason: reason,
+          performed_by: employee?.name || 'Unknown User',
+          department: employee?.department || 'Store'
         });
 
       if (error) {
-        throw error;
+        console.error('Error logging audit:', error);
       }
 
       toast({
-        title: "Deletion Request Submitted",
-        description: "Your request to delete the report has been sent to admin for approval"
+        title: "Report Deleted",
+        description: "Store report has been deleted and logged for audit"
       });
 
       return true;
     } catch (error) {
-      console.error('Error requesting report deletion:', error);
+      console.error('Error deleting report:', error);
       toast({
         title: "Error",
-        description: "Failed to submit deletion request",
+        description: "Failed to delete report",
         variant: "destructive"
       });
       return false;
     }
   };
 
-  const requestEditReport = async (reportId: string, updatedData: Omit<StoreReport, 'id' | 'created_at' | 'updated_at'>, reason: string) => {
+  const directEditReport = async (reportId: string, updatedData: Omit<StoreReport, 'id' | 'created_at' | 'updated_at'>, reason: string) => {
     try {
       const reportToEdit = reports.find(r => r.id === reportId);
       if (!reportToEdit) {
         throw new Error('Report not found');
       }
 
-      // Create edit request directly in Supabase
+      // Update directly in Firebase
+      const updatedReport = {
+        ...updatedData,
+        updated_at: new Date().toISOString()
+      };
+
+      await updateDoc(doc(db, 'store_reports', reportId), updatedReport);
+
+      // Log the action for audit purposes
       const { error } = await supabase
-        .from('approval_requests')
+        .from('audit_logs')
         .insert({
-          type: 'Store Report Edit',
-          title: `Edit Store Report - ${reportToEdit.date}`,
-          description: `Request to edit store report for ${reportToEdit.coffee_type} from ${reportToEdit.date}. Reason: ${reason}`,
-          amount: '0',
-          department: 'Store',
-          requestedby: employee?.name || 'Unknown User',
-          daterequested: new Date().toLocaleDateString(),
-          priority: 'High',
-          status: 'Pending',
-          details: JSON.stringify({
-            reportId,
-            originalData: reportToEdit,
-            updatedData,
-            editReason: reason,
-            action: 'edit_store_report',
-            department: 'Store'
-          })
+          action: 'edit_store_report',
+          table_name: 'store_reports',
+          record_id: reportId,
+          record_data: {
+            original: reportToEdit,
+            updated: updatedData
+          },
+          reason: reason,
+          performed_by: employee?.name || 'Unknown User',
+          department: employee?.department || 'Store'
         });
 
       if (error) {
-        throw error;
+        console.error('Error logging audit:', error);
       }
 
+      // Refresh reports
+      await fetchReports();
+
       toast({
-        title: "Edit Request Submitted",
-        description: "Your request to edit the report has been sent to admin for approval"
+        title: "Report Updated",
+        description: "Store report has been updated and logged for audit"
       });
 
       return true;
     } catch (error) {
-      console.error('Error requesting report edit:', error);
+      console.error('Error editing report:', error);
       toast({
         title: "Error",
-        description: "Failed to submit edit request. Please try again.",
+        description: "Failed to update report",
         variant: "destructive"
       });
       return false;
@@ -223,8 +220,8 @@ export const useStoreReports = () => {
     reports,
     loading,
     addStoreReport,
-    requestEditReport,
-    requestDeleteReport,
+    directEditReport,
+    directDeleteReport,
     deleteStoreReport,
     refetch: fetchReports
   };

@@ -197,7 +197,8 @@ const Navigation = () => {
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4 mr-2 flex-shrink-0" />
-          <span>Sign Out</span>
+          <span className="hidden sm:inline">Sign Out</span>
+          <span className="sm:hidden">Out</span>
         </Button>
       </div>
     </div>
