@@ -341,6 +341,24 @@ export const useMillingData = () => {
     addTransaction,
     addCashTransaction,
     getReportData,
-    fetchData
+    fetchData,
+    updateMillingTransaction: async (id: string, updates: Partial<MillingTransaction>) => {
+      try {
+        const { error } = await supabase
+          .from('milling_transactions')
+          .update(updates)
+          .eq('id', id);
+
+        if (error) throw error;
+
+        // Refresh data
+        await fetchData();
+        
+        return true;
+      } catch (error) {
+        console.error('Error updating milling transaction:', error);
+        throw error;
+      }
+    }
   };
 };

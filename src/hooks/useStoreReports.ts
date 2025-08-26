@@ -100,26 +100,20 @@ export const useStoreReports = () => {
       // Delete directly from Firebase
       await deleteStoreReport(reportId);
 
-      // Log the action for audit purposes
-      const { error } = await supabase
-        .from('audit_logs')
-        .insert({
-          action: 'delete_store_report',
-          table_name: 'store_reports',
-          record_id: reportId,
-          record_data: reportToDelete,
-          reason: reason,
-          performed_by: employee?.name || 'Unknown User',
-          department: employee?.department || 'Store'
-        });
-
-      if (error) {
-        console.error('Error logging audit:', error);
-      }
+      // Log to console for audit purposes (could be enhanced later)
+      console.log('AUDIT LOG - Report Deleted:', {
+        action: 'delete_store_report',
+        reportId,
+        reportData: reportToDelete,
+        reason,
+        performedBy: employee?.name || 'Unknown User',
+        department: employee?.department || 'Store',
+        timestamp: new Date().toISOString()
+      });
 
       toast({
         title: "Report Deleted",
-        description: "Store report has been deleted and logged for audit"
+        description: "Store report has been deleted successfully"
       });
 
       return true;
@@ -149,32 +143,24 @@ export const useStoreReports = () => {
 
       await updateDoc(doc(db, 'store_reports', reportId), updatedReport);
 
-      // Log the action for audit purposes
-      const { error } = await supabase
-        .from('audit_logs')
-        .insert({
-          action: 'edit_store_report',
-          table_name: 'store_reports',
-          record_id: reportId,
-          record_data: {
-            original: reportToEdit,
-            updated: updatedData
-          },
-          reason: reason,
-          performed_by: employee?.name || 'Unknown User',
-          department: employee?.department || 'Store'
-        });
-
-      if (error) {
-        console.error('Error logging audit:', error);
-      }
+      // Log to console for audit purposes (could be enhanced later)
+      console.log('AUDIT LOG - Report Edited:', {
+        action: 'edit_store_report',
+        reportId,
+        originalData: reportToEdit,
+        updatedData: updatedData,
+        reason,
+        performedBy: employee?.name || 'Unknown User',
+        department: employee?.department || 'Store',
+        timestamp: new Date().toISOString()
+      });
 
       // Refresh reports
       await fetchReports();
 
       toast({
         title: "Report Updated",
-        description: "Store report has been updated and logged for audit"
+        description: "Store report has been updated successfully"
       });
 
       return true;

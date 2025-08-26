@@ -62,6 +62,42 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          department: string | null
+          id: string
+          performed_by: string
+          reason: string | null
+          record_data: Json | null
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          department?: string | null
+          id?: string
+          performed_by: string
+          reason?: string | null
+          record_data?: Json | null
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          department?: string | null
+          id?: string
+          performed_by?: string
+          reason?: string | null
+          record_data?: Json | null
+          record_id?: string
+          table_name?: string
+        }
+        Relationships: []
+      }
       buying_stations: {
         Row: {
           capacity: number

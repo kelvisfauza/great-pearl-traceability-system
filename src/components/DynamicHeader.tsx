@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import NotificationButton from '@/components/notifications/NotificationButton';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import { useNotifications } from '@/hooks/useNotifications';
-import AnalogClock from '@/components/AnalogClock';
+import DigitalClock from '@/components/DigitalClock';
 
 const DynamicHeader = () => {
   const { employee } = useAuth();
@@ -96,9 +96,9 @@ const DynamicHeader = () => {
 
         {/* Time and Date Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Analog Clock */}
+          {/* Digital Clock */}
           <div className="flex items-center justify-center p-4 bg-gradient-to-br from-slate-50/80 via-white/90 to-blue-50/60 dark:from-slate-800/80 dark:via-slate-700/90 dark:to-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-600/40 backdrop-blur-sm shadow-lg">
-            <AnalogClock size={140} className="animate-scale-in" />
+            <DigitalClock className="animate-scale-in" showSeconds={true} showDate={false} />
           </div>
 
           {/* Date */}

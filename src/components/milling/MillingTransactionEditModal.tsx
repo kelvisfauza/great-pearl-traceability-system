@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useMillingData } from '@/hooks/useMillingData';
-import { useApprovalSystem } from '@/hooks/useApprovalSystem';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { MillingTransaction } from '@/hooks/useMillingData';
 
 interface MillingTransactionEditModalProps {
@@ -17,9 +17,10 @@ interface MillingTransactionEditModalProps {
 }
 
 const MillingTransactionEditModal = ({ open, onClose, transaction }: MillingTransactionEditModalProps) => {
-  const { customers } = useMillingData();
-  const { createApprovalRequest, loading } = useApprovalSystem();
+  const { customers, updateMillingTransaction } = useMillingData();
   const { employee } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     customer_id: '',
     customer_name: '',
@@ -103,42 +104,52 @@ const MillingTransactionEditModal = ({ open, onClose, transaction }: MillingTran
       return;
     }
 
-    const newTotalAmount = calculateTotalAmount();
-    const requestDetails = {
-      transaction_id: transaction.id,
-      original_data: {
-        customer_name: transaction.customer_name,
-        kgs_hulled: transaction.kgs_hulled,
-        rate_per_kg: transaction.rate_per_kg,
-        total_amount: transaction.total_amount,
-        amount_paid: transaction.amount_paid,
-        notes: transaction.notes
-      },
-      new_data: {
+    setLoading(true);
+    try {
+      const newTotalAmount = calculateTotalAmount();
+      const balance = newTotalAmount - formData.amount_paid;
+
+      const updatedData = {
         customer_id: formData.customer_id,
         customer_name: formData.customer_name,
         kgs_hulled: formData.kgs_hulled,
         rate_per_kg: formData.rate_per_kg,
         total_amount: newTotalAmount,
         amount_paid: formData.amount_paid,
-        notes: formData.notes
-      },
-      changes: changes,
-      change_reason: formData.change_reason,
-      department: 'Milling',
-      transaction_date: transaction.date
-    };
+        balance: balance,
+        notes: formData.notes,
+        updated_at: new Date().toISOString()
+      };
 
-    const success = await createApprovalRequest(
-      'milling_transaction_edit',
-      `Edit Milling Transaction - ${transaction.customer_name}`,
-      `Request to modify milling transaction. Changes: ${changes.join('; ')}. Reason: ${formData.change_reason}`,
-      newTotalAmount,
-      requestDetails
-    );
+      await updateMillingTransaction(transaction.id, updatedData);
 
-    if (success) {
+      // Log the action for audit purposes
+      console.log('AUDIT LOG - Milling Transaction Edited:', {
+        action: 'edit_milling_transaction',
+        transactionId: transaction.id,
+        originalData: transaction,
+        updatedData: updatedData,
+        changes: changes,
+        reason: formData.change_reason,
+        performedBy: employee?.name || 'Unknown User',
+        timestamp: new Date().toISOString()
+      });
+
+      toast({
+        title: "Transaction Updated",
+        description: "Milling transaction has been updated successfully"
+      });
+
       onClose();
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update transaction",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -260,7 +271,7 @@ const MillingTransactionEditModal = ({ open, onClose, transaction }: MillingTran
               type="submit"
               disabled={loading || !hasChanges || !formData.change_reason.trim()}
             >
-              {loading ? "Submitting..." : "Request Changes"}
+              {loading ? "Updating..." : "Update Transaction"}
             </Button>
           </div>
         </form>

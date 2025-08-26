@@ -327,6 +327,7 @@ export const useQualityControl = () => {
       if (insertError) {
         console.error('Error inserting quality assessment:', insertError);
         console.error('Insert error details:', JSON.stringify(insertError, null, 2));
+        console.error('Assessment data that failed:', JSON.stringify(assessmentData, null, 2));
         throw new Error(`Failed to save quality assessment: ${insertError.message}`);
       }
 
