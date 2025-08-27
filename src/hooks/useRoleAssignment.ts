@@ -83,6 +83,24 @@ export const useRoleAssignment = () => {
 
       await addDoc(collection(db, 'role_assignments'), assignmentData);
       
+      // Also update the employee's actual permissions to include the assigned role
+      try {
+        const { updateEmployeePermissions } = await import('@/utils/updateEmployeePermissions');
+        
+        // Get current permissions and add role-specific ones
+        const additionalPermissions = role === 'admin_delegate' 
+          ? ['Administration', 'Finance', 'Human Resources', 'Operations', 'Reports']
+          : ['Approval permissions'];
+        
+        await updateEmployeePermissions(assignedToEmail, {
+          permissions: additionalPermissions
+        });
+        
+        console.log(`✅ Updated ${assignedToEmail} permissions for ${role} role`);
+      } catch (permError) {
+        console.warn('Failed to update employee permissions:', permError);
+      }
+      
       // Create notification for the assigned user
       await createRoleAssignmentNotification(
         assignedToName,

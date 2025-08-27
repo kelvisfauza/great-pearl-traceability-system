@@ -8,8 +8,8 @@ export const fixDenisPermissions = async () => {
     await updateEmployeePermissions('bwambaledenis8@gmail.com', {
       role: 'User',
       permissions: ['General Access'],
-      position: 'Data Analyst',
-      department: 'Data Analysis'
+      position: 'Staff',
+      department: 'General'
     });
     
     console.log('✅ Denis account normalized successfully');

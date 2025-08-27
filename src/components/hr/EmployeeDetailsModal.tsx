@@ -51,19 +51,49 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
     }
   }, [employee]);
 
-  const handleSave = () => {
-    const updatedEmployee = {
-      ...employee,
-      ...formData,
-      salary: parseInt(formData.salary) || 0
-    };
+  const handleSave = async () => {
+    // Validate required fields
+    if (!formData.name.trim() || !formData.email.trim() || !formData.position.trim() || !formData.department.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Name, email, position, and department are required fields",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    // onEmployeeUpdated(updatedEmployee);
-    setIsEditing(false);
-    toast({
-      title: "Success",
-      description: "Employee details updated successfully"
-    });
+    try {
+      const { updateEmployeePermissions } = await import('@/utils/updateEmployeePermissions');
+      
+      await updateEmployeePermissions(formData.email, {
+        role: formData.role,
+        permissions: formData.permissions,
+        position: formData.position,
+        department: formData.department
+      });
+
+      // Update local state
+      Object.assign(employee, {
+        ...formData,
+        salary: parseInt(formData.salary) || 0
+      });
+
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Employee details updated successfully"
+      });
+      
+      // Close modal to refresh data
+      onClose();
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update employee details",
+        variant: "destructive"
+      });
+    }
   };
 
   const handlePermissionChange = (permission: string, checked: boolean) => {
