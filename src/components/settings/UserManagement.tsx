@@ -175,18 +175,24 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              User Management
-            </CardTitle>
-            <CardDescription>
-              Create and manage user accounts with system permissions (Administrator Only)
-            </CardDescription>
-          </div>
+    <div className="space-y-4">
+      <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+        <p className="text-sm text-orange-800">
+          <strong>Note:</strong> User permission management has been moved to Admin Dashboard → User Permissions for better coordination between departments.
+        </p>
+      </div>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                User Management (Account Creation Only)
+              </CardTitle>
+              <CardDescription>
+                Create new user accounts. Manage permissions in Admin Dashboard.
+              </CardDescription>
+            </div>
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -235,5 +241,6 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
         </DialogContent>
       </Dialog>
     </Card>
+    </div>
   );
 }

@@ -13,7 +13,7 @@ import CashManagementModal from './CashManagementModal';
 import UserPresencePanel from './UserPresencePanel';
 import CreateTrainingAccountButton from './CreateTrainingAccountButton';
 import QuickEmployeeUpdate from './QuickEmployeeUpdate';
-import UserPermissionManager from './UserPermissionManager';
+import UnifiedPermissionManager from './UnifiedPermissionManager';
 import PermissionOverview from './PermissionOverview';
 
 const AdminDashboard = () => {
@@ -63,7 +63,7 @@ const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="permissions" className="space-y-6">
-          <UserPermissionManager />
+          <UnifiedPermissionManager />
         </TabsContent>
 
         <TabsContent value="users" className="space-y-6">

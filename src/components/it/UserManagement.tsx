@@ -69,6 +69,11 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-6">
+      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+        <p className="text-sm text-green-800">
+          <strong>IT Note:</strong> For permission management, please use Admin Dashboard → User Permissions. This view is for monitoring only.
+        </p>
+      </div>
       {/* User Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
