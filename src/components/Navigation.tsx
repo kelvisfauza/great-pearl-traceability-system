@@ -73,7 +73,7 @@ const Navigation = () => {
     {
       title: "Operations",
       items: [
-        { name: "Dashboard", icon: BarChart3, path: "/", permission: null }, // Everyone can see dashboard
+        { name: "Dashboard", icon: BarChart3, path: "/", permission: "Reports" }, // Dashboard requires Reports permission
         { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permission: "Quality Control" },
         { name: "Store Management", icon: Shield, path: "/store", permission: "Store Management" },
         { name: "Milling", icon: Coffee, path: "/milling", permission: "Milling" },
@@ -95,7 +95,7 @@ const Navigation = () => {
       title: "System",
       items: [
         { name: "Reports", icon: FileText, path: "/reports", permission: "Reports" },
-        { name: "Settings", icon: Settings, path: "/settings", permission: null }, // Everyone can access settings
+        { name: "Settings", icon: Settings, path: "/settings", permission: "Reports" }, // Settings requires Reports permission
         { name: "Logistics", icon: Truck, path: "/logistics", permission: "Logistics" },
       ]
     }
