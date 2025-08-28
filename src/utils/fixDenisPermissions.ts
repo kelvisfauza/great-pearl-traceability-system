@@ -2,7 +2,7 @@ import { updateEmployeePermissions } from './updateEmployeePermissions';
 
 export const fixDenisPermissions = async () => {
   try {
-    console.log('Normalizing Denis account to regular user...');
+    console.log('Fixing Denis permissions with meaningful access...');
     
     // Give Denis meaningful permissions so he can actually use the system
     await updateEmployeePermissions('bwambaledenis8@gmail.com', {
@@ -12,17 +12,17 @@ export const fixDenisPermissions = async () => {
       department: 'General'
     });
     
-    console.log('✅ Denis account normalized successfully');
-    return { success: true, message: 'Denis account is now a regular user account' };
+    console.log('✅ Denis account fixed with proper permissions');
+    return { success: true, message: 'Denis now has Reports, Store Management, and Data Analysis access' };
   } catch (error) {
-    console.error('❌ Error normalizing Denis account:', error);
+    console.error('❌ Error fixing Denis permissions:', error);
     throw error;
   }
 };
 
-// Auto-execute to normalize Denis account immediately
+// Auto-execute to fix Denis permissions immediately
 fixDenisPermissions().then(() => {
-  console.log('Denis account has been normalized and can now be managed through admin interface');
+  console.log('Denis account has been fixed with proper permissions');
 }).catch(error => {
-  console.error('Failed to normalize Denis account:', error);
+  console.error('Failed to fix Denis account:', error);
 });
