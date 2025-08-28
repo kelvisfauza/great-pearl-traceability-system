@@ -4,10 +4,10 @@ export const fixDenisPermissions = async () => {
   try {
     console.log('Normalizing Denis account to regular user...');
     
-    // Make Denis a regular user account that can be managed through admin interface
+    // Give Denis meaningful permissions so he can actually use the system
     await updateEmployeePermissions('bwambaledenis8@gmail.com', {
       role: 'User',
-      permissions: ['General Access'],
+      permissions: ['Reports', 'Store Management', 'Data Analysis'], // Give him access to basic modules
       position: 'Staff',
       department: 'General'
     });

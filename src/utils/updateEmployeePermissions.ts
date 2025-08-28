@@ -82,7 +82,7 @@ export const PERMISSION_SETS = {
   ],
   DATA_ANALYST: ['Data Analysis', 'Reports', 'Finance', 'Store Management'],
   SUPERVISOR: ['Operations', 'Quality Control', 'Reports', 'Store Management'],
-  USER: ['General Access']
+  USER: ['Reports', 'Store Management'] // Basic permissions for regular users
 };
 
 // Quick function to set employee role with predefined permissions
