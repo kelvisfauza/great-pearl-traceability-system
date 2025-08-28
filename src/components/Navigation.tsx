@@ -120,13 +120,17 @@ const Navigation = () => {
 
   const filteredNavigationItems = getFilteredNavigationItems();
 
-  // Debug logging to see user permissions
-  console.log('=== NAVIGATION DEBUG ===');
-  console.log('Employee:', employee);
-  console.log('Employee permissions:', employee?.permissions);
-  console.log('Has Store Management permission:', hasPermission('Store Management'));
-  console.log('Is Admin:', isAdmin());
-  console.log('Filtered navigation items:', filteredNavigationItems);
+  // Debug logging for Denis specifically to track permission consistency
+  if (employee?.email === 'bwambaledenis8@gmail.com') {
+    console.log('=== DENIS NAVIGATION DEBUG ===');
+    console.log('Denis Employee Data:', employee);
+    console.log('Denis permissions array:', employee?.permissions);
+    console.log('Has Reports permission:', hasPermission('Reports'));
+    console.log('Has Store Management permission:', hasPermission('Store Management'));
+    console.log('Has Data Analysis permission:', hasPermission('Data Analysis'));
+    console.log('Is Admin:', isAdmin());
+    console.log('Filtered navigation items for Denis:', filteredNavigationItems);
+  }
 
   const handleLogout = async () => {
     try {

@@ -286,7 +286,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           department: employeeData.department,
           salary: employeeData.salary || 0,
           role: employeeData.role,
-          permissions: employeeData.permissions || [],
+          permissions: employeeData.permissions || ['General Access'],
           status: employeeData.status,
           join_date: employeeData.join_date,
           address: employeeData.address,
@@ -295,6 +295,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           mustChangePassword: false,
           authUserId: supabaseAuth.user.id
         };
+
+        // Sync to Firebase for consistency (especially for Denis)
+        try {
+          const { updateEmployeePermissions } = await import('@/utils/updateEmployeePermissions');
+          await updateEmployeePermissions(employee.email, {
+            role: employee.role,
+            permissions: employee.permissions,
+            position: employee.position,
+            department: employee.department
+          });
+          console.log(`✅ Synced ${employee.email} data to Firebase during login`);
+        } catch (syncError) {
+          console.warn('Failed to sync employee data to Firebase:', syncError);
+        }
 
         setEmployee(employee);
 
