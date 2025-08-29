@@ -103,6 +103,9 @@ const Navigation = () => {
 
   // Filter navigation items based on user permissions
   const getFilteredNavigationItems = () => {
+    // Don't show any items while employee data is still loading to prevent flickering
+    if (!employee) return [];
+    
     return navigationItems.map(section => ({
       ...section,
       items: section.items.filter(item => {
