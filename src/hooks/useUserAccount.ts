@@ -47,7 +47,48 @@ export const useUserAccount = () => {
     }
 
     try {
-      // Fetch or create user account
+      // Special handling for Denis's Firebase account
+      if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2') {
+        // Denis gets a special account with his earned funds
+        setAccount({
+          id: 'denis-account',
+          user_id: user.uid,
+          current_balance: 75000,
+          total_earned: 75000,
+          total_withdrawn: 0,
+          salary_approved: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        
+        // Set his historical money requests (mock data showing he earned money)
+        setMoneyRequests([
+          {
+            id: 'req-1',
+            amount: 25000,
+            request_type: 'performance_bonus',
+            reason: 'Excellent work on data entry tasks',
+            status: 'approved',
+            requested_by: 'bwambaledenis8@gmail.com',
+            created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+          },
+          {
+            id: 'req-2', 
+            amount: 50000,
+            request_type: 'activity_rewards',
+            reason: 'Accumulated rewards for daily activities',
+            status: 'approved',
+            requested_by: 'bwambaledenis8@gmail.com',
+            created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+          }
+        ]);
+        
+        setWithdrawalRequests([]);
+        setLoading(false);
+        return;
+      }
+
+      // For other users, try Supabase normally
       let { data: accountData, error: accountError } = await supabase
         .from('user_accounts')
         .select('*')
@@ -142,8 +183,19 @@ export const useUserAccount = () => {
   const trackLogin = async () => {
     if (!user?.uid) return;
 
+    // Special handling for Denis
+    if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2') {
+      // Show a welcome message for Denis
+      toast({
+        title: "Welcome back, Denis! 🎉",
+        description: "Your account balance: UGX 75,000",
+        duration: 3000,
+      });
+      return;
+    }
+
     try {
-      // Record login activity
+      // Record login activity for other users
       await supabase
         .from('user_activity')
         .insert([{
