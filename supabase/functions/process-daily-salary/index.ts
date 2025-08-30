@@ -69,69 +69,89 @@ serve(async (req) => {
 
     console.log(`Processing daily salary credits for ${employees.length} employees`)
 
-    let processedCount = 0
+    // First, check for and backfill any missing days from this month
+    const currentMonth = today.getMonth()
+    const currentYear = today.getFullYear()
+    const workingDaysThisMonth = getWorkingDaysForMonth(currentYear, currentMonth, today)
+    
+    console.log(`Checking for missing days in ${currentMonth + 1}/${currentYear}. Found ${workingDaysThisMonth.length} working days to check.`)
+
+    let totalProcessedCount = 0
     const todayDate = today.toISOString().split('T')[0]
 
-    for (const employee of employees) {
-      try {
-        // Calculate daily credit (monthly salary / 26 working days)
-        const dailyCredit = Math.round((employee.salary / 26) * 100) / 100
+    // Process all working days up to today (backfill + today)
+    for (const workingDay of workingDaysThisMonth) {
+      const dateStr = workingDay.toISOString().split('T')[0]
+      console.log(`Processing credits for ${dateStr}`)
+      
+      for (const employee of employees) {
+        try {
+          // Calculate daily credit (monthly salary / 26 working days)
+          const dailyCredit = Math.round((employee.salary / 26) * 100) / 100
 
-        // Check if credit already exists for today
-        const { data: existingEntry } = await supabase
-          .from('ledger_entries')
-          .select('id')
-          .eq('user_id', employee.auth_user_id)
-          .eq('entry_type', 'DAILY_SALARY')
-          .gte('created_at', `${todayDate}T00:00:00`)
-          .lt('created_at', `${todayDate}T23:59:59`)
-          .single()
+          // Check if credit already exists for this date
+          const { data: existingEntry } = await supabase
+            .from('ledger_entries')
+            .select('id')
+            .eq('user_id', employee.auth_user_id)
+            .eq('entry_type', 'DAILY_SALARY')
+            .gte('created_at', `${dateStr}T00:00:00`)
+            .lt('created_at', `${dateStr}T23:59:59`)
+            .single()
 
-        if (existingEntry) {
-          console.log(`Daily credit already exists for employee ${employee.name}`)
+          if (existingEntry) {
+            console.log(`Credit already exists for ${employee.name} on ${dateStr}`)
+            continue
+          }
+
+          // Determine if this is a backfill (past date) or current day
+          const isBackfill = dateStr !== todayDate
+          const reference = isBackfill ? `BACKFILL-${dateStr}-${employee.id}` : `DAILY-${dateStr}-${employee.id}`
+
+          // Add daily salary credit to ledger
+          const { error: insertError } = await supabase
+            .from('ledger_entries')
+            .insert({
+              user_id: employee.auth_user_id,
+              entry_type: 'DAILY_SALARY',
+              amount: dailyCredit,
+              reference: reference,
+              metadata: {
+                employee_id: employee.id,
+                employee_name: employee.name,
+                monthly_salary: employee.salary,
+                credit_date: dateStr,
+                backfill: isBackfill
+              },
+              created_at: `${dateStr}T08:00:00Z` // Credit at 8 AM
+            })
+
+          if (insertError) {
+            console.error(`Error inserting credit for ${employee.name} on ${dateStr}:`, insertError)
+            continue
+          }
+
+          const actionType = isBackfill ? 'Backfilled' : 'Added daily credit of'
+          console.log(`${actionType} ${dailyCredit} for ${employee.name} on ${dateStr}`)
+          totalProcessedCount++
+
+        } catch (empError) {
+          console.error(`Error processing employee ${employee.name} on ${dateStr}:`, empError)
           continue
         }
-
-        // Add daily salary credit to ledger
-        const { error: insertError } = await supabase
-          .from('ledger_entries')
-          .insert({
-            user_id: employee.auth_user_id,
-            entry_type: 'DAILY_SALARY',
-            amount: dailyCredit,
-            reference: `DAILY-${todayDate}-${employee.id}`,
-            metadata: {
-              employee_id: employee.id,
-              employee_name: employee.name,
-              monthly_salary: employee.salary,
-              credit_date: todayDate
-            },
-            created_at: `${todayDate}T08:00:00Z` // Credit at 8 AM
-          })
-
-        if (insertError) {
-          console.error(`Error inserting daily credit for ${employee.name}:`, insertError)
-          continue
-        }
-
-        console.log(`Added daily credit of ${dailyCredit} for ${employee.name}`)
-        processedCount++
-
-      } catch (empError) {
-        console.error(`Error processing employee ${employee.name}:`, empError)
-        continue
       }
     }
 
-    console.log(`Successfully processed ${processedCount} daily salary credits`)
+    console.log(`Successfully processed ${totalProcessedCount} salary credits (including backfill)`)
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Daily salary credits processed successfully',
+        message: `Salary credits processed successfully (including backfill for ${workingDaysThisMonth.length} working days)`,
         date: todayDate,
-        processed_count: processedCount,
-        total_employees: employees.length
+        processed_count: totalProcessedCount,
+        total_employees: employees.length,
+        working_days_processed: workingDaysThisMonth.length
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -156,3 +176,25 @@ serve(async (req) => {
     )
   }
 })
+
+function getWorkingDaysForMonth(year: number, month: number, upToDate: Date): Date[] {
+  const workingDays: Date[] = []
+  
+  // Get the first day of the month
+  const firstDay = new Date(year, month, 1)
+  
+  // Only go up to upToDate (today) if we're in the current month
+  const endDate = upToDate
+
+  // Loop through all days of the month up to today
+  for (let day = new Date(firstDay); day <= endDate; day.setDate(day.getDate() + 1)) {
+    const dayOfWeek = day.getDay() // 0 = Sunday, 1 = Monday, etc.
+    
+    // Include all days except Sunday (0)
+    if (dayOfWeek !== 0) {
+      workingDays.push(new Date(day)) // Create a new Date object to avoid reference issues
+    }
+  }
+
+  return workingDays
+}
