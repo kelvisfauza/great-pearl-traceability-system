@@ -85,6 +85,51 @@ export const useUserAccount = () => {
         return;
       }
 
+      // Special handling for Kibaba - check if user is Kibaba by email
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('email, name')
+        .eq('auth_user_id', user.uid)
+        .single();
+
+      // If no employee found by auth_user_id, try to find by email
+      if (!employee && user.email === 'nicholusscottlangz@gmail.com') {
+        console.log('Detected Kibaba login - using temp_id for ledger entries');
+        
+        const { data: kibabaLedger, error: kibabaError } = await supabase
+          .from('ledger_entries')
+          .select('amount')
+          .eq('user_id', 'kibaba_nicholus_temp_id');
+
+        console.log('Kibaba ledger query result:', { kibabaLedger, kibabaError });
+
+        const kibabaBalance = kibabaLedger?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
+        
+        // Also fetch pending withdrawals for Kibaba
+        const { data: kibabaPendingWithdrawals } = await supabase
+          .from('withdrawal_requests')
+          .select('amount')
+          .eq('user_id', user.uid)
+          .in('status', ['pending', 'approved', 'processing']);
+
+        const pendingAmount = kibabaPendingWithdrawals?.reduce((sum, req) => sum + (req.amount || 0), 0) || 0;
+        const availableAmount = Math.max(0, kibabaBalance - pendingAmount);
+
+        setAccount({
+          id: 'kibaba-account',
+          user_id: user.uid,
+          wallet_balance: kibabaBalance,
+          pending_withdrawals: pendingAmount,
+          available_to_request: availableAmount,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+        console.log('Kibaba account set with balance:', kibabaBalance, 'pending:', pendingAmount, 'available:', availableAmount);
+        setLoading(false);
+        return;
+      }
+
       // For all other users, use the new TEXT-compatible functions
       const { data: walletData, error: walletError } = await supabase
         .rpc('get_wallet_balance_text', { user_uuid: user.uid });
