@@ -2,99 +2,148 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Shield, Users, Settings, BarChart3, UserCog, Eye } from 'lucide-react';
-import UserRegistrationRequests from '@/components/UserRegistrationRequests';
+import { Badge } from '@/components/ui/badge';
+import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp } from 'lucide-react';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import MoneyRequestsFinalApproval from './MoneyRequestsFinalApproval';
 import { WithdrawalProcessingManager } from './WithdrawalProcessingManager';
 import RoleAssignmentManager from './RoleAssignmentManager';
-import CashManagementModal from './CashManagementModal';
-import UserPresencePanel from './UserPresencePanel';
-import CreateTrainingAccountButton from './CreateTrainingAccountButton';
-import QuickEmployeeUpdate from './QuickEmployeeUpdate';
-import UnifiedPermissionManager from './UnifiedPermissionManager';
 import PermissionOverview from './PermissionOverview';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [showCashModal, setShowCashModal] = useState(false);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Shield className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold">Administrator Dashboard</h1>
-          <p className="text-muted-foreground">Manage users, permissions, and system settings</p>
+          <h1 className="text-3xl font-bold">Administrator Hub</h1>
+          <p className="text-muted-foreground">System oversight, approvals, and critical administrative tasks</p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-6 lg:w-auto">
+        <TabsList className="grid grid-cols-3 lg:w-auto">
           <TabsTrigger value="overview" className="flex items-center gap-2">
-            <Eye className="h-4 w-4" />
+            <TrendingUp className="h-4 w-4" />
             Overview
-          </TabsTrigger>
-          <TabsTrigger value="permissions" className="flex items-center gap-2">
-            <UserCog className="h-4 w-4" />
-            Permissions
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Users
           </TabsTrigger>
           <TabsTrigger value="approvals" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Approvals
           </TabsTrigger>
-          <TabsTrigger value="system" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            System
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Analytics
+          <TabsTrigger value="permissions" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Permissions
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <PermissionOverview />
-        </TabsContent>
-
-        <TabsContent value="permissions" className="space-y-6">
-          <UnifiedPermissionManager />
-        </TabsContent>
-
-        <TabsContent value="users" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* System Status Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
-              <CardHeader>
-                <CardTitle>User Registration Requests</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <UserRegistrationRequests />
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">System Status</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                      <span className="text-lg font-semibold">Operational</span>
+                    </div>
+                  </div>
+                  <CheckCircle className="h-8 w-8 text-green-500" />
+                </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Quick User Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <QuickEmployeeUpdate />
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-orange-600">3</Badge>
+                      <span className="text-lg font-semibold">Requires Action</span>
+                    </div>
+                  </div>
+                  <AlertTriangle className="h-8 w-8 text-orange-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Active Users</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-blue-600">12</Badge>
+                      <span className="text-lg font-semibold">Online</span>
+                    </div>
+                  </div>
+                  <Users className="h-8 w-8 text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Financial</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-green-600">UGX 2.5M</Badge>
+                      <span className="text-sm font-semibold">Pending</span>
+                    </div>
+                  </div>
+                  <DollarSign className="h-8 w-8 text-green-500" />
+                </div>
               </CardContent>
             </Card>
           </div>
 
+          {/* Quick Actions */}
           <Card>
             <CardHeader>
-              <CardTitle>User Presence & Activity</CardTitle>
+              <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <UserPresencePanel />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setActiveTab('approvals')}>
+                  <CardContent className="p-4 text-center">
+                    <Shield className="h-6 w-6 mx-auto mb-2 text-primary" />
+                    <p className="text-sm font-medium">View Approvals</p>
+                  </CardContent>
+                </Card>
+                <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setActiveTab('permissions')}>
+                  <CardContent className="p-4 text-center">
+                    <Users className="h-6 w-6 mx-auto mb-2 text-primary" />
+                    <p className="text-sm font-medium">Manage Roles</p>
+                  </CardContent>
+                </Card>
+                <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <CardContent className="p-4 text-center">
+                    <TrendingUp className="h-6 w-6 mx-auto mb-2 text-primary" />
+                    <p className="text-sm font-medium">View Reports</p>
+                  </CardContent>
+                </Card>
+                <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <CardContent className="p-4 text-center">
+                    <AlertTriangle className="h-6 w-6 mx-auto mb-2 text-primary" />
+                    <p className="text-sm font-medium">System Alerts</p>
+                  </CardContent>
+                </Card>
+              </div>
             </CardContent>
           </Card>
+
+          {/* System Overview */}
+          <PermissionOverview />
+        </TabsContent>
+
+        <TabsContent value="permissions" className="space-y-6">
+          <RoleAssignmentManager />
         </TabsContent>
 
         <TabsContent value="approvals" className="space-y-6">
@@ -126,57 +175,8 @@ const AdminDashboard = () => {
               <DeletionRequestsManager />
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Role Assignments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RoleAssignmentManager />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="system" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Cash Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={() => setShowCashModal(true)} className="w-full">
-                  Add Cash/Float
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Training Accounts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CreateTrainingAccountButton />
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Analytics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Analytics dashboard coming soon...</p>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
-
-      <CashManagementModal
-        open={showCashModal}
-        onClose={() => setShowCashModal(false)}
-      />
     </div>
   );
 };
