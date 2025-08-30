@@ -76,22 +76,49 @@ export const useQualityControl = () => {
     try {
       console.log('Loading quality assessments from both Supabase and Firebase...');
       
-      // Fetch from Supabase with joined coffee records data
+      // Fetch from Supabase - get quality assessments first, then join data manually
       const { data: supabaseQualityData, error: qualityError } = await supabase
         .from('quality_assessments')
-        .select(`
-          *,
-          coffee_records!store_record_id (
-            supplier_name,
-            coffee_type,
-            kilograms,
-            batch_number
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (qualityError) {
         console.error('Error fetching quality assessments from Supabase:', qualityError);
+      }
+
+      // If we have quality assessments, fetch corresponding coffee records
+      let enrichedSupabaseData = [];
+      if (supabaseQualityData && supabaseQualityData.length > 0) {
+        const storeRecordIds = [...new Set(supabaseQualityData.map(qa => qa.store_record_id).filter(Boolean))];
+        
+        if (storeRecordIds.length > 0) {
+          const { data: coffeeRecords } = await supabase
+            .from('coffee_records')
+            .select('*')
+            .in('id', storeRecordIds);
+
+          // Manually join the data
+          enrichedSupabaseData = supabaseQualityData.map(assessment => {
+            const coffeeRecord = coffeeRecords?.find(record => record.id === assessment.store_record_id);
+            return {
+              ...assessment,
+              supplier_name: coffeeRecord?.supplier_name || 'Unknown',
+              coffee_type: coffeeRecord?.coffee_type || 'Unknown',
+              kilograms: coffeeRecord?.kilograms || 0,
+              batch_number: coffeeRecord?.batch_number || assessment.batch_number,
+              source: 'supabase'
+            };
+          });
+        } else {
+          enrichedSupabaseData = supabaseQualityData.map(assessment => ({
+            ...assessment,
+            supplier_name: 'Unknown',
+            coffee_type: 'Unknown',
+            kilograms: 0,
+            batch_number: assessment.batch_number,
+            source: 'supabase'
+          }));
+        }
       }
 
       // Fetch from Firebase
@@ -109,15 +136,8 @@ export const useQualityControl = () => {
         console.error('Error fetching quality assessments from Firebase:', firebaseError);
       }
 
-      // Transform Supabase data to flatten the joined fields
-      const transformedSupabaseData = (supabaseQualityData || []).map(assessment => ({
-        ...assessment,
-        supplier_name: assessment.coffee_records?.supplier_name || 'Unknown',
-        coffee_type: assessment.coffee_records?.coffee_type || 'Unknown',
-        kilograms: assessment.coffee_records?.kilograms || 0,
-        batch_number: assessment.coffee_records?.batch_number || assessment.batch_number,
-        source: 'supabase'
-      }));
+      // Transform the enriched Supabase data (no need to flatten since we manually joined)
+      const transformedSupabaseData = enrichedSupabaseData;
 
       // Combine data from both sources, removing duplicates by batch_number
       const batchMap = new Map();

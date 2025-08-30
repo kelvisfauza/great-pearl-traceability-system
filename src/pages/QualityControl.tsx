@@ -366,16 +366,7 @@ const QualityControl = () => {
     }
 
     // Validate required fields
-    console.log('=== VALIDATION DEBUG ===');
-    console.log('assessmentForm:', JSON.stringify(assessmentForm, null, 2));
-    console.log('assessmentForm.moisture:', assessmentForm.moisture);
-    console.log('typeof assessmentForm.moisture:', typeof assessmentForm.moisture);
-    console.log('parseFloat(assessmentForm.moisture):', parseFloat(assessmentForm.moisture));
-    console.log('parseFloat(assessmentForm.moisture) <= 0:', parseFloat(assessmentForm.moisture) <= 0);
-    console.log('!assessmentForm.moisture:', !assessmentForm.moisture);
-    
     if (!assessmentForm.moisture || parseFloat(assessmentForm.moisture) <= 0) {
-      console.log('VALIDATION FAILED: Moisture validation failed');
       toast({
         title: "Validation Error",
         description: "Please enter a valid moisture percentage.",

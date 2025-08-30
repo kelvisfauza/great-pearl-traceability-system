@@ -1479,15 +1479,7 @@ export type Database = {
           suggested_price?: number
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "quality_assessments_store_record_id_fkey"
-            columns: ["store_record_id"]
-            isOneToOne: false
-            referencedRelation: "coffee_records"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       reports: {
         Row: {
