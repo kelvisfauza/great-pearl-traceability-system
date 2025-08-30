@@ -181,18 +181,51 @@ export const generateStoreReportPDF = (report: StoreReport, preview: boolean = f
       console.log('Opening PDF preview in new tab');
       // Create blob and open in new tab for preview
       const pdfBlob = doc.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
+      console.log('PDF blob created:', pdfBlob.size, 'bytes');
       
-      // Open in new tab
-      const newWindow = window.open(url, '_blank');
+      const url = URL.createObjectURL(pdfBlob);
+      console.log('Object URL created:', url);
+      
+      // Try to open in new tab
+      const newWindow = window.open('', '_blank');
+      
       if (!newWindow) {
+        console.error('Pop-up blocked or window.open failed');
         throw new Error('Pop-up blocked. Please allow pop-ups for this site to preview PDFs.');
       }
+      
+      // Write PDF content to the new window
+      newWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Store Report Preview</title>
+          <style>
+            body { margin: 0; padding: 0; }
+            iframe { width: 100%; height: 100vh; border: none; }
+          </style>
+        </head>
+        <body>
+          <iframe src="${url}" type="application/pdf"></iframe>
+        </body>
+        </html>
+      `);
+      
+      // Alternative fallback: create a download link in the new window if PDF viewer fails
+      setTimeout(() => {
+        if (newWindow && !newWindow.closed) {
+          newWindow.document.body.innerHTML += `
+            <div style="position: fixed; top: 10px; right: 10px; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+              <p>If PDF doesn't display, <a href="${url}" download="${fileName}">click here to download</a></p>
+            </div>
+          `;
+        }
+      }, 2000);
       
       // Clean up the URL after a delay
       setTimeout(() => {
         URL.revokeObjectURL(url);
-      }, 10000);
+      }, 30000);
       
       console.log('PDF preview opened successfully');
     } else {
