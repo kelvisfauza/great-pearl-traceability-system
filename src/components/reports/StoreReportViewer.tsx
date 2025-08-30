@@ -64,13 +64,23 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
     }
   };
 
-  const handleGeneratePDF = () => {
+  const handlePreviewPDF = () => {
     try {
-      generateStoreReportPDF(report);
-      toast.success("PDF generated successfully!");
+      generateStoreReportPDF(report, true);
+      toast.success("PDF preview opened!");
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error("Failed to generate PDF");
+      toast.error("Failed to generate PDF preview");
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    try {
+      generateStoreReportPDF(report, false);
+      toast.success("PDF downloaded successfully!");
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error("Failed to download PDF");
     }
   };
 
@@ -94,10 +104,16 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
           </DialogTitle>
           <DialogDescription className="flex items-center justify-between">
             <span>Complete view of store report with scanned documents</span>
-            <Button onClick={handleGeneratePDF} variant="outline" className="ml-4">
-              <FileDown className="h-4 w-4 mr-2" />
-              Generate PDF
-            </Button>
+            <div className="flex gap-2 ml-4">
+              <Button onClick={handlePreviewPDF} variant="outline">
+                <Eye className="h-4 w-4 mr-2" />
+                Preview PDF
+              </Button>
+              <Button onClick={handleDownloadPDF} variant="outline">
+                <FileDown className="h-4 w-4 mr-2" />
+                Download PDF
+              </Button>
+            </div>
           </DialogDescription>
         </DialogHeader>
 

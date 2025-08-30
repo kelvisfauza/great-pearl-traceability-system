@@ -20,7 +20,7 @@ export interface StoreReport {
   scanner_used?: string;
 }
 
-export const generateStoreReportPDF = (report: StoreReport) => {
+export const generateStoreReportPDF = (report: StoreReport, preview: boolean = false) => {
   const doc = new jsPDF();
   
   // Set font
@@ -169,9 +169,18 @@ export const generateStoreReportPDF = (report: StoreReport) => {
   doc.text(`Generated on ${format(new Date(), 'MMMM dd, yyyy \'at\' HH:mm')}`, 105, 280, { align: 'center' });
   doc.text('Coffee ERP System - Store Management Report', 105, 290, { align: 'center' });
   
-  // Save the PDF
+  // Save or preview the PDF
   const fileName = `store-report-${format(new Date(report.date), 'yyyy-MM-dd')}-${report.coffee_type.replace(/\s+/g, '-')}.pdf`;
-  doc.save(fileName);
+  
+  if (preview) {
+    // Open PDF in new tab for preview
+    const pdfBlob = doc.output('blob');
+    const url = URL.createObjectURL(pdfBlob);
+    window.open(url, '_blank');
+  } else {
+    // Download the PDF
+    doc.save(fileName);
+  }
 };
 
 export const generateMultipleReportsPDF = (reports: StoreReport[], title: string = 'Store Reports') => {
