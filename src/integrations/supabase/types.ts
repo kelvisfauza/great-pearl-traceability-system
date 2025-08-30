@@ -509,6 +509,7 @@ export type Database = {
           auth_user_id: string | null
           created_at: string
           department: string
+          disabled: boolean | null
           email: string
           emergency_contact: string | null
           employee_id: string | null
@@ -530,6 +531,7 @@ export type Database = {
           auth_user_id?: string | null
           created_at?: string
           department: string
+          disabled?: boolean | null
           email: string
           emergency_contact?: string | null
           employee_id?: string | null
@@ -551,6 +553,7 @@ export type Database = {
           auth_user_id?: string | null
           created_at?: string
           department?: string
+          disabled?: boolean | null
           email?: string
           emergency_contact?: string | null
           employee_id?: string | null

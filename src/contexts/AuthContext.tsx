@@ -45,6 +45,7 @@ interface Employee {
   training_progress?: number;
   created_at?: string;
   updated_at?: string;
+  disabled?: boolean;
 }
 
 interface AuthContextType {
@@ -277,6 +278,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return {};
         }
 
+        // Check if account is disabled
+        if (employeeData.disabled) {
+          await supabase.auth.signOut();
+          setUser(null);
+          toast({
+            title: "Account Disabled",
+            description: "Your account has been disabled. Please contact your department administrator.",
+            variant: "destructive"
+          });
+          return {};
+        }
+
         const employee: Employee = {
           id: employeeData.id,
           name: employeeData.name,
@@ -293,7 +306,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           emergency_contact: employeeData.emergency_contact,
           isOneTimePassword: false,
           mustChangePassword: false,
-          authUserId: supabaseAuth.user.id
+          authUserId: supabaseAuth.user.id,
+          disabled: employeeData.disabled || false
         };
 
         // Sync to Firebase for consistency (especially for Denis)

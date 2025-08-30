@@ -7,6 +7,7 @@ export const updateEmployeePermissions = async (email: string, updates: {
   permissions?: string[];
   position?: string;
   department?: string;
+  disabled?: boolean;
 }) => {
   console.log('Updating employee permissions for:', email, updates);
   

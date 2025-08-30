@@ -12,6 +12,7 @@ import PaymentSlipGenerator from '@/components/settings/PaymentSlipGenerator';
 import ContractGenerator from '@/components/settings/ContractGenerator';
 import { useState } from 'react';
 import UserPresencePanel from '@/components/admin/UserPresencePanel';
+import AccountStatusManager from '@/components/admin/AccountStatusManager';
 
 const Settings = () => {
   const { canManageEmployees, isAdmin, employee } = useAuth();
@@ -108,6 +109,7 @@ const Settings = () => {
 
           {isAdmin() && (
             <TabsContent value="admin" className="space-y-6">
+              <AccountStatusManager />
               <Card>
                 <CardHeader>
                   <CardTitle>System Presence</CardTitle>
