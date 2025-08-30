@@ -347,9 +347,16 @@ export const useNotifications = () => {
             return true;
           }
           
-          // Check if user has permissions for the target department
-          if (employee.permissions && employee.permissions.includes(notification.targetDepartment)) {
-            return true;
+          // Check if user has permissions for the target department (case-insensitive)
+          if (employee.permissions) {
+            const hasPermission = employee.permissions.some(permission => 
+              permission.toLowerCase().includes(notification.targetDepartment.toLowerCase()) ||
+              notification.targetDepartment.toLowerCase().includes(permission.toLowerCase()) ||
+              permission === notification.targetDepartment
+            );
+            if (hasPermission) {
+              return true;
+            }
           }
           
           // Special case for Data Analysis permission mapping to Reports department
@@ -369,7 +376,17 @@ export const useNotifications = () => {
           const isTargeted = notification.targetDepartments.some(targetDept => {
             if (targetDept === 'All Departments') return true;
             if (targetDept === employee.department) return true;
-            if (employee.permissions && employee.permissions.includes(targetDept)) return true;
+            
+            // Enhanced permission checking for multiple departments
+            if (employee.permissions) {
+              const hasPermission = employee.permissions.some(permission => 
+                permission.toLowerCase().includes(targetDept.toLowerCase()) ||
+                targetDept.toLowerCase().includes(permission.toLowerCase()) ||
+                permission === targetDept
+              );
+              if (hasPermission) return true;
+            }
+            
             if (targetDept === 'Reports' && employee.permissions && employee.permissions.includes('Data Analysis')) return true;
             if (employee.department === 'Data Analysis' && targetDept === 'Reports') return true;
             return false;
