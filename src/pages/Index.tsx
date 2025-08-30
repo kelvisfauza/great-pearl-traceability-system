@@ -43,15 +43,15 @@ const Index = () => {
     subtitle: string, 
     gradient: string 
   }) => (
-    <div className="flex items-center gap-4 mb-6 md:mb-8 animate-slide-up">
-      <div className={`p-3 rounded-2xl bg-gradient-to-r ${gradient} shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105`}>
-        <Icon className="h-6 w-6 text-white" />
+    <div className="flex items-center gap-2 xs:gap-3 md:gap-4 mb-3 xs:mb-4 md:mb-6 lg:mb-8 animate-slide-up">
+      <div className={`p-2 xs:p-3 rounded-xl xs:rounded-2xl bg-gradient-to-r ${gradient} shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105`}>
+        <Icon className="h-4 w-4 xs:h-5 xs:w-5 md:h-6 md:w-6 text-white" />
       </div>
-      <div>
-        <h2 className={`text-2xl md:text-3xl font-bold bg-gradient-to-r ${gradient.replace('to-', 'to-').replace('from-', 'from-')} bg-clip-text text-transparent`}>
+      <div className="min-w-0 flex-1">
+        <h2 className={`text-lg xs:text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r ${gradient.replace('to-', 'to-').replace('from-', 'from-')} bg-clip-text text-transparent truncate`}>
           {title}
         </h2>
-        <p className="text-muted-foreground text-sm md:text-base">{subtitle}</p>
+        <p className="text-muted-foreground text-xs xs:text-sm md:text-base truncate">{subtitle}</p>
       </div>
     </div>
   );
@@ -66,7 +66,7 @@ const Index = () => {
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-50/20 to-indigo-50/20 dark:from-blue-950/15 dark:to-indigo-950/15 rounded-full blur-3xl animate-pulse delay-500"></div>
         </div>
 
-        <div className="relative z-10 space-y-8 md:space-y-12 p-4 md:p-8">
+        <div className="relative z-10 space-y-4 xs:space-y-6 md:space-y-8 lg:space-y-12 p-2 xs:p-4 md:p-6 lg:p-8">
           {/* Dynamic Header */}
           <div className="animate-fade-in">
             <DynamicHeader />
@@ -79,23 +79,23 @@ const Index = () => {
 
           {/* Admin Dashboard Section */}
           {employee.role === 'Administrator' && (
-            <div className="space-y-8 animate-fade-in delay-200">
+            <div className="space-y-4 xs:space-y-6 md:space-y-8 animate-fade-in delay-200">
               <SectionHeader 
                 icon={Settings}
                 title="Administration Center"
                 subtitle="System oversight and user management"
                 gradient="from-slate-600 to-slate-700"
               />
-              <div className="bg-gradient-to-br from-white/95 via-slate-50/90 to-blue-50/70 dark:from-slate-800/95 dark:via-slate-700/90 dark:to-slate-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-slate-600/40 rounded-3xl p-6 md:p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] hover:border-blue-300/40 dark:hover:border-blue-700/40">
+              <div className="bg-gradient-to-br from-white/95 via-slate-50/90 to-blue-50/70 dark:from-slate-800/95 dark:via-slate-700/90 dark:to-slate-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-slate-600/40 rounded-2xl xs:rounded-3xl p-3 xs:p-4 md:p-6 lg:p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] hover:border-blue-300/40 dark:hover:border-blue-700/40">
                 <AdminDashboard />
               </div>
             </div>
           )}
 
           {/* Main Dashboard Grid */}
-          <div className="space-y-8 md:space-y-12">
+          <div className="space-y-4 xs:space-y-6 md:space-y-8 lg:space-y-12">
             {/* Stats Section */}
-            <div className="space-y-8 animate-fade-in delay-300">
+            <div className="space-y-4 xs:space-y-6 md:space-y-8 animate-fade-in delay-300">
               <SectionHeader 
                 icon={BarChart3}
                 title="Performance Analytics"
@@ -106,20 +106,20 @@ const Index = () => {
             </div>
 
             {/* Quick Actions & Activities */}
-            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 md:gap-8 animate-fade-in delay-400">
-              <div className="xl:col-span-3 space-y-6 md:space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 gap-3 xs:gap-4 md:gap-6 lg:gap-8 animate-fade-in delay-400">
+              <div className="lg:col-span-2 xl:col-span-3 space-y-3 xs:space-y-4 md:space-y-6 lg:space-y-8">
                 <SectionHeader 
                   icon={TrendingUp}
                   title="Quick Operations"
                   subtitle="Streamlined workflow tools"
                   gradient="from-emerald-600 to-teal-700"
                 />
-                <div className="bg-gradient-to-br from-white/95 via-emerald-50/60 to-teal-50/50 dark:from-slate-800/95 dark:via-emerald-950/40 dark:to-teal-950/30 rounded-3xl p-6 md:p-8 border border-emerald-200/50 dark:border-emerald-800/40 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-xl hover:border-emerald-300/60 dark:hover:border-emerald-700/50">
+                <div className="bg-gradient-to-br from-white/95 via-emerald-50/60 to-teal-50/50 dark:from-slate-800/95 dark:via-emerald-950/40 dark:to-teal-950/30 rounded-2xl xs:rounded-3xl p-3 xs:p-4 md:p-6 lg:p-8 border border-emerald-200/50 dark:border-emerald-800/40 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-xl hover:border-emerald-300/60 dark:hover:border-emerald-700/50">
                   <QuickActions />
                 </div>
               </div>
               
-              <div className="xl:col-span-2 space-y-6 md:space-y-8">
+              <div className="lg:col-span-1 xl:col-span-2 space-y-3 xs:space-y-4 md:space-y-6 lg:space-y-8">
                 <SectionHeader 
                   icon={Activity}
                   title="System Activity"

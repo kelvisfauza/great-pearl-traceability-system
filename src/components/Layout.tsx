@@ -61,7 +61,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
       
       {/* Sidebar */}
       <aside 
-        className={`fixed left-0 top-0 h-full w-64 z-40 bg-background border-r border-border overflow-y-auto transition-transform duration-300 ease-in-out ${
+        className={`fixed left-0 top-0 h-full w-56 xs:w-64 z-40 bg-background border-r border-border overflow-y-auto mobile-scroll transition-transform duration-300 ease-in-out ${
           isSidebarVisible ? 'translate-x-0' : '-translate-x-full'
         }`}
         onMouseLeave={() => window.innerWidth >= 768 && setIsSidebarVisible(false)}
@@ -78,15 +78,15 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
       )}
       
       <main className="flex-1 min-w-0 w-full">
-        <div className="p-3 md:p-6 max-w-full">
+        <div className="p-2 xs:p-3 md:p-4 lg:p-6 max-w-full">
           {title && (
-            <div className="mb-4 md:mb-6">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+            <div className="mb-3 xs:mb-4 md:mb-6">
+              <div className="flex flex-col xs:flex-row xs:justify-between xs:items-start gap-2 xs:gap-4">
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl md:text-2xl font-bold text-foreground truncate">{title}</h1>
-                  {subtitle && <p className="text-muted-foreground mt-1 text-sm">{subtitle}</p>}
+                  <h1 className="text-lg xs:text-xl md:text-2xl font-bold text-foreground truncate">{title}</h1>
+                  {subtitle && <p className="text-muted-foreground mt-1 text-xs xs:text-sm">{subtitle}</p>}
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1 xs:gap-2 flex-shrink-0">
                   <AccountButton />
                   <NotificationButton
                     onToggle={toggleNotifications}

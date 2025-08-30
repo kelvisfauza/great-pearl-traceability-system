@@ -13,19 +13,30 @@ export default {
 		container: {
 			center: true,
 			padding: {
-				DEFAULT: '1rem',
-				sm: '2rem',
-				lg: '4rem',
-				xl: '5rem',
-				'2xl': '6rem',
+				DEFAULT: '0.5rem',
+				xs: '0.75rem',
+				sm: '1rem',
+				md: '1.5rem',
+				lg: '2rem',
+				xl: '2.5rem',
+				'2xl': '3rem',
 			},
 			screens: {
+				xs: '480px',
 				sm: '640px',
 				md: '768px',
 				lg: '1024px',
 				xl: '1280px',
 				'2xl': '1400px'
 			}
+		},
+		screens: {
+			xs: '480px',
+			sm: '640px',
+			md: '768px',
+			lg: '1024px',
+			xl: '1280px',
+			'2xl': '1400px',
 		},
 		extend: {
 			colors: {

@@ -116,11 +116,39 @@ All colors MUST be HSL.
   /* Better mobile touch targets */
   button, [role="button"], input, select, textarea {
     touch-action: manipulation;
+    min-height: 44px; /* Minimum touch target size */
   }
 
   /* Prevent horizontal scrolling on mobile */
   body, html {
     overflow-x: hidden;
     width: 100%;
+  }
+
+  /* Optimize for small screens */
+  @media (max-width: 640px) {
+    .container {
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
+  }
+
+  /* Better scrolling on mobile */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* Compact spacing for small screens */
+  @media (max-width: 768px) {
+    .space-y-8 > * + * {
+      margin-top: 1.5rem !important;
+    }
+    .space-y-6 > * + * {
+      margin-top: 1rem !important;
+    }
+    .space-y-4 > * + * {
+      margin-top: 0.75rem !important;
+    }
   }
 }

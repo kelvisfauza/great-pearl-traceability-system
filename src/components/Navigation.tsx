@@ -145,12 +145,12 @@ const Navigation = () => {
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="font-semibold text-lg text-gray-800">Coffee ERP</h2>
+      <div className="p-3 xs:p-4 border-b border-gray-200">
+        <h2 className="font-semibold text-base xs:text-lg text-gray-800 truncate">Coffee ERP</h2>
       </div>
       
-      <div className="flex-1 p-3">
-        <nav className="space-y-4">
+      <div className="flex-1 p-2 xs:p-3">
+        <nav className="space-y-3 xs:space-y-4">
           {filteredNavigationItems.map((section, sectionIndex) => (
             <div key={sectionIndex}>
               <h3 className="font-medium text-xs text-gray-500 uppercase tracking-wider mb-2 px-2">
@@ -164,7 +164,7 @@ const Navigation = () => {
                       key={itemIndex}
                       variant={isActive ? "default" : "ghost"}
                       size="sm"
-                      className={`w-full justify-start text-sm h-9 ${
+                      className={`w-full justify-start text-xs xs:text-sm h-8 xs:h-9 ${
                         isActive 
                           ? "bg-green-600 hover:bg-green-700 text-white shadow-sm" 
                           : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
@@ -172,8 +172,8 @@ const Navigation = () => {
                       asChild
                     >
                       <Link to={item.path}>
-                        <item.icon className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">{item.name}</span>
+                        <item.icon className="h-3 w-3 xs:h-4 xs:w-4 mr-1 xs:mr-2 flex-shrink-0" />
+                        <span className="truncate text-xs xs:text-sm">{item.name}</span>
                       </Link>
                     </Button>
                   );
@@ -185,12 +185,12 @@ const Navigation = () => {
       </div>
 
       {/* User info and logout section */}
-      <div className="p-3 border-t border-gray-200">
+      <div className="p-2 xs:p-3 border-t border-gray-200">
         {employee && (
-          <div className="mb-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-800 truncate">{employee.name}</p>
+          <div className="mb-2 xs:mb-3">
+            <div className="flex items-center justify-between mb-1 xs:mb-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs xs:text-sm font-medium text-gray-800 truncate">{employee.name}</p>
                 <p className="text-xs text-gray-500 truncate">{employee.position}</p>
               </div>
               <RoleNotificationWidget />
@@ -200,12 +200,11 @@ const Navigation = () => {
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start text-sm h-9 text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="w-full justify-start text-xs xs:text-sm h-8 xs:h-9 text-red-600 hover:text-red-700 hover:bg-red-50"
           onClick={handleLogout}
         >
-          <LogOut className="h-4 w-4 mr-2 flex-shrink-0" />
-          <span className="hidden sm:inline">Sign Out</span>
-          <span className="sm:hidden">Out</span>
+          <LogOut className="h-3 w-3 xs:h-4 xs:w-4 mr-1 xs:mr-2 flex-shrink-0" />
+          <span className="truncate">Sign Out</span>
         </Button>
       </div>
     </div>
