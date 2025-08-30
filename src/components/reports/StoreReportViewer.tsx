@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Download, Eye, Scan, Calendar, User } from 'lucide-react';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 
 interface StoreReportViewerProps {
   report: any;
@@ -14,13 +15,46 @@ interface StoreReportViewerProps {
 
 const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProps) => {
   const [showDocument, setShowDocument] = useState(false);
+  const [attachmentUrl, setAttachmentUrl] = useState<string>('');
+
+  useEffect(() => {
+    const getSignedUrl = async () => {
+      if (report?.attachment_url) {
+        try {
+          // If it's already a full URL (old format), use it directly
+          if (report.attachment_url.startsWith('http')) {
+            setAttachmentUrl(report.attachment_url);
+            return;
+          }
+
+          // For new format (file path), create signed URL
+          const { data, error } = await supabase.storage
+            .from('report-documents')
+            .createSignedUrl(report.attachment_url, 3600); // 1 hour expiry
+
+          if (error) {
+            console.error('Error creating signed URL:', error);
+            return;
+          }
+
+          setAttachmentUrl(data.signedUrl);
+        } catch (error) {
+          console.error('Error getting signed URL:', error);
+        }
+      }
+    };
+
+    if (open && report) {
+      getSignedUrl();
+    }
+  }, [open, report]);
 
   if (!report) return null;
 
   const handleDownloadDocument = () => {
-    if (report.attachment_url) {
+    if (attachmentUrl) {
       const link = document.createElement('a');
-      link.href = report.attachment_url;
+      link.href = attachmentUrl;
       link.download = report.attachment_name || 'report-document';
       document.body.appendChild(link);
       link.click();
@@ -183,26 +217,38 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
 
                   {showDocument && (
                     <div className="border rounded-lg p-4 bg-muted/50">
-                      {isImageFile(report.attachment_name) ? (
-                        <img
-                          src={report.attachment_url}
-                          alt="Scanned document"
-                          className="max-w-full h-auto rounded"
-                          style={{ maxHeight: '500px' }}
-                        />
-                      ) : isPdfFile(report.attachment_name) ? (
-                        <iframe
-                          src={report.attachment_url}
-                          title="PDF Document"
-                          className="w-full rounded"
-                          style={{ height: '500px' }}
-                        />
+                      {attachmentUrl ? (
+                        <>
+                          {isImageFile(report.attachment_name) ? (
+                            <img
+                              src={attachmentUrl}
+                              alt="Scanned document"
+                              className="max-w-full h-auto rounded"
+                              style={{ maxHeight: '500px' }}
+                            />
+                          ) : isPdfFile(report.attachment_name) ? (
+                            <iframe
+                              src={attachmentUrl}
+                              title="PDF Document"
+                              className="w-full rounded"
+                              style={{ height: '500px' }}
+                            />
+                          ) : (
+                            <div className="text-center py-8">
+                              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                              <p className="text-muted-foreground">
+                                Document preview not available. Click download to view the file.
+                              </p>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="text-center py-8">
-                          <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                          <p className="text-muted-foreground">
-                            Document preview not available. Click download to view the file.
-                          </p>
+                          <div className="animate-pulse">
+                            <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
+                            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                          </div>
+                          <p className="text-muted-foreground mt-2">Loading document...</p>
                         </div>
                       )}
                     </div>

@@ -133,13 +133,9 @@ const ManualStoreReportForm = () => {
         throw uploadError;
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('report-documents')
-        .getPublicUrl(filePath);
-
       setFormData(prev => ({
         ...prev,
-        attachment_url: publicUrl,
+        attachment_url: filePath, // Store file path instead of public URL
         attachment_name: file.name
       }));
 

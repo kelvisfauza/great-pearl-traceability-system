@@ -151,9 +151,10 @@ const StoreReportsList = () => {
         .from('report-documents')
         .getPublicUrl(filePath);
 
+      // Store the file path instead of public URL for private bucket
       setEditFormData(prev => ({
         ...prev,
-        attachment_url: publicUrl,
+        attachment_url: filePath, // Store the file path, not public URL
         attachment_name: file.name
       }));
 
