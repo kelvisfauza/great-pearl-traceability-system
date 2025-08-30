@@ -7,12 +7,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useStoreReports } from '@/hooks/useStoreReports';
 import { useAuth } from '@/contexts/AuthContext';
-import { Save } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Save, Upload, FileText } from 'lucide-react';
+import { toast } from 'sonner';
 
 const StoreReportForm = () => {
   const { addStoreReport } = useStoreReports();
   const { employee } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -27,7 +30,9 @@ const StoreReportForm = () => {
     kilograms_unbought: 0,
     advances_given: 0,
     comments: '',
-    input_by: employee?.name || ''
+    input_by: employee?.name || '',
+    attachment_url: '',
+    attachment_name: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,7 +56,9 @@ const StoreReportForm = () => {
         kilograms_unbought: 0,
         advances_given: 0,
         comments: '',
-        input_by: employee?.name || ''
+        input_by: employee?.name || '',
+        attachment_url: '',
+        attachment_name: ''
       });
     } catch (error) {
       console.error('Error submitting store report:', error);
@@ -65,6 +72,57 @@ const StoreReportForm = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a valid image (JPEG, PNG) or PDF file");
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB");
+      return;
+    }
+
+    setUploadingFile(true);
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `reports/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('report-documents')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('report-documents')
+        .getPublicUrl(filePath);
+
+      setFormData(prev => ({
+        ...prev,
+        attachment_url: publicUrl,
+        attachment_name: file.name
+      }));
+
+      toast.success("Document uploaded successfully");
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error("Failed to upload document");
+    } finally {
+      setUploadingFile(false);
+    }
   };
 
   return (
@@ -221,6 +279,43 @@ const StoreReportForm = () => {
                 placeholder="Your name"
                 required
               />
+            </div>
+          </div>
+
+          {/* Document Attachment Section */}
+          <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Document Attachment (Optional)
+            </h3>
+            
+            <div className="space-y-2">
+              <Label>Attach Supporting Document</Label>
+              <div className="flex gap-2">
+                <input
+                  id="daily-file-upload"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('daily-file-upload')?.click()}
+                  disabled={uploadingFile}
+                  className="flex-1"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {uploadingFile ? 'Uploading...' : 'Upload Document'}
+                </Button>
+              </div>
+              {formData.attachment_name && (
+                <div className="flex items-center gap-2 mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                  <FileText className="h-4 w-4 text-green-600" />
+                  <span className="text-sm text-green-800">{formData.attachment_name}</span>
+                </div>
+              )}
             </div>
           </div>
 
