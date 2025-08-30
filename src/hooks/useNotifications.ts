@@ -352,11 +352,25 @@ export const useNotifications = () => {
             const hasPermission = employee.permissions.some(permission => 
               permission.toLowerCase().includes(notification.targetDepartment.toLowerCase()) ||
               notification.targetDepartment.toLowerCase().includes(permission.toLowerCase()) ||
-              permission === notification.targetDepartment
+              permission === notification.targetDepartment ||
+              // Special mapping for Quality Control permission to Quality department
+              (permission === 'Quality Control' && notification.targetDepartment === 'Quality') ||
+              (notification.targetDepartment === 'Quality Control' && employee.permissions.includes('Quality Control'))
             );
             if (hasPermission) {
               return true;
             }
+          }
+          
+          // Special case for Quality Control permission mapping to Quality department
+          if (notification.targetDepartment === 'Quality' && 
+              employee.permissions && employee.permissions.includes('Quality Control')) {
+            return true;
+          }
+          
+          // Special case for Quality Control department mapping to Quality notifications
+          if (employee.department === 'Quality' && notification.targetDepartment === 'Quality Control') {
+            return true;
           }
           
           // Special case for Data Analysis permission mapping to Reports department
@@ -382,10 +396,16 @@ export const useNotifications = () => {
               const hasPermission = employee.permissions.some(permission => 
                 permission.toLowerCase().includes(targetDept.toLowerCase()) ||
                 targetDept.toLowerCase().includes(permission.toLowerCase()) ||
-                permission === targetDept
+                permission === targetDept ||
+                // Special mapping for Quality Control permission to Quality department
+                (permission === 'Quality Control' && targetDept === 'Quality') ||
+                (targetDept === 'Quality Control' && employee.permissions.includes('Quality Control'))
               );
               if (hasPermission) return true;
             }
+            
+            if (targetDept === 'Quality' && employee.permissions && employee.permissions.includes('Quality Control')) return true;
+            if (employee.department === 'Quality' && targetDept === 'Quality Control') return true;
             
             if (targetDept === 'Reports' && employee.permissions && employee.permissions.includes('Data Analysis')) return true;
             if (employee.department === 'Data Analysis' && targetDept === 'Reports') return true;
