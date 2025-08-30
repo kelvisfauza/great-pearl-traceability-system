@@ -2172,15 +2172,11 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      get_available_to_request: {
-        Args: { user_uuid: string }
-        Returns: number
-      }
       get_available_to_request_safe: {
         Args: { user_uuid: string }
         Returns: number
       }
-      get_pending_withdrawals: {
+      get_available_to_request_text: {
         Args: { user_uuid: string }
         Returns: number
       }
@@ -2188,11 +2184,15 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: number
       }
-      get_wallet_balance: {
+      get_pending_withdrawals_text: {
         Args: { user_uuid: string }
         Returns: number
       }
       get_wallet_balance_safe: {
+        Args: { user_uuid: string }
+        Returns: number
+      }
+      get_wallet_balance_text: {
         Args: { user_uuid: string }
         Returns: number
       }
