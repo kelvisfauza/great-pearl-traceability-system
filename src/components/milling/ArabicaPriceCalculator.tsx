@@ -32,7 +32,7 @@ interface CalculationResults {
 
 interface ArabicaPriceCalculatorProps {
   onPriceChange?: (finalPrice: number | null) => void;
-  onCalculationChange?: (results: CalculationResults) => void;
+  onCalculationChange?: (results: CalculationResults, calculatorState: PriceCalculatorState) => void;
 }
 
 const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange }: ArabicaPriceCalculatorProps) => {
@@ -181,7 +181,7 @@ const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange }: ArabicaP
     
     // Notify parent of all calculation results
     if (onCalculationChange) {
-      onCalculationChange(newResults);
+      onCalculationChange(newResults, state);
     }
   };
 

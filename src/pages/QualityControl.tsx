@@ -934,9 +934,20 @@ const QualityControl = () => {
                         manual_price: price ? price.toString() : ''
                       }));
                     }}
-                    onCalculationChange={(results) => {
+                    onCalculationChange={(results, calculatorState) => {
                       setAssessmentForm(prev => ({
                         ...prev,
+                        // Quality parameters from calculator state
+                        moisture: calculatorState.moisture,
+                        group1_defects: calculatorState.gp1,
+                        group2_defects: calculatorState.gp2,
+                        below12: calculatorState.less12,
+                        pods: calculatorState.pods,
+                        husks: calculatorState.husks,
+                        stones: calculatorState.stones,
+                        discretion: calculatorState.discretion,
+                        ref_price: calculatorState.refPrice,
+                        // Calculation results
                         fm: results.fm,
                         actual_ott: results.actualOtt,
                         clean_d14: results.cleanD14,
