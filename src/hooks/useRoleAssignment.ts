@@ -109,6 +109,12 @@ export const useRoleAssignment = () => {
       }
       
       // Create notification for the assigned user
+      console.log('Creating role assignment notification for:', {
+        assignedToName,
+        assignedToEmail,
+        currentEmployeeName: employee?.name
+      });
+      
       await createRoleAssignmentNotification(
         assignedToName,
         role === 'admin_delegate' ? 'Admin Delegate' : 'Approver',

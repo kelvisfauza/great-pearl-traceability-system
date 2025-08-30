@@ -327,6 +327,11 @@ export const useNotifications = () => {
         
         // Show notifications targeted to specific user by name
         if (notification.targetUser && notification.targetUser === employee.name) {
+          console.log('Notification matched by targetUser:', {
+            notificationTargetUser: notification.targetUser,
+            employeeName: employee.name,
+            notificationTitle: notification.title
+          });
           return true;
         }
         
