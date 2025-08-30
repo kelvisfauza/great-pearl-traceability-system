@@ -11,6 +11,8 @@ const DynamicHeader = () => {
   const { employee } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [showMainGreeting, setShowMainGreeting] = useState(true);
   const { unreadCount } = useNotifications();
 
   useEffect(() => {
@@ -20,6 +22,29 @@ const DynamicHeader = () => {
 
     return () => clearInterval(timer);
   }, []);
+
+  // Hide main greeting after 3 seconds and start cycling messages
+  useEffect(() => {
+    const greetingTimer = setTimeout(() => {
+      setShowMainGreeting(false);
+    }, 3000);
+
+    return () => clearTimeout(greetingTimer);
+  }, []);
+
+  // Cycle through messages every 4 seconds after main greeting is hidden
+  useEffect(() => {
+    if (!showMainGreeting) {
+      const messageTimer = setInterval(() => {
+        const greeting = getGreeting();
+        if (greeting.messages && greeting.messages.length > 0) {
+          setCurrentMessageIndex((prev) => (prev + 1) % greeting.messages.length);
+        }
+      }, 4000);
+
+      return () => clearInterval(messageTimer);
+    }
+  }, [showMainGreeting, currentTime]);
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
@@ -31,22 +56,21 @@ const DynamicHeader = () => {
         text: 'Good Night', 
         icon: Moon, 
         color: 'from-purple-500 to-indigo-600',
-        message: `Rest well ${firstName}, tomorrow brings new coffee adventures!`
+        messages: [`Rest well ${firstName}, tomorrow brings new coffee adventures!`]
       };
     }
     
     if (hour >= 6 && hour < 12) {
-      const morningMessages = [
-        `It's a fresh ${dayOfWeek} morning! Grab a cup of our finest coffee to kickstart your day ☕`,
-        `Rise and grind ${firstName}! Let the aroma of coffee fuel your productivity today`,
-        `Monday motivation or Friday feels? Either way, coffee makes everything better!`,
-        `Start your day right with a perfect brew - your mind will thank you later!`
-      ];
       return { 
         text: 'Good Morning', 
         icon: Sunrise, 
         color: 'from-orange-500 to-yellow-500',
-        message: morningMessages[Math.floor(Math.random() * morningMessages.length)]
+        messages: [
+          `It's a fresh ${dayOfWeek} morning! Grab a cup of our finest coffee to kickstart your day ☕`,
+          `Rise and grind ${firstName}! Let the aroma of coffee fuel your productivity today`,
+          `Monday motivation or Friday feels? Either way, coffee makes everything better!`,
+          `Start your day right with a perfect brew - your mind will thank you later!`
+        ]
       };
     }
     
@@ -55,37 +79,35 @@ const DynamicHeader = () => {
         text: 'Good Afternoon', 
         icon: Sun, 
         color: 'from-blue-500 to-cyan-500',
-        message: `${firstName}, have you had lunch yet? Don't forget to pair it with our signature coffee blend!`
+        messages: [`${firstName}, have you had lunch yet? Don't forget to pair it with our signature coffee blend!`]
       };
     }
     
     if (hour >= 13 && hour < 17) {
-      const afternoonMessages = [
-        `Afternoon energy dip? Try our premium espresso for that perfect pick-me-up!`,
-        `The day is halfway done ${firstName} - celebrate with a refreshing iced coffee!`,
-        `Productivity flowing? Keep it going with our smooth afternoon blend`,
-        `Take a coffee break and let your mind relax - you've earned it!`
-      ];
       return { 
         text: 'Good Afternoon', 
         icon: Sun, 
         color: 'from-blue-500 to-cyan-500',
-        message: afternoonMessages[Math.floor(Math.random() * afternoonMessages.length)]
+        messages: [
+          `Afternoon energy dip? Try our premium espresso for that perfect pick-me-up!`,
+          `The day is halfway done ${firstName} - celebrate with a refreshing iced coffee!`,
+          `Productivity flowing? Keep it going with our smooth afternoon blend`,
+          `Take a coffee break and let your mind relax - you've earned it!`
+        ]
       };
     }
     
     if (hour >= 17 && hour < 21) {
-      const eveningMessages = [
-        `Winding down ${firstName}? How about a decaf coffee to end the day peacefully?`,
-        `Evening reflection time - pair your thoughts with our mild evening roast`,
-        `Great work today! Celebrate with a warm cup of our specialty blend`,
-        `As the sun sets, let the warmth of coffee embrace your evening`
-      ];
       return { 
         text: 'Good Evening', 
         icon: Sunset, 
         color: 'from-orange-600 to-red-500',
-        message: eveningMessages[Math.floor(Math.random() * eveningMessages.length)]
+        messages: [
+          `Winding down ${firstName}? How about a decaf coffee to end the day peacefully?`,
+          `Evening reflection time - pair your thoughts with our mild evening roast`,
+          `Great work today! Celebrate with a warm cup of our specialty blend`,
+          `As the sun sets, let the warmth of coffee embrace your evening`
+        ]
       };
     }
     
@@ -93,7 +115,7 @@ const DynamicHeader = () => {
       text: 'Good Night', 
       icon: Moon, 
       color: 'from-purple-500 to-indigo-600',
-      message: `Sweet dreams ${firstName}! Tomorrow's coffee adventures await...`
+      messages: [`Sweet dreams ${firstName}! Tomorrow's coffee adventures await...`]
     };
   };
 
@@ -149,13 +171,16 @@ const DynamicHeader = () => {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
               {greeting.text}, {employee?.name?.split(' ')[0] || 'User'}!
             </h1>
-            <p className="text-lg text-muted-foreground mt-1">
-              Welcome to your dashboard
-            </p>
-            {greeting.message && (
-              <p className="text-base text-foreground/80 mt-2 bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg px-4 py-2 border-l-4 border-primary/30">
-                {greeting.message}
+            {showMainGreeting ? (
+              <p className="text-lg text-muted-foreground mt-1">
+                Welcome to your dashboard
               </p>
+            ) : (
+              <div className="mt-2">
+                <p className="text-base text-foreground/80 bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg px-4 py-2 border-l-4 border-primary/30 transition-all duration-500 animate-fade-in">
+                  {greeting.messages[currentMessageIndex % greeting.messages.length]}
+                </p>
+              </div>
             )}
           </div>
           <div className="ml-auto">
