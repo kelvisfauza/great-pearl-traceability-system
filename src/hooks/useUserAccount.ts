@@ -47,6 +47,9 @@ export const useUserAccount = () => {
       return;
     }
 
+    // Add debug logging for current user
+    console.log('fetchUserAccount called for user:', { uid: user.uid, email: user.email });
+
     try {
       // Special handling for Denis using Firebase ID
       if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2') {
