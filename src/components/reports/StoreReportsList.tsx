@@ -97,16 +97,15 @@ const StoreReportsList = () => {
   };
 
   const handleConfirmEdit = async () => {
-    if (!selectedReport || !editReason.trim()) return;
+    if (!selectedReport) return;
 
     setSubmitting(true);
     try {
-      const result = await directEditReport(selectedReport.id, editFormData, editReason);
+      const result = await directEditReport(selectedReport.id, editFormData);
       
       if (result) {
         setEditDialogOpen(false);
         setSelectedReport(null);
-        setEditReason('');
         setEditFormData({});
       }
     } catch (error) {
@@ -690,16 +689,6 @@ const StoreReportsList = () => {
                   rows={3}
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label>Reason for editing:</Label>
-                <Textarea
-                  placeholder="Please explain why this report needs to be edited..."
-                  value={editReason}
-                  onChange={(e) => setEditReason(e.target.value)}
-                  className="min-h-[100px]"
-                />
-              </div>
             </div>
           )}
 
@@ -713,7 +702,7 @@ const StoreReportsList = () => {
             </Button>
             <Button
               onClick={handleConfirmEdit}
-              disabled={submitting || !editReason.trim()}
+              disabled={submitting}
             >
               {submitting ? 'Updating...' : 'Update Report'}
             </Button>

@@ -169,7 +169,7 @@ export const useStoreReports = () => {
     }
   };
 
-  const directEditReport = async (reportId: string, updatedData: Omit<StoreReport, 'id' | 'created_at' | 'updated_at'>, reason: string) => {
+  const directEditReport = async (reportId: string, updatedData: Omit<StoreReport, 'id' | 'created_at' | 'updated_at'>, reason?: string) => {
     try {
       console.log('Updating store report in Supabase:', reportId, updatedData);
       
@@ -185,7 +185,7 @@ export const useStoreReports = () => {
         action: 'edit',
         table_name: 'store_reports',
         record_id: reportId,
-        reason: reason,
+        reason: reason || 'Report updated',
         performed_by: updatedData.input_by,
         department: 'Store',
         record_data: updatedData
