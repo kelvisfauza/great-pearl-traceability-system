@@ -36,15 +36,12 @@ const DynamicHeader = () => {
   useEffect(() => {
     if (!showMainGreeting) {
       const messageTimer = setInterval(() => {
-        const greeting = getGreeting();
-        if (greeting.messages && greeting.messages.length > 0) {
-          setCurrentMessageIndex((prev) => (prev + 1) % greeting.messages.length);
-        }
+        setCurrentMessageIndex((prev) => (prev + 1) % getGreeting().messages.length);
       }, 4000);
 
       return () => clearInterval(messageTimer);
     }
-  }, [showMainGreeting, currentTime]);
+  }, [showMainGreeting]); // Removed currentTime from dependencies
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
@@ -177,7 +174,10 @@ const DynamicHeader = () => {
               </p>
             ) : (
               <div className="mt-2">
-                <p className="text-base text-foreground/80 bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg px-4 py-2 border-l-4 border-primary/30 transition-all duration-500 animate-fade-in">
+                <p 
+                  key={currentMessageIndex} 
+                  className="text-base text-foreground/80 bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg px-4 py-2 border-l-4 border-primary/30 transition-all duration-500 animate-fade-in"
+                >
                   {greeting.messages[currentMessageIndex % greeting.messages.length]}
                 </p>
               </div>
