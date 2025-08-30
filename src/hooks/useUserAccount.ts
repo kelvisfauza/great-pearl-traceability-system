@@ -50,21 +50,27 @@ export const useUserAccount = () => {
     try {
       // Special handling for Denis using Firebase ID
       if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2') {
-        // For Denis, calculate balance from his Supabase ledger entries
-        const { data: denisBalance } = await supabase.rpc('get_wallet_balance', {
-          user_uuid: 'e5c7b8bc-1f27-4c0f-a750-c6f4e8b4a641' // His Supabase UUID
-        });
+        // For Denis, directly query his ledger entries to avoid UUID issues
+        const { data: denisLedger, error: denisError } = await supabase
+          .from('ledger_entries')
+          .select('amount')
+          .eq('user_id', 'e5c7b8bc-1f27-4c0f-a750-c6f4e8b4a641'); // His existing Supabase UUID
+
+        console.log('Denis ledger query result:', { denisLedger, denisError });
+
+        const denisBalance = denisLedger?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
 
         setAccount({
           id: 'denis-account',
           user_id: user.uid,
-          wallet_balance: denisBalance || 0,
+          wallet_balance: denisBalance,
           pending_withdrawals: 0,
-          available_to_request: denisBalance || 0,
+          available_to_request: denisBalance,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
 
+        console.log('Denis account set with balance:', denisBalance);
         setLoading(false);
         return;
       }
@@ -110,7 +116,6 @@ export const useUserAccount = () => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
-
 
       // Fetch money requests
       const { data: requests, error: requestsError } = await supabase
