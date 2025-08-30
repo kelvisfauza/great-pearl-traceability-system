@@ -39,8 +39,8 @@ const TrendAnalysisPanel = () => {
       trend_strength: formData.trend_strength[0],
       key_factors: formData.key_factors.split(',').map(f => f.trim()).filter(f => f),
       predicted_outcome: formData.predicted_outcome,
-      analyst_id: user.uid,
-      analyst_name: user.displayName || user.email || 'Unknown Analyst'
+      analyst_id: user.id,
+      analyst_name: user.email || 'Unknown Analyst'
     };
 
     const result = await createTrendAnalysis(trend);

@@ -28,11 +28,14 @@ import { WithdrawalModal } from './WithdrawalModal';
 import { format } from 'date-fns';
 
 export const AccountButton = () => {
+  console.log('🔥 AccountButton component mounting...');
+  
   const { account, moneyRequests, withdrawalRequests, loading } = useUserAccount();
   const [showMoneyRequest, setShowMoneyRequest] = useState(false);
   const [showWithdrawal, setShowWithdrawal] = useState(false);
 
   console.log('🚨 AccountButton render - loading:', loading, 'account:', account);
+  console.log('🚨 Full account data:', JSON.stringify(account, null, 2));
 
   const formatCurrency = (amount: number) => {
     return `UGX ${amount.toLocaleString()}`;

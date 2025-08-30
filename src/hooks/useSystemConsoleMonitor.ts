@@ -89,7 +89,7 @@ export const useSystemConsoleMonitor = () => {
         level: level as any,
         message: message.substring(0, 500), // Limit message length
         source: 'browser-console',
-        userId: employee?.id || user?.uid || 'anonymous',
+        userId: employee?.id || user?.id || 'anonymous',
         userName: employee?.name || 'Unknown',
         userDepartment: employee?.department || 'Unknown',
         url: window.location.href,

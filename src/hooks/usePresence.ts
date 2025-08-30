@@ -9,17 +9,17 @@ export const usePresence = (userId?: string) => {
   const hasSetLoginTime = useRef<boolean>(false);
 
   const updatePresence = useCallback(async (status: 'online' | 'away' | 'offline' = 'online') => {
-    const uid = userId || user?.uid;
-    if (!uid) return;
+    const id = userId || user?.id;
+    if (!id) return;
 
     try {
-      const presenceRef = doc(db, 'presence', uid);
+      const presenceRef = doc(db, 'presence', id);
 
       // Build base payload
       const payload: Record<string, any> = {
         status,
         last_seen: serverTimestamp(),
-        name: employee?.name || user?.displayName || user?.email || 'User',
+        name: employee?.name || user?.email?.split('@')[0] || 'User',
         email: user?.email ?? null,
         department: employee?.department ?? null,
         role: employee?.role ?? null,
@@ -35,15 +35,15 @@ export const usePresence = (userId?: string) => {
     } catch (error) {
       console.error('Error updating presence:', error);
     }
-  }, [userId, user?.uid, user?.email, user?.displayName, employee?.name, employee?.department, employee?.role]);
+  }, [userId, user?.id, user?.email, employee?.name, employee?.department, employee?.role]);
 
   const setOffline = useCallback(async () => {
     await updatePresence('offline');
   }, [updatePresence]);
 
   useEffect(() => {
-    const uid = userId || user?.uid;
-    if (!uid) return;
+    const id = userId || user?.id;
+    if (!id) return;
 
     // Set user as online when hook mounts
     updatePresence('online');
@@ -69,7 +69,7 @@ export const usePresence = (userId?: string) => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       setOffline();
     };
-  }, [userId, user?.uid, updatePresence, setOffline]);
+  }, [userId, user?.id, updatePresence, setOffline]);
 
   return { updatePresence };
 };

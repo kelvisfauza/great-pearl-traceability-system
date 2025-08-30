@@ -41,8 +41,8 @@ const PriceRecommendationPanel = () => {
       quality_score: formData.quality_score ? parseFloat(formData.quality_score) : undefined,
       market_trend: formData.market_trend,
       confidence_level: formData.confidence_level[0],
-      analyst_id: user.uid,
-      analyst_name: user.displayName || user.email || 'Unknown User',
+      analyst_id: user.id,
+      analyst_name: user.email || 'Unknown User',
       status: 'pending' as const,
       effective_date: formData.effective_date || undefined,
       expires_at: formData.expires_at || undefined
@@ -283,7 +283,7 @@ const PriceRecommendationPanel = () => {
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
-                        onClick={() => approveRecommendation(rec.id!, user.displayName || user.email || 'Admin')}
+                        onClick={() => approveRecommendation(rec.id!, user.email || 'Admin')}
                       >
                         Approve
                       </Button>

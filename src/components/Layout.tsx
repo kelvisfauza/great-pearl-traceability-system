@@ -29,7 +29,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   const { unreadCount } = useMessages();
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const { user } = useAuth();
-  usePresence(user?.uid);
+  usePresence(user?.id);
   
   console.log('Layout - notification unread count:', notificationUnreadCount);
   console.log('Layout - user:', user);

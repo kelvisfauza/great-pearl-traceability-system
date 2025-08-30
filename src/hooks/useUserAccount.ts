@@ -34,6 +34,8 @@ interface WithdrawalRequest {
 }
 
 export const useUserAccount = () => {
+  console.log('🏁 useUserAccount hook initializing...');
+  
   const [account, setAccount] = useState<UserAccount | null>(null);
   const [moneyRequests, setMoneyRequests] = useState<MoneyRequest[]>([]);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
@@ -41,20 +43,22 @@ export const useUserAccount = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  console.log('👤 useUserAccount - user object:', user);
+
   const fetchUserAccount = async () => {
-    if (!user?.uid) {
+    if (!user?.id) {
       setLoading(false);
       return;
     }
 
-    console.log('🔍 fetchUserAccount called for user:', { uid: user.uid, email: user.email });
+    console.log('🔍 fetchUserAccount called for user:', { id: user.id, email: user.email });
 
     try {
-      // Map user Firebase IDs to their ledger user_ids
-      let ledgerUserId = user.uid; // Default to Firebase ID
+      // Map user Supabase IDs to their ledger user_ids
+      let ledgerUserId = user.id; // Default to Supabase ID
       
       // Special mappings for users with different ledger IDs
-      if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2' || user.email === 'bwambaledenis8@gmail.com') {
+      if (user.id === 'JSxZYOSxmde6Cqra4clQNc92mRS2' || user.email === 'bwambaledenis8@gmail.com') {
         ledgerUserId = 'JSxZYOSxmde6Cqra4clQNc92mRS2'; // Denis uses Firebase ID
       } else if (user.email === 'nicholusscottlangz@gmail.com') {
         ledgerUserId = 'kibaba_nicholus_temp_id'; // Kibaba uses temp ID
@@ -72,11 +76,11 @@ export const useUserAccount = () => {
 
       const walletBalance = ledgerEntries?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
 
-      // Calculate pending withdrawals using Firebase ID (withdrawal requests use Firebase IDs)
+      // Calculate pending withdrawals using Supabase ID (withdrawal requests use Supabase IDs)
       const { data: pendingWithdrawals, error: withdrawalError } = await supabase
         .from('withdrawal_requests')
         .select('amount')
-        .eq('user_id', user.uid)
+        .eq('user_id', user.id)
         .in('status', ['pending', 'approved', 'processing']);
 
       const pendingAmount = pendingWithdrawals?.reduce((sum, req) => sum + (req.amount || 0), 0) || 0;
@@ -91,8 +95,8 @@ export const useUserAccount = () => {
       });
 
       const accountData: UserAccount = {
-        id: `account-${user.uid}`,
-        user_id: user.uid,
+        id: `account-${user.id}`,
+        user_id: user.id,
         wallet_balance: walletBalance,
         pending_withdrawals: pendingAmount,
         available_to_request: availableToRequest,
@@ -102,17 +106,17 @@ export const useUserAccount = () => {
 
       setAccount(accountData);
 
-      // Fetch money requests and withdrawal requests using Firebase ID
+      // Fetch money requests and withdrawal requests using Supabase ID
       const { data: moneyRequestsData } = await supabase
         .from('money_requests')
         .select('*')
-        .eq('user_id', user.uid)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       const { data: withdrawalRequestsData } = await supabase
         .from('withdrawal_requests')
         .select('*')
-        .eq('user_id', user.uid)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       setMoneyRequests(moneyRequestsData || []);
@@ -124,8 +128,8 @@ export const useUserAccount = () => {
       console.error('❌ Error fetching user account:', error);
       // Provide default account even on error
       setAccount({
-        id: `temp-${user.uid}`,
-        user_id: user.uid,
+        id: `temp-${user.id}`,
+        user_id: user.id,
         wallet_balance: 0,
         pending_withdrawals: 0,
         available_to_request: 0,
@@ -143,13 +147,13 @@ export const useUserAccount = () => {
   };
 
   const createMoneyRequest = async (amount: number, reason: string, requestType: string = 'advance') => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
     try {
       const { error } = await supabase
         .from('money_requests')
         .insert([{
-          user_id: user.uid,
+          user_id: user.id,
           amount,
           reason,
           request_type: requestType,
@@ -175,7 +179,7 @@ export const useUserAccount = () => {
   };
 
   const createWithdrawalRequest = async (amount: number, phoneNumber: string, channel: string = 'ZENGAPAY') => {
-    if (!user?.uid || !account) return;
+    if (!user?.id || !account) return;
 
     if (amount > account.available_to_request) {
       toast({
@@ -193,7 +197,7 @@ export const useUserAccount = () => {
       const { error } = await supabase
         .from('withdrawal_requests')
         .insert([{
-          user_id: user.uid,
+          user_id: user.id,
           amount,
           phone_number: phoneNumber,
           channel,

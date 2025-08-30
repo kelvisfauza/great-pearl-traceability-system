@@ -8,19 +8,19 @@ export const useActivityTracker = () => {
   const { toast } = useToast();
 
   const trackActivity = useCallback(async (activityType: string, description?: string) => {
-    if (!user?.uid) {
+    if (!user?.id) {
       console.log('No user found for activity tracking');
       return;
     }
 
-    console.log('Tracking activity:', activityType, 'for user:', user.uid);
+    console.log('Tracking activity:', activityType, 'for user:', user.id);
 
     try {
       // Record the activity
       const { error: activityError } = await supabase
         .from('user_activity')
         .insert([{
-          user_id: user.uid,
+          user_id: user.id,
           activity_type: activityType,
           activity_date: new Date().toISOString().split('T')[0]
         }]);
@@ -34,7 +34,7 @@ export const useActivityTracker = () => {
 
       // Check if user should get reward for this activity
       const { data, error } = await supabase.rpc('award_activity_reward' as any, {
-        user_uuid: user.uid,
+        user_uuid: user.id,
         activity_name: activityType
       });
 
