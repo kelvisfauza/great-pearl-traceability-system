@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -34,17 +36,49 @@ export const useStoreReports = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      console.log('Fetching store reports from Supabase...');
+      console.log('Fetching store reports from both Supabase and Firebase...');
       
-      const { data, error } = await supabase
+      // Fetch from Supabase first
+      const { data: supabaseData, error } = await supabase
         .from('store_reports')
         .select('*')
         .order('date', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+      }
       
-      console.log('Supabase store reports:', data);
-      setReports(data || []);
+      console.log('Supabase store reports:', supabaseData);
+      
+      // Also fetch from Firebase to get existing data
+      let firebaseData: StoreReport[] = [];
+      try {
+        const reportsQuery = query(collection(db, 'store_reports'), orderBy('date', 'desc'));
+        const querySnapshot = await getDocs(reportsQuery);
+        
+        firebaseData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as StoreReport[];
+        
+        console.log('Firebase store reports:', firebaseData);
+      } catch (firebaseError) {
+        console.error('Firebase error:', firebaseError);
+      }
+      
+      // Combine both sources, prioritizing Supabase but including Firebase data
+      const combinedReports = [...(supabaseData || []), ...firebaseData];
+      
+      // Remove duplicates based on ID (in case same report exists in both)
+      const uniqueReports = combinedReports.filter((report, index, self) => 
+        index === self.findIndex(r => r.id === report.id)
+      );
+      
+      // Sort by date
+      uniqueReports.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      console.log('Combined store reports:', uniqueReports);
+      setReports(uniqueReports);
     } catch (error) {
       console.error('Error fetching store reports:', error);
       toast({
@@ -210,6 +244,59 @@ export const useStoreReports = () => {
     fetchReports();
   }, []);
 
+  const migrateFirebaseToSupabase = async () => {
+    try {
+      console.log('Starting migration from Firebase to Supabase...');
+      
+      // Fetch all Firebase data
+      const reportsQuery = query(collection(db, 'store_reports'), orderBy('date', 'desc'));
+      const querySnapshot = await getDocs(reportsQuery);
+      
+      const firebaseReports = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as StoreReport[];
+      
+      console.log(`Found ${firebaseReports.length} reports in Firebase to migrate`);
+      
+      if (firebaseReports.length === 0) {
+        toast({
+          title: "Migration Complete",
+          description: "No reports found in Firebase to migrate"
+        });
+        return;
+      }
+      
+      // Insert into Supabase (exclude the id field as Supabase will generate new ones)
+      const reportsToInsert = firebaseReports.map(report => {
+        const { id, ...reportData } = report;
+        return reportData;
+      });
+      
+      const { error } = await supabase
+        .from('store_reports')
+        .insert(reportsToInsert);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Migration Successful",
+        description: `Successfully migrated ${firebaseReports.length} store reports to Supabase`
+      });
+      
+      // Refresh the reports
+      await fetchReports();
+      
+    } catch (error) {
+      console.error('Error migrating data:', error);
+      toast({
+        title: "Migration Failed",
+        description: "Failed to migrate reports from Firebase to Supabase",
+        variant: "destructive"
+      });
+    }
+  };
+
   return {
     reports,
     loading,
@@ -217,6 +304,7 @@ export const useStoreReports = () => {
     directEditReport,
     directDeleteReport,
     deleteStoreReport,
+    migrateFirebaseToSupabase,
     refetch: fetchReports
   };
 };

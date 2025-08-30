@@ -7,14 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useStoreReports } from '@/hooks/useStoreReports';
-import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit } from 'lucide-react';
+import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit, Database } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import StoreReportViewer from './StoreReportViewer';
 
 const StoreReportsList = () => {
-  const { reports, loading, directDeleteReport, directEditReport } = useStoreReports();
+  const { reports, loading, directDeleteReport, directEditReport, migrateFirebaseToSupabase } = useStoreReports();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState({
     start: '',
@@ -226,8 +226,17 @@ const StoreReportsList = () => {
           <FileText className="h-5 w-5" />
           Store Reports History
         </CardTitle>
-        <CardDescription>
-          View and print historical store reports
+        <CardDescription className="flex items-center justify-between">
+          <span>View and print historical store reports</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={migrateFirebaseToSupabase}
+            className="flex items-center gap-2"
+          >
+            <Database className="h-4 w-4" />
+            Migrate Data
+          </Button>
         </CardDescription>
       </CardHeader>
       <CardContent>
