@@ -66,21 +66,23 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
 
   const handlePreviewPDF = () => {
     try {
+      console.log('Starting PDF preview generation for report:', report.id);
       generateStoreReportPDF(report, true);
       toast.success("PDF preview opened!");
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error("Failed to generate PDF preview");
+      console.error('Error generating PDF preview:', error);
+      toast.error("Failed to generate PDF preview: " + (error as Error).message);
     }
   };
 
   const handleDownloadPDF = () => {
     try {
+      console.log('Starting PDF download for report:', report.id);
       generateStoreReportPDF(report, false);
       toast.success("PDF downloaded successfully!");
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error("Failed to download PDF");
+      console.error('Error downloading PDF:', error);
+      toast.error("Failed to download PDF: " + (error as Error).message);
     }
   };
 

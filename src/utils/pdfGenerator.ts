@@ -21,165 +21,189 @@ export interface StoreReport {
 }
 
 export const generateStoreReportPDF = (report: StoreReport, preview: boolean = false) => {
-  const doc = new jsPDF();
-  
-  // Set font
-  doc.setFont('helvetica');
-  
-  // Header
-  doc.setFontSize(20);
-  doc.setTextColor(44, 62, 80);
-  doc.text('DAILY STORE REPORT', 105, 25, { align: 'center' });
-  
-  // Date
-  doc.setFontSize(14);
-  doc.setTextColor(52, 73, 94);
-  doc.text(`Report Date: ${format(new Date(report.date), 'MMMM dd, yyyy')}`, 105, 35, { align: 'center' });
-  
-  // Divider line
-  doc.setDrawColor(189, 195, 199);
-  doc.line(20, 45, 190, 45);
-  
-  let yPosition = 55;
-  
-  // Report Information Section
-  doc.setFontSize(16);
-  doc.setTextColor(44, 62, 80);
-  doc.text('Report Information', 20, yPosition);
-  yPosition += 10;
-  
-  doc.setFontSize(12);
-  doc.setTextColor(52, 73, 94);
-  
-  // Two column layout for basic info
-  const leftCol = 20;
-  const rightCol = 110;
-  
-  doc.text('Coffee Type:', leftCol, yPosition);
-  doc.text(report.coffee_type, leftCol + 30, yPosition);
-  
-  doc.text('Input By:', rightCol, yPosition);
-  doc.text(report.input_by, rightCol + 25, yPosition);
-  yPosition += 8;
-  
-  if (report.scanner_used) {
-    doc.text('Scanner Used:', leftCol, yPosition);
-    doc.text(report.scanner_used, leftCol + 35, yPosition);
-    yPosition += 8;
-  }
-  
-  yPosition += 10;
-  
-  // Purchase Section
-  doc.setFontSize(16);
-  doc.setTextColor(44, 62, 80);
-  doc.text('Purchase Details', 20, yPosition);
-  yPosition += 10;
-  
-  doc.setFontSize(12);
-  doc.setTextColor(52, 73, 94);
-  
-  doc.text('Kilograms Bought:', leftCol, yPosition);
-  doc.text(`${report.kilograms_bought} kg`, leftCol + 40, yPosition);
-  
-  doc.text('Average Price:', rightCol, yPosition);
-  doc.text(`UGX ${report.average_buying_price.toLocaleString()}/kg`, rightCol + 30, yPosition);
-  yPosition += 8;
-  
-  doc.text('Advances Given:', leftCol, yPosition);
-  doc.text(`UGX ${report.advances_given.toLocaleString()}`, leftCol + 35, yPosition);
-  yPosition += 15;
-  
-  // Sales Section
-  doc.setFontSize(16);
-  doc.setTextColor(44, 62, 80);
-  doc.text('Sales Details', 20, yPosition);
-  yPosition += 10;
-  
-  doc.setFontSize(12);
-  doc.setTextColor(52, 73, 94);
-  
-  doc.text('Kilograms Sold:', leftCol, yPosition);
-  doc.text(`${report.kilograms_sold} kg`, leftCol + 35, yPosition);
-  
-  doc.text('Bags Sold:', rightCol, yPosition);
-  doc.text(`${report.bags_sold}`, rightCol + 25, yPosition);
-  yPosition += 8;
-  
-  if (report.sold_to) {
-    doc.text('Sold To:', leftCol, yPosition);
-    doc.text(report.sold_to, leftCol + 20, yPosition);
-    yPosition += 8;
-  }
-  
-  yPosition += 10;
-  
-  // Inventory Section
-  doc.setFontSize(16);
-  doc.setTextColor(44, 62, 80);
-  doc.text('Current Inventory', 20, yPosition);
-  yPosition += 10;
-  
-  doc.setFontSize(12);
-  doc.setTextColor(52, 73, 94);
-  
-  doc.text('Bags Left:', leftCol, yPosition);
-  doc.text(`${report.bags_left}`, leftCol + 25, yPosition);
-  
-  doc.text('Kilograms Left:', rightCol, yPosition);
-  doc.text(`${report.kilograms_left} kg`, rightCol + 35, yPosition);
-  yPosition += 8;
-  
-  doc.text('Kilograms Unbought:', leftCol, yPosition);
-  doc.text(`${report.kilograms_unbought} kg`, leftCol + 45, yPosition);
-  yPosition += 15;
-  
-  // Comments Section
-  if (report.comments) {
+  try {
+    console.log('Generating PDF for report:', report.id, 'Preview mode:', preview);
+    
+    const doc = new jsPDF();
+    
+    // Set font
+    doc.setFont('helvetica');
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(44, 62, 80);
+    doc.text('DAILY STORE REPORT', 105, 25, { align: 'center' });
+    
+    // Date
+    doc.setFontSize(14);
+    doc.setTextColor(52, 73, 94);
+    doc.text(`Report Date: ${format(new Date(report.date), 'MMMM dd, yyyy')}`, 105, 35, { align: 'center' });
+    
+    // Divider line
+    doc.setDrawColor(189, 195, 199);
+    doc.line(20, 45, 190, 45);
+    
+    let yPosition = 55;
+    
+    // Report Information Section
     doc.setFontSize(16);
     doc.setTextColor(44, 62, 80);
-    doc.text('Comments', 20, yPosition);
+    doc.text('Report Information', 20, yPosition);
     yPosition += 10;
     
     doc.setFontSize(12);
     doc.setTextColor(52, 73, 94);
     
-    // Handle long comments with text wrapping
-    const comments = doc.splitTextToSize(report.comments, 150);
-    doc.text(comments, 20, yPosition);
-    yPosition += comments.length * 6 + 10;
-  }
-  
-  // Document Information
-  if (report.attachment_name) {
+    // Two column layout for basic info
+    const leftCol = 20;
+    const rightCol = 110;
+    
+    doc.text('Coffee Type:', leftCol, yPosition);
+    doc.text(report.coffee_type, leftCol + 30, yPosition);
+    
+    doc.text('Input By:', rightCol, yPosition);
+    doc.text(report.input_by, rightCol + 25, yPosition);
+    yPosition += 8;
+    
+    if (report.scanner_used) {
+      doc.text('Scanner Used:', leftCol, yPosition);
+      doc.text(report.scanner_used, leftCol + 35, yPosition);
+      yPosition += 8;
+    }
+    
+    yPosition += 10;
+    
+    // Purchase Section
     doc.setFontSize(16);
     doc.setTextColor(44, 62, 80);
-    doc.text('Attached Document', 20, yPosition);
+    doc.text('Purchase Details', 20, yPosition);
     yPosition += 10;
     
     doc.setFontSize(12);
     doc.setTextColor(52, 73, 94);
-    doc.text(`Document: ${report.attachment_name}`, 20, yPosition);
+    
+    doc.text('Kilograms Bought:', leftCol, yPosition);
+    doc.text(`${report.kilograms_bought} kg`, leftCol + 40, yPosition);
+    
+    doc.text('Average Price:', rightCol, yPosition);
+    doc.text(`UGX ${report.average_buying_price.toLocaleString()}/kg`, rightCol + 30, yPosition);
+    yPosition += 8;
+    
+    doc.text('Advances Given:', leftCol, yPosition);
+    doc.text(`UGX ${report.advances_given.toLocaleString()}`, leftCol + 35, yPosition);
+    yPosition += 15;
+    
+    // Sales Section
+    doc.setFontSize(16);
+    doc.setTextColor(44, 62, 80);
+    doc.text('Sales Details', 20, yPosition);
     yPosition += 10;
-  }
-  
-  // Footer
-  doc.setFontSize(10);
-  doc.setTextColor(149, 165, 166);
-  doc.text(`Generated on ${format(new Date(), 'MMMM dd, yyyy \'at\' HH:mm')}`, 105, 280, { align: 'center' });
-  doc.text('Coffee ERP System - Store Management Report', 105, 290, { align: 'center' });
-  
-  // Save or preview the PDF
-  const fileName = `store-report-${format(new Date(report.date), 'yyyy-MM-dd')}-${report.coffee_type.replace(/\s+/g, '-')}.pdf`;
-  
-  if (preview) {
-    // Open PDF in new tab for preview
-    const pdfBlob = doc.output('blob');
-    const url = URL.createObjectURL(pdfBlob);
-    window.open(url, '_blank');
-  } else {
-    // Download the PDF
-    doc.save(fileName);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(52, 73, 94);
+    
+    doc.text('Kilograms Sold:', leftCol, yPosition);
+    doc.text(`${report.kilograms_sold} kg`, leftCol + 35, yPosition);
+    
+    doc.text('Bags Sold:', rightCol, yPosition);
+    doc.text(`${report.bags_sold}`, rightCol + 25, yPosition);
+    yPosition += 8;
+    
+    if (report.sold_to) {
+      doc.text('Sold To:', leftCol, yPosition);
+      doc.text(report.sold_to, leftCol + 20, yPosition);
+      yPosition += 8;
+    }
+    
+    yPosition += 10;
+    
+    // Inventory Section
+    doc.setFontSize(16);
+    doc.setTextColor(44, 62, 80);
+    doc.text('Current Inventory', 20, yPosition);
+    yPosition += 10;
+    
+    doc.setFontSize(12);
+    doc.setTextColor(52, 73, 94);
+    
+    doc.text('Bags Left:', leftCol, yPosition);
+    doc.text(`${report.bags_left}`, leftCol + 25, yPosition);
+    
+    doc.text('Kilograms Left:', rightCol, yPosition);
+    doc.text(`${report.kilograms_left} kg`, rightCol + 35, yPosition);
+    yPosition += 8;
+    
+    doc.text('Kilograms Unbought:', leftCol, yPosition);
+    doc.text(`${report.kilograms_unbought} kg`, leftCol + 45, yPosition);
+    yPosition += 15;
+    
+    // Comments Section
+    if (report.comments) {
+      doc.setFontSize(16);
+      doc.setTextColor(44, 62, 80);
+      doc.text('Comments', 20, yPosition);
+      yPosition += 10;
+      
+      doc.setFontSize(12);
+      doc.setTextColor(52, 73, 94);
+      
+      // Handle long comments with text wrapping
+      const comments = doc.splitTextToSize(report.comments, 150);
+      doc.text(comments, 20, yPosition);
+      yPosition += comments.length * 6 + 10;
+    }
+    
+    // Document Information
+    if (report.attachment_name) {
+      doc.setFontSize(16);
+      doc.setTextColor(44, 62, 80);
+      doc.text('Attached Document', 20, yPosition);
+      yPosition += 10;
+      
+      doc.setFontSize(12);
+      doc.setTextColor(52, 73, 94);
+      doc.text(`Document: ${report.attachment_name}`, 20, yPosition);
+      yPosition += 10;
+    }
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(149, 165, 166);
+    doc.text(`Generated on ${format(new Date(), 'MMMM dd, yyyy \'at\' HH:mm')}`, 105, 280, { align: 'center' });
+    doc.text('Coffee ERP System - Store Management Report', 105, 290, { align: 'center' });
+    
+    console.log('PDF document created successfully');
+    
+    // Save or preview the PDF
+    const fileName = `store-report-${format(new Date(report.date), 'yyyy-MM-dd')}-${report.coffee_type.replace(/\s+/g, '-')}.pdf`;
+    
+    if (preview) {
+      console.log('Opening PDF preview in new tab');
+      // Create blob and open in new tab for preview
+      const pdfBlob = doc.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      
+      // Open in new tab
+      const newWindow = window.open(url, '_blank');
+      if (!newWindow) {
+        throw new Error('Pop-up blocked. Please allow pop-ups for this site to preview PDFs.');
+      }
+      
+      // Clean up the URL after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 10000);
+      
+      console.log('PDF preview opened successfully');
+    } else {
+      console.log('Downloading PDF');
+      // Download the PDF
+      doc.save(fileName);
+      console.log('PDF download initiated');
+    }
+  } catch (error) {
+    console.error('Error in generateStoreReportPDF:', error);
+    throw error;
   }
 };
 
