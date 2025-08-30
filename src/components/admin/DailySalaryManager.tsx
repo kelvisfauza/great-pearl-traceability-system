@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 export const DailySalaryManager = () => {
   const [processing, setProcessing] = useState(false);
   const [lastProcessed, setLastProcessed] = useState<string | null>(null);
+  const [lastBackfill, setLastBackfill] = useState<string | null>(null);
   const { toast } = useToast();
 
   const triggerDailySalaryProcessing = async () => {
@@ -39,6 +40,39 @@ export const DailySalaryManager = () => {
     }
   };
 
+  const triggerBackfillProcessing = async () => {
+    setProcessing(true);
+    try {
+      const currentDate = new Date();
+      const { data, error } = await supabase.functions.invoke('backfill-salary-credits', {
+        body: { 
+          month: currentDate.getMonth() + 1, // Current month
+          year: currentDate.getFullYear()
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Backfill Processing Complete",
+        description: `${data.total_processed || 0} credits processed across ${data.working_days || 0} working days`,
+        duration: 6000,
+      });
+
+      setLastBackfill(new Date().toLocaleString());
+
+    } catch (error: any) {
+      console.error('Error triggering backfill processing:', error);
+      toast({
+        title: "Error",
+        description: "Failed to trigger backfill processing",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -49,7 +83,7 @@ export const DailySalaryManager = () => {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* System Overview */}
         <Card>
           <CardHeader className="pb-2">
@@ -94,7 +128,15 @@ export const DailySalaryManager = () => {
                 disabled={processing}
                 className="w-full"
               >
-                {processing ? 'Processing...' : 'Process Now'}
+                {processing ? 'Processing...' : 'Process Today'}
+              </Button>
+              <Button 
+                onClick={triggerBackfillProcessing}
+                disabled={processing}
+                variant="outline"
+                className="w-full"
+              >
+                {processing ? 'Processing...' : 'Backfill This Month'}
               </Button>
             </div>
           </CardContent>
@@ -124,6 +166,31 @@ export const DailySalaryManager = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Last Backfill */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Last Backfill
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center">
+              {lastBackfill ? (
+                <div>
+                  <div className="text-lg font-semibold text-blue-600">Complete</div>
+                  <div className="text-sm text-muted-foreground">{lastBackfill}</div>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-lg font-semibold text-muted-foreground">Not Run</div>
+                  <div className="text-sm text-muted-foreground">No backfill yet</div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Information Card */}
@@ -146,12 +213,12 @@ export const DailySalaryManager = () => {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">Credit Calculation</h4>
+              <h4 className="font-semibold mb-2">Backfill Processing</h4>
               <ul className="space-y-1 text-sm text-muted-foreground">
-                <li>• Monthly salary ÷ 26 working days</li>
-                <li>• Credits appear in employee wallet balance</li>
-                <li>• Tracked in ledger entries as 'DAILY_SALARY'</li>
-                <li>• Employees can withdraw available balance</li>
+                <li>• Credits all past working days of current month</li>
+                <li>• Skips Sundays and days already credited</li>
+                <li>• Useful for new system setup or missed days</li>
+                <li>• Run once per month maximum</li>
               </ul>
             </div>
           </div>
