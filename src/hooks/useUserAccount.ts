@@ -47,203 +47,84 @@ export const useUserAccount = () => {
       return;
     }
 
-    // Add debug logging for current user
-    console.log('fetchUserAccount called for user:', { uid: user.uid, email: user.email });
+    console.log('🔍 fetchUserAccount called for user:', { uid: user.uid, email: user.email });
 
     try {
-      // Special handling for Denis using Firebase ID
-      if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2') {
-        console.log('🔍 DETECTED DENIS LOGIN with Firebase ID:', user.uid);
-        
-        // For Denis, use his Firebase ID for all queries now
-        const { data: denisLedger, error: denisError } = await supabase
-          .from('ledger_entries')
-          .select('amount')
-          .eq('user_id', 'JSxZYOSxmde6Cqra4clQNc92mRS2'); // Use Firebase ID
-
-        console.log('Denis ledger query result:', { denisLedger, denisError });
-
-        const denisBalance = denisLedger?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
-        
-        // Also fetch pending withdrawals for Denis
-        const { data: denisPendingWithdrawals } = await supabase
-          .from('withdrawal_requests')
-          .select('amount')
-          .eq('user_id', 'JSxZYOSxmde6Cqra4clQNc92mRS2')
-          .in('status', ['pending', 'approved', 'processing']);
-
-        const pendingAmount = denisPendingWithdrawals?.reduce((sum, req) => sum + (req.amount || 0), 0) || 0;
-        const availableAmount = Math.max(0, denisBalance - pendingAmount);
-
-        setAccount({
-          id: 'denis-account',
-          user_id: user.uid,
-          wallet_balance: denisBalance,
-          pending_withdrawals: pendingAmount,
-          available_to_request: availableAmount,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-        console.log('✅ Denis account set with balance:', denisBalance, 'pending:', pendingAmount, 'available:', availableAmount);
-        setLoading(false);
-        return;
+      // Map user Firebase IDs to their ledger user_ids
+      let ledgerUserId = user.uid; // Default to Firebase ID
+      
+      // Special mappings for users with different ledger IDs
+      if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2' || user.email === 'bwambaledenis8@gmail.com') {
+        ledgerUserId = 'JSxZYOSxmde6Cqra4clQNc92mRS2'; // Denis uses Firebase ID
+      } else if (user.email === 'nicholusscottlangz@gmail.com') {
+        ledgerUserId = 'kibaba_nicholus_temp_id'; // Kibaba uses temp ID
+      } else if (user.email === 'alextumwine@gmail.com') {
+        ledgerUserId = 'alex_tumwine_temp_id'; // Tumwine uses temp ID  
       }
 
-      // Special handling for Kibaba by email (before checking employee records)
-      if (user.email === 'nicholusscottlangz@gmail.com') {
-        console.log('🔍 DETECTED KIBABA LOGIN with email:', user.email);
-        
-        const { data: kibabaLedger, error: kibabaError } = await supabase
-          .from('ledger_entries')
-          .select('amount')
-          .eq('user_id', 'kibaba_nicholus_temp_id');
+      console.log('💰 Fetching account data for ledgerUserId:', ledgerUserId);
 
-        console.log('Kibaba ledger query result:', { kibabaLedger, kibabaError });
+      // Calculate wallet balance from ledger entries
+      const { data: ledgerEntries, error: ledgerError } = await supabase
+        .from('ledger_entries')
+        .select('amount')
+        .eq('user_id', ledgerUserId);
 
-        const kibabaBalance = kibabaLedger?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
-        
-        // Also fetch pending withdrawals for Kibaba using his Firebase ID
-        const { data: kibabaPendingWithdrawals } = await supabase
-          .from('withdrawal_requests')
-          .select('amount')
-          .eq('user_id', user.uid)
-          .in('status', ['pending', 'approved', 'processing']);
+      const walletBalance = ledgerEntries?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
 
-        const pendingAmount = kibabaPendingWithdrawals?.reduce((sum, req) => sum + (req.amount || 0), 0) || 0;
-        const availableAmount = Math.max(0, kibabaBalance - pendingAmount);
+      // Calculate pending withdrawals using Firebase ID (withdrawal requests use Firebase IDs)
+      const { data: pendingWithdrawals, error: withdrawalError } = await supabase
+        .from('withdrawal_requests')
+        .select('amount')
+        .eq('user_id', user.uid)
+        .in('status', ['pending', 'approved', 'processing']);
 
-        setAccount({
-          id: 'kibaba-account',
-          user_id: user.uid,
-          wallet_balance: kibabaBalance,
-          pending_withdrawals: pendingAmount,
-          available_to_request: availableAmount,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+      const pendingAmount = pendingWithdrawals?.reduce((sum, req) => sum + (req.amount || 0), 0) || 0;
+      const availableToRequest = Math.max(0, walletBalance - pendingAmount);
 
-        console.log('✅ Kibaba account set with balance:', kibabaBalance, 'pending:', pendingAmount, 'available:', availableAmount);
-        setLoading(false);
-        return;
-      }
-
-      // Special handling for Tumwine by email
-      if (user.email === 'alextumwine@gmail.com') {
-        console.log('🔍 DETECTED TUMWINE LOGIN with email:', user.email);
-        
-        const { data: tumwineLedger, error: tumwineError } = await supabase
-          .from('ledger_entries')
-          .select('amount')
-          .eq('user_id', 'alex_tumwine_temp_id');
-
-        console.log('Tumwine ledger query result:', { tumwineLedger, tumwineError });
-
-        const tumwineBalance = tumwineLedger?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
-        
-        // Also fetch pending withdrawals for Tumwine using his Firebase ID
-        const { data: tumwinePendingWithdrawals } = await supabase
-          .from('withdrawal_requests')
-          .select('amount')
-          .eq('user_id', user.uid)
-          .in('status', ['pending', 'approved', 'processing']);
-
-        const pendingAmount = tumwinePendingWithdrawals?.reduce((sum, req) => sum + (req.amount || 0), 0) || 0;
-        const availableAmount = Math.max(0, tumwineBalance - pendingAmount);
-
-        setAccount({
-          id: 'tumwine-account',
-          user_id: user.uid,
-          wallet_balance: tumwineBalance,
-          pending_withdrawals: pendingAmount,
-          available_to_request: availableAmount,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-        console.log('✅ Tumwine account set with balance:', tumwineBalance, 'pending:', pendingAmount, 'available:', availableAmount);
-        setLoading(false);
-        return;
-      }
-
-      // Check employee record for other users
-      const { data: employee } = await supabase
-        .from('employees')
-        .select('email, name')
-        .eq('auth_user_id', user.uid)
-        .single();
-
-      // For all other users, use the new TEXT-compatible functions
-      const { data: walletData, error: walletError } = await supabase
-        .rpc('get_wallet_balance_text', { user_uuid: user.uid });
-
-      const { data: pendingData, error: pendingError } = await supabase
-        .rpc('get_pending_withdrawals_text', { user_uuid: user.uid });
-
-      const { data: availableData, error: availableError } = await supabase
-        .rpc('get_available_to_request_text', { user_uuid: user.uid });
-
-      if (walletError || pendingError || availableError) {
-        console.error('Wallet data errors:', { walletError, pendingError, availableError });
-        console.log('Error fetching wallet data, using defaults');
-        
-        // For users with no ledger entries yet, create default account
-        const defaultBalance = 0; // Use 0 as default, real balances come from database
-        setAccount({
-          id: 'temp-' + user.uid,
-          user_id: user.uid,
-          wallet_balance: defaultBalance,
-          pending_withdrawals: 0,
-          available_to_request: defaultBalance,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-        setLoading(false);
-        return;
-      }
-
-      console.log('Wallet data fetched successfully:', { walletData, pendingData, availableData });
-
-      setAccount({
-        id: 'account-' + user.uid,
-        user_id: user.uid,
-        wallet_balance: Number(walletData) || 0,
-        pending_withdrawals: Number(pendingData) || 0,
-        available_to_request: Number(availableData) || 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+      console.log('💰 Account calculations for', user.email, ':', {
+        walletBalance,
+        pendingAmount, 
+        availableToRequest,
+        ledgerUserId,
+        errors: { ledgerError, withdrawalError }
       });
 
-      // Fetch money requests for current user (use Firebase ID for Denis)
-      const currentUserId = user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2' ? 'JSxZYOSxmde6Cqra4clQNc92mRS2' : user.uid;
-      
-      const { data: requests, error: requestsError } = await supabase
+      const accountData: UserAccount = {
+        id: `account-${user.uid}`,
+        user_id: user.uid,
+        wallet_balance: walletBalance,
+        pending_withdrawals: pendingAmount,
+        available_to_request: availableToRequest,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      setAccount(accountData);
+
+      // Fetch money requests and withdrawal requests using Firebase ID
+      const { data: moneyRequestsData } = await supabase
         .from('money_requests')
         .select('*')
-        .eq('user_id', currentUserId)
+        .eq('user_id', user.uid)
         .order('created_at', { ascending: false });
 
-      if (!requestsError) {
-        setMoneyRequests(requests || []);
-      }
-
-      // Fetch withdrawal requests using correct user ID
-      const { data: withdrawals, error: withdrawalsError } = await supabase
+      const { data: withdrawalRequestsData } = await supabase
         .from('withdrawal_requests')
         .select('*')
-        .eq('user_id', currentUserId)
+        .eq('user_id', user.uid)
         .order('created_at', { ascending: false });
 
-      if (!withdrawalsError) {
-        setWithdrawalRequests(withdrawals || []);
-      }
-
+      setMoneyRequests(moneyRequestsData || []);
+      setWithdrawalRequests(withdrawalRequestsData || []);
+      
+      console.log('✅ Account loaded successfully for', user.email, 'Balance:', walletBalance);
+      
     } catch (error: any) {
-      console.error('Error fetching user account:', error);
+      console.error('❌ Error fetching user account:', error);
       // Provide default account even on error
       setAccount({
-        id: 'temp-' + user.uid,
+        id: `temp-${user.uid}`,
         user_id: user.uid,
         wallet_balance: 0,
         pending_withdrawals: 0,
