@@ -85,16 +85,9 @@ export const useUserAccount = () => {
         return;
       }
 
-      // Special handling for Kibaba - check if user is Kibaba by email
-      const { data: employee } = await supabase
-        .from('employees')
-        .select('email, name')
-        .eq('auth_user_id', user.uid)
-        .single();
-
-      // If no employee found by auth_user_id, try to find by email
-      if (!employee && user.email === 'nicholusscottlangz@gmail.com') {
-        console.log('Detected Kibaba login - using temp_id for ledger entries');
+      // Special handling for Kibaba by email (before checking employee records)
+      if (user.email === 'nicholusscottlangz@gmail.com') {
+        console.log('Detected Kibaba login - using kibaba_nicholus_temp_id for ledger entries');
         
         const { data: kibabaLedger, error: kibabaError } = await supabase
           .from('ledger_entries')
@@ -105,7 +98,7 @@ export const useUserAccount = () => {
 
         const kibabaBalance = kibabaLedger?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
         
-        // Also fetch pending withdrawals for Kibaba
+        // Also fetch pending withdrawals for Kibaba using his Firebase ID
         const { data: kibabaPendingWithdrawals } = await supabase
           .from('withdrawal_requests')
           .select('amount')
@@ -129,6 +122,13 @@ export const useUserAccount = () => {
         setLoading(false);
         return;
       }
+
+      // Check employee record for other users
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('email, name')
+        .eq('auth_user_id', user.uid)
+        .single();
 
       // For all other users, use the new TEXT-compatible functions
       const { data: walletData, error: walletError } = await supabase
