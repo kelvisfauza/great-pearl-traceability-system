@@ -123,6 +123,44 @@ export const useUserAccount = () => {
         return;
       }
 
+      // Special handling for Tumwine by email
+      if (user.email === 'alextumwine@gmail.com') {
+        console.log('Detected Tumwine login - using alex_tumwine_temp_id for ledger entries');
+        
+        const { data: tumwineLedger, error: tumwineError } = await supabase
+          .from('ledger_entries')
+          .select('amount')
+          .eq('user_id', 'alex_tumwine_temp_id');
+
+        console.log('Tumwine ledger query result:', { tumwineLedger, tumwineError });
+
+        const tumwineBalance = tumwineLedger?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
+        
+        // Also fetch pending withdrawals for Tumwine using his Firebase ID
+        const { data: tumwinePendingWithdrawals } = await supabase
+          .from('withdrawal_requests')
+          .select('amount')
+          .eq('user_id', user.uid)
+          .in('status', ['pending', 'approved', 'processing']);
+
+        const pendingAmount = tumwinePendingWithdrawals?.reduce((sum, req) => sum + (req.amount || 0), 0) || 0;
+        const availableAmount = Math.max(0, tumwineBalance - pendingAmount);
+
+        setAccount({
+          id: 'tumwine-account',
+          user_id: user.uid,
+          wallet_balance: tumwineBalance,
+          pending_withdrawals: pendingAmount,
+          available_to_request: availableAmount,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+        console.log('Tumwine account set with balance:', tumwineBalance, 'pending:', pendingAmount, 'available:', availableAmount);
+        setLoading(false);
+        return;
+      }
+
       // Check employee record for other users
       const { data: employee } = await supabase
         .from('employees')
