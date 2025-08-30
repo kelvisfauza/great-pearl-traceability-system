@@ -766,6 +766,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ledger_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          entry_type: string
+          id: string
+          metadata: Json | null
+          reference: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          entry_type: string
+          id?: string
+          metadata?: Json | null
+          reference: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          entry_type?: string
+          id?: string
+          metadata?: Json | null
+          reference?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       market_data: {
         Row: {
           change_percentage: number | null
@@ -2007,10 +2040,18 @@ export type Database = {
       withdrawal_requests: {
         Row: {
           amount: number
+          approved_at: string | null
+          approved_by: string | null
+          channel: string | null
           created_at: string
           id: string
+          payment_voucher: string | null
           phone_number: string
+          printed_at: string | null
           processed_at: string | null
+          provider_fee: number | null
+          provider_ref: string | null
+          request_ref: string | null
           status: string
           transaction_id: string | null
           updated_at: string
@@ -2018,10 +2059,18 @@ export type Database = {
         }
         Insert: {
           amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          channel?: string | null
           created_at?: string
           id?: string
+          payment_voucher?: string | null
           phone_number: string
+          printed_at?: string | null
           processed_at?: string | null
+          provider_fee?: number | null
+          provider_ref?: string | null
+          request_ref?: string | null
           status?: string
           transaction_id?: string | null
           updated_at?: string
@@ -2029,10 +2078,18 @@ export type Database = {
         }
         Update: {
           amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          channel?: string | null
           created_at?: string
           id?: string
+          payment_voucher?: string | null
           phone_number?: string
+          printed_at?: string | null
           processed_at?: string | null
+          provider_fee?: number | null
+          provider_ref?: string | null
+          request_ref?: string | null
           status?: string
           transaction_id?: string | null
           updated_at?: string
@@ -2104,6 +2161,18 @@ export type Database = {
       cleanup_inactive_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_available_to_request: {
+        Args: { user_uuid: string }
+        Returns: number
+      }
+      get_pending_withdrawals: {
+        Args: { user_uuid: string }
+        Returns: number
+      }
+      get_wallet_balance: {
+        Args: { user_uuid: string }
+        Returns: number
       }
       "great pearl": {
         Args: { conversation_id: string }
