@@ -181,12 +181,25 @@ export const useStoreReports = () => {
       if (isFirebaseId) {
         console.log('Detected Firebase ID, updating in Firebase instead');
         
+        // Clean data for Firebase - remove undefined values
+        const cleanedFirebaseData: any = {};
+        Object.keys(updatedData).forEach(key => {
+          const value = (updatedData as any)[key];
+          if (value !== undefined && value !== null) {
+            cleanedFirebaseData[key] = value;
+          } else if (value === null) {
+            cleanedFirebaseData[key] = null; // Firebase allows null but not undefined
+          }
+        });
+        
+        // Add timestamp
+        cleanedFirebaseData.updated_at = new Date().toISOString();
+        
+        console.log('Cleaned data for Firebase:', cleanedFirebaseData);
+        
         // Update in Firebase
         const docRef = doc(db, 'store_reports', reportId);
-        await updateDoc(docRef, {
-          ...updatedData,
-          updated_at: new Date().toISOString()
-        });
+        await updateDoc(docRef, cleanedFirebaseData);
         
         console.log('Firebase report updated successfully');
         
