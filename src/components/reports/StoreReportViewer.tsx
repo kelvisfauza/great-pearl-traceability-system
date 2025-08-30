@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Download, Eye, ScanLine, Calendar, User } from 'lucide-react';
+import { FileText, Download, Eye, Scan, Calendar, User } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface StoreReportViewerProps {
@@ -86,7 +86,7 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
 
               {report.scanner_used && (
                 <div className="mt-4 flex items-center gap-2">
-                  <ScanLine className="h-4 w-4 text-muted-foreground" />
+                  <Scan className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Scanner Used</p>
                     <p className="font-medium">{report.scanner_used}</p>

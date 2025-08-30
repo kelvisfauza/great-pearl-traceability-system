@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useStoreReports } from '@/hooks/useStoreReports';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Save, ScanLine, Upload, FileText } from 'lucide-react';
+import { Save, Scan, Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ManualStoreReportForm = () => {
@@ -162,7 +162,7 @@ const ManualStoreReportForm = () => {
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <ScanLine className="h-5 w-5" />
+          <Scan className="h-5 w-5" />
           Manual Store Report with Document Scan
         </CardTitle>
         <CardDescription>
@@ -174,7 +174,7 @@ const ManualStoreReportForm = () => {
           {/* Scanner Selection */}
           <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
             <h3 className="text-lg font-medium flex items-center gap-2">
-              <ScanLine className="h-4 w-4" />
+              <Scan className="h-4 w-4" />
               Scanner Setup
             </h3>
             
@@ -208,7 +208,7 @@ const ManualStoreReportForm = () => {
                     disabled={!formData.scanner_used || uploadingFile}
                     className="flex-1"
                   >
-                    <ScanLine className="h-4 w-4 mr-2" />
+                    <Scan className="h-4 w-4 mr-2" />
                     {uploadingFile ? 'Scanning...' : 'Scan Document'}
                   </Button>
                   <input

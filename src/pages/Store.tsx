@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText, Printer, Eye, ScanLine } from "lucide-react";
+import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText, Printer, Eye, Scan } from "lucide-react";
 import { useStoreManagement } from "@/hooks/useStoreManagement";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -524,7 +524,7 @@ const Store = () => {
                     Daily Report
                   </TabsTrigger>
                   <TabsTrigger value="manual-report">
-                    <ScanLine className="h-4 w-4 mr-2" />
+                    <Scan className="h-4 w-4 mr-2" />
                     Manual Report
                   </TabsTrigger>
                 </TabsList>
