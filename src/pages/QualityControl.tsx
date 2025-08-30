@@ -93,6 +93,7 @@ const QualityControl = () => {
     comments: ''
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [grnPrintModal, setGrnPrintModal] = useState<{
     open: boolean;
     grnData: {
@@ -348,6 +349,8 @@ const QualityControl = () => {
   };
 
   const handleSubmitAssessment = async () => {
+    if (isSubmitting) return; // Prevent multiple submissions
+    
     if (readOnly) {
       toast({
         title: 'View-only mode',
@@ -386,6 +389,7 @@ const QualityControl = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       console.log('Submitting quality assessment...');
       console.log('Selected record:', selectedRecord);
@@ -484,6 +488,8 @@ const QualityControl = () => {
         description: "Failed to submit quality assessment. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -995,10 +1001,23 @@ const QualityControl = () => {
                     <Button 
                       onClick={handleSubmitAssessment} 
                       className="flex-1"
-                      disabled={readOnly || (!assessmentForm.manual_price && !assessmentForm.final_price && !calculateSuggestedPrice())}
+                      disabled={
+                        readOnly || 
+                        isSubmitting ||
+                        (!assessmentForm.manual_price && !assessmentForm.final_price && !calculateSuggestedPrice())
+                      }
                     >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Save Assessment & Send to Finance
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Saving Assessment...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Save Assessment & Send to Finance
+                        </>
+                      )}
                     </Button>
                     <Button 
                       variant="outline" 

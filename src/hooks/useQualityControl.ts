@@ -252,6 +252,11 @@ export const useQualityControl = () => {
   };
 
   const addQualityAssessment = async (assessment: any) => {
+    if (loading) {
+      console.log('Assessment save already in progress, skipping...');
+      return;
+    }
+    
     try {
       console.log('=== STARTING QUALITY ASSESSMENT SAVE ===');
       console.log('Assessment data received:', JSON.stringify(assessment, null, 2));
