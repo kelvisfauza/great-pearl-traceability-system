@@ -59,7 +59,9 @@ export const useUserAccount = () => {
         .rpc('get_available_to_request', { user_uuid: user.uid });
 
       if (walletError || pendingError || availableError) {
+        console.error('Wallet data errors:', { walletError, pendingError, availableError });
         console.log('Error fetching wallet data, using defaults');
+        
         // For users with no ledger entries yet, create default account
         const defaultBalance = 0; // Use 0 as default, real balances come from database
         setAccount({
@@ -75,6 +77,8 @@ export const useUserAccount = () => {
         setLoading(false);
         return;
       }
+
+      console.log('Wallet data fetched successfully:', { walletData, pendingData, availableData });
 
       setAccount({
         id: 'account-' + user.uid,
@@ -127,64 +131,8 @@ export const useUserAccount = () => {
   };
 
   const trackLogin = async () => {
-    if (!user?.uid) return;
-
-    try {
-      // Check if user already has login activity today
-      const today = new Date().toISOString().split('T')[0];
-      const { data: existingLogin } = await supabase
-        .from('user_activity')
-        .select('id')
-        .eq('user_id', user.uid)
-        .eq('activity_type', 'login')
-        .eq('activity_date', today)
-        .limit(1);
-
-      // Only show welcome toast once per day
-      const shouldShowWelcome = !existingLogin || existingLogin.length === 0;
-
-      // Record login activity
-      await supabase
-        .from('user_activity')
-        .insert([{
-          user_id: user.uid,
-          activity_type: 'login',
-          activity_date: today
-        }]);
-
-      if (shouldShowWelcome) {
-        toast({
-          title: "Welcome back! 🎉",
-          description: "Daily login recorded",
-          duration: 3000,
-        });
-      }
-
-      // Check for daily reward eligibility
-      const { data, error } = await supabase.rpc('award_daily_login_reward' as any, {
-        user_uuid: user.uid
-      });
-
-      if (error) {
-        console.error('Error checking daily reward:', error);
-        return;
-      }
-
-      // Type guard for the response data
-      const rewardData = data as { rewarded?: boolean; amount?: number; reason?: string } | null;
-
-      if (rewardData?.rewarded) {
-        toast({
-          title: "Daily Login Reward! 🎉",
-          description: `You've earned UGX ${rewardData.amount?.toLocaleString()} for logging in 3 times today!`,
-          duration: 5000,
-        });
-        // Refresh account data
-        fetchUserAccount();
-      }
-    } catch (error: any) {
-      console.error('Error tracking login:', error);
-    }
+    // Disable all login tracking and popups
+    return;
   };
 
   const createMoneyRequest = async (amount: number, reason: string, requestType: string = 'advance') => {
