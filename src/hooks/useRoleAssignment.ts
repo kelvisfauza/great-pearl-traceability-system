@@ -58,6 +58,13 @@ export const useRoleAssignment = () => {
     description: string,
     expiresAt?: string
   ) => {
+    console.log('🔥 ROLE ASSIGNMENT STARTED:', {
+      assignedToName,
+      assignedToEmail,
+      role,
+      currentUser: employee?.name
+    });
+    
     if (!isAdmin()) {
       toast({
         title: "Access Denied",
@@ -81,10 +88,13 @@ export const useRoleAssignment = () => {
         isActive: true
       };
 
+      console.log('🔥 CREATING FIREBASE ASSIGNMENT RECORD');
       await addDoc(collection(db, 'role_assignments'), assignmentData);
+      console.log('✅ Firebase assignment record created');
       
       // Also update the employee's actual permissions properly
       try {
+        console.log('🔥 UPDATING EMPLOYEE PERMISSIONS');
         const { updateEmployeePermissions } = await import('@/utils/updateEmployeePermissions');
         
         // Get role-specific permissions and merge with existing permissions
@@ -101,26 +111,36 @@ export const useRoleAssignment = () => {
           updateData.role = 'Administrator';
         }
         
-        await updateEmployeePermissions(assignedToEmail, updateData);
+        console.log('🔥 CALLING updateEmployeePermissions with:', {
+          email: assignedToEmail,
+          updateData
+        });
         
-        console.log(`✅ Updated ${assignedToEmail} permissions for ${role} role:`, rolePermissions);
+        const updateResult = await updateEmployeePermissions(assignedToEmail, updateData);
+        console.log('✅ Employee permissions update result:', updateResult);
       } catch (permError) {
-        console.warn('Failed to update employee permissions:', permError);
+        console.error('❌ Failed to update employee permissions:', permError);
       }
       
       // Create notification for the assigned user
-      console.log('Creating role assignment notification for:', {
+      console.log('🔥 CREATING ROLE ASSIGNMENT NOTIFICATION for:', {
         assignedToName,
         assignedToEmail,
-        currentEmployeeName: employee?.name
+        currentEmployeeName: employee?.name,
+        role
       });
       
-      await createRoleAssignmentNotification(
-        assignedToName,
-        role === 'admin_delegate' ? 'Admin Delegate' : 'Approver',
-        role === 'admin_delegate' ? ['Full administrative privileges', 'All department access'] : ['Approval permissions'],
-        employee?.name || 'Administrator'
-      );
+      try {
+        await createRoleAssignmentNotification(
+          assignedToName,
+          role === 'admin_delegate' ? 'Admin Delegate' : 'Approver',
+          role === 'admin_delegate' ? ['Full administrative privileges', 'All department access'] : ['Approval permissions'],
+          employee?.name || 'Administrator'
+        );
+        console.log('✅ Role assignment notification created successfully');
+      } catch (notifError) {
+        console.error('❌ Failed to create notification:', notifError);
+      }
       
       toast({
         title: "Role Assigned",
