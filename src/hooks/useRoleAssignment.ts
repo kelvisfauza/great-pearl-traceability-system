@@ -141,7 +141,7 @@ export const useRoleAssignment = () => {
       
       toast({
         title: "Role Assigned",
-        description: `${role} role assigned to ${assignedToName}`
+        description: `${role} role assigned to ${assignedToName}. They will see changes immediately.`
       });
 
       await fetchAssignments();

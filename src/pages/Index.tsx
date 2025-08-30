@@ -20,6 +20,12 @@ const Index = () => {
   const roleData = useRoleBasedData();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
+  // Debug logging for role changes
+  console.log('=== INDEX PAGE RENDER ===');
+  console.log('Employee:', employee?.name, 'Role:', employee?.role);
+  console.log('RoleData isAdmin:', roleData?.isAdmin);
+  console.log('Can approve requests:', roleData?.canApproveRequests);
+
   if (!employee) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10 flex items-center justify-center">
