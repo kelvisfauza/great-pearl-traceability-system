@@ -17,27 +17,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
     const supabase = createClient(supabaseUrl, supabaseKey)
-
-    const today = new Date()
-    const isSunday = today.getDay() === 0 // 0 = Sunday
     
-    // Don't process on Sundays
-    if (isSunday) {
-      console.log('Skipping salary processing - today is Sunday')
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: 'No salary credits processed on Sunday',
-          date: today.toISOString().split('T')[0],
-          processed_count: 0
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
-        }
-      )
-    }
+    const today = new Date() // Add today back for date calculations
 
+    // Process ALL days including weekends - no more Sunday exclusion
+    
     // Get all active employees with salaries
     const { data: employees, error: employeesError } = await supabase
       .from('employees')
@@ -69,25 +53,29 @@ serve(async (req) => {
 
     console.log(`Processing daily salary credits for ${employees.length} employees`)
 
-    // First, check for and backfill any missing days from this month
+    // First, check for and backfill any missing days from this month (INCLUDING weekends)
     const currentMonth = today.getMonth()
     const currentYear = today.getFullYear()
-    const workingDaysThisMonth = getWorkingDaysForMonth(currentYear, currentMonth, today)
+    const allDaysThisMonth = getAllDaysForMonth(currentYear, currentMonth, today)
     
-    console.log(`Checking for missing days in ${currentMonth + 1}/${currentYear}. Found ${workingDaysThisMonth.length} working days to check.`)
+    console.log(`Checking for missing days in ${currentMonth + 1}/${currentYear}. Found ${allDaysThisMonth.length} total days (including weekends) to check.`)
 
     let totalProcessedCount = 0
     const todayDate = today.toISOString().split('T')[0]
 
-    // Process all working days up to today (backfill + today)
-    for (const workingDay of workingDaysThisMonth) {
-      const dateStr = workingDay.toISOString().split('T')[0]
+    // Process ALL days (including weekends) up to today
+    for (const dayDate of allDaysThisMonth) {
+      const dateStr = dayDate.toISOString().split('T')[0]
       console.log(`Processing credits for ${dateStr}`)
       
       for (const employee of employees) {
         try {
-          // Calculate daily credit (monthly salary / 26 working days)
-          const dailyCredit = Math.round((employee.salary / 26) * 100) / 100
+          // Calculate daily credit using database function (monthly salary / days in month)
+          const { data: dailyCreditResult } = await supabase.rpc('calculate_daily_salary_credit', {
+            employee_salary: employee.salary
+          })
+          
+          const dailyCredit = dailyCreditResult || Math.round((employee.salary / 31) * 100) / 100 // fallback
 
           // Check if credit already exists for this date
           const { data: existingEntry } = await supabase
@@ -147,11 +135,11 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Salary credits processed successfully (including backfill for ${workingDaysThisMonth.length} working days)`,
+        message: `Salary credits processed successfully (including backfill for ${allDaysThisMonth.length} total days including weekends)`,
         date: todayDate,
         processed_count: totalProcessedCount,
         total_employees: employees.length,
-        working_days_processed: workingDaysThisMonth.length
+        total_days_processed: allDaysThisMonth.length
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -177,8 +165,8 @@ serve(async (req) => {
   }
 })
 
-function getWorkingDaysForMonth(year: number, month: number, upToDate: Date): Date[] {
-  const workingDays: Date[] = []
+function getAllDaysForMonth(year: number, month: number, upToDate: Date): Date[] {
+  const allDays: Date[] = []
   
   // Get the first day of the month
   const firstDay = new Date(year, month, 1)
@@ -186,15 +174,11 @@ function getWorkingDaysForMonth(year: number, month: number, upToDate: Date): Da
   // Only go up to upToDate (today) if we're in the current month
   const endDate = upToDate
 
-  // Loop through all days of the month up to today
+  // Loop through ALL days of the month up to today (including weekends)
   for (let day = new Date(firstDay); day <= endDate; day.setDate(day.getDate() + 1)) {
-    const dayOfWeek = day.getDay() // 0 = Sunday, 1 = Monday, etc.
-    
-    // Include all days except Sunday (0)
-    if (dayOfWeek !== 0) {
-      workingDays.push(new Date(day)) // Create a new Date object to avoid reference issues
-    }
+    // Include ALL days - no exclusions for weekends
+    allDays.push(new Date(day)) // Create a new Date object to avoid reference issues
   }
 
-  return workingDays
+  return allDays
 }
