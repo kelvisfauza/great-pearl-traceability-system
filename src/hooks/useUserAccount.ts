@@ -85,15 +85,15 @@ export const useUserAccount = () => {
         return;
       }
 
-      // For all other users, use the regular UUID system
+      // For all other users, use the new TEXT-compatible functions
       const { data: walletData, error: walletError } = await supabase
-        .rpc('get_wallet_balance', { user_uuid: user.uid });
+        .rpc('get_wallet_balance_text', { user_uuid: user.uid });
 
       const { data: pendingData, error: pendingError } = await supabase
-        .rpc('get_pending_withdrawals', { user_uuid: user.uid });
+        .rpc('get_pending_withdrawals_text', { user_uuid: user.uid });
 
       const { data: availableData, error: availableError } = await supabase
-        .rpc('get_available_to_request', { user_uuid: user.uid });
+        .rpc('get_available_to_request_text', { user_uuid: user.uid });
 
       if (walletError || pendingError || availableError) {
         console.error('Wallet data errors:', { walletError, pendingError, availableError });
@@ -120,9 +120,9 @@ export const useUserAccount = () => {
       setAccount({
         id: 'account-' + user.uid,
         user_id: user.uid,
-        wallet_balance: walletData || 0,
-        pending_withdrawals: pendingData || 0,
-        available_to_request: availableData || 0,
+        wallet_balance: Number(walletData) || 0,
+        pending_withdrawals: Number(pendingData) || 0,
+        available_to_request: Number(availableData) || 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
@@ -234,14 +234,8 @@ export const useUserAccount = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Withdrawal Request Created",
-        description: "Print the Request Slip and present it to Finance for approval.",
-        duration: 6000,
-      });
-
-      // Open print dialog for request slip
-      openRequestSlipPrint(requestRef, amount, phoneNumber, channel);
+      // Show success popup with reference number
+      showWithdrawalSuccessPopup(requestRef, amount, phoneNumber, channel);
 
       fetchUserAccount(); // Refresh data
     } catch (error: any) {
@@ -252,6 +246,17 @@ export const useUserAccount = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const showWithdrawalSuccessPopup = (requestRef: string, amount: number, phoneNumber: string, channel: string) => {
+    toast({
+      title: "Withdrawal Request Created Successfully!",
+      description: `Reference: ${requestRef}. Take this reference to Finance for approval and payout.`,
+      duration: 8000,
+    });
+
+    // Also open print dialog for request slip
+    openRequestSlipPrint(requestRef, amount, phoneNumber, channel);
   };
 
   const openRequestSlipPrint = (requestRef: string, amount: number, phoneNumber: string, channel: string) => {

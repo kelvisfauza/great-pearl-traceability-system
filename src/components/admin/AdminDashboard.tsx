@@ -7,6 +7,7 @@ import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, Cale
 import DeletionRequestsManager from './DeletionRequestsManager';
 import MoneyRequestsFinalApproval from './MoneyRequestsFinalApproval';
 import { WithdrawalProcessingManager } from './WithdrawalProcessingManager';
+import { WithdrawalOversight } from './WithdrawalOversight';
 import RoleAssignmentManager from './RoleAssignmentManager';
 import PermissionOverview from './PermissionOverview';
 import { DailySalaryManager } from './DailySalaryManager';
@@ -164,10 +165,13 @@ const AdminDashboard = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Withdrawal Processing</CardTitle>
+                <CardTitle>Withdrawal Oversight & Processing</CardTitle>
               </CardHeader>
               <CardContent>
-                <WithdrawalProcessingManager />
+                <div className="space-y-6">
+                  <WithdrawalOversight />
+                  <WithdrawalProcessingManager />
+                </div>
               </CardContent>
             </Card>
           </div>
