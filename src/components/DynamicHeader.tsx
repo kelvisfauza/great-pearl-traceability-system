@@ -23,11 +23,78 @@ const DynamicHeader = () => {
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
-    if (hour < 6) return { text: 'Good Night', icon: Moon, color: 'from-purple-500 to-indigo-600' };
-    if (hour < 12) return { text: 'Good Morning', icon: Sunrise, color: 'from-orange-500 to-yellow-500' };
-    if (hour < 17) return { text: 'Good Afternoon', icon: Sun, color: 'from-blue-500 to-cyan-500' };
-    if (hour < 21) return { text: 'Good Evening', icon: Sunset, color: 'from-orange-600 to-red-500' };
-    return { text: 'Good Night', icon: Moon, color: 'from-purple-500 to-indigo-600' };
+    const dayOfWeek = currentTime.toLocaleDateString('en-US', { weekday: 'long' });
+    const firstName = employee?.name?.split(' ')[0] || 'there';
+    
+    if (hour < 6) {
+      return { 
+        text: 'Good Night', 
+        icon: Moon, 
+        color: 'from-purple-500 to-indigo-600',
+        message: `Rest well ${firstName}, tomorrow brings new coffee adventures!`
+      };
+    }
+    
+    if (hour >= 6 && hour < 12) {
+      const morningMessages = [
+        `It's a fresh ${dayOfWeek} morning! Grab a cup of our finest coffee to kickstart your day ☕`,
+        `Rise and grind ${firstName}! Let the aroma of coffee fuel your productivity today`,
+        `Monday motivation or Friday feels? Either way, coffee makes everything better!`,
+        `Start your day right with a perfect brew - your mind will thank you later!`
+      ];
+      return { 
+        text: 'Good Morning', 
+        icon: Sunrise, 
+        color: 'from-orange-500 to-yellow-500',
+        message: morningMessages[Math.floor(Math.random() * morningMessages.length)]
+      };
+    }
+    
+    if (hour >= 12 && hour < 13) {
+      return { 
+        text: 'Good Afternoon', 
+        icon: Sun, 
+        color: 'from-blue-500 to-cyan-500',
+        message: `${firstName}, have you had lunch yet? Don't forget to pair it with our signature coffee blend!`
+      };
+    }
+    
+    if (hour >= 13 && hour < 17) {
+      const afternoonMessages = [
+        `Afternoon energy dip? Try our premium espresso for that perfect pick-me-up!`,
+        `The day is halfway done ${firstName} - celebrate with a refreshing iced coffee!`,
+        `Productivity flowing? Keep it going with our smooth afternoon blend`,
+        `Take a coffee break and let your mind relax - you've earned it!`
+      ];
+      return { 
+        text: 'Good Afternoon', 
+        icon: Sun, 
+        color: 'from-blue-500 to-cyan-500',
+        message: afternoonMessages[Math.floor(Math.random() * afternoonMessages.length)]
+      };
+    }
+    
+    if (hour >= 17 && hour < 21) {
+      const eveningMessages = [
+        `Winding down ${firstName}? How about a decaf coffee to end the day peacefully?`,
+        `Evening reflection time - pair your thoughts with our mild evening roast`,
+        `Great work today! Celebrate with a warm cup of our specialty blend`,
+        `As the sun sets, let the warmth of coffee embrace your evening`
+      ];
+      return { 
+        text: 'Good Evening', 
+        icon: Sunset, 
+        color: 'from-orange-600 to-red-500',
+        message: eveningMessages[Math.floor(Math.random() * eveningMessages.length)]
+      };
+    }
+    
+    return { 
+      text: 'Good Night', 
+      icon: Moon, 
+      color: 'from-purple-500 to-indigo-600',
+      message: `Sweet dreams ${firstName}! Tomorrow's coffee adventures await...`
+    };
   };
 
   const greeting = getGreeting();
@@ -85,6 +152,11 @@ const DynamicHeader = () => {
             <p className="text-lg text-muted-foreground mt-1">
               Welcome to your dashboard
             </p>
+            {greeting.message && (
+              <p className="text-base text-foreground/80 mt-2 bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg px-4 py-2 border-l-4 border-primary/30">
+                {greeting.message}
+              </p>
+            )}
           </div>
           <div className="ml-auto">
             <NotificationButton 
