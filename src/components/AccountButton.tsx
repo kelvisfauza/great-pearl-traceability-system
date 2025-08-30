@@ -83,7 +83,7 @@ export const AccountButton = () => {
         <SheetTrigger asChild>
           <Button variant="outline" size="sm" className="relative">
             <Wallet className="h-4 w-4 mr-2" />
-            {account ? formatCurrency(account.current_balance) : 'Account'}
+            {account ? formatCurrency(account.wallet_balance) : 'Account'}
           </Button>
         </SheetTrigger>
         <SheetContent className="w-[400px] sm:w-[540px]">
@@ -95,19 +95,35 @@ export const AccountButton = () => {
           </SheetHeader>
 
           <div className="mt-6 space-y-6">
-            {/* Balance Overview */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* New Three-Figure Dashboard */}
+            <div className="grid grid-cols-1 gap-4">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <DollarSign className="h-4 w-4" />
-                    Current Balance
+                    Wallet Balance
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-green-600">
-                    {account ? formatCurrency(account.current_balance) : formatCurrency(0)}
+                    {account ? formatCurrency(account.wallet_balance) : formatCurrency(0)}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">From ledger sum</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Pending Withdrawals
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {account ? formatCurrency(account.pending_withdrawals) : formatCurrency(0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Being processed</p>
                 </CardContent>
               </Card>
 
@@ -115,42 +131,14 @@ export const AccountButton = () => {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <TrendingUp className="h-4 w-4" />
-                    Total Earned
+                    Available to Request
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-blue-600">
-                    {account ? formatCurrency(account.total_earned) : formatCurrency(0)}
+                    {account ? formatCurrency(account.available_to_request) : formatCurrency(0)}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <TrendingDown className="h-4 w-4" />
-                    Total Withdrawn
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">
-                    {account ? formatCurrency(account.total_withdrawn) : formatCurrency(0)}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Salary Approved
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-purple-600">
-                    {account ? formatCurrency(account.salary_approved) : formatCurrency(0)}
-                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Wallet - Pending</p>
                 </CardContent>
               </Card>
             </div>
@@ -168,7 +156,7 @@ export const AccountButton = () => {
                 variant="outline"
                 onClick={() => setShowWithdrawal(true)}
                 className="flex items-center gap-2"
-                disabled={!account || account.current_balance <= 0}
+                disabled={!account || account.available_to_request <= 0}
               >
                 <Smartphone className="h-4 w-4" />
                 Withdraw
@@ -250,7 +238,7 @@ export const AccountButton = () => {
       <WithdrawalModal 
         open={showWithdrawal} 
         onOpenChange={setShowWithdrawal}
-        currentBalance={account?.current_balance || 0}
+        availableAmount={account?.available_to_request || 0}
       />
     </>
   );

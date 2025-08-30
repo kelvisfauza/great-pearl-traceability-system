@@ -6,10 +6,9 @@ import { useToast } from '@/hooks/use-toast';
 interface UserAccount {
   id: string;
   user_id: string;
-  current_balance: number;
-  total_earned: number;
-  total_withdrawn: number;
-  salary_approved: number;
+  wallet_balance: number;
+  pending_withdrawals: number;
+  available_to_request: number;
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +28,8 @@ interface WithdrawalRequest {
   amount: number;
   phone_number: string;
   status: string;
+  request_ref?: string;
+  channel?: string;
   created_at: string;
 }
 
@@ -47,98 +48,66 @@ export const useUserAccount = () => {
     }
 
     try {
-      // Special handling for Denis's Firebase account
-      if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2') {
-        // Denis gets a special account with his earned funds
-        setAccount({
-          id: 'denis-account',
-          user_id: user.uid,
-          current_balance: 75000,
-          total_earned: 75000,
-          total_withdrawn: 0,
-          salary_approved: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-        
-        // Set his historical money requests (mock data showing he earned money)
-        setMoneyRequests([
-          {
-            id: 'req-1',
-            amount: 25000,
-            request_type: 'performance_bonus',
-            reason: 'Excellent work on data entry tasks',
-            status: 'approved',
-            requested_by: 'bwambaledenis8@gmail.com',
-            created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-          },
-          {
-            id: 'req-2', 
-            amount: 50000,
-            request_type: 'activity_rewards',
-            reason: 'Accumulated rewards for daily activities',
-            status: 'approved',
-            requested_by: 'bwambaledenis8@gmail.com',
-            created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
-          }
-        ]);
-        
-        setWithdrawalRequests([]);
-        setLoading(false);
-        return;
-      }
+      // For all users, use the new ledger-based system
+      const { data: walletData, error: walletError } = await supabase
+        .rpc('get_wallet_balance', { user_uuid: user.uid });
 
-      // For other users, try Supabase normally
-      let { data: accountData, error: accountError } = await supabase
-        .from('user_accounts')
-        .select('*')
-        .eq('user_id', user.uid)
-        .single();
+      const { data: pendingData, error: pendingError } = await supabase
+        .rpc('get_pending_withdrawals', { user_uuid: user.uid });
 
-      if (accountError && accountError.code !== 'PGRST116') {
-        // Table might not exist yet, create default account
-        console.log('Supabase table not available, using default account');
+      const { data: availableData, error: availableError } = await supabase
+        .rpc('get_available_to_request', { user_uuid: user.uid });
+
+      if (walletError || pendingError || availableError) {
+        console.log('Error fetching wallet data, using defaults');
+        // Use default values for users with no ledger entries yet
         setAccount({
           id: 'temp-' + user.uid,
           user_id: user.uid,
-          current_balance: 0,
-          total_earned: 0,
-          total_withdrawn: 0,
-          salary_approved: 0,
+          wallet_balance: user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2' ? 75000 : 0,
+          pending_withdrawals: 0,
+          available_to_request: user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2' ? 75000 : 0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
+
+        // Special data for Denis
+        if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2') {
+          setMoneyRequests([
+            {
+              id: 'req-1',
+              amount: 25000,
+              request_type: 'performance_bonus',
+              reason: 'Excellent work on data entry tasks',
+              status: 'approved',
+              requested_by: 'bwambaledenis8@gmail.com',
+              created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+            },
+            {
+              id: 'req-2', 
+              amount: 50000,
+              request_type: 'activity_rewards',
+              reason: 'Accumulated rewards for daily activities',
+              status: 'approved',
+              requested_by: 'bwambaledenis8@gmail.com',
+              created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+            }
+          ]);
+        }
         setLoading(false);
         return;
       }
 
-      // If no account exists, create one
-      if (!accountData) {
-        const { data: newAccount, error: createError } = await supabase
-          .from('user_accounts')
-          .insert([{ user_id: user.uid }])
-          .select()
-          .single();
+      setAccount({
+        id: 'account-' + user.uid,
+        user_id: user.uid,
+        wallet_balance: walletData || 0,
+        pending_withdrawals: pendingData || 0,
+        available_to_request: availableData || 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
 
-        if (createError) {
-          console.log('Cannot create account, using default');
-          setAccount({
-            id: 'temp-' + user.uid,
-            user_id: user.uid,
-            current_balance: 0,
-            total_earned: 0,
-            total_withdrawn: 0,
-            salary_approved: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-          setLoading(false);
-          return;
-        }
-        accountData = newAccount;
-      }
-
-      setAccount(accountData);
 
       // Fetch money requests
       const { data: requests, error: requestsError } = await supabase
@@ -168,10 +137,9 @@ export const useUserAccount = () => {
       setAccount({
         id: 'temp-' + user.uid,
         user_id: user.uid,
-        current_balance: 0,
-        total_earned: 0,
-        total_withdrawn: 0,
-        salary_approved: 0,
+        wallet_balance: 0,
+        pending_withdrawals: 0,
+        available_to_request: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
@@ -188,7 +156,7 @@ export const useUserAccount = () => {
       // Show a welcome message for Denis
       toast({
         title: "Welcome back, Denis! 🎉",
-        description: "Your account balance: UGX 75,000",
+        description: "Your wallet balance: UGX 75,000",
         duration: 3000,
       });
       return;
@@ -263,33 +231,43 @@ export const useUserAccount = () => {
     }
   };
 
-  const createWithdrawalRequest = async (amount: number, phoneNumber: string) => {
+  const createWithdrawalRequest = async (amount: number, phoneNumber: string, channel: string = 'ZENGAPAY') => {
     if (!user?.uid || !account) return;
 
-    if (amount > account.current_balance) {
+    if (amount > account.available_to_request) {
       toast({
-        title: "Insufficient Balance",
-        description: "You don't have enough balance for this withdrawal",
+        title: "Insufficient Available Balance",
+        description: `You can only request UGX ${account.available_to_request.toLocaleString()}. This prevents double-spending while you have pending withdrawals.`,
         variant: "destructive",
       });
       return;
     }
 
     try {
+      // Generate request reference
+      const requestRef = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
+      
       const { error } = await supabase
         .from('withdrawal_requests')
         .insert([{
           user_id: user.uid,
           amount,
-          phone_number: phoneNumber
+          phone_number: phoneNumber,
+          channel,
+          request_ref: requestRef,
+          printed_at: new Date().toISOString()
         }]);
 
       if (error) throw error;
 
       toast({
-        title: "Withdrawal Request Submitted",
-        description: "Your withdrawal request is being processed",
+        title: "Withdrawal Request Created",
+        description: "Print the Request Slip and present it to Finance for approval.",
+        duration: 6000,
       });
+
+      // Open print dialog for request slip
+      openRequestSlipPrint(requestRef, amount, phoneNumber, channel);
 
       fetchUserAccount(); // Refresh data
     } catch (error: any) {
@@ -300,6 +278,49 @@ export const useUserAccount = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const openRequestSlipPrint = (requestRef: string, amount: number, phoneNumber: string, channel: string) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const content = `
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8"/>
+        <title>Withdrawal Request Slip – ${requestRef}</title>
+        <style>
+          body { font: 14px/1.4 system-ui; margin: 0; padding: 20px; }
+          .card { width: 640px; margin: 0 auto; padding: 24px; border: 1px solid #ddd; }
+          h1 { font-size: 18px; margin: 0 0 12px; }
+          .row { display: flex; justify-content: space-between; margin: 6px 0; }
+          .muted { color: #555; }
+          @media print { .no-print { display:none; } }
+        </style>
+      </head>
+      <body onload="window.print(); window.close();">
+        <div class="card">
+          <h1>Withdrawal Request Slip</h1>
+          <div class="row"><div>Ref</div><div><strong>${requestRef}</strong></div></div>
+          <div class="row"><div>Employee</div><div>${user?.email || 'Unknown'}</div></div>
+          <div class="row"><div>Amount</div><div><strong>UGX ${amount.toLocaleString()}</strong></div></div>
+          <div class="row"><div>Channel</div><div>${channel}</div></div>
+          <div class="row"><div>Phone</div><div>${phoneNumber}</div></div>
+          <div class="row"><div>Requested at</div><div>${new Date().toLocaleString()}</div></div>
+          <hr/>
+          <p class="muted">This is a request awaiting Finance approval. No funds have been issued yet.</p>
+          <div style="margin-top:24px">
+            <div>Employee Signature: _____________________</div>
+            <div>Date: ______________</div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    printWindow.document.write(content);
+    printWindow.document.close();
   };
 
   useEffect(() => {
