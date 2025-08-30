@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { collection, query, orderBy, getDocs, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface StoreReport {
@@ -175,6 +175,30 @@ export const useStoreReports = () => {
       console.log('Report ID:', reportId);
       console.log('Raw updatedData:', updatedData);
       
+      // Check if this is a Firebase ID or Supabase UUID
+      const isFirebaseId = !reportId.includes('-') || reportId.length !== 36;
+      
+      if (isFirebaseId) {
+        console.log('Detected Firebase ID, updating in Firebase instead');
+        
+        // Update in Firebase
+        const docRef = doc(db, 'store_reports', reportId);
+        await updateDoc(docRef, {
+          ...updatedData,
+          updated_at: new Date().toISOString()
+        });
+        
+        console.log('Firebase report updated successfully');
+        
+        toast({
+          title: "Success",
+          description: "Store report updated successfully"
+        });
+        
+        await fetchReports();
+        return true;
+      }
+      
       // Clean and validate the data before sending to Supabase
       const cleanedData = {
         date: updatedData.date,
@@ -223,7 +247,7 @@ export const useStoreReports = () => {
 
       await supabase.from('audit_logs').insert([auditData]);
       
-      console.log('Store report updated successfully');
+      console.log('Supabase report updated successfully');
       
       toast({
         title: "Success",
