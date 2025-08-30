@@ -53,6 +53,8 @@ export const useUserAccount = () => {
     try {
       // Special handling for Denis using Firebase ID
       if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2') {
+        console.log('🔍 DETECTED DENIS LOGIN with Firebase ID:', user.uid);
+        
         // For Denis, use his Firebase ID for all queries now
         const { data: denisLedger, error: denisError } = await supabase
           .from('ledger_entries')
@@ -83,14 +85,14 @@ export const useUserAccount = () => {
           updated_at: new Date().toISOString()
         });
 
-        console.log('Denis account set with balance:', denisBalance, 'pending:', pendingAmount, 'available:', availableAmount);
+        console.log('✅ Denis account set with balance:', denisBalance, 'pending:', pendingAmount, 'available:', availableAmount);
         setLoading(false);
         return;
       }
 
       // Special handling for Kibaba by email (before checking employee records)
       if (user.email === 'nicholusscottlangz@gmail.com') {
-        console.log('Detected Kibaba login - using kibaba_nicholus_temp_id for ledger entries');
+        console.log('🔍 DETECTED KIBABA LOGIN with email:', user.email);
         
         const { data: kibabaLedger, error: kibabaError } = await supabase
           .from('ledger_entries')
@@ -121,14 +123,14 @@ export const useUserAccount = () => {
           updated_at: new Date().toISOString()
         });
 
-        console.log('Kibaba account set with balance:', kibabaBalance, 'pending:', pendingAmount, 'available:', availableAmount);
+        console.log('✅ Kibaba account set with balance:', kibabaBalance, 'pending:', pendingAmount, 'available:', availableAmount);
         setLoading(false);
         return;
       }
 
       // Special handling for Tumwine by email
       if (user.email === 'alextumwine@gmail.com') {
-        console.log('Detected Tumwine login - using alex_tumwine_temp_id for ledger entries');
+        console.log('🔍 DETECTED TUMWINE LOGIN with email:', user.email);
         
         const { data: tumwineLedger, error: tumwineError } = await supabase
           .from('ledger_entries')
@@ -159,7 +161,7 @@ export const useUserAccount = () => {
           updated_at: new Date().toISOString()
         });
 
-        console.log('Tumwine account set with balance:', tumwineBalance, 'pending:', pendingAmount, 'available:', availableAmount);
+        console.log('✅ Tumwine account set with balance:', tumwineBalance, 'pending:', pendingAmount, 'available:', availableAmount);
         setLoading(false);
         return;
       }
