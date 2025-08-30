@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText, Printer } from "lucide-react";
+import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText, Printer, Eye, ScanLine } from "lucide-react";
 import { useStoreManagement } from "@/hooks/useStoreManagement";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -22,6 +22,9 @@ import PricingGuidance from "@/components/PricingGuidance";
 import EUDRDocumentation from "@/components/store/EUDRDocumentation";
 import { StoreRecordsManager } from "@/components/store/StoreRecordsManager";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
+import StoreReportForm from "@/components/reports/StoreReportForm";
+import StoreReportsList from "@/components/reports/StoreReportsList";
+import ManualStoreReportForm from "@/components/reports/ManualStoreReportForm";
 
 const Store = () => {
   const [searchParams] = useSearchParams();
@@ -364,8 +367,8 @@ const Store = () => {
               Coffee Records
             </TabsTrigger>
             <TabsTrigger value="store-records">
-              <Package className="h-4 w-4 mr-2" />
-              Store Records
+              <FileText className="h-4 w-4 mr-2" />
+              Store Reports
             </TabsTrigger>
             <TabsTrigger value="eudr">
               <FileText className="h-4 w-4 mr-2" />
@@ -507,9 +510,38 @@ const Store = () => {
 
           </TabsContent>
 
-          {/* Store Records Tab */}
+          {/* Store Reports Tab */}
           <TabsContent value="store-records" className="space-y-6">
-            <StoreRecordsManager />
+            <div className="grid grid-cols-1 gap-6">
+              <Tabs defaultValue="view-reports" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="view-reports">
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Reports
+                  </TabsTrigger>
+                  <TabsTrigger value="daily-report">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Daily Report
+                  </TabsTrigger>
+                  <TabsTrigger value="manual-report">
+                    <ScanLine className="h-4 w-4 mr-2" />
+                    Manual Report
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="view-reports">
+                  <StoreReportsList />
+                </TabsContent>
+
+                <TabsContent value="daily-report">
+                  <StoreReportForm />
+                </TabsContent>
+
+                <TabsContent value="manual-report">
+                  <ManualStoreReportForm />
+                </TabsContent>
+              </Tabs>
+            </div>
           </TabsContent>
 
           {/* EUDR Documentation Tab */}

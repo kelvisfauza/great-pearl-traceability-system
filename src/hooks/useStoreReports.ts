@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 
 export interface StoreReport {
   id: string;
@@ -18,8 +16,11 @@ export interface StoreReport {
   kilograms_left: number;
   kilograms_unbought: number;
   advances_given: number;
-  comments: string;
+  comments?: string;
   input_by: string;
+  attachment_url?: string;
+  attachment_name?: string;
+  scanner_used?: string;
   created_at: string;
   updated_at: string;
 }
@@ -33,18 +34,17 @@ export const useStoreReports = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      console.log('Fetching store reports from Firebase...');
+      console.log('Fetching store reports from Supabase...');
       
-      const reportsQuery = query(collection(db, 'store_reports'), orderBy('date', 'desc'));
-      const querySnapshot = await getDocs(reportsQuery);
+      const { data, error } = await supabase
+        .from('store_reports')
+        .select('*')
+        .order('date', { ascending: false });
       
-      const reportsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as StoreReport[];
+      if (error) throw error;
       
-      console.log('Firebase store reports:', reportsData);
-      setReports(reportsData);
+      console.log('Supabase store reports:', data);
+      setReports(data || []);
     } catch (error) {
       console.error('Error fetching store reports:', error);
       toast({
@@ -60,30 +60,27 @@ export const useStoreReports = () => {
 
   const addStoreReport = async (reportData: Omit<StoreReport, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      console.log('Adding store report to Firebase:', reportData);
+      console.log('Adding store report to Supabase:', reportData);
       
-      const reportDoc = {
-        ...reportData,
-        input_by: employee?.name || reportData.input_by,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      const { error } = await supabase
+        .from('store_reports')
+        .insert([reportData]);
 
-      const docRef = await addDoc(collection(db, 'store_reports'), reportDoc);
-      console.log('Store report added with ID:', docRef.id);
+      if (error) throw error;
+      
+      console.log('Store report added successfully');
       
       toast({
         title: "Success",
-        description: "Store report saved successfully"
+        description: "Store report added successfully"
       });
       
       await fetchReports();
-      return docRef.id;
     } catch (error) {
       console.error('Error adding store report:', error);
       toast({
         title: "Error",
-        description: "Failed to save store report",
+        description: "Failed to add store report",
         variant: "destructive"
       });
       throw error;
@@ -92,92 +89,103 @@ export const useStoreReports = () => {
 
   const directDeleteReport = async (reportId: string, reason: string) => {
     try {
-      const reportToDelete = reports.find(r => r.id === reportId);
-      if (!reportToDelete) {
-        throw new Error('Report not found');
-      }
+      console.log('Deleting store report from Supabase:', reportId);
+      
+      // Get the report data before deletion for audit log
+      const { data: reportData } = await supabase
+        .from('store_reports')
+        .select('*')
+        .eq('id', reportId)
+        .single();
+      
+      const { error } = await supabase
+        .from('store_reports')
+        .delete()
+        .eq('id', reportId);
 
-      // Delete directly from Firebase
-      await deleteStoreReport(reportId);
+      if (error) throw error;
+      
+      // Log the deletion
+      const auditData = {
+        action: 'delete',
+        table_name: 'store_reports',
+        record_id: reportId,
+        reason: reason,
+        performed_by: reportData?.input_by || 'Unknown',
+        department: 'Store',
+        record_data: reportData
+      };
 
-      // Log to console for audit purposes (could be enhanced later)
-      console.log('AUDIT LOG - Report Deleted:', {
-        action: 'delete_store_report',
-        reportId,
-        reportData: reportToDelete,
-        reason,
-        performedBy: employee?.name || 'Unknown User',
-        department: employee?.department || 'Store',
-        timestamp: new Date().toISOString()
-      });
-
+      await supabase.from('audit_logs').insert([auditData]);
+      
       toast({
-        title: "Report Deleted",
-        description: "Store report has been deleted successfully"
+        title: "Success",
+        description: "Store report deleted successfully"
       });
-
-      return true;
+      
+      await fetchReports();
     } catch (error) {
-      console.error('Error deleting report:', error);
+      console.error('Error deleting store report:', error);
       toast({
         title: "Error",
-        description: "Failed to delete report",
+        description: "Failed to delete store report",
         variant: "destructive"
       });
-      return false;
+      throw error;
     }
   };
 
   const directEditReport = async (reportId: string, updatedData: Omit<StoreReport, 'id' | 'created_at' | 'updated_at'>, reason: string) => {
     try {
-      const reportToEdit = reports.find(r => r.id === reportId);
-      if (!reportToEdit) {
-        throw new Error('Report not found');
-      }
+      console.log('Updating store report in Supabase:', reportId, updatedData);
+      
+      const { error } = await supabase
+        .from('store_reports')
+        .update(updatedData)
+        .eq('id', reportId);
 
-      // Update directly in Firebase
-      const updatedReport = {
-        ...updatedData,
-        updated_at: new Date().toISOString()
+      if (error) throw error;
+      
+      // Log the action
+      const auditData = {
+        action: 'edit',
+        table_name: 'store_reports',
+        record_id: reportId,
+        reason: reason,
+        performed_by: updatedData.input_by,
+        department: 'Store',
+        record_data: updatedData
       };
 
-      await updateDoc(doc(db, 'store_reports', reportId), updatedReport);
-
-      // Log to console for audit purposes (could be enhanced later)
-      console.log('AUDIT LOG - Report Edited:', {
-        action: 'edit_store_report',
-        reportId,
-        originalData: reportToEdit,
-        updatedData: updatedData,
-        reason,
-        performedBy: employee?.name || 'Unknown User',
-        department: employee?.department || 'Store',
-        timestamp: new Date().toISOString()
-      });
-
-      // Refresh reports
-      await fetchReports();
-
+      await supabase.from('audit_logs').insert([auditData]);
+      
       toast({
-        title: "Report Updated",
-        description: "Store report has been updated successfully"
+        title: "Success",
+        description: "Store report updated successfully"
       });
-
+      
+      await fetchReports();
       return true;
     } catch (error) {
-      console.error('Error editing report:', error);
+      console.error('Error updating store report:', error);
       toast({
         title: "Error",
-        description: "Failed to update report",
+        description: "Failed to update store report",
         variant: "destructive"
       });
-      return false;
+      throw error;
     }
   };
 
   const deleteStoreReport = async (reportId: string) => {
     try {
-      await deleteDoc(doc(db, 'store_reports', reportId));
+      const { error } = await supabase
+        .from('store_reports')
+        .delete()
+        .eq('id', reportId);
+
+      if (error) throw error;
+      
       console.log('Store report deleted:', reportId);
       
       toast({

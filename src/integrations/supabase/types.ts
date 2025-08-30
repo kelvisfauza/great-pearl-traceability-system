@@ -1733,6 +1733,72 @@ export type Database = {
           },
         ]
       }
+      store_reports: {
+        Row: {
+          advances_given: number
+          attachment_name: string | null
+          attachment_url: string | null
+          average_buying_price: number
+          bags_left: number
+          bags_sold: number
+          coffee_type: string
+          comments: string | null
+          created_at: string
+          date: string
+          id: string
+          input_by: string
+          kilograms_bought: number
+          kilograms_left: number
+          kilograms_sold: number
+          kilograms_unbought: number
+          scanner_used: string | null
+          sold_to: string | null
+          updated_at: string
+        }
+        Insert: {
+          advances_given?: number
+          attachment_name?: string | null
+          attachment_url?: string | null
+          average_buying_price?: number
+          bags_left?: number
+          bags_sold?: number
+          coffee_type: string
+          comments?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          input_by: string
+          kilograms_bought?: number
+          kilograms_left?: number
+          kilograms_sold?: number
+          kilograms_unbought?: number
+          scanner_used?: string | null
+          sold_to?: string | null
+          updated_at?: string
+        }
+        Update: {
+          advances_given?: number
+          attachment_name?: string | null
+          attachment_url?: string | null
+          average_buying_price?: number
+          bags_left?: number
+          bags_sold?: number
+          coffee_type?: string
+          comments?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          input_by?: string
+          kilograms_bought?: number
+          kilograms_left?: number
+          kilograms_sold?: number
+          kilograms_unbought?: number
+          scanner_used?: string | null
+          sold_to?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       supplier_contracts: {
         Row: {
           advance_given: number | null

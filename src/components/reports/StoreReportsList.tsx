@@ -11,6 +11,7 @@ import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit } from 'lucide-r
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
+import StoreReportViewer from './StoreReportViewer';
 
 const StoreReportsList = () => {
   const { reports, loading, directDeleteReport, directEditReport } = useStoreReports();
@@ -21,6 +22,7 @@ const StoreReportsList = () => {
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [deleteReason, setDeleteReason] = useState('');
   const [editReason, setEditReason] = useState('');
@@ -46,6 +48,11 @@ const StoreReportsList = () => {
     setDeleteReason('');
   };
 
+  const handleViewReport = (report: any) => {
+    setSelectedReport(report);
+    setViewDialogOpen(true);
+  };
+
   const handleEditRequest = (report: any) => {
     setSelectedReport(report);
     setEditFormData({
@@ -61,7 +68,10 @@ const StoreReportsList = () => {
       kilograms_unbought: report.kilograms_unbought,
       advances_given: report.advances_given,
       comments: report.comments,
-      input_by: report.input_by
+      input_by: report.input_by,
+      attachment_url: report.attachment_url,
+      attachment_name: report.attachment_name,
+      scanner_used: report.scanner_used
     });
     setEditDialogOpen(true);
     setEditReason('');
@@ -293,6 +303,13 @@ const StoreReportsList = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => handleViewReport(report)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handlePrint(report)}
                           >
                             <Printer className="h-4 w-4" />
@@ -351,6 +368,13 @@ const StoreReportsList = () => {
           )}
         </div>
       </CardContent>
+
+      {/* View Report Dialog */}
+      <StoreReportViewer
+        report={selectedReport}
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
