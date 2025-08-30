@@ -3,9 +3,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Download, Eye, Scan, Calendar, User } from 'lucide-react';
+import { FileText, Download, Eye, Scan, Calendar, User, FileDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { generateStoreReportPDF } from '@/utils/pdfGenerator';
+import { toast } from 'sonner';
 
 interface StoreReportViewerProps {
   report: any;
@@ -62,6 +64,16 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
     }
   };
 
+  const handleGeneratePDF = () => {
+    try {
+      generateStoreReportPDF(report);
+      toast.success("PDF generated successfully!");
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error("Failed to generate PDF");
+    }
+  };
+
   const isImageFile = (filename: string) => {
     const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     const extension = filename?.split('.').pop()?.toLowerCase();
@@ -80,8 +92,12 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
             <FileText className="h-5 w-5" />
             Store Report Details - {format(new Date(report.date), 'MMMM d, yyyy')}
           </DialogTitle>
-          <DialogDescription>
-            Complete view of store report with scanned documents
+          <DialogDescription className="flex items-center justify-between">
+            <span>Complete view of store report with scanned documents</span>
+            <Button onClick={handleGeneratePDF} variant="outline" className="ml-4">
+              <FileDown className="h-4 w-4 mr-2" />
+              Generate PDF
+            </Button>
           </DialogDescription>
         </DialogHeader>
 
@@ -204,55 +220,56 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
                       onClick={() => setShowDocument(!showDocument)}
                     >
                       <Eye className="h-4 w-4 mr-2" />
-                      {showDocument ? 'Hide Document' : 'View Document'}
+                      {showDocument ? 'Hide Preview' : 'Show Preview'}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={handleDownloadDocument}
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      Download
+                      Download Original
                     </Button>
                   </div>
 
-                  {showDocument && (
-                    <div className="border rounded-lg p-4 bg-muted/50">
-                      {attachmentUrl ? (
-                        <>
-                          {isImageFile(report.attachment_name) ? (
-                            <img
-                              src={attachmentUrl}
-                              alt="Scanned document"
-                              className="max-w-full h-auto rounded"
-                              style={{ maxHeight: '500px' }}
-                            />
-                          ) : isPdfFile(report.attachment_name) ? (
-                            <iframe
-                              src={attachmentUrl}
-                              title="PDF Document"
-                              className="w-full rounded"
-                              style={{ height: '500px' }}
-                            />
-                          ) : (
-                            <div className="text-center py-8">
-                              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                              <p className="text-muted-foreground">
-                                Document preview not available. Click download to view the file.
-                              </p>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-center py-8">
-                          <div className="animate-pulse">
-                            <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
-                            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
-                          </div>
-                          <p className="text-muted-foreground mt-2">Loading document...</p>
-                        </div>
-                      )}
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">{report.attachment_name || 'Scanned Document'}</span>
                     </div>
-                  )}
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Document safely stored and available for download. Use "Generate PDF" above for a complete formatted report.
+                    </p>
+                    
+                    {showDocument && attachmentUrl && (
+                      <div className="border rounded p-2 bg-background">
+                        {isImageFile(report.attachment_name) ? (
+                          <img
+                            src={attachmentUrl}
+                            alt="Scanned document"
+                            className="max-w-full h-auto rounded"
+                            style={{ maxHeight: '300px' }}
+                          />
+                        ) : (
+                          <div className="text-center py-4">
+                            <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                            <p className="text-sm text-muted-foreground">
+                              {isPdfFile(report.attachment_name) ? 'PDF Document' : 'Document'} preview - Click download to view full file
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {showDocument && !attachmentUrl && (
+                      <div className="text-center py-4">
+                        <div className="animate-pulse">
+                          <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
+                          <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                        </div>
+                        <p className="text-muted-foreground mt-2 text-sm">Loading document...</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

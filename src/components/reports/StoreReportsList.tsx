@@ -7,13 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useStoreReports } from '@/hooks/useStoreReports';
-import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit, Database, Upload } from 'lucide-react';
+import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit, Database, Upload, FileDown, Files } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import StoreReportViewer from './StoreReportViewer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { generateStoreReportPDF, generateMultipleReportsPDF } from '@/utils/pdfGenerator';
 
 const StoreReportsList = () => {
   const { reports, loading, directDeleteReport, directEditReport, migrateFirebaseToSupabase } = useStoreReports();
@@ -167,99 +168,29 @@ const StoreReportsList = () => {
     }
   };
 
+  const handleBulkPDF = () => {
+    if (filteredReports.length === 0) {
+      toast.error("No reports to generate PDF for");
+      return;
+    }
+    
+    try {
+      const title = searchTerm ? `Store Reports - Search: ${searchTerm}` : 'Store Reports';
+      generateMultipleReportsPDF(filteredReports, title);
+      toast.success(`PDF with ${filteredReports.length} reports generated successfully!`);
+    } catch (error) {
+      console.error('Error generating bulk PDF:', error);
+      toast.error("Failed to generate PDF");
+    }
+  };
+
   const handlePrint = (report: any) => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Store Report - ${report.date}</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              .header { text-align: center; margin-bottom: 30px; }
-              .details { margin-bottom: 20px; }
-              .row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-              .label { font-weight: bold; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f2f2f2; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h1>Daily Store Report</h1>
-              <h2>Date: ${format(new Date(report.date), 'MMMM d, yyyy')}</h2>
-            </div>
-            
-            <div class="details">
-              <div class="row">
-                <span class="label">Coffee Type:</span>
-                <span>${report.coffee_type}</span>
-              </div>
-              <div class="row">
-                <span class="label">Input By:</span>
-                <span>${report.input_by}</span>
-              </div>
-            </div>
-
-            <table>
-              <tr>
-                <th>Category</th>
-                <th>Value</th>
-              </tr>
-              <tr>
-                <td>Kilograms Bought</td>
-                <td>${report.kilograms_bought} kg</td>
-              </tr>
-              <tr>
-                <td>Average Buying Price</td>
-                <td>UGX ${report.average_buying_price.toLocaleString()}/kg</td>
-              </tr>
-              <tr>
-                <td>Kilograms Sold</td>
-                <td>${report.kilograms_sold} kg</td>
-              </tr>
-              <tr>
-                <td>Bags Sold</td>
-                <td>${report.bags_sold}</td>
-              </tr>
-              <tr>
-                <td>Sold To</td>
-                <td>${report.sold_to}</td>
-              </tr>
-              <tr>
-                <td>Bags Left in Store</td>
-                <td>${report.bags_left}</td>
-              </tr>
-              <tr>
-                <td>Kilograms Left in Store</td>
-                <td>${report.kilograms_left} kg</td>
-              </tr>
-              <tr>
-                <td>Kilograms Unbought in Store</td>
-                <td>${report.kilograms_unbought} kg</td>
-              </tr>
-              <tr>
-                <td>Advances Given</td>
-                <td>UGX ${report.advances_given.toLocaleString()}</td>
-              </tr>
-            </table>
-
-            ${report.comments ? `
-              <div style="margin-top: 20px;">
-                <h3>Comments:</h3>
-                <p>${report.comments}</p>
-              </div>
-            ` : ''}
-
-            <div style="margin-top: 30px; text-align: center; font-size: 12px;">
-              <p>Generated on ${format(new Date(), 'MMMM d, yyyy HH:mm')}</p>
-            </div>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.print();
+    try {
+      generateStoreReportPDF(report);
+      toast.success("PDF generated successfully!");
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error("Failed to generate PDF");
     }
   };
 
@@ -276,22 +207,34 @@ const StoreReportsList = () => {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Store Reports History
-        </CardTitle>
-        <CardDescription className="flex items-center justify-between">
-          <span>View and print historical store reports</span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={migrateFirebaseToSupabase}
-            className="flex items-center gap-2"
-          >
-            <Database className="h-4 w-4" />
-            Migrate Data
-          </Button>
-        </CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Store Reports History
+          </CardTitle>
+          <CardDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <span>View and export historical store reports as PDF</span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkPDF}
+                disabled={filteredReports.length === 0}
+                className="flex items-center gap-2"
+              >
+                <Files className="h-4 w-4" />
+                Export All PDF ({filteredReports.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={migrateFirebaseToSupabase}
+                className="flex items-center gap-2"
+              >
+                <Database className="h-4 w-4" />
+                Migrate Data
+              </Button>
+            </div>
+          </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -374,8 +317,9 @@ const StoreReportsList = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => handlePrint(report)}
+                            title="Generate PDF"
                           >
-                            <Printer className="h-4 w-4" />
+                            <FileDown className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
