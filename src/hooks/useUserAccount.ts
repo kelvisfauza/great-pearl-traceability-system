@@ -48,15 +48,15 @@ export const useUserAccount = () => {
     }
 
     try {
-      // For all users, use the new ledger-based system
+      // For all users, use the new safe ledger-based system
       const { data: walletData, error: walletError } = await supabase
-        .rpc('get_wallet_balance', { user_uuid: user.uid });
+        .rpc('get_wallet_balance_safe', { user_uuid: user.uid });
 
       const { data: pendingData, error: pendingError } = await supabase
-        .rpc('get_pending_withdrawals', { user_uuid: user.uid });
+        .rpc('get_pending_withdrawals_safe', { user_uuid: user.uid });
 
       const { data: availableData, error: availableError } = await supabase
-        .rpc('get_available_to_request', { user_uuid: user.uid });
+        .rpc('get_available_to_request_safe', { user_uuid: user.uid });
 
       if (walletError || pendingError || availableError) {
         console.error('Wallet data errors:', { walletError, pendingError, availableError });
