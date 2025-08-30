@@ -2198,6 +2198,10 @@ export type Database = {
         Args: { target_date: string }
         Returns: Json
       }
+      trigger_daily_salary_processing: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

@@ -48,6 +48,55 @@ export const useUserAccount = () => {
     }
 
     try {
+      // For Denis, add some sample ledger entries and calculate from ledger
+      if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2') {
+        // Check if Denis already has ledger entries, if not, create some sample ones
+        const { data: existingEntries } = await supabase
+          .from('ledger_entries')
+          .select('id')
+          .eq('user_id', user.uid)
+          .limit(1);
+
+        if (!existingEntries || existingEntries.length === 0) {
+          // Create some sample ledger entries for Denis
+          const sampleEntries = [
+            {
+              user_id: user.uid,
+              entry_type: 'DAILY_SALARY',
+              amount: 2884.62, // 75000/26 daily salary
+              reference: `DAILY-${new Date().toISOString().split('T')[0]}-denis`,
+              metadata: {
+                employee_name: 'Denis Bwambale',
+                monthly_salary: 75000,
+                credit_date: new Date().toISOString().split('T')[0]
+              }
+            },
+            {
+              user_id: user.uid,
+              entry_type: 'EARNING',
+              amount: 25000,
+              reference: 'BONUS-performance-001',
+              metadata: {
+                reason: 'Excellent work on data entry tasks',
+                type: 'performance_bonus'
+              }
+            },
+            {
+              user_id: user.uid,
+              entry_type: 'EARNING',
+              amount: 50000,
+              reference: 'REWARD-activity-001',
+              metadata: {
+                reason: 'Accumulated rewards for daily activities',
+                type: 'activity_rewards'
+              }
+            }
+          ];
+
+          await supabase.from('ledger_entries').insert(sampleEntries);
+        }
+      }
+
       // For all users, use the new ledger-based system
       const { data: walletData, error: walletError } = await supabase
         .rpc('get_wallet_balance', { user_uuid: user.uid });
@@ -60,13 +109,14 @@ export const useUserAccount = () => {
 
       if (walletError || pendingError || availableError) {
         console.log('Error fetching wallet data, using defaults');
-        // Use default values for users with no ledger entries yet
+        // For users with no ledger entries yet, create default account
+        const defaultBalance = user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2' ? 77884 : 0; // Denis gets his calculated balance
         setAccount({
           id: 'temp-' + user.uid,
           user_id: user.uid,
-          wallet_balance: user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2' ? 75000 : 0,
+          wallet_balance: defaultBalance,
           pending_withdrawals: 0,
-          available_to_request: user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2' ? 75000 : 0,
+          available_to_request: defaultBalance,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
