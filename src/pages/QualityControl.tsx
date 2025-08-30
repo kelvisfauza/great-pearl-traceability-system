@@ -984,7 +984,7 @@ const QualityControl = () => {
                     <Button 
                       onClick={handleSubmitAssessment} 
                       className="flex-1"
-                      disabled={readOnly || !assessmentForm.manual_price}
+                      disabled={readOnly || (!assessmentForm.manual_price && !assessmentForm.final_price && !calculateSuggestedPrice())}
                     >
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       Save Assessment & Send to Finance
