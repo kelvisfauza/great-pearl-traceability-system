@@ -171,14 +171,44 @@ export const useStoreReports = () => {
 
   const directEditReport = async (reportId: string, updatedData: Omit<StoreReport, 'id' | 'created_at' | 'updated_at'>, reason?: string) => {
     try {
-      console.log('Updating store report in Supabase:', reportId, updatedData);
+      console.log('=== STORE REPORT UPDATE DEBUG ===');
+      console.log('Report ID:', reportId);
+      console.log('Raw updatedData:', updatedData);
+      
+      // Clean and validate the data before sending to Supabase
+      const cleanedData = {
+        date: updatedData.date,
+        coffee_type: updatedData.coffee_type || '',
+        kilograms_bought: Number(updatedData.kilograms_bought) || 0,
+        average_buying_price: Number(updatedData.average_buying_price) || 0,
+        kilograms_sold: Number(updatedData.kilograms_sold) || 0,
+        bags_sold: Number(updatedData.bags_sold) || 0,
+        sold_to: updatedData.sold_to || null,
+        bags_left: Number(updatedData.bags_left) || 0,
+        kilograms_left: Number(updatedData.kilograms_left) || 0,
+        kilograms_unbought: Number(updatedData.kilograms_unbought) || 0,
+        advances_given: Number(updatedData.advances_given) || 0,
+        comments: updatedData.comments || null,
+        input_by: updatedData.input_by || 'Unknown',
+        attachment_url: updatedData.attachment_url || null,
+        attachment_name: updatedData.attachment_name || null,
+        scanner_used: updatedData.scanner_used || null,
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log('Cleaned data for Supabase:', cleanedData);
       
       const { error } = await supabase
         .from('store_reports')
-        .update(updatedData)
+        .update(cleanedData)
         .eq('id', reportId);
 
-      if (error) throw error;
+      console.log('Supabase update error:', error);
+
+      if (error) {
+        console.error('Supabase error details:', error);
+        throw error;
+      }
       
       // Log the action
       const auditData = {
@@ -186,12 +216,14 @@ export const useStoreReports = () => {
         table_name: 'store_reports',
         record_id: reportId,
         reason: reason || 'Report updated',
-        performed_by: updatedData.input_by,
+        performed_by: cleanedData.input_by,
         department: 'Store',
-        record_data: updatedData
+        record_data: cleanedData
       };
 
       await supabase.from('audit_logs').insert([auditData]);
+      
+      console.log('Store report updated successfully');
       
       toast({
         title: "Success",
@@ -204,7 +236,7 @@ export const useStoreReports = () => {
       console.error('Error updating store report:', error);
       toast({
         title: "Error",
-        description: "Failed to update store report",
+        description: "Failed to update store report. Check console for details.",
         variant: "destructive"
       });
       throw error;
