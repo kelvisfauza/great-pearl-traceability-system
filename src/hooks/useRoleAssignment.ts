@@ -92,9 +92,16 @@ export const useRoleAssignment = () => {
           ? ['Administration', 'Finance', 'Human Resources', 'Operations', 'Reports', 'Store Management']
           : ['Reports', 'Store Management']; // Basic approver permissions
         
-        await updateEmployeePermissions(assignedToEmail, {
+        const updateData: any = {
           permissions: rolePermissions
-        });
+        };
+        
+        // If admin_delegate, also set the role to Administrator
+        if (role === 'admin_delegate') {
+          updateData.role = 'Administrator';
+        }
+        
+        await updateEmployeePermissions(assignedToEmail, updateData);
         
         console.log(`✅ Updated ${assignedToEmail} permissions for ${role} role:`, rolePermissions);
       } catch (permError) {
