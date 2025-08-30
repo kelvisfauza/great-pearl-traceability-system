@@ -32,7 +32,7 @@ export const AccountButton = () => {
   const [showMoneyRequest, setShowMoneyRequest] = useState(false);
   const [showWithdrawal, setShowWithdrawal] = useState(false);
 
-  console.log('AccountButton - loading:', loading, 'account:', account);
+  console.log('🚨 AccountButton render - loading:', loading, 'account:', account);
 
   const formatCurrency = (amount: number) => {
     return `UGX ${amount.toLocaleString()}`;
