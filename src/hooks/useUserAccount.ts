@@ -48,15 +48,36 @@ export const useUserAccount = () => {
     }
 
     try {
-      // For all users, use the new safe ledger-based system
+      // Special handling for Denis using Firebase ID
+      if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2') {
+        // For Denis, calculate balance from his Supabase ledger entries
+        const { data: denisBalance } = await supabase.rpc('get_wallet_balance', {
+          user_uuid: 'e5c7b8bc-1f27-4c0f-a750-c6f4e8b4a641' // His Supabase UUID
+        });
+
+        setAccount({
+          id: 'denis-account',
+          user_id: user.uid,
+          wallet_balance: denisBalance || 0,
+          pending_withdrawals: 0,
+          available_to_request: denisBalance || 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+        setLoading(false);
+        return;
+      }
+
+      // For all other users, use the regular UUID system
       const { data: walletData, error: walletError } = await supabase
-        .rpc('get_wallet_balance_safe', { user_uuid: user.uid });
+        .rpc('get_wallet_balance', { user_uuid: user.uid });
 
       const { data: pendingData, error: pendingError } = await supabase
-        .rpc('get_pending_withdrawals_safe', { user_uuid: user.uid });
+        .rpc('get_pending_withdrawals', { user_uuid: user.uid });
 
       const { data: availableData, error: availableError } = await supabase
-        .rpc('get_available_to_request_safe', { user_uuid: user.uid });
+        .rpc('get_available_to_request', { user_uuid: user.uid });
 
       if (walletError || pendingError || availableError) {
         console.error('Wallet data errors:', { walletError, pendingError, availableError });
