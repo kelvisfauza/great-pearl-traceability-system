@@ -2044,6 +2044,7 @@ export type Database = {
           approved_by: string | null
           channel: string | null
           created_at: string
+          failure_reason: string | null
           id: string
           payment_voucher: string | null
           phone_number: string
@@ -2054,6 +2055,7 @@ export type Database = {
           request_ref: string | null
           status: string
           transaction_id: string | null
+          transaction_reference: string | null
           updated_at: string
           user_id: string
         }
@@ -2063,6 +2065,7 @@ export type Database = {
           approved_by?: string | null
           channel?: string | null
           created_at?: string
+          failure_reason?: string | null
           id?: string
           payment_voucher?: string | null
           phone_number: string
@@ -2073,6 +2076,7 @@ export type Database = {
           request_ref?: string | null
           status?: string
           transaction_id?: string | null
+          transaction_reference?: string | null
           updated_at?: string
           user_id: string
         }
@@ -2082,6 +2086,7 @@ export type Database = {
           approved_by?: string | null
           channel?: string | null
           created_at?: string
+          failure_reason?: string | null
           id?: string
           payment_voucher?: string | null
           phone_number?: string
@@ -2092,6 +2097,7 @@ export type Database = {
           request_ref?: string | null
           status?: string
           transaction_id?: string | null
+          transaction_reference?: string | null
           updated_at?: string
           user_id?: string
         }

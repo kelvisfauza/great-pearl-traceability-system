@@ -50,27 +50,37 @@ export const useUserAccount = () => {
     try {
       // Special handling for Denis using Firebase ID
       if (user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2') {
-        // For Denis, directly query his ledger entries to avoid UUID issues
+        // For Denis, use his Firebase ID for all queries now
         const { data: denisLedger, error: denisError } = await supabase
           .from('ledger_entries')
           .select('amount')
-          .eq('user_id', 'e5c7b8bc-1f27-4c0f-a750-c6f4e8b4a641'); // His existing Supabase UUID
+          .eq('user_id', 'JSxZYOSxmde6Cqra4clQNc92mRS2'); // Use Firebase ID
 
         console.log('Denis ledger query result:', { denisLedger, denisError });
 
         const denisBalance = denisLedger?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
+        
+        // Also fetch pending withdrawals for Denis
+        const { data: denisPendingWithdrawals } = await supabase
+          .from('withdrawal_requests')
+          .select('amount')
+          .eq('user_id', 'JSxZYOSxmde6Cqra4clQNc92mRS2')
+          .in('status', ['pending', 'approved', 'processing']);
+
+        const pendingAmount = denisPendingWithdrawals?.reduce((sum, req) => sum + (req.amount || 0), 0) || 0;
+        const availableAmount = Math.max(0, denisBalance - pendingAmount);
 
         setAccount({
           id: 'denis-account',
           user_id: user.uid,
           wallet_balance: denisBalance,
-          pending_withdrawals: 0,
-          available_to_request: denisBalance,
+          pending_withdrawals: pendingAmount,
+          available_to_request: availableAmount,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
 
-        console.log('Denis account set with balance:', denisBalance);
+        console.log('Denis account set with balance:', denisBalance, 'pending:', pendingAmount, 'available:', availableAmount);
         setLoading(false);
         return;
       }
@@ -117,22 +127,24 @@ export const useUserAccount = () => {
         updated_at: new Date().toISOString()
       });
 
-      // Fetch money requests
+      // Fetch money requests for current user (use Firebase ID for Denis)
+      const currentUserId = user.uid === 'JSxZYOSxmde6Cqra4clQNc92mRS2' ? 'JSxZYOSxmde6Cqra4clQNc92mRS2' : user.uid;
+      
       const { data: requests, error: requestsError } = await supabase
         .from('money_requests')
         .select('*')
-        .eq('user_id', user.uid)
+        .eq('user_id', currentUserId)
         .order('created_at', { ascending: false });
 
       if (!requestsError) {
         setMoneyRequests(requests || []);
       }
 
-      // Fetch withdrawal requests
+      // Fetch withdrawal requests using correct user ID
       const { data: withdrawals, error: withdrawalsError } = await supabase
         .from('withdrawal_requests')
         .select('*')
-        .eq('user_id', user.uid)
+        .eq('user_id', currentUserId)
         .order('created_at', { ascending: false });
 
       if (!withdrawalsError) {
