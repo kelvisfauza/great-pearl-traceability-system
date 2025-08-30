@@ -2158,6 +2158,10 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: Json
       }
+      calculate_daily_salary_credit: {
+        Args: { employee_salary: number }
+        Returns: number
+      }
       cleanup_inactive_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2185,6 +2189,14 @@ export type Database = {
       is_current_user_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      process_daily_salary_credits: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      process_salary_credits_for_date: {
+        Args: { target_date: string }
+        Returns: Json
       }
     }
     Enums: {
