@@ -58,14 +58,11 @@ export const useRoleAssignment = () => {
     description: string,
     expiresAt?: string
   ) => {
-    console.log('🔥 ROLE ASSIGNMENT STARTED:', {
-      assignedToName,
-      assignedToEmail,
-      role,
-      currentUser: employee?.name
-    });
+    console.log('=== ASSIGN ROLE FUNCTION CALLED ===');
+    console.log('Parameters:', { assignedToName, assignedToEmail, role });
     
     if (!isAdmin()) {
+      console.log('Access denied - not admin');
       toast({
         title: "Access Denied",
         description: "Only administrators can assign roles",

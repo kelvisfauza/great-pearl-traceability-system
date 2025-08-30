@@ -25,13 +25,25 @@ const RoleAssignmentModal = ({ open, onClose }: RoleAssignmentModalProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('=== ROLE ASSIGNMENT FORM SUBMITTED ===');
     
     if (!selectedEmployeeId || !description) {
+      console.log('Form validation failed - missing data');
       return;
     }
 
     const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
-    if (!selectedEmployee) return;
+    if (!selectedEmployee) {
+      console.log('Selected employee not found');
+      return;
+    }
+    
+    console.log('Calling assignRole with:', {
+      id: selectedEmployee.id,
+      name: selectedEmployee.name,
+      email: selectedEmployee.email,
+      role
+    });
 
     setLoading(true);
 
