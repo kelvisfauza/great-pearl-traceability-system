@@ -92,9 +92,10 @@ serve(async (req) => {
             continue
           }
 
-          // CRITICAL: Check current month total to prevent exceeding monthly salary
+          // CRITICAL: Check current month credits to prevent exceeding monthly salary
+          // BUT allow previous months' unspent balance to carry forward
           const monthStart = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01T00:00:00Z`
-          const { data: monthlyEntries } = await supabase
+          const { data: currentMonthEntries } = await supabase
             .from('ledger_entries')
             .select('amount')
             .eq('user_id', employee.auth_user_id)
@@ -102,19 +103,19 @@ serve(async (req) => {
             .gte('created_at', monthStart)
             .lt('created_at', `${currentYear}-${String(currentMonth + 2).padStart(2, '0')}-01T00:00:00Z`)
 
-          const currentMonthTotal = monthlyEntries?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0
-          const remainingAllowance = employee.salary - currentMonthTotal
+          const currentMonthCredits = currentMonthEntries?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0
+          const remainingMonthlyAllowance = employee.salary - currentMonthCredits
 
-          // If already at or above monthly salary, skip
-          if (remainingAllowance <= 0) {
-            console.log(`${employee.name} already reached monthly salary (${currentMonthTotal}/${employee.salary}). Skipping ${dateStr}`)
+          // Only cap NEW monthly credits, not total balance (allows carryover)
+          if (remainingMonthlyAllowance <= 0) {
+            console.log(`${employee.name} already received full monthly salary (${currentMonthCredits}/${employee.salary}). Skipping ${dateStr}`)
             continue
           }
 
-          // Cap the daily credit to not exceed monthly salary
-          if (dailyCredit > remainingAllowance) {
-            dailyCredit = remainingAllowance
-            console.log(`Capped daily credit for ${employee.name} on ${dateStr}: ${dailyCredit} (remaining: ${remainingAllowance})`)
+          // Cap the daily credit to not exceed monthly salary allowance (but total balance can be higher from carryover)
+          if (dailyCredit > remainingMonthlyAllowance) {
+            dailyCredit = remainingMonthlyAllowance
+            console.log(`Capped daily credit for ${employee.name} on ${dateStr}: ${dailyCredit} (monthly remaining: ${remainingMonthlyAllowance})`)
           }
 
           // Determine if this is a backfill (past date) or current day
