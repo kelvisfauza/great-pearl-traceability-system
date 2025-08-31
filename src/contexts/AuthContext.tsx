@@ -97,11 +97,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     console.log('🔍 Fetching employee data from database for:', normalizedEmail);
     try {
       // Try to get from Supabase using auth_user_id first
+      console.log('🔍 Searching by auth_user_id:', targetUserId);
       let { data: employeeData, error } = await supabase
         .from('employees')
         .select('*')
         .eq('auth_user_id', targetUserId)
         .maybeSingle();
+
+      console.log('🔍 Result from auth_user_id search:', employeeData, error);
 
       // If not found by auth_user_id, try by email
       if (!employeeData && !error) {
@@ -112,6 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .eq('email', normalizedEmail)
           .maybeSingle();
         
+        console.log('🔍 Result from email search:', emailData, emailError);
         employeeData = emailData;
         error = emailError;
       }
