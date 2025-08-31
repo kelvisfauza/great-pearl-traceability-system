@@ -231,23 +231,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       (event, session) => {
         if (!mounted) return;
         
+        console.log('🔥 Auth state change:', { event, user: session?.user?.email, hasSession: !!session });
+        
         // Only synchronous state updates here
         setSession(session);
         setUser(session?.user ?? null);
         
         // Defer employee data fetching with setTimeout to prevent deadlock
         if (session?.user) {
+          console.log('👤 User authenticated, fetching employee data for:', session.user.email);
           setTimeout(() => {
             if (mounted) {
               fetchEmployeeData(session.user.id, session.user.email)
                 .then(employeeData => {
+                  console.log('✅ Employee data fetched successfully:', employeeData);
                   if (mounted) {
                     setEmployee(employeeData);
                     setLoading(false);
                   }
                 })
                 .catch(error => {
-                  console.error('Error fetching employee data:', error);
+                  console.error('❌ Error fetching employee data:', error);
                   if (mounted) {
                     setEmployee(null);
                     setLoading(false);
@@ -256,6 +260,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
           }, 0);
         } else {
+          console.log('🚫 No user session, clearing employee data');
           // No user - clear everything immediately
           setEmployee(null);
           setLoading(false);
