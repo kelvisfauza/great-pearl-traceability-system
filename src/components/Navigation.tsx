@@ -105,25 +105,13 @@ const Navigation = () => {
   const getFilteredNavigationItems = () => {
     console.log('🔍 Navigation check - employee:', employee, 'user email:', employee?.email);
     
-    // TEMP FIX: For Kibaba, always show navigation regardless of employee loading state
+    // Don't show any items while employee data is still loading to prevent flickering
     if (!employee) {
-      console.log('⚠️ No employee data, checking if this is Kibaba via user object');
-      // Check if this is Kibaba via the user object from auth
-      if (user?.email === 'nicholusscottlangz@gmail.com') {
-        console.log('🎯 This is Kibaba, showing all navigation items despite no employee data');
-        return navigationItems;
-      }
-      console.log('⚠️ Not Kibaba and no employee data, returning empty navigation');
+      console.log('⚠️ No employee data, returning empty navigation');
       return [];
     }
     
     console.log('🔍 Filtering navigation for employee:', employee);
-    
-    // Show all items for Kibaba
-    if (employee.email === 'nicholusscottlangz@gmail.com') {
-      console.log('🎯 Showing all navigation items for Kibaba');
-      return navigationItems;
-    }
     
     return navigationItems.map(section => ({
       ...section,
