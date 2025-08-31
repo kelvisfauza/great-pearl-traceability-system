@@ -54,9 +54,9 @@ export const useUserAccount = () => {
     console.log('🔍 fetchUserAccount called for user:', { id: user.id, email: user.email });
 
     try {
-      // Use the unified function to get balance data
+      // Use the safer unified function to get balance data
       const { data: balanceData, error: balanceError } = await supabase
-        .rpc('get_user_balance_data', { user_email: user.email });
+        .rpc('get_user_balance_safe', { user_email: user.email });
       
       if (balanceError) {
         console.error('Error fetching balance data:', balanceError);

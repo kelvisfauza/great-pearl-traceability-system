@@ -2203,6 +2203,17 @@ export type Database = {
           wallet_balance: number
         }[]
       }
+      get_user_balance_safe: {
+        Args: { user_email: string }
+        Returns: {
+          auth_user_id: string
+          available_balance: number
+          email: string
+          name: string
+          pending_withdrawals: number
+          wallet_balance: number
+        }[]
+      }
       get_wallet_balance_safe: {
         Args: { user_uuid: string }
         Returns: number
