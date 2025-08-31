@@ -9,13 +9,6 @@ import DigitalClock from '@/components/DigitalClock';
 
 const DynamicHeader = () => {
   const { employee } = useAuth();
-  
-  // Debug logging for employee data
-  console.log('=== DYNAMIC HEADER DEBUG ===');
-  console.log('Employee object:', employee);
-  console.log('Employee name:', employee?.name);
-  console.log('Employee role:', employee?.role);
-  console.log('Employee permissions:', employee?.permissions);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);

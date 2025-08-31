@@ -242,36 +242,59 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Simple auth state listener
   useEffect(() => {
+    let mounted = true;
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('🔄 Auth state change:', event, session?.user?.email);
+        
+        if (!mounted) return;
+        
         if (session?.user) {
           setUser(session.user);
           setSession(session);
           
           const employeeData = await fetchEmployeeData(session.user.id, session.user.email);
-          setEmployee(employeeData);
+          if (mounted) {
+            setEmployee(employeeData);
+            setLoading(false);
+          }
         } else {
-          setUser(null);
-          setSession(null);
-          setEmployee(null);
+          if (mounted) {
+            setUser(null);
+            setSession(null);
+            setEmployee(null);
+            setLoading(false);
+          }
         }
-        setLoading(false);
       }
     );
 
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('🚀 Initial session check:', session?.user?.email);
+      
+      if (!mounted) return;
+      
       if (session?.user) {
         setUser(session.user);
         setSession(session);
         
         const employeeData = await fetchEmployeeData(session.user.id, session.user.email);
-        setEmployee(employeeData);
+        if (mounted) {
+          setEmployee(employeeData);
+        }
       }
-      setLoading(false);
+      
+      if (mounted) {
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const hasPermission = (permission: string): boolean => {
