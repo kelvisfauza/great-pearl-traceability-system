@@ -23,7 +23,7 @@ import { useEffect, useState } from "react";
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { RoleNotificationWidget } from '@/components/notifications/RoleNotificationWidget';
+
 
 const Navigation = () => {
   const location = useLocation();
@@ -188,12 +188,9 @@ const Navigation = () => {
       <div className="p-2 xs:p-3 border-t border-gray-200">
         {employee && (
           <div className="mb-2 xs:mb-3">
-            <div className="flex items-center justify-between mb-1 xs:mb-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs xs:text-sm font-medium text-gray-800 truncate">{employee.name}</p>
-                <p className="text-xs text-gray-500 truncate">{employee.position}</p>
-              </div>
-              <RoleNotificationWidget />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs xs:text-sm font-medium text-gray-800 truncate">{employee.name}</p>
+              <p className="text-xs text-gray-500 truncate">{employee.position}</p>
             </div>
           </div>
         )}
