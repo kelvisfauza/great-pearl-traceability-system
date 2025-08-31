@@ -129,7 +129,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           disabled: employeeData.disabled || false
         };
 
-        console.log('✅ Employee data loaded for:', employee.name, 'Permissions:', employee.permissions);
         return employee;
       }
 
@@ -163,45 +162,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (!data.user) {
         throw new Error('No user returned from authentication');
-      }
-
-      // Set user and session immediately
-      setUser(data.user);
-      setSession(data.session);
-
-      // Fetch employee data
-      const employeeData = await fetchEmployeeData(data.user.id, data.user.email);
-      
-      if (employeeData) {
-        setEmployee(employeeData);
-        toast({
-          title: "Login Successful",
-          description: `Welcome back, ${employeeData.name}!`
-        });
-      } else {
-        // Create a basic user record
-        const basicEmployee: Employee = {
-          id: data.user.id,
-          name: normalizedEmail.split('@')[0],
-          email: normalizedEmail,
-          position: 'Staff',
-          department: 'General',
-          salary: 0,
-          role: 'User',
-          permissions: ['General Access'],
-          status: 'Active',
-          join_date: new Date().toISOString(),
-          isOneTimePassword: false,
-          mustChangePassword: false,
-          authUserId: data.user.id
-        };
-        
-        setEmployee(basicEmployee);
-        
-        toast({
-          title: "Welcome!",
-          description: "Please contact HR to complete your profile setup.",
-        });
       }
 
       return {};
@@ -240,13 +200,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Simple auth state listener
+  // Initialize auth state
   useEffect(() => {
     let mounted = true;
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 Auth state change:', event, session?.user?.email);
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
@@ -257,39 +217,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const employeeData = await fetchEmployeeData(session.user.id, session.user.email);
           if (mounted) {
             setEmployee(employeeData);
-            setLoading(false);
+          }
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+        
+        if (session?.user) {
+          setUser(session.user);
+          setSession(session);
+          
+          const employeeData = await fetchEmployeeData(session.user.id, session.user.email);
+          if (mounted) {
+            setEmployee(employeeData);
           }
         } else {
-          if (mounted) {
-            setUser(null);
-            setSession(null);
-            setEmployee(null);
-            setLoading(false);
-          }
+          setUser(null);
+          setSession(null);
+          setEmployee(null);
+        }
+        
+        if (mounted) {
+          setLoading(false);
         }
       }
     );
-
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('🚀 Initial session check:', session?.user?.email);
-      
-      if (!mounted) return;
-      
-      if (session?.user) {
-        setUser(session.user);
-        setSession(session);
-        
-        const employeeData = await fetchEmployeeData(session.user.id, session.user.email);
-        if (mounted) {
-          setEmployee(employeeData);
-        }
-      }
-      
-      if (mounted) {
-        setLoading(false);
-      }
-    });
 
     return () => {
       mounted = false;
