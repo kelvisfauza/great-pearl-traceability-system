@@ -262,10 +262,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     console.log('🎯 Setting up Supabase auth listener');
     let isMounted = true;
+    let profileTimeout: NodeJS.Timeout;
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('🔄 Auth state changed:', event, session?.user?.email);
         
         if (!isMounted) return;
@@ -274,33 +275,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(session.user);
           setSession(session);
           
-          // Fetch employee data for the authenticated user
-          try {
-            const employeeData = await fetchEmployeeData(session.user.id);
+          // Clear any existing timeout
+          if (profileTimeout) clearTimeout(profileTimeout);
+          
+          // Set a timeout to prevent infinite loading
+          profileTimeout = setTimeout(() => {
             if (isMounted) {
-              setEmployee(employeeData);
+              console.log('⏰ Profile loading timeout, setting loading to false');
               setLoading(false);
             }
-          } catch (error) {
-            console.error('Error fetching employee data:', error);
-            if (isMounted) {
-              setEmployee(null);
-              setLoading(false);
-            }
-          }
+          }, 5000); // 5 second timeout
+          
+          // Fetch employee data
+          fetchEmployeeData(session.user.id)
+            .then(employeeData => {
+              if (isMounted) {
+                console.log('✅ Employee data loaded:', employeeData?.name || 'No employee');
+                setEmployee(employeeData);
+                setLoading(false);
+                if (profileTimeout) clearTimeout(profileTimeout);
+              }
+            })
+            .catch(error => {
+              console.error('❌ Error fetching employee data:', error);
+              if (isMounted) {
+                setEmployee(null);
+                setLoading(false);
+                if (profileTimeout) clearTimeout(profileTimeout);
+              }
+            });
         } else {
           if (isMounted) {
             setUser(null);
             setSession(null);
             setEmployee(null);
             setLoading(false);
+            if (profileTimeout) clearTimeout(profileTimeout);
           }
         }
       }
     );
 
     // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('🎯 Initial session check:', session?.user?.email);
       
       if (!isMounted) return;
@@ -309,20 +326,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session.user);
         setSession(session);
         
+        // Set timeout for initial load too
+        profileTimeout = setTimeout(() => {
+          if (isMounted) {
+            console.log('⏰ Initial profile loading timeout');
+            setLoading(false);
+          }
+        }, 5000);
+        
         // Fetch employee data
-        try {
-          const employeeData = await fetchEmployeeData(session.user.id);
-          if (isMounted) {
-            setEmployee(employeeData);
-            setLoading(false);
-          }
-        } catch (error) {
-          console.error('Error fetching initial employee data:', error);
-          if (isMounted) {
-            setEmployee(null);
-            setLoading(false);
-          }
-        }
+        fetchEmployeeData(session.user.id)
+          .then(employeeData => {
+            if (isMounted) {
+              console.log('✅ Initial employee data loaded:', employeeData?.name || 'No employee');
+              setEmployee(employeeData);
+              setLoading(false);
+              if (profileTimeout) clearTimeout(profileTimeout);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Error fetching initial employee data:', error);
+            if (isMounted) {
+              setEmployee(null);
+              setLoading(false);
+              if (profileTimeout) clearTimeout(profileTimeout);
+            }
+          });
       } else {
         if (isMounted) {
           setLoading(false);
@@ -332,6 +361,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => {
       isMounted = false;
+      if (profileTimeout) clearTimeout(profileTimeout);
       subscription.unsubscribe();
     };
   }, []);
