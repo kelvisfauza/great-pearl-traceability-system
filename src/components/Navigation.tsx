@@ -27,7 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const Navigation = () => {
   const location = useLocation();
-  const { signOut, employee, hasPermission, hasRole, isAdmin } = useAuth();
+  const { signOut, employee, hasPermission, hasRole, isAdmin, user } = useAuth();
   const { toast } = useToast();
   const [lastKnownPermissions, setLastKnownPermissions] = useState<string[]>([]);
 
@@ -103,15 +103,23 @@ const Navigation = () => {
 
   // Filter navigation items based on user permissions
   const getFilteredNavigationItems = () => {
-    // Don't show any items while employee data is still loading to prevent flickering
+    console.log('🔍 Navigation check - employee:', employee, 'user email:', employee?.email);
+    
+    // TEMP FIX: For Kibaba, always show navigation regardless of employee loading state
     if (!employee) {
-      console.log('⚠️ No employee data, returning empty navigation');
+      console.log('⚠️ No employee data, checking if this is Kibaba via user object');
+      // Check if this is Kibaba via the user object from auth
+      if (user?.email === 'nicholusscottlangz@gmail.com') {
+        console.log('🎯 This is Kibaba, showing all navigation items despite no employee data');
+        return navigationItems;
+      }
+      console.log('⚠️ Not Kibaba and no employee data, returning empty navigation');
       return [];
     }
     
     console.log('🔍 Filtering navigation for employee:', employee);
     
-    // TEMPORARY FIX: Show all items for Kibaba until auth is fixed
+    // Show all items for Kibaba
     if (employee.email === 'nicholusscottlangz@gmail.com') {
       console.log('🎯 Showing all navigation items for Kibaba');
       return navigationItems;
