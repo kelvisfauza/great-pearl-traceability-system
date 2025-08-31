@@ -129,6 +129,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           disabled: employeeData.disabled || false
         };
 
+        console.log('✅ Employee data loaded for:', employee.name, 'Permissions:', employee.permissions);
         return employee;
       }
 
