@@ -104,7 +104,18 @@ const Navigation = () => {
   // Filter navigation items based on user permissions
   const getFilteredNavigationItems = () => {
     // Don't show any items while employee data is still loading to prevent flickering
-    if (!employee) return [];
+    if (!employee) {
+      console.log('⚠️ No employee data, returning empty navigation');
+      return [];
+    }
+    
+    console.log('🔍 Filtering navigation for employee:', employee);
+    
+    // TEMPORARY FIX: Show all items for Kibaba until auth is fixed
+    if (employee.email === 'nicholusscottlangz@gmail.com') {
+      console.log('🎯 Showing all navigation items for Kibaba');
+      return navigationItems;
+    }
     
     return navigationItems.map(section => ({
       ...section,
