@@ -21,6 +21,7 @@ import QualityAssessmentReports from "@/components/finance/QualityAssessmentRepo
 import CashManagementDashboard from "@/components/finance/CashManagementDashboard";
 import MoneyRequestsManager from "@/components/finance/MoneyRequestsManager";
 import { WithdrawalRequestsManager } from "@/components/finance/WithdrawalRequestsManager";
+import { UnifiedWithdrawalManager } from "@/components/admin/UnifiedWithdrawalManager";
 import { WithdrawalProcessingManager } from "@/components/admin/WithdrawalProcessingManager";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { FinanceSidebar } from "@/components/finance/FinanceSidebar";
@@ -223,7 +224,7 @@ const Finance = () => {
         return <MoneyRequestsManager />;
 
       case "withdrawals":
-        return <WithdrawalRequestsManager />;
+        return <UnifiedWithdrawalManager />;
 
       case "advances":
         return (

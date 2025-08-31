@@ -46,7 +46,7 @@ export const useUserAccount = () => {
   console.log('👤 useUserAccount - user object:', user);
 
   const fetchUserAccount = async () => {
-    if (!user?.id) {
+    if (!user?.email) {
       setLoading(false);
       return;
     }
@@ -54,75 +54,74 @@ export const useUserAccount = () => {
     console.log('🔍 fetchUserAccount called for user:', { id: user.id, email: user.email });
 
     try {
-      // Map user Supabase IDs to their ledger user_ids
-      let ledgerUserId = user.id; // Default to Supabase ID
+      // Use the unified function to get balance data
+      const { data: balanceData, error: balanceError } = await supabase
+        .rpc('get_user_balance_data', { user_email: user.email });
       
-      // Special mappings for users with different ledger IDs
-      if (user.id === 'JSxZYOSxmde6Cqra4clQNc92mRS2' || user.email === 'bwambaledenis8@gmail.com') {
-        ledgerUserId = 'JSxZYOSxmde6Cqra4clQNc92mRS2'; // Denis uses Firebase ID
-      } else if (user.email === 'nicholusscottlangz@gmail.com') {
-        ledgerUserId = 'kibaba_nicholus_temp_id'; // Kibaba uses temp ID
-      } else if (user.email === 'alextumwine@gmail.com') {
-        ledgerUserId = 'alex_tumwine_temp_id'; // Tumwine uses temp ID  
+      if (balanceError) {
+        console.error('Error fetching balance data:', balanceError);
+        throw balanceError;
       }
-
-      console.log('💰 Fetching account data for ledgerUserId:', ledgerUserId);
-
-      // Calculate wallet balance from ledger entries
-      const { data: ledgerEntries, error: ledgerError } = await supabase
-        .from('ledger_entries')
-        .select('amount')
-        .eq('user_id', ledgerUserId);
-
-      const walletBalance = ledgerEntries?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
-
-      // Calculate pending withdrawals using Supabase ID (withdrawal requests use Supabase IDs)
-      const { data: pendingWithdrawals, error: withdrawalError } = await supabase
-        .from('withdrawal_requests')
-        .select('amount')
-        .eq('user_id', user.id)
-        .in('status', ['pending', 'approved', 'processing']);
-
-      const pendingAmount = pendingWithdrawals?.reduce((sum, req) => sum + (req.amount || 0), 0) || 0;
-      const availableToRequest = Math.max(0, walletBalance - pendingAmount);
-
-      console.log('💰 Account calculations for', user.email, ':', {
-        walletBalance,
-        pendingAmount, 
-        availableToRequest,
-        ledgerUserId,
-        errors: { ledgerError, withdrawalError }
-      });
-
-      const accountData: UserAccount = {
-        id: `account-${user.id}`,
-        user_id: user.id,
-        wallet_balance: walletBalance,
-        pending_withdrawals: pendingAmount,
-        available_to_request: availableToRequest,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      setAccount(accountData);
-
-      // Fetch money requests and withdrawal requests using Supabase ID
+      
+      console.log('💰 Balance data from unified function:', balanceData);
+      
+      const userData = balanceData?.[0];
+      if (userData) {
+        const accountData: UserAccount = {
+          id: `account-${user.id}`,
+          user_id: user.id,
+          wallet_balance: Number(userData.wallet_balance) || 0,
+          pending_withdrawals: Number(userData.pending_withdrawals) || 0,
+          available_to_request: Number(userData.available_balance) || 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        setAccount(accountData);
+        
+        console.log('✅ Account loaded successfully for', user.email, 'Balance:', userData.wallet_balance);
+      } else {
+        // No data found, set default values
+        const defaultAccount: UserAccount = {
+          id: `temp-${user.id}`,
+          user_id: user.id,
+          wallet_balance: 0,
+          pending_withdrawals: 0,
+          available_to_request: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        setAccount(defaultAccount);
+        console.log('⚠️ No balance data found for', user.email, 'using defaults');
+      }
+      
+      // Get unified user ID for withdrawal requests
+      const { data: userIdData, error: userIdError } = await supabase
+        .rpc('get_unified_user_id', { input_email: user.email });
+      
+      if (userIdError) {
+        console.error('Error getting unified user ID:', userIdError);
+        return;
+      }
+      
+      const unifiedUserId = userIdData || user.id;
+      console.log('🆔 Using unified user ID:', unifiedUserId);
+      
+      // Fetch money requests using Supabase ID
       const { data: moneyRequestsData } = await supabase
         .from('money_requests')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
+      // Fetch withdrawal requests using unified user ID
       const { data: withdrawalRequestsData } = await supabase
         .from('withdrawal_requests')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', unifiedUserId)
         .order('created_at', { ascending: false });
 
       setMoneyRequests(moneyRequestsData || []);
       setWithdrawalRequests(withdrawalRequestsData || []);
-      
-      console.log('✅ Account loaded successfully for', user.email, 'Balance:', walletBalance);
       
     } catch (error: any) {
       console.error('❌ Error fetching user account:', error);
@@ -179,7 +178,7 @@ export const useUserAccount = () => {
   };
 
   const createWithdrawalRequest = async (amount: number, phoneNumber: string, channel: string = 'ZENGAPAY') => {
-    if (!user?.id || !account) return;
+    if (!user?.email || !account) return;
 
     if (amount > account.available_to_request) {
       toast({
@@ -191,13 +190,23 @@ export const useUserAccount = () => {
     }
 
     try {
+      // Get unified user ID for withdrawal requests
+      const { data: userIdData, error: userIdError } = await supabase
+        .rpc('get_unified_user_id', { input_email: user.email });
+      
+      if (userIdError) {
+        throw new Error('Error getting user ID');
+      }
+      
+      const unifiedUserId = userIdData || user.id;
+      
       // Generate request reference
       const requestRef = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
       
       const { error } = await supabase
         .from('withdrawal_requests')
         .insert([{
-          user_id: user.id,
+          user_id: unifiedUserId,
           amount,
           phone_number: phoneNumber,
           channel,
