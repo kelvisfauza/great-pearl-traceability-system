@@ -71,9 +71,9 @@ const Navigation = () => {
   
   const navigationItems = [
     {
-      title: "Operations",
+      title: "Operations", 
       items: [
-        { name: "Dashboard", icon: BarChart3, path: "/", permission: "Reports" }, // Dashboard requires Reports permission
+        { name: "Dashboard", icon: BarChart3, path: "/", permission: "Reports" },
         { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permission: "Quality Control" },
         { name: "Store Management", icon: Shield, path: "/store", permission: "Store Management" },
         { name: "Milling", icon: Coffee, path: "/milling", permission: "Milling" },
@@ -95,7 +95,7 @@ const Navigation = () => {
       title: "System",
       items: [
         { name: "Reports", icon: FileText, path: "/reports", permission: "Reports" },
-        { name: "Settings", icon: Settings, path: "/settings", permission: "Reports" }, // Settings requires Reports permission
+        { name: "Settings", icon: Settings, path: "/settings", permission: "Reports" },
         { name: "Logistics", icon: Truck, path: "/logistics", permission: "Logistics" },
       ]
     }
@@ -112,6 +112,32 @@ const Navigation = () => {
     }
     
     console.log('🔍 Filtering navigation for employee:', employee);
+    console.log('🔍 Employee permissions:', employee.permissions);
+    console.log('🔍 IsAdmin result:', isAdmin());
+    
+    // For Kibaba, ensure he has access to his specific items
+    if (employee.email === 'nicholusscottlangz@gmail.com') {
+      console.log('🎯 Processing navigation for Kibaba specifically');
+      const kibabaSections = navigationItems.map(section => ({
+        ...section,
+        items: section.items.filter(item => {
+          const hasAccess = !item.permission || 
+                           isAdmin() || 
+                           hasPermission(item.permission) ||
+                           (item.permission === 'Quality Control' && employee.permissions?.includes('Quality Control')) ||
+                           (item.permission === 'Store Management' && employee.permissions?.includes('Store Management')) ||
+                           (item.permission === 'Reports' && employee.permissions?.includes('Reports')) ||
+                           (item.permission === 'Milling' && employee.permissions?.includes('Milling')) ||
+                           (item.permission === 'Inventory' && employee.permissions?.includes('Inventory'));
+          
+          console.log(`🔍 Item ${item.name} (${item.permission}): hasAccess=${hasAccess}`);
+          return hasAccess;
+        })
+      })).filter(section => section.items.length > 0);
+      
+      console.log('🎯 Kibaba filtered sections:', kibabaSections);
+      return kibabaSections;
+    }
     
     return navigationItems.map(section => ({
       ...section,
