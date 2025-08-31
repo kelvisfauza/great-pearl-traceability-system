@@ -61,18 +61,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const email = userEmail || user?.email;
     
     if (!email || !targetUserId) {
-      console.log('❌ fetchEmployeeData - missing user data');
       return null;
     }
 
     // Normalize email consistently
     const normalizedEmail = email.toLowerCase().trim();
     
-    console.log('🔍 Checking user:', normalizedEmail);
-
     // HARDCODED MAIN ADMIN - No database lookup needed
     if (ADMIN_EMAILS.includes(normalizedEmail)) {
-      console.log('🔧 MAIN ADMIN DETECTED - Hardcoded permissions');
       const mainAdminProfile: Employee = {
         id: 'main-admin',
         name: 'Main Administrator',
@@ -113,8 +109,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (employeeData) {
-        console.log('✅ Found employee record:', employeeData.name);
-        
         const employee: Employee = {
           id: employeeData.id,
           name: employeeData.name,
@@ -138,7 +132,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return employee;
       }
 
-      console.log('❌ No employee record found for:', normalizedEmail);
       return null;
     } catch (error) {
       console.error('Error fetching employee data:', error);
@@ -149,8 +142,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      console.log('🔐 Attempting Supabase login for:', email);
-
+      
       // Normalize email
       const normalizedEmail = email.toLowerCase().trim();
       
@@ -160,7 +152,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) {
-        console.error('❌ Supabase login failed:', error);
         toast({
           title: "Login Failed",
           description: error.message || "Invalid email or password",
@@ -173,25 +164,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error('No user returned from authentication');
       }
 
-      console.log('✅ Supabase login successful for:', data.user.email);
-
       // Set user and session immediately
       setUser(data.user);
       setSession(data.session);
 
       // Fetch employee data
-      const employeeData = await fetchEmployeeData(data.user.id);
+      const employeeData = await fetchEmployeeData(data.user.id, data.user.email);
       
       if (employeeData) {
         setEmployee(employeeData);
-        console.log('✅ Employee data loaded:', employeeData.name);
-        
         toast({
           title: "Login Successful",
           description: `Welcome back, ${employeeData.name}!`
         });
       } else {
-        console.log('⚠️ No employee record found, creating basic user');
         // Create a basic user record
         const basicEmployee: Employee = {
           id: data.user.id,
@@ -233,8 +219,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async (): Promise<void> => {
     try {
-      console.log('🚪 Signing out user');
-      
       await supabase.auth.signOut();
       
       setUser(null);
@@ -255,60 +239,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Set up Supabase auth state listener
+  // Simple auth state listener
   useEffect(() => {
-    let isMounted = true;
-
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!isMounted) return;
-        
         if (session?.user) {
           setUser(session.user);
           setSession(session);
           
-          // Fetch employee data
           const employeeData = await fetchEmployeeData(session.user.id, session.user.email);
-          if (isMounted) {
-            setEmployee(employeeData);
-            setLoading(false);
-          }
+          setEmployee(employeeData);
         } else {
-          if (isMounted) {
-            setUser(null);
-            setSession(null);
-            setEmployee(null);
-            setLoading(false);
-          }
+          setUser(null);
+          setSession(null);
+          setEmployee(null);
         }
+        setLoading(false);
       }
     );
 
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!isMounted) return;
-      
       if (session?.user) {
         setUser(session.user);
         setSession(session);
         
         const employeeData = await fetchEmployeeData(session.user.id, session.user.email);
-        if (isMounted) {
-          setEmployee(employeeData);
-          setLoading(false);
-        }
-      } else {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setEmployee(employeeData);
       }
+      setLoading(false);
     });
 
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const hasPermission = (permission: string): boolean => {
