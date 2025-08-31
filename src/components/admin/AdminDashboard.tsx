@@ -11,6 +11,8 @@ import { WithdrawalOversight } from './WithdrawalOversight';
 import RoleAssignmentManager from './RoleAssignmentManager';
 import PermissionOverview from './PermissionOverview';
 import { DailySalaryManager } from './DailySalaryManager';
+import UserPermissionsList from './UserPermissionsList';
+import QuickPermissionAssignment from './QuickPermissionAssignment';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -149,7 +151,15 @@ const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="permissions" className="space-y-6">
-          <RoleAssignmentManager />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <UserPermissionsList />
+            </div>
+            <div className="space-y-6">
+              <QuickPermissionAssignment />
+              <RoleAssignmentManager />
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="approvals" className="space-y-6">

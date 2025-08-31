@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { Shield } from 'lucide-react';
-import UnifiedPermissionManager from '@/components/admin/UnifiedPermissionManager';
+import UserPermissionsList from '@/components/admin/UserPermissionsList';
 
 const RoleManagement = () => {
   const { isAdmin } = useAuth();
@@ -21,12 +21,7 @@ const RoleManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> Permission management has been unified. Use the Admin Dashboard → User Permissions for comprehensive management.
-        </p>
-      </div>
-      <UnifiedPermissionManager />
+      <UserPermissionsList />
     </div>
   );
 };

@@ -27,6 +27,7 @@ import FieldOperations from "./pages/FieldOperations";
 import Processing from "./pages/Processing";
 import ITDepartment from "./pages/ITDepartment";
 import Milling from "./pages/Milling";
+import PermissionManagement from "./pages/PermissionManagement";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 
 // Error Handler Component
@@ -135,6 +136,11 @@ const App: React.FC = () => {
                 <Route path="/settings" element={
                   <ProtectedRoute>
                     <Settings />
+                  </ProtectedRoute>
+                } />
+                <Route path="/permissions" element={
+                  <ProtectedRoute requiredPermissions={["Permission Management"]}>
+                    <PermissionManagement />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFound />} />
