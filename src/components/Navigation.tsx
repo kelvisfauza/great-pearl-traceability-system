@@ -135,6 +135,20 @@ const Navigation = () => {
     console.log('Filtered navigation items for Denis:', filteredNavigationItems);
   }
 
+  // Debug logging for Kibaba to track permission loading
+  if (employee?.email === 'nicholusscottlangz@gmail.com') {
+    console.log('=== KIBABA NAVIGATION DEBUG ===');
+    console.log('Kibaba Employee Data:', employee);
+    console.log('Kibaba permissions array:', employee?.permissions);
+    console.log('Has Quality Control permission:', hasPermission('Quality Control'));
+    console.log('Has Milling permission:', hasPermission('Milling'));
+    console.log('Has Reports permission:', hasPermission('Reports'));
+    console.log('Has Store Management permission:', hasPermission('Store Management'));
+    console.log('Has Inventory permission:', hasPermission('Inventory'));
+    console.log('Is Admin:', isAdmin());
+    console.log('Filtered navigation items for Kibaba:', filteredNavigationItems);
+  }
+
   const handleLogout = async () => {
     try {
       await signOut();
