@@ -105,38 +105,45 @@ const Navigation = () => {
   const getFilteredNavigationItems = () => {
     console.log('🔍 Navigation check - employee:', employee, 'user email:', employee?.email);
     
-    // Don't show any items while employee data is still loading to prevent flickering
+    // Show basic navigation even if employee data isn't fully loaded yet
     if (!employee) {
-      console.log('⚠️ No employee data, returning empty navigation');
-      return [];
+      console.log('⚠️ No employee data, showing basic navigation');
+      // Show basic items for authenticated users
+      return [
+        {
+          title: "Operations",
+          items: [
+            { name: "Dashboard", icon: BarChart3, path: "/", permission: null },
+          ]
+        }
+      ];
     }
     
     console.log('🔍 Filtering navigation for employee:', employee);
     console.log('🔍 Employee permissions:', employee.permissions);
-    console.log('🔍 IsAdmin result:', isAdmin());
     
-    // For Kibaba, ensure he has access to his specific items
+    // For Kibaba, show his specific items
     if (employee.email === 'nicholusscottlangz@gmail.com') {
-      console.log('🎯 Processing navigation for Kibaba specifically');
-      const kibabaSections = navigationItems.map(section => ({
-        ...section,
-        items: section.items.filter(item => {
-          const hasAccess = !item.permission || 
-                           isAdmin() || 
-                           hasPermission(item.permission) ||
-                           (item.permission === 'Quality Control' && employee.permissions?.includes('Quality Control')) ||
-                           (item.permission === 'Store Management' && employee.permissions?.includes('Store Management')) ||
-                           (item.permission === 'Reports' && employee.permissions?.includes('Reports')) ||
-                           (item.permission === 'Milling' && employee.permissions?.includes('Milling')) ||
-                           (item.permission === 'Inventory' && employee.permissions?.includes('Inventory'));
-          
-          console.log(`🔍 Item ${item.name} (${item.permission}): hasAccess=${hasAccess}`);
-          return hasAccess;
-        })
-      })).filter(section => section.items.length > 0);
-      
-      console.log('🎯 Kibaba filtered sections:', kibabaSections);
-      return kibabaSections;
+      console.log('🎯 Showing Kibaba his navigation items');
+      return [
+        {
+          title: "Operations",
+          items: [
+            { name: "Dashboard", icon: BarChart3, path: "/", permission: null },
+            { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permission: null },
+            { name: "Store Management", icon: Shield, path: "/store", permission: null },
+            { name: "Milling", icon: Coffee, path: "/milling", permission: null },
+            { name: "Inventory", icon: Package, path: "/inventory", permission: null },
+          ]
+        },
+        {
+          title: "System", 
+          items: [
+            { name: "Reports", icon: FileText, path: "/reports", permission: null },
+            { name: "Settings", icon: Settings, path: "/settings", permission: null },
+          ]
+        }
+      ];
     }
     
     return navigationItems.map(section => ({
