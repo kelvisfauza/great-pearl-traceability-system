@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .from('employees')
           .select('*')
           .eq('email', normalizedEmail)
-          .single();
+          .maybeSingle();
 
         if (employeeData) {
           console.log('✅ Found admin in Supabase:', employeeData.name);
@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('employees')
         .select('*')
         .eq('email', normalizedEmail)
-        .single();
+        .maybeSingle();
 
       if (error || !employeeData) {
         console.log('❌ No employee record found for:', normalizedEmail);
@@ -281,48 +281,79 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Set up Supabase auth state listener
   useEffect(() => {
     console.log('🎯 Setting up Supabase auth listener');
+    let isMounted = true;
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 Auth state changed:', event, session?.user?.email);
         
+        if (!isMounted) return;
+        
         if (session?.user) {
           setUser(session.user);
           setSession(session);
           
           // Fetch employee data for the authenticated user
-          const employeeData = await fetchEmployeeData(session.user.id);
-          setEmployee(employeeData);
+          try {
+            const employeeData = await fetchEmployeeData(session.user.id);
+            if (isMounted) {
+              setEmployee(employeeData);
+              setLoading(false);
+            }
+          } catch (error) {
+            console.error('Error fetching employee data:', error);
+            if (isMounted) {
+              setEmployee(null);
+              setLoading(false);
+            }
+          }
         } else {
-          setUser(null);
-          setSession(null);
-          setEmployee(null);
+          if (isMounted) {
+            setUser(null);
+            setSession(null);
+            setEmployee(null);
+            setLoading(false);
+          }
         }
-        
-        setLoading(false);
       }
     );
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       console.log('🎯 Initial session check:', session?.user?.email);
+      
+      if (!isMounted) return;
       
       if (session?.user) {
         setUser(session.user);
         setSession(session);
         
         // Fetch employee data
-        fetchEmployeeData(session.user.id).then(employeeData => {
-          setEmployee(employeeData);
-          setLoading(false);
-        });
+        try {
+          const employeeData = await fetchEmployeeData(session.user.id);
+          if (isMounted) {
+            setEmployee(employeeData);
+            setLoading(false);
+          }
+        } catch (error) {
+          console.error('Error fetching initial employee data:', error);
+          if (isMounted) {
+            setEmployee(null);
+            setLoading(false);
+          }
+        }
       } else {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const hasPermission = (permission: string): boolean => {
