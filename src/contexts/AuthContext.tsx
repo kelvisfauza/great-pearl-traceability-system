@@ -72,8 +72,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     console.log('🔍 Fetching employee data for:', normalizedEmail);
 
-    // Check if this is an admin account
+    // Check if this is an admin account and fallback to Supabase data
     if (ADMIN_EMAILS.includes(normalizedEmail)) {
+      console.log('🔑 Admin account detected, fetching from Supabase');
+      
+      try {
+        // First try to get from Supabase
+        const { data: employeeData, error } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('email', normalizedEmail)
+          .single();
+
+        if (employeeData) {
+          console.log('✅ Found admin in Supabase:', employeeData.name);
+          return {
+            id: employeeData.id,
+            name: employeeData.name,
+            email: employeeData.email,
+            phone: employeeData.phone || '',
+            position: employeeData.position,
+            department: employeeData.department,
+            salary: employeeData.salary || 0,
+            role: employeeData.role,
+            permissions: employeeData.permissions || ['*'],
+            status: employeeData.status,
+            join_date: employeeData.join_date || new Date().toISOString(),
+            isOneTimePassword: false,
+            mustChangePassword: false,
+            authUserId: targetUserId
+          };
+        }
+      } catch (supabaseError) {
+        console.log('⚠️ Admin not in Supabase, using fallback profile');
+      }
+
+      // Fallback admin profile if not in Supabase
       const adminProfile: Employee = {
         id: 'main-admin',
         name: 'Main Administrator',
