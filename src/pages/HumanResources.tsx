@@ -18,7 +18,7 @@ import {
   UserCheck
 } from 'lucide-react';
 
-import { useCombinedEmployees } from '@/hooks/useCombinedEmployees';
+import { useUnifiedEmployees } from '@/hooks/useUnifiedEmployees';
 import { useAuth } from '@/contexts/AuthContext';
 import EmployeeList from '@/components/hr/EmployeeList';
 import EmployeeStatsCards from '@/components/hr/EmployeeStatsCards';
@@ -45,7 +45,16 @@ const HumanResources = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
 
-  const { employees, loading, addEmployee, updateEmployee, deleteEmployee, stats } = useCombinedEmployees();
+  const { 
+    employees, 
+    loading, 
+    createEmployee, 
+    updateEmployee, 
+    deleteEmployee,
+    searchEmployees,
+    getEmployeeByEmail,
+    stats
+  } = useUnifiedEmployees();
   const { canManageEmployees, isAdmin } = useAuth();
 
   const filteredEmployees = employees.filter(employee => {
@@ -85,7 +94,7 @@ const HumanResources = () => {
       if (selectedEmployee) {
         await updateEmployee(selectedEmployee.id, employeeData);
       } else {
-        await addEmployee(employeeData);
+        await createEmployee(employeeData);
       }
       setShowAddModal(false);
       setSelectedEmployee(null);

@@ -3,12 +3,12 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2 } from "lucide-react";
-import { Employee } from "@/hooks/useEmployees";
+import { UnifiedEmployee } from "@/hooks/useUnifiedEmployees";
 
 interface UserListProps {
-  employees: Employee[];
-  onEdit: (employee: Employee) => void;
-  onDelete: (employee: Employee) => void;
+  employees: UnifiedEmployee[];
+  onEdit: (employee: UnifiedEmployee) => void;
+  onDelete: (employee: UnifiedEmployee) => void;
 }
 
 export default function UserList({ employees, onEdit, onDelete }: UserListProps) {

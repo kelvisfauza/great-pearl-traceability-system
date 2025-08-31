@@ -2156,14 +2156,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      award_activity_reward: {
-        Args: { activity_name: string; user_uuid: string }
-        Returns: Json
-      }
-      award_daily_login_reward: {
-        Args: { user_uuid: string }
-        Returns: Json
-      }
       calculate_daily_salary_credit: {
         Args: { employee_salary: number }
         Returns: number

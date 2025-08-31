@@ -2,13 +2,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, User, DollarSign, UserPlus, Shield } from "lucide-react";
-import { useEmployees } from "@/hooks/useEmployees";
+import { useUnifiedEmployees } from "@/hooks/useUnifiedEmployees";
 import { useSalaryPayments } from "@/hooks/useSalaryPayments";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 
 const RecentActivity = () => {
-  const { employees } = useEmployees();
+  const { employees } = useUnifiedEmployees();
   const { paymentRequests } = useSalaryPayments();
   const { hasRole, hasPermission } = useAuth();
 

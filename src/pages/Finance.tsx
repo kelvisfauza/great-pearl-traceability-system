@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText, Receipt, Banknote, PlusCircle, Users, AlertTriangle, Clock, CheckCircle, Activity, Target, Wallet } from "lucide-react";
-import { useFinanceData } from "@/hooks/useFinanceData";
+import { useFirebaseFinance as useFinanceData } from "@/hooks/useFirebaseFinance";
 import { useDailyTasks } from "@/hooks/useDailyTasks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";

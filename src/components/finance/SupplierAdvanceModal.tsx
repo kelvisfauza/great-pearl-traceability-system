@@ -9,7 +9,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFinanceData } from '@/hooks/useFinanceData';
+import { useFirebaseFinance } from '@/hooks/useFirebaseFinance';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { format } from 'date-fns';
 
@@ -26,7 +26,7 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
   const [calendarOpen, setCalendarOpen] = useState(false);
   
   const { suppliers, loading: suppliersLoading } = useSuppliers();
-  const { addSupplierAdvance } = useFinanceData();
+  const { addSupplierAdvance } = useFirebaseFinance();
   const { toast } = useToast();
 
   const handleSubmit = async () => {

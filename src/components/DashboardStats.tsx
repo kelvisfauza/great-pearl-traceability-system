@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Coffee, TrendingUp, Package, DollarSign, Users, Shield, Building, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEmployees } from "@/hooks/useEmployees";
+import { useUnifiedEmployees } from "@/hooks/useUnifiedEmployees";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useState, useEffect } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -12,7 +12,7 @@ import { firebaseClient } from "@/lib/firebaseClient";
 
 const DashboardStats = () => {
   const { hasRole, hasPermission, employee } = useAuth();
-  const { employees } = useEmployees();
+  const { employees } = useUnifiedEmployees();
   const { requests } = useApprovalRequests();
 
   const [realTimeData, setRealTimeData] = useState({

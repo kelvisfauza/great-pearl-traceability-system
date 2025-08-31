@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { UserPlus, Shield, AlertTriangle } from "lucide-react";
-import { useEmployees, Employee } from "@/hooks/useEmployees";
+import { useUnifiedEmployees, UnifiedEmployee } from "@/hooks/useUnifiedEmployees";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { useSecureEmployees } from '@/hooks/useSecureEmployees';
@@ -15,7 +15,7 @@ import EditUserForm from './EditUserForm';
 import UserList from './UserList';
 
 interface UserManagementProps {
-  employees: Employee[];
+  employees: UnifiedEmployee[];
   onEmployeeAdded: (employee: any) => Promise<void>;
   onEmployeeUpdated: (id: string, updates: any) => Promise<void>;
   onEmployeeDeleted: (id: string) => Promise<void>;
@@ -24,9 +24,9 @@ interface UserManagementProps {
 export default function UserManagement({ employees, onEmployeeAdded, onEmployeeUpdated, onEmployeeDeleted }: UserManagementProps) {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<UnifiedEmployee | null>(null);
   const { toast } = useToast();
-  const { refetch } = useEmployees();
+  const { refetch } = useUnifiedEmployees();
   const { isAdmin } = useAuth();
   const { addEmployee } = useSecureEmployees();
 
@@ -149,7 +149,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     }
   };
 
-  const handleDeleteUser = async (employee: Employee) => {
+  const handleDeleteUser = async (employee: UnifiedEmployee) => {
     if (window.confirm(`Are you sure you want to delete ${employee.name}? This action cannot be undone.`)) {
       try {
         await onEmployeeDeleted(employee.id);
@@ -169,7 +169,7 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     }
   };
 
-  const openEditModal = (employee: Employee) => {
+  const openEditModal = (employee: UnifiedEmployee) => {
     setSelectedEmployee(employee);
     setIsEditModalOpen(true);
   };

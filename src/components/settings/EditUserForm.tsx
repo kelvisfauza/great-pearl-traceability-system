@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Employee } from "@/hooks/useEmployees";
+import { UnifiedEmployee } from "@/hooks/useUnifiedEmployees";
 
 const editUserFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -35,7 +35,7 @@ const departments = [
 ];
 
 interface EditUserFormProps {
-  employee: Employee;
+  employee: UnifiedEmployee;
   onSubmit: (data: EditUserFormValues) => Promise<void>;
   onCancel: () => void;
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useUserWallet } from '@/hooks/useUserWallet';
 
 interface UserAccount {
   id: string;
@@ -38,74 +39,28 @@ export const useUserAccount = () => {
   
   const [account, setAccount] = useState<UserAccount | null>(null);
   const [moneyRequests, setMoneyRequests] = useState<MoneyRequest[]>([]);
-  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Use the unified wallet system
+  const { 
+    walletData, 
+    withdrawalRequests, 
+    loading: walletLoading, 
+    createWithdrawalRequest,
+    refreshWallet 
+  } = useUserWallet();
 
   console.log('👤 useUserAccount - user object:', user);
 
   const fetchUserAccount = async () => {
     if (!user?.email) {
-      setLoading(false);
       return;
     }
 
     console.log('🔍 fetchUserAccount called for user:', { id: user.id, email: user.email });
 
     try {
-      // Use the safer unified function to get balance data
-      const { data: balanceData, error: balanceError } = await supabase
-        .rpc('get_user_balance_safe', { user_email: user.email });
-      
-      if (balanceError) {
-        console.error('Error fetching balance data:', balanceError);
-        throw balanceError;
-      }
-      
-      console.log('💰 Balance data from unified function:', balanceData);
-      
-      const userData = balanceData?.[0];
-      if (userData) {
-        const accountData: UserAccount = {
-          id: `account-${user.id}`,
-          user_id: user.id,
-          wallet_balance: Number(userData.wallet_balance) || 0,
-          pending_withdrawals: Number(userData.pending_withdrawals) || 0,
-          available_to_request: Number(userData.available_balance) || 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        setAccount(accountData);
-        
-        console.log('✅ Account loaded successfully for', user.email, 'Balance:', userData.wallet_balance);
-      } else {
-        // No data found, set default values
-        const defaultAccount: UserAccount = {
-          id: `temp-${user.id}`,
-          user_id: user.id,
-          wallet_balance: 0,
-          pending_withdrawals: 0,
-          available_to_request: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        setAccount(defaultAccount);
-        console.log('⚠️ No balance data found for', user.email, 'using defaults');
-      }
-      
-      // Get unified user ID for withdrawal requests
-      const { data: userIdData, error: userIdError } = await supabase
-        .rpc('get_unified_user_id', { input_email: user.email });
-      
-      if (userIdError) {
-        console.error('Error getting unified user ID:', userIdError);
-        return;
-      }
-      
-      const unifiedUserId = userIdData || user.id;
-      console.log('🆔 Using unified user ID:', unifiedUserId);
-      
       // Fetch money requests using Supabase ID
       const { data: moneyRequestsData } = await supabase
         .from('money_requests')
@@ -113,30 +68,25 @@ export const useUserAccount = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      // Fetch withdrawal requests using unified user ID
-      const { data: withdrawalRequestsData } = await supabase
-        .from('withdrawal_requests')
-        .select('*')
-        .eq('user_id', unifiedUserId)
-        .order('created_at', { ascending: false });
-
       setMoneyRequests(moneyRequestsData || []);
-      setWithdrawalRequests(withdrawalRequestsData || []);
+      
+      // Convert wallet data to account format for compatibility
+      if (walletData) {
+        const accountData: UserAccount = {
+          id: `account-${user.id}`,
+          user_id: user.id,
+          wallet_balance: walletData.balance,
+          pending_withdrawals: walletData.pendingWithdrawals,
+          available_to_request: walletData.availableToRequest,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        setAccount(accountData);
+        console.log('✅ Account synced with wallet data for', user.email, 'Balance:', walletData.balance);
+      }
       
     } catch (error: any) {
-      console.error('❌ Error fetching user account:', error);
-      // Provide default account even on error
-      setAccount({
-        id: `temp-${user.id}`,
-        user_id: user.id,
-        wallet_balance: 0,
-        pending_withdrawals: 0,
-        available_to_request: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-    } finally {
-      setLoading(false);
+      console.error('❌ Error fetching money requests:', error);
     }
   };
 
@@ -177,58 +127,8 @@ export const useUserAccount = () => {
     }
   };
 
-  const createWithdrawalRequest = async (amount: number, phoneNumber: string, channel: string = 'ZENGAPAY') => {
-    if (!user?.email || !account) return;
-
-    if (amount > account.available_to_request) {
-      toast({
-        title: "Insufficient Available Balance",
-        description: `You can only request UGX ${account.available_to_request.toLocaleString()}. This prevents double-spending while you have pending withdrawals.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Get unified user ID for withdrawal requests
-      const { data: userIdData, error: userIdError } = await supabase
-        .rpc('get_unified_user_id', { input_email: user.email });
-      
-      if (userIdError) {
-        throw new Error('Error getting user ID');
-      }
-      
-      const unifiedUserId = userIdData || user.id;
-      
-      // Generate request reference
-      const requestRef = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
-      
-      const { error } = await supabase
-        .from('withdrawal_requests')
-        .insert([{
-          user_id: unifiedUserId,
-          amount,
-          phone_number: phoneNumber,
-          channel,
-          request_ref: requestRef,
-          printed_at: new Date().toISOString()
-        }]);
-
-      if (error) throw error;
-
-      // Show success popup with reference number
-      showWithdrawalSuccessPopup(requestRef, amount, phoneNumber, channel);
-
-      fetchUserAccount(); // Refresh data
-    } catch (error: any) {
-      console.error('Error creating withdrawal request:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit withdrawal request",
-        variant: "destructive",
-      });
-    }
-  };
+  // Use the unified wallet's withdrawal creation function
+  const handleWithdrawalRequest = createWithdrawalRequest;
 
   const showWithdrawalSuccessPopup = (requestRef: string, amount: number, phoneNumber: string, channel: string) => {
     toast({
@@ -289,15 +189,18 @@ export const useUserAccount = () => {
       fetchUserAccount();
       trackLogin(); // Track login when component mounts
     }
-  }, [user]);
+  }, [user, walletData]);
 
   return {
     account,
     moneyRequests,
     withdrawalRequests,
-    loading,
+    loading: walletLoading,
     createMoneyRequest,
-    createWithdrawalRequest,
-    refreshAccount: fetchUserAccount
+    createWithdrawalRequest: handleWithdrawalRequest,
+    refreshAccount: () => {
+      fetchUserAccount();
+      refreshWallet();
+    }
   };
 };

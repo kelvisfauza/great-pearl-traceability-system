@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Banknote } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFinanceData } from '@/hooks/useFinanceData';
+import { useFirebaseFinance } from '@/hooks/useFirebaseFinance';
 
 interface CashManagementModalProps {
   open: boolean;
@@ -17,7 +17,7 @@ const CashManagementModal: React.FC<CashManagementModalProps> = ({ open, onClose
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<'Float' | 'Cash'>('Float');
-  const { addTransaction } = useFinanceData();
+  const { addTransaction } = useFirebaseFinance();
   const { toast } = useToast();
 
   const handleSubmit = async () => {

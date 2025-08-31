@@ -1,13 +1,13 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
-import { useEmployees } from "@/hooks/useEmployees";
+import { useUnifiedEmployees } from "@/hooks/useUnifiedEmployees";
 import { useSalaryPayments } from "@/hooks/useSalaryPayments";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useState, useEffect } from "react";
 
 const PerformanceOverview = () => {
-  const { employees } = useEmployees();
+  const { employees } = useUnifiedEmployees();
   const { paymentRequests } = useSalaryPayments();
   const { requests } = useApprovalRequests();
   
