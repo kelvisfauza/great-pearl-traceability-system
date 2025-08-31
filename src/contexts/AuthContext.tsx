@@ -132,7 +132,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return employee;
       }
 
-      return null;
+      // If no employee record found, create a basic user profile
+      const basicEmployee: Employee = {
+        id: targetUserId,
+        name: normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        position: 'Staff',
+        department: 'General',
+        salary: 0,
+        role: 'User',
+        permissions: ['General Access'],
+        status: 'Active',
+        join_date: new Date().toISOString(),
+        isOneTimePassword: false,
+        mustChangePassword: false,
+        authUserId: targetUserId
+      };
+      
+      return basicEmployee;
     } catch (error) {
       console.error('Error fetching employee data:', error);
       return null;
@@ -204,56 +221,71 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-        
-        if (session?.user) {
-          setUser(session.user);
-          setSession(session);
-          
-          const employeeData = await fetchEmployeeData(session.user.id, session.user.email);
-          if (mounted) {
-            setEmployee(employeeData);
-          }
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    initializeAuth();
-
-    // Listen for auth changes
+    // Set up auth state listener FIRST - CRITICAL: No async operations here
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!mounted) return;
         
-        if (session?.user) {
-          setUser(session.user);
-          setSession(session);
-          
-          const employeeData = await fetchEmployeeData(session.user.id, session.user.email);
-          if (mounted) {
-            setEmployee(employeeData);
-          }
-        } else {
-          setUser(null);
-          setSession(null);
-          setEmployee(null);
-        }
+        // Only synchronous state updates here
+        setSession(session);
+        setUser(session?.user ?? null);
         
-        if (mounted) {
+        // Defer employee data fetching with setTimeout to prevent deadlock
+        if (session?.user) {
+          setTimeout(() => {
+            if (mounted) {
+              fetchEmployeeData(session.user.id, session.user.email)
+                .then(employeeData => {
+                  if (mounted) {
+                    setEmployee(employeeData);
+                    setLoading(false);
+                  }
+                })
+                .catch(error => {
+                  console.error('Error fetching employee data:', error);
+                  if (mounted) {
+                    setEmployee(null);
+                    setLoading(false);
+                  }
+                });
+            }
+          }, 0);
+        } else {
+          // No user - clear everything immediately
+          setEmployee(null);
           setLoading(false);
         }
       }
     );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchEmployeeData(session.user.id, session.user.email)
+          .then(employeeData => {
+            if (mounted) {
+              setEmployee(employeeData);
+              setLoading(false);
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching employee data:', error);
+            if (mounted) {
+              setEmployee(null);
+              setLoading(false);
+            }
+          });
+      } else {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    });
 
     return () => {
       mounted = false;
