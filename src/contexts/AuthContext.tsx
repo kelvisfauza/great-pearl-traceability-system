@@ -58,17 +58,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   console.log('🔥 AuthProvider - current user:', user?.id, user?.email);
 
-  const fetchEmployeeData = async (userId?: string): Promise<Employee | null> => {
+  const fetchEmployeeData = async (userId?: string, userEmail?: string): Promise<Employee | null> => {
     const targetUserId = userId || user?.id;
-    const userEmail = user?.email;
+    const email = userEmail || user?.email;
     
-    if (!userEmail || !targetUserId) {
+    if (!email || !targetUserId) {
       console.log('❌ fetchEmployeeData - missing user data');
       return null;
     }
 
     // Normalize email consistently
-    const normalizedEmail = userEmail.toLowerCase().trim();
+    const normalizedEmail = email.toLowerCase().trim();
     
     console.log('🔍 Checking user:', normalizedEmail);
 
@@ -287,8 +287,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
           }, 5000); // 5 second timeout
           
-          // Fetch employee data
-          fetchEmployeeData(session.user.id)
+          // Fetch employee data - pass email from session
+          fetchEmployeeData(session.user.id, session.user.email)
             .then(employeeData => {
               if (isMounted) {
                 console.log('✅ Employee data loaded:', employeeData?.name || 'No employee');
@@ -335,8 +335,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         }, 5000);
         
-        // Fetch employee data
-        fetchEmployeeData(session.user.id)
+        // Fetch employee data - pass email from session
+        fetchEmployeeData(session.user.id, session.user.email)
           .then(employeeData => {
             if (isMounted) {
               console.log('✅ Initial employee data loaded:', employeeData?.name || 'No employee');
