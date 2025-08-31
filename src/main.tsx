@@ -6,6 +6,9 @@ import './index.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { useGlobalErrorHandler } from './hooks/useGlobalErrorHandler';
 
+// Import Denis auth fix - this will execute automatically
+import './utils/fixDenisAuthManually';
+
 // Error Handler Component
 const ErrorHandlerInitializer = () => {
   const { initializeErrorHandlers } = useGlobalErrorHandler();
