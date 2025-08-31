@@ -2153,7 +2153,17 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      unified_user_balances: {
+        Row: {
+          auth_user_id: string | null
+          available_balance: number | null
+          email: string | null
+          name: string | null
+          pending_withdrawals: number | null
+          wallet_balance: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       award_activity_reward: {
@@ -2187,6 +2197,10 @@ export type Database = {
       get_pending_withdrawals_text: {
         Args: { user_uuid: string }
         Returns: number
+      }
+      get_unified_user_id: {
+        Args: { input_email: string }
+        Returns: string
       }
       get_wallet_balance_safe: {
         Args: { user_uuid: string }
