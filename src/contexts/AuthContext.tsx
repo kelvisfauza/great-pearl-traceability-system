@@ -70,10 +70,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Normalize email consistently
     const normalizedEmail = userEmail.toLowerCase().trim();
     
-    console.log('🔍 Fetching employee data for:', normalizedEmail, 'with ID:', targetUserId);
+    console.log('🔍 Checking user:', normalizedEmail);
 
+    // HARDCODED MAIN ADMIN - No database lookup needed
+    if (ADMIN_EMAILS.includes(normalizedEmail)) {
+      console.log('🔧 MAIN ADMIN DETECTED - Hardcoded permissions');
+      const mainAdminProfile: Employee = {
+        id: 'main-admin',
+        name: 'Main Administrator',
+        email: normalizedEmail,
+        position: 'System Administrator',
+        department: 'Administration',
+        salary: 0,
+        role: 'Administrator',
+        permissions: ['*'], // All permissions - hardcoded
+        status: 'Active',
+        join_date: new Date().toISOString(),
+        isOneTimePassword: false,
+        mustChangePassword: false,
+        authUserId: targetUserId
+      };
+      return mainAdminProfile;
+    }
+
+    // For other users, check database
+    console.log('🔍 Fetching employee data from database for:', normalizedEmail);
     try {
-      // First try to get from Supabase using auth_user_id
+      // Try to get from Supabase using auth_user_id first
       let { data: employeeData, error } = await supabase
         .from('employees')
         .select('*')
@@ -117,28 +140,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
 
         return employee;
-      }
-
-      // If admin but not found in database, create fallback
-      if (ADMIN_EMAILS.includes(normalizedEmail)) {
-        console.log('🔧 Creating fallback admin profile');
-        const adminProfile: Employee = {
-          id: 'main-admin',
-          name: 'Main Administrator',
-          email: normalizedEmail,
-          position: 'System Administrator',
-          department: 'Administration',
-          salary: 0,
-          role: 'Administrator',
-          permissions: ['*'], // All permissions
-          status: 'Active',
-          join_date: new Date().toISOString(),
-          isOneTimePassword: false,
-          mustChangePassword: false,
-          authUserId: targetUserId
-        };
-
-        return adminProfile;
       }
 
       console.log('❌ No employee record found for:', normalizedEmail);
