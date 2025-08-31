@@ -70,99 +70,79 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Normalize email consistently
     const normalizedEmail = userEmail.toLowerCase().trim();
     
-    console.log('🔍 Fetching employee data for:', normalizedEmail);
+    console.log('🔍 Fetching employee data for:', normalizedEmail, 'with ID:', targetUserId);
 
-    // Check if this is an admin account and fallback to Supabase data
-    if (ADMIN_EMAILS.includes(normalizedEmail)) {
-      console.log('🔑 Admin account detected, fetching from Supabase');
-      
-      try {
-        // First try to get from Supabase
-        const { data: employeeData, error } = await supabase
+    try {
+      // First try to get from Supabase using auth_user_id
+      let { data: employeeData, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('auth_user_id', targetUserId)
+        .maybeSingle();
+
+      // If not found by auth_user_id, try by email
+      if (!employeeData && !error) {
+        console.log('🔄 Trying to find by email instead');
+        const { data: emailData, error: emailError } = await supabase
           .from('employees')
           .select('*')
           .eq('email', normalizedEmail)
           .maybeSingle();
-
-        if (employeeData) {
-          console.log('✅ Found admin in Supabase:', employeeData.name);
-          return {
-            id: employeeData.id,
-            name: employeeData.name,
-            email: employeeData.email,
-            phone: employeeData.phone || '',
-            position: employeeData.position,
-            department: employeeData.department,
-            salary: employeeData.salary || 0,
-            role: employeeData.role,
-            permissions: employeeData.permissions || ['*'],
-            status: employeeData.status,
-            join_date: employeeData.join_date || new Date().toISOString(),
-            isOneTimePassword: false,
-            mustChangePassword: false,
-            authUserId: targetUserId
-          };
-        }
-      } catch (supabaseError) {
-        console.log('⚠️ Admin not in Supabase, using fallback profile');
+        
+        employeeData = emailData;
+        error = emailError;
       }
 
-      // Fallback admin profile if not in Supabase
-      const adminProfile: Employee = {
-        id: 'main-admin',
-        name: 'Main Administrator',
-        email: normalizedEmail,
-        position: 'System Administrator',
-        department: 'Administration',
-        salary: 0,
-        role: 'Administrator',
-        permissions: ['*'], // All permissions
-        status: 'Active',
-        join_date: new Date().toISOString(),
-        isOneTimePassword: false,
-        mustChangePassword: false,
-        authUserId: targetUserId
-      };
+      if (employeeData) {
+        console.log('✅ Found employee record:', employeeData.name);
+        
+        const employee: Employee = {
+          id: employeeData.id,
+          name: employeeData.name,
+          email: employeeData.email,
+          phone: employeeData.phone || '',
+          position: employeeData.position,
+          department: employeeData.department,
+          salary: employeeData.salary || 0,
+          role: employeeData.role,
+          permissions: employeeData.permissions || ['General Access'],
+          status: employeeData.status,
+          join_date: employeeData.join_date,
+          address: employeeData.address,
+          emergency_contact: employeeData.emergency_contact,
+          isOneTimePassword: false,
+          mustChangePassword: false,
+          authUserId: targetUserId,
+          disabled: employeeData.disabled || false
+        };
 
-      return adminProfile;
-    }
-
-    try {
-      // Fetch employee data from Supabase
-      const { data: employeeData, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('email', normalizedEmail)
-        .maybeSingle();
-
-      if (error || !employeeData) {
-        console.log('❌ No employee record found for:', normalizedEmail);
-        return null;
+        return employee;
       }
 
-      console.log('✅ Found employee record:', employeeData.name);
+      // If admin but not found in database, create fallback
+      if (ADMIN_EMAILS.includes(normalizedEmail)) {
+        console.log('🔧 Creating fallback admin profile');
+        const adminProfile: Employee = {
+          id: 'main-admin',
+          name: 'Main Administrator',
+          email: normalizedEmail,
+          position: 'System Administrator',
+          department: 'Administration',
+          salary: 0,
+          role: 'Administrator',
+          permissions: ['*'], // All permissions
+          status: 'Active',
+          join_date: new Date().toISOString(),
+          isOneTimePassword: false,
+          mustChangePassword: false,
+          authUserId: targetUserId
+        };
 
-      const employee: Employee = {
-        id: employeeData.id,
-        name: employeeData.name,
-        email: employeeData.email,
-        phone: employeeData.phone || '',
-        position: employeeData.position,
-        department: employeeData.department,
-        salary: employeeData.salary || 0,
-        role: employeeData.role,
-        permissions: employeeData.permissions || ['General Access'],
-        status: employeeData.status,
-        join_date: employeeData.join_date,
-        address: employeeData.address,
-        emergency_contact: employeeData.emergency_contact,
-        isOneTimePassword: false,
-        mustChangePassword: false,
-        authUserId: targetUserId,
-        disabled: employeeData.disabled || false
-      };
+        return adminProfile;
+      }
 
-      return employee;
+      console.log('❌ No employee record found for:', normalizedEmail);
+      return null;
     } catch (error) {
       console.error('Error fetching employee data:', error);
       return null;
