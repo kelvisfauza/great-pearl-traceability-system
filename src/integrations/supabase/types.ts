@@ -223,6 +223,57 @@ export type Database = {
           },
         ]
       }
+      company_employees: {
+        Row: {
+          address: string | null
+          allowances: number
+          base_salary: number
+          created_at: string
+          deductions: number
+          department: string
+          employee_id: string
+          full_name: string
+          hire_date: string
+          id: string
+          phone: string | null
+          position: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          allowances?: number
+          base_salary?: number
+          created_at?: string
+          deductions?: number
+          department: string
+          employee_id: string
+          full_name: string
+          hire_date?: string
+          id?: string
+          phone?: string | null
+          position: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          allowances?: number
+          base_salary?: number
+          created_at?: string
+          deductions?: number
+          department?: string
+          employee_id?: string
+          full_name?: string
+          hire_date?: string
+          id?: string
+          phone?: string | null
+          position?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contract_approvals: {
         Row: {
           action_type: string
@@ -1645,6 +1696,68 @@ export type Database = {
           total_pay?: number
         }
         Relationships: []
+      }
+      salary_payslips: {
+        Row: {
+          allowances: number
+          base_salary: number
+          created_at: string
+          deductions: number
+          employee_id: string
+          employee_id_number: string
+          employee_name: string
+          generated_date: string
+          gross_salary: number
+          id: string
+          net_salary: number
+          pay_period_month: number
+          pay_period_year: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          allowances?: number
+          base_salary?: number
+          created_at?: string
+          deductions?: number
+          employee_id: string
+          employee_id_number: string
+          employee_name: string
+          generated_date?: string
+          gross_salary?: number
+          id?: string
+          net_salary?: number
+          pay_period_month: number
+          pay_period_year: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          allowances?: number
+          base_salary?: number
+          created_at?: string
+          deductions?: number
+          employee_id?: string
+          employee_id_number?: string
+          employee_name?: string
+          generated_date?: string
+          gross_salary?: number
+          id?: string
+          net_salary?: number
+          pay_period_month?: number
+          pay_period_year?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_payslips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "company_employees"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sales_contracts: {
         Row: {

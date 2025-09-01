@@ -15,10 +15,12 @@ import {
   DollarSign,
   Calendar,
   TrendingUp,
-  UserCheck
+  UserCheck,
+  Building2
 } from 'lucide-react';
 
 import { useUnifiedEmployees } from '@/hooks/useUnifiedEmployees';
+import { useCompanyEmployees } from '@/hooks/useCompanyEmployees';
 import { useAuth } from '@/contexts/AuthContext';
 import EmployeeList from '@/components/hr/EmployeeList';
 import EmployeeStatsCards from '@/components/hr/EmployeeStatsCards';
@@ -34,6 +36,10 @@ import PrintUserDetails from '@/components/hr/PrintUserDetails';
 import CreateTrainingAccountButton from '@/components/admin/CreateTrainingAccountButton';
 import RoleManagement from '@/components/hr/RoleManagement';
 import AccountStatusManager from '@/components/admin/AccountStatusManager';
+import CompanyEmployeesList from '@/components/hr/CompanyEmployeesList';
+import CompanyEmployeesStats from '@/components/hr/CompanyEmployeesStats';
+import AddCompanyEmployeeModal from '@/components/hr/AddCompanyEmployeeModal';
+import PayslipGenerator from '@/components/hr/PayslipGenerator';
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,6 +50,8 @@ const HumanResources = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [showCompanyEmployeeModal, setShowCompanyEmployeeModal] = useState(false);
+  const [selectedCompanyEmployee, setSelectedCompanyEmployee] = useState<any>(null);
 
   const { 
     employees, 
@@ -55,6 +63,18 @@ const HumanResources = () => {
     getEmployeeByEmail,
     stats
   } = useUnifiedEmployees();
+
+  const {
+    employees: companyEmployees,
+    payslips,
+    loading: companyLoading,
+    addEmployee: addCompanyEmployee,
+    updateEmployee: updateCompanyEmployee,
+    deleteEmployee: deleteCompanyEmployee,
+    generateMonthlyPayslips,
+    getEmployeeStats
+  } = useCompanyEmployees();
+
   const { canManageEmployees, isAdmin } = useAuth();
 
   const filteredEmployees = employees.filter(employee => {
@@ -115,6 +135,27 @@ const HumanResources = () => {
     setStatusFilter('all');
   };
 
+  // Company Employee handlers
+  const handleAddCompanyEmployee = () => {
+    setSelectedCompanyEmployee(null);
+    setShowCompanyEmployeeModal(true);
+  };
+
+  const handleEditCompanyEmployee = (employee: any) => {
+    setSelectedCompanyEmployee(employee);
+    setShowCompanyEmployeeModal(true);
+  };
+
+  const handleSaveCompanyEmployee = async (employeeData: any) => {
+    if (selectedCompanyEmployee) {
+      await updateCompanyEmployee(selectedCompanyEmployee.id, employeeData);
+    } else {
+      await addCompanyEmployee(employeeData);
+    }
+  };
+
+  const companyStats = getEmployeeStats();
+
   if (!canManageEmployees()) {
     return (
       <Layout>
@@ -142,8 +183,10 @@ const HumanResources = () => {
         </div>
 
         <Tabs defaultValue="employees" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="employees">Employee Management</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-9">
+            <TabsTrigger value="employees">System Users</TabsTrigger>
+            <TabsTrigger value="company-employees">Company Employees</TabsTrigger>
+            <TabsTrigger value="payslips">Payslips</TabsTrigger>
             <TabsTrigger value="roles">Role Management</TabsTrigger>
             <TabsTrigger value="account-status">Account Status</TabsTrigger>
             <TabsTrigger value="create">Create User</TabsTrigger>
@@ -222,6 +265,25 @@ const HumanResources = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="company-employees" className="space-y-6">
+            <CompanyEmployeesStats stats={companyStats} />
+            <CompanyEmployeesList
+              employees={companyEmployees}
+              onAddEmployee={handleAddCompanyEmployee}
+              onEditEmployee={handleEditCompanyEmployee}
+              onDeleteEmployee={deleteCompanyEmployee}
+              loading={companyLoading}
+            />
+          </TabsContent>
+
+          <TabsContent value="payslips">
+            <PayslipGenerator
+              payslips={payslips}
+              onGeneratePayslips={generateMonthlyPayslips}
+              loading={companyLoading}
+            />
+          </TabsContent>
+
           <TabsContent value="roles">
             <RoleManagement />
           </TabsContent>
@@ -273,6 +335,16 @@ const HumanResources = () => {
             setSelectedEmployee(null);
           }}
           employee={selectedEmployee}
+        />
+
+        <AddCompanyEmployeeModal
+          isOpen={showCompanyEmployeeModal}
+          onClose={() => {
+            setShowCompanyEmployeeModal(false);
+            setSelectedCompanyEmployee(null);
+          }}
+          onSubmit={handleSaveCompanyEmployee}
+          employee={selectedCompanyEmployee}
         />
       </div>
     </Layout>
