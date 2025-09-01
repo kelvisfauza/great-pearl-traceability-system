@@ -24,6 +24,7 @@ const MillingTransactionEditModal = ({ open, onClose, transaction }: MillingTran
   const [formData, setFormData] = useState({
     customer_id: '',
     customer_name: '',
+    date: '',
     kgs_hulled: 0,
     rate_per_kg: 0,
     amount_paid: 0,
@@ -36,6 +37,7 @@ const MillingTransactionEditModal = ({ open, onClose, transaction }: MillingTran
       setFormData({
         customer_id: transaction.customer_id,
         customer_name: transaction.customer_name,
+        date: transaction.date,
         kgs_hulled: transaction.kgs_hulled,
         rate_per_kg: transaction.rate_per_kg,
         amount_paid: transaction.amount_paid,
@@ -78,6 +80,9 @@ const MillingTransactionEditModal = ({ open, onClose, transaction }: MillingTran
     if (formData.customer_name !== transaction.customer_name) {
       changes.push(`Customer: ${transaction.customer_name} → ${formData.customer_name}`);
     }
+    if (formData.date !== transaction.date) {
+      changes.push(`Date: ${transaction.date} → ${formData.date}`);
+    }
     if (formData.kgs_hulled !== transaction.kgs_hulled) {
       changes.push(`KGs Hulled: ${transaction.kgs_hulled} → ${formData.kgs_hulled}`);
     }
@@ -112,6 +117,7 @@ const MillingTransactionEditModal = ({ open, onClose, transaction }: MillingTran
       const updatedData = {
         customer_id: formData.customer_id,
         customer_name: formData.customer_name,
+        date: formData.date,
         kgs_hulled: formData.kgs_hulled,
         rate_per_kg: formData.rate_per_kg,
         total_amount: newTotalAmount,
@@ -180,6 +186,18 @@ const MillingTransactionEditModal = ({ open, onClose, transaction }: MillingTran
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => handleInputChange('date', e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="kgs_hulled">KGs Hulled</Label>
               <Input
