@@ -50,7 +50,7 @@ const MillingTransactionsList = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactions.map((transaction) => (
+                {transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((transaction) => (
                   <TableRow key={transaction.id}>
                     <TableCell>
                       {format(new Date(transaction.date), 'MMM dd, yyyy')}
