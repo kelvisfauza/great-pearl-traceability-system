@@ -307,7 +307,7 @@ ${reportData.cashTransactions.map((p: any) =>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="text-2xl font-bold">UGX {reportData.summary.totalCashReceived.toLocaleString()}</div>
-                  <div className="text-sm text-muted-foreground">Cash Received</div>
+                  <div className="text-sm text-muted-foreground">Cash Payments</div>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="text-2xl font-bold">{reportData.summary.totalTransactions}</div>
