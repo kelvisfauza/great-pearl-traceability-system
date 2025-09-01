@@ -63,13 +63,18 @@ const MillingReports = () => {
       return transDate >= startDate && transDate <= endDate;
     });
 
+    // Calculate total cash received from both transaction types
+    const cashFromTransactions = filteredTransactions.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
+    const cashFromPayments = filteredCashTransactions.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
+    const totalCashReceived = cashFromTransactions + cashFromPayments;
+
     const data = {
       transactions: filteredTransactions,
       cashTransactions: filteredCashTransactions,
       summary: {
-        totalKgsHulled: filteredTransactions.reduce((sum, t) => sum + t.kgs_hulled, 0),
-        totalRevenue: filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0),
-        totalCashReceived: filteredCashTransactions.reduce((sum, t) => sum + t.amount_paid, 0),
+        totalKgsHulled: filteredTransactions.reduce((sum, t) => sum + (t.kgs_hulled || 0), 0),
+        totalRevenue: filteredTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0),
+        totalCashReceived,
         totalTransactions: filteredTransactions.length,
         totalPayments: filteredCashTransactions.length
       }
@@ -164,20 +169,25 @@ ${reportData.cashTransactions.map((p: any) =>
       new Date(e.date).getMonth() === targetMonth && new Date(e.date).getFullYear() === targetYear
     );
 
-    const totalRevenue = filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0);
-    const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalRevenue = filteredTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+    const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
     const netRevenue = totalRevenue - totalExpenses;
+    
+    // Calculate total cash received from both transaction types
+    const cashFromTransactions = filteredTransactions.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
+    const cashFromPayments = filteredCashTransactions.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
+    const totalCashReceived = cashFromTransactions + cashFromPayments;
 
     const data = {
       transactions: filteredTransactions,
       cashTransactions: filteredCashTransactions,
       expenses: filteredExpenses,
       summary: {
-        totalKgsHulled: filteredTransactions.reduce((sum, t) => sum + t.kgs_hulled, 0),
+        totalKgsHulled: filteredTransactions.reduce((sum, t) => sum + (t.kgs_hulled || 0), 0),
         totalRevenue,
         totalExpenses,
         netRevenue,
-        totalCashReceived: filteredCashTransactions.reduce((sum, t) => sum + t.amount_paid, 0),
+        totalCashReceived,
         totalTransactions: filteredTransactions.length,
         totalPayments: filteredCashTransactions.length
       },

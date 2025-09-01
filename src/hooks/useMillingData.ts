@@ -382,16 +382,24 @@ export const useMillingData = () => {
     const filteredCashTransactions = cashTransactions.filter(t => new Date(t.date) >= startDate);
     const filteredExpenses = expenses.filter(e => new Date(e.date) >= startDate);
 
+    // Calculate total cash received from both transaction types
+    const cashFromTransactions = filteredTransactions.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
+    const cashFromPayments = filteredCashTransactions.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
+    const totalCashReceived = cashFromTransactions + cashFromPayments;
+    
+    const totalRevenue = filteredTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+    const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
     return {
       transactions: filteredTransactions,
       cashTransactions: filteredCashTransactions,
       expenses: filteredExpenses,
       summary: {
-        totalKgsHulled: filteredTransactions.reduce((sum, t) => sum + t.kgs_hulled, 0),
-        totalRevenue: filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0),
-        totalCashReceived: filteredCashTransactions.reduce((sum, t) => sum + t.amount_paid, 0),
-        totalExpenses: filteredExpenses.reduce((sum, e) => sum + e.amount, 0),
-        netRevenue: filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0) - filteredExpenses.reduce((sum, e) => sum + e.amount, 0),
+        totalKgsHulled: filteredTransactions.reduce((sum, t) => sum + (t.kgs_hulled || 0), 0),
+        totalRevenue,
+        totalCashReceived,
+        totalExpenses,
+        netRevenue: totalRevenue - totalExpenses,
         totalTransactions: filteredTransactions.length,
         totalPayments: filteredCashTransactions.length
       }
