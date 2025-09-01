@@ -9,6 +9,7 @@ import { fixDenisAccountFinal } from '@/utils/fixDenisAccountFinal';
 import { updateKibabaPermissions } from '@/utils/updateKibabaPermissions';
 import { forceRefreshUserSession } from '@/utils/forceRefreshUserSession';
 import { syncSupabaseToFirebase } from '@/utils/syncSupabaseToFirebase';
+import { supabase } from '@/integrations/supabase/client';
 
 const QuickEmployeeUpdate = () => {
   const [email, setEmail] = useState('bwambaledenis8@gmail.com');
@@ -62,6 +63,39 @@ const QuickEmployeeUpdate = () => {
       toast({
         title: "Error",
         description: "An error occurred while updating permissions",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetKibabaPassword = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-kibaba-password');
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: "Kibaba's password has been reset to 'Yedascott'. He can now login with this password.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to reset password",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      toast({
+        title: "Error",
+        description: "An error occurred while resetting the password",
         variant: "destructive"
       });
     } finally {
@@ -201,6 +235,15 @@ const QuickEmployeeUpdate = () => {
           className="w-full"
         >
           {loading ? 'Updating...' : 'Fix Kibaba Permissions'}
+        </Button>
+
+        <Button 
+          onClick={handleResetKibabaPassword}
+          disabled={loading}
+          variant="destructive"
+          className="w-full"
+        >
+          {loading ? 'Resetting...' : 'Reset Kibaba Password (Yedascott)'}
         </Button>
 
         <Button 
