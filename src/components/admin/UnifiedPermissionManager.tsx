@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Search, UserCog, Shield, Save, RotateCcw, Crown, Users, Settings } from 'lucide-react';
-import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
+import { useUnifiedEmployees } from '@/hooks/useUnifiedEmployees';
 import { updateEmployeePermissions, PERMISSION_SETS, setEmployeeRole } from '@/utils/updateEmployeePermissions';
 
 // All available permissions in the system
@@ -41,7 +41,7 @@ const USER_ROLES = [
 ];
 
 const UnifiedPermissionManager = () => {
-  const { employees, loading, refetch } = useFirebaseEmployees();
+  const { employees, loading, refetch } = useUnifiedEmployees();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);

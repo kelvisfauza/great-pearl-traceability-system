@@ -20,6 +20,7 @@ export interface UnifiedEmployee {
   address?: string;
   emergency_contact?: string;
   auth_user_id?: string;
+  disabled?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -61,6 +62,7 @@ export const useUnifiedEmployees = () => {
         address: emp.address,
         emergency_contact: emp.emergency_contact,
         auth_user_id: emp.auth_user_id,
+        disabled: emp.disabled || false,
         created_at: emp.created_at,
         updated_at: emp.updated_at
       }));

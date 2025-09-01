@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
+import { useUnifiedEmployees } from '@/hooks/useUnifiedEmployees';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Search, UserX, UserCheck, Shield } from 'lucide-react';
@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const AccountStatusManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [updating, setUpdating] = useState<string | null>(null);
-  const { employees, loading } = useFirebaseEmployees();
+  const { employees, loading } = useUnifiedEmployees();
   const { toast } = useToast();
   const { isAdmin } = useAuth();
 

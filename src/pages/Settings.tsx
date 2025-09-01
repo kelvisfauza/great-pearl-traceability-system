@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
+import { useUnifiedEmployees } from '@/hooks/useUnifiedEmployees';
 import UserManagement from '@/components/settings/UserManagement';
 import UserProfile from '@/components/settings/UserProfile';
 import QuickEmployeeUpdate from '@/components/admin/QuickEmployeeUpdate';
@@ -16,13 +16,13 @@ import AccountStatusManager from '@/components/admin/AccountStatusManager';
 
 const Settings = () => {
   const { canManageEmployees, isAdmin, employee } = useAuth();
-  const { employees, addEmployee, updateEmployee, deleteEmployee } = useFirebaseEmployees();
+  const { employees, createEmployee, updateEmployee, deleteEmployee } = useUnifiedEmployees();
   const [showPaymentSlipModal, setShowPaymentSlipModal] = useState(false);
   const [showContractModal, setShowContractModal] = useState(false);
 
   // Wrapper functions to match the expected interface
   const handleEmployeeAdded = async (employee: any): Promise<void> => {
-    await addEmployee(employee);
+    await createEmployee(employee);
   };
 
   const handleEmployeeUpdated = async (id: string, updates: any): Promise<void> => {

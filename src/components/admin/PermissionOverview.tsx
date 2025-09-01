@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Users, Shield, UserCheck, AlertTriangle } from 'lucide-react';
-import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
+import { useUnifiedEmployees } from '@/hooks/useUnifiedEmployees';
 
 const PermissionOverview = () => {
-  const { employees, loading } = useFirebaseEmployees();
+  const { employees, loading } = useUnifiedEmployees();
 
   if (loading) {
     return (
