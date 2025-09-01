@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useStoreReports } from '@/hooks/useStoreReports';
-import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit, Database, Upload, FileDown, Files } from 'lucide-react';
+import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit, Database, Upload, FileDown, Files, CalendarCheck, TrendingUp, TrendingDown } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import StoreReportViewer from './StoreReportViewer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -23,6 +23,7 @@ const StoreReportsList = () => {
     start: '',
     end: ''
   });
+  const [quickFilter, setQuickFilter] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -32,6 +33,35 @@ const StoreReportsList = () => {
   const [submitting, setSubmitting] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
   const [uploadingEditFile, setUploadingEditFile] = useState(false);
+
+  // Handle quick filters
+  const handleQuickFilter = (filter: string) => {
+    setQuickFilter(filter);
+    const today = new Date();
+    
+    switch (filter) {
+      case 'previous-month':
+        const prevMonth = subMonths(today, 1);
+        const startOfPrevMonth = startOfMonth(prevMonth);
+        const endOfPrevMonth = endOfMonth(prevMonth);
+        setSelectedDateRange({
+          start: format(startOfPrevMonth, 'yyyy-MM-dd'),
+          end: format(endOfPrevMonth, 'yyyy-MM-dd')
+        });
+        break;
+      case 'current-month':
+        const startOfCurrentMonth = startOfMonth(today);
+        const endOfCurrentMonth = endOfMonth(today);
+        setSelectedDateRange({
+          start: format(startOfCurrentMonth, 'yyyy-MM-dd'),
+          end: format(endOfCurrentMonth, 'yyyy-MM-dd')
+        });
+        break;
+      case 'all':
+        setSelectedDateRange({ start: '', end: '' });
+        break;
+    }
+  };
 
   const filteredReports = reports.filter(report => {
     const matchesSearch = 
@@ -45,6 +75,36 @@ const StoreReportsList = () => {
     
     return matchesSearch && matchesDateRange;
   });
+
+  // Calculate customer debt analysis for filtered reports
+  const customerDebtAnalysis = () => {
+    const customerTotals = filteredReports.reduce((acc, report) => {
+      if (report.sold_to && report.sold_to !== 'N/A') {
+        if (!acc[report.sold_to]) {
+          acc[report.sold_to] = {
+            name: report.sold_to,
+            totalSold: 0,
+            totalAdvances: 0,
+            reports: 0
+          };
+        }
+        acc[report.sold_to].totalSold += report.kilograms_sold;
+        acc[report.sold_to].totalAdvances += report.advances_given;
+        acc[report.sold_to].reports += 1;
+      }
+      return acc;
+    }, {} as Record<string, { name: string; totalSold: number; totalAdvances: number; reports: number }>);
+
+    const customers = Object.values(customerTotals).sort((a, b) => b.totalAdvances - a.totalAdvances);
+    
+    return {
+      highest: customers[0] || null,
+      lowest: customers[customers.length - 1] || null,
+      all: customers
+    };
+  };
+
+  const debtAnalysis = customerDebtAnalysis();
 
   const handleDeleteRequest = (report: any) => {
     setSelectedReport(report);
@@ -239,31 +299,65 @@ const StoreReportsList = () => {
       <CardContent>
         <div className="space-y-4">
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <div className="space-y-4">
+            {/* Quick Filters */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={quickFilter === 'previous-month' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleQuickFilter('previous-month')}
+                className="flex items-center gap-2"
+              >
+                <CalendarCheck className="h-4 w-4" />
+                Previous Month
+              </Button>
+              <Button
+                variant={quickFilter === 'current-month' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleQuickFilter('current-month')}
+                className="flex items-center gap-2"
+              >
+                <Calendar className="h-4 w-4" />
+                Current Month
+              </Button>
+              <Button
+                variant={quickFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleQuickFilter('all')}
+                className="flex items-center gap-2"
+              >
+                <Files className="h-4 w-4" />
+                All Reports
+              </Button>
+            </div>
+
+            {/* Search and Date Range */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search by coffee type, input by, or sold to..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
                 <Input
-                  placeholder="Search by coffee type, input by, or sold to..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  type="date"
+                  placeholder="Start date"
+                  value={selectedDateRange.start}
+                  onChange={(e) => setSelectedDateRange(prev => ({ ...prev, start: e.target.value }))}
+                />
+                <Input
+                  type="date"
+                  placeholder="End date"
+                  value={selectedDateRange.end}
+                  onChange={(e) => setSelectedDateRange(prev => ({ ...prev, end: e.target.value }))}
                 />
               </div>
-            </div>
-            <div className="flex gap-2">
-              <Input
-                type="date"
-                placeholder="Start date"
-                value={selectedDateRange.start}
-                onChange={(e) => setSelectedDateRange(prev => ({ ...prev, start: e.target.value }))}
-              />
-              <Input
-                type="date"
-                placeholder="End date"
-                value={selectedDateRange.end}
-                onChange={(e) => setSelectedDateRange(prev => ({ ...prev, end: e.target.value }))}
-              />
             </div>
           </div>
 
@@ -346,31 +440,137 @@ const StoreReportsList = () => {
 
           {/* Summary */}
           {filteredReports.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {filteredReports.length}
+            <div className="space-y-6 pt-4 border-t">
+              {/* Main Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">
+                    {filteredReports.length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Reports</div>
                 </div>
-                <div className="text-sm text-muted-foreground">Total Reports</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {filteredReports.reduce((sum, report) => sum + report.kilograms_bought, 0).toFixed(1)}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {filteredReports.reduce((sum, report) => sum + report.kilograms_bought, 0).toFixed(1)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Kg Bought</div>
                 </div>
-                <div className="text-sm text-muted-foreground">Total Kg Bought</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {filteredReports.reduce((sum, report) => sum + report.kilograms_sold, 0).toFixed(1)}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {filteredReports.reduce((sum, report) => sum + report.kilograms_sold, 0).toFixed(1)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Kg Sold</div>
                 </div>
-                <div className="text-sm text-muted-foreground">Total Kg Sold</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">
-                  UGX {filteredReports.reduce((sum, report) => sum + report.advances_given, 0).toLocaleString()}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">
+                    UGX {filteredReports.reduce((sum, report) => sum + report.advances_given, 0).toLocaleString()}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total Advances</div>
                 </div>
-                <div className="text-sm text-muted-foreground">Total Advances</div>
               </div>
+
+              {/* Customer Debt Analysis */}
+              {(quickFilter === 'previous-month' || selectedDateRange.start) && debtAnalysis.all.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Customer Debt Analysis
+                    {quickFilter === 'previous-month' && (
+                      <Badge variant="outline">Previous Month</Badge>
+                    )}
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Highest Debt Customer */}
+                    {debtAnalysis.highest && (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-red-500" />
+                            Highest Debt Customer
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <p className="font-semibold">{debtAnalysis.highest.name}</p>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Advances:</span>
+                                <p className="font-medium text-red-600">
+                                  UGX {debtAnalysis.highest.totalAdvances.toLocaleString()}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Coffee Sold:</span>
+                                <p className="font-medium">{debtAnalysis.highest.totalSold.toFixed(1)} kg</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Transactions:</span>
+                                <p className="font-medium">{debtAnalysis.highest.reports}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Lowest Debt Customer */}
+                    {debtAnalysis.lowest && debtAnalysis.all.length > 1 && (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <TrendingDown className="h-4 w-4 text-green-500" />
+                            Lowest Debt Customer
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <p className="font-semibold">{debtAnalysis.lowest.name}</p>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Advances:</span>
+                                <p className="font-medium text-green-600">
+                                  UGX {debtAnalysis.lowest.totalAdvances.toLocaleString()}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Coffee Sold:</span>
+                                <p className="font-medium">{debtAnalysis.lowest.totalSold.toFixed(1)} kg</p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Transactions:</span>
+                                <p className="font-medium">{debtAnalysis.lowest.reports}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+
+                  {/* All Customers Summary */}
+                  {debtAnalysis.all.length > 2 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm">All Customers Debt Summary</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {debtAnalysis.all.map((customer, index) => (
+                            <div key={customer.name} className="flex justify-between items-center text-sm py-1 border-b last:border-b-0">
+                              <span className="font-medium">{customer.name}</span>
+                              <div className="text-right">
+                                <p className="font-medium">UGX {customer.totalAdvances.toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground">{customer.totalSold.toFixed(1)} kg</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
