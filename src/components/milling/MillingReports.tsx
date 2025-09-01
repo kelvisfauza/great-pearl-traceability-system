@@ -189,16 +189,75 @@ ${reportData.cashTransactions.map((p: any) =>
         <head>
           <title>Milling Report - ${monthReportData.monthName}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
-            h1, h2 { color: #333; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .summary { background: #f5f5f5; padding: 15px; margin: 20px 0; }
-            .section { margin: 20px 0; }
-            .customer-list { font-family: monospace; white-space: pre; }
-            .transaction-list { font-family: monospace; white-space: pre; font-size: 12px; }
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 15px; 
+              line-height: 1.4; 
+              font-size: 12px;
+            }
+            h1, h2, h3 { 
+              color: #333; 
+              margin: 10px 0; 
+            }
+            h1 { font-size: 18px; }
+            h2 { font-size: 14px; }
+            h3 { font-size: 12px; }
+            .header { 
+              text-align: center; 
+              margin-bottom: 20px; 
+              border-bottom: 2px solid #333;
+              padding-bottom: 10px;
+            }
+            .summary-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 15px 0;
+              background: #f9f9f9;
+            }
+            .summary-table th,
+            .summary-table td {
+              border: 1px solid #333;
+              padding: 8px;
+              text-align: left;
+            }
+            .summary-table th {
+              background: #ddd;
+              font-weight: bold;
+            }
+            .data-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 15px 0;
+              font-size: 11px;
+            }
+            .data-table th,
+            .data-table td {
+              border: 1px solid #333;
+              padding: 4px;
+              text-align: left;
+            }
+            .data-table th {
+              background: #e0e0e0;
+              font-weight: bold;
+            }
+            .data-table tr:nth-child(even) {
+              background: #f5f5f5;
+            }
+            .amount {
+              text-align: right;
+            }
+            .section { 
+              margin: 15px 0; 
+              page-break-inside: avoid;
+            }
+            .totals-row {
+              background: #e0e0e0 !important;
+              font-weight: bold;
+            }
             @media print {
-              body { margin: 0; }
+              body { margin: 10px; }
               .no-print { display: none; }
+              .section { page-break-inside: avoid; }
             }
           </style>
         </head>
@@ -206,65 +265,222 @@ ${reportData.cashTransactions.map((p: any) =>
           <div class="header">
             <h1>MILLING DEPARTMENT MONTHLY REPORT</h1>
             <h2>${monthReportData.monthName}</h2>
-            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+            <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
           </div>
 
-          <div class="section summary">
+          <div class="section">
             <h2>EXECUTIVE SUMMARY</h2>
-            <p><strong>Total KGs Hulled:</strong> ${monthReportData.summary.totalKgsHulled} kg</p>
-            <p><strong>Total Revenue Generated:</strong> UGX ${monthReportData.summary.totalRevenue.toLocaleString()}</p>
-            <p><strong>Cash Received:</strong> UGX ${monthReportData.summary.totalCashReceived.toLocaleString()}</p>
-            <p><strong>Total Transactions:</strong> ${monthReportData.summary.totalTransactions}</p>
-            <p><strong>Cash Payments:</strong> ${monthReportData.summary.totalPayments}</p>
-            <p><strong>Current Total Outstanding Debt:</strong> UGX ${totalDebt.toLocaleString()}</p>
+            <table class="summary-table">
+              <tr>
+                <th>Metric</th>
+                <th>Value</th>
+                <th>Unit</th>
+              </tr>
+              <tr>
+                <td>Total KGs Hulled</td>
+                <td class="amount">${monthReportData.summary.totalKgsHulled.toLocaleString()}</td>
+                <td>kg</td>
+              </tr>
+              <tr>
+                <td>Total Revenue Generated</td>
+                <td class="amount">UGX ${monthReportData.summary.totalRevenue.toLocaleString()}</td>
+                <td>UGX</td>
+              </tr>
+              <tr>
+                <td>Cash Received</td>
+                <td class="amount">UGX ${monthReportData.summary.totalCashReceived.toLocaleString()}</td>
+                <td>UGX</td>
+              </tr>
+              <tr>
+                <td>Outstanding Balance</td>
+                <td class="amount">UGX ${(monthReportData.summary.totalRevenue - monthReportData.summary.totalCashReceived).toLocaleString()}</td>
+                <td>UGX</td>
+              </tr>
+              <tr>
+                <td>Total Transactions</td>
+                <td class="amount">${monthReportData.summary.totalTransactions}</td>
+                <td>Count</td>
+              </tr>
+              <tr>
+                <td>Cash Payments Made</td>
+                <td class="amount">${monthReportData.summary.totalPayments}</td>
+                <td>Count</td>
+              </tr>
+              <tr class="totals-row">
+                <td>Current Total Outstanding Debt</td>
+                <td class="amount">UGX ${totalDebt.toLocaleString()}</td>
+                <td>UGX</td>
+              </tr>
+            </table>
           </div>
 
           <div class="section">
-            <h2>CUSTOMER PERFORMANCE ANALYSIS</h2>
-            ${debtAnalysis.highest ? `
-              <h3>HIGHEST DEBT CUSTOMER</h3>
-              <p><strong>Name:</strong> ${debtAnalysis.highest.name}</p>
-              <p><strong>Current Debt:</strong> UGX ${debtAnalysis.highest.currentBalance.toLocaleString()}</p>
-              <p><strong>Revenue Generated:</strong> UGX ${debtAnalysis.highest.totalRevenue.toLocaleString()}</p>
-              <p><strong>Total KGs Processed:</strong> ${debtAnalysis.highest.totalKgs.toFixed(1)} kg</p>
-              <p><strong>Number of Transactions:</strong> ${debtAnalysis.highest.transactions}</p>
-            ` : '<p>No customer data available</p>'}
-          </div>
-
-          <div class="section">
-            <h2>CUSTOMER DEBT RANKING (Top 15)</h2>
-            <div class="customer-list">${debtAnalysis.all.slice(0, 15).map((customer, index) => 
-              `${(index + 1).toString().padStart(2, '0')}. ${customer.name.padEnd(25)} | Debt: UGX ${customer.currentBalance.toLocaleString().padStart(12)}`
-            ).join('\n')}</div>
+            <h2>CUSTOMER DEBT RANKING</h2>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Customer Name</th>
+                  <th>Current Debt (UGX)</th>
+                  <th>Monthly Revenue (UGX)</th>
+                  <th>KGs Processed</th>
+                  <th>Transactions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${debtAnalysis.all.slice(0, 20).map((customer, index) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${customer.name}</td>
+                    <td class="amount">${customer.currentBalance.toLocaleString()}</td>
+                    <td class="amount">${customer.totalRevenue.toLocaleString()}</td>
+                    <td class="amount">${customer.totalKgs.toFixed(1)}</td>
+                    <td class="amount">${customer.transactions}</td>
+                  </tr>
+                `).join('')}
+                <tr class="totals-row">
+                  <td colspan="2"><strong>TOTALS</strong></td>
+                  <td class="amount"><strong>${debtAnalysis.all.reduce((sum, c) => sum + c.currentBalance, 0).toLocaleString()}</strong></td>
+                  <td class="amount"><strong>${debtAnalysis.all.reduce((sum, c) => sum + c.totalRevenue, 0).toLocaleString()}</strong></td>
+                  <td class="amount"><strong>${debtAnalysis.all.reduce((sum, c) => sum + c.totalKgs, 0).toFixed(1)}</strong></td>
+                  <td class="amount"><strong>${debtAnalysis.all.reduce((sum, c) => sum + c.transactions, 0)}</strong></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           <div class="section">
             <h2>DETAILED TRANSACTION LOG</h2>
-            <div class="transaction-list">${monthReportData.transactions.map((t: any, index: number) => 
-              `${(index + 1).toString().padStart(3, '0')}. ${t.date} | ${t.customer_name.padEnd(20)} | ${t.kgs_hulled}kg | UGX ${t.total_amount.toLocaleString()}`
-            ).join('\n')}</div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Date</th>
+                  <th>Customer Name</th>
+                  <th>KGs Hulled</th>
+                  <th>Rate/KG (UGX)</th>
+                  <th>Total Amount (UGX)</th>
+                  <th>Amount Paid (UGX)</th>
+                  <th>Balance (UGX)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${monthReportData.transactions.map((t: any, index: number) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${t.date}</td>
+                    <td>${t.customer_name}</td>
+                    <td class="amount">${t.kgs_hulled.toFixed(1)}</td>
+                    <td class="amount">${t.rate_per_kg.toLocaleString()}</td>
+                    <td class="amount">${t.total_amount.toLocaleString()}</td>
+                    <td class="amount">${t.amount_paid.toLocaleString()}</td>
+                    <td class="amount">${t.balance.toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+                <tr class="totals-row">
+                  <td colspan="3"><strong>TOTALS</strong></td>
+                  <td class="amount"><strong>${monthReportData.transactions.reduce((sum: number, t: any) => sum + t.kgs_hulled, 0).toFixed(1)}</strong></td>
+                  <td class="amount"><strong>-</strong></td>
+                  <td class="amount"><strong>${monthReportData.transactions.reduce((sum: number, t: any) => sum + t.total_amount, 0).toLocaleString()}</strong></td>
+                  <td class="amount"><strong>${monthReportData.transactions.reduce((sum: number, t: any) => sum + t.amount_paid, 0).toLocaleString()}</strong></td>
+                  <td class="amount"><strong>${monthReportData.transactions.reduce((sum: number, t: any) => sum + t.balance, 0).toLocaleString()}</strong></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           <div class="section">
             <h2>CASH PAYMENT LOG</h2>
-            <div class="transaction-list">${monthReportData.cashTransactions.map((p: any, index: number) => 
-              `${(index + 1).toString().padStart(3, '0')}. ${p.date} | ${p.customer_name.padEnd(20)} | UGX ${p.amount_paid.toLocaleString()}`
-            ).join('\n')}</div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Date</th>
+                  <th>Customer Name</th>
+                  <th>Payment Amount (UGX)</th>
+                  <th>Payment Method</th>
+                  <th>Previous Balance (UGX)</th>
+                  <th>New Balance (UGX)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${monthReportData.cashTransactions.map((p: any, index: number) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${p.date}</td>
+                    <td>${p.customer_name}</td>
+                    <td class="amount">${p.amount_paid.toLocaleString()}</td>
+                    <td>${p.payment_method || 'Cash'}</td>
+                    <td class="amount">${p.previous_balance ? p.previous_balance.toLocaleString() : '-'}</td>
+                    <td class="amount">${p.new_balance ? p.new_balance.toLocaleString() : '-'}</td>
+                  </tr>
+                `).join('')}
+                <tr class="totals-row">
+                  <td colspan="3"><strong>TOTAL PAYMENTS</strong></td>
+                  <td class="amount"><strong>${monthReportData.cashTransactions.reduce((sum: number, p: any) => sum + p.amount_paid, 0).toLocaleString()}</strong></td>
+                  <td colspan="3"></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           <div class="section">
-            <h2>RECOMMENDATIONS</h2>
+            <h2>FINANCIAL RECONCILIATION</h2>
+            <table class="summary-table">
+              <tr>
+                <th>Description</th>
+                <th>Amount (UGX)</th>
+              </tr>
+              <tr>
+                <td>Opening Balance (Previous Month)</td>
+                <td class="amount">-</td>
+              </tr>
+              <tr>
+                <td>Total Revenue Generated This Month</td>
+                <td class="amount">${monthReportData.summary.totalRevenue.toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td>Less: Cash Payments Received</td>
+                <td class="amount">(${monthReportData.summary.totalCashReceived.toLocaleString()})</td>
+              </tr>
+              <tr class="totals-row">
+                <td><strong>Net Outstanding This Month</strong></td>
+                <td class="amount"><strong>${(monthReportData.summary.totalRevenue - monthReportData.summary.totalCashReceived).toLocaleString()}</strong></td>
+              </tr>
+              <tr class="totals-row">
+                <td><strong>Total Current Outstanding Debt</strong></td>
+                <td class="amount"><strong>${totalDebt.toLocaleString()}</strong></td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="section">
+            <h2>AUDIT NOTES & RECOMMENDATIONS</h2>
             <ul>
-              <li>Follow up with high-debt customers for payment collection</li>
-              <li>Review payment terms for customers with increasing debt</li>
-              <li>Monitor transaction patterns for business insights</li>
-              <li>Consider incentives for prompt payment customers</li>
+              <li><strong>Collection Priority:</strong> Follow up with top 5 debt customers for payment collection</li>
+              <li><strong>Payment Terms:</strong> Review credit terms for customers with increasing debt trends</li>
+              <li><strong>Cash Flow:</strong> Monitor daily cash receipts vs. credit sales ratio</li>
+              <li><strong>Inventory:</strong> Verify physical stock matches transaction records</li>
+              <li><strong>Reconciliation:</strong> Cross-check customer balances with individual ledger cards</li>
             </ul>
           </div>
 
-          <div class="section">
-            <p><strong>Report Generated by:</strong> Milling Department System</p>
-            <p><strong>Generation Time:</strong> ${new Date().toLocaleString()}</p>
+          <div class="section" style="margin-top: 30px; border-top: 1px solid #333; padding-top: 10px;">
+            <table style="width: 100%; border: none;">
+              <tr>
+                <td style="border: none; width: 50%;">
+                  <strong>Prepared By:</strong><br>
+                  Milling Department System<br>
+                  <strong>Date:</strong> ${new Date().toLocaleDateString()}<br>
+                  <strong>Time:</strong> ${new Date().toLocaleTimeString()}
+                </td>
+                <td style="border: none; width: 50%; text-align: right;">
+                  <strong>Reviewed By:</strong><br><br>
+                  _________________________<br>
+                  Signature & Date
+                </td>
+              </tr>
+            </table>
           </div>
         </body>
       </html>
