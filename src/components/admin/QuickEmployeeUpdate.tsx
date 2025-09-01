@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { setEmployeeRole, PERMISSION_SETS } from '@/utils/updateEmployeePermissions';
 import { fixDenisAccountFinal } from '@/utils/fixDenisAccountFinal';
+import { updateKibabaPermissions } from '@/utils/updateKibabaPermissions';
 
 const QuickEmployeeUpdate = () => {
   const [email, setEmail] = useState('bwambaledenis8@gmail.com');
@@ -32,16 +33,38 @@ const QuickEmployeeUpdate = () => {
     }
   };
 
-  const handleUpdate = async () => {
-    if (!email) {
+  const handleUpdateKibabaPermissions = async () => {
+    setLoading(true);
+    try {
+      const result = await updateKibabaPermissions();
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Kibaba's permissions updated successfully. Please refresh the page.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update Kibaba's permissions",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error updating Kibaba permissions:', error);
       toast({
         title: "Error",
-        description: "Please enter an email address",
+        description: "An error occurred while updating permissions",
         variant: "destructive"
       });
-      return;
+    } finally {
+      setLoading(false);
     }
+  };
 
+  const handleUpdate = async () => {
+    if (!email) return;
+    
     setLoading(true);
     try {
       await setEmployeeRole(email, roleType);
@@ -49,10 +72,10 @@ const QuickEmployeeUpdate = () => {
         title: "Success",
         description: `Employee role updated to ${roleType}`,
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update employee role",
+        description: "Failed to update employee role",
         variant: "destructive"
       });
     } finally {
@@ -115,6 +138,15 @@ const QuickEmployeeUpdate = () => {
           className="w-full"
         >
           {loading ? 'Fixing...' : 'Fix Denis Account Authentication'}
+        </Button>
+
+        <Button 
+          onClick={handleUpdateKibabaPermissions}
+          disabled={loading}
+          variant="secondary"
+          className="w-full"
+        >
+          {loading ? 'Updating...' : 'Fix Kibaba Permissions'}
         </Button>
       </CardContent>
     </Card>

@@ -81,6 +81,10 @@ const MillingReports = () => {
   const exportReport = () => {
     if (!reportData) return;
 
+    // Enhanced report content with best/worst customers and debt analysis
+    const debtAnalysis = customerDebtAnalysis();
+    const totalDebt = customers.reduce((sum, customer) => sum + customer.current_balance, 0);
+    
     const reportContent = `
 MILLING DEPARTMENT REPORT - ${selectedPeriod.toUpperCase()}
 Generated on: ${new Date().toLocaleDateString()}
@@ -91,10 +95,20 @@ SUMMARY:
 - Cash Received: UGX ${reportData.summary.totalCashReceived.toLocaleString()}
 - Total Transactions: ${reportData.summary.totalTransactions}
 - Total Payments: ${reportData.summary.totalPayments}
+- Total Outstanding Debt: UGX ${totalDebt.toLocaleString()}
+
+CUSTOMER DEBT ANALYSIS:
+${debtAnalysis.highest ? `Best Performing Customer: ${debtAnalysis.highest.name} - Debt: UGX ${debtAnalysis.highest.currentBalance.toLocaleString()}` : 'No customer data available'}
+${debtAnalysis.lowest ? `Lowest Debt Customer: ${debtAnalysis.lowest.name} - Debt: UGX ${debtAnalysis.lowest.currentBalance.toLocaleString()}` : ''}
+
+TOP CUSTOMERS BY DEBT:
+${debtAnalysis.all.slice(0, 10).map((customer, index) => 
+  `${index + 1}. ${customer.name} - UGX ${customer.currentBalance.toLocaleString()} (${customer.transactions} transactions, ${customer.totalKgs}kg)`
+).join('\n')}
 
 TRANSACTIONS:
 ${reportData.transactions.map((t: any) => 
-  `${t.date} - ${t.customer_name} - ${t.kgs_hulled}kg - UGX ${t.total_amount.toLocaleString()}`
+  `${t.date} - ${t.customer_name} - ${t.kgs_hulled}kg - UGX ${t.total_amount.toLocaleString()} (Balance: UGX ${t.balance.toLocaleString()})`
 ).join('\n')}
 
 PAYMENTS:
@@ -108,6 +122,84 @@ ${reportData.cashTransactions.map((p: any) =>
     const a = document.createElement('a');
     a.href = url;
     a.download = `milling-report-${selectedPeriod}-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Enhanced export function for previous month reports
+  const exportPreviousMonthReport = () => {
+    if (!reportData || quickFilter !== 'previous-month') return;
+
+    const debtAnalysis = customerDebtAnalysis();
+    const totalDebt = customers.reduce((sum, customer) => sum + customer.current_balance, 0);
+    const today = new Date();
+    const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1);
+    const monthName = prevMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    const reportContent = `
+MILLING DEPARTMENT - PREVIOUS MONTH REPORT
+Report Period: ${monthName}
+Generated on: ${new Date().toLocaleDateString()}
+
+EXECUTIVE SUMMARY:
+- Total KGs Hulled: ${reportData.summary.totalKgsHulled} kg
+- Total Revenue Generated: UGX ${reportData.summary.totalRevenue.toLocaleString()}
+- Cash Received: UGX ${reportData.summary.totalCashReceived.toLocaleString()}
+- Total Transactions: ${reportData.summary.totalTransactions}
+- Cash Payments: ${reportData.summary.totalPayments}
+- Current Total Outstanding Debt: UGX ${totalDebt.toLocaleString()}
+
+CUSTOMER PERFORMANCE ANALYSIS:
+${debtAnalysis.highest ? `
+HIGHEST DEBT CUSTOMER:
+  Name: ${debtAnalysis.highest.name}
+  Current Debt: UGX ${debtAnalysis.highest.currentBalance.toLocaleString()}
+  Revenue Generated: UGX ${debtAnalysis.highest.totalRevenue.toLocaleString()}
+  Total KGs Processed: ${debtAnalysis.highest.totalKgs.toFixed(1)} kg
+  Number of Transactions: ${debtAnalysis.highest.transactions}
+` : 'No customer data available'}
+
+${debtAnalysis.lowest && debtAnalysis.all.length > 1 ? `
+LOWEST DEBT CUSTOMER:
+  Name: ${debtAnalysis.lowest.name}
+  Current Debt: UGX ${debtAnalysis.lowest.currentBalance.toLocaleString()}
+  Revenue Generated: UGX ${debtAnalysis.lowest.totalRevenue.toLocaleString()}
+  Total KGs Processed: ${debtAnalysis.lowest.totalKgs.toFixed(1)} kg
+  Number of Transactions: ${debtAnalysis.lowest.transactions}
+` : ''}
+
+CUSTOMER DEBT RANKING (Top 15):
+${debtAnalysis.all.slice(0, 15).map((customer, index) => 
+  `${(index + 1).toString().padStart(2, '0')}. ${customer.name.padEnd(25)} | Debt: UGX ${customer.currentBalance.toLocaleString().padStart(12)} | Revenue: UGX ${customer.totalRevenue.toLocaleString().padStart(12)} | KGs: ${customer.totalKgs.toFixed(1).padStart(8)}`
+).join('\n')}
+
+DETAILED TRANSACTION LOG:
+${reportData.transactions.map((t: any, index: number) => 
+  `${(index + 1).toString().padStart(3, '0')}. ${t.date} | ${t.customer_name.padEnd(20)} | ${t.kgs_hulled.toString().padStart(6)}kg | Revenue: UGX ${t.total_amount.toLocaleString().padStart(10)} | Paid: UGX ${t.amount_paid.toLocaleString().padStart(10)} | Balance: UGX ${t.balance.toLocaleString().padStart(10)}`
+).join('\n')}
+
+CASH PAYMENT LOG:
+${reportData.cashTransactions.map((p: any, index: number) => 
+  `${(index + 1).toString().padStart(3, '0')}. ${p.date} | ${p.customer_name.padEnd(20)} | Payment: UGX ${p.amount_paid.toLocaleString().padStart(10)} | Method: ${p.payment_method || 'Cash'}`
+).join('\n')}
+
+RECOMMENDATIONS:
+- Follow up with high-debt customers for payment collection
+- Review payment terms for customers with increasing debt
+- Monitor transaction patterns for business insights
+- Consider incentives for prompt payment customers
+
+Report Generated by: Milling Department System
+Generation Time: ${new Date().toLocaleString()}
+    `;
+
+    const blob = new Blob([reportContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `milling-previous-month-report-${monthName.replace(' ', '-').toLowerCase()}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -287,7 +379,13 @@ ${reportData.cashTransactions.map((p: any) =>
               {reportData && (
                 <Button variant="outline" onClick={exportReport}>
                   <Download className="h-4 w-4 mr-2" />
-                  Export
+                  Export Report
+                </Button>
+              )}
+              {reportData && quickFilter === 'previous-month' && (
+                <Button variant="outline" onClick={exportPreviousMonthReport}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Previous Month
                 </Button>
               )}
             </div>
