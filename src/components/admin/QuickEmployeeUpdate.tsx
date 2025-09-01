@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { setEmployeeRole, PERMISSION_SETS } from '@/utils/updateEmployeePermissions';
 import { fixDenisAccountFinal } from '@/utils/fixDenisAccountFinal';
 import { updateKibabaPermissions } from '@/utils/updateKibabaPermissions';
+import { forceRefreshUserSession } from '@/utils/forceRefreshUserSession';
 
 const QuickEmployeeUpdate = () => {
   const [email, setEmail] = useState('bwambaledenis8@gmail.com');
@@ -41,8 +42,13 @@ const QuickEmployeeUpdate = () => {
       if (result.success) {
         toast({
           title: "Success",
-          description: "Kibaba's permissions updated successfully. Please refresh the page.",
+          description: "Kibaba's permissions updated successfully.",
         });
+        
+        // Force refresh session after a short delay
+        setTimeout(() => {
+          forceRefreshUserSession('nicholusscottlangz@gmail.com');
+        }, 1000);
       } else {
         toast({
           title: "Error",
@@ -55,6 +61,25 @@ const QuickEmployeeUpdate = () => {
       toast({
         title: "Error",
         description: "An error occurred while updating permissions",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForceRefreshSession = async () => {
+    setLoading(true);
+    try {
+      await forceRefreshUserSession('nicholusscottlangz@gmail.com');
+      toast({
+        title: "Success",
+        description: "Session refresh initiated. Page will reload automatically.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh session",
         variant: "destructive"
       });
     } finally {
@@ -147,6 +172,15 @@ const QuickEmployeeUpdate = () => {
           className="w-full"
         >
           {loading ? 'Updating...' : 'Fix Kibaba Permissions'}
+        </Button>
+
+        <Button 
+          onClick={handleForceRefreshSession}
+          disabled={loading}
+          variant="outline"
+          className="w-full"
+        >
+          {loading ? 'Refreshing...' : 'Force Refresh Session'}
         </Button>
       </CardContent>
     </Card>

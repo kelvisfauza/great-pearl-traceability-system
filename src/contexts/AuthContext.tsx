@@ -56,6 +56,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  // Function to force refresh employee data
+  const refreshEmployeeData = async () => {
+    if (user) {
+      console.log('🔄 Force refreshing employee data for:', user.email);
+      const freshEmployeeData = await fetchEmployeeData(user.id, user.email);
+      setEmployee(freshEmployeeData);
+    }
+  };
+
   const fetchEmployeeData = async (userId?: string, userEmail?: string): Promise<Employee | null> => {
     const targetUserId = userId || user?.id;
     const email = userEmail || user?.email;
