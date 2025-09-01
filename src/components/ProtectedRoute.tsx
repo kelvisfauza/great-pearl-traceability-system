@@ -45,20 +45,32 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check if user has required permissions (only if permissions are specified)
   if (requiredPermissions.length > 0) {
-    console.log('🔒 ProtectedRoute checking permissions:', {
-      user: user?.email,
-      employee: employee?.name,
-      employeeEmail: employee?.email,
+    console.log('🔒 DEBUGGING PERMISSION CHECK:', {
+      userEmail: user?.email,
+      employeeName: employee?.name,
+      employeeRole: employee?.role,
       employeePermissions: employee?.permissions,
-      requiredPermissions,
-      userPermissionCheck: requiredPermissions.map(p => ({ permission: p, hasIt: hasPermission(p) }))
+      requiredPermissions: requiredPermissions,
+      route: window.location.pathname
+    });
+    
+    // Check each permission individually for debugging
+    const permissionResults = requiredPermissions.map(permission => {
+      const hasIt = hasPermission(permission);
+      console.log(`🔒 Permission "${permission}": ${hasIt ? '✅ GRANTED' : '❌ DENIED'}`);
+      return { permission, hasIt };
     });
     
     const hasRequiredPermission = requiredPermissions.some(permission => hasPermission(permission));
     
-    console.log('🔒 Permission check result:', { hasRequiredPermission });
+    console.log('🔒 FINAL RESULT:', { 
+      hasRequiredPermission,
+      permissionResults,
+      willGrantAccess: hasRequiredPermission
+    });
     
     if (!hasRequiredPermission) {
+      console.log('🚫 ACCESS DENIED - Showing access denied screen');
       
       if (showAccessDenied) {
         return (
@@ -75,6 +87,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
                   You don't have the required permissions to access this page. 
                   Required permissions: {requiredPermissions.join(', ')}
                 </p>
+                <div className="text-sm text-gray-500 mb-4">
+                  <p>Your current permissions: {employee?.permissions?.join(', ') || 'None'}</p>
+                  <p>Your role: {employee?.role || 'None'}</p>
+                </div>
                 <button 
                   onClick={() => window.history.back()} 
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
