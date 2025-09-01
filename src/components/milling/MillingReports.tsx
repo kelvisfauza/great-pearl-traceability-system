@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, TrendingUp, TrendingDown, DollarSign, Package2, Users, CalendarCheck, Calendar, Files } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { FileText, Download, TrendingUp, TrendingDown, DollarSign, Package2, Users, CalendarCheck, Calendar, Files, Printer } from 'lucide-react';
 import { useMillingData } from '@/hooks/useMillingData';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 
@@ -14,6 +15,9 @@ const MillingReports = () => {
   const [quickFilter, setQuickFilter] = useState('');
   const [reportData, setReportData] = useState<any>(null);
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [monthReportData, setMonthReportData] = useState<any>(null);
+  const [showMonthSelector, setShowMonthSelector] = useState(false);
 
   // Handle quick filters
   const handleQuickFilter = (filter: string) => {
@@ -128,82 +132,152 @@ ${reportData.cashTransactions.map((p: any) =>
     URL.revokeObjectURL(url);
   };
 
-  // Enhanced export function for previous month reports
-  const exportPreviousMonthReport = () => {
-    if (!reportData || quickFilter !== 'previous-month') return;
+  // Generate month options for the past 12 months
+  const getMonthOptions = () => {
+    const options = [];
+    const today = new Date();
+    for (let i = 0; i < 12; i++) {
+      const date = subMonths(today, i);
+      const value = format(date, 'yyyy-MM');
+      const label = format(date, 'MMMM yyyy');
+      options.push({ value, label });
+    }
+    return options;
+  };
+
+  // Generate report for selected month
+  const generateMonthReport = (monthValue: string) => {
+    const [year, month] = monthValue.split('-');
+    const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+    const endDate = endOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+    
+    const filteredTransactions = transactions.filter(t => {
+      const transDate = new Date(t.date);
+      return transDate >= startDate && transDate <= endDate;
+    });
+    
+    const filteredCashTransactions = cashTransactions.filter(t => {
+      const transDate = new Date(t.date);
+      return transDate >= startDate && transDate <= endDate;
+    });
+
+    const data = {
+      transactions: filteredTransactions,
+      cashTransactions: filteredCashTransactions,
+      summary: {
+        totalKgsHulled: filteredTransactions.reduce((sum, t) => sum + t.kgs_hulled, 0),
+        totalRevenue: filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0),
+        totalCashReceived: filteredCashTransactions.reduce((sum, t) => sum + t.amount_paid, 0),
+        totalTransactions: filteredTransactions.length,
+        totalPayments: filteredCashTransactions.length
+      },
+      monthName: format(startDate, 'MMMM yyyy')
+    };
+    
+    setMonthReportData(data);
+  };
+
+  // Print month report
+  const printMonthReport = () => {
+    if (!monthReportData) return;
 
     const debtAnalysis = customerDebtAnalysis();
     const totalDebt = customers.reduce((sum, customer) => sum + customer.current_balance, 0);
-    const today = new Date();
-    const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1);
-    const monthName = prevMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     
-    const reportContent = `
-MILLING DEPARTMENT - PREVIOUS MONTH REPORT
-Report Period: ${monthName}
-Generated on: ${new Date().toLocaleDateString()}
+    const printContent = `
+      <html>
+        <head>
+          <title>Milling Report - ${monthReportData.monthName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
+            h1, h2 { color: #333; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .summary { background: #f5f5f5; padding: 15px; margin: 20px 0; }
+            .section { margin: 20px 0; }
+            .customer-list { font-family: monospace; white-space: pre; }
+            .transaction-list { font-family: monospace; white-space: pre; font-size: 12px; }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>MILLING DEPARTMENT MONTHLY REPORT</h1>
+            <h2>${monthReportData.monthName}</h2>
+            <p>Generated on: ${new Date().toLocaleDateString()}</p>
+          </div>
 
-EXECUTIVE SUMMARY:
-- Total KGs Hulled: ${reportData.summary.totalKgsHulled} kg
-- Total Revenue Generated: UGX ${reportData.summary.totalRevenue.toLocaleString()}
-- Cash Received: UGX ${reportData.summary.totalCashReceived.toLocaleString()}
-- Total Transactions: ${reportData.summary.totalTransactions}
-- Cash Payments: ${reportData.summary.totalPayments}
-- Current Total Outstanding Debt: UGX ${totalDebt.toLocaleString()}
+          <div class="section summary">
+            <h2>EXECUTIVE SUMMARY</h2>
+            <p><strong>Total KGs Hulled:</strong> ${monthReportData.summary.totalKgsHulled} kg</p>
+            <p><strong>Total Revenue Generated:</strong> UGX ${monthReportData.summary.totalRevenue.toLocaleString()}</p>
+            <p><strong>Cash Received:</strong> UGX ${monthReportData.summary.totalCashReceived.toLocaleString()}</p>
+            <p><strong>Total Transactions:</strong> ${monthReportData.summary.totalTransactions}</p>
+            <p><strong>Cash Payments:</strong> ${monthReportData.summary.totalPayments}</p>
+            <p><strong>Current Total Outstanding Debt:</strong> UGX ${totalDebt.toLocaleString()}</p>
+          </div>
 
-CUSTOMER PERFORMANCE ANALYSIS:
-${debtAnalysis.highest ? `
-HIGHEST DEBT CUSTOMER:
-  Name: ${debtAnalysis.highest.name}
-  Current Debt: UGX ${debtAnalysis.highest.currentBalance.toLocaleString()}
-  Revenue Generated: UGX ${debtAnalysis.highest.totalRevenue.toLocaleString()}
-  Total KGs Processed: ${debtAnalysis.highest.totalKgs.toFixed(1)} kg
-  Number of Transactions: ${debtAnalysis.highest.transactions}
-` : 'No customer data available'}
+          <div class="section">
+            <h2>CUSTOMER PERFORMANCE ANALYSIS</h2>
+            ${debtAnalysis.highest ? `
+              <h3>HIGHEST DEBT CUSTOMER</h3>
+              <p><strong>Name:</strong> ${debtAnalysis.highest.name}</p>
+              <p><strong>Current Debt:</strong> UGX ${debtAnalysis.highest.currentBalance.toLocaleString()}</p>
+              <p><strong>Revenue Generated:</strong> UGX ${debtAnalysis.highest.totalRevenue.toLocaleString()}</p>
+              <p><strong>Total KGs Processed:</strong> ${debtAnalysis.highest.totalKgs.toFixed(1)} kg</p>
+              <p><strong>Number of Transactions:</strong> ${debtAnalysis.highest.transactions}</p>
+            ` : '<p>No customer data available</p>'}
+          </div>
 
-${debtAnalysis.lowest && debtAnalysis.all.length > 1 ? `
-LOWEST DEBT CUSTOMER:
-  Name: ${debtAnalysis.lowest.name}
-  Current Debt: UGX ${debtAnalysis.lowest.currentBalance.toLocaleString()}
-  Revenue Generated: UGX ${debtAnalysis.lowest.totalRevenue.toLocaleString()}
-  Total KGs Processed: ${debtAnalysis.lowest.totalKgs.toFixed(1)} kg
-  Number of Transactions: ${debtAnalysis.lowest.transactions}
-` : ''}
+          <div class="section">
+            <h2>CUSTOMER DEBT RANKING (Top 15)</h2>
+            <div class="customer-list">${debtAnalysis.all.slice(0, 15).map((customer, index) => 
+              `${(index + 1).toString().padStart(2, '0')}. ${customer.name.padEnd(25)} | Debt: UGX ${customer.currentBalance.toLocaleString().padStart(12)}`
+            ).join('\n')}</div>
+          </div>
 
-CUSTOMER DEBT RANKING (Top 15):
-${debtAnalysis.all.slice(0, 15).map((customer, index) => 
-  `${(index + 1).toString().padStart(2, '0')}. ${customer.name.padEnd(25)} | Debt: UGX ${customer.currentBalance.toLocaleString().padStart(12)} | Revenue: UGX ${customer.totalRevenue.toLocaleString().padStart(12)} | KGs: ${customer.totalKgs.toFixed(1).padStart(8)}`
-).join('\n')}
+          <div class="section">
+            <h2>DETAILED TRANSACTION LOG</h2>
+            <div class="transaction-list">${monthReportData.transactions.map((t: any, index: number) => 
+              `${(index + 1).toString().padStart(3, '0')}. ${t.date} | ${t.customer_name.padEnd(20)} | ${t.kgs_hulled}kg | UGX ${t.total_amount.toLocaleString()}`
+            ).join('\n')}</div>
+          </div>
 
-DETAILED TRANSACTION LOG:
-${reportData.transactions.map((t: any, index: number) => 
-  `${(index + 1).toString().padStart(3, '0')}. ${t.date} | ${t.customer_name.padEnd(20)} | ${t.kgs_hulled.toString().padStart(6)}kg | Revenue: UGX ${t.total_amount.toLocaleString().padStart(10)} | Paid: UGX ${t.amount_paid.toLocaleString().padStart(10)} | Balance: UGX ${t.balance.toLocaleString().padStart(10)}`
-).join('\n')}
+          <div class="section">
+            <h2>CASH PAYMENT LOG</h2>
+            <div class="transaction-list">${monthReportData.cashTransactions.map((p: any, index: number) => 
+              `${(index + 1).toString().padStart(3, '0')}. ${p.date} | ${p.customer_name.padEnd(20)} | UGX ${p.amount_paid.toLocaleString()}`
+            ).join('\n')}</div>
+          </div>
 
-CASH PAYMENT LOG:
-${reportData.cashTransactions.map((p: any, index: number) => 
-  `${(index + 1).toString().padStart(3, '0')}. ${p.date} | ${p.customer_name.padEnd(20)} | Payment: UGX ${p.amount_paid.toLocaleString().padStart(10)} | Method: ${p.payment_method || 'Cash'}`
-).join('\n')}
+          <div class="section">
+            <h2>RECOMMENDATIONS</h2>
+            <ul>
+              <li>Follow up with high-debt customers for payment collection</li>
+              <li>Review payment terms for customers with increasing debt</li>
+              <li>Monitor transaction patterns for business insights</li>
+              <li>Consider incentives for prompt payment customers</li>
+            </ul>
+          </div>
 
-RECOMMENDATIONS:
-- Follow up with high-debt customers for payment collection
-- Review payment terms for customers with increasing debt
-- Monitor transaction patterns for business insights
-- Consider incentives for prompt payment customers
-
-Report Generated by: Milling Department System
-Generation Time: ${new Date().toLocaleString()}
+          <div class="section">
+            <p><strong>Report Generated by:</strong> Milling Department System</p>
+            <p><strong>Generation Time:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+        </body>
+      </html>
     `;
 
-    const blob = new Blob([reportContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `milling-previous-month-report-${monthName.replace(' ', '-').toLowerCase()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
   };
 
   // Customer debt analysis for filtered data
@@ -382,12 +456,59 @@ Generation Time: ${new Date().toLocaleString()}
                   Export Report
                 </Button>
               )}
-              {reportData && quickFilter === 'previous-month' && (
-                <Button variant="outline" onClick={exportPreviousMonthReport}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Previous Month
-                </Button>
-              )}
+              <Dialog open={showMonthSelector} onOpenChange={setShowMonthSelector}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print Monthly Report
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Select Month to Print</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getMonthOptions().map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          if (selectedMonth) {
+                            generateMonthReport(selectedMonth);
+                          }
+                        }}
+                        disabled={!selectedMonth}
+                        className="flex-1"
+                      >
+                        Generate Report
+                      </Button>
+                      {monthReportData && (
+                        <Button
+                          onClick={() => {
+                            printMonthReport();
+                            setShowMonthSelector(false);
+                          }}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <Printer className="h-4 w-4 mr-2" />
+                          Print
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
