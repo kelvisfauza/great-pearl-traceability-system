@@ -81,7 +81,7 @@ export const useUnifiedEmployees = () => {
     }
   };
 
-  const createEmployee = async (employeeData: Omit<UnifiedEmployee, 'id' | 'created_at' | 'updated_at'>) => {
+  const createEmployee = async (employeeData: Omit<UnifiedEmployee, 'id' | 'created_at' | 'updated_at'> & { password?: string }) => {
     if (!canManageEmployees()) {
       toast({
         title: "Access Denied",
@@ -94,11 +94,44 @@ export const useUnifiedEmployees = () => {
     try {
       console.log('🆕 Creating new employee:', employeeData.name);
 
-      // 1. Create in Supabase first (primary database)
+      // Extract password and remove it from employee data
+      const { password, ...employeeDataWithoutPassword } = employeeData;
+
+      // 1. Create auth user if password is provided
+      let authUserId = null;
+      if (password) {
+        try {
+          const response = await supabase.functions.invoke('create-user', {
+            body: { 
+              employeeData: {
+                ...employeeDataWithoutPassword,
+                password
+              }
+            }
+          });
+
+          if (response.error) {
+            throw new Error(response.error.message || 'Failed to create user account');
+          }
+
+          if (response.data?.success && response.data?.user?.id) {
+            authUserId = response.data.user.id;
+            console.log('✅ Auth user created with ID:', authUserId);
+          } else {
+            throw new Error(response.data?.error || 'Failed to create user account');
+          }
+        } catch (authError) {
+          console.error('❌ Auth user creation failed:', authError);
+          throw new Error(`Failed to create user account: ${authError.message}`);
+        }
+      }
+
+      // 2. Create in Supabase employees table
       const { data: newEmployee, error: supabaseError } = await supabase
         .from('employees')
         .insert([{
-          ...employeeData,
+          ...employeeDataWithoutPassword,
+          auth_user_id: authUserId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }])
