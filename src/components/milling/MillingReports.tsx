@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { FileText, Download, TrendingUp, TrendingDown, DollarSign, Package2, Users, CalendarCheck, Calendar, Files, Printer } from 'lucide-react';
 import { useMillingData } from '@/hooks/useMillingData';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import StandardPrintHeader from '@/components/print/StandardPrintHeader';
 
 const MillingReports = () => {
   const { getReportData, stats, customers, transactions, cashTransactions } = useMillingData();
@@ -184,6 +185,47 @@ ${reportData.cashTransactions.map((p: any) =>
     const debtAnalysis = customerDebtAnalysis();
     const totalDebt = customers.reduce((sum, customer) => sum + customer.current_balance, 0);
     
+    // Calculate daily totals
+    const dailyTotals = monthReportData.transactions.reduce((acc: Record<string, {
+      date: string;
+      totalKgs: number;
+      totalRevenue: number;
+      totalAmountPaid: number;
+      totalBalance: number;
+      transactionCount: number;
+    }>, transaction: any) => {
+      const date = transaction.date;
+      if (!acc[date]) {
+        acc[date] = {
+          date,
+          totalKgs: 0,
+          totalRevenue: 0,
+          totalAmountPaid: 0,
+          totalBalance: 0,
+          transactionCount: 0
+        };
+      }
+      acc[date].totalKgs += transaction.kgs_hulled;
+      acc[date].totalRevenue += transaction.total_amount;
+      acc[date].totalAmountPaid += transaction.amount_paid;
+      acc[date].totalBalance += transaction.balance;
+      acc[date].transactionCount += 1;
+      return acc;
+    }, {});
+
+    interface DailyTotal {
+      date: string;
+      totalKgs: number;
+      totalRevenue: number;
+      totalAmountPaid: number;
+      totalBalance: number;
+      transactionCount: number;
+    }
+
+    const sortedDailyTotals: DailyTotal[] = (Object.values(dailyTotals) as DailyTotal[]).sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    
     const printContent = `
       <html>
         <head>
@@ -202,11 +244,47 @@ ${reportData.cashTransactions.map((p: any) =>
             h1 { font-size: 18px; }
             h2 { font-size: 14px; }
             h3 { font-size: 12px; }
-            .header { 
+            .print-header { 
               text-align: center; 
-              margin-bottom: 20px; 
               border-bottom: 2px solid #333;
               padding-bottom: 10px;
+              margin-bottom: 20px;
+            }
+            .company-logo {
+              height: 64px;
+              width: auto;
+              margin-bottom: 8px;
+            }
+            .company-name {
+              font-weight: bold;
+              font-size: 20px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              margin-bottom: 8px;
+              color: #333;
+            }
+            .company-details {
+              font-size: 12px;
+              color: #666;
+              margin-bottom: 16px;
+            }
+            .company-details p {
+              margin: 4px 0;
+            }
+            .document-title {
+              font-size: 16px;
+              font-weight: bold;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              color: #333;
+              margin-bottom: 8px;
+            }
+            .document-info {
+              font-size: 12px;
+              color: #666;
+            }
+            .document-info p {
+              margin: 4px 0;
             }
             .summary-table {
               width: 100%;
@@ -262,10 +340,30 @@ ${reportData.cashTransactions.map((p: any) =>
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>MILLING DEPARTMENT MONTHLY REPORT</h1>
-            <h2>${monthReportData.monthName}</h2>
-            <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+          <!-- Company Header -->
+          <div class="print-header">
+            <img 
+              src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+              alt="Great Pearl Coffee Factory Logo" 
+              class="company-logo" 
+            />
+            
+            <h1 class="company-name">GREAT PEARL COFFEE FACTORY</h1>
+            
+            <div class="company-details">
+              <p>Specialty Coffee Processing & Export</p>
+              <p>+256781121639 / +256778536681</p>
+              <p>www.greatpearlcoffee.com | greatpearlcoffee@gmail.com</p>
+              <p>Uganda Coffee Development Authority Licensed</p>
+            </div>
+            
+            <h2 class="document-title">MILLING DEPARTMENT MONTHLY REPORT</h2>
+            <p class="document-title" style="font-size: 14px; margin-top: 4px;">${monthReportData.monthName}</p>
+            
+            <div class="document-info">
+              <p>Date: ${new Date().toLocaleDateString('en-GB')}</p>
+              <p>Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+            </div>
           </div>
 
           <div class="section">
@@ -313,6 +411,44 @@ ${reportData.cashTransactions.map((p: any) =>
               </tr>
             </table>
           </div>
+
+          ${sortedDailyTotals.length > 0 ? `
+          <div class="section">
+            <h2>DAILY TOTALS SUMMARY</h2>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Transactions</th>
+                  <th>KGs Hulled</th>
+                  <th>Revenue Generated (UGX)</th>
+                  <th>Amount Paid (UGX)</th>
+                  <th>Balance Outstanding (UGX)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${sortedDailyTotals.map((daily: any) => `
+                  <tr>
+                    <td>${daily.date}</td>
+                    <td class="amount">${daily.transactionCount}</td>
+                    <td class="amount">${daily.totalKgs.toFixed(1)}</td>
+                    <td class="amount">${daily.totalRevenue.toLocaleString()}</td>
+                    <td class="amount">${daily.totalAmountPaid.toLocaleString()}</td>
+                    <td class="amount">${daily.totalBalance.toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+                <tr class="totals-row">
+                  <td><strong>TOTALS</strong></td>
+                  <td class="amount"><strong>${sortedDailyTotals.reduce((sum: number, d: any) => sum + d.transactionCount, 0)}</strong></td>
+                  <td class="amount"><strong>${sortedDailyTotals.reduce((sum: number, d: DailyTotal) => sum + d.totalKgs, 0).toFixed(1)}</strong></td>
+                  <td class="amount"><strong>${sortedDailyTotals.reduce((sum: number, d: any) => sum + d.totalRevenue, 0).toLocaleString()}</strong></td>
+                  <td class="amount"><strong>${sortedDailyTotals.reduce((sum: number, d: any) => sum + d.totalAmountPaid, 0).toLocaleString()}</strong></td>
+                  <td class="amount"><strong>${sortedDailyTotals.reduce((sum: number, d: any) => sum + d.totalBalance, 0).toLocaleString()}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
 
           <div class="section">
             <h2>CUSTOMER DEBT RANKING</h2>
