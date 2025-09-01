@@ -146,33 +146,40 @@ ${reportData.cashTransactions.map((p: any) =>
     return options;
   };
 
-  // Generate report for selected month
   const generateMonthReport = (monthValue: string) => {
     const [year, month] = monthValue.split('-');
-    const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
-    const endDate = endOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+    const targetYear = parseInt(year);
+    const targetMonth = parseInt(month) - 1; // JavaScript months are 0-indexed
     
-    const filteredTransactions = transactions.filter(t => {
-      const transDate = new Date(t.date);
-      return transDate >= startDate && transDate <= endDate;
-    });
-    
-    const filteredCashTransactions = cashTransactions.filter(t => {
-      const transDate = new Date(t.date);
-      return transDate >= startDate && transDate <= endDate;
-    });
+    const reportData = getReportData('monthly');
+    const filteredTransactions = reportData.transactions.filter(t => 
+      new Date(t.date).getMonth() === targetMonth && new Date(t.date).getFullYear() === targetYear
+    );
+    const filteredCashTransactions = reportData.cashTransactions.filter(t => 
+      new Date(t.date).getMonth() === targetMonth && new Date(t.date).getFullYear() === targetYear
+    );
+    const filteredExpenses = reportData.expenses?.filter(e => 
+      new Date(e.date).getMonth() === targetMonth && new Date(e.date).getFullYear() === targetYear
+    ) || [];
+
+    const totalRevenue = filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0);
+    const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const netRevenue = totalRevenue - totalExpenses;
 
     const data = {
       transactions: filteredTransactions,
       cashTransactions: filteredCashTransactions,
+      expenses: filteredExpenses,
       summary: {
         totalKgsHulled: filteredTransactions.reduce((sum, t) => sum + t.kgs_hulled, 0),
-        totalRevenue: filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0),
+        totalRevenue,
+        totalExpenses,
+        netRevenue,
         totalCashReceived: filteredCashTransactions.reduce((sum, t) => sum + t.amount_paid, 0),
         totalTransactions: filteredTransactions.length,
         totalPayments: filteredCashTransactions.length
       },
-      monthName: format(startDate, 'MMMM yyyy')
+      monthName: format(new Date(targetYear, targetMonth), 'MMMM yyyy')
     };
     
     setMonthReportData(data);
@@ -385,6 +392,16 @@ ${reportData.cashTransactions.map((p: any) =>
                 <td>UGX</td>
               </tr>
               <tr>
+                <td>Total Expenses</td>
+                <td class="amount">UGX ${monthReportData.summary.totalExpenses.toLocaleString()}</td>
+                <td>UGX</td>
+              </tr>
+              <tr style="background-color: #e8f5e8;">
+                <td><strong>Net Revenue (After Expenses)</strong></td>
+                <td class="amount"><strong>UGX ${monthReportData.summary.netRevenue.toLocaleString()}</strong></td>
+                <td>UGX</td>
+              </tr>
+              <tr>
                 <td>Cash Received</td>
                 <td class="amount">UGX ${monthReportData.summary.totalCashReceived.toLocaleString()}</td>
                 <td>UGX</td>
@@ -444,6 +461,36 @@ ${reportData.cashTransactions.map((p: any) =>
                   <td class="amount"><strong>${sortedDailyTotals.reduce((sum: number, d: any) => sum + d.totalRevenue, 0).toLocaleString()}</strong></td>
                   <td class="amount"><strong>${sortedDailyTotals.reduce((sum: number, d: any) => sum + d.totalAmountPaid, 0).toLocaleString()}</strong></td>
                   <td class="amount"><strong>${sortedDailyTotals.reduce((sum: number, d: any) => sum + d.totalBalance, 0).toLocaleString()}</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+
+          ${monthReportData.expenses && monthReportData.expenses.length > 0 ? `
+          <div class="section">
+            <h2>EXPENSES BREAKDOWN</h2>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Category</th>
+                  <th>Amount (UGX)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${monthReportData.expenses.map((expense: any) => `
+                  <tr>
+                    <td>${expense.date}</td>
+                    <td>${expense.description}</td>
+                    <td>${expense.category}</td>
+                    <td class="amount">${expense.amount.toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+                <tr class="totals-row">
+                  <td colspan="3"><strong>TOTAL EXPENSES</strong></td>
+                  <td class="amount"><strong>${monthReportData.summary.totalExpenses.toLocaleString()}</strong></td>
                 </tr>
               </tbody>
             </table>

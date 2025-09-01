@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, TrendingUp, DollarSign, Package2, Plus, Receipt, CreditCard, FileText } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Package2, Plus, Receipt, CreditCard, FileText, TrendingDown } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useMillingData } from '@/hooks/useMillingData';
 import MillingCustomerForm from '@/components/milling/MillingCustomerForm';
@@ -13,6 +13,7 @@ import MillingReports from '@/components/milling/MillingReports';
 import MillingTransactionsList from '@/components/milling/MillingTransactionsList';
 import MillingCustomersList from '@/components/milling/MillingCustomersList';
 import MillingCustomerLedger from '@/components/milling/MillingCustomerLedger';
+import MillingExpenses from '@/components/milling/MillingExpenses';
 import MillingPrintReportModal from '@/components/milling/MillingPrintReportModal';
 
 const Milling = () => {
@@ -85,7 +86,7 @@ const Milling = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
           {statsCards.map((stat, index) => (
             <Card key={index}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -98,15 +99,53 @@ const Milling = () => {
               </CardContent>
             </Card>
           ))}
+
+          {/* Additional Revenue and Expenses Cards */}
+          <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-100 border-green-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-700">Monthly Revenue</p>
+                <p className="text-2xl font-bold text-green-900">
+                  UGX {stats.monthlyRevenue.toLocaleString()}
+                </p>
+              </div>
+              <TrendingUp className="h-12 w-12 text-green-600" />
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-red-50 to-rose-100 border-red-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-700">Monthly Expenses</p>
+                <p className="text-2xl font-bold text-red-900">
+                  UGX {stats.totalExpenses.toLocaleString()}
+                </p>
+              </div>
+              <TrendingDown className="h-12 w-12 text-red-600" />
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-blue-50 to-cyan-100 border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-700">Net Revenue</p>
+                <p className="text-2xl font-bold text-blue-900">
+                  UGX {stats.netRevenue.toLocaleString()}
+                </p>
+              </div>
+              <TrendingUp className="h-12 w-12 text-blue-600" />
+            </div>
+          </Card>
         </div>
 
         {/* Main Tabs */}
         <Tabs defaultValue="transactions" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="transactions" className="font-bold">Transactions</TabsTrigger>
             <TabsTrigger value="customers" className="font-bold">Customers</TabsTrigger>
             <TabsTrigger value="ledger" className="font-bold">Customer Ledger</TabsTrigger>
             <TabsTrigger value="payments" className="font-bold">Payments</TabsTrigger>
+            <TabsTrigger value="expenses" className="font-bold">Expenses</TabsTrigger>
             <TabsTrigger value="reports" className="font-bold">Reports</TabsTrigger>
           </TabsList>
 
@@ -149,6 +188,10 @@ const Milling = () => {
                 <p className="text-center text-muted-foreground">Cash transaction history will be displayed here</p>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="expenses" className="space-y-4">
+            <MillingExpenses />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-4">

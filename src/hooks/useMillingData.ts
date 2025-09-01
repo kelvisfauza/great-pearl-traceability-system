@@ -44,6 +44,19 @@ export interface MillingCashTransaction {
   created_by: string;
 }
 
+export interface MillingExpense {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
+  status: string;
+  created_by: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MillingStats {
   totalCustomers: number;
   activeCustomers: number;
@@ -51,19 +64,24 @@ export interface MillingStats {
   cashReceived: number;
   totalKgsHulled: number;
   monthlyRevenue: number;
+  totalExpenses: number;
+  netRevenue: number;
 }
 
 export const useMillingData = () => {
   const [customers, setCustomers] = useState<MillingCustomer[]>([]);
   const [transactions, setTransactions] = useState<MillingTransaction[]>([]);
   const [cashTransactions, setCashTransactions] = useState<MillingCashTransaction[]>([]);
+  const [expenses, setExpenses] = useState<MillingExpense[]>([]);
   const [stats, setStats] = useState<MillingStats>({
     totalCustomers: 0,
     activeCustomers: 0,
     totalDebts: 0,
     cashReceived: 0,
     totalKgsHulled: 0,
-    monthlyRevenue: 0
+    monthlyRevenue: 0,
+    totalExpenses: 0,
+    netRevenue: 0
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -96,12 +114,21 @@ export const useMillingData = () => {
 
       if (cashTransactionsError) throw cashTransactionsError;
 
+      // Fetch expenses
+      const { data: expensesData, error: expensesError } = await supabase
+        .from('milling_expenses')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (expensesError) throw expensesError;
+
       setCustomers(customersData || []);
       setTransactions(transactionsData || []);
       setCashTransactions(cashTransactionsData || []);
+      setExpenses(expensesData || []);
 
       // Calculate stats
-      calculateStats(customersData || [], transactionsData || [], cashTransactionsData || []);
+      calculateStats(customersData || [], transactionsData || [], cashTransactionsData || [], expensesData || []);
       
     } catch (error) {
       console.error('Error fetching milling data:', error);
@@ -115,7 +142,7 @@ export const useMillingData = () => {
     }
   };
 
-  const calculateStats = (customers: MillingCustomer[], transactions: MillingTransaction[], cashTransactions: MillingCashTransaction[]) => {
+  const calculateStats = (customers: MillingCustomer[], transactions: MillingTransaction[], cashTransactions: MillingCashTransaction[], expenses: MillingExpense[]) => {
     const totalCustomers = customers.length;
     const activeCustomers = customers.filter(c => c.status === 'Active').length;
     const totalDebts = customers.reduce((sum, c) => sum + (c.current_balance || 0), 0);
@@ -132,9 +159,16 @@ export const useMillingData = () => {
       const transDate = new Date(t.date);
       return transDate.getMonth() === currentMonth && transDate.getFullYear() === currentYear;
     });
+
+    const monthlyExpenses = expenses.filter(e => {
+      const expenseDate = new Date(e.date);
+      return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+    });
     
     const totalKgsHulled = monthlyTransactions.reduce((sum, t) => sum + (t.kgs_hulled || 0), 0);
     const monthlyRevenue = monthlyTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+    const totalExpenses = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const netRevenue = monthlyRevenue - totalExpenses;
     
     // Cash received = sum of amount_paid from milling transactions + cash transactions in current month
     const cashFromTransactions = monthlyTransactions.reduce((sum, t) => sum + (t.amount_paid || 0), 0);
@@ -147,7 +181,9 @@ export const useMillingData = () => {
       totalDebts,
       cashReceived,
       totalKgsHulled,
-      monthlyRevenue
+      monthlyRevenue,
+      totalExpenses,
+      netRevenue
     });
   };
 
@@ -294,6 +330,37 @@ export const useMillingData = () => {
     }
   };
 
+  const addExpense = async (expenseData: Omit<MillingExpense, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('milling_expenses')
+        .insert([expenseData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Expense recorded successfully"
+      });
+
+      await fetchData();
+      return data;
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record expense. Please try again.",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   const getReportData = (period: 'daily' | 'weekly' | 'monthly') => {
     const now = new Date();
     let startDate: Date;
@@ -313,14 +380,18 @@ export const useMillingData = () => {
 
     const filteredTransactions = transactions.filter(t => new Date(t.date) >= startDate);
     const filteredCashTransactions = cashTransactions.filter(t => new Date(t.date) >= startDate);
+    const filteredExpenses = expenses.filter(e => new Date(e.date) >= startDate);
 
     return {
       transactions: filteredTransactions,
       cashTransactions: filteredCashTransactions,
+      expenses: filteredExpenses,
       summary: {
         totalKgsHulled: filteredTransactions.reduce((sum, t) => sum + t.kgs_hulled, 0),
         totalRevenue: filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0),
         totalCashReceived: filteredCashTransactions.reduce((sum, t) => sum + t.amount_paid, 0),
+        totalExpenses: filteredExpenses.reduce((sum, e) => sum + e.amount, 0),
+        netRevenue: filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0) - filteredExpenses.reduce((sum, e) => sum + e.amount, 0),
         totalTransactions: filteredTransactions.length,
         totalPayments: filteredCashTransactions.length
       }
@@ -335,11 +406,13 @@ export const useMillingData = () => {
     customers,
     transactions,
     cashTransactions,
+    expenses,
     stats,
     loading,
     addCustomer,
     addTransaction,
     addCashTransaction,
+    addExpense,
     getReportData,
     fetchData,
     updateMillingTransaction: async (id: string, updates: Partial<MillingTransaction>) => {
