@@ -2160,9 +2160,17 @@ export type Database = {
         Args: { employee_salary: number }
         Returns: number
       }
+      check_auth_user_exists: {
+        Args: { user_uuid: string }
+        Returns: Json
+      }
       cleanup_inactive_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      fix_denis_auth_final: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_available_to_request_safe: {
         Args: { user_uuid: string }
