@@ -11,7 +11,7 @@ import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import StandardPrintHeader from '@/components/print/StandardPrintHeader';
 
 const MillingReports = () => {
-  const { getReportData, stats, customers, transactions, cashTransactions } = useMillingData();
+  const { getReportData, stats, customers, transactions, cashTransactions, expenses } = useMillingData();
   const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [quickFilter, setQuickFilter] = useState('');
   const [reportData, setReportData] = useState<any>(null);
@@ -151,16 +151,18 @@ ${reportData.cashTransactions.map((p: any) =>
     const targetYear = parseInt(year);
     const targetMonth = parseInt(month) - 1; // JavaScript months are 0-indexed
     
-    const reportData = getReportData('monthly');
-    const filteredTransactions = reportData.transactions.filter(t => 
+    // Filter all transactions for the selected month instead of using getReportData
+    const filteredTransactions = transactions.filter(t => 
       new Date(t.date).getMonth() === targetMonth && new Date(t.date).getFullYear() === targetYear
     );
-    const filteredCashTransactions = reportData.cashTransactions.filter(t => 
+    const filteredCashTransactions = cashTransactions.filter(t => 
       new Date(t.date).getMonth() === targetMonth && new Date(t.date).getFullYear() === targetYear
     );
-    const filteredExpenses = reportData.expenses?.filter(e => 
+    
+    // Access expenses directly from the hook
+    const filteredExpenses = expenses.filter(e => 
       new Date(e.date).getMonth() === targetMonth && new Date(e.date).getFullYear() === targetYear
-    ) || [];
+    );
 
     const totalRevenue = filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0);
     const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
