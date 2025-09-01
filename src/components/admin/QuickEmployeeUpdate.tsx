@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { setEmployeeRole, PERMISSION_SETS } from '@/utils/updateEmployeePermissions';
-import { fixDenisPermissions } from '@/utils/fixDenisPermissions';
+import { fixDenisAccountFinal } from '@/utils/fixDenisAccountFinal';
 
 const QuickEmployeeUpdate = () => {
   const [email, setEmail] = useState('bwambaledenis8@gmail.com');
@@ -16,15 +16,15 @@ const QuickEmployeeUpdate = () => {
   const handleFixDenis = async () => {
     setLoading(true);
     try {
-      await fixDenisPermissions();
+      await fixDenisAccountFinal();
       toast({
         title: "Success",
-        description: "Denis permissions fixed to User level",
+        description: "Denis account authentication fixed completely",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fix Denis permissions",
+        description: "Failed to fix Denis account",
         variant: "destructive"
       });
     } finally {
@@ -114,7 +114,7 @@ const QuickEmployeeUpdate = () => {
           variant="destructive"
           className="w-full"
         >
-          {loading ? 'Fixing...' : 'Fix Denis Permissions (Set to User)'}
+          {loading ? 'Fixing...' : 'Fix Denis Account Authentication'}
         </Button>
       </CardContent>
     </Card>
