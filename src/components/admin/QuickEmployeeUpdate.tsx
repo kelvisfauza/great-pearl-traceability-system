@@ -8,6 +8,7 @@ import { setEmployeeRole, PERMISSION_SETS } from '@/utils/updateEmployeePermissi
 import { fixDenisAccountFinal } from '@/utils/fixDenisAccountFinal';
 import { updateKibabaPermissions } from '@/utils/updateKibabaPermissions';
 import { forceRefreshUserSession } from '@/utils/forceRefreshUserSession';
+import { syncSupabaseToFirebase } from '@/utils/syncSupabaseToFirebase';
 
 const QuickEmployeeUpdate = () => {
   const [email, setEmail] = useState('bwambaledenis8@gmail.com');
@@ -80,6 +81,34 @@ const QuickEmployeeUpdate = () => {
       toast({
         title: "Error",
         description: "Failed to refresh session",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSyncSupabaseToFirebase = async () => {
+    setLoading(true);
+    try {
+      const result = await syncSupabaseToFirebase();
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: `${result.message}. Permissions synchronized across systems.`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to sync employee data between systems",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred during synchronization",
         variant: "destructive"
       });
     } finally {
@@ -181,6 +210,15 @@ const QuickEmployeeUpdate = () => {
           className="w-full"
         >
           {loading ? 'Refreshing...' : 'Force Refresh Session'}
+        </Button>
+
+        <Button 
+          onClick={handleSyncSupabaseToFirebase}
+          disabled={loading}
+          variant="default"
+          className="w-full"
+        >
+          {loading ? 'Syncing...' : 'Sync Supabase → Firebase'}
         </Button>
       </CardContent>
     </Card>
