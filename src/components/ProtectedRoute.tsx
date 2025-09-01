@@ -45,7 +45,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check if user has required permissions (only if permissions are specified)
   if (requiredPermissions.length > 0) {
+    console.log('🔒 ProtectedRoute checking permissions:', {
+      user: user?.email,
+      employee: employee?.name,
+      employeeEmail: employee?.email,
+      employeePermissions: employee?.permissions,
+      requiredPermissions,
+      userPermissionCheck: requiredPermissions.map(p => ({ permission: p, hasIt: hasPermission(p) }))
+    });
+    
     const hasRequiredPermission = requiredPermissions.some(permission => hasPermission(permission));
+    
+    console.log('🔒 Permission check result:', { hasRequiredPermission });
     
     if (!hasRequiredPermission) {
       
