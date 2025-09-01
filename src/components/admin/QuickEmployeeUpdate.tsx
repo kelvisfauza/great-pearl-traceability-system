@@ -10,6 +10,7 @@ import { updateKibabaPermissions } from '@/utils/updateKibabaPermissions';
 import { forceRefreshUserSession } from '@/utils/forceRefreshUserSession';
 import { syncSupabaseToFirebase } from '@/utils/syncSupabaseToFirebase';
 import { resetKibabaPassword } from '@/utils/resetKibabaPassword';
+import { cleanupAllUsers } from '@/utils/cleanupUsers';
 import { supabase } from '@/integrations/supabase/client';
 
 const QuickEmployeeUpdate = () => {
@@ -172,6 +173,30 @@ const QuickEmployeeUpdate = () => {
     }
   };
 
+  const handleCleanupAllUsers = async () => {
+    if (!window.confirm('⚠️ WARNING: This will delete ALL users except the main account (nicholusscottlangz@gmail.com) from both Supabase and Firebase. This action cannot be undone. Are you sure?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await cleanupAllUsers();
+      toast({
+        title: "Success",
+        description: `User cleanup completed. Deleted ${result.deletedCount} users, kept main account.`,
+      });
+    } catch (error) {
+      console.error('Error cleaning up users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cleanup users",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
@@ -263,6 +288,15 @@ const QuickEmployeeUpdate = () => {
           className="w-full"
         >
           {loading ? 'Syncing...' : 'Sync Supabase → Firebase'}
+        </Button>
+
+        <Button 
+          onClick={handleCleanupAllUsers}
+          disabled={loading}
+          variant="destructive"
+          className="w-full"
+        >
+          {loading ? 'Cleaning...' : '🗑️ Delete All Users (Keep Main Account)'}
         </Button>
 
       </CardContent>
