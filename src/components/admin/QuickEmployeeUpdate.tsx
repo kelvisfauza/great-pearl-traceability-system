@@ -9,6 +9,7 @@ import { fixDenisAccountFinal } from '@/utils/fixDenisAccountFinal';
 import { updateKibabaPermissions } from '@/utils/updateKibabaPermissions';
 import { forceRefreshUserSession } from '@/utils/forceRefreshUserSession';
 import { syncSupabaseToFirebase } from '@/utils/syncSupabaseToFirebase';
+import { resetKibabaPassword } from '@/utils/resetKibabaPassword';
 import { supabase } from '@/integrations/supabase/client';
 
 const QuickEmployeeUpdate = () => {
@@ -70,6 +71,46 @@ const QuickEmployeeUpdate = () => {
     }
   };
 
+  const handleUpdate = async () => {
+    if (!email) return;
+    
+    setLoading(true);
+    try {
+      await setEmployeeRole(email, roleType);
+      toast({
+        title: "Success",
+        description: `Employee role updated to ${roleType}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update employee role",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForceRefreshSession = async () => {
+    setLoading(true);
+    try {
+      await forceRefreshUserSession('nicholusscottlangz@gmail.com');
+      toast({
+        title: "Success",
+        description: "Session refresh initiated. Page will reload automatically.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh session",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleResetKibabaPassword = async () => {
     setLoading(true);
     try {
@@ -103,25 +144,6 @@ const QuickEmployeeUpdate = () => {
     }
   };
 
-  const handleForceRefreshSession = async () => {
-    setLoading(true);
-    try {
-      await forceRefreshUserSession('nicholusscottlangz@gmail.com');
-      toast({
-        title: "Success",
-        description: "Session refresh initiated. Page will reload automatically.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to refresh session",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSyncSupabaseToFirebase = async () => {
     setLoading(true);
     try {
@@ -143,27 +165,6 @@ const QuickEmployeeUpdate = () => {
       toast({
         title: "Error",
         description: "An error occurred during synchronization",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdate = async () => {
-    if (!email) return;
-    
-    setLoading(true);
-    try {
-      await setEmployeeRole(email, roleType);
-      toast({
-        title: "Success",
-        description: `Employee role updated to ${roleType}`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update employee role",
         variant: "destructive"
       });
     } finally {
@@ -263,6 +264,7 @@ const QuickEmployeeUpdate = () => {
         >
           {loading ? 'Syncing...' : 'Sync Supabase → Firebase'}
         </Button>
+
       </CardContent>
     </Card>
   );
