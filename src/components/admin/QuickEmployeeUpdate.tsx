@@ -17,6 +17,7 @@ const QuickEmployeeUpdate = () => {
   const [email, setEmail] = useState('bwambaledenis8@gmail.com');
   const [roleType, setRoleType] = useState<keyof typeof PERMISSION_SETS>('USER');
   const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleFixDenis = async () => {
@@ -197,6 +198,53 @@ const QuickEmployeeUpdate = () => {
     }
   };
 
+  const createGreatpearlUser = async () => {
+    setIsLoading(true);
+    try {
+      const employeeData = {
+        name: "Great Pearl",
+        email: "Greatpearl@gmail.com",
+        phone: "+256700000000",
+        position: "Operations Staff",
+        department: "Operations",
+        salary: 150000,
+        role: "User",
+        permissions: ["Milling", "Quality Control", "Reports"],
+        password: "Uganda@20",
+        status: "Active",
+        employee_id: "EMP-GP001",
+        address: "Kampala, Uganda",
+        emergency_contact: "+256700000001"
+      };
+
+      const response = await supabase.functions.invoke('create-user', {
+        body: { employeeData }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.success) {
+        toast({
+          title: "Success",
+          description: "Great Pearl user created successfully with permissions: Milling, Quality Control, Reports",
+        });
+      } else {
+        throw new Error(response.data?.error || 'Failed to create user');
+      }
+    } catch (error) {
+      console.error('Failed to create Great Pearl user:', error);
+      toast({
+        title: "Error",
+        description: `Failed to create user: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
@@ -297,6 +345,15 @@ const QuickEmployeeUpdate = () => {
           className="w-full"
         >
           {loading ? 'Cleaning...' : '🗑️ Delete All Users (Keep Main Account)'}
+        </Button>
+
+        <Button 
+          onClick={createGreatpearlUser}
+          disabled={isLoading}
+          variant="secondary"
+          className="w-full"
+        >
+          {isLoading ? 'Creating...' : '✨ Create Great Pearl User'}
         </Button>
 
       </CardContent>
