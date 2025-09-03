@@ -32,32 +32,18 @@ export const useActivityTracker = () => {
 
       console.log('Activity recorded successfully, checking for reward...');
 
-      // Check if user should get reward for this activity
-      const { data, error } = await supabase.rpc('award_activity_reward' as any, {
-        user_uuid: user.id,
-        activity_name: activityType
-      });
+      // Temporarily disable reward system until function is implemented
+      // const { data, error } = await supabase.rpc('award_activity_reward' as any, {
+      //   user_uuid: user.id,
+      //   activity_name: activityType
+      // });
 
-      if (error) {
-        console.error('Error awarding activity reward:', error);
-        return;
-      }
+      // if (error) {
+      //   console.error('Error awarding activity reward:', error);
+      //   return;
+      // }
 
-      console.log('Reward check response:', data);
-
-      // Type guard for the response data
-      const rewardData = data as { rewarded?: boolean; amount?: number; reason?: string } | null;
-
-      if (rewardData?.rewarded) {
-        toast({
-          title: "Activity Reward! 🎉",
-          description: `You've earned UGX ${rewardData.amount?.toLocaleString()} for ${description || activityType}!`,
-          duration: 5000,
-        });
-        console.log('Reward awarded:', rewardData.amount);
-      } else {
-        console.log('No reward awarded. Reason:', rewardData?.reason);
-      }
+      console.log('Activity tracked successfully for user:', user.email);
     } catch (error: any) {
       console.error('Error tracking activity:', error);
     }
