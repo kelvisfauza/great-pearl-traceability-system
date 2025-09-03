@@ -105,10 +105,9 @@ const Auth = () => {
         const browserInfo = navigator.userAgent.split(' ').slice(-2).join(' ');
         const location = `${browserInfo} browser`;
 
-        await smsService.sendVerificationSMS(
+        await smsService.sendSMS(
           employee.phone,
-          `Dear ${employee.name}, you have successfully logged in at ${timeStr} from ${location}. If this wasn't you, contact your admin immediately.`,
-          employee.name
+          `Dear ${employee.name}, you have successfully logged in at ${timeStr} from ${location}. If this wasn't you, contact your admin immediately.`
         );
       }
     } catch (error) {

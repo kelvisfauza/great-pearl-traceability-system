@@ -210,8 +210,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signOut = async (): Promise<void> => {
+  const signOut = async (reason?: 'inactivity' | 'manual'): Promise<void> => {
     try {
+      // Send SMS notification for inactivity logout
+      if (reason === 'inactivity' && employee?.phone) {
+        try {
+          await smsService.sendSMS(
+            employee.phone,
+            `Hi ${employee.name}, you have been logged out due to inactivity. Login again to access the system.`
+          );
+        } catch (error) {
+          console.error('Failed to send inactivity SMS:', error);
+        }
+      }
+
       await supabase.auth.signOut();
       
       setUser(null);
@@ -220,7 +232,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       toast({
         title: "Logged Out",
-        description: "You have been successfully logged out"
+        description: reason === 'inactivity' 
+          ? "You have been logged out due to inactivity" 
+          : "You have been successfully logged out"
       });
     } catch (error: any) {
       console.error('Sign out error:', error);

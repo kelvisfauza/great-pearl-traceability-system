@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface SMSProvider {
@@ -17,7 +16,7 @@ class SupabaseSMSProvider implements SMSProvider {
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: { 
           phone: phone, 
-          code: message,
+          message: message,
           userName: 'User' 
         }
       });
@@ -83,7 +82,7 @@ export class SMSService {
       try {
         console.log(`Trying ${provider.name}...`);
         
-        // For Supabase provider, we need to send the raw code, not the formatted message
+        // For Supabase provider, send the message as is
         if (provider.name === 'Supabase SMS') {
           const success = await provider.sendSMS(formattedPhone, code);
           
@@ -119,6 +118,37 @@ export class SMSService {
     return { 
       success: false, 
       error: 'All SMS providers failed to send the verification code' 
+    };
+  }
+
+  // Method to send general SMS messages
+  async sendSMS(phone: string, message: string): Promise<{ success: boolean; error?: string }> {
+    const formattedPhone = this.formatPhoneNumber(phone);
+    
+    console.log('Sending SMS to:', formattedPhone, 'Message:', message);
+
+    for (const provider of this.providers) {
+      try {
+        console.log(`Trying ${provider.name}...`);
+        
+        const success = await provider.sendSMS(formattedPhone, message);
+        
+        if (success) {
+          console.log(`SMS sent successfully via ${provider.name}`);
+          return { 
+            success: true 
+          };
+        } else {
+          console.log(`${provider.name} returned false, trying next provider...`);
+        }
+      } catch (error) {
+        console.error(`${provider.name} failed:`, error);
+      }
+    }
+
+    return { 
+      success: false, 
+      error: 'All SMS providers failed to send the message' 
     };
   }
 
