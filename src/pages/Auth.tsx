@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Loader2, AlertCircle, Phone, Mail, MessageCircle } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 import { DenisAccountFixer } from '@/components/DenisAccountFixer';
+import TwoFactorVerification from '@/components/TwoFactorVerification';
+import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -18,6 +19,8 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [showTwoFactor, setShowTwoFactor] = useState(false);
+  const [userPhone, setUserPhone] = useState('');
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
@@ -31,8 +34,25 @@ const Auth = () => {
       
       if (result.requiresPasswordChange) {
         setShowPasswordChange(true);
+        setLoading(false);
+        return;
+      }
+
+      // After successful email/password authentication, get user's phone for 2FA
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('phone')
+        .eq('email', email)
+        .single();
+
+      if (employee?.phone) {
+        setUserPhone(employee.phone);
+        setShowTwoFactor(true);
+        setLoading(false);
       } else {
+        // No phone number found, proceed without 2FA
         navigate('/');
+        setLoading(false);
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -50,15 +70,38 @@ const Auth = () => {
       }
       
       setError(errorMessage);
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handlePasswordChangeComplete = () => {
     setShowPasswordChange(false);
     navigate('/');
   };
+
+  const handleTwoFactorComplete = () => {
+    setShowTwoFactor(false);
+    navigate('/');
+  };
+
+  const handleTwoFactorCancel = () => {
+    setShowTwoFactor(false);
+    setLoading(false);
+  };
+
+  // Show 2FA verification screen
+  if (showTwoFactor) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
+        <TwoFactorVerification
+          email={email}
+          phone={userPhone}
+          onVerificationComplete={handleTwoFactorComplete}
+          onCancel={handleTwoFactorCancel}
+        />
+      </div>
+    );
+  }
 
 
   return (
