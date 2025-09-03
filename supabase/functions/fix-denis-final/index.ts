@@ -40,10 +40,17 @@ Deno.serve(async (req) => {
 
     console.log('📋 Denis employee found:', employee.email, 'Auth ID:', employee.auth_user_id);
 
-    // Check if auth user exists
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(employee.auth_user_id);
+    // Check if auth user exists (only if auth_user_id is not null)
+    let authUser = null;
+    let authError = null;
 
-    if (authError || !authUser.user) {
+    if (employee.auth_user_id) {
+      const result = await supabaseAdmin.auth.admin.getUserById(employee.auth_user_id);
+      authUser = result.data;
+      authError = result.error;
+    }
+
+    if (!employee.auth_user_id || authError || !authUser?.user) {
       console.log('🆕 Auth user not found, creating new one...');
       
       // Create new auth user
