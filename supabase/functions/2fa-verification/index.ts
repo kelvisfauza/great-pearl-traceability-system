@@ -85,6 +85,25 @@ Deno.serve(async (req) => {
       
       console.log('✅ Verification code stored in database');
       
+      // Get user details from employees table
+      const { data: employeeData, error: employeeError } = await supabaseAdmin
+        .from('employees')
+        .select('name, role')
+        .eq('email', email)
+        .single();
+
+      let userName = 'User';
+      let userRole = 'User';
+      
+      if (employeeData && !employeeError) {
+        userName = employeeData.name || 'User';
+        userRole = employeeData.role || 'User';
+      } else {
+        console.warn('Could not fetch employee data:', employeeError);
+      }
+
+      // Format the SMS message as requested
+      const smsMessage = `HI ${userName.toUpperCase()}, ${userRole} your log in code is ${verificationCode} for Great Pearl Coffee, valid for 5 minutes, always log out when not on the site and dont share pin`;
 
       // Send SMS using existing send-sms function
       const smsResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-sms`, {
@@ -95,8 +114,8 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           phone: phone,
-          message: `Your Great Pearl Coffee verification code is: ${verificationCode}. This code expires in 5 minutes.`,
-          userName: 'System'
+          message: smsMessage,
+          userName: userName
         })
       });
 
