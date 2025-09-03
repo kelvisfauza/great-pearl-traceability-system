@@ -76,6 +76,7 @@ export default function EditUserForm({ employee, onSubmit, onCancel }: EditUserF
         permissions: Array.isArray(values.permissions) ? values.permissions : [],
       };
 
+      console.log('🔄 EditUserForm submitting update with data:', updateData);
       await onSubmit(updateData);
     } catch (error) {
       throw error;
