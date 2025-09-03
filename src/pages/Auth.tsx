@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, AlertCircle, Phone, Mail, MessageCircle } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
+import { DenisAccountFixer } from '@/components/DenisAccountFixer';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -135,6 +136,11 @@ const Auth = () => {
             </form>
           </CardContent>
         </Card>
+
+        {/* Denis Account Fixer - Temporary */}
+        <div className="mt-4">
+          <DenisAccountFixer />
+        </div>
 
         {/* IT Support Contact */}
         <Card className="mt-4">
