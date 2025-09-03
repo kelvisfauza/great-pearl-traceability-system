@@ -11,6 +11,7 @@ import { Loader2, AlertCircle, Phone, Mail, MessageCircle } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 import TwoFactorVerification from '@/components/TwoFactorVerification';
 import { supabase } from '@/integrations/supabase/client';
+import { smsService } from '@/services/smsService';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -78,8 +79,42 @@ const Auth = () => {
     navigate('/');
   };
 
-  const handleTwoFactorComplete = () => {
+  const handleTwoFactorComplete = async () => {
     setShowTwoFactor(false);
+    
+    // Send login success SMS notification after successful 2FA
+    try {
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('name, phone')
+        .eq('email', email)
+        .single();
+
+      if (employee?.phone) {
+        const now = new Date();
+        const timeStr = now.toLocaleString('en-US', { 
+          timeZone: 'Africa/Kampala',
+          year: 'numeric',
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        // Get basic browser/location info
+        const browserInfo = navigator.userAgent.split(' ').slice(-2).join(' ');
+        const location = `${browserInfo} browser`;
+
+        await smsService.sendVerificationSMS(
+          employee.phone,
+          `Dear ${employee.name}, you have successfully logged in at ${timeStr} from ${location}. If this wasn't you, contact your admin immediately.`,
+          employee.name
+        );
+      }
+    } catch (error) {
+      console.error('Failed to send login SMS:', error);
+    }
+    
     navigate('/');
   };
 
