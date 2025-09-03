@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.test-function]
 verify_jwt = false
+
+[functions.test-sms]
+verify_jwt = false
