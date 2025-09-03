@@ -43,7 +43,9 @@ export const DenisAccountFixer = () => {
             email: 'tatwanzire@gmail.com',
             password: 'TimothyFarmFlow2025!',
             name: 'Artwanzire Timothy',
-            role: 'Supervisor'
+            role: 'Supervisor',
+            position: 'Supervisor', // Add required position field
+            department: 'Field Operations' // Add required department field
           },
           linkExisting: true
         }
@@ -51,7 +53,7 @@ export const DenisAccountFixer = () => {
 
       if (error) throw error;
 
-      if (data.success) {
+      if (data?.success) {
         toast({
           title: "Success",
           description: `Timothy's auth account created and linked successfully`,
@@ -59,7 +61,7 @@ export const DenisAccountFixer = () => {
         });
         console.log('✅ Timothy account created:', data);
       } else {
-        throw new Error(data.error || 'Unknown error');
+        throw new Error(data?.error || 'Unknown error');
       }
     } catch (error) {
       console.error('Failed to create Timothy account:', error);
