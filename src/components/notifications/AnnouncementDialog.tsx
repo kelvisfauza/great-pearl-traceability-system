@@ -187,9 +187,9 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
                 <SelectValue placeholder="Select priority" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="High">High</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
                 <SelectItem value="Low">Low</SelectItem>
+                <SelectItem value="Medium">Normal</SelectItem>
+                <SelectItem value="High">High</SelectItem>
               </SelectContent>
             </Select>
           </div>
