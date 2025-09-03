@@ -287,31 +287,33 @@ export const useApprovalRequests = () => {
           console.log('Updating payment record status for approved bank transfer...');
           
           try {
-            await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
-              status: 'Paid',
-              method: 'Bank Transfer',
-              updated_at: new Date().toISOString()
-            });
-            console.log('Payment record updated to Paid in Firebase');
-
-            // Also update the Supabase payment record if it exists
+            // Try to update Firebase first
             try {
-              const { error: supabaseError } = await supabase
-                .from('payment_records')
-                .update({
-                  status: 'Paid',
-                  method: 'Bank Transfer',
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', request.details.paymentId);
-              
-              if (supabaseError) {
-                console.error('Error updating Supabase payment record:', supabaseError);
-              } else {
-                console.log('Payment record updated to Paid in Supabase');
-              }
-            } catch (supabaseUpdateError) {
-              console.error('Error updating payment in Supabase:', supabaseUpdateError);
+              await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
+                status: 'Paid',
+                method: 'Bank Transfer',
+                updated_at: new Date().toISOString()
+              });
+              console.log('Payment record updated to Paid in Firebase');
+            } catch (firebaseError) {
+              console.log('Payment record not found in Firebase, updating Supabase only');
+            }
+
+            // Always update the Supabase payment record
+            const { error: supabaseError } = await supabase
+              .from('payment_records')
+              .update({
+                status: 'Paid',
+                method: 'Bank Transfer',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', request.details.paymentId);
+            
+            if (supabaseError) {
+              console.error('Error updating Supabase payment record:', supabaseError);
+              throw supabaseError;
+            } else {
+              console.log('Payment record updated to Paid in Supabase');
             }
           } catch (error) {
             console.error('Error updating payment record:', error);

@@ -9,6 +9,7 @@ import { useDailyTasks } from "@/hooks/useDailyTasks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import PaymentProcessingCard from "@/components/finance/PaymentProcessingCard";
 import SalaryRequestsCard from "@/components/finance/SalaryRequestsCard";
 import DailyReportsCard from "@/components/finance/DailyReportsCard";
