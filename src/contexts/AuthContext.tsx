@@ -35,7 +35,7 @@ interface AuthContextType {
   employee: Employee | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ requiresPasswordChange?: boolean }>;
-  signOut: () => Promise<void>;
+  signOut: (reason?: 'inactivity' | 'manual') => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   canManageEmployees: () => boolean;

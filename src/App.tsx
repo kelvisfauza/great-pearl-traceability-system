@@ -30,6 +30,8 @@ import Milling from "./pages/Milling";
 import PermissionManagement from "./pages/PermissionManagement";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 
+import { useInactivityTimer } from './hooks/useInactivityTimer';
+
 // Error Handler Component
 const ErrorHandlerInitializer = () => {
   const { initializeErrorHandlers } = useGlobalErrorHandler();
@@ -41,6 +43,12 @@ const ErrorHandlerInitializer = () => {
   return null;
 };
 
+// Inactivity Timer Component
+const InactivityTimerInitializer = () => {
+  useInactivityTimer();
+  return null;
+};
+
 const App: React.FC = () => {
   const queryClient = new QueryClient();
 
@@ -48,6 +56,7 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ErrorHandlerInitializer />
+        <InactivityTimerInitializer />
         {/* Temporarily disabled console monitor to fix auth issues */}
         {/* <ConsoleMonitorInitializer /> */}
         <GlobalActivityTracker />
