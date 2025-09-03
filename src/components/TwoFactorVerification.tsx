@@ -26,6 +26,8 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
   const [error, setError] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes
   const [canResend, setCanResend] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const hasSentInitialCode = React.useRef(false);
 
   // Start countdown timer
   React.useEffect(() => {
@@ -51,10 +53,16 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
   };
 
   const sendVerificationCode = async () => {
+    if (isSendingCode) {
+      console.log('🚫 Already sending code, skipping duplicate request');
+      return;
+    }
+
     setIsSendingCode(true);
     setError('');
 
     try {
+      console.log('📱 Sending verification code to:', { email, phone });
       const { data, error } = await supabase.functions.invoke('2fa-verification', {
         body: {
           action: 'send_code',
@@ -69,6 +77,8 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
         throw new Error(data.error || 'Failed to send verification code');
       }
 
+      console.log('✅ Verification code sent successfully');
+      setCodeSent(true);
       // Reset timer
       setTimeRemaining(300);
       setCanResend(false);
@@ -129,10 +139,14 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
     }
   };
 
-  // Auto-send code on component mount
+  // Auto-send code on component mount (only once)
   React.useEffect(() => {
-    sendVerificationCode();
-  }, []);
+    if (!hasSentInitialCode.current) {
+      hasSentInitialCode.current = true;
+      console.log('🎯 Auto-sending initial verification code...');
+      sendVerificationCode();
+    }
+  }, [email, phone]);
 
   return (
     <Card className="w-full max-w-md mx-auto">
