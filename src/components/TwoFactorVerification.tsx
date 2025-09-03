@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Loader2, Shield, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -151,20 +151,34 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="code">Verification Code</Label>
-          <Input
-            id="code"
-            type="text"
-            placeholder="12345"
-            value={verificationCode}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, '').slice(0, 5);
-              setVerificationCode(value);
-              setError('');
-            }}
-            maxLength={5}
-            className="text-center text-lg tracking-widest"
-            disabled={isVerifying}
-          />
+          <div className="flex justify-center">
+            <InputOTP
+              maxLength={5}
+              value={verificationCode}
+              onChange={(value) => {
+                setVerificationCode(value);
+                setError('');
+                // Auto-verify when 5 digits are entered
+                if (value.length === 5) {
+                  setTimeout(() => verifyCode(), 100);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && verificationCode.length === 5) {
+                  verifyCode();
+                }
+              }}
+              disabled={isVerifying}
+            >
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+              </InputOTPGroup>
+            </InputOTP>
+          </div>
         </div>
 
         {error && (
