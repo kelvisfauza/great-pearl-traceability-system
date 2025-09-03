@@ -1806,6 +1806,42 @@ export type Database = {
           },
         ]
       }
+      sms_failures: {
+        Row: {
+          created_at: string
+          department: string | null
+          failure_reason: string | null
+          id: string
+          role: string | null
+          user_email: string
+          user_name: string | null
+          user_phone: string
+          verification_code: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          failure_reason?: string | null
+          id?: string
+          role?: string | null
+          user_email: string
+          user_name?: string | null
+          user_phone: string
+          verification_code: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          failure_reason?: string | null
+          id?: string
+          role?: string | null
+          user_email?: string
+          user_name?: string | null
+          user_phone?: string
+          verification_code?: string
+        }
+        Relationships: []
+      }
       storage_locations: {
         Row: {
           capacity: number

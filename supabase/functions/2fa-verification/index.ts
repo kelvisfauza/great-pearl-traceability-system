@@ -125,6 +125,59 @@ Deno.serve(async (req) => {
       if (!smsResponse.ok) {
         const smsError = await smsResponse.text();
         console.error('SMS sending failed:', smsError);
+        
+        // Log SMS failure for IT support
+        const { error: logError } = await supabaseAdmin
+          .from('sms_failures')
+          .insert({
+            user_email: email,
+            user_name: userName,
+            user_phone: phone,
+            verification_code: verificationCode,
+            failure_reason: `SMS API Error: ${smsError}`,
+            department: userDepartment,
+            role: userRole
+          });
+
+        if (logError) {
+          console.error('Failed to log SMS failure:', logError);
+        }
+
+        // Send notification to IT department
+        try {
+          // Get IT department phone numbers
+          const { data: itUsers } = await supabaseAdmin
+            .from('employees')
+            .select('name, phone')
+            .eq('department', 'IT Department')
+            .eq('status', 'Active');
+
+          if (itUsers && itUsers.length > 0) {
+            for (const itUser of itUsers) {
+              if (itUser.phone) {
+                const itMessage = `IT ALERT: User ${userName} (${email}) failed to receive login code ${verificationCode}. Phone: ${phone}. Please assist with login.`;
+                
+                await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-sms`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+                  },
+                  body: JSON.stringify({
+                    phone: itUser.phone,
+                    message: itMessage,
+                    userName: 'IT System'
+                  })
+                });
+                
+                console.log(`IT notification sent to ${itUser.name}`);
+              }
+            }
+          }
+        } catch (itError) {
+          console.error('Failed to notify IT department:', itError);
+        }
+
         throw new Error('Failed to send verification code');
       }
 

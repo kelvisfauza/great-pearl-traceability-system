@@ -39,6 +39,7 @@ import TicketSystem from '@/components/it/TicketSystem';
 import SystemMaintenance from '@/components/it/SystemMaintenance';
 import SystemConsoleMonitor from '@/components/it/SystemConsoleMonitor';
 import DeletionRequestsManager from '@/components/admin/DeletionRequestsManager';
+import { SMSFailureManager } from '@/components/it/SMSFailureManager';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
@@ -146,8 +147,9 @@ const ITDepartment = () => {
 
         <Tabs defaultValue="errors" className="space-y-6">
 
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="errors">Error Dashboard</TabsTrigger>
+            <TabsTrigger value="sms">SMS Support</TabsTrigger>
             <TabsTrigger value="console">Console Monitor</TabsTrigger>
             <TabsTrigger value="deletions">Deletions</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
@@ -160,6 +162,10 @@ const ITDepartment = () => {
 
           <TabsContent value="errors" className="space-y-4">
             <ErrorDashboard />
+          </TabsContent>
+
+          <TabsContent value="sms" className="space-y-4">
+            <SMSFailureManager />
           </TabsContent>
 
           <TabsContent value="console" className="space-y-4">
