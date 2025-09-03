@@ -2189,6 +2189,36 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_codes: {
+        Row: {
+          attempts: number | null
+          code: string
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          phone: string
+        }
+        Insert: {
+          attempts?: number | null
+          code: string
+          created_at?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          phone: string
+        }
+        Update: {
+          attempts?: number | null
+          code?: string
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           amount: number
@@ -2315,6 +2345,10 @@ export type Database = {
       check_auth_user_exists: {
         Args: { user_uuid: string }
         Returns: Json
+      }
+      cleanup_expired_verification_codes: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       cleanup_inactive_sessions: {
         Args: Record<PropertyKey, never>

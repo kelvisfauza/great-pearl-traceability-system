@@ -5,9 +5,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// In-memory storage for verification codes (in production, use Redis or database)
-const verificationCodes = new Map();
-
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -56,16 +53,38 @@ Deno.serve(async (req) => {
     );
 
     if (action === 'send_code') {
+      console.log('📱 Generating new verification code for:', { email, phone: phone?.substring(0, 6) + '***' });
+      
       // Generate 5-digit verification code
       const verificationCode = Math.floor(10000 + Math.random() * 90000).toString();
       
-      // Store verification code with expiry (5 minutes)
-      const codeKey = `${email}_${phone}`;
-      verificationCodes.set(codeKey, {
-        code: verificationCode,
-        expires: Date.now() + (5 * 60 * 1000), // 5 minutes
-        attempts: 0
-      });
+      // Clean up any existing codes for this user
+      await supabaseAdmin
+        .from('verification_codes')
+        .delete()
+        .eq('email', email)
+        .eq('phone', phone);
+      
+      // Store verification code in database with expiry (5 minutes)
+      const expiresAt = new Date(Date.now() + (5 * 60 * 1000)); // 5 minutes from now
+      
+      const { error: insertError } = await supabaseAdmin
+        .from('verification_codes')
+        .insert({
+          email,
+          phone,
+          code: verificationCode,
+          expires_at: expiresAt.toISOString(),
+          attempts: 0
+        });
+        
+      if (insertError) {
+        console.error('❌ Failed to store verification code:', insertError);
+        throw new Error('Failed to store verification code');
+      }
+      
+      console.log('✅ Verification code stored in database');
+      
 
       // Send SMS using existing send-sms function
       const smsResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-sms`, {
@@ -87,7 +106,7 @@ Deno.serve(async (req) => {
         throw new Error('Failed to send verification code');
       }
 
-      console.log('Verification code sent successfully');
+      console.log('✅ Verification code sent successfully');
 
       return new Response(
         JSON.stringify({
@@ -111,16 +130,30 @@ Deno.serve(async (req) => {
         );
       }
       
-      console.log('Verifying code:', { email, phone: phone?.substring(0, 6) + '***', code: code?.substring(0, 2) + '***' });
+      console.log('🔍 Verifying code:', { email, phone: phone?.substring(0, 6) + '***', code: code?.substring(0, 2) + '***' });
       
-      const codeKey = `${email}_${phone}`;
-      const storedData = verificationCodes.get(codeKey);
+      // Get verification code from database
+      const { data: storedCodes, error: fetchError } = await supabaseAdmin
+        .from('verification_codes')
+        .select('*')
+        .eq('email', email)
+        .eq('phone', phone)
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      if (fetchError) {
+        console.error('❌ Database error fetching verification code:', fetchError);
+        throw new Error('Database error occurred');
+      }
       
-      console.log('Stored verification codes keys:', Array.from(verificationCodes.keys()));
-      console.log('Looking for key:', codeKey);
-      console.log('Stored data found:', !!storedData);
+      console.log('📊 Database query result:', { 
+        found: storedCodes?.length || 0,
+        email,
+        phone: phone?.substring(0, 6) + '***'
+      });
 
-      if (!storedData) {
+      if (!storedCodes || storedCodes.length === 0) {
+        console.log('❌ No verification code found in database');
         return new Response(
           JSON.stringify({
             success: false,
@@ -132,10 +165,26 @@ Deno.serve(async (req) => {
           }
         );
       }
+      
+      const storedData = storedCodes[0];
+      console.log('📋 Found verification code:', { 
+        id: storedData.id,
+        attempts: storedData.attempts,
+        expires_at: storedData.expires_at
+      });
 
       // Check if code has expired
-      if (Date.now() > storedData.expires) {
-        verificationCodes.delete(codeKey);
+      const now = new Date();
+      const expiresAt = new Date(storedData.expires_at);
+      if (now > expiresAt) {
+        console.log('⏰ Code has expired');
+        
+        // Clean up expired code
+        await supabaseAdmin
+          .from('verification_codes')
+          .delete()
+          .eq('id', storedData.id);
+          
         return new Response(
           JSON.stringify({
             success: false,
@@ -150,7 +199,14 @@ Deno.serve(async (req) => {
 
       // Check attempts limit
       if (storedData.attempts >= 3) {
-        verificationCodes.delete(codeKey);
+        console.log('🚫 Too many attempts');
+        
+        // Clean up the code
+        await supabaseAdmin
+          .from('verification_codes')
+          .delete()
+          .eq('id', storedData.id);
+          
         return new Response(
           JSON.stringify({
             success: false,
@@ -165,13 +221,18 @@ Deno.serve(async (req) => {
 
       // Verify the code
       if (storedData.code !== code) {
-        storedData.attempts += 1;
-        verificationCodes.set(codeKey, storedData);
+        console.log('❌ Invalid code provided');
+        
+        // Increment attempts
+        await supabaseAdmin
+          .from('verification_codes')
+          .update({ attempts: storedData.attempts + 1 })
+          .eq('id', storedData.id);
         
         return new Response(
           JSON.stringify({
             success: false,
-            error: `Invalid verification code. ${3 - storedData.attempts} attempts remaining.`
+            error: `Invalid verification code. ${3 - (storedData.attempts + 1)} attempts remaining.`
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -181,7 +242,12 @@ Deno.serve(async (req) => {
       }
 
       // Code is valid - clean up and return success
-      verificationCodes.delete(codeKey);
+      console.log('✅ Code verification successful');
+      
+      await supabaseAdmin
+        .from('verification_codes')
+        .delete()
+        .eq('id', storedData.id);
       
       console.log('Verification code validated successfully');
 
