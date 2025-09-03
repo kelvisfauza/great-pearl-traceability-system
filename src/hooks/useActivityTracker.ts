@@ -1,11 +1,13 @@
-import { useCallback } from 'react';
+import { useCallback, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { AuthContext } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 export const useActivityTracker = () => {
-  const { user } = useAuth();
+  const authContext = useContext(AuthContext);
   const { toast } = useToast();
+  
+  const user = authContext?.user;
 
   const trackActivity = useCallback(async (activityType: string, description?: string) => {
     if (!user?.id) {
