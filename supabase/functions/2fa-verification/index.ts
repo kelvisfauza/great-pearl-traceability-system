@@ -88,22 +88,25 @@ Deno.serve(async (req) => {
       // Get user details from employees table
       const { data: employeeData, error: employeeError } = await supabaseAdmin
         .from('employees')
-        .select('name, role')
+        .select('name, role, department')
         .eq('email', email)
         .single();
 
       let userName = 'User';
       let userRole = 'User';
+      let userDepartment = '';
       
       if (employeeData && !employeeError) {
         userName = employeeData.name || 'User';
         userRole = employeeData.role || 'User';
+        userDepartment = employeeData.department || '';
       } else {
         console.warn('Could not fetch employee data:', employeeError);
       }
 
-      // Format the SMS message as requested
-      const smsMessage = `HI ${userName.toUpperCase()}, ${userRole} your log in code is ${verificationCode} for Great Pearl Coffee, valid for 5 minutes, always log out when not on the site and dont share pin`;
+      // Format the SMS message with department
+      const departmentText = userDepartment ? `${userDepartment} ` : '';
+      const smsMessage = `HI ${userName.toUpperCase()}, ${departmentText}${userRole} your log in code is ${verificationCode} for Great Pearl Coffee, valid for 5 minutes, always log out when not on the site and dont share pin`;
 
       // Send SMS using existing send-sms function
       const smsResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-sms`, {
