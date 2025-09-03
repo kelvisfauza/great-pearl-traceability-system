@@ -22,9 +22,6 @@ import {
   Lock,
   Key
 } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { updatePassword } from 'firebase/auth';
-import { db, auth } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfileProps {
@@ -56,23 +53,24 @@ const UserProfile = ({ employee }: UserProfileProps) => {
   const handleSaveProfile = async () => {
     if (!employee) return;
     
-    // Check if this is the main admin with hardcoded ID
-    if (employee.id === 'main-admin') {
-      toast({
-        title: "Not Available",
-        description: "Admin profile editing is not available. Contact system administrator.",
-        variant: "destructive"
-      });
-      setIsEditing(false);
-      return;
-    }
-    
     setIsSaving(true);
     try {
-      await updateDoc(doc(db, 'employees', employee.id), {
-        ...formData,
-        updated_at: new Date().toISOString()
-      });
+      // Update Supabase employee record
+      const { error } = await supabase
+        .from('employees')
+        .update({
+          name: formData.name,
+          phone: formData.phone,
+          address: formData.address,
+          emergency_contact: formData.emergency_contact,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', employee.id);
+
+      if (error) {
+        throw error;
+      }
+
       setIsEditing(false);
       toast({ title: "Success", description: "Profile updated successfully!" });
       if (fetchEmployeeData) await fetchEmployeeData();
@@ -106,66 +104,45 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         return;
       }
 
-      // Convert image to base64 for direct Firebase storage
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const base64String = reader.result as string;
-          
-          // Check if this is the main admin with hardcoded ID
-          if (employee.id === 'main-admin') {
-            toast({
-              title: "Not Available",
-              description: "Admin profile picture update is not available. Contact system administrator.",
-              variant: "destructive"
-            });
-            return;
-          }
-          
-          // Store directly in Firebase employee record
-          if (employee.id && typeof employee.id === 'string') {
-            await updateDoc(doc(db, 'employees', employee.id), {
-              avatar_url: base64String,
-              updated_at: new Date().toISOString()
-            });
-            console.log('Firebase avatar update successful!');
-            
-            // Update local state with the new avatar URL
-            setFormData(prev => ({ ...prev, avatar_url: base64String }));
-            
-            // Force update the employee data
-            if (fetchEmployeeData) {
-              await fetchEmployeeData();
-            }
-            
-            toast({ title: "Success", description: "Profile picture saved successfully!" });
-          } else {
-            throw new Error('Invalid employee ID');
-          }
-        } catch (error: any) {
-          console.error('Upload error:', error);
-          toast({
-            title: "Upload failed", 
-            description: error.message || 'Please try again.',
-            variant: "destructive"
-          });
-        } finally {
-          setIsUploadingPhoto(false);
-          event.target.value = '';
-        }
-      };
+      // Upload to Supabase storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${employee.id}-${Date.now()}.${fileExt}`;
       
-      reader.onerror = () => {
-        toast({
-          title: "Upload failed",
-          description: "Failed to read image file",
-          variant: "destructive"
-        });
-        setIsUploadingPhoto(false);
-        event.target.value = '';
-      };
+      const { data, error } = await supabase.storage
+        .from('profile_pictures')
+        .upload(fileName, file);
+
+      if (error) {
+        throw error;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile_pictures')
+        .getPublicUrl(fileName);
+
+      // Update employee record with new avatar URL
+      const { error: updateError } = await supabase
+        .from('employees')
+        .update({ 
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', employee.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Update local state with the new avatar URL
+      setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
       
-      reader.readAsDataURL(file);
+      // Force update the employee data
+      if (fetchEmployeeData) {
+        await fetchEmployeeData();
+      }
+      
+      toast({ title: "Success", description: "Profile picture updated successfully!" });
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
@@ -173,6 +150,7 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         description: error.message || 'Please try again.',
         variant: "destructive"
       });
+    } finally {
       setIsUploadingPhoto(false);
       event.target.value = '';
     }
@@ -198,16 +176,23 @@ const UserProfile = ({ employee }: UserProfileProps) => {
     }
 
     try {
-      if (auth.currentUser) {
-        await updatePassword(auth.currentUser, passwordData.newPassword);
-        setShowPasswordForm(false);
-        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        toast({ title: "Success", description: "Password updated successfully!" });
+      // Update password in Supabase
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
+
+      if (error) {
+        throw error;
       }
-    } catch (error) {
+
+      setShowPasswordForm(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      toast({ title: "Success", description: "Password updated successfully!" });
+    } catch (error: any) {
+      console.error('Password update error:', error);
       toast({
         title: "Error",
-        description: "Failed to update password",
+        description: error.message || "Failed to update password",
         variant: "destructive"
       });
     }
