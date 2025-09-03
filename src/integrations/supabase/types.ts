@@ -2354,6 +2354,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      create_timothy_auth_account: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       fix_denis_auth_final: {
         Args: Record<PropertyKey, never>
         Returns: Json
