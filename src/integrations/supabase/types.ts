@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          message: string
+          priority: string
+          recipients_count: number | null
+          send_sms: boolean
+          sent_at: string | null
+          sms_sent_count: number | null
+          status: string
+          target_departments: string[] | null
+          target_roles: string[] | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          message: string
+          priority?: string
+          recipients_count?: number | null
+          send_sms?: boolean
+          sent_at?: string | null
+          sms_sent_count?: number | null
+          status?: string
+          target_departments?: string[] | null
+          target_roles?: string[] | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          message?: string
+          priority?: string
+          recipients_count?: number | null
+          send_sms?: boolean
+          sent_at?: string | null
+          sms_sent_count?: number | null
+          status?: string
+          target_departments?: string[] | null
+          target_roles?: string[] | null
+          title?: string
+        }
+        Relationships: []
+      }
       approval_requests: {
         Row: {
           amount: string
