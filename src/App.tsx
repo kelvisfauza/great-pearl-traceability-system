@@ -31,6 +31,7 @@ import PermissionManagement from "./pages/PermissionManagement";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 
 import { useInactivityTimer } from './hooks/useInactivityTimer';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 // Error Handler Component
 const ErrorHandlerInitializer = () => {
@@ -46,6 +47,7 @@ const ErrorHandlerInitializer = () => {
 // Inactivity Timer Component
 const InactivityTimerInitializer = () => {
   useInactivityTimer();
+  useKeyboardShortcuts();
   return null;
 };
 
