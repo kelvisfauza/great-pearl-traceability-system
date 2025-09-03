@@ -81,6 +81,13 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
   };
 
   const verifyCode = async () => {
+    console.log('🔍 Verification attempt:', { 
+      email, 
+      phone, 
+      codeLength: verificationCode.length,
+      code: verificationCode 
+    });
+    
     if (!verificationCode || verificationCode.length !== 5) {
       setError('Please enter a valid 5-digit code');
       return;
@@ -90,6 +97,7 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
     setError('');
 
     try {
+      console.log('📞 Calling 2FA verification function...');
       const { data, error } = await supabase.functions.invoke('2fa-verification', {
         body: {
           action: 'verify_code',
@@ -99,12 +107,19 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
         }
       });
 
-      if (error) throw error;
+      console.log('📞 2FA Response:', { data, error });
 
-      if (!data.success) {
-        throw new Error(data.error || 'Invalid verification code');
+      if (error) {
+        console.error('❌ Supabase function error:', error);
+        throw error;
       }
 
+      if (!data?.success) {
+        console.error('❌ Verification failed:', data);
+        throw new Error(data?.error || 'Invalid verification code');
+      }
+
+      console.log('✅ Verification successful!');
       onVerificationComplete();
     } catch (err: any) {
       console.error('Verify code error:', err);

@@ -15,9 +15,33 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, email, phone, code } = await req.json();
+    const body = await req.json();
+    const { action, email, phone, code } = body;
     
+    console.log('2FA request body:', JSON.stringify(body, null, 2));
     console.log('2FA request:', { action, email, phone: phone?.substring(0, 6) + '***' });
+    
+    // Validate required fields
+    if (!action) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing action parameter' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    if (!email) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing email parameter' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    if (!phone) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing phone parameter' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
 
     // Create Supabase admin client
     const supabaseAdmin = createClient(
@@ -79,8 +103,22 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'verify_code') {
+      // Validate code parameter for verify action
+      if (!code) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Missing code parameter for verification' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      
+      console.log('Verifying code:', { email, phone: phone?.substring(0, 6) + '***', code: code?.substring(0, 2) + '***' });
+      
       const codeKey = `${email}_${phone}`;
       const storedData = verificationCodes.get(codeKey);
+      
+      console.log('Stored verification codes keys:', Array.from(verificationCodes.keys()));
+      console.log('Looking for key:', codeKey);
+      console.log('Stored data found:', !!storedData);
 
       if (!storedData) {
         return new Response(

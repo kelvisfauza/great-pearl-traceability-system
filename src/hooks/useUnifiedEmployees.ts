@@ -179,17 +179,22 @@ export const useUnifiedEmployees = () => {
   };
 
   const updateEmployee = async (id: string, updates: Partial<UnifiedEmployee>) => {
+    console.log('🔍 Update employee called with:', { id, updates });
+    console.log('🔍 Can manage employees:', canManageEmployees());
+    
     if (!canManageEmployees()) {
+      const errorMsg = "You don't have permission to update employees";
+      console.error('❌ Access denied:', errorMsg);
       toast({
         title: "Access Denied",
-        description: "You don't have permission to update employees",
+        description: errorMsg,
         variant: "destructive"
       });
       throw new Error("Access denied");
     }
 
     try {
-      console.log('📝 Updating employee:', id);
+      console.log('📝 Updating employee:', id, 'with updates:', updates);
       
       const employee = employees.find(emp => emp.id === id);
       if (!employee) {
