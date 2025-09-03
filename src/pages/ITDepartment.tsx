@@ -40,7 +40,6 @@ import SystemMaintenance from '@/components/it/SystemMaintenance';
 import SystemConsoleMonitor from '@/components/it/SystemConsoleMonitor';
 import DeletionRequestsManager from '@/components/admin/DeletionRequestsManager';
 import { SMSFailureManager } from '@/components/it/SMSFailureManager';
-import CompanyAnnouncementManager from '@/components/admin/CompanyAnnouncementManager';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();

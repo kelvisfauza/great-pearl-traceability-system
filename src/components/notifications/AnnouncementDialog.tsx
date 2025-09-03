@@ -6,9 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { MessageSquare } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AnnouncementDialogProps {
   trigger?: React.ReactNode;
@@ -40,6 +43,7 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
   const [message, setMessage] = useState("");
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [priority, setPriority] = useState<"High" | "Medium" | "Low">("Medium");
+  const [sendSms, setSendSms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleDepartmentChange = (dept: string, checked: boolean) => {
@@ -71,7 +75,37 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
     try {
       setSubmitting(true);
       
-      // Send single announcement to all selected departments
+      // Create announcement record for tracking
+      const { data: announcement, error } = await supabase
+        .from('announcements')
+        .insert({
+          title: title.trim(),
+          message: message.trim(),
+          priority: priority.toLowerCase(),
+          target_departments: selectedDepartments,
+          target_roles: [],
+          send_sms: sendSms,
+          created_by: employee.name || employee.email,
+          status: 'draft'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Send the announcement via edge function if SMS is requested
+      if (sendSms && announcement) {
+        const { error: sendError } = await supabase.functions.invoke('send-company-announcement', {
+          body: { announcementId: announcement.id }
+        });
+        
+        if (sendError) {
+          console.error('SMS sending failed:', sendError);
+          // Continue with regular notification even if SMS fails
+        }
+      }
+      
+      // Send regular in-app notifications
       console.log('Sending announcement to departments:', selectedDepartments);
       await createAnnouncement(
         title.trim(),
@@ -84,13 +118,14 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
       
       toast({ 
         title: "Announcement sent", 
-        description: `Sent to ${selectedDepartments.length} department${selectedDepartments.length > 1 ? 's' : ''}` 
+        description: `Sent to ${selectedDepartments.length} department${selectedDepartments.length > 1 ? 's' : ''}${sendSms ? ' with SMS alerts' : ''}` 
       });
       setOpen(false);
       setTitle("");
       setMessage("");
       setSelectedDepartments([]);
       setPriority("Medium");
+      setSendSms(false);
     } catch (err) {
       console.error(err);
       toast({ title: "Failed", description: "Could not send announcement.", variant: "destructive" });
@@ -108,8 +143,8 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
       </DialogTrigger>
       <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Send departmental announcement</DialogTitle>
-          <DialogDescription>Target a department. Only intended recipients will see it.</DialogDescription>
+          <DialogTitle>Send Company Announcement</DialogTitle>
+          <DialogDescription>Send notifications to employees with optional SMS alerts</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-2">
@@ -157,6 +192,20 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
                 <SelectItem value="Low">Low</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          
+          <Separator />
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="send_sms"
+              checked={sendSms}
+              onCheckedChange={(checked) => setSendSms(!!checked)}
+            />
+            <Label htmlFor="send_sms" className="flex items-center gap-2 cursor-pointer">
+              <MessageSquare className="h-4 w-4" />
+              Also send SMS notifications to all employees
+            </Label>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
