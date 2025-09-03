@@ -18,6 +18,7 @@ const editUserFormSchema = z.object({
   department: z.string().min(2, "Department is required"),
   role: z.enum(["Administrator", "Manager", "Supervisor", "User", "Guest"]),
   salary: z.number().min(0, "Salary must be positive"),
+  employee_id: z.string().optional(),
   permissions: z.array(z.string()).optional(),
 });
 
@@ -53,6 +54,7 @@ export default function EditUserForm({ employee, onSubmit, onCancel }: EditUserF
       department: employee.department || "",
       role: (employee.role as any) || "User",
       salary: Number(employee.salary) || 0,
+      employee_id: employee.employee_id || "",
       permissions: Array.isArray(employee.permissions) ? employee.permissions : [],
     },
   });
@@ -70,6 +72,7 @@ export default function EditUserForm({ employee, onSubmit, onCancel }: EditUserF
         department: values.department.trim(),
         role: values.role,
         salary: Number(values.salary),
+        employee_id: values.employee_id?.trim() || "",
         permissions: Array.isArray(values.permissions) ? values.permissions : [],
       };
 
@@ -129,6 +132,22 @@ export default function EditUserForm({ employee, onSubmit, onCancel }: EditUserF
           />
           <FormField
             control={form.control}
+            name="employee_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Employee ID (Optional)</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="EMP001" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
             name="position"
             render={({ field }) => (
               <FormItem>
@@ -140,9 +159,6 @@ export default function EditUserForm({ employee, onSubmit, onCancel }: EditUserF
               </FormItem>
             )}
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="department"
@@ -165,6 +181,9 @@ export default function EditUserForm({ employee, onSubmit, onCancel }: EditUserF
               </FormItem>
             )}
           />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="role"
@@ -189,9 +208,6 @@ export default function EditUserForm({ employee, onSubmit, onCancel }: EditUserF
               </FormItem>
             )}
           />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4">
           <FormField
             control={form.control}
             name="salary"
