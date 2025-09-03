@@ -133,7 +133,21 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
       onVerificationComplete();
     } catch (err: any) {
       console.error('Verify code error:', err);
-      setError(err.message || 'Verification failed');
+      
+      // Parse error message to show specific error types
+      let errorMessage = err.message || 'Verification failed';
+      
+      if (errorMessage.includes('expired')) {
+        errorMessage = 'Code expired. Please request a new code.';
+      } else if (errorMessage.includes('Invalid verification code')) {
+        errorMessage = 'Wrong code. Please try again.';
+      } else if (errorMessage.includes('Too many failed attempts')) {
+        errorMessage = 'Too many attempts. Please request a new code.';
+      } else if (errorMessage.includes('No verification code found')) {
+        errorMessage = 'No code found. Please request a new code.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsVerifying(false);
     }
