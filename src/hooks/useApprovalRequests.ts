@@ -282,8 +282,8 @@ export const useApprovalRequests = () => {
           }
         }
         
-        // Handle Bank Transfer
-        else if (request.type === 'Bank Transfer' && request.details?.paymentId) {
+        // Handle Bank Transfer and Payment Approval
+        else if ((request.type === 'Bank Transfer' || request.type === 'Payment Approval') && request.details?.paymentId) {
           console.log('Updating payment record status for approved bank transfer...');
           
           try {
@@ -293,6 +293,26 @@ export const useApprovalRequests = () => {
               updated_at: new Date().toISOString()
             });
             console.log('Payment record updated to Paid in Firebase');
+
+            // Also update the Supabase payment record if it exists
+            try {
+              const { error: supabaseError } = await supabase
+                .from('payment_records')
+                .update({
+                  status: 'Paid',
+                  method: 'Bank Transfer',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', request.details.paymentId);
+              
+              if (supabaseError) {
+                console.error('Error updating Supabase payment record:', supabaseError);
+              } else {
+                console.log('Payment record updated to Paid in Supabase');
+              }
+            } catch (supabaseUpdateError) {
+              console.error('Error updating payment in Supabase:', supabaseUpdateError);
+            }
           } catch (error) {
             console.error('Error updating payment record:', error);
           }

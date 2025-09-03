@@ -65,27 +65,26 @@ const QualityAssessmentReports: React.FC<QualityAssessmentReportsProps> = ({
     const actualAmount = paymentMethod === 'Cash' ? parseFloat(cashAmount) : totalAmount;
 
     try {
-      if (paymentMethod === 'Bank Transfer') {
-        // Create approval request for bank transfer
-        await createApprovalRequest(
-          'Payment Approval',
-          `Bank Transfer Payment - ${selectedAssessment.supplier_name || 'Unknown Supplier'}`,
-          `Payment for coffee batch ${selectedAssessment.batch_number} - ${selectedAssessment.kilograms}kg at ${formatCurrency(selectedAssessment.suggested_price)}/kg`,
-          totalAmount,
-          {
-            supplier: selectedAssessment.supplier_name || 'Unknown Supplier',
-            batch_number: selectedAssessment.batch_number,
-            kilograms: selectedAssessment.kilograms,
-            price_per_kg: selectedAssessment.suggested_price,
-            assessment_id: selectedAssessment.id,
-            payment_method: 'Bank Transfer',
-            notes: paymentNotes
-          }
-        );
+      // Create payment record first
+      const paymentData = {
+        id: `payment_${Date.now()}`,
+        supplier: selectedAssessment.supplier_name || 'Unknown Supplier',
+        amount: totalAmount,
+        status: 'Pending',
+        method: paymentMethod,
+        batchNumber: selectedAssessment.batch_number,
+        qualityAssessmentId: selectedAssessment.id,
+        paid_amount: paymentMethod === 'Cash' ? actualAmount : 0,
+        date: new Date().toISOString().split('T')[0]
+      };
 
-        // Track workflow step
+      // Call the parent's process payment function which handles the proper workflow
+      onProcessPayment(paymentData);
+
+      if (paymentMethod === 'Bank Transfer') {
+        // Track workflow step for bank transfer
         await trackWorkflowStep({
-          paymentId: selectedAssessment.id,
+          paymentId: paymentData.id,
           fromDepartment: 'Finance',
           toDepartment: 'Management',
           action: 'submitted',
@@ -96,28 +95,13 @@ const QualityAssessmentReports: React.FC<QualityAssessmentReportsProps> = ({
         });
 
         toast({
-          title: "Approval Request Submitted",
-          description: `Bank transfer payment approval request sent for ${formatCurrency(totalAmount)}`
+          title: "Bank Transfer Submitted",
+          description: `Bank transfer payment submitted for approval - ${formatCurrency(totalAmount)}`
         });
       } else {
-        // Process cash payment directly
-        const paymentData = {
-          id: `payment_${Date.now()}`,
-          supplier: selectedAssessment.supplier_name || 'Unknown Supplier',
-          amount: actualAmount,
-          status: 'Paid',
-          method: 'Cash',
-          batchNumber: selectedAssessment.batch_number,
-          qualityAssessmentId: selectedAssessment.id,
-          paid_amount: actualAmount,
-          date: new Date().toISOString().split('T')[0]
-        };
-
-        onProcessPayment(paymentData);
-
-        // Track workflow step
+        // Track workflow step for cash payment
         await trackWorkflowStep({
-          paymentId: selectedAssessment.id,
+          paymentId: paymentData.id,
           fromDepartment: 'Finance',
           toDepartment: 'Finance',
           action: 'approved',

@@ -114,11 +114,27 @@ const Finance = () => {
     setReceiptDescription("");
   };
 
+  const addTransactionFromPayment = async (paymentData: any) => {
+    console.log('Adding transaction from payment data:', paymentData);
+    try {
+      await addTransaction({
+        type: 'Payment',
+        description: `Payment to ${paymentData.supplier} for batch ${paymentData.batchNumber}`,
+        amount: paymentData.amount,
+        time: new Date().toLocaleTimeString(),
+        date: paymentData.date
+      });
+    } catch (error) {
+      console.error('Error adding transaction from payment:', error);
+    }
+  };
+
   const handleProcessPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash', actualAmount?: number) => {
     console.log('Finance page - Processing payment:', paymentId, method, actualAmount ? `Actual amount: ${actualAmount}` : 'Full amount');
     try {
       await processPayment(paymentId, method, actualAmount);
       console.log('Finance page - Payment processed, refreshing data...');
+      await refetch();
     } catch (error) {
       console.error('Finance page - Error processing payment:', error);
       toast({
