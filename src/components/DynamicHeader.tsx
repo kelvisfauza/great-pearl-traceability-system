@@ -2,18 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Sun, Moon, Sunrise, Sunset, Calendar, Bell } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import NotificationButton from '@/components/notifications/NotificationButton';
-import NotificationPanel from '@/components/notifications/NotificationPanel';
 import { useNotifications } from '@/hooks/useNotifications';
 import DigitalClock from '@/components/DigitalClock';
 
 const DynamicHeader = () => {
   const { employee } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [showMainGreeting, setShowMainGreeting] = useState(true);
-  const { unreadCount } = useNotifications();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -183,12 +179,6 @@ const DynamicHeader = () => {
               </div>
             )}
           </div>
-          <div className="ml-auto">
-            <NotificationButton 
-              onToggle={() => setIsNotificationOpen(true)}
-              unreadCount={unreadCount}
-            />
-          </div>
         </div>
 
         {/* Time and Date Section */}
@@ -225,10 +215,6 @@ const DynamicHeader = () => {
             <span className="text-xs font-medium text-green-700 dark:text-green-400">Online</span>
           </div>
         </div>
-        <NotificationPanel 
-          isOpen={isNotificationOpen}
-          onClose={() => setIsNotificationOpen(false)}
-        />
       </div>
     </div>
     );
