@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { smsService } from '@/services/smsService';
 
 interface Employee {
   id: string;
@@ -212,18 +211,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async (reason?: 'inactivity' | 'manual'): Promise<void> => {
     try {
-      // Send SMS notification for inactivity logout
-      if (reason === 'inactivity' && employee?.phone) {
-        try {
-          await smsService.sendSMS(
-            employee.phone,
-            `Hi ${employee.name}, you have been logged out due to inactivity. Login again to access the system.`
-          );
-        } catch (error) {
-          console.error('Failed to send inactivity SMS:', error);
-        }
-      }
-
       await supabase.auth.signOut();
       
       setUser(null);

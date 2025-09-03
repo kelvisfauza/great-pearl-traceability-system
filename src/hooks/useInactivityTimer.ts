@@ -1,15 +1,20 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useRef, useCallback, useContext } from 'react';
+import { AuthContext } from '@/contexts/AuthContext';
+import { smsService } from '@/services/smsService';
 
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 export const useInactivityTimer = () => {
-  const { user, signOut } = useAuth();
+  const authContext = useContext(AuthContext);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isActiveRef = useRef(true);
+  
+  const user = authContext?.user;
+  const employee = authContext?.employee;
+  const signOut = authContext?.signOut;
 
   const resetTimer = useCallback(() => {
-    if (!user) return;
+    if (!user || !signOut) return;
 
     // Clear existing timeout
     if (timeoutRef.current) {
@@ -17,13 +22,26 @@ export const useInactivityTimer = () => {
     }
 
     // Set new timeout
-    timeoutRef.current = setTimeout(() => {
-      if (user && isActiveRef.current) {
+    timeoutRef.current = setTimeout(async () => {
+      if (user && isActiveRef.current && signOut) {
         console.log('User inactive for 5 minutes, logging out...');
+        
+        // Send SMS notification before logout
+        if (employee?.phone) {
+          try {
+            await smsService.sendSMS(
+              employee.phone,
+              `Hi ${employee.name}, you have been logged out due to inactivity. Login again to access the system.`
+            );
+          } catch (error) {
+            console.error('Failed to send inactivity SMS:', error);
+          }
+        }
+        
         signOut('inactivity');
       }
     }, INACTIVITY_TIMEOUT);
-  }, [user, signOut]);
+  }, [user, employee, signOut]);
 
   const handleActivity = useCallback(() => {
     if (user) {
