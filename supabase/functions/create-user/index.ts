@@ -97,6 +97,25 @@ serve(async (req) => {
       const existingEmployee = existingEmployees[0]
       console.log('📋 Found existing employee:', { id: existingEmployee.id, name: existingEmployee.name })
 
+      // Check if employee already has auth_user_id
+      if (existingEmployee.auth_user_id) {
+        console.log('🔄 Employee already has auth_user_id, cleaning up new auth user and returning existing info')
+        // Clean up the new auth user we just created since employee is already linked
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: `Employee ${existingEmployee.name} already has an auth account. Try logging in with the existing credentials.`,
+            employee: existingEmployee,
+            alreadyLinked: true
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+
       // Update existing employee with auth_user_id
       const { data: updatedEmployee, error: updateError } = await supabaseAdmin
         .from('employees')
