@@ -189,6 +189,18 @@ const Navigation = () => {
     console.log('Filtered navigation items for Kibaba:', filteredNavigationItems);
   }
 
+  // Debug logging for Timothy to track Finance permissions
+  if (employee?.email === 'tatwanzire@gmail.com') {
+    console.log('=== TIMOTHY NAVIGATION DEBUG ===');
+    console.log('Timothy Employee Data:', employee);
+    console.log('Timothy permissions array:', employee?.permissions);
+    console.log('Has Finance permission:', hasPermission('Finance'));
+    console.log('Has Human Resources permission:', hasPermission('Human Resources'));
+    console.log('Has Reports permission:', hasPermission('Reports'));
+    console.log('Is Admin:', isAdmin());
+    console.log('Filtered navigation items for Timothy:', filteredNavigationItems);
+  }
+
   const handleLogout = async () => {
     try {
       await signOut();
