@@ -1896,6 +1896,60 @@ export type Database = {
           },
         ]
       }
+      sales_transactions: {
+        Row: {
+          coffee_type: string
+          created_at: string
+          customer: string
+          date: string
+          driver_details: string
+          grn_file_name: string | null
+          grn_file_url: string | null
+          id: string
+          moisture: string | null
+          status: string
+          total_amount: number
+          truck_details: string
+          unit_price: number
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          coffee_type: string
+          created_at?: string
+          customer: string
+          date: string
+          driver_details: string
+          grn_file_name?: string | null
+          grn_file_url?: string | null
+          id?: string
+          moisture?: string | null
+          status?: string
+          total_amount: number
+          truck_details: string
+          unit_price: number
+          updated_at?: string
+          weight: number
+        }
+        Update: {
+          coffee_type?: string
+          created_at?: string
+          customer?: string
+          date?: string
+          driver_details?: string
+          grn_file_name?: string | null
+          grn_file_url?: string | null
+          id?: string
+          moisture?: string | null
+          status?: string
+          total_amount?: number
+          truck_details?: string
+          unit_price?: number
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: []
+      }
       sms_failures: {
         Row: {
           created_at: string

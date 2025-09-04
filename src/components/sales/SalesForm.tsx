@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,13 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Printer, Save } from 'lucide-react';
+import { CalendarIcon, Printer, Save, Upload, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useInventoryManagement } from '@/hooks/useInventoryManagement';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, doc, updateDoc, increment } from 'firebase/firestore';
+import { useSalesTransactions } from '@/hooks/useSalesTransactions';
 import DeliveryNoteModal from './DeliveryNoteModal';
 
 interface SalesFormData {
@@ -25,6 +23,7 @@ interface SalesFormData {
   totalAmount: number;
   truckDetails: string;
   driverDetails: string;
+  grnFile?: File;
 }
 
 const SalesForm = () => {
@@ -43,9 +42,10 @@ const SalesForm = () => {
   const [showDeliveryNote, setShowDeliveryNote] = useState(false);
   const [lastSaleRecord, setLastSaleRecord] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
-  const { fetchInventoryData } = useInventoryManagement();
+  const { createTransaction, uploadGRNFile } = useSalesTransactions();
 
   const customers = [
     'Starbucks Uganda',
@@ -92,48 +92,39 @@ const SalesForm = () => {
     return true;
   };
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, grnFile: file }));
+    }
+  };
+
   const handleSave = async () => {
     if (!validateForm()) return;
     
     setLoading(true);
     try {
-      // Save sales transaction
-      const saleRecord = {
-        ...formData,
+      // Create sales transaction
+      const transactionData = {
         date: formData.date.toISOString().split('T')[0],
-        status: 'Completed',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        customer: formData.customer,
+        coffee_type: formData.coffeeType,
+        moisture: formData.moisture,
+        weight: formData.weight,
+        unit_price: formData.unitPrice,
+        total_amount: formData.totalAmount,
+        truck_details: formData.truckDetails,
+        driver_details: formData.driverDetails,
+        status: 'Completed' as const
       };
       
-      const docRef = await addDoc(collection(db, 'sales_transactions'), saleRecord);
-      setLastSaleRecord({ ...saleRecord, id: docRef.id });
+      const savedTransaction = await createTransaction(transactionData);
+      setLastSaleRecord(savedTransaction);
 
-      // Update inventory - reduce stock
-      await addDoc(collection(db, 'inventory_movements'), {
-        coffee_type: formData.coffeeType,
-        movement_type: 'outbound',
-        quantity: formData.weight,
-        reason: 'Sale to ' + formData.customer,
-        date: new Date().toISOString(),
-        created_at: new Date().toISOString()
-      });
-
-      // Add to finance transactions (revenue)
-      await addDoc(collection(db, 'finance_transactions'), {
-        type: 'Income',
-        description: `Coffee sale to ${formData.customer}`,
-        amount: formData.totalAmount,
-        date: new Date().toLocaleDateString(),
-        time: new Date().toLocaleTimeString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-
-      toast({
-        title: "Sale Recorded Successfully",
-        description: `Sale of ${formData.weight}kg to ${formData.customer} has been recorded`,
-      });
+      // Upload GRN file if provided
+      if (formData.grnFile && savedTransaction) {
+        await uploadGRNFile(formData.grnFile, savedTransaction.id);
+      }
 
       // Reset form
       setFormData({
@@ -148,13 +139,13 @@ const SalesForm = () => {
         driverDetails: ''
       });
 
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
     } catch (error) {
       console.error('Error saving sale:', error);
-      toast({
-        title: "Error",
-        description: "Failed to record sale",
-        variant: "destructive"
-      });
     } finally {
       setLoading(false);
     }
@@ -294,6 +285,35 @@ const SalesForm = () => {
                 onChange={(e) => handleInputChange('driverDetails', e.target.value)}
                 placeholder="Driver name, phone number"
               />
+            </div>
+
+            {/* GRN File Upload */}
+            <div className="space-y-2 col-span-2">
+              <Label>Upload Sales GRN (Optional)</Label>
+              <div className="flex items-center gap-4">
+                <Input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  {formData.grnFile ? 'Change File' : 'Upload GRN'}
+                </Button>
+                {formData.grnFile && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <FileText className="h-4 w-4" />
+                    {formData.grnFile.name}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

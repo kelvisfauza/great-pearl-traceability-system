@@ -9,7 +9,8 @@ import PerformanceDashboard from "@/components/reports/PerformanceDashboard";
 import RecentReports from "@/components/reports/RecentReports";
 import StoreReportForm from "@/components/reports/StoreReportForm";
 import StoreReportsList from "@/components/reports/StoreReportsList";
-import { BarChart3, FileText, TrendingUp, History, Store, Printer } from "lucide-react";
+import SalesReportsList from "@/components/reports/SalesReportsList";
+import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart } from "lucide-react";
 
 const Reports = () => {
   return (
@@ -23,7 +24,7 @@ const Reports = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
@@ -47,6 +48,10 @@ const Reports = () => {
             <TabsTrigger value="store" className="flex items-center gap-2">
               <Store className="h-4 w-4" />
               Store Reports
+            </TabsTrigger>
+            <TabsTrigger value="sales" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Sales Reports
             </TabsTrigger>
           </TabsList>
 
@@ -76,6 +81,10 @@ const Reports = () => {
               <StorePrintReportGenerator />
               <StoreReportsList />
             </div>
+          </TabsContent>
+
+          <TabsContent value="sales" className="space-y-6">
+            <SalesReportsList />
           </TabsContent>
         </Tabs>
       </div>
