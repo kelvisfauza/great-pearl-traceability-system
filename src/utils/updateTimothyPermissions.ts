@@ -1,19 +1,28 @@
-import { updateEmployeePermissions } from './updateEmployeePermissions';
+import { supabase } from '@/integrations/supabase/client';
 
 export const updateTimothyPermissions = async () => {
   try {
     console.log('🔧 Adding Finance permissions to Timothy...');
     
-    // Update Timothy's permissions to include Finance
-    const result = await updateEmployeePermissions('tatwanzire@gmail.com', {
-      permissions: ['Human Resources', 'Reports', 'Finance'],
-      department: 'Finance' // Also update department to Finance
-    });
+    // Update Timothy's permissions directly in Supabase
+    const { data, error } = await supabase
+      .from('employees')
+      .update({
+        permissions: ['Human Resources', 'Reports', 'Finance'],
+        department: 'Finance',
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', 'tatwanzire@gmail.com')
+      .select();
     
-    console.log('✅ Timothy permissions updated:', result);
+    if (error) {
+      throw error;
+    }
+    
+    console.log('✅ Timothy permissions updated in Supabase:', data);
     alert('✅ Finance permissions added to Timothy successfully! Please refresh the page.');
     
-    return result;
+    return { success: true, data };
   } catch (error) {
     console.error('❌ Error updating Timothy permissions:', error);
     alert('❌ Failed to update Timothy permissions. Check console for details.');
