@@ -30,6 +30,10 @@ export const updateTimothyPermissions = async () => {
   }
 };
 
-// Execute the update immediately
+// Execute the update immediately when this file is imported
 console.log('🚀 Executing Timothy permissions update...');
-updateTimothyPermissions();
+updateTimothyPermissions().then(() => {
+  console.log('Timothy update completed');
+}).catch((error) => {
+  console.error('Timothy update failed:', error);
+});
