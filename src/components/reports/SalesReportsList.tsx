@@ -1,24 +1,68 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Eye, FileText, Download, Search } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSalesTransactions } from '@/hooks/useSalesTransactions';
-import { format } from 'date-fns';
+import { Eye, FileText, Printer, Download, Search, Calendar, Files, CalendarCheck, TrendingUp } from 'lucide-react';
+import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { toast } from 'sonner';
 
 const SalesReportsList = () => {
-  const { transactions, loading } = useSalesTransactions();
+  const { transactions, loading, getGRNFileUrl } = useSalesTransactions();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDateRange, setSelectedDateRange] = useState({
+    start: '',
+    end: ''
+  });
+  const [quickFilter, setQuickFilter] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  const filteredTransactions = transactions.filter(transaction =>
-    transaction.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    transaction.coffee_type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Handle quick filters
+  const handleQuickFilter = (filter: string) => {
+    setQuickFilter(filter);
+    const today = new Date();
+    
+    switch (filter) {
+      case 'previous-month':
+        const prevMonth = subMonths(today, 1);
+        const startOfPrevMonth = startOfMonth(prevMonth);
+        const endOfPrevMonth = endOfMonth(prevMonth);
+        setSelectedDateRange({
+          start: format(startOfPrevMonth, 'yyyy-MM-dd'),
+          end: format(endOfPrevMonth, 'yyyy-MM-dd')
+        });
+        break;
+      case 'current-month':
+        const startOfCurrentMonth = startOfMonth(today);
+        const endOfCurrentMonth = endOfMonth(today);
+        setSelectedDateRange({
+          start: format(startOfCurrentMonth, 'yyyy-MM-dd'),
+          end: format(endOfCurrentMonth, 'yyyy-MM-dd')
+        });
+        break;
+      case 'all':
+        setSelectedDateRange({ start: '', end: '' });
+        break;
+    }
+  };
+
+  const filteredTransactions = transactions.filter(transaction => {
+    const matchesSearch = 
+      transaction.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.coffee_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.truck_details.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.driver_details.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDateRange = 
+      (!selectedDateRange.start || transaction.date >= selectedDateRange.start) &&
+      (!selectedDateRange.end || transaction.date <= selectedDateRange.end);
+    
+    return matchesSearch && matchesDateRange;
+  });
 
   const handleViewDetails = (transaction: any) => {
     setSelectedTransaction(transaction);
@@ -26,114 +70,253 @@ const SalesReportsList = () => {
   };
 
   const handleDownloadGRN = async (transaction: any) => {
-    if (transaction.grn_file_url) {
-      const link = document.createElement('a');
-      link.href = transaction.grn_file_url;
-      link.download = transaction.grn_file_name || `GRN-${transaction.id}.pdf`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    if (!transaction.grn_file_url) return;
+    
+    try {
+      // If it's a file path, get signed URL
+      if (!transaction.grn_file_url.startsWith('http')) {
+        const signedUrl = await getGRNFileUrl(transaction.grn_file_url);
+        if (signedUrl) {
+          window.open(signedUrl, '_blank');
+        } else {
+          toast.error("Failed to access GRN file");
+        }
+      } else {
+        window.open(transaction.grn_file_url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error downloading GRN:', error);
+      toast.error("Failed to download GRN file");
     }
   };
 
+  const handlePrintReport = (transaction: any) => {
+    // Generate and print PDF report for the transaction
+    toast.info("PDF generation feature coming soon!");
+  };
+
+  const handleBulkPDF = () => {
+    if (filteredTransactions.length === 0) {
+      toast.error("No sales reports to generate PDF for");
+      return;
+    }
+    
+    toast.info("Bulk PDF generation feature coming soon!");
+  };
+
   if (loading) {
-    return <div>Loading sales reports...</div>;
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">Loading sales reports...</div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
     <>
-      <Card>
+      <Card className="w-full">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Sales Reports</CardTitle>
-              <p className="text-sm text-gray-600 mt-1">
-                View all sales transactions and their GRN documents
-              </p>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Sales Reports History
+          </CardTitle>
+          <CardDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <span>View and export sales transactions with attachments</span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkPDF}
+                disabled={filteredTransactions.length === 0}
+                className="flex items-center gap-2"
+              >
+                <Files className="h-4 w-4" />
+                Export All PDF ({filteredTransactions.length})
+              </Button>
             </div>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search by customer or coffee type..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Coffee Type</TableHead>
-                <TableHead>Weight (kg)</TableHead>
-                <TableHead>Total Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>GRN</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTransactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell>
-                    {format(new Date(transaction.date), 'MMM dd, yyyy')}
-                  </TableCell>
-                  <TableCell className="font-medium">{transaction.customer}</TableCell>
-                  <TableCell>{transaction.coffee_type}</TableCell>
-                  <TableCell>{transaction.weight.toLocaleString()}</TableCell>
-                  <TableCell className="font-semibold text-green-600">
-                    UGX {transaction.total_amount.toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={transaction.status === 'Completed' ? 'default' : 'secondary'}>
-                      {transaction.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {transaction.grn_file_url ? (
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-green-600" />
-                        <span className="text-sm text-green-600">Available</span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-400">No GRN</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewDetails(transaction)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {transaction.grn_file_url && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDownloadGRN(transaction)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="space-y-4">
+            {/* Filters */}
+            <div className="space-y-4">
+              {/* Quick Filters */}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={quickFilter === 'previous-month' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleQuickFilter('previous-month')}
+                  className="flex items-center gap-2"
+                >
+                  <CalendarCheck className="h-4 w-4" />
+                  Previous Month
+                </Button>
+                <Button
+                  variant={quickFilter === 'current-month' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleQuickFilter('current-month')}
+                  className="flex items-center gap-2"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Current Month
+                </Button>
+                <Button
+                  variant={quickFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleQuickFilter('all')}
+                  className="flex items-center gap-2"
+                >
+                  <Files className="h-4 w-4" />
+                  All Reports
+                </Button>
+              </div>
 
-          {filteredTransactions.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No sales transactions found.
+              {/* Search and Date Range */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      placeholder="Search by customer, coffee type, truck, or driver..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    type="date"
+                    placeholder="Start date"
+                    value={selectedDateRange.start}
+                    onChange={(e) => setSelectedDateRange(prev => ({ ...prev, start: e.target.value }))}
+                  />
+                  <Input
+                    type="date"
+                    placeholder="End date"
+                    value={selectedDateRange.end}
+                    onChange={(e) => setSelectedDateRange(prev => ({ ...prev, end: e.target.value }))}
+                  />
+                </div>
+              </div>
             </div>
-          )}
+
+            {/* Sales Table */}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Coffee Type</TableHead>
+                    <TableHead>Weight (kg)</TableHead>
+                    <TableHead>Amount (UGX)</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransactions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        No sales transactions found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredTransactions.map((transaction) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            {format(new Date(transaction.date), 'MMM d, yyyy')}
+                          </div>
+                        </TableCell>
+                        <TableCell>{transaction.customer}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{transaction.coffee_type}</Badge>
+                        </TableCell>
+                        <TableCell>{transaction.weight} kg</TableCell>
+                        <TableCell>
+                          {transaction.total_amount.toLocaleString('en-UG')} UGX
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={transaction.status === 'Completed' ? 'default' : 'secondary'}
+                          >
+                            {transaction.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewDetails(transaction)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePrintReport(transaction)}
+                              title="Generate PDF"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                            {transaction.grn_file_url && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDownloadGRN(transaction)}
+                                title="Download GRN"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Summary */}
+            {filteredTransactions.length > 0 && (
+              <div className="space-y-6 pt-4 border-t">
+                {/* Main Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">
+                      {filteredTransactions.length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Total Sales</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {filteredTransactions.reduce((sum, t) => sum + t.weight, 0).toFixed(1)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Total Kg Sold</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {filteredTransactions.reduce((sum, t) => sum + t.total_amount, 0).toLocaleString()}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Total Revenue (UGX)</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {filteredTransactions.filter(t => t.grn_file_url).length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">With GRN Files</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -142,76 +325,67 @@ const SalesReportsList = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Sales Transaction Details</DialogTitle>
+            <DialogDescription>
+              View detailed information about this sales transaction
+            </DialogDescription>
           </DialogHeader>
           {selectedTransaction && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-semibold text-sm text-gray-600">Date</h4>
-                  <p>{format(new Date(selectedTransaction.date), 'MMMM dd, yyyy')}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-gray-600">Customer</h4>
-                  <p>{selectedTransaction.customer}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-gray-600">Coffee Type</h4>
-                  <p>{selectedTransaction.coffee_type}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-gray-600">Weight</h4>
-                  <p>{selectedTransaction.weight.toLocaleString()} kg</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-gray-600">Unit Price</h4>
-                  <p>UGX {selectedTransaction.unit_price.toLocaleString()}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-gray-600">Total Amount</h4>
-                  <p className="font-semibold text-green-600">
-                    UGX {selectedTransaction.total_amount.toLocaleString()}
+                  <label className="text-sm font-medium">Date</label>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(selectedTransaction.date), 'MMMM d, yyyy')}
                   </p>
                 </div>
-                {selectedTransaction.moisture && (
-                  <div>
-                    <h4 className="font-semibold text-sm text-gray-600">Moisture</h4>
-                    <p>{selectedTransaction.moisture}%</p>
-                  </div>
-                )}
                 <div>
-                  <h4 className="font-semibold text-sm text-gray-600">Status</h4>
-                  <Badge variant={selectedTransaction.status === 'Completed' ? 'default' : 'secondary'}>
-                    {selectedTransaction.status}
-                  </Badge>
+                  <label className="text-sm font-medium">Customer</label>
+                  <p className="text-sm text-muted-foreground">{selectedTransaction.customer}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Coffee Type</label>
+                  <p className="text-sm text-muted-foreground">{selectedTransaction.coffee_type}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Moisture</label>
+                  <p className="text-sm text-muted-foreground">{selectedTransaction.moisture || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Weight</label>
+                  <p className="text-sm text-muted-foreground">{selectedTransaction.weight} kg</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Unit Price</label>
+                  <p className="text-sm text-muted-foreground">{selectedTransaction.unit_price.toLocaleString()} UGX/kg</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Total Amount</label>
+                  <p className="text-sm text-muted-foreground">{selectedTransaction.total_amount.toLocaleString()} UGX</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Status</label>
+                  <p className="text-sm text-muted-foreground">{selectedTransaction.status}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Truck Details</label>
+                  <p className="text-sm text-muted-foreground">{selectedTransaction.truck_details}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Driver Details</label>
+                  <p className="text-sm text-muted-foreground">{selectedTransaction.driver_details}</p>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <h4 className="font-semibold text-sm text-gray-600">Truck Details</h4>
-                  <p>{selectedTransaction.truck_details}</p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-gray-600">Driver Details</h4>
-                  <p>{selectedTransaction.driver_details}</p>
-                </div>
-              </div>
-
               {selectedTransaction.grn_file_url && (
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold text-sm text-gray-600 mb-2">GRN Document</h4>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-green-600" />
-                      <span>{selectedTransaction.grn_file_name || 'GRN Document'}</span>
-                    </div>
-                    <Button
-                      variant="outline"
+                <div className="pt-4 border-t">
+                  <label className="text-sm font-medium">GRN File</label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Button 
+                      variant="outline" 
                       size="sm"
                       onClick={() => handleDownloadGRN(selectedTransaction)}
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      Download
+                      {selectedTransaction.grn_file_name || 'Download GRN'}
                     </Button>
                   </div>
                 </div>
