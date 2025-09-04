@@ -90,15 +90,11 @@ export const useSalesTransactions = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from('sales-documents')
-        .getPublicUrl(filePath);
-
-      // Update transaction with file info
+      // Store the file path instead of public URL for private bucket (like store reports)
       const { error: updateError } = await supabase
         .from('sales_transactions')
         .update({
-          grn_file_url: urlData.publicUrl,
+          grn_file_url: filePath, // Store file path, not public URL
           grn_file_name: file.name
         })
         .eq('id', transactionId);
@@ -106,7 +102,7 @@ export const useSalesTransactions = () => {
       if (updateError) throw updateError;
 
       await fetchTransactions();
-      return urlData.publicUrl;
+      return filePath;
     } catch (error) {
       console.error('Error uploading GRN file:', error);
       toast({

@@ -137,6 +137,12 @@ const Navigation = () => {
           ]
         },
         {
+          title: "Management",
+          items: [
+            { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: null },
+          ]
+        },
+        {
           title: "System", 
           items: [
             { name: "Reports", icon: FileText, path: "/reports", permission: null },
