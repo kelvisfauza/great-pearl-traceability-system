@@ -126,9 +126,9 @@ const SalesForm = () => {
         await uploadGRNFile(formData.grnFile, savedTransaction.id);
       }
 
-      // Reset form
+      // Reset form with current date (will automatically be today's date)
       setFormData({
-        date: new Date(),
+        date: new Date(), // This ensures it's always today's date when saving
         customer: '',
         coffeeType: '',
         moisture: '',

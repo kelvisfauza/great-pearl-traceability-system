@@ -131,11 +131,60 @@ export const useSalesTransactions = () => {
     fetchTransactions();
   }, []);
 
+  const updateTransaction = async (id: string, transactionData: Partial<SalesTransaction>) => {
+    try {
+      console.log('Updating transaction:', id, transactionData);
+      
+      const { data, error } = await supabase
+        .from('sales_transactions')
+        .update(transactionData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating transaction:', error);
+        throw error;
+      }
+
+      console.log('Transaction updated successfully:', data);
+      await fetchTransactions(); // Refresh the list
+      return data;
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      throw error;
+    }
+  };
+
+  const deleteTransaction = async (id: string) => {
+    try {
+      console.log('Deleting transaction:', id);
+      
+      const { error } = await supabase
+        .from('sales_transactions')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting transaction:', error);
+        throw error;
+      }
+
+      console.log('Transaction deleted successfully');
+      await fetchTransactions(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      throw error;
+    }
+  };
+
   return {
     transactions,
     loading,
     fetchTransactions,
     createTransaction,
+    updateTransaction,
+    deleteTransaction,
     uploadGRNFile,
     getGRNFileUrl
   };

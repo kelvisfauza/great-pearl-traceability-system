@@ -6,12 +6,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSalesTransactions } from '@/hooks/useSalesTransactions';
-import { Eye, FileText, Printer, Download, Search, Calendar, Files, CalendarCheck, TrendingUp } from 'lucide-react';
+import { Eye, FileText, Printer, Download, Search, Calendar, Files, CalendarCheck, TrendingUp, Trash2, Edit } from 'lucide-react';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const SalesReportsList = () => {
-  const { transactions, loading, getGRNFileUrl } = useSalesTransactions();
+  const { transactions, loading, getGRNFileUrl, updateTransaction, deleteTransaction } = useSalesTransactions();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState({
     start: '',
@@ -20,6 +23,8 @@ const SalesReportsList = () => {
   const [quickFilter, setQuickFilter] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
 
   // Handle quick filters
   const handleQuickFilter = (filter: string) => {
@@ -102,6 +107,44 @@ const SalesReportsList = () => {
     }
     
     toast.info("Bulk PDF generation feature coming soon!");
+  };
+
+  const handleEditTransaction = (transaction: any) => {
+    setEditingTransaction({ ...transaction });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingTransaction) return;
+    
+    try {
+      await updateTransaction(editingTransaction.id, {
+        date: editingTransaction.date,
+        customer: editingTransaction.customer,
+        coffee_type: editingTransaction.coffee_type,
+        moisture: editingTransaction.moisture,
+        weight: editingTransaction.weight,
+        unit_price: editingTransaction.unit_price,
+        total_amount: editingTransaction.total_amount,
+        truck_details: editingTransaction.truck_details,
+        driver_details: editingTransaction.driver_details
+      });
+      
+      toast.success("Transaction updated successfully");
+      setShowEditModal(false);
+      setEditingTransaction(null);
+    } catch (error) {
+      toast.error("Failed to update transaction");
+    }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      await deleteTransaction(id);
+      toast.success("Transaction deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete transaction");
+    }
   };
 
   if (loading) {
@@ -254,8 +297,17 @@ const SalesReportsList = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handleViewDetails(transaction)}
+                              title="View Details"
                             >
                               <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditTransaction(transaction)}
+                              title="Edit Transaction"
+                            >
+                              <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="outline"
@@ -275,6 +327,35 @@ const SalesReportsList = () => {
                                 <Download className="h-4 w-4" />
                               </Button>
                             )}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  title="Delete Transaction"
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this sales transaction? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteTransaction(transaction.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -390,6 +471,142 @@ const SalesReportsList = () => {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Transaction Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Sales Transaction</DialogTitle>
+            <DialogDescription>
+              Update the details of this sales transaction
+            </DialogDescription>
+          </DialogHeader>
+          {editingTransaction && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Input
+                    type="date"
+                    value={editingTransaction.date}
+                    onChange={(e) => setEditingTransaction({ ...editingTransaction, date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Customer</Label>
+                  <Input
+                    value={editingTransaction.customer}
+                    onChange={(e) => setEditingTransaction({ ...editingTransaction, customer: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Coffee Type</Label>
+                  <Select 
+                    value={editingTransaction.coffee_type} 
+                    onValueChange={(value) => setEditingTransaction({ ...editingTransaction, coffee_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Arabica">Arabica</SelectItem>
+                      <SelectItem value="Robusta">Robusta</SelectItem>
+                      <SelectItem value="Screen 18">Screen 18</SelectItem>
+                      <SelectItem value="Screen 15">Screen 15</SelectItem>
+                      <SelectItem value="FAQ">FAQ</SelectItem>
+                      <SelectItem value="Bugisu AA">Bugisu AA</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Moisture (%)</Label>
+                  <Input
+                    value={editingTransaction.moisture || ''}
+                    onChange={(e) => setEditingTransaction({ ...editingTransaction, moisture: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Weight (kg)</Label>
+                  <Input
+                    type="number"
+                    value={editingTransaction.weight}
+                    onChange={(e) => {
+                      const weight = parseFloat(e.target.value) || 0;
+                      setEditingTransaction({ 
+                        ...editingTransaction, 
+                        weight,
+                        total_amount: weight * editingTransaction.unit_price
+                      });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Unit Price (UGX/kg)</Label>
+                  <Input
+                    type="number"
+                    value={editingTransaction.unit_price}
+                    onChange={(e) => {
+                      const unitPrice = parseFloat(e.target.value) || 0;
+                      setEditingTransaction({ 
+                        ...editingTransaction, 
+                        unit_price: unitPrice,
+                        total_amount: editingTransaction.weight * unitPrice
+                      });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Total Amount (UGX)</Label>
+                  <Input
+                    type="number"
+                    value={editingTransaction.total_amount}
+                    readOnly
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select 
+                    value={editingTransaction.status} 
+                    onValueChange={(value) => setEditingTransaction({ ...editingTransaction, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Completed">Completed</SelectItem>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Truck Details</Label>
+                  <Input
+                    value={editingTransaction.truck_details}
+                    onChange={(e) => setEditingTransaction({ ...editingTransaction, truck_details: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Driver Details</Label>
+                  <Input
+                    value={editingTransaction.driver_details}
+                    onChange={(e) => setEditingTransaction({ ...editingTransaction, driver_details: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveEdit}>
+                  Save Changes
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
