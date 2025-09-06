@@ -25,6 +25,7 @@ const SalesReportsList = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<Set<string>>(new Set());
 
   // Handle quick filters
   const handleQuickFilter = (filter: string) => {
@@ -251,6 +252,20 @@ const SalesReportsList = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <input 
+                        type="checkbox" 
+                        className="rounded"
+                        checked={selectedTransactionIds.size === filteredTransactions.length && filteredTransactions.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTransactionIds(new Set(filteredTransactions.map(t => t.id)));
+                          } else {
+                            setSelectedTransactionIds(new Set());
+                          }
+                        }}
+                      />
+                    </TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Coffee Type</TableHead>
@@ -263,13 +278,32 @@ const SalesReportsList = () => {
                 <TableBody>
                   {filteredTransactions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
+                      <TableCell colSpan={8} className="text-center py-8">
                         No sales transactions found
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
+                      <TableRow 
+                        key={transaction.id}
+                        className={selectedTransactionIds.has(transaction.id) ? "bg-muted/50" : ""}
+                      >
+                        <TableCell>
+                          <input 
+                            type="checkbox" 
+                            className="rounded"
+                            checked={selectedTransactionIds.has(transaction.id)}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedTransactionIds);
+                              if (e.target.checked) {
+                                newSelected.add(transaction.id);
+                              } else {
+                                newSelected.delete(transaction.id);
+                              }
+                              setSelectedTransactionIds(newSelected);
+                            }}
+                          />
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -292,71 +326,14 @@ const SalesReportsList = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewDetails(transaction)}
-                              title="View Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditTransaction(transaction)}
-                              title="Edit Transaction"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handlePrintReport(transaction)}
-                              title="Generate PDF"
-                            >
-                              <Printer className="h-4 w-4" />
-                            </Button>
-                            {transaction.grn_file_url && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDownloadGRN(transaction)}
-                                title="Download GRN"
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  title="Delete Transaction"
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete this sales transaction? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteTransaction(transaction.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetails(transaction)}
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -364,6 +341,79 @@ const SalesReportsList = () => {
                 </TableBody>
               </Table>
             </div>
+
+            {/* Selected Actions */}
+            {selectedTransactionIds.size > 0 && (
+              <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    {selectedTransactionIds.size} selected
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedTransactionIds(new Set())}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  {selectedTransactionIds.size === 1 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const transactionId = Array.from(selectedTransactionIds)[0];
+                        const transaction = filteredTransactions.find(t => t.id === transactionId);
+                        if (transaction) handleEditTransaction(transaction);
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit Report
+                    </Button>
+                  )}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete {selectedTransactionIds.size > 1 ? 'Reports' : 'Report'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete {selectedTransactionIds.size > 1 ? 'Transactions' : 'Transaction'}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete {selectedTransactionIds.size} selected sales transaction{selectedTransactionIds.size > 1 ? 's' : ''}? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={async () => {
+                            try {
+                              for (const id of selectedTransactionIds) {
+                                await handleDeleteTransaction(id);
+                              }
+                              setSelectedTransactionIds(new Set());
+                            } catch (error) {
+                              toast.error("Failed to delete some transactions");
+                            }
+                          }}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            )}
 
             {/* Summary */}
             {filteredTransactions.length > 0 && (

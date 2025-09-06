@@ -29,6 +29,20 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
   const [codeSent, setCodeSent] = useState(false);
   const hasSentInitialCode = React.useRef(false);
 
+  // Listen for auto-fill events from SMS links
+  React.useEffect(() => {
+    const handleAutoFill = (event: CustomEvent) => {
+      const { code } = event.detail;
+      console.log('🔗 Auto-filling code from SMS link:', code);
+      setVerificationCode(code);
+      // Auto-verify after a short delay
+      setTimeout(() => verifyCode(), 100);
+    };
+
+    window.addEventListener('autoFillCode', handleAutoFill as EventListener);
+    return () => window.removeEventListener('autoFillCode', handleAutoFill as EventListener);
+  }, []);
+
   // Start countdown timer
   React.useEffect(() => {
     const timer = setInterval(() => {
@@ -44,6 +58,48 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
 
     return () => clearInterval(timer);
   }, []);
+
+  // Listen for auto-fill events from SMS links
+  React.useEffect(() => {
+    const handleAutoFill = (event: CustomEvent) => {
+      const { code } = event.detail;
+      console.log('🔗 Auto-filling code from SMS link:', code);
+      setVerificationCode(code);
+      // Auto-verify after a short delay
+      setTimeout(async () => {
+        console.log('🔍 Auto-verifying code from SMS link');
+        if (code && code.length === 5) {
+          setIsVerifying(true);
+          setError('');
+
+          try {
+            const { data, error } = await supabase.functions.invoke('2fa-verification', {
+              body: {
+                action: 'verify_code',
+                email,
+                phone,
+                code: code
+              }
+            });
+
+            if (error) throw error;
+            if (!data?.success) throw new Error(data?.error || 'Invalid verification code');
+
+            console.log('✅ Auto-verification successful!');
+            onVerificationComplete();
+          } catch (err: any) {
+            console.error('Auto-verify code error:', err);
+            setError(err.message || 'Auto-verification failed');
+          } finally {
+            setIsVerifying(false);
+          }
+        }
+      }, 500);
+    };
+
+    window.addEventListener('autoFillCode', handleAutoFill as EventListener);
+    return () => window.removeEventListener('autoFillCode', handleAutoFill as EventListener);
+  }, [email, phone, onVerificationComplete]);
 
   // Format time remaining
   const formatTime = (seconds: number) => {

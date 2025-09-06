@@ -24,6 +24,31 @@ const Auth = () => {
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
+  // Check for auto-fill parameters from SMS link
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const autoCode = urlParams.get('auto_code');
+    const autoEmail = urlParams.get('email');
+    const autoPhone = urlParams.get('phone');
+    
+    if (autoCode && autoEmail && autoPhone) {
+      console.log('🔗 Auto-filling from SMS link:', { email: autoEmail, phone: autoPhone, code: autoCode });
+      setEmail(autoEmail);
+      setUserPhone(autoPhone);
+      setShowTwoFactor(true);
+      
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Auto-fill the verification code
+      setTimeout(() => {
+        // Trigger auto-verification if TwoFactorVerification component is ready
+        const event = new CustomEvent('autoFillCode', { detail: { code: autoCode } });
+        window.dispatchEvent(event);
+      }, 500);
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
