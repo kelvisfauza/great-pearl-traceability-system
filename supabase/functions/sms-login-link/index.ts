@@ -119,11 +119,64 @@ serve(async (req) => {
       });
     }
 
-    // Create a temporary login token
-    const loginToken = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + (5 * 60 * 1000)); // 5 minutes
+    // Generate magic link for direct authentication
+    if (employee.auth_user_id) {
+      const { data: magicLinkData, error: magicLinkError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: employee.email,
+      });
 
-    // Store the login token
+      if (!magicLinkError && magicLinkData.properties?.action_link) {
+        // Generate HTML response that shows approved login and immediately redirects
+        const html = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Login Approved - FarmFlow</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+              .container { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+              .success { color: #16a34a; margin-bottom: 20px; font-size: 18px; font-weight: 600; }
+              .welcome { color: #374151; margin-bottom: 20px; }
+              .loading { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 20px 0; }
+              .spinner { width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top: 2px solid #16a34a; border-radius: 50%; animation: spin 1s linear infinite; }
+              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+              .checkmark { font-size: 48px; color: #16a34a; margin-bottom: 20px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="checkmark">✅</div>
+              <h2 class="success">LOGIN APPROVED!</h2>
+              <p class="welcome">Welcome ${employee.name}! You are now being logged in...</p>
+              <div class="loading">
+                <div class="spinner"></div>
+                <span>Logging you in securely...</span>
+              </div>
+              <p><small>If you're not redirected automatically, <a href="${magicLinkData.properties.action_link}">click here</a>.</small></p>
+            </div>
+            
+            <script>
+              // Auto-redirect to magic link for authentication
+              setTimeout(() => {
+                window.location.href = '${magicLinkData.properties.action_link}';
+              }, 2000);
+            </script>
+          </body>
+          </html>
+        `;
+
+        return new Response(html, {
+          headers: { ...corsHeaders, 'Content-Type': 'text/html' }
+        });
+      }
+    }
+
+    // Fallback - redirect with login token (original implementation)
+    const loginToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + (5 * 60 * 1000));
+
     await supabase
       .from('login_tokens')
       .insert({
@@ -146,7 +199,7 @@ serve(async (req) => {
           .container { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
           .success { color: #16a34a; margin-bottom: 20px; font-size: 18px; font-weight: 600; }
           .welcome { color: #374151; margin-bottom: 20px; }
-          .loading { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 20px 0; }
+          .loading { display: flex; align-items: center; justify-center: center; gap: 10px; margin: 20px 0; }
           .spinner { width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top: 2px solid #16a34a; border-radius: 50%; animation: spin 1s linear infinite; }
           @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
           .checkmark { font-size: 48px; color: #16a34a; margin-bottom: 20px; }
@@ -168,7 +221,7 @@ serve(async (req) => {
           // Auto-redirect to main page with login token
           setTimeout(() => {
             window.location.href = '/?login_token=${loginToken}';
-          }, 3000);
+          }, 2000);
         </script>
       </body>
       </html>
