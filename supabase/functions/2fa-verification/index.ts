@@ -104,21 +104,18 @@ Deno.serve(async (req) => {
         console.warn('Could not fetch employee data:', employeeError);
       }
 
-      // Format the SMS message with department and include login link
+      // Format the SMS message with department and include login link  
       const departmentText = userDepartment ? `${userDepartment} ` : '';
       const loginLink = `${Deno.env.get('SUPABASE_URL')?.replace('/v1', '')}/functions/v1/sms-login-link?code=${verificationCode}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phone)}`;
       
-      const smsMessage = `HI ${userName.toUpperCase()}, ${departmentText}${userRole}
+      const smsMessage = `${userName.toUpperCase()} - Great Pearl Coffee Login
 
-Your login code: ${verificationCode}
-Valid for 5 minutes
+Code: ${verificationCode} (5min)
 
-🔗 INSTANT LOGIN LINK:
+CLICK TO LOGIN:
 ${loginLink}
 
-Click link above to login instantly without entering code.
-
-Always log out when not on site and don't share this message.`;
+Don't share this code/link.`;
 
       // Send SMS using existing send-sms function
       const smsResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-sms`, {
