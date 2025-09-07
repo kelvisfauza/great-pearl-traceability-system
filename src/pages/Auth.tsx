@@ -27,10 +27,18 @@ const Auth = () => {
   // Check for auto-fill parameters from SMS link
   React.useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
+    const loginToken = urlParams.get('login_token');
     const autoCode = urlParams.get('auto_code');
     const autoEmail = urlParams.get('email');
     const autoPhone = urlParams.get('phone');
     
+    // Handle direct auto-login via token
+    if (loginToken) {
+      handleAutoLogin(loginToken);
+      return;
+    }
+    
+    // Handle auto-fill from SMS link
     if (autoCode && autoEmail && autoPhone) {
       console.log('🔗 Auto-filling from SMS link:', { email: autoEmail, phone: autoPhone, code: autoCode });
       setEmail(autoEmail);
@@ -48,6 +56,44 @@ const Auth = () => {
       }, 500);
     }
   }, []);
+
+  const handleAutoLogin = async (token: string) => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      console.log('🔐 Attempting auto-login with token...');
+      
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Call the auto-login edge function
+      const { data, error } = await supabase.functions.invoke('auto-login', {
+        body: { token }
+      });
+
+      if (error) {
+        console.error('Auto-login error:', error);
+        setError('Auto-login failed. Please try logging in manually.');
+        setLoading(false);
+        return;
+      }
+
+      if (data.success && data.auth_url) {
+        console.log('✅ Auto-login successful, redirecting...');
+        // Use the magic link to authenticate
+        window.location.href = data.auth_url;
+      } else {
+        console.error('Auto-login failed:', data.message);
+        setError(data.message || 'Auto-login failed. Please try logging in manually.');
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error('Auto-login error:', err);
+      setError('An error occurred during auto-login. Please try logging in manually.');
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,11 +270,23 @@ const Auth = () => {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+              
+              {loading && !error && (
+                <Alert>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <AlertDescription>
+                    {window.location.search.includes('login_token') 
+                      ? 'Processing automatic login...' 
+                      : 'Signing you in...'}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Signing in...
+                    {window.location.search.includes('login_token') ? 'Auto-logging in...' : 'Signing in...'}
                   </>
                 ) : (
                   'Sign In'

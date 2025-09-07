@@ -793,6 +793,111 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_ledgers: {
+        Row: {
+          balance: number | null
+          credit: number | null
+          date: string | null
+          debit: number | null
+          id: string
+          ref: string | null
+          type: string | null
+        }
+        Insert: {
+          balance?: number | null
+          credit?: number | null
+          date?: string | null
+          debit?: number | null
+          id?: string
+          ref?: string | null
+          type?: string | null
+        }
+        Update: {
+          balance?: number | null
+          credit?: number | null
+          date?: string | null
+          debit?: number | null
+          id?: string
+          ref?: string | null
+          type?: string | null
+        }
+        Relationships: []
+      }
+      finance_payments: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          id: string
+          method: string | null
+          notes: string | null
+          reference: string | null
+          status: string | null
+          supplier: string | null
+          supplier_code: string | null
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          method?: string | null
+          notes?: string | null
+          reference?: string | null
+          status?: string | null
+          supplier?: string | null
+          supplier_code?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          method?: string | null
+          notes?: string | null
+          reference?: string | null
+          status?: string | null
+          supplier?: string | null
+          supplier_code?: string | null
+        }
+        Relationships: []
+      }
+      finance_prices: {
+        Row: {
+          base_price: number | null
+          coffee_type: string
+          created_at: string | null
+          created_by: string | null
+          differential: number | null
+          grade: string | null
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          base_price?: number | null
+          coffee_type: string
+          created_at?: string | null
+          created_by?: string | null
+          differential?: number | null
+          grade?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          base_price?: number | null
+          coffee_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          differential?: number | null
+          grade?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
       finance_transactions: {
         Row: {
           amount: number
@@ -895,6 +1000,39 @@ export type Database = {
           reference?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      login_tokens: {
+        Row: {
+          auth_user_id: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          phone: string
+          token: string
+          used: boolean
+        }
+        Insert: {
+          auth_user_id?: string | null
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          phone: string
+          token: string
+          used?: boolean
+        }
+        Update: {
+          auth_user_id?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          token?: string
+          used?: boolean
         }
         Relationships: []
       }
