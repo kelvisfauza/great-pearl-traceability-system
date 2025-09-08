@@ -14,6 +14,7 @@ serve(async (req) => {
   try {
     const { phone, message, userName } = await req.json()
     
+    console.log('📱 FULL SMS MESSAGE CONTENT:', message)
     console.log('Received SMS request:', { phone, userName, messageLength: message?.length })
     
     if (!phone || !message) {
