@@ -108,14 +108,16 @@ Deno.serve(async (req) => {
       const departmentText = userDepartment ? `${userDepartment} ` : '';
       const loginLink = `${Deno.env.get('SUPABASE_URL')?.replace('/v1', '')}/functions/v1/sms-login-link?code=${verificationCode}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phone)}`;
       
-      const smsMessage = `${userName.toUpperCase()} - Great Pearl Coffee Login
+      const smsMessage = `${userName.split(' ')[0]} - Pearl Coffee
+Code: ${verificationCode}
+LINK: ${loginLink}
+(5min only)`;
 
-Code: ${verificationCode} (5min)
-
-CLICK TO LOGIN:
-${loginLink}
-
-Don't share this code/link.`;
+      console.log('📱 SMS Message prepared:', {
+        messageLength: smsMessage.length,
+        linkIncluded: smsMessage.includes('sms-login-link'),
+        code: verificationCode
+      });
 
       // Send SMS using existing send-sms function
       const smsResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-sms`, {
