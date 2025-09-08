@@ -38,6 +38,23 @@ const Auth = () => {
       return;
     }
     
+    // Check for auto-fill code from URL hash (from SMS approval page)
+    const hash = window.location.hash;
+    if (hash.includes('code=')) {
+      const codeMatch = hash.match(/code=([^&]+)/);
+      if (codeMatch) {
+        console.log('🔗 Auto-filling code from SMS approval:', codeMatch[1]);
+        // Clear the hash
+        window.location.hash = '';
+        
+        // Auto-fill the verification code in TwoFactor component
+        setTimeout(() => {
+          const event = new CustomEvent('autoFillCode', { detail: { code: codeMatch[1] } });
+          window.dispatchEvent(event);
+        }, 500);
+      }
+    }
+    
     // Handle auto-fill from SMS link
     if (autoCode && autoEmail && autoPhone) {
       console.log('🔗 Auto-filling from SMS link:', { email: autoEmail, phone: autoPhone, code: autoCode });
