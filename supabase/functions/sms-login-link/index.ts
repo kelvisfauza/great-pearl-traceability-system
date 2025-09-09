@@ -27,6 +27,8 @@ serve(async (req) => {
       );
     }
 
+    console.log('SMS login link accessed with params:', { code, email, phone });
+
     // Create Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -42,6 +44,8 @@ serve(async (req) => {
       .eq('code', code)
       .gt('expires_at', new Date().toISOString())
       .single();
+
+    console.log('Verification record result:', { verificationRecord, verifyError });
 
     if (verifyError || !verificationRecord) {
       // Generate HTML response for invalid/expired code
@@ -89,6 +93,8 @@ serve(async (req) => {
       .eq('phone', phone)
       .single();
 
+    console.log('Employee lookup result:', { employee, employeeError });
+
     if (employeeError || !employee) {
       console.error('Employee not found:', employeeError);
       const html = `
@@ -120,6 +126,7 @@ serve(async (req) => {
     }
 
     // Show approval page instead of automatic login
+    console.log('Returning approval page for employee:', employee?.name);
     const approvalPageHTML = `
 <!DOCTYPE html>
 <html lang="en">
@@ -334,7 +341,7 @@ serve(async (req) => {
 
             try {
                 // Generate magic link directly here
-                const response = await fetch(window.location.origin + '/functions/v1/generate-magic-link', {
+                const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/generate-magic-link', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -362,6 +369,7 @@ serve(async (req) => {
                 loading.style.display = 'none';
                 approveBtn.disabled = false;
                 message.innerHTML = '<div class="error">❌ Login failed: ' + error.message + '</div>';
+                console.error('Auto-login error:', error);
             }
         }
 
@@ -372,15 +380,13 @@ serve(async (req) => {
                 
                 // Redirect to login page with code in URL hash
                 setTimeout(() => {
-                    const appUrl = '${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}';
-                    window.location.href = appUrl + '/auth#code=' + code;
+                    window.location.href = 'https://id-preview--0ab47c69-3f36-4407-b03c-de1f9684ac9a.lovable.app/auth#code=' + code;
                 }, 1000);
             }).catch(() => {
                 // Fallback if clipboard doesn't work
                 document.getElementById('message').innerHTML = '<div class="success">Code: ' + code + ' - Redirecting to login...</div>';
                 setTimeout(() => {
-                    const appUrl = '${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}';
-                    window.location.href = appUrl + '/auth#code=' + code;
+                    window.location.href = 'https://id-preview--0ab47c69-3f36-4407-b03c-de1f9684ac9a.lovable.app/auth#code=' + code;
                 }, 2000);
             });
         }
