@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.sms-login-link]
 verify_jwt = false
+
+[functions.generate-magic-link]
+verify_jwt = false

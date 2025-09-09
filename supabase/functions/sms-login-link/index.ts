@@ -333,8 +333,8 @@ serve(async (req) => {
             message.innerHTML = '';
 
             try {
-                // Call the auto-login function
-                const response = await fetch('${Deno.env.get('SUPABASE_URL')}/functions/v1/auto-login', {
+                // Generate magic link directly here
+                const response = await fetch(window.location.origin + '/functions/v1/generate-magic-link', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -348,15 +348,15 @@ serve(async (req) => {
 
                 const result = await response.json();
 
-                if (result.success) {
+                if (result.success && result.magicLink) {
                     message.innerHTML = '<div class="success">✓ Login approved! Redirecting...</div>';
                     
-                    // Redirect to the magic link or app
+                    // Redirect to the magic link
                     setTimeout(() => {
-                        window.location.href = result.redirectUrl || '${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'lovable.app')}';
+                        window.location.href = result.magicLink;
                     }, 1500);
                 } else {
-                    throw new Error(result.error || 'Login failed');
+                    throw new Error(result.error || 'Failed to generate login link');
                 }
             } catch (error) {
                 loading.style.display = 'none';
