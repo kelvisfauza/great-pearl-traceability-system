@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useContext } from 'react';
 import { AuthContext } from '@/contexts/AuthContext';
 import { smsService } from '@/services/smsService';
 
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+const INACTIVITY_TIMEOUT = 20 * 60 * 1000; // 20 minutes in milliseconds
 
 export const useInactivityTimer = () => {
   const authContext = useContext(AuthContext);
@@ -24,7 +24,7 @@ export const useInactivityTimer = () => {
     // Set new timeout
     timeoutRef.current = setTimeout(async () => {
       if (user && isActiveRef.current && signOut) {
-        console.log('User inactive for 5 minutes, logging out...');
+        console.log('User inactive for 20 minutes, logging out...');
         
         // Send SMS notification before logout
         if (employee?.phone) {
