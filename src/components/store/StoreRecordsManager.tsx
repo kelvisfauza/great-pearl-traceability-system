@@ -11,7 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Edit, Trash2, Package, Calendar, User, MapPin, AlertTriangle } from 'lucide-react';
-import { generateBatchNumber, validateBatchWeight, getMinimumBatchWeight } from '@/utils/batchUtils';
+import { generateBatchNumber, validateBatchWeight, getMinimumBatchWeight, checkBatchAccumulation, batchAccumulatedDeliveries } from '@/utils/batchUtils';
+import { PendingBatchSummary } from '@/components/PendingBatchSummary';
 
 interface StoreRecord {
   id: string;
@@ -48,6 +49,7 @@ export const StoreRecordsManager = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<StoreRecord | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [formData, setFormData] = useState({
     inventory_item_id: '',
     transaction_type: 'received',
@@ -110,28 +112,63 @@ export const StoreRecordsManager = () => {
 
   const handleSubmit = async () => {
     try {
-      // Validate minimum batch weight for new records
-      if (!editMode && !validateBatchWeight(formData.quantity_kg)) {
-        toast({
-          title: 'Invalid Batch Weight',
-          description: `Batch must contain at least ${getMinimumBatchWeight()}kg. Current weight: ${formData.quantity_kg}kg`,
-          variant: 'destructive'
-        });
-        return;
-      }
+      const { checkBatchAccumulation, batchAccumulatedDeliveries } = await import('@/utils/batchUtils');
+      
+      let recordData: any;
+      let shouldCreateBatch = false;
+      let batchInfo: any = {};
 
-      // Generate batch number if not provided
-      let batchNumber = formData.batch_number;
-      if (!editMode && !batchNumber) {
-        batchNumber = await generateBatchNumber();
+      if (!editMode && formData.transaction_type === 'received' && formData.supplier_name) {
+        // Check if this delivery should be accumulated with others
+        batchInfo = await checkBatchAccumulation(formData.supplier_name, formData.quantity_kg);
+        
+        if (batchInfo.shouldBatch) {
+          // This delivery will complete a batch
+          shouldCreateBatch = true;
+          recordData = {
+            ...formData,
+            batch_number: batchInfo.batchNumber,
+            status: 'active',
+            created_by: user?.email || 'Unknown',
+            total_value: formData.quantity_kg * formData.price_per_kg
+          };
+        } else {
+          // This delivery will remain pending until batch is complete
+          recordData = {
+            ...formData,
+            batch_number: null,
+            status: 'pending_batch',
+            created_by: user?.email || 'Unknown',
+            total_value: formData.quantity_kg * formData.price_per_kg
+          };
+        }
+      } else if (!editMode) {
+        // For non-received transactions or no supplier, handle normally
+        if (formData.quantity_kg >= getMinimumBatchWeight()) {
+          const batchNumber = await generateBatchNumber();
+          recordData = {
+            ...formData,
+            batch_number: batchNumber,
+            status: 'active',
+            created_by: user?.email || 'Unknown',
+            total_value: formData.quantity_kg * formData.price_per_kg
+          };
+        } else {
+          toast({
+            title: 'Invalid Batch Weight',
+            description: `Single deliveries must be at least ${getMinimumBatchWeight()}kg. Current weight: ${formData.quantity_kg}kg`,
+            variant: 'destructive'
+          });
+          return;
+        }
+      } else {
+        // Edit mode
+        recordData = {
+          ...formData,
+          created_by: user?.email || 'Unknown',
+          total_value: formData.quantity_kg * formData.price_per_kg
+        };
       }
-
-      const recordData = {
-        ...formData,
-        batch_number: batchNumber,
-        created_by: user?.email || 'Unknown',
-        total_value: formData.quantity_kg * formData.price_per_kg
-      };
 
       if (editMode && selectedRecord) {
         // Create edit request instead of direct update
@@ -160,12 +197,32 @@ export const StoreRecordsManager = () => {
 
         if (error) throw error;
 
-        toast({
-          title: 'Record Created',
-          description: 'Store record has been created successfully',
-        });
+        // If this delivery completes a batch, update all pending deliveries
+        if (shouldCreateBatch && batchInfo.pendingDeliveries) {
+          await batchAccumulatedDeliveries(
+            formData.supplier_name!, 
+            batchInfo.batchNumber!, 
+            batchInfo.pendingDeliveries
+          );
+          
+          toast({
+            title: 'Batch Created',
+            description: `Delivery added and batch ${batchInfo.batchNumber} created with total weight: ${batchInfo.totalWeight}kg`,
+          });
+        } else if (recordData.status === 'pending_batch') {
+          toast({
+            title: 'Delivery Pending',
+            description: `Delivery added to pending batch. Current total: ${batchInfo.totalWeight || formData.quantity_kg}kg (${getMinimumBatchWeight()}kg needed)`,
+          });
+        } else {
+          toast({
+            title: 'Record Created',
+            description: 'Store record has been created successfully',
+          });
+        }
         
         fetchRecords();
+        setRefreshTrigger(prev => prev + 1); // Trigger pending batch summary refresh
       }
 
       setFormOpen(false);
@@ -265,6 +322,7 @@ export const StoreRecordsManager = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
+      case 'pending_batch': return 'bg-blue-100 text-blue-800';
       case 'pending_deletion': return 'bg-red-100 text-red-800';
       case 'pending_edit': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -285,7 +343,7 @@ export const StoreRecordsManager = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Store Records Management</h2>
           <p className="text-muted-foreground">
-            Manage inventory transactions and submit requests for changes
+            Manage inventory transactions. Deliveries under 1,000kg will be accumulated into batches.
           </p>
         </div>
         
@@ -355,12 +413,24 @@ export const StoreRecordsManager = () => {
                   step="0.01"
                   value={formData.quantity_kg}
                   onChange={(e) => setFormData({...formData, quantity_kg: parseFloat(e.target.value) || 0})}
-                  className={!editMode && formData.quantity_kg > 0 && !validateBatchWeight(formData.quantity_kg) ? 'border-red-500' : ''}
                 />
-                {!editMode && formData.quantity_kg > 0 && !validateBatchWeight(formData.quantity_kg) && (
+                {!editMode && formData.quantity_kg > 0 && formData.transaction_type === 'received' && formData.supplier_name && (
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {validateBatchWeight(formData.quantity_kg) ? (
+                      <div className="flex items-center gap-1 text-green-600">
+                        ✓ Will create new batch immediately
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-blue-600">
+                        📦 Will be added to pending batch (needs {getMinimumBatchWeight()}kg total)
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!editMode && formData.quantity_kg > 0 && formData.transaction_type !== 'received' && !validateBatchWeight(formData.quantity_kg) && (
                   <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
                     <AlertTriangle className="h-4 w-4" />
-                    Minimum {getMinimumBatchWeight()}kg required for batch
+                    Minimum {getMinimumBatchWeight()}kg required for non-received transactions
                   </div>
                 )}
               </div>
@@ -461,6 +531,8 @@ export const StoreRecordsManager = () => {
         </Dialog>
       </div>
 
+      <PendingBatchSummary refreshTrigger={refreshTrigger} />
+
       <div className="grid gap-4">
         {records.map((record) => (
           <Card key={record.id} className="transition-all hover:shadow-md">
@@ -469,7 +541,7 @@ export const StoreRecordsManager = () => {
                 <div className="space-y-1">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <span className="text-2xl">{getTransactionIcon(record.transaction_type)}</span>
-                    {record.transaction_type.toUpperCase()} - {record.batch_number || 'No Batch'}
+                    {record.transaction_type.toUpperCase()} - {record.batch_number || (record.status === 'pending_batch' ? 'Pending Batch' : 'No Batch')}
                   </CardTitle>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">

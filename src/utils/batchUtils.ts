@@ -66,3 +66,84 @@ export const validateBatchWeight = (kilograms: number): boolean => {
 export const getMinimumBatchWeight = (): number => {
   return 1000;
 };
+
+/**
+ * Checks if deliveries for a supplier can be batched together
+ * @param supplierName - The supplier name
+ * @param newDeliveryWeight - Weight of the new delivery
+ * @returns Promise<{shouldBatch: boolean, batchNumber?: string, totalWeight?: number}>
+ */
+export const checkBatchAccumulation = async (
+  supplierName: string, 
+  newDeliveryWeight: number
+): Promise<{shouldBatch: boolean, batchNumber?: string, totalWeight?: number, pendingDeliveries?: any[]}> => {
+  try {
+    // Get pending deliveries for this supplier (deliveries without batch_number)
+    const { data: pendingDeliveries } = await supabase
+      .from('store_records')
+      .select('*')
+      .eq('supplier_name', supplierName)
+      .is('batch_number', null)
+      .eq('status', 'pending_batch');
+
+    const currentPendingWeight = (pendingDeliveries || []).reduce((sum, delivery) => sum + delivery.quantity_kg, 0);
+    const totalWeight = currentPendingWeight + newDeliveryWeight;
+
+    if (totalWeight >= getMinimumBatchWeight()) {
+      // Generate batch number for all accumulated deliveries
+      const batchNumber = await generateBatchNumber();
+      return {
+        shouldBatch: true,
+        batchNumber,
+        totalWeight,
+        pendingDeliveries: pendingDeliveries || []
+      };
+    }
+
+    return {
+      shouldBatch: false,
+      totalWeight
+    };
+  } catch (error) {
+    console.error('Error checking batch accumulation:', error);
+    return { shouldBatch: false };
+  }
+};
+
+/**
+ * Batches accumulated deliveries together
+ * @param supplierName - The supplier name
+ * @param batchNumber - The batch number to assign
+ * @param pendingDeliveries - Array of pending delivery records
+ * @returns Promise<boolean> - Success status
+ */
+export const batchAccumulatedDeliveries = async (
+  supplierName: string,
+  batchNumber: string,
+  pendingDeliveries: any[]
+): Promise<boolean> => {
+  try {
+    // Update all pending deliveries with the batch number
+    const deliveryIds = pendingDeliveries.map(d => d.id);
+    
+    const { error } = await supabase
+      .from('store_records')
+      .update({ 
+        batch_number: batchNumber,
+        status: 'active',
+        updated_at: new Date().toISOString()
+      })
+      .in('id', deliveryIds);
+
+    if (error) {
+      console.error('Error batching deliveries:', error);
+      return false;
+    }
+
+    console.log(`Successfully batched ${deliveryIds.length} deliveries for ${supplierName} into batch ${batchNumber}`);
+    return true;
+  } catch (error) {
+    console.error('Error in batchAccumulatedDeliveries:', error);
+    return false;
+  }
+};
