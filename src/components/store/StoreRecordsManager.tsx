@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Edit, Trash2, Package, Calendar, User, MapPin } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Calendar, User, MapPin, AlertTriangle } from 'lucide-react';
+import { generateBatchNumber, validateBatchWeight, getMinimumBatchWeight } from '@/utils/batchUtils';
 
 interface StoreRecord {
   id: string;
@@ -109,8 +110,25 @@ export const StoreRecordsManager = () => {
 
   const handleSubmit = async () => {
     try {
+      // Validate minimum batch weight for new records
+      if (!editMode && !validateBatchWeight(formData.quantity_kg)) {
+        toast({
+          title: 'Invalid Batch Weight',
+          description: `Batch must contain at least ${getMinimumBatchWeight()}kg. Current weight: ${formData.quantity_kg}kg`,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Generate batch number if not provided
+      let batchNumber = formData.batch_number;
+      if (!editMode && !batchNumber) {
+        batchNumber = await generateBatchNumber();
+      }
+
       const recordData = {
         ...formData,
+        batch_number: batchNumber,
         created_by: user?.email || 'Unknown',
         total_value: formData.quantity_kg * formData.price_per_kg
       };
@@ -337,7 +355,14 @@ export const StoreRecordsManager = () => {
                   step="0.01"
                   value={formData.quantity_kg}
                   onChange={(e) => setFormData({...formData, quantity_kg: parseFloat(e.target.value) || 0})}
+                  className={!editMode && formData.quantity_kg > 0 && !validateBatchWeight(formData.quantity_kg) ? 'border-red-500' : ''}
                 />
+                {!editMode && formData.quantity_kg > 0 && !validateBatchWeight(formData.quantity_kg) && (
+                  <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    Minimum {getMinimumBatchWeight()}kg required for batch
+                  </div>
+                )}
               </div>
 
               <div>
@@ -345,7 +370,14 @@ export const StoreRecordsManager = () => {
                 <Input
                   value={formData.batch_number}
                   onChange={(e) => setFormData({...formData, batch_number: e.target.value})}
+                  placeholder={editMode ? "Enter batch number" : "Auto-generated (B00001 format)"}
+                  disabled={!editMode && !formData.batch_number}
                 />
+                {!editMode && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Batch number will be auto-generated in format B00001
+                  </p>
+                )}
               </div>
 
               <div>

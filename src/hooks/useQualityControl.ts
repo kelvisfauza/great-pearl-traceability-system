@@ -321,10 +321,18 @@ export const useQualityControl = () => {
       const finalPrice = assessment.manual_price 
         ? Number(assessment.manual_price) 
         : (assessment.final_price || assessment.suggested_price || 0);
+      
+      // Use the existing batch number or generate a new one if missing
+      let batchNumber = assessment.batch_number || coffeeRecord.batch_number;
+      if (!batchNumber) {
+        // Import the batch utils for consistency
+        const { generateBatchNumber } = await import('@/utils/batchUtils');
+        batchNumber = await generateBatchNumber();
+      }
         
       const assessmentData = {
         store_record_id: coffeeRecordId,
-        batch_number: assessment.batch_number || coffeeRecord.batch_number,
+        batch_number: batchNumber,
         moisture: Number(assessment.moisture) || 0,
         group1_defects: Number(assessment.group1_defects) || 0,
         group2_defects: Number(assessment.group2_defects) || 0,
@@ -387,7 +395,7 @@ export const useQualityControl = () => {
           status: 'Pending',
           method: 'Bank Transfer',
           date: new Date().toISOString().split('T')[0],
-          batch_number: assessment.batch_number,
+          batch_number: batchNumber,
           quality_assessment_id: newAssessment.id
         }]);
 
