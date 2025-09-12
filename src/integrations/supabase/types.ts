@@ -2240,6 +2240,10 @@ export type Database = {
           comments: string | null
           created_at: string
           date: string
+          delivery_note_name: string | null
+          delivery_note_url: string | null
+          dispatch_report_name: string | null
+          dispatch_report_url: string | null
           id: string
           input_by: string
           kilograms_bought: number
@@ -2261,6 +2265,10 @@ export type Database = {
           comments?: string | null
           created_at?: string
           date?: string
+          delivery_note_name?: string | null
+          delivery_note_url?: string | null
+          dispatch_report_name?: string | null
+          dispatch_report_url?: string | null
           id?: string
           input_by: string
           kilograms_bought?: number
@@ -2282,6 +2290,10 @@ export type Database = {
           comments?: string | null
           created_at?: string
           date?: string
+          delivery_note_name?: string | null
+          delivery_note_url?: string | null
+          dispatch_report_name?: string | null
+          dispatch_report_url?: string | null
           id?: string
           input_by?: string
           kilograms_bought?: number

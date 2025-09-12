@@ -22,6 +22,10 @@ export interface StoreReport {
   input_by: string;
   attachment_url?: string;
   attachment_name?: string;
+  delivery_note_url?: string;
+  delivery_note_name?: string;
+  dispatch_report_url?: string;
+  dispatch_report_name?: string;
   scanner_used?: string;
   created_at: string;
   updated_at: string;
@@ -229,6 +233,10 @@ export const useStoreReports = () => {
         input_by: updatedData.input_by || 'Unknown',
         attachment_url: updatedData.attachment_url || null,
         attachment_name: updatedData.attachment_name || null,
+        delivery_note_url: updatedData.delivery_note_url || null,
+        delivery_note_name: updatedData.delivery_note_name || null,
+        dispatch_report_url: updatedData.dispatch_report_url || null,
+        dispatch_report_name: updatedData.dispatch_report_name || null,
         scanner_used: updatedData.scanner_used || null,
         updated_at: new Date().toISOString()
       };

@@ -3,11 +3,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Download, Eye, Scan, Calendar, User, FileDown } from 'lucide-react';
+import { FileText, Download, Eye, Scan, Calendar, User, FileDown, Truck, Receipt } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { generateStoreReportPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
+import StoreReportDocumentViewer from './StoreReportDocumentViewer';
 
 interface StoreReportViewerProps {
   report: any;
@@ -218,76 +219,70 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
             </CardContent>
           </Card>
 
-          {/* Attached Document */}
-          {report.attachment_url && (
+          {/* Attached Documents */}
+          {(report.attachment_url || report.delivery_note_url || report.dispatch_report_url) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Attached Document
+                  Attached Documents
                 </CardTitle>
                 <CardDescription>
-                  Scanned document: {report.attachment_name}
+                  Scanned documents related to this store report
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowDocument(!showDocument)}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      {showDocument ? 'Hide Preview' : 'Show Preview'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={handleDownloadDocument}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Original
-                    </Button>
-                  </div>
-
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{report.attachment_name || 'Scanned Document'}</span>
+                  {/* General Document */}
+                  {report.attachment_url && (
+                    <div className="p-4 border rounded-lg bg-muted/30">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-green-600" />
+                          General Document
+                        </h4>
+                      </div>
+                      <StoreReportDocumentViewer
+                        documentUrl={report.attachment_url}
+                        documentName={report.attachment_name || 'General Document'}
+                        documentType="general"
+                      />
                     </div>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Document safely stored and available for download. Use "Generate PDF" above for a complete formatted report.
-                    </p>
-                    
-                    {showDocument && attachmentUrl && (
-                      <div className="border rounded p-2 bg-background">
-                        {isImageFile(report.attachment_name) ? (
-                          <img
-                            src={attachmentUrl}
-                            alt="Scanned document"
-                            className="max-w-full h-auto rounded"
-                            style={{ maxHeight: '300px' }}
-                          />
-                        ) : (
-                          <div className="text-center py-4">
-                            <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground">
-                              {isPdfFile(report.attachment_name) ? 'PDF Document' : 'Document'} preview - Click download to view full file
-                            </p>
-                          </div>
-                        )}
+                  )}
+
+                  {/* Delivery Note */}
+                  {report.delivery_note_url && (
+                    <div className="p-4 border rounded-lg bg-blue-50/30">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-blue-600" />
+                          Delivery Note
+                        </h4>
                       </div>
-                    )}
-                    
-                    {showDocument && !attachmentUrl && (
-                      <div className="text-center py-4">
-                        <div className="animate-pulse">
-                          <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
-                          <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
-                        </div>
-                        <p className="text-muted-foreground mt-2 text-sm">Loading document...</p>
+                      <StoreReportDocumentViewer
+                        documentUrl={report.delivery_note_url}
+                        documentName={report.delivery_note_name || 'Delivery Note'}
+                        documentType="delivery_note"
+                      />
+                    </div>
+                  )}
+
+                  {/* Dispatch Report */}
+                  {report.dispatch_report_url && (
+                    <div className="p-4 border rounded-lg bg-purple-50/30">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Receipt className="h-4 w-4 text-purple-600" />
+                          Dispatch Report
+                        </h4>
                       </div>
-                    )}
-                  </div>
+                      <StoreReportDocumentViewer
+                        documentUrl={report.dispatch_report_url}
+                        documentName={report.dispatch_report_name || 'Dispatch Report'}
+                        documentType="dispatch_report"
+                      />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
