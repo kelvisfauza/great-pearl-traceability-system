@@ -61,16 +61,29 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
 
   const handleView = async () => {
     try {
+      // Download the file directly from storage to avoid browser blocking
       const { data, error } = await supabase.storage
         .from('report-documents')
-        .createSignedUrl(documentUrl, 3600); // 1 hour expiry
+        .download(documentUrl);
 
       if (error) {
         throw error;
       }
 
-      // Open in new tab
-      window.open(data.signedUrl, '_blank');
+      // Create blob URL to bypass browser blocking of external domains
+      const fileUrl = URL.createObjectURL(data);
+      
+      // Open in new tab using blob URL
+      const newWindow = window.open(fileUrl, '_blank');
+      
+      // Clean up the blob URL after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(fileUrl);
+      }, 10000); // 10 seconds should be enough for the document to load
+
+      if (!newWindow) {
+        toast.error('Please allow popups to view documents');
+      }
     } catch (error) {
       console.error('Error viewing document:', error);
       toast.error('Failed to view document');
