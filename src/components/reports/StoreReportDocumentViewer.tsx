@@ -1,7 +1,7 @@
-import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, Eye } from 'lucide-react';
+import { FileText, Download, Eye, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -16,6 +16,18 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
   documentName,
   documentType
 }) => {
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const isPdf = useMemo(() => documentName?.toLowerCase().endsWith('.pdf'), [documentName]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   const getTypeLabel = () => {
     switch (documentType) {
       case 'delivery_note': return 'Delivery Note';
@@ -53,9 +65,12 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
       URL.revokeObjectURL(url);
 
       toast.success('Document downloaded successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error downloading document:', error);
-      toast.error('Failed to download document');
+      const msg = String(error?.message || '').includes('ERR_BLOCKED_BY_CLIENT')
+        ? 'Blocked by a browser extension. Please disable ad/privacy blocker for this site or try Incognito.'
+        : 'Failed to download document';
+      toast.error(msg);
     }
   };
 
@@ -70,20 +85,10 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
         throw error;
       }
 
-      // Create blob URL to bypass browser blocking of external domains
+      // Create blob URL and show in in-app viewer (no external navigation)
       const fileUrl = URL.createObjectURL(data);
-      
-      // Open in new tab using blob URL
-      const newWindow = window.open(fileUrl, '_blank');
-      
-      // Clean up the blob URL after a delay
-      setTimeout(() => {
-        URL.revokeObjectURL(fileUrl);
-      }, 10000); // 10 seconds should be enough for the document to load
-
-      if (!newWindow) {
-        toast.error('Please allow popups to view documents');
-      }
+      setPreviewUrl(fileUrl);
+      setViewerOpen(true);
     } catch (error) {
       console.error('Error viewing document:', error);
       toast.error('Failed to view document');
@@ -91,28 +96,58 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <FileText className={`h-4 w-4 ${getTypeColor()}`} />
-      <span className="text-sm font-medium">{getTypeLabel()}</span>
-      <div className="flex gap-1 ml-auto">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleView}
-          title="View Document"
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleDownload}
-          title="Download Document"
-        >
-          <Download className="h-4 w-4" />
-        </Button>
+    <>
+      <div className="flex items-center gap-2">
+        <FileText className={`h-4 w-4 ${getTypeColor()}`} />
+        <span className="text-sm font-medium">{getTypeLabel()}</span>
+        <div className="flex gap-1 ml-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleView}
+            title="View Document"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDownload}
+            title="Download Document"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
-    </div>
+
+      <Dialog
+        open={viewerOpen}
+        onOpenChange={(open) => {
+          setViewerOpen(open);
+          if (!open && previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>{documentName}</DialogTitle>
+          </DialogHeader>
+          <div className="h-full">
+            {previewUrl ? (
+              isPdf ? (
+                <iframe src={previewUrl} className="w-full h-full rounded" title={documentName} />
+              ) : (
+                <img src={previewUrl} alt={documentName} className="max-h-full w-auto mx-auto rounded" />
+              )
+            ) : (
+              <div className="text-sm text-muted-foreground">Loading document...</div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
