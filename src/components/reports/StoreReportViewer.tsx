@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { generateStoreReportPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
 import StoreReportDocumentViewer from './StoreReportDocumentViewer';
+import UnifiedDocumentPreview from './UnifiedDocumentPreview';
 
 interface StoreReportViewerProps {
   report: any;
@@ -17,6 +18,7 @@ interface StoreReportViewerProps {
 }
 
 const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProps) => {
+  const [showUnifiedPreview, setShowUnifiedPreview] = useState(false);
 
   if (!report) return null;
 
@@ -41,6 +43,39 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
       console.error('Error downloading PDF:', error);
       toast.error("Failed to download PDF: " + (error as Error).message);
     }
+  };
+
+  const handlePreviewAllDocuments = () => {
+    setShowUnifiedPreview(true);
+  };
+
+  const getAttachedDocuments = () => {
+    const docs = [];
+    if (report.attachment_url) {
+      docs.push({
+        url: report.attachment_url,
+        name: report.attachment_name || 'General Document',
+        type: 'general' as const,
+        label: 'General Document'
+      });
+    }
+    if (report.delivery_note_url) {
+      docs.push({
+        url: report.delivery_note_url,
+        name: report.delivery_note_name || 'Delivery Note',
+        type: 'delivery_note' as const,
+        label: 'Delivery Note'
+      });
+    }
+    if (report.dispatch_report_url) {
+      docs.push({
+        url: report.dispatch_report_url,
+        name: report.dispatch_report_name || 'Dispatch Report',
+        type: 'dispatch_report' as const,
+        label: 'Dispatch Report'
+      });
+    }
+    return docs;
   };
 
   const isImageFile = (filename: string) => {
@@ -178,15 +213,20 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
           {/* Attached Documents */}
           {(report.attachment_url || report.delivery_note_url || report.dispatch_report_url) && (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Attached Documents
-                </CardTitle>
-                <CardDescription>
-                  Scanned documents related to this store report
-                </CardDescription>
-              </CardHeader>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Attached Documents</h3>
+              {getAttachedDocuments().length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviewAllDocuments}
+                  className="flex items-center gap-2"
+                >
+                  <Eye className="h-4 w-4" />
+                  View All Documents
+                </Button>
+              )}
+            </div>
               <CardContent>
                 <div className="space-y-4">
                   {/* General Document */}
@@ -244,6 +284,14 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
             </Card>
           )}
         </div>
+
+        {/* Unified Document Preview Modal */}
+        <UnifiedDocumentPreview
+          documents={getAttachedDocuments()}
+          open={showUnifiedPreview}
+          onOpenChange={setShowUnifiedPreview}
+          reportDate={format(new Date(report.date), 'MMMM d, yyyy')}
+        />
       </DialogContent>
     </Dialog>
   );
