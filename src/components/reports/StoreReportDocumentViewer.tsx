@@ -46,25 +46,34 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
 
   const handleDownload = async () => {
     try {
-      const { data, error } = await supabase.storage
-        .from('report-documents')
-        .download(documentUrl);
-
-      if (error) {
-        throw error;
+      // Prefer a signed URL like Sales reports (more reliable with extensions)
+      if (documentUrl.startsWith('http')) {
+        const a = document.createElement('a');
+        a.href = documentUrl;
+        a.download = documentName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast.success('Document download started');
+        return;
       }
 
-      // Create download link
-      const url = URL.createObjectURL(data);
+      const { data, error } = await supabase.storage
+        .from('report-documents')
+        .createSignedUrl(documentUrl, 3600);
+
+      if (error || !data?.signedUrl) {
+        throw error || new Error('Failed to create signed URL');
+      }
+
       const a = document.createElement('a');
-      a.href = url;
+      a.href = data.signedUrl;
       a.download = documentName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
 
-      toast.success('Document downloaded successfully');
+      toast.success('Document download started');
     } catch (error: any) {
       console.error('Error downloading document:', error);
       const msg = String(error?.message || '').includes('ERR_BLOCKED_BY_CLIENT')
@@ -76,22 +85,33 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
 
   const handleView = async () => {
     try {
-      // Download the file directly from storage to avoid browser blocking
-      const { data, error } = await supabase.storage
-        .from('report-documents')
-        .download(documentUrl);
-
-      if (error) {
-        throw error;
+      // Use signed URL for viewing (same approach as Sales reports)
+      if (documentUrl.startsWith('http')) {
+        const newWindow = window.open(documentUrl, '_blank');
+        if (!newWindow) {
+          toast.error('Please allow popups to view documents');
+        }
+        return;
       }
 
-      // Create blob URL and show in in-app viewer (no external navigation)
-      const fileUrl = URL.createObjectURL(data);
-      setPreviewUrl(fileUrl);
-      setViewerOpen(true);
-    } catch (error) {
+      const { data, error } = await supabase.storage
+        .from('report-documents')
+        .createSignedUrl(documentUrl, 3600);
+
+      if (error || !data?.signedUrl) {
+        throw error || new Error('Failed to create signed URL');
+      }
+
+      const newWindow = window.open(data.signedUrl, '_blank');
+      if (!newWindow) {
+        toast.error('Please allow popups to view documents');
+      }
+    } catch (error: any) {
       console.error('Error viewing document:', error);
-      toast.error('Failed to view document');
+      const msg = String(error?.message || '').includes('ERR_BLOCKED_BY_CLIENT')
+        ? 'Blocked by a browser extension. Please disable ad/privacy blocker for this site or try Incognito.'
+        : 'Failed to view document';
+      toast.error(msg);
     }
   };
 
