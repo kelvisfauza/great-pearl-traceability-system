@@ -26,9 +26,9 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
 
   const getTypeColor = () => {
     switch (documentType) {
-      case 'delivery_note': return 'text-blue-600';
-      case 'dispatch_report': return 'text-purple-600';
-      default: return 'text-green-600';
+      case 'delivery_note': return 'text-primary';
+      case 'dispatch_report': return 'text-accent-foreground';
+      default: return 'text-success-foreground';
     }
   };
 

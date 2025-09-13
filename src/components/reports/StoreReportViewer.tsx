@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Download, Eye, Scan, Calendar, User, FileDown, Truck, Receipt } from 'lucide-react';
 import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
+
 import { generateStoreReportPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
 import StoreReportDocumentViewer from './StoreReportDocumentViewer';
@@ -17,53 +17,9 @@ interface StoreReportViewerProps {
 }
 
 const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProps) => {
-  const [showDocument, setShowDocument] = useState(false);
-  const [attachmentUrl, setAttachmentUrl] = useState<string>('');
-
-  useEffect(() => {
-    const getSignedUrl = async () => {
-      if (report?.attachment_url) {
-        try {
-          // If it's already a full URL (old format), use it directly
-          if (report.attachment_url.startsWith('http')) {
-            setAttachmentUrl(report.attachment_url);
-            return;
-          }
-
-          // For new format (file path), create signed URL
-          const { data, error } = await supabase.storage
-            .from('report-documents')
-            .createSignedUrl(report.attachment_url, 3600); // 1 hour expiry
-
-          if (error) {
-            console.error('Error creating signed URL:', error);
-            return;
-          }
-
-          setAttachmentUrl(data.signedUrl);
-        } catch (error) {
-          console.error('Error getting signed URL:', error);
-        }
-      }
-    };
-
-    if (open && report) {
-      getSignedUrl();
-    }
-  }, [open, report]);
 
   if (!report) return null;
 
-  const handleDownloadDocument = () => {
-    if (attachmentUrl) {
-      const link = document.createElement('a');
-      link.href = attachmentUrl;
-      link.download = report.attachment_name || 'report-document';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
 
   const handlePreviewPDF = () => {
     try {
@@ -238,7 +194,7 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
                     <div className="p-4 border rounded-lg bg-muted/30">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-medium flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-green-600" />
+                          <FileText className="h-4 w-4 text-success-foreground" />
                           General Document
                         </h4>
                       </div>
@@ -255,7 +211,7 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
                     <div className="p-4 border rounded-lg bg-blue-50/30">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-medium flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-blue-600" />
+                          <Truck className="h-4 w-4 text-primary" />
                           Delivery Note
                         </h4>
                       </div>
@@ -272,7 +228,7 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
                     <div className="p-4 border rounded-lg bg-purple-50/30">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-medium flex items-center gap-2">
-                          <Receipt className="h-4 w-4 text-purple-600" />
+                          <Receipt className="h-4 w-4 text-accent-foreground" />
                           Dispatch Report
                         </h4>
                       </div>
