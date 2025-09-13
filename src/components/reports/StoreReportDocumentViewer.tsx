@@ -46,32 +46,31 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
 
   const handleDownload = async () => {
     try {
-      // Prefer a signed URL like Sales reports (more reliable with extensions)
+      let signed: string | null = null;
+
       if (documentUrl.startsWith('http')) {
-        const a = document.createElement('a');
-        a.href = documentUrl;
-        a.download = documentName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        toast.success('Document download started');
-        return;
+        signed = documentUrl;
+      } else {
+        const { data, error } = await supabase.storage
+          .from('report-documents')
+          .createSignedUrl(documentUrl, 3600);
+        if (error || !data?.signedUrl) throw error || new Error('Failed to create signed URL');
+        signed = data.signedUrl;
       }
 
-      const { data, error } = await supabase.storage
-        .from('report-documents')
-        .createSignedUrl(documentUrl, 3600);
-
-      if (error || !data?.signedUrl) {
-        throw error || new Error('Failed to create signed URL');
-      }
+      // Fetch the file then download via blob URL (avoids popup/ad-block issues)
+      const res = await fetch(signed);
+      if (!res.ok) throw new Error('Failed to fetch document');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
 
       const a = document.createElement('a');
-      a.href = data.signedUrl;
-      a.download = documentName;
+      a.href = url;
+      a.download = documentName || 'document';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
       toast.success('Document download started');
     } catch (error: any) {
@@ -85,27 +84,25 @@ const StoreReportDocumentViewer: React.FC<DocumentViewerProps> = ({
 
   const handleView = async () => {
     try {
-      // Use signed URL for viewing (same approach as Sales reports)
+      // Always render in-app via blob URL to avoid popup/extension blocking
+      let signed: string | null = null;
+
       if (documentUrl.startsWith('http')) {
-        const newWindow = window.open(documentUrl, '_blank');
-        if (!newWindow) {
-          toast.error('Please allow popups to view documents');
-        }
-        return;
+        signed = documentUrl;
+      } else {
+        const { data, error } = await supabase.storage
+          .from('report-documents')
+          .createSignedUrl(documentUrl, 3600);
+        if (error || !data?.signedUrl) throw error || new Error('Failed to create signed URL');
+        signed = data.signedUrl;
       }
 
-      const { data, error } = await supabase.storage
-        .from('report-documents')
-        .createSignedUrl(documentUrl, 3600);
-
-      if (error || !data?.signedUrl) {
-        throw error || new Error('Failed to create signed URL');
-      }
-
-      const newWindow = window.open(data.signedUrl, '_blank');
-      if (!newWindow) {
-        toast.error('Please allow popups to view documents');
-      }
+      const res = await fetch(signed);
+      if (!res.ok) throw new Error('Failed to fetch document');
+      const blob = await res.blob();
+      const fileUrl = URL.createObjectURL(blob);
+      setPreviewUrl(fileUrl);
+      setViewerOpen(true);
     } catch (error: any) {
       console.error('Error viewing document:', error);
       const msg = String(error?.message || '').includes('ERR_BLOCKED_BY_CLIENT')
