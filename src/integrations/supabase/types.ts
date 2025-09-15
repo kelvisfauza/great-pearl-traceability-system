@@ -117,6 +117,7 @@ export type Database = {
           id: string
           priority: string
           rejection_comments: string | null
+          rejection_reason: string | null
           requestedby: string
           status: string
           title: string
@@ -138,6 +139,7 @@ export type Database = {
           id?: string
           priority?: string
           rejection_comments?: string | null
+          rejection_reason?: string | null
           requestedby: string
           status?: string
           title: string
@@ -159,6 +161,7 @@ export type Database = {
           id?: string
           priority?: string
           rejection_comments?: string | null
+          rejection_reason?: string | null
           requestedby?: string
           status?: string
           title?: string
