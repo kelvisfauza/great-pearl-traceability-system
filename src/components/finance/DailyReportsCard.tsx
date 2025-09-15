@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Receipt, CreditCard, FileText, Banknote, CheckCircle2, DollarSign, Activity, TrendingUp, Users, BarChart3 } from "lucide-react";
+import { useApprovalRequests } from '@/hooks/useApprovalRequests';
 
 interface DailyReportsCardProps {
   transactions: any[];
@@ -19,6 +20,25 @@ const DailyReportsCard = ({
   stats, 
   formatCurrency 
 }: DailyReportsCardProps) => {
+  const { requests } = useApprovalRequests();
+  
+  // Get today's approved expense requests
+  const today = new Date().toDateString();
+  const todaysApprovedExpenses = requests.filter(
+    request => 
+      request.type === 'Expense Request' && 
+      request.status === 'Approved' &&
+      request.finance_approved_at && 
+      request.admin_approved_at &&
+      (new Date(request.admin_approved_at).toDateString() === today || 
+       new Date(request.finance_approved_at).toDateString() === today)
+  );
+  
+  const totalApprovedExpensesToday = todaysApprovedExpenses.reduce(
+    (sum, request) => sum + parseFloat(request.amount || '0'), 
+    0
+  );
+
   return (
     <div className="space-y-6">
       {/* Daily Summary Cards */}
@@ -47,14 +67,15 @@ const DailyReportsCard = ({
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-700">Net Cash Flow</p>
-                <p className="text-xl font-bold text-blue-900">{formatCurrency(stats.netCashFlow)}</p>
+                <p className="text-sm font-medium text-orange-700">Approved Expenses</p>
+                <p className="text-xl font-bold text-orange-900">{formatCurrency(totalApprovedExpensesToday)}</p>
+                <p className="text-xs text-orange-600">{todaysApprovedExpenses.length} requests</p>
               </div>
-              <Activity className="h-8 w-8 text-blue-600" />
+              <FileText className="h-8 w-8 text-orange-600" />
             </div>
           </CardContent>
         </Card>
@@ -72,7 +93,7 @@ const DailyReportsCard = ({
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Daily Transactions */}
         <Card>
           <CardHeader>
@@ -115,6 +136,49 @@ const DailyReportsCard = ({
                       </p>
                       <Badge variant="outline" className="text-xs">
                         {transaction.type}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Approved Expense Requests */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Today's Approved Expenses
+            </CardTitle>
+            <CardDescription>Expense requests approved today</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {todaysApprovedExpenses.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No expenses approved today</p>
+                </div>
+              ) : (
+                todaysApprovedExpenses.map((expense) => (
+                  <div key={expense.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 bg-green-50 border-green-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="h-8 w-8 rounded-full flex items-center justify-center bg-green-100">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{expense.title}</p>
+                        <p className="text-xs text-gray-500">
+                          {expense.requestedby}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-sm text-green-700">{formatCurrency(parseFloat(expense.amount || '0'))}</p>
+                      <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
+                        Approved
                       </Badge>
                     </div>
                   </div>

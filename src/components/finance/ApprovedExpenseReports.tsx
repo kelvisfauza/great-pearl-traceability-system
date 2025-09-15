@@ -12,7 +12,7 @@ const ApprovedExpenseReports = () => {
   const approvedExpenseRequests = requests.filter(
     request => 
       request.type === 'Expense Request' && 
-      request.status === 'approved' &&
+      request.status === 'Approved' &&
       request.finance_approved_at && 
       request.admin_approved_at
   );
