@@ -58,6 +58,17 @@ const ApprovedExpenseReports = () => {
     }
   };
 
+  const formatSafeDate = (dateValue: string | null | undefined, formatStr: string = 'MMM dd, yyyy'): string => {
+    if (!dateValue) return 'N/A';
+    try {
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return format(date, formatStr);
+    } catch {
+      return 'Invalid Date';
+    }
+  };
+
   const totalApprovedAmount = approvedRequests.reduce(
     (sum, request) => sum + parseFloat(request.amount || '0'), 
     0
@@ -131,7 +142,7 @@ const ApprovedExpenseReports = () => {
                   
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{format(new Date(request.daterequested), 'MMM dd, yyyy')}</span>
+                    <span>{formatSafeDate(request.daterequested)}</span>
                   </div>
                   
                   <div className="flex items-center gap-2">
@@ -150,14 +161,14 @@ const ApprovedExpenseReports = () => {
                     <div>
                       <span className="font-medium">Finance Approved:</span>
                       <br />
-                      {request.finance_approved_by || 'Finance Team'} - {format(new Date(request.finance_approved_at), 'MMM dd, yyyy HH:mm')}
+                      {request.finance_approved_by || 'Finance Team'} - {formatSafeDate(request.finance_approved_at, 'MMM dd, yyyy HH:mm')}
                     </div>
                   )}
                   {request.admin_approved_at && (
                     <div>
                       <span className="font-medium">Admin Approved:</span>
                       <br />
-                      {request.admin_approved_by || 'Admin Team'} - {format(new Date(request.admin_approved_at), 'MMM dd, yyyy HH:mm')}
+                      {request.admin_approved_by || 'Admin Team'} - {formatSafeDate(request.admin_approved_at, 'MMM dd, yyyy HH:mm')}
                     </div>
                   )}
                   {!request.finance_approved_at && !request.admin_approved_at && (
