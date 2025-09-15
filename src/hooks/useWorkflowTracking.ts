@@ -95,6 +95,7 @@ export const useWorkflowTracking = () => {
       
       // Also try to save to Supabase workflow_steps table
       try {
+        const now = new Date().toISOString();
         const { data, error } = await supabase
           .from('workflow_steps')
           .insert({
@@ -107,7 +108,9 @@ export const useWorkflowTracking = () => {
             comments: stepData.comments,
             processed_by: stepData.processedBy,
             status: stepData.status,
-            timestamp: new Date().toISOString()
+            timestamp: now,
+            created_at: now,
+            updated_at: now
           });
         
         if (error) {
