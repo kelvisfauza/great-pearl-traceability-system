@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkflowTracking } from './useWorkflowTracking';
 import { useNotifications } from './useNotifications';
+import { toast } from '@/hooks/use-toast';
 
 export interface ApprovalRequest {
   id: string;
@@ -68,6 +69,57 @@ export const useApprovalRequests = () => {
   const [loading, setLoading] = useState(true);
   const { trackWorkflowStep } = useWorkflowTracking();
   const { createAnnouncement } = useNotifications();
+
+// Function to send expense approval notification
+const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
+  try {
+    // Get user name from employees table
+    const { data: employee } = await supabase
+      .from('employees')
+      .select('name, phone')
+      .eq('email', request.requestedby)
+      .single();
+
+    const userName = employee?.name || request.requestedby.split('@')[0];
+    const userPhone = employee?.phone;
+    
+    const message = `Dear ${userName}, your expense ${request.title} of UGX ${parseFloat(request.amount).toLocaleString()} has been approved and dispersed successfully. Great Pearl Coffee.`;
+    
+    // Log the message (could be enhanced to use SMS service)
+    console.log('Sending approval notification:', {
+      recipient: request.requestedby,
+      userName,
+      phone: userPhone,
+      message
+    });
+
+    // Send SMS notification if phone number is available
+    if (userPhone) {
+      await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: userPhone,
+          message: message,
+          userName: userName
+        }
+      });
+      console.log('SMS notification sent successfully');
+    }
+
+    // Show success toast
+    toast({
+      title: "Approval Notification Sent",
+      description: `Notification sent to ${userName} about expense approval`,
+    });
+
+  } catch (error) {
+    console.error('Error sending expense approval notification:', error);
+    toast({
+      title: "Notification Error",
+      description: "Failed to send approval notification to user",
+      variant: "destructive"
+    });
+  }
+};
 
   const fetchRequests = async () => {
     try {
@@ -192,6 +244,12 @@ export const useApprovalRequests = () => {
 
         // Handle different types of approved requests - only if fully approved
         if (updateData.status === 'Approved' && updateData.approval_stage === 'fully_approved') {
+          
+          // Send approval notification for Expense Requests
+          if (request.type === 'Expense Request') {
+            await sendExpenseApprovalNotification(request);
+          }
+          
            // Handle Modification Request Approval
            if (request.type === 'Modification Request Approval' && request.details?.originalModificationId) {
              console.log('Processing approved modification request:', request.details.originalModificationId);
