@@ -16,7 +16,7 @@ import { toast } from '@/hooks/use-toast';
 const Expenses = () => {
   const { employee } = useAuth();
   const { createApprovalRequest, loading: submitting } = useApprovalSystem();
-  const { requests: myRequests, loading: fetchingRequests, refetch, getApprovalStatus, getStatusColor } = useMyExpenseRequests();
+  const { requests: myRequests, loading: fetchingRequests, refetch, getApprovalStatus, getStatusColor, getRejectionDetails } = useMyExpenseRequests();
 
   const [formData, setFormData] = useState({
     expenseType: '',
@@ -276,24 +276,39 @@ const Expenses = () => {
                             </Badge>
                           </div>
                         </div>
-                        
-                        {request.rejection_reason && (
-                          <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-xs font-medium text-red-700">Rejection Reason:</p>
-                            <p className="text-xs text-red-600">{request.rejection_reason}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
+                        {/* Rejection Details */}
+                        {(() => {
+                          const rejectionDetails = getRejectionDetails(request);
+                          return rejectionDetails ? (
+                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                              <div className="flex items-center gap-2 mb-2">
+                                <XCircle className="h-4 w-4 text-red-500" />
+                                <span className="text-sm font-medium text-red-700">
+                                  Rejected by {rejectionDetails.rejectedBy}
+                                </span>
+                              </div>
+                              <div className="text-sm text-red-600">
+                                <strong>Reason:</strong> {rejectionDetails.reason}
+                              </div>
+                              {rejectionDetails.comments && (
+                                <div className="text-sm text-red-600 mt-1">
+                                  <strong>Comments:</strong> {rejectionDetails.comments}
+                                </div>
+                              )}
+                            </div>
+                          ) : null;
+                        })()}
+                       </CardContent>
+                     </Card>
+                   ))}
+                 </div>
+               )}
+             </div>
+           </CardContent>
+         </Card>
+       </div>
+     </div>
+   );
+ };
 
-export default Expenses;
+ export default Expenses;

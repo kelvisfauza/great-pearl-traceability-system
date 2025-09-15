@@ -82,11 +82,32 @@ export const useMyExpenseRequests = () => {
     return 'text-yellow-600 bg-yellow-50';
   };
 
+  const getRejectionDetails = (request: MyExpenseRequest) => {
+    if (request.status !== 'Rejected') return null;
+    
+    // Determine who rejected it based on approval timestamps and status
+    let rejectedBy = 'Unknown';
+    if (!request.finance_approved_at && !request.admin_approved_at) {
+      rejectedBy = 'Finance or Admin';
+    } else if (request.finance_approved_at && !request.admin_approved_at) {
+      rejectedBy = 'Admin';
+    } else if (!request.finance_approved_at && request.admin_approved_at) {
+      rejectedBy = 'Finance';
+    }
+    
+    return {
+      rejectedBy,
+      reason: request.rejection_reason || 'No reason provided',
+      comments: request.details?.rejection_comments || ''
+    };
+  };
+
   return {
     requests,
     loading,
     refetch: fetchMyRequests,
     getApprovalStatus,
-    getStatusColor
+    getStatusColor,
+    getRejectionDetails
   };
 };
