@@ -12,6 +12,7 @@ import { useMyExpenseRequests } from '@/hooks/useMyExpenseRequests';
 import { DollarSign, Send, FileText, Clock, CheckCircle, XCircle, AlertTriangle, Calendar, User, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import Layout from '@/components/Layout';
 
 const Expenses = () => {
   const { employee } = useAuth();
@@ -110,14 +111,8 @@ const Expenses = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <DollarSign className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">Expense Requests</h1>
-          <p className="text-muted-foreground">Submit and track your expense requests with dual approval system</p>
-        </div>
-      </div>
+    <Layout title="Expense Requests" subtitle="Submit and track your expense requests with dual approval system">
+      <div className="space-y-6">
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Submit New Expense Request */}
@@ -334,9 +329,10 @@ const Expenses = () => {
              </div>
            </CardContent>
          </Card>
-       </div>
-     </div>
-   );
- };
+        </div>
+      </div>
+    </Layout>
+  );
+};
 
  export default Expenses;
