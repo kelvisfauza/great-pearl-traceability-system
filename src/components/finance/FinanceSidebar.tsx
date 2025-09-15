@@ -7,9 +7,11 @@ import {
   DollarSign, 
   Activity, 
   Banknote, 
-  TrendingUp,
+  BarChart3, 
+  Package, 
+  Receipt,
   Wallet,
-  BarChart3,
+  TrendingUp,
   PieChart
 } from "lucide-react";
 import {
@@ -60,6 +62,12 @@ const financeNavItems = [
     key: "money-requests",
     icon: DollarSign,
     description: "Review employee money requests"
+  },
+  {
+    title: "Expense Requests", 
+    key: "expense-requests",
+    icon: Receipt,
+    description: "Review and approve expense requests"
   },
   {
     title: "Withdrawal Processing",

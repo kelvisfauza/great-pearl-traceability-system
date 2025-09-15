@@ -44,6 +44,11 @@ export interface ApprovalRequest {
     updatedData?: any;
     originalData?: any;
     editReason?: string;
+    expenseType?: string;
+    expenseCategory?: string;
+    reason?: string;
+    requestDate?: string;
+    department?: string;
   };
   created_at: string;
   updated_at: string;

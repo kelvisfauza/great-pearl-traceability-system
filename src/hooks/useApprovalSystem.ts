@@ -27,7 +27,7 @@ export const useApprovalSystem = () => {
         description,
         amount: amount.toString(),
         department: details.department || 'Finance',
-        requestedby: employee?.name || 'Unknown User',
+        requestedby: employee?.email || 'Unknown User',
         daterequested: new Date().toLocaleDateString(),
         priority: details.priority || 'High',
         status: 'Pending',
