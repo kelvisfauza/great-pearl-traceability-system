@@ -153,16 +153,12 @@ const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="approvals" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Expense Requests - Admin Review</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AdminExpenseRequestsManager />
-              </CardContent>
-            </Card>
+          {/* Full width for Admin Expense Review */}
+          <div className="grid grid-cols-1 gap-6">
+            <AdminExpenseRequestsManager />
+          </div>
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Money Requests - Final Approval</CardTitle>

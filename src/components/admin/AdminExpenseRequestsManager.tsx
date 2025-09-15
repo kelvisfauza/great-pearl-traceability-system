@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,7 @@ import { useApprovalRequests } from '@/hooks/useApprovalRequests';
 import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield, Phone } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AdminExpenseRequestsManagerProps {
   onApprove?: (requestId: string) => void;
@@ -20,8 +21,51 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const [rejectionModalOpen, setRejectionModalOpen] = React.useState(false);
   const [selectedRequestId, setSelectedRequestId] = React.useState<string>('');
   const [selectedRequestTitle, setSelectedRequestTitle] = React.useState<string>('');
+  const [userProfiles, setUserProfiles] = useState<Record<string, { name?: string; phone?: string }>>({});
 
   const expenseRequests = requests.filter(request => request.type === 'Expense Request');
+
+  // Fetch user profiles to get names and phone numbers
+  useEffect(() => {
+    const fetchUserProfiles = async () => {
+      const emails = [...new Set(expenseRequests.map(r => r.requestedby))];
+      const profiles: Record<string, { name?: string; phone?: string }> = {};
+
+      for (const email of emails) {
+        try {
+          // First try to get from employees table
+          const { data: employee } = await supabase
+            .from('employees')
+            .select('name, phone')
+            .eq('email', email)
+            .single();
+
+          if (employee) {
+            profiles[email] = { name: employee.name, phone: employee.phone };
+          } else {
+            // Fallback to profiles table
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('name, phone')
+              .eq('user_id', email)
+              .single();
+
+            if (profile) {
+              profiles[email] = { name: profile.name, phone: profile.phone };
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching profile for', email, error);
+        }
+      }
+
+      setUserProfiles(profiles);
+    };
+
+    if (expenseRequests.length > 0) {
+      fetchUserProfiles();
+    }
+  }, [expenseRequests]);
 
   const handleApprove = async (requestId: string) => {
     const success = await updateRequestStatus(requestId, 'Approved', undefined, undefined, 'admin', 'Admin Team');
@@ -192,16 +236,19 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                       </div>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{request.requestedby}</span>
+                        <span className="text-sm font-medium">
+                          {userProfiles[request.requestedby]?.name || request.requestedby.split('@')[0]}
+                        </span>
+                        <span className="text-xs text-muted-foreground">({request.requestedby})</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{
-                          request.phone || 
-                          request.details?.phoneNumber || 
-                          (typeof request.details?.reason === 'string' && request.details.reason.match(/^[0-9+\-\s()]+$/) ? request.details.reason : null) ||
-                          'Not provided'
-                        }</span>
+                        <span className="text-sm">
+                          {userProfiles[request.requestedby]?.phone || 
+                           request.phone || 
+                           request.details?.phoneNumber || 
+                           'Not provided'}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
