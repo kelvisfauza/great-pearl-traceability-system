@@ -77,12 +77,6 @@ const financeNavItems = [
     description: "View fully approved expense requests"
   },
   {
-    title: "Withdrawal Processing",
-    key: "withdrawals",
-    icon: Banknote,
-    description: "Process user withdrawal requests"
-  },
-  {
     title: "Supplier Advances",
     key: "advances",
     icon: DollarSign,

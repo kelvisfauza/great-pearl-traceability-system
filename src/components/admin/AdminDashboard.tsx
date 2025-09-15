@@ -6,8 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, Calendar } from 'lucide-react';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import MoneyRequestsFinalApproval from './MoneyRequestsFinalApproval';
-import { WithdrawalProcessingManager } from './WithdrawalProcessingManager';
-import { WithdrawalOversight } from './WithdrawalOversight';
 import RoleAssignmentManager from './RoleAssignmentManager';
 import PermissionOverview from './PermissionOverview';
 import { DailySalaryManager } from './DailySalaryManager';
@@ -185,19 +183,7 @@ const AdminDashboard = () => {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Withdrawal Oversight & Processing</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <WithdrawalOversight />
-                  <WithdrawalProcessingManager />
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="grid grid-cols-1 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Deletion Requests</CardTitle>

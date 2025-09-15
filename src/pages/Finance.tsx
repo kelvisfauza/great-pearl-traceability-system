@@ -23,9 +23,6 @@ import CashManagementDashboard from "@/components/finance/CashManagementDashboar
 import MoneyRequestsManager from "@/components/finance/MoneyRequestsManager";
 import ExpenseRequestsManager from "@/components/finance/ExpenseRequestsManager";
 import ApprovedExpenseReports from "@/components/finance/ApprovedExpenseReports";
-import { WithdrawalRequestsManager } from "@/components/finance/WithdrawalRequestsManager";
-import { UnifiedWithdrawalManager } from "@/components/admin/UnifiedWithdrawalManager";
-import { WithdrawalProcessingManager } from "@/components/admin/WithdrawalProcessingManager";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { FinanceSidebar } from "@/components/finance/FinanceSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -247,9 +244,6 @@ const Finance = () => {
 
       case "approved-expenses":
         return <ApprovedExpenseReports />;
-
-      case "withdrawals":
-        return <UnifiedWithdrawalManager />;
 
       case "advances":
         return (
