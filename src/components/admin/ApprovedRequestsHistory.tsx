@@ -30,26 +30,32 @@ const ApprovedRequestsHistory = () => {
     try {
       setLoading(true);
       
-      // Fetch approved requests from different tables
-      const [approvalRequests, deletionRequests, editRequests] = await Promise.all([
+      // Fetch approved requests from different tables - checking both 'approved' and 'Approved'
+      const [approvalRequests, deletionRequests, editRequests, moneyRequests] = await Promise.all([
         supabase
           .from('approval_requests')
           .select('*')
-          .eq('status', 'approved')
+          .in('status', ['approved', 'Approved'])
           .order('updated_at', { ascending: false })
-          .limit(20),
+          .limit(10),
         supabase
           .from('deletion_requests')
           .select('*')
-          .eq('status', 'approved')
+          .in('status', ['approved', 'Approved'])
           .order('updated_at', { ascending: false })
-          .limit(20),
+          .limit(10),
         supabase
           .from('edit_requests')
           .select('*')
-          .eq('status', 'approved')
+          .in('status', ['approved', 'Approved'])
           .order('updated_at', { ascending: false })
-          .limit(20)
+          .limit(10),
+        supabase
+          .from('money_requests')
+          .select('*')
+          .in('status', ['approved', 'Approved'])
+          .order('updated_at', { ascending: false })
+          .limit(10)
       ]);
 
       const unified: ApprovedRequest[] = [
@@ -82,10 +88,21 @@ const ApprovedRequestsHistory = () => {
           approvedAt: new Date(req.updated_at),
           department: req.requested_by_department,
           source: 'supabase' as const
+        })),
+        ...(moneyRequests.data || []).map(req => ({
+          id: req.id,
+          type: 'expense',
+          title: req.reason || 'Money/Expense Request',
+          status: req.status,
+          approvedAt: new Date(req.admin_approved_at || req.finance_approved_at || req.updated_at),
+          approvedBy: req.admin_approved_by || req.finance_approved_by || 'System',
+          department: 'Finance',
+          amount: req.amount ? parseFloat(req.amount.toString()) : 0,
+          source: 'supabase' as const
         }))
       ];
 
-      // Sort by approved date
+      // Sort by approved date - show most recent first
       unified.sort((a, b) => b.approvedAt.getTime() - a.approvedAt.getTime());
       
       setApprovedRequests(unified);
@@ -101,6 +118,7 @@ const ApprovedRequestsHistory = () => {
       case 'approval': return 'bg-green-100 text-green-800';
       case 'deletion': return 'bg-red-100 text-red-800';
       case 'modification': return 'bg-blue-100 text-blue-800';
+      case 'expense': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -137,11 +155,22 @@ const ApprovedRequestsHistory = () => {
         <ScrollArea className="h-[400px]">
           {approvedRequests.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No approved requests found
+              <p>No approved requests found in the system.</p>
+              <p className="text-sm mt-2">
+                Approved expense requests, deletions, and modifications will appear here.
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {approvedRequests.map((request) => (
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-sm text-muted-foreground">
+                  Showing {Math.min(5, approvedRequests.length)} most recent approvals
+                </p>
+                <Badge variant="outline">
+                  {approvedRequests.length} total found
+                </Badge>
+              </div>
+              {approvedRequests.slice(0, 5).map((request) => (
                 <div 
                   key={request.id}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
