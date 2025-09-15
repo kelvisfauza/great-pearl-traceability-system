@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -27,7 +27,47 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
   const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes
   const [canResend, setCanResend] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
+  const [bypassEnabled, setBypassEnabled] = useState(false);
   const hasSentInitialCode = React.useRef(false);
+
+  // Check for bypass immediately when component loads
+  useEffect(() => {
+    const checkBypass = async () => {
+      try {
+        console.log('🔐 Checking SMS bypass for:', email);
+        const { data, error } = await supabase.functions.invoke('2fa-verification', {
+          body: {
+            action: 'send_code',
+            email,
+            phone
+          }
+        });
+
+        if (error) throw error;
+
+        // If bypass is enabled, complete verification immediately
+        if (data?.bypassed) {
+          console.log('✅ SMS bypass enabled - auto-completing verification');
+          setBypassEnabled(true);
+          onVerificationComplete();
+          return;
+        }
+
+        // Normal flow - code was sent
+        if (data?.success) {
+          setCodeSent(true);
+          hasSentInitialCode.current = true;
+        }
+      } catch (error) {
+        console.error('Error checking bypass:', error);
+        setError('Failed to initialize verification');
+      }
+    };
+
+    if (!hasSentInitialCode.current) {
+      checkBypass();
+    }
+  }, [email, phone, onVerificationComplete]);
 
   // Listen for auto-fill events from SMS links
   React.useEffect(() => {
@@ -83,6 +123,14 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
             });
 
             if (error) throw error;
+            
+            // Check for bypass response
+            if (data?.bypassed) {
+              console.log('✅ SMS bypass enabled - verification completed');
+              onVerificationComplete();
+              return;
+            }
+            
             if (!data?.success) throw new Error(data?.error || 'Invalid verification code');
 
             console.log('✅ Auto-verification successful!');
@@ -128,6 +176,13 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
       });
 
       if (error) throw error;
+
+      // Check for bypass response
+      if (data?.bypassed) {
+        console.log('✅ SMS bypass enabled - verification not required');
+        onVerificationComplete();
+        return;
+      }
 
       if (!data.success) {
         throw new Error(data.error || 'Failed to send verification code');
@@ -178,6 +233,13 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
       if (error) {
         console.error('❌ Supabase function error:', error);
         throw error;
+      }
+
+      // Check for bypass response
+      if (data?.bypassed) {
+        console.log('✅ SMS bypass enabled - verification completed');
+        onVerificationComplete();
+        return;
       }
 
       if (!data?.success) {
