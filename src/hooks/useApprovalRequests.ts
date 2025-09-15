@@ -53,6 +53,7 @@ export interface ApprovalRequest {
     expenseType?: string;
     expenseCategory?: string;
     reason?: string;
+    phoneNumber?: string;
     requestDate?: string;
     department?: string;
   };
