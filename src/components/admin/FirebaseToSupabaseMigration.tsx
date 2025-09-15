@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { collection, getDocs } from 'firebase/firestore';
@@ -26,6 +27,7 @@ interface FirebaseEmployee {
 const FirebaseToSupabaseMigration: React.FC = () => {
   const [migrating, setMigrating] = useState(false);
   const [firebaseUsers, setFirebaseUsers] = useState<FirebaseEmployee[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [migrationResults, setMigrationResults] = useState<{
     success: number;
     failed: number;
@@ -60,11 +62,21 @@ const FirebaseToSupabaseMigration: React.FC = () => {
     }
   };
 
+  const toggleUserSelection = (userId: string) => {
+    const newSelection = new Set(selectedUsers);
+    if (newSelection.has(userId)) {
+      newSelection.delete(userId);
+    } else {
+      newSelection.add(userId);
+    }
+    setSelectedUsers(newSelection);
+  };
+
   const migrateToSupabase = async () => {
-    if (firebaseUsers.length === 0) {
+    if (selectedUsers.size === 0) {
       toast({
-        title: "No Users to Migrate",
-        description: "Please load Firebase users first",
+        title: "No Users Selected",
+        description: "Please select users to migrate",
         variant: "destructive"
       });
       return;
@@ -77,7 +89,9 @@ const FirebaseToSupabaseMigration: React.FC = () => {
     const errors: string[] = [];
 
     try {
-      for (const firebaseUser of firebaseUsers) {
+      const usersToMigrate = firebaseUsers.filter(user => selectedUsers.has(user.id));
+      
+      for (const firebaseUser of usersToMigrate) {
         try {
           // Check if user already exists in Supabase
           const { data: existingUser } = await supabase
@@ -175,24 +189,56 @@ const FirebaseToSupabaseMigration: React.FC = () => {
           
           <Button
             onClick={migrateToSupabase}
-            disabled={migrating || firebaseUsers.length === 0}
+            disabled={migrating || selectedUsers.size === 0}
           >
             <Upload className="h-4 w-4 mr-2" />
-            {migrating ? 'Migrating...' : 'Migrate to Supabase'}
+            {migrating ? 'Migrating...' : `Migrate Selected (${selectedUsers.size})`}
           </Button>
         </div>
 
         {firebaseUsers.length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-medium">Firebase Users Found:</h4>
-            <div className="bg-muted p-3 rounded-lg space-y-1 max-h-40 overflow-y-auto">
+            <h4 className="font-medium">Select Users to Migrate:</h4>
+            <div className="bg-muted p-3 rounded-lg space-y-2 max-h-60 overflow-y-auto">
               {firebaseUsers.map(user => (
-                <div key={user.id} className="text-sm flex justify-between">
-                  <span>{user.name}</span>
-                  <span className="text-muted-foreground">{user.email}</span>
+                <div key={user.id} className="flex items-center space-x-3 p-2 rounded border">
+                  <Checkbox
+                    id={user.id}
+                    checked={selectedUsers.has(user.id)}
+                    onCheckedChange={() => toggleUserSelection(user.id)}
+                  />
+                  <label htmlFor={user.id} className="flex-1 cursor-pointer">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-medium">{user.name}</span>
+                        <div className="text-xs text-muted-foreground">
+                          {user.department} • {user.role}
+                        </div>
+                      </div>
+                      <span className="text-sm text-muted-foreground">{user.email}</span>
+                    </div>
+                  </label>
                 </div>
               ))}
             </div>
+            {firebaseUsers.length > 1 && (
+              <div className="flex gap-2 text-sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedUsers(new Set(firebaseUsers.map(u => u.id)))}
+                >
+                  Select All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedUsers(new Set())}
+                >
+                  Clear All
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
