@@ -28,6 +28,7 @@ import Processing from "./pages/Processing";
 import ITDepartment from "./pages/ITDepartment";
 import Milling from "./pages/Milling";
 import PermissionManagement from "./pages/PermissionManagement";
+import Expenses from "./pages/Expenses";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 
 import { useInactivityTimer } from './hooks/useInactivityTimer';
@@ -152,6 +153,11 @@ const App: React.FC = () => {
                 <Route path="/permissions" element={
                   <ProtectedRoute requiredPermissions={["Permission Management"]}>
                     <PermissionManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="/expenses" element={
+                  <ProtectedRoute>
+                    <Expenses />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFound />} />
