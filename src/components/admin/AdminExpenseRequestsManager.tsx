@@ -3,15 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
-import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
-interface ExpenseRequestsManagerProps {
+interface AdminExpenseRequestsManagerProps {
   onApprove?: (requestId: string) => void;
   onReject?: (requestId: string, reason: string) => void;
 }
 
-const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({ 
+const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = ({ 
   onApprove, 
   onReject 
 }) => {
@@ -20,11 +20,11 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
   const expenseRequests = requests.filter(request => request.type === 'Expense Request');
 
   const handleApprove = async (requestId: string) => {
-    const success = await updateRequestStatus(requestId, 'Approved', undefined, undefined, 'finance', 'Finance Team');
+    const success = await updateRequestStatus(requestId, 'Approved', undefined, undefined, 'admin', 'Admin Team');
     if (success) {
       toast({
-        title: "Finance Approval Recorded", 
-        description: "Expense request approved by Finance. Awaiting Admin approval."
+        title: "Admin Approval Recorded",
+        description: "Expense request approved by Admin. Checking for full approval..."
       });
       onApprove?.(requestId);
     }
@@ -34,11 +34,11 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
     const reason = prompt("Please provide a reason for rejection:");
     if (!reason) return;
     
-    const success = await updateRequestStatus(requestId, 'Rejected', reason, undefined, 'finance', 'Finance Team');
+    const success = await updateRequestStatus(requestId, 'Rejected', reason, undefined, 'admin', 'Admin Team');
     if (success) {
       toast({
         title: "Expense Rejected", 
-        description: "Expense request has been rejected by Finance"
+        description: "Expense request has been rejected by Admin"
       });
       onReject?.(requestId, reason);
     }
@@ -50,6 +50,10 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'rejected':
         return <XCircle className="h-4 w-4 text-red-600" />;
+      case 'finance approved':
+        return <Clock className="h-4 w-4 text-blue-600" />;
+      case 'admin approved':
+        return <Clock className="h-4 w-4 text-purple-600" />;
       case 'pending':
         return <Clock className="h-4 w-4 text-yellow-600" />;
       default:
@@ -63,6 +67,10 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
         return 'default';
       case 'rejected':
         return 'destructive';
+      case 'finance approved':
+        return 'secondary';
+      case 'admin approved':
+        return 'secondary';
       case 'pending':
         return 'secondary';
       default:
@@ -85,8 +93,8 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Expense Requests
+            <Shield className="h-5 w-5" />
+            Admin Expense Review
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -104,39 +112,34 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Expense Requests Review
+            <Shield className="h-5 w-5" />
+            Admin Expense Review
           </CardTitle>
           <CardDescription>
-            Review and approve employee expense requests
+            Final approval for employee expense requests
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="text-center p-4 bg-yellow-50 rounded-lg">
-              <p className="text-sm font-medium text-yellow-700">Pending Requests</p>
-              <p className="text-2xl font-bold text-yellow-900">
-                {expenseRequests.filter(r => r.status === 'Pending').length}
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <p className="text-sm font-medium text-purple-700">Needs Admin Review</p>
+              <p className="text-2xl font-bold text-purple-900">
+                {expenseRequests.filter(r => !r.admin_approved_at && r.status !== 'Rejected').length}
               </p>
             </div>
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <p className="text-sm font-medium text-blue-700">Total Amount</p>
               <p className="text-2xl font-bold text-blue-900">
                 UGX {expenseRequests
-                  .filter(r => r.status === 'Pending')
+                  .filter(r => !r.admin_approved_at && r.status !== 'Rejected')
                   .reduce((sum, r) => sum + parseFloat(r.amount), 0)
                   .toLocaleString()}
               </p>
             </div>
             <div className="text-center p-4 bg-green-50 rounded-lg">
-              <p className="text-sm font-medium text-green-700">This Month</p>
+              <p className="text-sm font-medium text-green-700">Fully Approved</p>
               <p className="text-2xl font-bold text-green-900">
-                {expenseRequests.filter(r => {
-                  const requestDate = new Date(r.created_at);
-                  const now = new Date();
-                  return requestDate.getMonth() === now.getMonth() && 
-                         requestDate.getFullYear() === now.getFullYear();
-                }).length}
+                {expenseRequests.filter(r => r.status === 'Approved').length}
               </p>
             </div>
           </div>
@@ -149,7 +152,7 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
               </div>
             ) : (
               expenseRequests.map((request) => (
-                <Card key={request.id} className="border-l-4 border-l-blue-500">
+                <Card key={request.id} className="border-l-4 border-l-purple-500">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
@@ -164,7 +167,7 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
                         </div>
                         <p className="text-muted-foreground mb-3">{request.description}</p>
                         
-                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-muted-foreground" />
                             <span>{request.requestedby}</span>
@@ -184,8 +187,8 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
                         </div>
 
                         {/* Two-way approval status */}
-                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                          <h4 className="font-semibold text-sm text-blue-700 mb-2">Approval Status</h4>
+                        <div className="mt-4 p-3 bg-purple-50 rounded-lg">
+                          <h4 className="font-semibold text-sm text-purple-700 mb-2">Approval Status</h4>
                           <div className="grid grid-cols-2 gap-4 text-xs">
                             <div className="flex items-center gap-2">
                               <div className={`h-2 w-2 rounded-full ${request.finance_approved_at ? 'bg-green-500' : 'bg-gray-300'}`}></div>
@@ -223,7 +226,7 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
                       </div>
                     </div>
 
-                    {(request.status === 'Pending' || request.status === 'Admin Approved') && !request.finance_approved_at && (
+                    {(request.status === 'Pending' || request.status === 'Finance Approved') && !request.admin_approved_at && (
                       <div className="flex gap-2 pt-4 border-t">
                         <Button
                           onClick={() => handleApprove(request.id)}
@@ -231,7 +234,7 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
                           size="sm"
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
-                          Finance Approve
+                          Admin Approve
                         </Button>
                         <Button
                           onClick={() => handleReject(request.id)}
@@ -245,10 +248,18 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
                       </div>
                     )}
 
-                    {request.finance_approved_at && !request.admin_approved_at && (
+                    {request.admin_approved_at && !request.finance_approved_at && (
+                      <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                        <p className="text-purple-700 font-medium">
+                          ✓ Admin Approved - Awaiting Finance Approval
+                        </p>
+                      </div>
+                    )}
+
+                    {request.status === 'Approved' && (
                       <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                         <p className="text-green-700 font-medium">
-                          ✓ Finance Approved - Awaiting Admin Approval
+                          ✓ Fully Approved by Both Finance and Admin
                         </p>
                       </div>
                     )}
@@ -270,4 +281,4 @@ const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({
   );
 };
 
-export default ExpenseRequestsManager;
+export default AdminExpenseRequestsManager;

@@ -13,6 +13,7 @@ import PermissionOverview from './PermissionOverview';
 import { DailySalaryManager } from './DailySalaryManager';
 import UserPermissionsList from './UserPermissionsList';
 import QuickPermissionAssignment from './QuickPermissionAssignment';
+import AdminExpenseRequestsManager from './AdminExpenseRequestsManager';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -166,13 +167,24 @@ const AdminDashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
+                <CardTitle>Expense Requests - Admin Review</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AdminExpenseRequestsManager />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Money Requests - Final Approval</CardTitle>
               </CardHeader>
               <CardContent>
                 <MoneyRequestsFinalApproval />
               </CardContent>
             </Card>
+          </div>
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Withdrawal Oversight & Processing</CardTitle>
@@ -184,16 +196,16 @@ const AdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Deletion Requests</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DeletionRequestsManager />
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Deletion Requests</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DeletionRequestsManager />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="daily-salary" className="space-y-6">

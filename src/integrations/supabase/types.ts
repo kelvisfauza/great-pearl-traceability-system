@@ -103,12 +103,17 @@ export type Database = {
       }
       approval_requests: {
         Row: {
+          admin_approved_at: string | null
+          admin_approved_by: string | null
           amount: string
+          approval_stage: string | null
           created_at: string
           daterequested: string
           department: string
           description: string
           details: Json | null
+          finance_approved_at: string | null
+          finance_approved_by: string | null
           id: string
           priority: string
           requestedby: string
@@ -118,12 +123,17 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
           amount: string
+          approval_stage?: string | null
           created_at?: string
           daterequested: string
           department: string
           description: string
           details?: Json | null
+          finance_approved_at?: string | null
+          finance_approved_by?: string | null
           id?: string
           priority?: string
           requestedby: string
@@ -133,12 +143,17 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
           amount?: string
+          approval_stage?: string | null
           created_at?: string
           daterequested?: string
           department?: string
           description?: string
           details?: Json | null
+          finance_approved_at?: string | null
+          finance_approved_by?: string | null
           id?: string
           priority?: string
           requestedby?: string

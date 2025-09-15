@@ -17,6 +17,11 @@ export interface ApprovalRequest {
   daterequested: string;
   priority: string;
   status: string;
+  finance_approved_at?: string | null;
+  admin_approved_at?: string | null;
+  finance_approved_by?: string | null;
+  admin_approved_by?: string | null;
+  approval_stage?: string;
   details?: {
     paymentId?: string;
     method?: string;
@@ -70,7 +75,7 @@ export const useApprovalRequests = () => {
       const { data: supabaseRequests, error } = await supabase
         .from('approval_requests')
         .select('*')
-        .eq('status', 'Pending')
+        .in('status', ['Pending', 'Finance Approved', 'Admin Approved'])
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -105,7 +110,9 @@ export const useApprovalRequests = () => {
     id: string, 
     status: 'Approved' | 'Rejected',
     rejectionReason?: string,
-    rejectionComments?: string
+    rejectionComments?: string,
+    approvalType?: 'finance' | 'admin',
+    approverName?: string
   ) => {
     try {
       console.log('Updating approval request status:', id, status);
@@ -117,13 +124,42 @@ export const useApprovalRequests = () => {
       }
 
       const updateData: any = {
-        status,
         updated_at: new Date().toISOString()
       };
 
-      if (status === 'Rejected' && rejectionReason) {
-        updateData.rejection_reason = rejectionReason;
-        updateData.rejection_comments = rejectionComments || '';
+      if (status === 'Rejected') {
+        updateData.status = 'Rejected';
+        if (rejectionReason) {
+          updateData.rejection_reason = rejectionReason;
+          updateData.rejection_comments = rejectionComments || '';
+        }
+      } else if (status === 'Approved' && approvalType) {
+        // Handle two-stage approval
+        if (approvalType === 'finance') {
+          updateData.finance_approved_at = new Date().toISOString();
+          updateData.finance_approved_by = approverName || 'Finance Team';
+          
+          // Check if admin has already approved
+          if (request.admin_approved_at) {
+            updateData.status = 'Approved';
+            updateData.approval_stage = 'fully_approved';
+          } else {
+            updateData.status = 'Finance Approved';
+            updateData.approval_stage = 'finance_approved';
+          }
+        } else if (approvalType === 'admin') {
+          updateData.admin_approved_at = new Date().toISOString();
+          updateData.admin_approved_by = approverName || 'Admin Team';
+          
+          // Check if finance has already approved
+          if (request.finance_approved_at) {
+            updateData.status = 'Approved';
+            updateData.approval_stage = 'fully_approved';
+          } else {
+            updateData.status = 'Admin Approved';
+            updateData.approval_stage = 'admin_approved';
+          }
+        }
       }
 
       console.log('Updating Supabase approval request...');
@@ -152,8 +188,8 @@ export const useApprovalRequests = () => {
         status: 'completed'
       });
 
-        // Handle different types of approved requests
-        if (status === 'Approved') {
+        // Handle different types of approved requests - only if fully approved
+        if (updateData.status === 'Approved' && updateData.approval_stage === 'fully_approved') {
            // Handle Modification Request Approval
            if (request.type === 'Modification Request Approval' && request.details?.originalModificationId) {
              console.log('Processing approved modification request:', request.details.originalModificationId);
@@ -380,8 +416,15 @@ export const useApprovalRequests = () => {
         }
       }
 
-      // Remove from local state since it's no longer pending
-      setRequests(prev => prev.filter(req => req.id !== id));
+      // Remove from local state only if fully approved or rejected
+      if (updateData.status === 'Approved' || updateData.status === 'Rejected') {
+        setRequests(prev => prev.filter(req => req.id !== id));
+      } else {
+        // Update the local state with the new approval status
+        setRequests(prev => prev.map(req => 
+          req.id === id ? { ...req, ...updateData } : req
+        ));
+      }
       
       return true;
     } catch (error) {
