@@ -22,7 +22,8 @@ const Expenses = () => {
     expenseType: '',
     amount: '',
     description: '',
-    reason: ''
+    reason: '',
+    phoneNumber: ''
   });
 
   // Filter to only show user's own expense requests
@@ -44,7 +45,7 @@ const Expenses = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.expenseType || !formData.amount || !formData.description || !formData.reason) {
+    if (!formData.expenseType || !formData.amount || !formData.description || !formData.reason || !formData.phoneNumber) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -54,10 +55,21 @@ const Expenses = () => {
     }
 
     const numericAmount = parseFloat(formData.amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
+    if (isNaN(numericAmount) || numericAmount < 2000) {
       toast({
         title: "Error",
-        description: "Please enter a valid amount",
+        description: "Please enter a valid amount (minimum UGX 2,000)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Basic phone number validation
+    const phoneRegex = /^[0-9+\-\s()]{10,15}$/;
+    if (!phoneRegex.test(formData.phoneNumber)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid phone number",
         variant: "destructive"
       });
       return;
@@ -75,6 +87,7 @@ const Expenses = () => {
         expenseType: formData.expenseType,
         expenseCategory: selectedType?.label || formData.expenseType,
         reason: formData.reason,
+        phoneNumber: formData.phoneNumber,
         requestDate: new Date().toISOString(),
         department: employee?.department || 'General',
         priority: 'Normal'
@@ -87,7 +100,8 @@ const Expenses = () => {
         expenseType: '',
         amount: '',
         description: '',
-        reason: ''
+        reason: '',
+        phoneNumber: ''
       });
       
       // Refresh requests
@@ -139,16 +153,30 @@ const Expenses = () => {
               </div>
 
               <div>
-                <Label htmlFor="amount">Amount (UGX) *</Label>
+                <Label htmlFor="amount">Amount (UGX) * (Minimum: 2,000)</Label>
                 <Input
                   id="amount"
                   type="number"
-                  placeholder="Enter amount"
+                  placeholder="Enter amount (min. 2,000)"
                   value={formData.amount}
                   onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                  min="1"
+                  min="2000"
                   step="1000"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="phoneNumber">Phone Number for Payment * </Label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="Enter phone number (e.g., 0700123456)"
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter the phone number where you want to receive the money via mobile money
+                </p>
               </div>
 
               <div>
