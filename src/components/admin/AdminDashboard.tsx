@@ -13,7 +13,7 @@ import UserPermissionsList from './UserPermissionsList';
 import QuickPermissionAssignment from './QuickPermissionAssignment';
 import AdminExpenseRequestsManager from './AdminExpenseRequestsManager';
 import ApprovedRequestsHistory from './ApprovedRequestsHistory';
-import PasswordResetHelper from './PasswordResetHelper';
+
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -197,7 +197,6 @@ const AdminDashboard = () => {
 
           <div className="grid grid-cols-1 gap-6">
             <ApprovedRequestsHistory />
-            <PasswordResetHelper />
           </div>
         </TabsContent>
 
