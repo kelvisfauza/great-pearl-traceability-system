@@ -12,7 +12,8 @@ import {
   Receipt,
   Wallet,
   TrendingUp,
-  PieChart
+  PieChart,
+  CheckCircle
 } from "lucide-react";
 import {
   Sidebar,
@@ -68,6 +69,12 @@ const financeNavItems = [
     key: "expense-requests",
     icon: Receipt,
     description: "Review and approve expense requests"
+  },
+  {
+    title: "Approved Expenses",
+    key: "approved-expenses", 
+    icon: CheckCircle,
+    description: "View fully approved expense requests"
   },
   {
     title: "Withdrawal Processing",
