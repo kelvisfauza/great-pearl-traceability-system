@@ -7,9 +7,6 @@ import { UserPlus, Shield, AlertTriangle } from "lucide-react";
 import { useUnifiedEmployees, UnifiedEmployee } from "@/hooks/useUnifiedEmployees";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
-import { useSecureEmployees } from '@/hooks/useSecureEmployees';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import AddUserForm from './AddUserForm';
 import EditUserForm from './EditUserForm';
 import UserList from './UserList';
@@ -26,9 +23,8 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<UnifiedEmployee | null>(null);
   const { toast } = useToast();
-  const { refetch } = useUnifiedEmployees();
+  const { createEmployee, refetch } = useUnifiedEmployees();
   const { isAdmin } = useAuth();
-  const { addEmployee } = useSecureEmployees();
 
   // Only administrators can access user management
   if (!isAdmin()) {
@@ -53,30 +49,15 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
     try {
       console.log('UserManagement handleAddUser called with:', employeeData);
       
-      // First, create the Firebase authentication user
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        employeeData.email, 
-        employeeData.password
-      );
-      
-      console.log('Firebase auth user created:', userCredential.user.uid);
-
-      // Then create the employee record in Firebase with the flag to change password
+      // Use the unified employee creation system (Supabase-based)
       const processedData = {
         ...employeeData,
         permissions: Array.isArray(employeeData.permissions) ? employeeData.permissions : [],
-        isOneTimePassword: true,
-        mustChangePassword: true,
-        authUserId: userCredential.user.uid, // Link to Firebase auth user
         email: employeeData.email.toLowerCase().trim() // Ensure email is normalized
       };
 
-      // Remove password from employee data (don't store it in the employee record)
-      delete processedData.password;
-
-      console.log('Creating employee record in Firebase...');
-      await addEmployee(processedData);
+      console.log('Creating employee using unified system...');
+      await createEmployee(processedData);
       
       console.log('Employee record created successfully');
       
@@ -93,19 +74,13 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
       
       let errorMessage = "Failed to create user. Please try again.";
       
-      if (error.code) {
-        switch (error.code) {
-          case 'auth/email-already-in-use':
-            errorMessage = `A user with the email "${employeeData.email}" already exists.`;
-            break;
-          case 'auth/weak-password':
-            errorMessage = "Password is too weak. Please use a stronger password.";
-            break;
-          case 'auth/invalid-email':
-            errorMessage = "Invalid email address format.";
-            break;
-          default:
-            errorMessage = `Error: ${error.message}`;
+      if (error.message) {
+        if (error.message.includes('already exists')) {
+          errorMessage = error.message;
+        } else if (error.message.includes('email')) {
+          errorMessage = "Invalid email address or email already exists.";
+        } else {
+          errorMessage = error.message;
         }
       }
       
@@ -176,9 +151,9 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
 
   return (
     <div className="space-y-4">
-      <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-        <p className="text-sm text-orange-800">
-          <strong>Note:</strong> User permission management has been moved to Admin Dashboard → User Permissions for better coordination between departments.
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-800">
+          <strong>System Unified:</strong> All user creation now uses the unified Supabase system. Users created here will be visible in HR and Admin sections.
         </p>
       </div>
       <Card>
@@ -187,10 +162,10 @@ export default function UserManagement({ employees, onEmployeeAdded, onEmployeeU
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                User Management (Account Creation Only)
+                Unified User Management
               </CardTitle>
               <CardDescription>
-                Create new user accounts. Manage permissions in Admin Dashboard.
+                Create and manage user accounts. All users are now stored in the unified database.
               </CardDescription>
             </div>
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>

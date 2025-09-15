@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, Calendar } from 'lucide-react';
+import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, Calendar, Database } from 'lucide-react';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import MoneyRequestsFinalApproval from './MoneyRequestsFinalApproval';
 import { WithdrawalProcessingManager } from './WithdrawalProcessingManager';
@@ -14,6 +14,7 @@ import { DailySalaryManager } from './DailySalaryManager';
 import UserPermissionsList from './UserPermissionsList';
 import QuickPermissionAssignment from './QuickPermissionAssignment';
 import AdminExpenseRequestsManager from './AdminExpenseRequestsManager';
+import FirebaseToSupabaseMigration from './FirebaseToSupabaseMigration';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -29,7 +30,7 @@ const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-4 lg:w-auto">
+        <TabsList className="grid grid-cols-5 lg:w-auto">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Overview
@@ -41,6 +42,10 @@ const AdminDashboard = () => {
           <TabsTrigger value="permissions" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Permissions
+          </TabsTrigger>
+          <TabsTrigger value="migration" className="flex items-center gap-2">
+            <Database className="h-4 w-4" />
+            Migration
           </TabsTrigger>
           <TabsTrigger value="daily-salary" className="flex items-center gap-2">
             <Calendar className="h-4 w-4" />
@@ -206,6 +211,10 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="migration" className="space-y-6">
+          <FirebaseToSupabaseMigration />
         </TabsContent>
 
         <TabsContent value="daily-salary" className="space-y-6">
