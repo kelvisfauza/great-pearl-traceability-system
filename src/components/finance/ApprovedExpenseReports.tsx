@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
-import { CheckCircle, DollarSign, Calendar, User } from 'lucide-react';
+import { CheckCircle, DollarSign, Calendar, User, Phone } from 'lucide-react';
 import { format } from 'date-fns';
 
 const ApprovedExpenseReports = () => {
@@ -69,7 +69,7 @@ const ApprovedExpenseReports = () => {
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">UGX {parseFloat(request.amount || '0').toLocaleString()}</span>
@@ -78,6 +78,11 @@ const ApprovedExpenseReports = () => {
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span>{request.requestedby}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{request.phone || 'N/A'}</span>
                   </div>
                   
                   <div className="flex items-center gap-2">

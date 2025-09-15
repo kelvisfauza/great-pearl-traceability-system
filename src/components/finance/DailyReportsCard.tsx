@@ -171,7 +171,7 @@ const DailyReportsCard = ({
                       <div className="flex-1">
                         <p className="font-medium text-sm">{expense.title}</p>
                         <p className="text-xs text-gray-500">
-                          {expense.requestedby}
+                          {expense.requestedby} • Phone: {expense.phone || 'N/A'}
                         </p>
                       </div>
                     </div>

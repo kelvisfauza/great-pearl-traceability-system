@@ -17,6 +17,7 @@ export interface ApprovalRequest {
   daterequested: string;
   priority: string;
   status: string;
+  phone?: string;
   finance_approved_at?: string | null;
   admin_approved_at?: string | null;
   finance_approved_by?: string | null;
