@@ -14,6 +14,7 @@ import { DailySalaryManager } from './DailySalaryManager';
 import UserPermissionsList from './UserPermissionsList';
 import QuickPermissionAssignment from './QuickPermissionAssignment';
 import AdminExpenseRequestsManager from './AdminExpenseRequestsManager';
+import ApprovedRequestsHistory from './ApprovedRequestsHistory';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -205,6 +206,10 @@ const AdminDashboard = () => {
                 <DeletionRequestsManager />
               </CardContent>
             </Card>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            <ApprovedRequestsHistory />
           </div>
         </TabsContent>
 
