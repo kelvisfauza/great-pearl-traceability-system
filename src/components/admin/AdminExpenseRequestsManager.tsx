@@ -271,7 +271,10 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                             <Clock className="h-4 w-4 text-yellow-500" />
                           )}
                           <span className={`text-sm ${request.finance_approved_at ? 'text-green-700' : 'text-yellow-700'}`}>
-                            Finance: {request.finance_approved_at ? 'Approved' : 'Pending'}
+                            Finance: {request.finance_approved_at ? 
+                              `Approved by ${request.finance_approved_by || 'Finance Team'}` : 
+                              'Pending'
+                            }
                           </span>
                           {request.finance_approved_at && (
                             <span className="text-xs text-muted-foreground">
@@ -286,7 +289,10 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                             <Clock className="h-4 w-4 text-yellow-500" />
                           )}
                           <span className={`text-sm ${request.admin_approved_at ? 'text-green-700' : 'text-yellow-700'}`}>
-                            Admin: {request.admin_approved_at ? 'Approved' : 'Pending'}
+                            Admin: {request.admin_approved_at ? 
+                              `Approved by ${request.admin_approved_by || 'Admin Team'}` : 
+                              'Pending'
+                            }
                           </span>
                           {request.admin_approved_at && (
                             <span className="text-xs text-muted-foreground">
