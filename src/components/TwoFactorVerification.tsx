@@ -30,44 +30,14 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
   const [bypassEnabled, setBypassEnabled] = useState(false);
   const hasSentInitialCode = React.useRef(false);
 
-  // Check for bypass immediately when component loads
+  // Auto-send code when component loads (check bypass first)
   useEffect(() => {
-    const checkBypass = async () => {
-      try {
-        console.log('🔐 Checking SMS bypass for:', email);
-        const { data, error } = await supabase.functions.invoke('2fa-verification', {
-          body: {
-            action: 'send_code',
-            email,
-            phone
-          }
-        });
-
-        if (error) throw error;
-
-        // If bypass is enabled, complete verification immediately
-        if (data?.bypassed) {
-          console.log('✅ SMS bypass enabled - auto-completing verification');
-          setBypassEnabled(true);
-          onVerificationComplete();
-          return;
-        }
-
-        // Normal flow - code was sent
-        if (data?.success) {
-          setCodeSent(true);
-          hasSentInitialCode.current = true;
-        }
-      } catch (error) {
-        console.error('Error checking bypass:', error);
-        setError('Failed to initialize verification');
-      }
-    };
-
     if (!hasSentInitialCode.current) {
-      checkBypass();
+      hasSentInitialCode.current = true;
+      console.log('🎯 Auto-sending initial verification code...');
+      sendVerificationCode();
     }
-  }, [email, phone, onVerificationComplete]);
+  }, [email, phone]);
 
   // Listen for auto-fill events from SMS links
   React.useEffect(() => {
@@ -177,9 +147,10 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
 
       if (error) throw error;
 
-      // Check for bypass response
+      // Check for bypass response first
       if (data?.bypassed) {
         console.log('✅ SMS bypass enabled - verification not required');
+        setBypassEnabled(true);
         onVerificationComplete();
         return;
       }
@@ -271,14 +242,6 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
     }
   };
 
-  // Auto-send code on component mount (only once)
-  React.useEffect(() => {
-    if (!hasSentInitialCode.current) {
-      hasSentInitialCode.current = true;
-      console.log('🎯 Auto-sending initial verification code...');
-      sendVerificationCode();
-    }
-  }, [email, phone]);
 
   return (
     <Card className="w-full max-w-md mx-auto">
