@@ -9,7 +9,7 @@ import { KeyRound, Mail, RefreshCw } from 'lucide-react';
 
 const PasswordResetHelper = () => {
   const [email, setEmail] = useState('shafikahmed20051@gmail.com');
-  const [phone, setPhone] = useState('+256');
+  const [phone, setPhone] = useState('+256781316806');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
