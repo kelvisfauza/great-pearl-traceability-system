@@ -1,23 +1,64 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useApprovalRequests } from '@/hooks/useApprovalRequests';
+import { supabase } from '@/integrations/supabase/client';
 import { CheckCircle, DollarSign, Calendar, User, Phone } from 'lucide-react';
 import { format } from 'date-fns';
 
+interface ApprovedExpenseRecord {
+  id: string;
+  title: string;
+  description: string;
+  amount: string;
+  type: string;
+  status: string;
+  requestedby: string;
+  daterequested: string;
+  priority: string;
+  phone?: string;
+  department: string;
+  finance_approved_at?: string | null;
+  admin_approved_at?: string | null;
+  finance_approved_by?: string | null;
+  admin_approved_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 const ApprovedExpenseReports = () => {
-  const { requests, loading } = useApprovalRequests();
+  const [approvedRequests, setApprovedRequests] = useState<ApprovedExpenseRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter for fully approved expense requests
-  const approvedExpenseRequests = requests.filter(
-    request => 
-      request.type === 'Expense Request' && 
-      request.status === 'Approved' &&
-      request.finance_approved_at && 
-      request.admin_approved_at
-  );
+  useEffect(() => {
+    fetchApprovedExpenses();
+  }, []);
 
-  const totalApprovedAmount = approvedExpenseRequests.reduce(
+  const fetchApprovedExpenses = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('approval_requests')
+        .select('*')
+        .eq('status', 'Approved')
+        .in('type', ['Expense Request', 'Airtime/Data Request'])
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching approved expenses:', error);
+        return;
+      }
+
+      console.log('Fetched approved expense requests:', data);
+      setApprovedRequests(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalApprovedAmount = approvedRequests.reduce(
     (sum, request) => sum + parseFloat(request.amount || '0'), 
     0
   );
@@ -40,7 +81,7 @@ const ApprovedExpenseReports = () => {
           Approved Expense Requests
         </CardTitle>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span>{approvedExpenseRequests.length} requests approved</span>
+          <span>{approvedRequests.length} requests approved</span>
           <span className="flex items-center gap-1">
             <DollarSign className="h-4 w-4" />
             Total: UGX {totalApprovedAmount.toLocaleString()}
@@ -48,14 +89,17 @@ const ApprovedExpenseReports = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {approvedExpenseRequests.length === 0 ? (
+        {approvedRequests.length === 0 ? (
           <div className="text-center py-8">
             <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No approved expense requests found</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Approved expense requests will appear here once they are fully processed
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {approvedExpenseRequests.map((request) => (
+            {approvedRequests.map((request) => (
               <div key={request.id} className="border rounded-lg p-4 space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -102,16 +146,25 @@ const ApprovedExpenseReports = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-2 border-t text-xs text-muted-foreground">
-                  <div>
-                    <span className="font-medium">Finance Approved:</span>
-                    <br />
-                    {request.finance_approved_by} - {format(new Date(request.finance_approved_at!), 'MMM dd, yyyy HH:mm')}
-                  </div>
-                  <div>
-                    <span className="font-medium">Admin Approved:</span>
-                    <br />
-                    {request.admin_approved_by} - {format(new Date(request.admin_approved_at!), 'MMM dd, yyyy HH:mm')}
-                  </div>
+                  {request.finance_approved_at && (
+                    <div>
+                      <span className="font-medium">Finance Approved:</span>
+                      <br />
+                      {request.finance_approved_by || 'Finance Team'} - {format(new Date(request.finance_approved_at), 'MMM dd, yyyy HH:mm')}
+                    </div>
+                  )}
+                  {request.admin_approved_at && (
+                    <div>
+                      <span className="font-medium">Admin Approved:</span>
+                      <br />
+                      {request.admin_approved_by || 'Admin Team'} - {format(new Date(request.admin_approved_at), 'MMM dd, yyyy HH:mm')}
+                    </div>
+                  )}
+                  {!request.finance_approved_at && !request.admin_approved_at && (
+                    <div className="col-span-2">
+                      <span className="font-medium">Status:</span> Direct approval (legacy system)
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
