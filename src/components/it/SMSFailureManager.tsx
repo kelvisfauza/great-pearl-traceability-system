@@ -5,8 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { RefreshCw, Phone, Copy, Search } from 'lucide-react';
-import { format } from 'date-fns';
+import { RefreshCw, Phone, Copy, Search, Clock, AlertTriangle, CheckCircle, MessageCircle } from 'lucide-react';
+import { format, differenceInMinutes } from 'date-fns';
 
 interface SMSFailure {
   id: string;
@@ -24,6 +24,7 @@ export const SMSFailureManager = () => {
   const [failures, setFailures] = useState<SMSFailure[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [realtimeEnabled, setRealtimeEnabled] = useState(false);
   const { toast } = useToast();
 
   const fetchFailures = async () => {
@@ -65,8 +66,79 @@ export const SMSFailureManager = () => {
     }
   };
 
+  const getCodeExpiryStatus = (createdAt: string) => {
+    const created = new Date(createdAt);
+    const minutesElapsed = differenceInMinutes(new Date(), created);
+    const isExpired = minutesElapsed > 5; // Codes expire after 5 minutes
+    const isExpiringSoon = minutesElapsed > 3 && !isExpired;
+    
+    return { isExpired, isExpiringSoon, minutesElapsed };
+  };
+
+  const sendCodeManually = async (phone: string, code: string, userName: string) => {
+    try {
+      // Call the SMS edge function directly to resend
+      const { error } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: phone.replace('+256', '0').replace('+', ''),
+          message: `${userName} - Pearl Coffee\nCode: ${code}\n(Manual delivery by IT Support)\n(5min only)`,
+          userName: userName
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Code Sent",
+        description: `Verification code manually sent to ${userName}`,
+      });
+    } catch (error) {
+      console.error('Error sending SMS manually:', error);
+      toast({
+        title: "Send Failed",
+        description: "Could not send SMS manually. Try calling the user instead.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const setupRealTimeSubscription = () => {
+    if (realtimeEnabled) return;
+
+    const channel = supabase
+      .channel('sms-failures')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'sms_failures'
+        },
+        (payload) => {
+          const newFailure = payload.new as SMSFailure;
+          setFailures(prev => [newFailure, ...prev]);
+          
+          // Show immediate notification for new SMS failure
+          toast({
+            title: "🚨 SMS Failed to Send",
+            description: `${newFailure.user_name} needs manual code delivery: ${newFailure.verification_code}`,
+            duration: 10000,
+          });
+        }
+      )
+      .subscribe();
+
+    setRealtimeEnabled(true);
+    return () => supabase.removeChannel(channel);
+  };
+
   useEffect(() => {
     fetchFailures();
+    const cleanup = setupRealTimeSubscription();
+    
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, []);
 
   const filteredFailures = failures.filter(failure => 
@@ -90,18 +162,26 @@ export const SMSFailureManager = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>SMS Failure Support</CardTitle>
-              <CardDescription>
-                Users who couldn't receive their verification codes
-              </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  SMS Failure Support
+                  {realtimeEnabled && (
+                    <Badge variant="outline" className="text-green-600 border-green-600">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div>
+                      Live Monitoring
+                    </Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  Users who couldn't receive their verification codes - IT Support can provide codes manually
+                </CardDescription>
+              </div>
+              <Button onClick={fetchFailures} variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
             </div>
-            <Button onClick={fetchFailures} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
@@ -122,53 +202,89 @@ export const SMSFailureManager = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredFailures.map((failure) => (
-                <Card key={failure.id} className="border-l-4 border-l-orange-500">
-                  <CardContent className="pt-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{failure.user_name || 'Unknown User'}</h3>
-                          <Badge variant="outline">
-                            {failure.department} {failure.role}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          <div>Email: {failure.user_email}</div>
-                          <div>Phone: {failure.user_phone}</div>
-                          <div>
-                            Failed: {format(new Date(failure.created_at), 'MMM d, yyyy HH:mm')}
+              {filteredFailures.map((failure) => {
+                const expiryStatus = getCodeExpiryStatus(failure.created_at);
+                const borderColor = expiryStatus.isExpired ? 'border-l-red-500' : 
+                                   expiryStatus.isExpiringSoon ? 'border-l-yellow-500' : 'border-l-orange-500';
+                
+                return (
+                  <Card key={failure.id} className={`border-l-4 ${borderColor}`}>
+                    <CardContent className="pt-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{failure.user_name || 'Unknown User'}</h3>
+                            <Badge variant="outline">
+                              {failure.department} {failure.role}
+                            </Badge>
+                            {expiryStatus.isExpired && (
+                              <Badge variant="destructive" className="text-xs">
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                Expired
+                              </Badge>
+                            )}
+                            {expiryStatus.isExpiringSoon && (
+                              <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Expiring Soon
+                              </Badge>
+                            )}
                           </div>
-                          <div>Reason: {failure.failure_reason}</div>
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <div>Email: {failure.user_email}</div>
+                            <div>Phone: {failure.user_phone}</div>
+                            <div className="flex items-center gap-2">
+                              Failed: {format(new Date(failure.created_at), 'MMM d, yyyy HH:mm')}
+                              <Badge variant="outline" className="text-xs">
+                                {expiryStatus.minutesElapsed}m ago
+                              </Badge>
+                            </div>
+                            <div className="text-xs">Reason: {failure.failure_reason}</div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2">
+                          <div className={`flex items-center gap-2 p-2 rounded ${
+                            expiryStatus.isExpired ? 'bg-red-50 border border-red-200' : 'bg-muted'
+                          }`}>
+                            <span className="text-sm font-mono font-bold">
+                              Code: {failure.verification_code}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => copyCode(failure.verification_code, failure.user_name || 'User')}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => callUser(failure.user_phone)}
+                              className="flex-1"
+                            >
+                              <Phone className="h-3 w-3 mr-1" />
+                              Call
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant={expiryStatus.isExpired ? "default" : "secondary"}
+                              onClick={() => sendCodeManually(failure.user_phone, failure.verification_code, failure.user_name || 'User')}
+                              className="flex-1"
+                            >
+                              <MessageCircle className="h-3 w-3 mr-1" />
+                              {expiryStatus.isExpired ? 'Resend' : 'Retry SMS'}
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                      
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2 p-2 bg-muted rounded">
-                          <span className="text-sm font-mono">
-                            Code: {failure.verification_code}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => copyCode(failure.verification_code, failure.user_name || 'User')}
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => callUser(failure.user_phone)}
-                        >
-                          <Phone className="h-3 w-3 mr-1" />
-                          Call User
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>

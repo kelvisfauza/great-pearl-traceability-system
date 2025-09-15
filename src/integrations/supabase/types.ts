@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      advance_recoveries: {
+        Row: {
+          advance_id: string
+          created_at: string
+          id: string
+          payment_id: string
+          recovered_ugx: number
+        }
+        Insert: {
+          advance_id: string
+          created_at?: string
+          id?: string
+          payment_id: string
+          recovered_ugx: number
+        }
+        Update: {
+          advance_id?: string
+          created_at?: string
+          id?: string
+          payment_id?: string
+          recovered_ugx?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advance_recoveries_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_advances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advance_recoveries_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           created_at: string
@@ -218,6 +257,95 @@ export type Database = {
           recipient_name?: string
           started_at?: string
           status?: string
+        }
+        Relationships: []
+      }
+      cash_movements: {
+        Row: {
+          amount_ugx: number
+          created_at: string
+          description: string | null
+          direction: string
+          id: string
+          occurred_at: string
+          session_id: string
+          source_id: string
+          source_type: string
+        }
+        Insert: {
+          amount_ugx: number
+          created_at?: string
+          description?: string | null
+          direction: string
+          id?: string
+          occurred_at?: string
+          session_id: string
+          source_id: string
+          source_type: string
+        }
+        Update: {
+          amount_ugx?: number
+          created_at?: string
+          description?: string | null
+          direction?: string
+          id?: string
+          occurred_at?: string
+          session_id?: string
+          source_id?: string
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_sessions: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          declared_cash_on_hand_ugx: number | null
+          id: string
+          is_closed: boolean
+          opened_at: string
+          opened_by: string
+          opening_float_ugx: number
+          session_date: string
+          system_closing_balance_ugx: number | null
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          declared_cash_on_hand_ugx?: number | null
+          id?: string
+          is_closed?: boolean
+          opened_at?: string
+          opened_by: string
+          opening_float_ugx: number
+          session_date: string
+          system_closing_balance_ugx?: number | null
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          declared_cash_on_hand_ugx?: number | null
+          id?: string
+          is_closed?: boolean
+          opened_at?: string
+          opened_by?: string
+          opening_float_ugx?: number
+          session_date?: string
+          system_closing_balance_ugx?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -606,6 +734,7 @@ export type Database = {
         Row: {
           address: string | null
           auth_user_id: string | null
+          bypass_sms_verification: boolean | null
           created_at: string
           department: string
           disabled: boolean | null
@@ -628,6 +757,7 @@ export type Database = {
         Insert: {
           address?: string | null
           auth_user_id?: string | null
+          bypass_sms_verification?: boolean | null
           created_at?: string
           department: string
           disabled?: boolean | null
@@ -650,6 +780,7 @@ export type Database = {
         Update: {
           address?: string | null
           auth_user_id?: string | null
+          bypass_sms_verification?: boolean | null
           created_at?: string
           department?: string
           disabled?: boolean | null
@@ -756,6 +887,79 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "field_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_coffee_lots: {
+        Row: {
+          assessed_at: string
+          assessed_by: string
+          coffee_record_id: string | null
+          created_at: string
+          finance_notes: string | null
+          finance_status: Database["public"]["Enums"]["lot_finance_status"]
+          id: string
+          quality_assessment_id: string | null
+          quality_json: Json
+          quantity_kg: number
+          supplier_id: string | null
+          total_amount_ugx: number | null
+          unit_price_ugx: number
+          updated_at: string
+        }
+        Insert: {
+          assessed_at?: string
+          assessed_by: string
+          coffee_record_id?: string | null
+          created_at?: string
+          finance_notes?: string | null
+          finance_status?: Database["public"]["Enums"]["lot_finance_status"]
+          id?: string
+          quality_assessment_id?: string | null
+          quality_json: Json
+          quantity_kg: number
+          supplier_id?: string | null
+          total_amount_ugx?: number | null
+          unit_price_ugx: number
+          updated_at?: string
+        }
+        Update: {
+          assessed_at?: string
+          assessed_by?: string
+          coffee_record_id?: string | null
+          created_at?: string
+          finance_notes?: string | null
+          finance_status?: Database["public"]["Enums"]["lot_finance_status"]
+          id?: string
+          quality_assessment_id?: string | null
+          quality_json?: Json
+          quantity_kg?: number
+          supplier_id?: string | null
+          total_amount_ugx?: number | null
+          unit_price_ugx?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_coffee_lots_coffee_record_id_fkey"
+            columns: ["coffee_record_id"]
+            isOneToOne: false
+            referencedRelation: "coffee_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_coffee_lots_quality_assessment_id_fkey"
+            columns: ["quality_assessment_id"]
+            isOneToOne: true
+            referencedRelation: "quality_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_coffee_lots_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -1832,6 +2036,36 @@ export type Database = {
         }
         Relationships: []
       }
+      receipts: {
+        Row: {
+          created_at: string
+          doc_id: string
+          doc_type: string
+          id: string
+          issued_at: string
+          issued_by: string
+          receipt_no: string
+        }
+        Insert: {
+          created_at?: string
+          doc_id: string
+          doc_type: string
+          id?: string
+          issued_at?: string
+          issued_by: string
+          receipt_no: string
+        }
+        Update: {
+          created_at?: string
+          doc_id?: string
+          doc_type?: string
+          id?: string
+          issued_at?: string
+          issued_by?: string
+          receipt_no?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           category: string
@@ -2306,6 +2540,53 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_advances: {
+        Row: {
+          amount_ugx: number
+          created_at: string
+          description: string | null
+          id: string
+          is_closed: boolean
+          issued_at: string
+          issued_by: string
+          outstanding_ugx: number
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_ugx: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_closed?: boolean
+          issued_at?: string
+          issued_by: string
+          outstanding_ugx: number
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_ugx?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_closed?: boolean
+          issued_at?: string
+          issued_by?: string
+          outstanding_ugx?: number
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_advances_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_contracts: {
         Row: {
           advance_given: number | null
@@ -2365,6 +2646,78 @@ export type Database = {
           voided_by?: string | null
         }
         Relationships: []
+      }
+      supplier_payments: {
+        Row: {
+          advance_recovered_ugx: number
+          amount_paid_ugx: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          gross_payable_ugx: number
+          id: string
+          lot_id: string
+          method: Database["public"]["Enums"]["payment_method"]
+          notes: string | null
+          reference: string | null
+          requested_at: string
+          requested_by: string
+          status: Database["public"]["Enums"]["payment_status"]
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          advance_recovered_ugx?: number
+          amount_paid_ugx: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          gross_payable_ugx: number
+          id?: string
+          lot_id: string
+          method: Database["public"]["Enums"]["payment_method"]
+          notes?: string | null
+          reference?: string | null
+          requested_at?: string
+          requested_by: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          advance_recovered_ugx?: number
+          amount_paid_ugx?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          gross_payable_ugx?: number
+          id?: string
+          lot_id?: string
+          method?: Database["public"]["Enums"]["payment_method"]
+          notes?: string | null
+          reference?: string | null
+          requested_at?: string
+          requested_by?: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "finance_coffee_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppliers: {
         Row: {
@@ -2672,6 +3025,10 @@ export type Database = {
         Args: { employee_salary: number }
         Returns: number
       }
+      can_bypass_sms_verification: {
+        Args: { user_email: string }
+        Returns: boolean
+      }
       check_auth_user_exists: {
         Args: { user_uuid: string }
         Returns: Json
@@ -2754,6 +3111,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      migrate_approved_assessments_to_finance: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       process_daily_salary_credits: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -2768,7 +3129,10 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      expense_status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "POSTED"
+      lot_finance_status: "READY_FOR_FINANCE" | "APPROVED_FOR_PAYMENT" | "PAID"
+      payment_method: "CASH" | "CHEQUE" | "BANK_TRANSFER"
+      payment_status: "PENDING_ADMIN_APPROVAL" | "POSTED" | "VOID"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2895,6 +3259,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      expense_status: ["PENDING_APPROVAL", "APPROVED", "REJECTED", "POSTED"],
+      lot_finance_status: ["READY_FOR_FINANCE", "APPROVED_FOR_PAYMENT", "PAID"],
+      payment_method: ["CASH", "CHEQUE", "BANK_TRANSFER"],
+      payment_status: ["PENDING_ADMIN_APPROVAL", "POSTED", "VOID"],
+    },
   },
 } as const

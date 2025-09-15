@@ -18,6 +18,52 @@ Deno.serve(async (req) => {
     console.log('2FA request body:', JSON.stringify(body, null, 2));
     console.log('2FA request:', { action, email, phone: phone?.substring(0, 6) + '***' });
     
+    // Create Supabase admin client
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+
+    // Check if this user can bypass SMS verification (like Timothy in IT)
+    if (email) {
+      const { data: canBypass } = await supabaseAdmin
+        .rpc('can_bypass_sms_verification', { user_email: email });
+
+      if (canBypass) {
+        console.log(`🔓 User ${email} has SMS bypass enabled`);
+        
+        if (action === 'verify_code') {
+          console.log('✅ Verification bypassed for authorized user');
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'Verification bypassed - you are authorized to access without SMS',
+              bypassed: true 
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } else if (action === 'send_code') {
+          console.log('✅ SMS sending bypassed for authorized user');
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'SMS verification not required for your account',
+              bypassed: true 
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+    
+    // Continue with normal validation for non-bypass users
+    
     // Validate required fields
     if (!action) {
       return new Response(
@@ -41,16 +87,6 @@ Deno.serve(async (req) => {
     }
 
     // Create Supabase admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
 
     if (action === 'send_code') {
       console.log('📱 Generating new verification code for:', { email, phone: phone?.substring(0, 6) + '***' });
