@@ -3,12 +3,11 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, Calendar } from 'lucide-react';
+import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp } from 'lucide-react';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import MoneyRequestsFinalApproval from './MoneyRequestsFinalApproval';
 import RoleAssignmentManager from './RoleAssignmentManager';
 import PermissionOverview from './PermissionOverview';
-import { DailySalaryManager } from './DailySalaryManager';
 import UserPermissionsList from './UserPermissionsList';
 import QuickPermissionAssignment from './QuickPermissionAssignment';
 import AdminExpenseRequestsManager from './AdminExpenseRequestsManager';
@@ -29,7 +28,7 @@ const AdminDashboard = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-4 lg:w-auto">
+        <TabsList className="grid grid-cols-3 lg:w-auto">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Overview
@@ -41,10 +40,6 @@ const AdminDashboard = () => {
           <TabsTrigger value="permissions" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Permissions
-          </TabsTrigger>
-          <TabsTrigger value="daily-salary" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Daily Salary
           </TabsTrigger>
         </TabsList>
 
@@ -118,7 +113,7 @@ const AdminDashboard = () => {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setActiveTab('approvals')}>
                   <CardContent className="p-4 text-center">
                     <Shield className="h-6 w-6 mx-auto mb-2 text-primary" />
@@ -129,12 +124,6 @@ const AdminDashboard = () => {
                   <CardContent className="p-4 text-center">
                     <Users className="h-6 w-6 mx-auto mb-2 text-primary" />
                     <p className="text-sm font-medium">Manage Roles</p>
-                  </CardContent>
-                </Card>
-                <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setActiveTab('daily-salary')}>
-                  <CardContent className="p-4 text-center">
-                    <Calendar className="h-6 w-6 mx-auto mb-2 text-primary" />
-                    <p className="text-sm font-medium">Daily Salary</p>
                   </CardContent>
                 </Card>
                 <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
@@ -200,9 +189,6 @@ const AdminDashboard = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="daily-salary" className="space-y-6">
-          <DailySalaryManager />
-        </TabsContent>
       </Tabs>
     </div>
   );
