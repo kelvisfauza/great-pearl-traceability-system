@@ -196,7 +196,12 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                       </div>
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{request.phone || request.details?.phoneNumber || 'Not provided'}</span>
+                        <span className="text-sm">{
+                          request.phone || 
+                          request.details?.phoneNumber || 
+                          (typeof request.details?.reason === 'string' && request.details.reason.match(/^[0-9+\-\s()]+$/) ? request.details.reason : null) ||
+                          'Not provided'
+                        }</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
