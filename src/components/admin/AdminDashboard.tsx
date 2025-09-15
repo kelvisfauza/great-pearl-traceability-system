@@ -15,6 +15,7 @@ import UserPermissionsList from './UserPermissionsList';
 import QuickPermissionAssignment from './QuickPermissionAssignment';
 import AdminExpenseRequestsManager from './AdminExpenseRequestsManager';
 import FirebaseToSupabaseMigration from './FirebaseToSupabaseMigration';
+import QuickUserCreation from './QuickUserCreation';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -215,6 +216,7 @@ const AdminDashboard = () => {
 
         <TabsContent value="migration" className="space-y-6">
           <FirebaseToSupabaseMigration />
+          <QuickUserCreation />
         </TabsContent>
 
         <TabsContent value="daily-salary" className="space-y-6">
