@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { generateStoreReportPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
 import StoreReportDocumentViewer from './StoreReportDocumentViewer';
+import { supabase } from '@/integrations/supabase/client';
 
 interface StoreReportViewerProps {
   report: any;
@@ -19,6 +20,60 @@ interface StoreReportViewerProps {
 const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProps) => {
 
   if (!report) return null;
+
+  const handleViewAllDocuments = async () => {
+    const documents = [];
+    
+    if (report.attachment_url) {
+      try {
+        const { data, error } = await supabase.storage
+          .from('report-documents')
+          .download(report.attachment_url);
+        
+        if (!error) {
+          const url = URL.createObjectURL(data);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = report.attachment_name || 'Document 1';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          documents.push('Document 1');
+        }
+      } catch (error) {
+        console.error('Error downloading document 1:', error);
+      }
+    }
+
+    if (report.delivery_note_url) {
+      try {
+        const { data, error } = await supabase.storage
+          .from('report-documents')
+          .download(report.delivery_note_url);
+        
+        if (!error) {
+          const url = URL.createObjectURL(data);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = report.delivery_note_name || 'Document 2';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          documents.push('Document 2');
+        }
+      } catch (error) {
+        console.error('Error downloading document 2:', error);
+      }
+    }
+
+    if (documents.length > 0) {
+      toast.success(`Downloaded ${documents.join(' and ')} for viewing`);
+    } else {
+      toast.error('Failed to download documents');
+    }
+  };
 
 
   const handlePreviewPDF = () => {
@@ -183,60 +238,106 @@ const StoreReportViewer = ({ report, open, onOpenChange }: StoreReportViewerProp
                   <FileText className="h-5 w-5" />
                   Attached Documents
                 </CardTitle>
-                <CardDescription>
-                  Scanned documents related to this store report
+                <CardDescription className="flex items-center justify-between">
+                  <span>Scanned documents related to this store report</span>
+                  {(report.attachment_url && report.delivery_note_url) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleViewAllDocuments}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View All Documents
+                    </Button>
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* General Document */}
-                  {report.attachment_url && (
-                    <div className="p-4 border rounded-lg bg-muted/30">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-success-foreground" />
-                          General Document
-                        </h4>
+                  {/* Two Document Side-by-Side Layout when both exist */}
+                  {(report.attachment_url && report.delivery_note_url) ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Document 1 */}
+                      <div className="p-4 border rounded-lg bg-muted/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-success-foreground" />
+                            Document 1
+                          </h4>
+                        </div>
+                        <StoreReportDocumentViewer
+                          documentUrl={report.attachment_url}
+                          documentName={report.attachment_name || 'Document 1'}
+                          documentType="general"
+                        />
                       </div>
-                      <StoreReportDocumentViewer
-                        documentUrl={report.attachment_url}
-                        documentName={report.attachment_name || 'General Document'}
-                        documentType="general"
-                      />
-                    </div>
-                  )}
 
-                  {/* Delivery Note */}
-                  {report.delivery_note_url && (
-                    <div className="p-4 border rounded-lg bg-blue-50/30">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-primary" />
-                          Delivery Note
-                        </h4>
+                      {/* Document 2 */}
+                      <div className="p-4 border rounded-lg bg-blue-50/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            Document 2
+                          </h4>
+                        </div>
+                        <StoreReportDocumentViewer
+                          documentUrl={report.delivery_note_url}
+                          documentName={report.delivery_note_name || 'Document 2'}
+                          documentType="delivery_note"
+                        />
                       </div>
-                      <StoreReportDocumentViewer
-                        documentUrl={report.delivery_note_url}
-                        documentName={report.delivery_note_name || 'Delivery Note'}
-                        documentType="delivery_note"
-                      />
                     </div>
-                  )}
+                  ) : (
+                    /* Single Document Layout */
+                    <div className="space-y-4">
+                      {/* Single Document */}
+                      {report.attachment_url && (
+                        <div className="p-4 border rounded-lg bg-muted/30">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-success-foreground" />
+                              Document
+                            </h4>
+                          </div>
+                          <StoreReportDocumentViewer
+                            documentUrl={report.attachment_url}
+                            documentName={report.attachment_name || 'Document'}
+                            documentType="general"
+                          />
+                        </div>
+                      )}
 
-                  {/* Dispatch Report */}
-                  {report.dispatch_report_url && (
-                    <div className="p-4 border rounded-lg bg-purple-50/30">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium flex items-center gap-2">
-                          <Receipt className="h-4 w-4 text-accent-foreground" />
-                          Dispatch Report
-                        </h4>
-                      </div>
-                      <StoreReportDocumentViewer
-                        documentUrl={report.dispatch_report_url}
-                        documentName={report.dispatch_report_name || 'Dispatch Report'}
-                        documentType="dispatch_report"
-                      />
+                      {report.delivery_note_url && (
+                        <div className="p-4 border rounded-lg bg-blue-50/30">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-primary" />
+                              Document
+                            </h4>
+                          </div>
+                          <StoreReportDocumentViewer
+                            documentUrl={report.delivery_note_url}
+                            documentName={report.delivery_note_name || 'Document'}
+                            documentType="delivery_note"
+                          />
+                        </div>
+                      )}
+
+                      {report.dispatch_report_url && (
+                        <div className="p-4 border rounded-lg bg-purple-50/30">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <Receipt className="h-4 w-4 text-accent-foreground" />
+                              Document
+                            </h4>
+                          </div>
+                          <StoreReportDocumentViewer
+                            documentUrl={report.dispatch_report_url}
+                            documentName={report.dispatch_report_name || 'Document'}
+                            documentType="dispatch_report"
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

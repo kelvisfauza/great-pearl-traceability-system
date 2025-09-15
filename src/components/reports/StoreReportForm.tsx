@@ -82,6 +82,77 @@ const StoreReportForm = () => {
     }));
   };
 
+  const handleBulkFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    if (files.length > 2) {
+      toast.error("Please select only 2 documents");
+      return;
+    }
+
+    setUploadingFile(true);
+    
+    try {
+      const uploadPromises = Array.from(files).map(async (file, index) => {
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+        if (!allowedTypes.includes(file.type)) {
+          throw new Error(`File ${index + 1}: Please upload a valid image (JPEG, PNG) or PDF file`);
+        }
+
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error(`File ${index + 1}: File size must be less than 10MB`);
+        }
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `reports/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('report-documents')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        return {
+          filePath,
+          fileName: file.name,
+          index
+        };
+      });
+
+      const results = await Promise.all(uploadPromises);
+      
+      // Update form data with uploaded files
+      const updateFields: any = {};
+      results.forEach((result) => {
+        if (result.index === 0) {
+          updateFields.attachment_url = result.filePath;
+          updateFields.attachment_name = result.fileName;
+        } else if (result.index === 1) {
+          updateFields.delivery_note_url = result.filePath;
+          updateFields.delivery_note_name = result.fileName;
+        }
+      });
+
+      setFormData(prev => ({
+        ...prev,
+        ...updateFields
+      }));
+
+      toast.success(`${results.length} document(s) uploaded successfully`);
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      toast.error(error instanceof Error ? error.message : "Failed to upload documents");
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, fileType: 'general' | 'delivery_note' | 'dispatch_report') => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -302,20 +373,20 @@ const StoreReportForm = () => {
             </div>
           </div>
 
-          {/* Document Attachment Section */}
+          {/* Document Attachment Section - Upload 2 Documents */}
           <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
             <h3 className="text-lg font-medium flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Document Attachments (Optional)
+              Document Attachments - Upload 2 Documents
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* General Document */}
+              {/* Document 1 */}
               <div className="space-y-2">
-                <Label>General Supporting Document</Label>
+                <Label>Document 1</Label>
                 <div className="flex gap-2">
                   <input
-                    id="general-file-upload"
+                    id="document-1-upload"
                     type="file"
                     accept=".jpg,.jpeg,.png,.pdf"
                     onChange={(e) => handleFileUpload(e, 'general')}
@@ -324,12 +395,12 @@ const StoreReportForm = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => document.getElementById('general-file-upload')?.click()}
+                    onClick={() => document.getElementById('document-1-upload')?.click()}
                     disabled={uploadingFile}
                     className="flex-1"
                   >
                     <Upload className="h-4 w-4 mr-2" />
-                    {uploadingFile ? 'Uploading...' : 'Upload Document'}
+                    {uploadingFile ? 'Uploading...' : 'Upload Document 1'}
                   </Button>
                 </div>
                 {formData.attachment_name && (
@@ -339,72 +410,72 @@ const StoreReportForm = () => {
                   </div>
                 )}
               </div>
-              
-              {/* Sale Documents - Show only if there's a sale */}
-              {(formData.kilograms_sold > 0 || formData.bags_sold > 0) && (
-                <>
-                  {/* Delivery Note */}
-                  <div className="space-y-2">
-                    <Label>Delivery Note</Label>
-                    <div className="flex gap-2">
-                      <input
-                        id="delivery-note-upload"
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={(e) => handleFileUpload(e, 'delivery_note')}
-                        className="hidden"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => document.getElementById('delivery-note-upload')?.click()}
-                        disabled={uploadingFile}
-                        className="flex-1"
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        {uploadingFile ? 'Uploading...' : 'Upload Delivery Note'}
-                      </Button>
-                    </div>
-                    {formData.delivery_note_name && (
-                      <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
-                        <FileText className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm text-blue-800">{formData.delivery_note_name}</span>
-                      </div>
-                    )}
+
+              {/* Document 2 */}
+              <div className="space-y-2">
+                <Label>Document 2</Label>
+                <div className="flex gap-2">
+                  <input
+                    id="document-2-upload"
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    onChange={(e) => handleFileUpload(e, 'delivery_note')}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('document-2-upload')?.click()}
+                    disabled={uploadingFile}
+                    className="flex-1"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploadingFile ? 'Uploading...' : 'Upload Document 2'}
+                  </Button>
+                </div>
+                {formData.delivery_note_name && (
+                  <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm text-blue-800">{formData.delivery_note_name}</span>
                   </div>
-                  
-                  {/* Dispatch Report */}
-                  <div className="space-y-2">
-                    <Label>Dispatch Report</Label>
-                    <div className="flex gap-2">
-                      <input
-                        id="dispatch-report-upload"
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={(e) => handleFileUpload(e, 'dispatch_report')}
-                        className="hidden"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => document.getElementById('dispatch-report-upload')?.click()}
-                        disabled={uploadingFile}
-                        className="flex-1"
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        {uploadingFile ? 'Uploading...' : 'Upload Dispatch Report'}
-                      </Button>
-                    </div>
-                    {formData.dispatch_report_name && (
-                      <div className="flex items-center gap-2 mt-2 p-2 bg-purple-50 border border-purple-200 rounded">
-                        <FileText className="h-4 w-4 text-purple-600" />
-                        <span className="text-sm text-purple-800">{formData.dispatch_report_name}</span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
+                )}
+              </div>
             </div>
+
+            {/* Bulk Upload Option */}
+            <div className="pt-2 border-t">
+              <Label>Or upload both documents at once:</Label>
+              <div className="mt-2">
+                <input
+                  id="bulk-upload"
+                  type="file"
+                  multiple
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={handleBulkFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('bulk-upload')?.click()}
+                  disabled={uploadingFile}
+                  className="w-full"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {uploadingFile ? 'Uploading...' : 'Upload 2 Documents Together'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Upload Progress */}
+            {(formData.attachment_name && formData.delivery_note_name) && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 text-green-800">
+                  <FileText className="h-4 w-4" />
+                  <span className="font-medium">Both documents uploaded successfully!</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
