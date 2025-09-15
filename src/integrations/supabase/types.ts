@@ -116,6 +116,7 @@ export type Database = {
           finance_approved_by: string | null
           id: string
           priority: string
+          rejection_comments: string | null
           requestedby: string
           status: string
           title: string
@@ -136,6 +137,7 @@ export type Database = {
           finance_approved_by?: string | null
           id?: string
           priority?: string
+          rejection_comments?: string | null
           requestedby: string
           status?: string
           title: string
@@ -156,6 +158,7 @@ export type Database = {
           finance_approved_by?: string | null
           id?: string
           priority?: string
+          rejection_comments?: string | null
           requestedby?: string
           status?: string
           title?: string
