@@ -94,6 +94,7 @@ export const ComprehensiveSMSManager = () => {
       setSmsFailures(failuresData || []);
     } catch (error) {
       console.error('Error fetching SMS data:', error);
+      console.log('Detailed error:', JSON.stringify(error, null, 2));
       toast({
         title: "Error",
         description: "Failed to fetch SMS data",

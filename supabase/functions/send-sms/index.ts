@@ -90,20 +90,31 @@ serve(async (req) => {
         console.log('SMS sent successfully via YoolaSMS:', smsResult);
 
         // Log successful SMS to database
-        await supabase.from('sms_logs').insert({
-          recipient_phone: formattedPhone,
-          recipient_name: userName,
-          recipient_email: recipientEmail,
-          message_content: message,
-          message_type: messageType || 'general',
-          status: 'sent',
-          provider: 'YoolaSMS',
-          provider_response: smsResult,
-          credits_used: smsResult.credits_used || 1,
-          department: department,
-          triggered_by: triggeredBy,
-          request_id: requestId
-        });
+        try {
+          console.log('Attempting to log SMS to database...');
+          const logResult = await supabase.from('sms_logs').insert({
+            recipient_phone: formattedPhone,
+            recipient_name: userName,
+            recipient_email: recipientEmail,
+            message_content: message,
+            message_type: messageType || 'general',
+            status: 'sent',
+            provider: 'YoolaSMS',
+            provider_response: smsResult,
+            credits_used: smsResult.credits_used || 1,
+            department: department,
+            triggered_by: triggeredBy,
+            request_id: requestId
+          });
+          
+          if (logResult.error) {
+            console.error('Database logging error:', logResult.error);
+          } else {
+            console.log('SMS successfully logged to database');
+          }
+        } catch (dbError) {
+          console.error('Failed to log SMS to database:', dbError);
+        }
 
         return new Response(
           JSON.stringify({ 
@@ -122,19 +133,30 @@ serve(async (req) => {
         console.error('YoolaSMS API error:', errorText);
         
         // Log failed SMS to database
-        await supabase.from('sms_logs').insert({
-          recipient_phone: formattedPhone,
-          recipient_name: userName,
-          recipient_email: recipientEmail,
-          message_content: message,
-          message_type: messageType || 'general',
-          status: 'failed',
-          provider: 'YoolaSMS',
-          failure_reason: errorText,
-          department: department,
-          triggered_by: triggeredBy,
-          request_id: requestId
-        });
+        try {
+          console.log('Attempting to log failed SMS to database...');
+          const logResult = await supabase.from('sms_logs').insert({
+            recipient_phone: formattedPhone,
+            recipient_name: userName,
+            recipient_email: recipientEmail,
+            message_content: message,
+            message_type: messageType || 'general',
+            status: 'failed',
+            provider: 'YoolaSMS',
+            failure_reason: errorText,
+            department: department,
+            triggered_by: triggeredBy,
+            request_id: requestId
+          });
+          
+          if (logResult.error) {
+            console.error('Database logging error (failed SMS):', logResult.error);
+          } else {
+            console.log('Failed SMS successfully logged to database');
+          }
+        } catch (dbError) {
+          console.error('Failed to log failed SMS to database:', dbError);
+        }
         
         return new Response(
           JSON.stringify({ 
@@ -154,19 +176,30 @@ serve(async (req) => {
       console.error('YoolaSMS request failed:', error)
       
       // Log failed SMS to database
-      await supabase.from('sms_logs').insert({
-        recipient_phone: formattedPhone,
-        recipient_name: userName,
-        recipient_email: recipientEmail,
-        message_content: message,
-        message_type: messageType || 'general',
-        status: 'failed',
-        provider: 'YoolaSMS',
-        failure_reason: error.message,
-        department: department,
-        triggered_by: triggeredBy,
-        request_id: requestId
-      });
+      try {
+        console.log('Attempting to log exception SMS to database...');
+        const logResult = await supabase.from('sms_logs').insert({
+          recipient_phone: formattedPhone,
+          recipient_name: userName,
+          recipient_email: recipientEmail,
+          message_content: message,
+          message_type: messageType || 'general',
+          status: 'failed',
+          provider: 'YoolaSMS',
+          failure_reason: error.message,
+          department: department,
+          triggered_by: triggeredBy,
+          request_id: requestId
+        });
+        
+        if (logResult.error) {
+          console.error('Database logging error (exception):', logResult.error);
+        } else {
+          console.log('Exception SMS successfully logged to database');
+        }
+      } catch (dbError) {
+        console.error('Failed to log exception SMS to database:', dbError);
+      }
       
       return new Response(
         JSON.stringify({ 
