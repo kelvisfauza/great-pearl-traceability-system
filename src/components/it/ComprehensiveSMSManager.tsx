@@ -65,41 +65,48 @@ export const ComprehensiveSMSManager = () => {
   const [filterDays, setFilterDays] = useState(7);
   const { toast } = useToast();
 
-  const testInsert = async () => {
+  const sendTestSMS = async () => {
     try {
-      console.log('🧪 Testing SMS logs insert...');
-      const { data, error } = await supabase
-        .from('sms_logs')
-        .insert({
-          recipient_phone: '+256781316806',
-          recipient_name: 'Test User',
-          message_content: 'Test message from IT Department',
-          message_type: 'test',
-          status: 'sent',
-          provider: 'YoolaSMS',
-          triggered_by: 'IT Department Test',
-          department: 'IT'
-        })
-        .select();
+      console.log('📱 Sending test SMS...');
+      toast({
+        title: "Sending Test SMS",
+        description: "Sending test message to 0781121639...",
+      });
 
-      console.log('🧪 Test insert result:', { data, error });
+      const { data, error } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: '0781121639',
+          message: 'Test message from IT Department - SMS system is working properly!',
+          userName: 'Test User',
+          messageType: 'test',
+          triggeredBy: 'IT Department Test',
+          department: 'IT'
+        }
+      });
+
+      console.log('📱 Test SMS result:', { data, error });
       
       if (error) {
         toast({
-          title: "Test Insert Failed",
+          title: "Test SMS Failed",
           description: error.message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Test Insert Success", 
-          description: "Test SMS log inserted successfully",
+          title: "Test SMS Sent Successfully", 
+          description: "Test message sent to 0781121639",
         });
-        // Refresh data
-        fetchSMSData();
+        // Refresh data to show the new SMS log
+        setTimeout(() => fetchSMSData(), 2000);
       }
     } catch (error) {
-      console.error('🧪 Test insert error:', error);
+      console.error('📱 Test SMS error:', error);
+      toast({
+        title: "Test SMS Error",
+        description: "Failed to send test SMS",
+        variant: "destructive",
+      });
     }
   };
 
@@ -345,8 +352,8 @@ export const ComprehensiveSMSManager = () => {
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
               </Button>
-              <Button onClick={testInsert} variant="secondary" size="sm">
-                🧪 Test Insert
+              <Button onClick={sendTestSMS} variant="secondary" size="sm">
+                📱 Send Test SMS
               </Button>
             </div>
           </div>
