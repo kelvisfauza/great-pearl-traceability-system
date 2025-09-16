@@ -69,8 +69,10 @@ export const ComprehensiveSMSManager = () => {
     setLoading(true);
     try {
       const cutoffDate = subDays(new Date(), filterDays).toISOString();
+      console.log('Fetching SMS logs from:', cutoffDate);
 
       // Fetch SMS logs
+      console.log('About to fetch sms_logs...');
       const { data: logsData, error: logsError } = await supabase
         .from('sms_logs')
         .select('*')
@@ -78,9 +80,15 @@ export const ComprehensiveSMSManager = () => {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (logsError) throw logsError;
+      console.log('SMS logs query result:', { data: logsData, error: logsError });
+
+      if (logsError) {
+        console.error('SMS logs error details:', logsError);
+        throw logsError;
+      }
 
       // Fetch SMS failures
+      console.log('About to fetch sms_failures...');
       const { data: failuresData, error: failuresError } = await supabase
         .from('sms_failures')
         .select('*')
@@ -88,8 +96,14 @@ export const ComprehensiveSMSManager = () => {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (failuresError) throw failuresError;
+      console.log('SMS failures query result:', { data: failuresData, error: failuresError });
 
+      if (failuresError) {
+        console.error('SMS failures error details:', failuresError);
+        throw failuresError;
+      }
+
+      console.log('Setting SMS data - Logs:', logsData?.length, 'Failures:', failuresData?.length);
       setSmsLogs(logsData || []);
       setSmsFailures(failuresData || []);
     } catch (error) {
@@ -97,7 +111,7 @@ export const ComprehensiveSMSManager = () => {
       console.log('Detailed error:', JSON.stringify(error, null, 2));
       toast({
         title: "Error",
-        description: "Failed to fetch SMS data",
+        description: `Failed to fetch SMS data: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
