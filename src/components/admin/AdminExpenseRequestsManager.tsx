@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
-import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield, Phone } from 'lucide-react';
+import { useRiskAssessment } from '@/hooks/useRiskAssessment';
+import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield, Phone, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +19,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   onReject 
 }) => {
   const { requests, loading, updateRequestStatus } = useApprovalRequests();
+  const { assessExpenseRisk } = useRiskAssessment();
   const [rejectionModalOpen, setRejectionModalOpen] = React.useState(false);
   const [selectedRequestId, setSelectedRequestId] = React.useState<string>('');
   const [selectedRequestTitle, setSelectedRequestTitle] = React.useState<string>('');
@@ -105,6 +107,35 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     setRejectionModalOpen(false);
     setSelectedRequestId('');
     setSelectedRequestTitle('');
+  };
+
+  const getRiskBadgeColor = (riskLevel: string) => {
+    switch (riskLevel) {
+      case 'CRITICAL':
+        return 'destructive';
+      case 'HIGH':
+        return 'destructive';
+      case 'MEDIUM':
+        return 'secondary';
+      case 'LOW':
+        return 'default';
+      default:
+        return 'outline';
+    }
+  };
+
+  const getRiskIcon = (riskLevel: string) => {
+    switch (riskLevel) {
+      case 'CRITICAL':
+      case 'HIGH':
+        return <AlertTriangle className="h-4 w-4" />;
+      case 'MEDIUM':
+        return <AlertCircle className="h-4 w-4" />;
+      case 'LOW':
+        return <CheckCircle className="h-4 w-4" />;
+      default:
+        return <AlertCircle className="h-4 w-4" />;
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -213,19 +244,93 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                 <p>No expense requests to review</p>
               </div>
             ) : (
-              expenseRequests.map((request) => (
+              expenseRequests.map((request) => {
+                const riskAssessment = assessExpenseRisk(request);
+                const paymentPhone = request.details?.phoneNumber || userProfiles[request.requestedby]?.phone || 'Not provided';
+                const expenseReason = request.details?.reason || 'No reason provided';
+                
+                return (
                 <Card key={request.id} className="border-l-4 border-l-purple-400">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-semibold text-lg">{request.title}</h3>
                         <p className="text-muted-foreground">{request.description}</p>
+                        
+                        {/* Expense Details */}
+                        <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-sm font-medium text-blue-800">Reason for Expense:</span>
+                              <p className="text-sm text-blue-700 mt-1">{expenseReason}</p>
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-blue-800">Payment Phone Number:</span>
+                              <p className="text-sm text-blue-700 font-mono">{paymentPhone}</p>
+                            </div>
+                            {request.details?.expenseCategory && (
+                              <div>
+                                <span className="text-sm font-medium text-blue-800">Expense Category:</span>
+                                <p className="text-sm text-blue-700">{request.details.expenseCategory}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 ml-4">
                         {getStatusIcon(request.status)}
                         <Badge variant={getStatusBadgeVariant(request.status)}>
                           {request.status}
                         </Badge>
+                      </div>
+                    </div>
+
+                    {/* Risk Assessment Panel */}
+                    <div className="mb-4 p-4 bg-slate-50 rounded-lg border">
+                      <div className="flex items-center gap-2 mb-3">
+                        {getRiskIcon(riskAssessment.riskLevel)}
+                        <span className="font-medium">Risk Assessment</span>
+                        <Badge variant={getRiskBadgeColor(riskAssessment.riskLevel)}>
+                          {riskAssessment.riskLevel} RISK
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          (Score: {riskAssessment.riskScore}/100)
+                        </span>
+                      </div>
+                      
+                      {riskAssessment.flaggedReasons.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-sm font-medium text-orange-700 mb-1">Risk Factors:</p>
+                          <ul className="text-sm text-orange-600 space-y-1">
+                            {riskAssessment.flaggedReasons.map((reason, index) => (
+                              <li key={index} className="flex items-start gap-1">
+                                <span className="text-orange-500">•</span>
+                                {reason}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      <div>
+                        <p className="text-sm font-medium text-green-700 mb-1">Recommendations:</p>
+                        <ul className="text-sm text-green-600 space-y-1">
+                          {riskAssessment.recommendations.map((rec, index) => (
+                            <li key={index} className="flex items-start gap-1">
+                              <span className="text-green-500">•</span>
+                              {rec}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      
+                      <div className="mt-3 p-2 bg-white rounded border">
+                        <p className="text-sm">
+                          <span className="font-medium">Approval Required:</span>
+                          <span className={`ml-2 ${riskAssessment.requiresApproval ? 'text-red-600' : 'text-green-600'}`}>
+                            {riskAssessment.requiresApproval ? 'YES - Manual review needed' : 'NO - Can be fast-tracked'}
+                          </span>
+                        </p>
                       </div>
                     </div>
 
@@ -351,7 +456,8 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                     )}
                   </CardContent>
                 </Card>
-              ))
+                );
+              })
             )}
           </div>
         </CardContent>
