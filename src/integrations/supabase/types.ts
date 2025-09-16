@@ -2379,6 +2379,63 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_logs: {
+        Row: {
+          created_at: string
+          credits_used: number | null
+          department: string | null
+          failure_reason: string | null
+          id: string
+          message_content: string
+          message_type: string
+          provider: string | null
+          provider_response: Json | null
+          recipient_email: string | null
+          recipient_name: string | null
+          recipient_phone: string
+          request_id: string | null
+          status: string
+          triggered_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          credits_used?: number | null
+          department?: string | null
+          failure_reason?: string | null
+          id?: string
+          message_content: string
+          message_type?: string
+          provider?: string | null
+          provider_response?: Json | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone: string
+          request_id?: string | null
+          status?: string
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          credits_used?: number | null
+          department?: string | null
+          failure_reason?: string | null
+          id?: string
+          message_content?: string
+          message_type?: string
+          provider?: string | null
+          provider_response?: Json | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string
+          request_id?: string | null
+          status?: string
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       storage_locations: {
         Row: {
           capacity: number

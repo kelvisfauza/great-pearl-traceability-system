@@ -40,6 +40,7 @@ import SystemMaintenance from '@/components/it/SystemMaintenance';
 import SystemConsoleMonitor from '@/components/it/SystemConsoleMonitor';
 import DeletionRequestsManager from '@/components/admin/DeletionRequestsManager';
 import { SMSFailureManager } from '@/components/it/SMSFailureManager';
+import { ComprehensiveSMSManager } from '@/components/it/ComprehensiveSMSManager';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
@@ -165,7 +166,7 @@ const ITDepartment = () => {
           </TabsContent>
 
           <TabsContent value="sms" className="space-y-4">
-            <SMSFailureManager />
+            <ComprehensiveSMSManager />
           </TabsContent>
 
           <TabsContent value="console" className="space-y-4">

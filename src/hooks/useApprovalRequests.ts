@@ -99,7 +99,12 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
         body: {
           phone: userPhone,
           message: message,
-          userName: userName
+          userName: userName,
+          messageType: 'approval',
+          triggeredBy: 'Expense Approval System',
+          requestId: request.id,
+          department: request.department,
+          recipientEmail: request.requestedby
         }
       });
       console.log('SMS notification sent successfully');
