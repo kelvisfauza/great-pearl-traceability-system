@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
-import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, TrendingUp } from 'lucide-react';
+import { useRiskAssessment } from '@/hooks/useRiskAssessment';
+import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, TrendingUp, Shield, Phone, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
 
@@ -14,6 +15,7 @@ interface ExpenseRequestsManagerProps {
 
 export const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({ onApprove, onReject }) => {
   const { requests, loading, updateRequestStatus } = useApprovalRequests();
+  const { assessExpenseRisk } = useRiskAssessment();
   const [rejectionModalOpen, setRejectionModalOpen] = React.useState(false);
   const [selectedRequestId, setSelectedRequestId] = React.useState<string>('');
   const [selectedRequestTitle, setSelectedRequestTitle] = React.useState<string>('');
@@ -102,6 +104,26 @@ export const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({ 
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const getRiskBadgeColor = (riskLevel: string) => {
+    switch (riskLevel) {
+      case 'LOW': return 'bg-green-100 text-green-800 border-green-200';
+      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'HIGH': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'CRITICAL': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getRiskIcon = (riskLevel: string) => {
+    switch (riskLevel) {
+      case 'LOW': return <Shield className="h-3 w-3" />;
+      case 'MEDIUM': return <AlertCircle className="h-3 w-3" />;
+      case 'HIGH': return <AlertTriangle className="h-3 w-3" />;
+      case 'CRITICAL': return <AlertTriangle className="h-3 w-3" />;
+      default: return <Shield className="h-3 w-3" />;
+    }
   };
 
   if (loading) {
@@ -201,6 +223,64 @@ export const ExpenseRequestsManager: React.FC<ExpenseRequestsManagerProps> = ({ 
                         <span className="text-sm capitalize">{request.priority}</span>
                       </div>
                     </div>
+
+                    {/* Risk Assessment Section */}
+                    {(() => {
+                      const riskAssessment = assessExpenseRisk(request);
+                      return (
+                        <div className="mb-4 p-3 bg-slate-50 rounded-lg border">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium">Risk Assessment:</span>
+                            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getRiskBadgeColor(riskAssessment.riskLevel)}`}>
+                              {getRiskIcon(riskAssessment.riskLevel)}
+                              {riskAssessment.riskLevel} RISK
+                            </div>
+                          </div>
+                          
+                          <div className="text-xs text-muted-foreground mb-2">
+                            Risk Score: {riskAssessment.riskScore}/100 | 
+                            Requires Approval: {riskAssessment.requiresApproval ? 'Yes' : 'No'}
+                          </div>
+                          
+                          {request.details && request.details.reason && (
+                            <div className="mb-2">
+                              <span className="text-xs font-medium">Reason:</span>
+                              <p className="text-xs text-muted-foreground">{request.details.reason}</p>
+                            </div>
+                          )}
+                          
+                          {request.details && request.details.phoneNumber && (
+                            <div className="mb-2 flex items-center gap-1">
+                              <Phone className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-xs font-medium">Payment Phone:</span>
+                              <span className="text-xs text-muted-foreground">{request.details.phoneNumber}</span>
+                            </div>
+                          )}
+                          
+                          {riskAssessment.flaggedReasons.length > 0 && (
+                            <div className="mb-2">
+                              <span className="text-xs font-medium text-red-600">Flagged Issues:</span>
+                              <ul className="text-xs text-red-600 list-disc list-inside">
+                                {riskAssessment.flaggedReasons.map((reason, index) => (
+                                  <li key={index}>{reason}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          
+                          {riskAssessment.recommendations.length > 0 && (
+                            <div>
+                              <span className="text-xs font-medium text-blue-600">Recommendations:</span>
+                              <ul className="text-xs text-blue-600 list-disc list-inside">
+                                {riskAssessment.recommendations.map((rec, index) => (
+                                  <li key={index}>{rec}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Approval Status Tracking */}
                     <div className="mb-4 p-3 bg-slate-50 rounded-lg">
