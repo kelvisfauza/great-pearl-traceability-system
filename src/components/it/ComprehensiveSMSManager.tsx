@@ -65,14 +65,52 @@ export const ComprehensiveSMSManager = () => {
   const [filterDays, setFilterDays] = useState(7);
   const { toast } = useToast();
 
+  const testInsert = async () => {
+    try {
+      console.log('🧪 Testing SMS logs insert...');
+      const { data, error } = await supabase
+        .from('sms_logs')
+        .insert({
+          recipient_phone: '+256781316806',
+          recipient_name: 'Test User',
+          message_content: 'Test message from IT Department',
+          message_type: 'test',
+          status: 'sent',
+          provider: 'YoolaSMS',
+          triggered_by: 'IT Department Test',
+          department: 'IT'
+        })
+        .select();
+
+      console.log('🧪 Test insert result:', { data, error });
+      
+      if (error) {
+        toast({
+          title: "Test Insert Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Test Insert Success", 
+          description: "Test SMS log inserted successfully",
+        });
+        // Refresh data
+        fetchSMSData();
+      }
+    } catch (error) {
+      console.error('🧪 Test insert error:', error);
+    }
+  };
+
   const fetchSMSData = async () => {
     setLoading(true);
     try {
       const cutoffDate = subDays(new Date(), filterDays).toISOString();
-      console.log('Fetching SMS logs from:', cutoffDate);
+      console.log('📧 Fetching SMS logs from:', cutoffDate);
 
       // Fetch SMS logs
-      console.log('About to fetch sms_logs...');
+      console.log('📋 About to fetch sms_logs...');
       const { data: logsData, error: logsError } = await supabase
         .from('sms_logs')
         .select('*')
@@ -80,10 +118,10 @@ export const ComprehensiveSMSManager = () => {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      console.log('SMS logs query result:', { data: logsData, error: logsError });
+      console.log('📊 SMS logs query result:', { data: logsData, error: logsError });
 
       if (logsError) {
-        console.error('SMS logs error details:', logsError);
+        console.error('❌ SMS logs error details:', logsError);
         throw logsError;
       }
 
@@ -302,10 +340,15 @@ export const ComprehensiveSMSManager = () => {
                 Monitor all SMS messages sent by the system and provide support for failed deliveries
               </CardDescription>
             </div>
-            <Button onClick={fetchSMSData} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={fetchSMSData} variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Button onClick={testInsert} variant="secondary" size="sm">
+                🧪 Test Insert
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
