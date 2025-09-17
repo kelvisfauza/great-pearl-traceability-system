@@ -22,7 +22,7 @@ import {
 
 const RoleBasedNavigation = () => {
   const location = useLocation();
-  const { employee } = useAuth();
+  const { employee, hasPermission } = useAuth();
   const access = useRoleBasedAccess();
   
   if (!employee) return null;
@@ -54,6 +54,12 @@ const RoleBasedNavigation = () => {
           icon: Shield, 
           path: "/store", 
           access: access.canViewInventory
+        },
+        { 
+          name: "EUDR Documentation", 
+          icon: FileText, 
+          path: "/eudr-documentation", 
+          access: hasPermission('EUDR Documentation')
         },
         { 
           name: "Inventory", 
