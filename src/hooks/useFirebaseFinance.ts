@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { firebaseClient } from '@/lib/firebaseClient';
 import { useToast } from '@/hooks/use-toast';
@@ -559,7 +559,25 @@ export const useFirebaseFinance = () => {
       console.log('Processing payment:', paymentId, method, actualAmount ? `Actual amount: ${actualAmount}` : 'Full amount');
       
       // Find the payment record to get quality assessment ID
-      const payment = payments.find(p => p.id === paymentId);
+      let payment = payments.find(p => p.id === paymentId);
+      
+      // If not found in local state, try to fetch from Firebase
+      if (!payment) {
+        console.log('Payment not found in local state, fetching from Firebase...');
+        try {
+          const paymentDoc = await getDoc(doc(db, 'payment_records', paymentId));
+          if (paymentDoc.exists()) {
+            payment = {
+              id: paymentDoc.id,
+              ...paymentDoc.data()
+            } as PaymentRecord;
+            console.log('Payment found in Firebase:', payment);
+          }
+        } catch (firebaseError) {
+          console.error('Error fetching payment from Firebase:', firebaseError);
+        }
+      }
+      
       if (!payment) {
         console.error('Payment not found:', paymentId);
         toast({
