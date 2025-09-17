@@ -3,15 +3,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useMillingData } from '@/hooks/useMillingData';
+import { useRoleBasedAccess } from '@/hooks/useRoleBasedAccess';
 import MillingTransactionEditModal from './MillingTransactionEditModal';
 
 const MillingTransactionsList = () => {
-  const { transactions, loading } = useMillingData();
+  const { transactions, loading, deleteTransaction } = useMillingData();
+  const { canDeleteEmployees } = useRoleBasedAccess();
   const [editTransaction, setEditTransaction] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+
+  const handleDelete = async (transaction: any) => {
+    if (window.confirm(`Are you sure you want to delete this transaction for ${transaction.customer_name}?`)) {
+      try {
+        await deleteTransaction(transaction.id);
+      } catch (error) {
+        console.error('Error deleting transaction:', error);
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -73,17 +85,29 @@ const MillingTransactionsList = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditTransaction(transaction);
-                          setEditModalOpen(true);
-                        }}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditTransaction(transaction);
+                            setEditModalOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        {canDeleteEmployees && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDelete(transaction)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

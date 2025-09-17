@@ -440,6 +440,34 @@ export const useMillingData = () => {
         console.error('Error updating milling transaction:', error);
         throw error;
       }
+    },
+    deleteTransaction: async (id: string) => {
+      try {
+        const { error } = await supabase
+          .from('milling_transactions')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Transaction deleted successfully"
+        });
+
+        // Refresh data
+        await fetchData();
+        
+        return true;
+      } catch (error) {
+        console.error('Error deleting milling transaction:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete transaction. Please try again.",
+          variant: "destructive"
+        });
+        throw error;
+      }
     }
   };
 };
