@@ -47,11 +47,11 @@ const EUDRDocumentation = () => {
   });
 
   const [newSale, setNewSale] = useState({
-    batch_id: '',
     kilograms: 0,
     sold_to: '',
     sale_date: new Date().toISOString().split('T')[0],
-    sale_price: 0
+    sale_price: 0,
+    coffee_type: ''
   });
 
   const [receiptData, setReceiptData] = useState({
@@ -108,8 +108,14 @@ const EUDRDocumentation = () => {
   };
 
   const handleSubmitSale = async () => {
-    if (!newSale.batch_id || newSale.kilograms <= 0 || !newSale.sold_to || newSale.sale_price <= 0) {
+    if (newSale.kilograms <= 0 || !newSale.sold_to || newSale.sale_price <= 0) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    const totalAvailable = getTotalAvailableKilograms();
+    if (newSale.kilograms > totalAvailable) {
+      toast.error(`Only ${totalAvailable}kg available for sale`);
       return;
     }
 
@@ -117,14 +123,13 @@ const EUDRDocumentation = () => {
     try {
       await createEUDRSale(newSale);
       setNewSale({
-        batch_id: '',
         kilograms: 0,
         sold_to: '',
         sale_date: new Date().toISOString().split('T')[0],
-        sale_price: 0
+        sale_price: 0,
+        coffee_type: ''
       });
       setShowSaleModal(false);
-      setSelectedBatch(null);
     } catch (error) {
       console.error('Error submitting sale:', error);
     } finally {
@@ -166,12 +171,7 @@ const EUDRDocumentation = () => {
     }
   };
 
-  const openSaleModal = (batch: any) => {
-    setSelectedBatch(batch);
-    setNewSale({
-      ...newSale,
-      batch_id: batch.id
-    });
+  const openSaleModal = () => {
     setShowSaleModal(true);
   };
 
@@ -262,6 +262,99 @@ const EUDRDocumentation = () => {
               Add EUDR Documentation
             </Button>
           </DialogTrigger>
+        </Dialog>
+
+        <Dialog open={showSaleModal} onOpenChange={setShowSaleModal}>
+          <DialogTrigger asChild>
+            <Button variant="outline" disabled={getTotalAvailableKilograms() <= 0}>
+              <DollarSign className="h-4 w-4 mr-2" />
+              Create Sale
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Sale</DialogTitle>
+              <DialogDescription>
+                Sale will be automatically allocated from available batches in order.
+                Available: {getTotalAvailableKilograms().toLocaleString()}kg
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="sale-kg">Kilograms to Sell *</Label>
+                  <Input
+                    id="sale-kg"
+                    type="number"
+                    value={newSale.kilograms}
+                    onChange={(e) => setNewSale({...newSale, kilograms: Number(e.target.value)})}
+                    placeholder="0"
+                    max={getTotalAvailableKilograms()}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Max: {getTotalAvailableKilograms().toLocaleString()}kg available
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="sale-price">Price per KG (UGX) *</Label>
+                  <Input
+                    id="sale-price"
+                    type="number"
+                    value={newSale.sale_price}
+                    onChange={(e) => setNewSale({...newSale, sale_price: Number(e.target.value)})}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="sold-to">Sold To *</Label>
+                  <Input
+                    id="sold-to"
+                    value={newSale.sold_to}
+                    onChange={(e) => setNewSale({...newSale, sold_to: e.target.value})}
+                    placeholder="Customer name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="sale-date">Sale Date *</Label>
+                  <Input
+                    id="sale-date"
+                    type="date"
+                    value={newSale.sale_date}
+                    onChange={(e) => setNewSale({...newSale, sale_date: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="coffee-type-filter">Coffee Type (Optional)</Label>
+                <Select value={newSale.coffee_type} onValueChange={(value) => setNewSale({...newSale, coffee_type: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any coffee type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Any Type</SelectItem>
+                    <SelectItem value="arabica">Arabica Only</SelectItem>
+                    <SelectItem value="robusta">Robusta Only</SelectItem>
+                    <SelectItem value="mixed">Mixed Only</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Leave empty to auto-allocate from any available batches
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSaleModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmitSale} disabled={submittingSale}>
+                {submittingSale ? 'Creating Sale...' : 'Create Sale'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add EUDR Documentation</DialogTitle>
@@ -418,14 +511,6 @@ const EUDRDocumentation = () => {
                               >
                                 Add Receipts
                               </Button>
-                              {batch.available_kilograms > 0 && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => openSaleModal(batch)}
-                                >
-                                  Create Sale
-                                </Button>
-                              )}
                             </div>
                             {(sales || []).length > 0 && (
                               <div className="text-xs text-muted-foreground mt-1">

@@ -181,73 +181,103 @@ export const useEUDRDocumentation = () => {
   };
 
   const createEUDRSale = async (saleData: {
-    batch_id: string;
     kilograms: number;
     sold_to: string;
     sale_date: string;
     sale_price: number;
+    coffee_type?: string;
   }) => {
     try {
-      // Find the batch
-      const batch = eudrBatches.find(b => b.id === saleData.batch_id);
-      if (!batch) {
-        throw new Error('Batch not found');
+      // Get available batches sorted by creation date (FIFO)
+      let availableBatches = eudrBatches
+        .filter(batch => batch.available_kilograms > 0)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+      // Filter by coffee type if specified
+      if (saleData.coffee_type) {
+        const matchingDocs = eudrDocuments.filter(doc => doc.coffee_type === saleData.coffee_type);
+        availableBatches = availableBatches.filter(batch => 
+          matchingDocs.some(doc => doc.id === batch.document_id)
+        );
       }
 
-      // Find the document
-      const document = eudrDocuments.find(doc => doc.id === batch.document_id);
-      if (!document) {
-        throw new Error('Document not found');
+      if (availableBatches.length === 0) {
+        throw new Error('No available batches found');
       }
 
-      // Check if sufficient kilograms available
-      if (saleData.kilograms > batch.available_kilograms) {
-        throw new Error(`Insufficient kilograms available in ${batch.batch_identifier}. Available: ${batch.available_kilograms}kg`);
+      // Check if sufficient total kilograms available
+      const totalAvailable = availableBatches.reduce((total, batch) => total + batch.available_kilograms, 0);
+      if (saleData.kilograms > totalAvailable) {
+        throw new Error(`Insufficient kilograms available. Available: ${totalAvailable}kg, Requested: ${saleData.kilograms}kg`);
       }
 
-      // Calculate remaining kilograms
-      const remainingBatchKilograms = batch.available_kilograms - saleData.kilograms;
+      // Allocate from batches in order
+      let remainingToSell = saleData.kilograms;
+      const allocations = [];
 
-      // Create the sale record
-      const newSale = {
-        ...saleData,
-        document_id: batch.document_id,
-        remaining_batch_kilograms: remainingBatchKilograms,
-        batch_identifier: batch.batch_identifier,
-        coffee_type: document.coffee_type
-      };
+      for (const batch of availableBatches) {
+        if (remainingToSell <= 0) break;
 
-      const { data: saleResult, error: saleError } = await supabase
-        .from('eudr_sales')
-        .insert(newSale)
-        .select()
-        .single();
+        const document = eudrDocuments.find(doc => doc.id === batch.document_id);
+        if (!document) continue;
 
-      if (saleError) throw saleError;
+        const amountFromThisBatch = Math.min(remainingToSell, batch.available_kilograms);
+        const remainingBatchKilograms = batch.available_kilograms - amountFromThisBatch;
 
-      // Update the batch available kilograms and status
-      const newBatchStatus = remainingBatchKilograms === 0 ? 'sold_out' : 'partially_sold';
-      
-      const { error: batchError } = await supabase
-        .from('eudr_batches')
-        .update({ 
-          available_kilograms: remainingBatchKilograms,
-          status: newBatchStatus
-        })
-        .eq('id', saleData.batch_id);
+        allocations.push({
+          batch,
+          document,
+          amountFromThisBatch,
+          remainingBatchKilograms
+        });
 
-      if (batchError) throw batchError;
+        remainingToSell -= amountFromThisBatch;
+      }
+
+      // Create sales for each allocation
+      for (const allocation of allocations) {
+        const newSale = {
+          batch_id: allocation.batch.id,
+          document_id: allocation.batch.document_id,
+          kilograms: allocation.amountFromThisBatch,
+          sold_to: saleData.sold_to,
+          sale_date: saleData.sale_date,
+          sale_price: saleData.sale_price,
+          remaining_batch_kilograms: allocation.remainingBatchKilograms,
+          batch_identifier: allocation.batch.batch_identifier,
+          coffee_type: allocation.document.coffee_type
+        };
+
+        const { error: saleError } = await supabase
+          .from('eudr_sales')
+          .insert(newSale);
+
+        if (saleError) throw saleError;
+
+        // Update the batch available kilograms and status
+        const newBatchStatus = allocation.remainingBatchKilograms === 0 ? 'sold_out' : 'partially_sold';
+        
+        const { error: batchError } = await supabase
+          .from('eudr_batches')
+          .update({ 
+            available_kilograms: allocation.remainingBatchKilograms,
+            status: newBatchStatus
+          })
+          .eq('id', allocation.batch.id);
+
+        if (batchError) throw batchError;
+      }
 
       await fetchEUDRDocuments();
       await fetchEUDRBatches();
       await fetchEUDRSales();
 
+      const batchesUsed = allocations.map(a => a.batch.batch_identifier).join(', ');
       toast({
         title: "Success",
-        description: `Sale recorded successfully. ${remainingBatchKilograms}kg remaining in ${batch.batch_identifier}.`
+        description: `Sale of ${saleData.kilograms}kg recorded successfully across batches: ${batchesUsed}`
       });
 
-      return saleResult;
     } catch (error) {
       console.error('Error creating EUDR sale:', error);
       toast({
