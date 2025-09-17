@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download } from 'lucide-react';
+import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye } from 'lucide-react';
 import { useEUDRDocumentation } from '@/hooks/useEUDRDocumentation';
 import { toast } from 'sonner';
 import EUDRReportPrint from './EUDRReportPrint';
@@ -42,6 +42,7 @@ const EUDRDocumentation = () => {
   const [reportStartDate, setReportStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
 
   const [newDocument, setNewDocument] = useState({
     coffee_type: '',
@@ -862,18 +863,10 @@ const EUDRDocumentation = () => {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => {
-                        // Show print version
-                        const printContent = document.querySelector('.print-content');
-                        if (printContent) {
-                          printContent.classList.remove('hidden');
-                          printContent.classList.add('print:block');
-                        }
-                        window.print();
-                      }}
+                      onClick={() => setShowPrintPreview(true)}
                     >
-                      <Printer className="h-4 w-4 mr-2" />
-                      Print Report
+                      <Eye className="h-4 w-4 mr-2" />
+                      Preview & Print Report
                     </Button>
                     <Button 
                       variant="outline" 
@@ -1133,6 +1126,54 @@ const EUDRDocumentation = () => {
               Update Receipts
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Print Preview Dialog */}
+      <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>EUDR Report Preview</DialogTitle>
+            <DialogDescription>
+              Preview the EUDR compliance report before printing
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  window.print();
+                  setShowPrintPreview(false);
+                }}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setShowPrintPreview(false)}
+              >
+                Close
+              </Button>
+            </div>
+            
+            {/* Render the print component */}
+            <div className="border rounded-lg bg-white">
+              <EUDRReportPrint
+                reportType={reportType}
+                startDate={reportStartDate}
+                endDate={reportEndDate}
+                totalDocumented={getTotalDocumentedKilograms()}
+                availableStock={getTotalAvailableKilograms()}
+                totalSold={getTotalSoldKilograms()}
+                activeBatches={eudrBatches.length}
+                documents={eudrDocuments}
+                sales={eudrSales}
+              />
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
