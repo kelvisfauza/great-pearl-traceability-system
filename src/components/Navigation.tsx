@@ -125,36 +125,7 @@ const Navigation = () => {
     console.log('🔍 Filtering navigation for employee:', employee);
     console.log('🔍 Employee permissions:', employee.permissions);
     
-    // For Kibaba, show his specific items
-    if (employee.email === 'nicholusscottlangz@gmail.com') {
-      console.log('🎯 Showing Kibaba his navigation items');
-      return [
-        {
-          title: "Operations",
-          items: [
-            { name: "Dashboard", icon: BarChart3, path: "/", permission: null },
-            { name: "Quality Control", icon: ClipboardCheck, path: "/quality-control", permission: null },
-            { name: "Store Management", icon: Shield, path: "/store", permission: null },
-            { name: "Milling", icon: Coffee, path: "/milling", permission: null },
-            { name: "Inventory", icon: Package, path: "/inventory", permission: null },
-          ]
-        },
-        {
-          title: "Management",
-          items: [
-            { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: null },
-            { name: "Expenses", icon: Receipt, path: "/expenses", permission: null },
-          ]
-        },
-        {
-          title: "System", 
-          items: [
-            { name: "Reports", icon: FileText, path: "/reports", permission: null },
-            { name: "Settings", icon: Settings, path: "/settings", permission: null },
-          ]
-        }
-      ];
-    }
+    // Remove hardcoded navigation overrides - use permission system instead
     
     return navigationItems.map(section => ({
       ...section,
