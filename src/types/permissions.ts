@@ -11,6 +11,7 @@ export const PERMISSIONS = {
   // Operations
   QUALITY_CONTROL: 'Quality Control',
   STORE_MANAGEMENT: 'Store Management',
+  EUDR_DOCUMENTATION: 'EUDR Documentation',
   MILLING: 'Milling',
   INVENTORY: 'Inventory',
   FIELD_OPERATIONS: 'Field Operations',
@@ -77,6 +78,12 @@ export const PERMISSION_DETAILS = {
     description: 'Manage coffee processing operations',
     category: PERMISSION_CATEGORIES.OPERATIONS,
     icon: 'Settings'
+  },
+  [PERMISSIONS.EUDR_DOCUMENTATION]: {
+    name: 'EUDR Documentation',
+    description: 'Access EU Deforestation Regulation documentation and compliance',
+    category: PERMISSION_CATEGORIES.OPERATIONS,
+    icon: 'FileText'
   },
   [PERMISSIONS.SALES_MARKETING]: {
     name: 'Sales Marketing',
@@ -158,12 +165,14 @@ export const ROLE_PERMISSION_PRESETS = {
   'Quality Manager': [
     PERMISSIONS.QUALITY_CONTROL,
     PERMISSIONS.REPORTS,
-    PERMISSIONS.STORE_MANAGEMENT
+    PERMISSIONS.STORE_MANAGEMENT,
+    PERMISSIONS.EUDR_DOCUMENTATION
   ],
   'Store Manager': [
     PERMISSIONS.STORE_MANAGEMENT,
     PERMISSIONS.INVENTORY,
-    PERMISSIONS.REPORTS
+    PERMISSIONS.REPORTS,
+    PERMISSIONS.EUDR_DOCUMENTATION
   ],
   'Finance Manager': [
     PERMISSIONS.FINANCE,
