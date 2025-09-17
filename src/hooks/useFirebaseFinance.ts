@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { firebaseClient } from '@/lib/firebaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from './useNotifications';
 
@@ -772,14 +773,42 @@ export const useFirebaseFinance = () => {
         });
       }
 
-      // Update quality assessment status to "sent_to_finance" if we have the assessment ID
+      // Update quality assessment status based on payment completion
       if (payment.qualityAssessmentId) {
-        console.log('Updating quality assessment status to sent_to_finance:', payment.qualityAssessmentId);
+        let assessmentStatus = 'submitted_to_finance'; // Default for processing payments
+        
+        // For cash payments, mark as payment_processed if fully paid
+        if (method === 'Cash') {
+          const originalAmount = payment.amount;
+          const previouslyPaid = payment.paid_amount || 0;
+          const amountBeingPaid = actualAmount || originalAmount;
+          const totalPaid = previouslyPaid + amountBeingPaid;
+          const remainingBalance = originalAmount - totalPaid;
+          
+          if (remainingBalance <= 0) {
+            assessmentStatus = 'payment_processed';
+          }
+        }
+        
+        console.log(`Updating quality assessment status to ${assessmentStatus}:`, payment.qualityAssessmentId);
         try {
-          await updateDoc(doc(db, 'quality_assessments', payment.qualityAssessmentId), {
-            status: 'sent_to_finance',
-            updated_at: new Date().toISOString()
-          });
+          // Try updating in Supabase first (preferred)
+          const { error: supabaseError } = await supabase
+            .from('quality_assessments')
+            .update({ 
+              status: assessmentStatus,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', payment.qualityAssessmentId);
+            
+          if (supabaseError) {
+            console.log('Supabase update failed, trying Firebase:', supabaseError);
+            // Fallback to Firebase if Supabase fails
+            await updateDoc(doc(db, 'quality_assessments', payment.qualityAssessmentId), {
+              status: assessmentStatus,
+              updated_at: new Date().toISOString()
+            });
+          }
           console.log('Quality assessment status updated successfully');
         } catch (error) {
           console.error('Error updating quality assessment status:', error);
