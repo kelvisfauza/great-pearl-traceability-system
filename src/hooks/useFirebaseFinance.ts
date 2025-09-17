@@ -556,42 +556,83 @@ export const useFirebaseFinance = () => {
 
   const processPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash', actualAmount?: number) => {
     try {
-      console.log('🔄 Processing payment:', paymentId, method, actualAmount ? `Actual amount: ${actualAmount}` : 'Full amount');
+      console.log('🔄 Processing payment with ID:', paymentId);
+      console.log('🔄 Method:', method, 'Actual Amount:', actualAmount);
+      console.log('🔄 Current payments in state:', payments.length);
+      
+      // Debug: Log all payment IDs in current state
+      console.log('🔍 Payment IDs in state:', payments.map(p => ({ id: p.id, supplier: p.supplier, status: p.status })));
       
       // Find the payment record to get quality assessment ID
       let payment = payments.find(p => p.id === paymentId);
-      console.log('🔍 Payment found in local state:', !!payment);
+      console.log('🔍 Payment found in local state:', !!payment, payment ? payment.supplier : 'N/A');
       
-      // If not found in local state, try to fetch from Firebase
+      // If not found in local state, refresh data first and try again
       if (!payment) {
-        console.log('⚠️ Payment not found in local state, fetching from Firebase...');
-        try {
-          const paymentDoc = await getDoc(doc(db, 'payment_records', paymentId));
-          if (paymentDoc.exists()) {
-            payment = {
-              id: paymentDoc.id,
-              ...paymentDoc.data()
-            } as PaymentRecord;
-            console.log('✅ Payment found in Firebase:', payment);
-          } else {
-            console.error('❌ Payment document does not exist in Firebase:', paymentId);
+        console.log('⚠️ Payment not found in local state, refreshing payment records...');
+        await fetchPaymentRecords();
+        
+        // Try again after refresh
+        payment = payments.find(p => p.id === paymentId);
+        console.log('🔍 After refresh - Payment found:', !!payment);
+        
+        if (!payment) {
+          console.log('⚠️ Still not found after refresh, fetching directly from Firebase...');
+          try {
+            const paymentDoc = await getDoc(doc(db, 'payment_records', paymentId));
+            if (paymentDoc.exists()) {
+              const data = paymentDoc.data();
+              payment = {
+                id: paymentDoc.id,
+                supplier: data.supplier || '',
+                amount: data.amount || 0,
+                status: data.status || 'Pending',
+                method: data.method || 'Bank Transfer',
+                date: data.date || new Date().toLocaleDateString(),
+                batchNumber: data.batchNumber || data.batch_number || '',
+                qualityAssessmentId: data.qualityAssessmentId || data.quality_assessment_id || null,
+                paid_amount: data.paid_amount || 0,
+                rejection_reason: data.rejection_reason || null,
+                rejection_comments: data.rejection_comments || null,
+                ...data
+              } as PaymentRecord;
+              console.log('✅ Payment fetched directly from Firebase:', {
+                id: payment.id,
+                supplier: payment.supplier,
+                amount: payment.amount,
+                status: payment.status,
+                batchNumber: payment.batchNumber
+              });
+            } else {
+              console.error('❌ Payment document does not exist in Firebase. ID:', paymentId);
+              
+              // Debug: List all payment documents in Firebase
+              console.log('🔍 Checking all payment records in Firebase...');
+              const allPaymentsSnapshot = await getDocs(collection(db, 'payment_records'));
+              const allPaymentIds = allPaymentsSnapshot.docs.map(doc => ({
+                id: doc.id,
+                supplier: doc.data().supplier,
+                batchNumber: doc.data().batchNumber || doc.data().batch_number
+              }));
+              console.log('🔍 All payment records in Firebase:', allPaymentIds);
+            }
+          } catch (firebaseError) {
+            console.error('❌ Error fetching payment from Firebase:', firebaseError);
+            toast({
+              title: "Database Error", 
+              description: "Failed to fetch payment record from database. Please try again.",
+              variant: "destructive"
+            });
+            return;
           }
-        } catch (firebaseError) {
-          console.error('❌ Error fetching payment from Firebase:', firebaseError);
-          toast({
-            title: "Error", 
-            description: "Failed to fetch payment record from database",
-            variant: "destructive"
-          });
-          return;
         }
       }
       
       if (!payment) {
-        console.error('❌ Payment not found anywhere:', paymentId);
+        console.error('❌ Payment record not found anywhere. ID:', paymentId);
         toast({
-          title: "Error",
-          description: "Payment record not found. Please refresh and try again.",
+          title: "Payment Not Found",
+          description: `Payment record with ID ${paymentId} could not be found. Please refresh the page and try again.`,
           variant: "destructive"
         });
         return;
@@ -601,7 +642,9 @@ export const useFirebaseFinance = () => {
         id: payment.id,
         supplier: payment.supplier,
         amount: payment.amount,
-        status: payment.status
+        status: payment.status,
+        batchNumber: payment.batchNumber,
+        qualityAssessmentId: payment.qualityAssessmentId
       });
       
       if (method === 'Bank Transfer') {
