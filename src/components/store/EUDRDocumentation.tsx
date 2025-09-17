@@ -9,12 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye } from 'lucide-react';
+import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2 } from 'lucide-react';
 import { useEUDRDocumentation } from '@/hooks/useEUDRDocumentation';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import EUDRReportPrint from './EUDRReportPrint';
 
 const EUDRDocumentation = () => {
+  const { hasPermission } = useAuth();
   const {
     eudrDocuments,
     eudrBatches,
@@ -23,6 +25,7 @@ const EUDRDocumentation = () => {
     addEUDRDocument,
     updateBatchReceipts,
     createEUDRSale,
+    deleteBatch,
     getTotalAvailableKilograms,
     getTotalDocumentedKilograms,
     getTotalSoldKilograms,
@@ -277,6 +280,17 @@ const EUDRDocumentation = () => {
     window.URL.revokeObjectURL(url);
     
     toast.success('Report exported to CSV successfully');
+  };
+
+  const handleDeleteBatch = async (batchId: string, batchIdentifier: string) => {
+    if (!window.confirm(`Are you sure you want to delete batch "${batchIdentifier}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    const success = await deleteBatch(batchId);
+    if (success) {
+      toast.success(`Batch "${batchIdentifier}" deleted successfully`);
+    }
   };
 
   if (loading) {
@@ -628,6 +642,16 @@ const EUDRDocumentation = () => {
                               >
                                 Add Receipts
                               </Button>
+                              {hasPermission('Administrator') && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDeleteBatch(batch.id, batch.batch_identifier)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                             {(sales || []).length > 0 && (
                               <div className="text-xs text-muted-foreground mt-1">

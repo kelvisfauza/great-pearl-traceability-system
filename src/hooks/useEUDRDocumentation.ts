@@ -319,6 +319,39 @@ export const useEUDRDocumentation = () => {
     return eudrBatches.filter(batch => batch.available_kilograms > 0) || [];
   };
 
+  const deleteBatch = async (batchId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('eudr_batches')
+        .delete()
+        .eq('id', batchId);
+
+      if (error) throw error;
+
+      // Refresh data after deletion
+      await Promise.all([
+        fetchEUDRDocuments(),
+        fetchEUDRBatches(),
+        fetchEUDRSales()
+      ]);
+
+      toast({
+        title: "Success",
+        description: "Batch deleted successfully"
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting batch:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete batch. Please try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   return {
     eudrDocuments,
     eudrBatches,
@@ -327,6 +360,7 @@ export const useEUDRDocumentation = () => {
     addEUDRDocument,
     updateBatchReceipts,
     createEUDRSale,
+    deleteBatch,
     fetchEUDRDocuments,
     fetchEUDRBatches,
     fetchEUDRSales,
