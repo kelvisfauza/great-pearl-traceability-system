@@ -10,6 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import PaymentProcessingCard from "@/components/finance/PaymentProcessingCard";
 import SalaryRequestsCard from "@/components/finance/SalaryRequestsCard";
 import DailyReportsCard from "@/components/finance/DailyReportsCard";
@@ -145,6 +147,51 @@ const Finance = () => {
     }
   };
 
+  // Handle payment processing from Quality Assessment Reports
+  const handleQualityAssessmentPayment = async (paymentData: any) => {
+    console.log('🔄 Finance page - Processing quality assessment payment:', paymentData);
+    
+    try {
+      // Check if this is a new payment from quality assessment
+      if (paymentData.isNewPayment) {
+        console.log('🔄 Creating new payment record from quality assessment...');
+        
+        // Create the payment record in Firebase first
+        const docRef = await addDoc(collection(db, 'payment_records'), {
+          supplier: paymentData.supplier,
+          amount: paymentData.amount,
+          status: 'Pending',
+          method: paymentData.method,
+          date: paymentData.date,
+          batchNumber: paymentData.batchNumber,
+          qualityAssessmentId: paymentData.qualityAssessmentId,
+          paid_amount: paymentData.paid_amount || 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        
+        console.log('✅ Payment record created with ID:', docRef.id);
+        
+        // Now process the payment with the real Firebase ID
+        await processPayment(docRef.id, paymentData.method, paymentData.paid_amount > 0 ? paymentData.paid_amount : undefined);
+        
+        console.log('✅ Quality assessment payment processed successfully');
+        await refetch();
+      } else {
+        // Handle existing payment processing (shouldn't happen from QA reports)
+        console.log('🔄 Processing existing payment:', paymentData.id);
+        await handleProcessPayment(paymentData.id, paymentData.method, paymentData.paid_amount);
+      }
+    } catch (error) {
+      console.error('❌ Error processing quality assessment payment:', error);
+      toast({
+        title: "Payment Processing Error",
+        description: "Failed to process payment from quality assessment. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handlePaymentModification = async (paymentId: string, targetDepartment: string, reason: string, comments?: string) => {
     console.log('Finance page - Modifying payment:', paymentId, targetDepartment, reason);
     try {
@@ -203,10 +250,7 @@ const Finance = () => {
       case "quality-reports":
         return (
           <QualityAssessmentReports
-            onProcessPayment={(paymentData) => {
-              console.log('Processing payment from quality report:', paymentData);
-              handleProcessPayment(paymentData.id, paymentData.method, paymentData.paid_amount);
-            }}
+            onProcessPayment={handleQualityAssessmentPayment}
             formatCurrency={formatCurrency}
           />
         );
