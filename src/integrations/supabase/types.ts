@@ -880,6 +880,7 @@ export type Database = {
           documentation_notes: string | null
           id: string
           status: string
+          total_bulked_coffee: number | null
           total_kilograms: number
           total_receipts: number
           updated_at: string | null
@@ -893,6 +894,7 @@ export type Database = {
           documentation_notes?: string | null
           id?: string
           status?: string
+          total_bulked_coffee?: number | null
           total_kilograms: number
           total_receipts?: number
           updated_at?: string | null
@@ -906,6 +908,7 @@ export type Database = {
           documentation_notes?: string | null
           id?: string
           status?: string
+          total_bulked_coffee?: number | null
           total_kilograms?: number
           total_receipts?: number
           updated_at?: string | null

@@ -6,6 +6,7 @@ interface EUDRDocument {
   id: string;
   coffee_type: string;
   total_kilograms: number;
+  total_bulked_coffee: number;
   available_kilograms: number;
   total_receipts: number;
   batch_number: string;
@@ -115,6 +116,7 @@ export const useEUDRDocumentation = () => {
   const addEUDRDocument = async (documentData: {
     coffee_type: string;
     total_kilograms: number;
+    total_bulked_coffee: number;
     total_receipts: number;
     batch_number?: string;
     documentation_notes?: string;

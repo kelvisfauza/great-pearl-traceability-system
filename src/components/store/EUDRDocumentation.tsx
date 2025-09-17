@@ -41,6 +41,7 @@ const EUDRDocumentation = () => {
   const [newDocument, setNewDocument] = useState({
     coffee_type: '',
     total_kilograms: 0,
+    total_bulked_coffee: 0,
     total_receipts: 0,
     batch_number: '',
     documentation_notes: ''
@@ -80,7 +81,7 @@ const EUDRDocumentation = () => {
   };
 
   const handleSubmitDocument = async () => {
-    if (!newDocument.coffee_type || newDocument.total_kilograms <= 0 || newDocument.total_receipts <= 0) {
+    if (!newDocument.coffee_type || newDocument.total_kilograms <= 0 || newDocument.total_bulked_coffee <= 0 || newDocument.total_receipts <= 0) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -95,6 +96,7 @@ const EUDRDocumentation = () => {
       setNewDocument({
         coffee_type: '',
         total_kilograms: 0,
+        total_bulked_coffee: 0,
         total_receipts: 0,
         batch_number: '',
         documentation_notes: ''
@@ -284,6 +286,7 @@ const EUDRDocumentation = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="total-kg">Total Kilograms *</Label>
                   <Input
@@ -297,6 +300,20 @@ const EUDRDocumentation = () => {
                     Will create {Math.ceil(newDocument.total_kilograms / 5000)} batch{Math.ceil(newDocument.total_kilograms / 5000) !== 1 ? 'es' : ''} of 5 tonnes each
                   </p>
                 </div>
+                <div>
+                  <Label htmlFor="total-bulked">Total Bulked Coffee (kg) *</Label>
+                  <Input
+                    id="total-bulked"
+                    type="number"
+                    value={newDocument.total_bulked_coffee}
+                    onChange={(e) => setNewDocument({...newDocument, total_bulked_coffee: Number(e.target.value)})}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Weight after hulling/processing
+                  </p>
+                </div>
+              </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -309,6 +326,9 @@ const EUDRDocumentation = () => {
                     onChange={(e) => setNewDocument({...newDocument, total_receipts: Number(e.target.value)})}
                     placeholder="0"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Number of receipts (actual receipt references added per batch later)
+                  </p>
                 </div>
                 <div>
                   <Label htmlFor="batch">Batch Number</Label>
