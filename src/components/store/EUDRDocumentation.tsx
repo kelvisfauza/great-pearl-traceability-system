@@ -593,7 +593,7 @@ const EUDRDocumentation = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {eudrBatches.length > 0 ? (
+              {eudrBatches.filter(batch => batch.status !== 'sold_out').length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -607,68 +607,71 @@ const EUDRDocumentation = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {eudrBatches.map((batch) => {
-                      const document = eudrDocuments.find(doc => doc.id === batch.document_id);
-                      const sales = getSalesForBatch(batch.id);
-                      return (
-                        <TableRow key={batch.id}>
-                          <TableCell className="font-mono">{batch.batch_identifier}</TableCell>
-                          <TableCell className="capitalize">{document?.coffee_type}</TableCell>
-                          <TableCell>{batch.kilograms.toLocaleString()}kg</TableCell>
-                          <TableCell className="font-semibold">{batch.available_kilograms.toLocaleString()}kg</TableCell>
-                          <TableCell>{getStatusBadge(batch.status)}</TableCell>
-                          <TableCell>
-                            <div className="text-xs">
-                              {(batch.receipts && batch.receipts.length > 0) ? (
-                                <div>
-                                  {batch.receipts.slice(0, 2).map((receipt, i) => (
-                                    <div key={i} className="truncate max-w-[100px]">{receipt}</div>
-                                  ))}
-                                  {batch.receipts.length > 2 && (
-                                    <div className="text-muted-foreground">+{batch.receipts.length - 2} more</div>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground">No receipts</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openReceiptModal(batch)}
-                              >
-                                Add Receipts
-                              </Button>
-                              {hasPermission('Administrator') && (
+                    {eudrBatches
+                      .filter(batch => batch.status !== 'sold_out')
+                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                      .map((batch) => {
+                        const document = eudrDocuments.find(doc => doc.id === batch.document_id);
+                        const sales = getSalesForBatch(batch.id);
+                        return (
+                          <TableRow key={batch.id}>
+                            <TableCell className="font-mono">{batch.batch_identifier}</TableCell>
+                            <TableCell className="capitalize">{document?.coffee_type}</TableCell>
+                            <TableCell>{batch.kilograms.toLocaleString()}kg</TableCell>
+                            <TableCell className="font-semibold">{batch.available_kilograms.toLocaleString()}kg</TableCell>
+                            <TableCell>{getStatusBadge(batch.status)}</TableCell>
+                            <TableCell>
+                              <div className="text-xs">
+                                {(batch.receipts && batch.receipts.length > 0) ? (
+                                  <div>
+                                    {batch.receipts.slice(0, 2).map((receipt, i) => (
+                                      <div key={i} className="truncate max-w-[100px]">{receipt}</div>
+                                    ))}
+                                    {batch.receipts.length > 2 && (
+                                      <div className="text-muted-foreground">+{batch.receipts.length - 2} more</div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">No receipts</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleDeleteBatch(batch.id, batch.batch_identifier)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => openReceiptModal(batch)}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  Add Receipts
                                 </Button>
-                              )}
-                            </div>
-                            {(sales || []).length > 0 && (
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {sales.length} sale{sales.length !== 1 ? 's' : ''} recorded
+                                {hasPermission('Administrator') && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleDeleteBatch(batch.id, batch.batch_identifier)}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                              {(sales || []).length > 0 && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {sales.length} sale{sales.length !== 1 ? 's' : ''} recorded
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                   </TableBody>
                 </Table>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Layers className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No batches yet</p>
-                  <p className="text-sm">Add EUDR documentation to create batches</p>
+                  <p>No active batches</p>
+                  <p className="text-sm">All batches have been sold out or add new EUDR documentation to create batches</p>
                 </div>
               )}
             </CardContent>
@@ -697,19 +700,21 @@ const EUDRDocumentation = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {eudrDocuments.map((doc) => {
-                      const batches = getBatchesForDocument(doc.id) || [];
-                      return (
-                        <TableRow key={doc.id}>
-                          <TableCell className="font-mono">{doc.batch_number}</TableCell>
-                          <TableCell className="capitalize">{doc.coffee_type}</TableCell>
-                          <TableCell>{doc.total_kilograms.toLocaleString()}kg</TableCell>
-                          <TableCell className="font-semibold">{doc.available_kilograms.toLocaleString()}kg</TableCell>
-                          <TableCell>{batches.length} batches</TableCell>
-                          <TableCell>{getStatusBadge(doc.status)}</TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {eudrDocuments
+                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                      .map((doc) => {
+                        const batches = getBatchesForDocument(doc.id) || [];
+                        return (
+                          <TableRow key={doc.id}>
+                            <TableCell className="font-mono">{doc.batch_number}</TableCell>
+                            <TableCell className="capitalize">{doc.coffee_type}</TableCell>
+                            <TableCell>{doc.total_kilograms.toLocaleString()}kg</TableCell>
+                            <TableCell className="font-semibold">{doc.available_kilograms.toLocaleString()}kg</TableCell>
+                            <TableCell>{batches.length} batches</TableCell>
+                            <TableCell>{getStatusBadge(doc.status)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
                   </TableBody>
                 </Table>
               ) : (
@@ -717,6 +722,57 @@ const EUDRDocumentation = () => {
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No EUDR documentation yet</p>
                   <p className="text-sm">Add your first EUDR documentation using the button above</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* All Batches Overview */}
+          <Card>
+            <CardHeader>
+              <CardTitle>All Batches Overview</CardTitle>
+              <CardDescription>
+                Complete list of all batches including sold out ones
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {eudrBatches.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Batch ID</TableHead>
+                      <TableHead>Coffee Type</TableHead>
+                      <TableHead>Total KG</TableHead>
+                      <TableHead>Available KG</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {eudrBatches
+                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                      .map((batch) => {
+                        const document = eudrDocuments.find(doc => doc.id === batch.document_id);
+                        return (
+                          <TableRow key={batch.id}>
+                            <TableCell className="font-mono">{batch.batch_identifier}</TableCell>
+                            <TableCell className="capitalize">{document?.coffee_type}</TableCell>
+                            <TableCell>{batch.kilograms.toLocaleString()}kg</TableCell>
+                            <TableCell className="font-semibold">{batch.available_kilograms.toLocaleString()}kg</TableCell>
+                            <TableCell>{getStatusBadge(batch.status)}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(batch.created_at).toLocaleDateString()}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Layers className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No batches created yet</p>
+                  <p className="text-sm">Add EUDR documentation to create batches</p>
                 </div>
               )}
             </CardContent>
