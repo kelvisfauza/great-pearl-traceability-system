@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText, Printer, Eye, Scan } from "lucide-react";
+import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText, Printer } from "lucide-react";
 import { useStoreManagement } from "@/hooks/useStoreManagement";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -22,9 +22,6 @@ import PricingGuidance from "@/components/PricingGuidance";
 
 import { StoreRecordsManager } from "@/components/store/StoreRecordsManager";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
-import StoreReportForm from "@/components/reports/StoreReportForm";
-import StoreReportsList from "@/components/reports/StoreReportsList";
-import ManualStoreReportForm from "@/components/reports/ManualStoreReportForm";
 
 const Store = () => {
   const [searchParams] = useSearchParams();
@@ -90,7 +87,7 @@ const Store = () => {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['records', 'store-records', 'pricing', 'operations', 'suppliers'].includes(tab)) {
+    if (tab && ['records', 'pricing', 'operations', 'suppliers'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -361,14 +358,10 @@ const Store = () => {
         <PriceTicker />
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="records">
               <Package className="h-4 w-4 mr-2" />
               Coffee Records
-            </TabsTrigger>
-            <TabsTrigger value="store-records">
-              <FileText className="h-4 w-4 mr-2" />
-              Store Reports
             </TabsTrigger>
             <TabsTrigger value="pricing">
               <DollarSign className="h-4 w-4 mr-2" />
@@ -504,40 +497,6 @@ const Store = () => {
               </CardContent>
             </Card>
 
-          </TabsContent>
-
-          {/* Store Reports Tab */}
-          <TabsContent value="store-records" className="space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-              <Tabs defaultValue="view-reports" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="view-reports">
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Reports
-                  </TabsTrigger>
-                  <TabsTrigger value="daily-report">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Daily Report
-                  </TabsTrigger>
-                  <TabsTrigger value="manual-report">
-                    <Scan className="h-4 w-4 mr-2" />
-                    Manual Report
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="view-reports">
-                  <StoreReportsList />
-                </TabsContent>
-
-                <TabsContent value="daily-report">
-                  <StoreReportForm />
-                </TabsContent>
-
-                <TabsContent value="manual-report">
-                  <ManualStoreReportForm />
-                </TabsContent>
-              </Tabs>
-            </div>
           </TabsContent>
 
           {/* Pricing & Assessment Tab */}
