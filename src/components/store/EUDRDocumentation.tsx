@@ -60,19 +60,19 @@ const EUDRDocumentation = () => {
 
   const handleAddReceipt = () => {
     setReceiptData({
-      receipts: [...receiptData.receipts, '']
+      receipts: [...(receiptData.receipts || []), '']
     });
   };
 
   const handleRemoveReceipt = (index: number) => {
-    const updatedReceipts = receiptData.receipts.filter((_, i) => i !== index);
+    const updatedReceipts = (receiptData.receipts || []).filter((_, i) => i !== index);
     setReceiptData({
       receipts: updatedReceipts.length > 0 ? updatedReceipts : ['']
     });
   };
 
   const handleReceiptChange = (index: number, value: string) => {
-    const updatedReceipts = [...receiptData.receipts];
+    const updatedReceipts = [...(receiptData.receipts || [])];
     updatedReceipts[index] = value;
     setReceiptData({
       receipts: updatedReceipts
@@ -135,7 +135,7 @@ const EUDRDocumentation = () => {
   const handleUpdateReceipts = async () => {
     if (!selectedBatch) return;
     
-    const validReceipts = receiptData.receipts.filter(receipt => receipt.trim() !== '');
+    const validReceipts = (receiptData.receipts || []).filter(receipt => receipt.trim() !== '');
     if (validReceipts.length === 0) {
       toast.error('Please add at least one receipt reference');
       return;
@@ -178,7 +178,7 @@ const EUDRDocumentation = () => {
   const openReceiptModal = (batch: any) => {
     setSelectedBatch(batch);
     setReceiptData({
-      receipts: batch.receipts.length > 0 ? batch.receipts : ['']
+      receipts: (batch.receipts && batch.receipts.length > 0) ? batch.receipts : ['']
     });
     setShowReceiptModal(true);
   };
@@ -219,7 +219,7 @@ const EUDRDocumentation = () => {
           <CardContent>
             <div className="text-2xl font-bold">{getTotalAvailableKilograms().toLocaleString()}kg</div>
             <p className="text-xs text-muted-foreground">
-              {getAvailableBatches().length} batches available
+              {(getAvailableBatches() || []).length} batches available
             </p>
           </CardContent>
         </Card>
@@ -395,7 +395,7 @@ const EUDRDocumentation = () => {
                           <TableCell>{getStatusBadge(batch.status)}</TableCell>
                           <TableCell>
                             <div className="text-xs">
-                              {batch.receipts.length > 0 ? (
+                              {(batch.receipts && batch.receipts.length > 0) ? (
                                 <div>
                                   {batch.receipts.slice(0, 2).map((receipt, i) => (
                                     <div key={i} className="truncate max-w-[100px]">{receipt}</div>
@@ -427,7 +427,7 @@ const EUDRDocumentation = () => {
                                 </Button>
                               )}
                             </div>
-                            {sales.length > 0 && (
+                            {(sales || []).length > 0 && (
                               <div className="text-xs text-muted-foreground mt-1">
                                 {sales.length} sale{sales.length !== 1 ? 's' : ''} recorded
                               </div>
@@ -472,7 +472,7 @@ const EUDRDocumentation = () => {
                   </TableHeader>
                   <TableBody>
                     {eudrDocuments.map((doc) => {
-                      const batches = getBatchesForDocument(doc.id);
+                      const batches = getBatchesForDocument(doc.id) || [];
                       return (
                         <TableRow key={doc.id}>
                           <TableCell className="font-mono">{doc.batch_number}</TableCell>
@@ -631,14 +631,14 @@ const EUDRDocumentation = () => {
           </DialogHeader>
           <div className="space-y-4">
             <Label>Receipt References</Label>
-            {receiptData.receipts.map((receipt, index) => (
+            {(receiptData.receipts || []).map((receipt, index) => (
               <div key={index} className="flex gap-2">
                 <Input
                   value={receipt}
                   onChange={(e) => handleReceiptChange(index, e.target.value)}
                   placeholder={`Receipt reference ${index + 1}`}
                 />
-                {receiptData.receipts.length > 1 && (
+                {(receiptData.receipts || []).length > 1 && (
                   <Button
                     type="button"
                     variant="outline"

@@ -260,31 +260,31 @@ export const useEUDRDocumentation = () => {
   };
 
   const getTotalAvailableKilograms = () => {
-    return eudrDocuments.reduce((total, doc) => total + doc.available_kilograms, 0);
+    return (eudrDocuments || []).reduce((total, doc) => total + (doc.available_kilograms || 0), 0);
   };
 
   const getTotalDocumentedKilograms = () => {
-    return eudrDocuments.reduce((total, doc) => total + doc.total_kilograms, 0);
+    return (eudrDocuments || []).reduce((total, doc) => total + (doc.total_kilograms || 0), 0);
   };
 
   const getTotalSoldKilograms = () => {
-    return eudrSales.reduce((total, sale) => total + sale.kilograms, 0);
+    return (eudrSales || []).reduce((total, sale) => total + (sale.kilograms || 0), 0);
   };
 
   const getDocumentsByStatus = (status: EUDRDocument['status']) => {
-    return eudrDocuments.filter(doc => doc.status === status);
+    return (eudrDocuments || []).filter(doc => doc.status === status);
   };
 
   const getBatchesForDocument = (documentId: string) => {
-    return eudrBatches.filter(batch => batch.document_id === documentId);
+    return eudrBatches.filter(batch => batch.document_id === documentId) || [];
   };
 
   const getSalesForBatch = (batchId: string) => {
-    return eudrSales.filter(sale => sale.batch_id === batchId);
+    return eudrSales.filter(sale => sale.batch_id === batchId) || [];
   };
 
   const getAvailableBatches = () => {
-    return eudrBatches.filter(batch => batch.available_kilograms > 0);
+    return eudrBatches.filter(batch => batch.available_kilograms > 0) || [];
   };
 
   return {
