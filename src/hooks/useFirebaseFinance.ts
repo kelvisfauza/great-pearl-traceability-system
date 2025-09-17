@@ -556,14 +556,15 @@ export const useFirebaseFinance = () => {
 
   const processPayment = async (paymentId: string, method: 'Bank Transfer' | 'Cash', actualAmount?: number) => {
     try {
-      console.log('Processing payment:', paymentId, method, actualAmount ? `Actual amount: ${actualAmount}` : 'Full amount');
+      console.log('🔄 Processing payment:', paymentId, method, actualAmount ? `Actual amount: ${actualAmount}` : 'Full amount');
       
       // Find the payment record to get quality assessment ID
       let payment = payments.find(p => p.id === paymentId);
+      console.log('🔍 Payment found in local state:', !!payment);
       
       // If not found in local state, try to fetch from Firebase
       if (!payment) {
-        console.log('Payment not found in local state, fetching from Firebase...');
+        console.log('⚠️ Payment not found in local state, fetching from Firebase...');
         try {
           const paymentDoc = await getDoc(doc(db, 'payment_records', paymentId));
           if (paymentDoc.exists()) {
@@ -571,22 +572,37 @@ export const useFirebaseFinance = () => {
               id: paymentDoc.id,
               ...paymentDoc.data()
             } as PaymentRecord;
-            console.log('Payment found in Firebase:', payment);
+            console.log('✅ Payment found in Firebase:', payment);
+          } else {
+            console.error('❌ Payment document does not exist in Firebase:', paymentId);
           }
         } catch (firebaseError) {
-          console.error('Error fetching payment from Firebase:', firebaseError);
+          console.error('❌ Error fetching payment from Firebase:', firebaseError);
+          toast({
+            title: "Error", 
+            description: "Failed to fetch payment record from database",
+            variant: "destructive"
+          });
+          return;
         }
       }
       
       if (!payment) {
-        console.error('Payment not found:', paymentId);
+        console.error('❌ Payment not found anywhere:', paymentId);
         toast({
           title: "Error",
-          description: "Payment record not found",
+          description: "Payment record not found. Please refresh and try again.",
           variant: "destructive"
         });
         return;
       }
+
+      console.log('✅ Payment record located:', {
+        id: payment.id,
+        supplier: payment.supplier,
+        amount: payment.amount,
+        status: payment.status
+      });
       
       if (method === 'Bank Transfer') {
         // For bank transfers, create approval request
@@ -727,12 +743,31 @@ export const useFirebaseFinance = () => {
         }
       }
       
-      console.log('Payment processing completed successfully');
+      console.log('✅ Payment processing completed successfully');
+      
+      // Refresh payment records to ensure UI is up to date
+      await fetchPaymentRecords();
+      
     } catch (error) {
-      console.error('Error processing payment:', error);
+      console.error('❌ Error processing payment:', error);
+      
+      // More specific error handling
+      let errorMessage = "Failed to process payment";
+      if (error instanceof Error) {
+        if (error.message.includes('permission')) {
+          errorMessage = "Permission denied. Please check your access rights.";
+        } else if (error.message.includes('network')) {
+          errorMessage = "Network error. Please check your connection and try again.";
+        } else if (error.message.includes('not-found')) {
+          errorMessage = "Payment record not found. Please refresh and try again.";
+        } else {
+          errorMessage = `Payment processing failed: ${error.message}`;
+        }
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to process payment",
+        title: "Payment Processing Error",
+        description: errorMessage,
         variant: "destructive"
       });
     }
