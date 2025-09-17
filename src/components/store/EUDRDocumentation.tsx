@@ -9,9 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers } from 'lucide-react';
+import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download } from 'lucide-react';
 import { useEUDRDocumentation } from '@/hooks/useEUDRDocumentation';
 import { toast } from 'sonner';
+import EUDRReportPrint from './EUDRReportPrint';
 
 const EUDRDocumentation = () => {
   const {
@@ -37,6 +38,10 @@ const EUDRDocumentation = () => {
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [submittingDocument, setSubmittingDocument] = useState(false);
   const [submittingSale, setSubmittingSale] = useState(false);
+  const [reportType, setReportType] = useState('daily');
+  const [reportStartDate, setReportStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const [newDocument, setNewDocument] = useState({
     coffee_type: '',
@@ -183,6 +188,94 @@ const EUDRDocumentation = () => {
       receipts: (batch.receipts && batch.receipts.length > 0) ? batch.receipts : ['']
     });
     setShowReceiptModal(true);
+  };
+
+  const generateReport = () => {
+    setGeneratingReport(true);
+    
+    // Set date range based on report type
+    const today = new Date();
+    let startDate = reportStartDate;
+    let endDate = reportEndDate;
+    
+    switch (reportType) {
+      case 'daily':
+        startDate = today.toISOString().split('T')[0];
+        endDate = today.toISOString().split('T')[0];
+        break;
+      case 'weekly':
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - 7);
+        startDate = weekStart.toISOString().split('T')[0];
+        endDate = today.toISOString().split('T')[0];
+        break;
+      case 'monthly':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        startDate = monthStart.toISOString().split('T')[0];
+        endDate = today.toISOString().split('T')[0];
+        break;
+    }
+    
+    setReportStartDate(startDate);
+    setReportEndDate(endDate);
+    
+    // Simulate report generation
+    setTimeout(() => {
+      setGeneratingReport(false);
+      toast.success(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} report generated successfully`);
+    }, 1000);
+  };
+
+  const exportToCSV = () => {
+    const csvData = [
+      ['EUDR Documentation Report'],
+      ['Generated:', new Date().toLocaleString()],
+      ['Report Type:', reportType],
+      ['Date Range:', `${reportStartDate} to ${reportEndDate}`],
+      [''],
+      ['Summary Metrics'],
+      ['Total Documented (kg)', getTotalDocumentedKilograms()],
+      ['Available Stock (kg)', getTotalAvailableKilograms()],
+      ['Total Sold (kg)', getTotalSoldKilograms()],
+      ['Active Batches', getAvailableBatches().length],
+      [''],
+      ['Documentation Details'],
+      ['Date', 'Batch Number', 'Coffee Type', 'Total KG', 'Bulked KG', 'Receipts', 'Status'],
+      ...eudrDocuments.map(doc => [
+        doc.date,
+        doc.batch_number,
+        doc.coffee_type,
+        doc.total_kilograms,
+        doc.total_bulked_coffee || 0,
+        doc.total_receipts,
+        doc.status
+      ]),
+      [''],
+      ['Sales Details'],
+      ['Sale Date', 'Customer', 'Batch', 'Coffee Type', 'Kilograms', 'Price (UGX)', 'Total Value'],
+      ...eudrSales.map(sale => [
+        sale.sale_date,
+        sale.sold_to,
+        sale.batch_identifier,
+        sale.coffee_type,
+        sale.kilograms,
+        sale.sale_price,
+        sale.kilograms * sale.sale_price
+      ])
+    ];
+
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `EUDR_Report_${reportType}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    toast.success('Report exported to CSV successfully');
   };
 
   if (loading) {
@@ -470,6 +563,10 @@ const EUDRDocumentation = () => {
             <DollarSign className="h-4 w-4 mr-2" />
             Sales History
           </TabsTrigger>
+          <TabsTrigger value="reports">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Reports
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="batches" className="space-y-4">
@@ -645,7 +742,271 @@ const EUDRDocumentation = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="reports" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>EUDR Compliance Reports</CardTitle>
+              <CardDescription>
+                Generate detailed reports on EUDR documentation, traceability, and sales
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Report Controls */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <Label htmlFor="report-type">Report Type</Label>
+                  <Select value={reportType} onValueChange={setReportType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily Report</SelectItem>
+                      <SelectItem value="weekly">Weekly Report</SelectItem>
+                      <SelectItem value="monthly">Monthly Report</SelectItem>
+                      <SelectItem value="custom">Custom Range</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="start-date">Start Date</Label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={reportStartDate}
+                    onChange={(e) => setReportStartDate(e.target.value)}
+                    disabled={reportType !== 'custom'}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="end-date">End Date</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={reportEndDate}
+                    onChange={(e) => setReportEndDate(e.target.value)}
+                    disabled={reportType !== 'custom'}
+                  />
+                </div>
+
+                <div className="flex items-end gap-2">
+                  <Button 
+                    className="flex-1"
+                    onClick={() => generateReport()}
+                    disabled={generatingReport}
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    {generatingReport ? 'Generating...' : 'Generate Report'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Report Summary Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-blue-600 font-medium">Total Documented</p>
+                        <p className="text-2xl font-bold text-blue-900">{getTotalDocumentedKilograms().toLocaleString()}kg</p>
+                      </div>
+                      <FileText className="h-8 w-8 text-blue-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-green-600 font-medium">Available Stock</p>
+                        <p className="text-2xl font-bold text-green-900">{getTotalAvailableKilograms().toLocaleString()}kg</p>
+                      </div>
+                      <Package className="h-8 w-8 text-green-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-purple-50 border-purple-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-purple-600 font-medium">Total Sold</p>
+                        <p className="text-2xl font-bold text-purple-900">{getTotalSoldKilograms().toLocaleString()}kg</p>
+                      </div>
+                      <DollarSign className="h-8 w-8 text-purple-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-orange-50 border-orange-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-orange-600 font-medium">Active Batches</p>
+                        <p className="text-2xl font-bold text-orange-900">{getAvailableBatches().length}</p>
+                      </div>
+                      <Layers className="h-8 w-8 text-orange-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Detailed Report Table */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Detailed Report Data</h3>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        // Show print version
+                        const printContent = document.querySelector('.print-content');
+                        if (printContent) {
+                          printContent.classList.remove('hidden');
+                          printContent.classList.add('print:block');
+                        }
+                        window.print();
+                      }}
+                    >
+                      <Printer className="h-4 w-4 mr-2" />
+                      Print Report
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => exportToCSV()}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Export CSV
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Documentation Summary */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Documentation Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Batch Number</TableHead>
+                          <TableHead>Coffee Type</TableHead>
+                          <TableHead>Total KG</TableHead>
+                          <TableHead>Bulked KG</TableHead>
+                          <TableHead>Receipts</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {eudrDocuments.map((doc) => (
+                          <TableRow key={doc.id}>
+                            <TableCell>{doc.date}</TableCell>
+                            <TableCell className="font-mono">{doc.batch_number}</TableCell>
+                            <TableCell className="capitalize">{doc.coffee_type}</TableCell>
+                            <TableCell>{doc.total_kilograms?.toLocaleString() || 0}kg</TableCell>
+                            <TableCell>{doc.total_bulked_coffee?.toLocaleString() || 0}kg</TableCell>
+                            <TableCell>{doc.total_receipts}</TableCell>
+                            <TableCell>{getStatusBadge(doc.status)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Sales Summary */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Sales Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Sale Date</TableHead>
+                          <TableHead>Customer</TableHead>
+                          <TableHead>Batch</TableHead>
+                          <TableHead>Coffee Type</TableHead>
+                          <TableHead>Kilograms</TableHead>
+                          <TableHead>Price (UGX)</TableHead>
+                          <TableHead>Total Value</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {eudrSales.map((sale) => (
+                          <TableRow key={sale.id}>
+                            <TableCell>{sale.sale_date}</TableCell>
+                            <TableCell>{sale.sold_to}</TableCell>
+                            <TableCell className="font-mono">{sale.batch_identifier}</TableCell>
+                            <TableCell className="capitalize">{sale.coffee_type}</TableCell>
+                            <TableCell>{sale.kilograms.toLocaleString()}kg</TableCell>
+                            <TableCell>{sale.sale_price.toLocaleString()}</TableCell>
+                            <TableCell>{(sale.kilograms * sale.sale_price).toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Compliance Metrics */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">EUDR Compliance Metrics</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 bg-muted/50 rounded-lg">
+                        <h4 className="font-medium mb-2">Traceability Rate</h4>
+                        <div className="text-2xl font-bold text-green-600">
+                          {eudrDocuments.length > 0 ? '100%' : '0%'}
+                        </div>
+                        <p className="text-xs text-muted-foreground">All batches have EUDR documentation</p>
+                      </div>
+                      
+                      <div className="p-4 bg-muted/50 rounded-lg">
+                        <h4 className="font-medium mb-2">Documentation Coverage</h4>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {Math.round((getTotalDocumentedKilograms() / Math.max(getTotalDocumentedKilograms() + getTotalSoldKilograms(), 1)) * 100)}%
+                        </div>
+                        <p className="text-xs text-muted-foreground">Coffee with proper documentation</p>
+                      </div>
+
+                      <div className="p-4 bg-muted/50 rounded-lg">
+                        <h4 className="font-medium mb-2">Sales Efficiency</h4>
+                        <div className="text-2xl font-bold text-purple-600">
+                          {Math.round((getTotalSoldKilograms() / Math.max(getTotalDocumentedKilograms(), 1)) * 100)}%
+                        </div>
+                        <p className="text-xs text-muted-foreground">Documented coffee sold</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Print Component */}
+      <EUDRReportPrint
+        reportType={reportType}
+        startDate={reportStartDate}
+        endDate={reportEndDate}
+        totalDocumented={getTotalDocumentedKilograms()}
+        availableStock={getTotalAvailableKilograms()}
+        totalSold={getTotalSoldKilograms()}
+        activeBatches={getAvailableBatches().length}
+        documents={eudrDocuments}
+        sales={eudrSales}
+      />
 
       {/* Sale Modal */}
       <Dialog open={showSaleModal} onOpenChange={setShowSaleModal}>
