@@ -1144,7 +1144,93 @@ const EUDRDocumentation = () => {
               <Button 
                 variant="outline"
                 onClick={() => {
-                  window.print();
+                  // Create a temporary print window with the preview content
+                  const printWindow = window.open('', '_blank');
+                  const previewContent = document.querySelector('.print-preview-content');
+                  if (printWindow && previewContent) {
+                    printWindow.document.write(`
+                      <!DOCTYPE html>
+                      <html>
+                        <head>
+                          <title>EUDR Compliance Report</title>
+                          <style>
+                            body { 
+                              margin: 0; 
+                              font-family: Arial, sans-serif; 
+                              background: white;
+                              color: black;
+                            }
+                            @media print {
+                              body { margin: 0; }
+                              .no-print { display: none !important; }
+                            }
+                            .text-center { text-align: center; }
+                            .mb-8 { margin-bottom: 2rem; }
+                            .mb-4 { margin-bottom: 1rem; }
+                            .mb-3 { margin-bottom: 0.75rem; }
+                            .mb-2 { margin-bottom: 0.5rem; }
+                            .mt-2 { margin-top: 0.5rem; }
+                            .mt-4 { margin-top: 1rem; }
+                            .mt-8 { margin-top: 2rem; }
+                            .p-8 { padding: 2rem; }
+                            .p-4 { padding: 1rem; }
+                            .p-3 { padding: 0.75rem; }
+                            .p-2 { padding: 0.5rem; }
+                            .pb-6 { padding-bottom: 1.5rem; }
+                            .pt-4 { padding-top: 1rem; }
+                            .border-b-2 { border-bottom: 2px solid; }
+                            .border-green-600 { border-color: #059669; }
+                            .border-l-4 { border-left: 4px solid; }
+                            .border { border: 1px solid #d1d5db; }
+                            .border-gray-200 { border-color: #e5e7eb; }
+                            .border-gray-300 { border-color: #d1d5db; }
+                            .border-t { border-top: 1px solid; }
+                            .rounded { border-radius: 0.25rem; }
+                            .bg-gray-100 { background-color: #f3f4f6; }
+                            .bg-gray-50 { background-color: #f9fafb; }
+                            .grid { display: grid; }
+                            .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+                            .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+                            .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+                            .gap-4 { gap: 1rem; }
+                            .gap-6 { gap: 1.5rem; }
+                            .flex { display: flex; }
+                            .items-center { align-items: center; }
+                            .justify-center { justify-content: center; }
+                            .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+                            .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+                            .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+                            .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+                            .text-xs { font-size: 0.75rem; line-height: 1rem; }
+                            .font-bold { font-weight: 700; }
+                            .font-semibold { font-weight: 600; }
+                            .font-medium { font-weight: 500; }
+                            .text-green-700 { color: #047857; }
+                            .text-green-600 { color: #059669; }
+                            .text-blue-600 { color: #2563eb; }
+                            .text-purple-600 { color: #9333ea; }
+                            .text-orange-600 { color: #ea580c; }
+                            .text-gray-800 { color: #1f2937; }
+                            .text-gray-600 { color: #4b5563; }
+                            .text-gray-500 { color: #6b7280; }
+                            .capitalize { text-transform: capitalize; }
+                            .w-full { width: 100%; }
+                            .h-16 { height: 4rem; }
+                            .w-auto { width: auto; }
+                            .overflow-x-auto { overflow-x: auto; }
+                            .border-collapse { border-collapse: collapse; }
+                            .hover\\:bg-gray-50:hover { background-color: #f9fafb; }
+                          </style>
+                        </head>
+                        <body>
+                          ${previewContent.innerHTML}
+                        </body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                    printWindow.print();
+                    printWindow.close();
+                  }
                   setShowPrintPreview(false);
                 }}
               >
@@ -1160,7 +1246,7 @@ const EUDRDocumentation = () => {
             </div>
             
             {/* Render the print component */}
-            <div className="border rounded-lg bg-white">
+            <div className="border rounded-lg bg-white print-preview-content">
               <EUDRReportPrint
                 reportType={reportType}
                 startDate={reportStartDate}
