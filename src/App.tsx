@@ -29,6 +29,7 @@ import ITDepartment from "./pages/ITDepartment";
 import Milling from "./pages/Milling";
 import PermissionManagement from "./pages/PermissionManagement";
 import Expenses from "./pages/Expenses";
+import EUDRDocumentationPage from "./pages/EUDRDocumentation";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 
 import { useInactivityTimer } from './hooks/useInactivityTimer';
@@ -158,6 +159,11 @@ const App: React.FC = () => {
                 <Route path="/expenses" element={
                   <ProtectedRoute>
                     <Expenses />
+                  </ProtectedRoute>
+                } />
+                <Route path="/eudr-documentation" element={
+                  <ProtectedRoute requiredPermissions={["EUDR Documentation", "Store Management"]}>
+                    <EUDRDocumentationPage />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFound />} />

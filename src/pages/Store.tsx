@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import PriceTicker from "@/components/PriceTicker";
 import PricingGuidance from "@/components/PricingGuidance";
-import EUDRDocumentation from "@/components/store/EUDRDocumentation";
+
 import { StoreRecordsManager } from "@/components/store/StoreRecordsManager";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
 import StoreReportForm from "@/components/reports/StoreReportForm";
@@ -90,7 +90,7 @@ const Store = () => {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['records', 'store-records', 'eudr', 'pricing', 'operations', 'suppliers'].includes(tab)) {
+    if (tab && ['records', 'store-records', 'pricing', 'operations', 'suppliers'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -361,7 +361,7 @@ const Store = () => {
         <PriceTicker />
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="records">
               <Package className="h-4 w-4 mr-2" />
               Coffee Records
@@ -369,10 +369,6 @@ const Store = () => {
             <TabsTrigger value="store-records">
               <FileText className="h-4 w-4 mr-2" />
               Store Reports
-            </TabsTrigger>
-            <TabsTrigger value="eudr">
-              <FileText className="h-4 w-4 mr-2" />
-              EUDR Documentation
             </TabsTrigger>
             <TabsTrigger value="pricing">
               <DollarSign className="h-4 w-4 mr-2" />
@@ -542,11 +538,6 @@ const Store = () => {
                 </TabsContent>
               </Tabs>
             </div>
-          </TabsContent>
-
-          {/* EUDR Documentation Tab */}
-          <TabsContent value="eudr" className="space-y-6">
-            <EUDRDocumentation />
           </TabsContent>
 
           {/* Pricing & Assessment Tab */}
