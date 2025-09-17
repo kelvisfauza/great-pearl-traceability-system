@@ -1171,6 +1171,7 @@ const EUDRDocumentation = () => {
                 activeBatches={eudrBatches.length}
                 documents={eudrDocuments}
                 sales={eudrSales}
+                isPreview={true}
               />
             </div>
           </div>
