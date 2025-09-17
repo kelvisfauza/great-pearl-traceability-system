@@ -9,83 +9,79 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers } from 'lucide-react';
 import { useEUDRDocumentation } from '@/hooks/useEUDRDocumentation';
-import { useStoreManagement } from '@/hooks/useStoreManagement';
 import { toast } from 'sonner';
 
 const EUDRDocumentation = () => {
   const {
     eudrDocuments,
+    eudrBatches,
     eudrSales,
     loading,
     addEUDRDocument,
+    updateBatchReceipts,
     createEUDRSale,
     getTotalAvailableKilograms,
     getTotalDocumentedKilograms,
     getTotalSoldKilograms,
     getDocumentsByStatus,
-    getSalesForDocument
+    getBatchesForDocument,
+    getSalesForBatch,
+    getAvailableBatches
   } = useEUDRDocumentation();
-
-  const { storeRecords } = useStoreManagement();
 
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState(null);
   const [submittingDocument, setSubmittingDocument] = useState(false);
   const [submittingSale, setSubmittingSale] = useState(false);
 
   const [newDocument, setNewDocument] = useState({
-    coffeeType: '',
-    totalKilograms: 0,
-    receipts: [''],
-    supplierName: '',
-    batchNumber: '',
-    documentationNotes: ''
+    coffee_type: '',
+    total_kilograms: 0,
+    total_receipts: 0,
+    batch_number: '',
+    documentation_notes: ''
   });
 
   const [newSale, setNewSale] = useState({
-    eudrDocumentId: '',
+    batch_id: '',
     kilograms: 0,
-    soldTo: '',
-    saleDate: new Date().toISOString().split('T')[0],
-    salePrice: 0
+    sold_to: '',
+    sale_date: new Date().toISOString().split('T')[0],
+    sale_price: 0
+  });
+
+  const [receiptData, setReceiptData] = useState({
+    receipts: ['']
   });
 
   const handleAddReceipt = () => {
-    setNewDocument({
-      ...newDocument,
-      receipts: [...newDocument.receipts, '']
+    setReceiptData({
+      receipts: [...receiptData.receipts, '']
     });
   };
 
   const handleRemoveReceipt = (index: number) => {
-    const updatedReceipts = newDocument.receipts.filter((_, i) => i !== index);
-    setNewDocument({
-      ...newDocument,
+    const updatedReceipts = receiptData.receipts.filter((_, i) => i !== index);
+    setReceiptData({
       receipts: updatedReceipts.length > 0 ? updatedReceipts : ['']
     });
   };
 
   const handleReceiptChange = (index: number, value: string) => {
-    const updatedReceipts = [...newDocument.receipts];
+    const updatedReceipts = [...receiptData.receipts];
     updatedReceipts[index] = value;
-    setNewDocument({
-      ...newDocument,
+    setReceiptData({
       receipts: updatedReceipts
     });
   };
 
   const handleSubmitDocument = async () => {
-    if (!newDocument.coffeeType || !newDocument.supplierName || newDocument.totalKilograms <= 0) {
+    if (!newDocument.coffee_type || newDocument.total_kilograms <= 0 || newDocument.total_receipts <= 0) {
       toast.error('Please fill in all required fields');
-      return;
-    }
-
-    const validReceipts = newDocument.receipts.filter(receipt => receipt.trim() !== '');
-    if (validReceipts.length === 0) {
-      toast.error('Please add at least one receipt reference');
       return;
     }
 
@@ -93,18 +89,15 @@ const EUDRDocumentation = () => {
     try {
       await addEUDRDocument({
         ...newDocument,
-        receipts: validReceipts,
-        date: new Date().toISOString().split('T')[0],
-        batchNumber: newDocument.batchNumber || `EUDR${Date.now()}`
+        batch_number: newDocument.batch_number || `EUDR${Date.now()}`
       });
 
       setNewDocument({
-        coffeeType: '',
-        totalKilograms: 0,
-        receipts: [''],
-        supplierName: '',
-        batchNumber: '',
-        documentationNotes: ''
+        coffee_type: '',
+        total_kilograms: 0,
+        total_receipts: 0,
+        batch_number: '',
+        documentation_notes: ''
       });
       setShowDocumentModal(false);
     } catch (error) {
@@ -115,31 +108,46 @@ const EUDRDocumentation = () => {
   };
 
   const handleSubmitSale = async () => {
-    if (!newSale.eudrDocumentId || newSale.kilograms <= 0 || !newSale.soldTo || newSale.salePrice <= 0) {
+    if (!newSale.batch_id || newSale.kilograms <= 0 || !newSale.sold_to || newSale.sale_price <= 0) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     setSubmittingSale(true);
     try {
-      await createEUDRSale({
-        ...newSale,
-        coffeeType: selectedDocument.coffeeType,
-        batchNumber: selectedDocument.batchNumber
-      });
+      await createEUDRSale(newSale);
       setNewSale({
-        eudrDocumentId: '',
+        batch_id: '',
         kilograms: 0,
-        soldTo: '',
-        saleDate: new Date().toISOString().split('T')[0],
-        salePrice: 0
+        sold_to: '',
+        sale_date: new Date().toISOString().split('T')[0],
+        sale_price: 0
       });
       setShowSaleModal(false);
-      setSelectedDocument(null);
+      setSelectedBatch(null);
     } catch (error) {
       console.error('Error submitting sale:', error);
     } finally {
       setSubmittingSale(false);
+    }
+  };
+
+  const handleUpdateReceipts = async () => {
+    if (!selectedBatch) return;
+    
+    const validReceipts = receiptData.receipts.filter(receipt => receipt.trim() !== '');
+    if (validReceipts.length === 0) {
+      toast.error('Please add at least one receipt reference');
+      return;
+    }
+
+    try {
+      await updateBatchReceipts(selectedBatch.id, validReceipts);
+      setShowReceiptModal(false);
+      setSelectedBatch(null);
+      setReceiptData({ receipts: [''] });
+    } catch (error) {
+      console.error('Error updating receipts:', error);
     }
   };
 
@@ -151,18 +159,28 @@ const EUDRDocumentation = () => {
         return <Badge variant="default"><Clock className="h-3 w-3 mr-1" />Partially Sold</Badge>;
       case 'sold_out':
         return <Badge variant="outline"><Package className="h-3 w-3 mr-1" />Sold Out</Badge>;
+      case 'available':
+        return <Badge variant="secondary"><CheckCircle className="h-3 w-3 mr-1" />Available</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
-  const openSaleModal = (document: any) => {
-    setSelectedDocument(document);
+  const openSaleModal = (batch: any) => {
+    setSelectedBatch(batch);
     setNewSale({
       ...newSale,
-      eudrDocumentId: document.id
+      batch_id: batch.id
     });
     setShowSaleModal(true);
+  };
+
+  const openReceiptModal = (batch: any) => {
+    setSelectedBatch(batch);
+    setReceiptData({
+      receipts: batch.receipts.length > 0 ? batch.receipts : ['']
+    });
+    setShowReceiptModal(true);
   };
 
   if (loading) {
@@ -188,7 +206,7 @@ const EUDRDocumentation = () => {
           <CardContent>
             <div className="text-2xl font-bold">{getTotalDocumentedKilograms().toLocaleString()}kg</div>
             <p className="text-xs text-muted-foreground">
-              {eudrDocuments.length} document{eudrDocuments.length !== 1 ? 's' : ''}
+              {eudrDocuments.length} document{eudrDocuments.length !== 1 ? 's' : ''} • {eudrBatches.length} batches
             </p>
           </CardContent>
         </Card>
@@ -201,7 +219,7 @@ const EUDRDocumentation = () => {
           <CardContent>
             <div className="text-2xl font-bold">{getTotalAvailableKilograms().toLocaleString()}kg</div>
             <p className="text-xs text-muted-foreground">
-              Ready for sale
+              {getAvailableBatches().length} batches available
             </p>
           </CardContent>
         </Card>
@@ -244,18 +262,18 @@ const EUDRDocumentation = () => {
               Add EUDR Documentation
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Add EUDR Documentation</DialogTitle>
               <DialogDescription>
-                Document coffee with proper EUDR compliance receipts and information
+                Document coffee with proper EUDR compliance. Batches of 5 tonnes will be created automatically.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="coffee-type">Coffee Type *</Label>
-                  <Select value={newDocument.coffeeType} onValueChange={(value) => setNewDocument({...newDocument, coffeeType: value})}>
+                  <Select value={newDocument.coffee_type} onValueChange={(value) => setNewDocument({...newDocument, coffee_type: value})}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select coffee type" />
                     </SelectTrigger>
@@ -271,73 +289,44 @@ const EUDRDocumentation = () => {
                   <Input
                     id="total-kg"
                     type="number"
-                    value={newDocument.totalKilograms}
-                    onChange={(e) => setNewDocument({...newDocument, totalKilograms: Number(e.target.value)})}
+                    value={newDocument.total_kilograms}
+                    onChange={(e) => setNewDocument({...newDocument, total_kilograms: Number(e.target.value)})}
                     placeholder="0"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Will create {Math.ceil(newDocument.total_kilograms / 5000)} batch{Math.ceil(newDocument.total_kilograms / 5000) !== 1 ? 'es' : ''} of 5 tonnes each
+                  </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="supplier">Supplier Name *</Label>
+                  <Label htmlFor="total-receipts">Total Traceable Receipts *</Label>
                   <Input
-                    id="supplier"
-                    value={newDocument.supplierName}
-                    onChange={(e) => setNewDocument({...newDocument, supplierName: e.target.value})}
-                    placeholder="Enter supplier name"
+                    id="total-receipts"
+                    type="number"
+                    value={newDocument.total_receipts}
+                    onChange={(e) => setNewDocument({...newDocument, total_receipts: Number(e.target.value)})}
+                    placeholder="0"
                   />
                 </div>
                 <div>
                   <Label htmlFor="batch">Batch Number</Label>
                   <Input
                     id="batch"
-                    value={newDocument.batchNumber}
-                    onChange={(e) => setNewDocument({...newDocument, batchNumber: e.target.value})}
+                    value={newDocument.batch_number}
+                    onChange={(e) => setNewDocument({...newDocument, batch_number: e.target.value})}
                     placeholder="Auto-generated if empty"
                   />
                 </div>
               </div>
 
               <div>
-                <Label>Documentation Receipts *</Label>
-                {newDocument.receipts.map((receipt, index) => (
-                  <div key={index} className="flex gap-2 mt-2">
-                    <Input
-                      value={receipt}
-                      onChange={(e) => handleReceiptChange(index, e.target.value)}
-                      placeholder={`Receipt reference ${index + 1}`}
-                    />
-                    {newDocument.receipts.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRemoveReceipt(index)}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddReceipt}
-                  className="mt-2"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Receipt
-                </Button>
-              </div>
-
-              <div>
                 <Label htmlFor="notes">Documentation Notes</Label>
                 <Textarea
                   id="notes"
-                  value={newDocument.documentationNotes}
-                  onChange={(e) => setNewDocument({...newDocument, documentationNotes: e.target.value})}
+                  value={newDocument.documentation_notes}
+                  onChange={(e) => setNewDocument({...newDocument, documentation_notes: e.target.value})}
                   placeholder="Additional notes about documentation..."
                 />
               </div>
@@ -354,71 +343,205 @@ const EUDRDocumentation = () => {
         </Dialog>
       </div>
 
-      {/* Documents Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>EUDR Documented Coffee</CardTitle>
-          <CardDescription>
-            All coffee with proper EUDR documentation and compliance
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {eudrDocuments.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Batch Number</TableHead>
-                  <TableHead>Coffee Type</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Total KG</TableHead>
-                  <TableHead>Available KG</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Receipts</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {eudrDocuments.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-mono">{doc.batchNumber}</TableCell>
-                    <TableCell className="capitalize">{doc.coffeeType}</TableCell>
-                    <TableCell>{doc.supplierName}</TableCell>
-                    <TableCell>{doc.totalKilograms.toLocaleString()}kg</TableCell>
-                    <TableCell className="font-semibold">{doc.availableKilograms.toLocaleString()}kg</TableCell>
-                    <TableCell>{getStatusBadge(doc.status)}</TableCell>
-                    <TableCell>
-                      <div className="text-xs">
-                        {doc.receipts.slice(0, 2).map((receipt, i) => (
-                          <div key={i} className="truncate max-w-[100px]">{receipt}</div>
-                        ))}
-                        {doc.receipts.length > 2 && (
-                          <div className="text-muted-foreground">+{doc.receipts.length - 2} more</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {doc.availableKilograms > 0 && (
-                        <Button
-                          size="sm"
-                          onClick={() => openSaleModal(doc)}
-                        >
-                          Create Sale
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No EUDR documentation yet</p>
-              <p className="text-sm">Add your first EUDR documentation using the button above</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Batch Management Tabs */}
+      <Tabs defaultValue="batches" className="w-full">
+        <TabsList>
+          <TabsTrigger value="batches">
+            <Layers className="h-4 w-4 mr-2" />
+            Batch Management
+          </TabsTrigger>
+          <TabsTrigger value="documents">
+            <FileText className="h-4 w-4 mr-2" />
+            Document Overview
+          </TabsTrigger>
+          <TabsTrigger value="sales">
+            <DollarSign className="h-4 w-4 mr-2" />
+            Sales History
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="batches" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>EUDR Coffee Batches (5 Tonnes Each)</CardTitle>
+              <CardDescription>
+                Manage individual batches and their receipt documentation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {eudrBatches.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Batch ID</TableHead>
+                      <TableHead>Coffee Type</TableHead>
+                      <TableHead>Total KG</TableHead>
+                      <TableHead>Available KG</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Receipts</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {eudrBatches.map((batch) => {
+                      const document = eudrDocuments.find(doc => doc.id === batch.document_id);
+                      const sales = getSalesForBatch(batch.id);
+                      return (
+                        <TableRow key={batch.id}>
+                          <TableCell className="font-mono">{batch.batch_identifier}</TableCell>
+                          <TableCell className="capitalize">{document?.coffee_type}</TableCell>
+                          <TableCell>{batch.kilograms.toLocaleString()}kg</TableCell>
+                          <TableCell className="font-semibold">{batch.available_kilograms.toLocaleString()}kg</TableCell>
+                          <TableCell>{getStatusBadge(batch.status)}</TableCell>
+                          <TableCell>
+                            <div className="text-xs">
+                              {batch.receipts.length > 0 ? (
+                                <div>
+                                  {batch.receipts.slice(0, 2).map((receipt, i) => (
+                                    <div key={i} className="truncate max-w-[100px]">{receipt}</div>
+                                  ))}
+                                  {batch.receipts.length > 2 && (
+                                    <div className="text-muted-foreground">+{batch.receipts.length - 2} more</div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">No receipts</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openReceiptModal(batch)}
+                              >
+                                Add Receipts
+                              </Button>
+                              {batch.available_kilograms > 0 && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => openSaleModal(batch)}
+                                >
+                                  Create Sale
+                                </Button>
+                              )}
+                            </div>
+                            {sales.length > 0 && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {sales.length} sale{sales.length !== 1 ? 's' : ''} recorded
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Layers className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No batches yet</p>
+                  <p className="text-sm">Add EUDR documentation to create batches</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="documents" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>EUDR Document Overview</CardTitle>
+              <CardDescription>
+                Overall document status and batch breakdown
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {eudrDocuments.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Document</TableHead>
+                      <TableHead>Coffee Type</TableHead>
+                      <TableHead>Total KG</TableHead>
+                      <TableHead>Available KG</TableHead>
+                      <TableHead>Batches</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {eudrDocuments.map((doc) => {
+                      const batches = getBatchesForDocument(doc.id);
+                      return (
+                        <TableRow key={doc.id}>
+                          <TableCell className="font-mono">{doc.batch_number}</TableCell>
+                          <TableCell className="capitalize">{doc.coffee_type}</TableCell>
+                          <TableCell>{doc.total_kilograms.toLocaleString()}kg</TableCell>
+                          <TableCell className="font-semibold">{doc.available_kilograms.toLocaleString()}kg</TableCell>
+                          <TableCell>{batches.length} batches</TableCell>
+                          <TableCell>{getStatusBadge(doc.status)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No EUDR documentation yet</p>
+                  <p className="text-sm">Add your first EUDR documentation using the button above</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sales" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sales History</CardTitle>
+              <CardDescription>
+                All sales from EUDR documented batches
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {eudrSales.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Batch</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Kilograms</TableHead>
+                      <TableHead>Price (UGX)</TableHead>
+                      <TableHead>Remaining</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {eudrSales.map((sale) => (
+                      <TableRow key={sale.id}>
+                        <TableCell>{sale.sale_date}</TableCell>
+                        <TableCell className="font-mono">{sale.batch_identifier}</TableCell>
+                        <TableCell>{sale.sold_to}</TableCell>
+                        <TableCell>{sale.kilograms.toLocaleString()}kg</TableCell>
+                        <TableCell>{sale.sale_price.toLocaleString()}</TableCell>
+                        <TableCell>{sale.remaining_batch_kilograms.toLocaleString()}kg</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No sales recorded yet</p>
+                  <p className="text-sm">Create sales from available batches</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Sale Modal */}
       <Dialog open={showSaleModal} onOpenChange={setShowSaleModal}>
@@ -426,11 +549,11 @@ const EUDRDocumentation = () => {
           <DialogHeader>
             <DialogTitle>Create EUDR Sale</DialogTitle>
             <DialogDescription>
-              Record a sale from documented EUDR coffee stock
-              {selectedDocument && (
+              Record a sale from documented EUDR coffee batch
+              {selectedBatch && (
                 <div className="mt-2 text-sm bg-muted p-2 rounded">
-                  <strong>Batch:</strong> {selectedDocument.batchNumber} | 
-                  <strong> Available:</strong> {selectedDocument.availableKilograms}kg
+                  <strong>Batch:</strong> {selectedBatch.batch_identifier} | 
+                  <strong> Available:</strong> {selectedBatch.available_kilograms}kg
                 </div>
               )}
             </DialogDescription>
@@ -445,7 +568,7 @@ const EUDRDocumentation = () => {
                   value={newSale.kilograms}
                   onChange={(e) => setNewSale({...newSale, kilograms: Number(e.target.value)})}
                   placeholder="0"
-                  max={selectedDocument?.availableKilograms || 0}
+                  max={selectedBatch?.available_kilograms || 0}
                 />
               </div>
               <div>
@@ -453,8 +576,8 @@ const EUDRDocumentation = () => {
                 <Input
                   id="sale-price"
                   type="number"
-                  value={newSale.salePrice}
-                  onChange={(e) => setNewSale({...newSale, salePrice: Number(e.target.value)})}
+                  value={newSale.sale_price}
+                  onChange={(e) => setNewSale({...newSale, sale_price: Number(e.target.value)})}
                   placeholder="0"
                 />
               </div>
@@ -462,12 +585,12 @@ const EUDRDocumentation = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="sold-to">Sold To *</Label>
+                <Label htmlFor="customer">Customer *</Label>
                 <Input
-                  id="sold-to"
-                  value={newSale.soldTo}
-                  onChange={(e) => setNewSale({...newSale, soldTo: e.target.value})}
-                  placeholder="Customer/Company name"
+                  id="customer"
+                  value={newSale.sold_to}
+                  onChange={(e) => setNewSale({...newSale, sold_to: e.target.value})}
+                  placeholder="Customer name"
                 />
               </div>
               <div>
@@ -475,8 +598,8 @@ const EUDRDocumentation = () => {
                 <Input
                   id="sale-date"
                   type="date"
-                  value={newSale.saleDate}
-                  onChange={(e) => setNewSale({...newSale, saleDate: e.target.value})}
+                  value={newSale.sale_date}
+                  onChange={(e) => setNewSale({...newSale, sale_date: e.target.value})}
                 />
               </div>
             </div>
@@ -486,7 +609,63 @@ const EUDRDocumentation = () => {
               Cancel
             </Button>
             <Button onClick={handleSubmitSale} disabled={submittingSale}>
-              {submittingSale ? 'Creating Sale...' : 'Create Sale'}
+              {submittingSale ? 'Recording...' : 'Record Sale'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Modal */}
+      <Dialog open={showReceiptModal} onOpenChange={setShowReceiptModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Manage Batch Receipts</DialogTitle>
+            <DialogDescription>
+              Add or update receipt references for this batch
+              {selectedBatch && (
+                <div className="mt-2 text-sm bg-muted p-2 rounded">
+                  <strong>Batch:</strong> {selectedBatch.batch_identifier}
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Label>Receipt References</Label>
+            {receiptData.receipts.map((receipt, index) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  value={receipt}
+                  onChange={(e) => handleReceiptChange(index, e.target.value)}
+                  placeholder={`Receipt reference ${index + 1}`}
+                />
+                {receiptData.receipts.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRemoveReceipt(index)}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddReceipt}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Receipt
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReceiptModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateReceipts}>
+              Update Receipts
             </Button>
           </DialogFooter>
         </DialogContent>

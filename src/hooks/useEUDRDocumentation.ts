@@ -1,37 +1,51 @@
 import { useState, useEffect } from 'react';
-import { firebaseClient } from '@/lib/firebaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface EUDRDocument {
   id: string;
-  coffeeType: string;
-  totalKilograms: number;
-  availableKilograms: number;
-  receipts: string[];
-  batchNumber: string;
-  supplierName: string;
+  coffee_type: string;
+  total_kilograms: number;
+  available_kilograms: number;
+  total_receipts: number;
+  batch_number: string;
   date: string;
   status: 'documented' | 'partially_sold' | 'sold_out';
   created_at: string;
   updated_at: string;
-  documentationNotes?: string;
+  documentation_notes?: string;
+}
+
+interface EUDRBatch {
+  id: string;
+  document_id: string;
+  batch_sequence: number;
+  batch_identifier: string;
+  kilograms: number;
+  available_kilograms: number;
+  receipts: string[];
+  status: 'available' | 'partially_sold' | 'sold_out';
+  created_at: string;
+  updated_at: string;
 }
 
 interface EUDRSale {
   id: string;
-  eudrDocumentId: string;
+  document_id: string;
+  batch_id: string;
   kilograms: number;
-  soldTo: string;
-  saleDate: string;
-  salePrice: number;
-  remainingKilograms: number;
+  sold_to: string;
+  sale_date: string;
+  sale_price: number;
+  remaining_batch_kilograms: number;
+  batch_identifier: string;
+  coffee_type: string;
   created_at: string;
-  batchNumber: string;
-  coffeeType: string;
 }
 
 export const useEUDRDocumentation = () => {
   const [eudrDocuments, setEudrDocuments] = useState<EUDRDocument[]>([]);
+  const [eudrBatches, setEudrBatches] = useState<EUDRBatch[]>([]);
   const [eudrSales, setEudrSales] = useState<EUDRSale[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -39,14 +53,16 @@ export const useEUDRDocumentation = () => {
   const fetchEUDRDocuments = async () => {
     setLoading(true);
     try {
-      const { data, error } = await firebaseClient
+      const { data, error } = await supabase
         .from('eudr_documents')
-        .select()
-        .order('created_at', { ascending: false })
-        .get();
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setEudrDocuments(data || []);
+      setEudrDocuments((data || []).map(doc => ({
+        ...doc,
+        status: doc.status as 'documented' | 'partially_sold' | 'sold_out'
+      })));
     } catch (error) {
       console.error('Error fetching EUDR documents:', error);
       toast({
@@ -59,13 +75,29 @@ export const useEUDRDocumentation = () => {
     }
   };
 
+  const fetchEUDRBatches = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('eudr_batches')
+        .select('*')
+        .order('batch_sequence', { ascending: true });
+
+      if (error) throw error;
+      setEudrBatches((data || []).map(batch => ({
+        ...batch,
+        status: batch.status as 'available' | 'partially_sold' | 'sold_out'
+      })));
+    } catch (error) {
+      console.error('Error fetching EUDR batches:', error);
+    }
+  };
+
   const fetchEUDRSales = async () => {
     try {
-      const { data, error } = await firebaseClient
+      const { data, error } = await supabase
         .from('eudr_sales')
-        .select()
-        .order('created_at', { ascending: false })
-        .get();
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setEudrSales(data || []);
@@ -76,28 +108,39 @@ export const useEUDRDocumentation = () => {
 
   useEffect(() => {
     fetchEUDRDocuments();
+    fetchEUDRBatches();
     fetchEUDRSales();
   }, []);
 
-  const addEUDRDocument = async (documentData: Omit<EUDRDocument, 'id' | 'created_at' | 'updated_at' | 'availableKilograms' | 'status'>) => {
+  const addEUDRDocument = async (documentData: {
+    coffee_type: string;
+    total_kilograms: number;
+    total_receipts: number;
+    batch_number?: string;
+    documentation_notes?: string;
+  }) => {
     try {
       const newDoc = {
         ...documentData,
-        availableKilograms: documentData.totalKilograms,
+        available_kilograms: documentData.total_kilograms,
         status: 'documented' as const,
-        batchNumber: documentData.batchNumber || `EUDR${Date.now()}`
+        batch_number: documentData.batch_number || `EUDR${Date.now()}`,
+        date: new Date().toISOString().split('T')[0]
       };
 
-      const { data, error } = await firebaseClient
+      const { data, error } = await supabase
         .from('eudr_documents')
-        .insert(newDoc);
+        .insert(newDoc)
+        .select()
+        .single();
 
       if (error) throw error;
 
       await fetchEUDRDocuments();
+      await fetchEUDRBatches();
       toast({
         title: "Success",
-        description: "EUDR documentation added successfully"
+        description: "EUDR documentation added successfully with batches"
       });
 
       return data;
@@ -112,55 +155,99 @@ export const useEUDRDocumentation = () => {
     }
   };
 
-  const createEUDRSale = async (saleData: Omit<EUDRSale, 'id' | 'created_at' | 'remainingKilograms'>) => {
+  const updateBatchReceipts = async (batchId: string, receipts: string[]) => {
     try {
-      // Find the EUDR document
-      const eudrDoc = eudrDocuments.find(doc => doc.id === saleData.eudrDocumentId);
-      if (!eudrDoc) {
-        throw new Error('EUDR document not found');
+      const { error } = await supabase
+        .from('eudr_batches')
+        .update({ receipts })
+        .eq('id', batchId);
+
+      if (error) throw error;
+      
+      await fetchEUDRBatches();
+      toast({
+        title: "Success",
+        description: "Batch receipts updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating batch receipts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update batch receipts",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const createEUDRSale = async (saleData: {
+    batch_id: string;
+    kilograms: number;
+    sold_to: string;
+    sale_date: string;
+    sale_price: number;
+  }) => {
+    try {
+      // Find the batch
+      const batch = eudrBatches.find(b => b.id === saleData.batch_id);
+      if (!batch) {
+        throw new Error('Batch not found');
+      }
+
+      // Find the document
+      const document = eudrDocuments.find(doc => doc.id === batch.document_id);
+      if (!document) {
+        throw new Error('Document not found');
       }
 
       // Check if sufficient kilograms available
-      if (saleData.kilograms > eudrDoc.availableKilograms) {
-        throw new Error('Insufficient kilograms available for sale');
+      if (saleData.kilograms > batch.available_kilograms) {
+        throw new Error(`Insufficient kilograms available in ${batch.batch_identifier}. Available: ${batch.available_kilograms}kg`);
       }
 
       // Calculate remaining kilograms
-      const remainingKilograms = eudrDoc.availableKilograms - saleData.kilograms;
+      const remainingBatchKilograms = batch.available_kilograms - saleData.kilograms;
 
       // Create the sale record
       const newSale = {
         ...saleData,
-        remainingKilograms,
-        coffeeType: eudrDoc.coffeeType,
-        batchNumber: eudrDoc.batchNumber
+        document_id: batch.document_id,
+        remaining_batch_kilograms: remainingBatchKilograms,
+        batch_identifier: batch.batch_identifier,
+        coffee_type: document.coffee_type
       };
 
-      const { data: saleData_result, error: saleError } = await firebaseClient
+      const { data: saleResult, error: saleError } = await supabase
         .from('eudr_sales')
-        .insert(newSale);
+        .insert(newSale)
+        .select()
+        .single();
 
       if (saleError) throw saleError;
 
-      // Update the EUDR document with new available kilograms and status
-      const newStatus = remainingKilograms === 0 ? 'sold_out' : 'partially_sold';
+      // Update the batch available kilograms and status
+      const newBatchStatus = remainingBatchKilograms === 0 ? 'sold_out' : 'partially_sold';
       
-      // Update the document in the eudrDocuments array locally for immediate UI update
-      setEudrDocuments(prev => prev.map(doc => 
-        doc.id === saleData.eudrDocumentId 
-          ? { ...doc, availableKilograms: remainingKilograms, status: newStatus, updated_at: new Date().toISOString() }
-          : doc
-      ));
+      const { error: batchError } = await supabase
+        .from('eudr_batches')
+        .update({ 
+          available_kilograms: remainingBatchKilograms,
+          status: newBatchStatus
+        })
+        .eq('id', saleData.batch_id);
+
+      if (batchError) throw batchError;
 
       await fetchEUDRDocuments();
+      await fetchEUDRBatches();
       await fetchEUDRSales();
 
       toast({
         title: "Success",
-        description: `Sale recorded successfully. ${remainingKilograms}kg remaining.`
+        description: `Sale recorded successfully. ${remainingBatchKilograms}kg remaining in ${batch.batch_identifier}.`
       });
 
-      return saleData_result;
+      return saleResult;
     } catch (error) {
       console.error('Error creating EUDR sale:', error);
       toast({
@@ -173,11 +260,11 @@ export const useEUDRDocumentation = () => {
   };
 
   const getTotalAvailableKilograms = () => {
-    return eudrDocuments.reduce((total, doc) => total + doc.availableKilograms, 0);
+    return eudrDocuments.reduce((total, doc) => total + doc.available_kilograms, 0);
   };
 
   const getTotalDocumentedKilograms = () => {
-    return eudrDocuments.reduce((total, doc) => total + doc.totalKilograms, 0);
+    return eudrDocuments.reduce((total, doc) => total + doc.total_kilograms, 0);
   };
 
   const getTotalSoldKilograms = () => {
@@ -188,22 +275,35 @@ export const useEUDRDocumentation = () => {
     return eudrDocuments.filter(doc => doc.status === status);
   };
 
-  const getSalesForDocument = (documentId: string) => {
-    return eudrSales.filter(sale => sale.eudrDocumentId === documentId);
+  const getBatchesForDocument = (documentId: string) => {
+    return eudrBatches.filter(batch => batch.document_id === documentId);
+  };
+
+  const getSalesForBatch = (batchId: string) => {
+    return eudrSales.filter(sale => sale.batch_id === batchId);
+  };
+
+  const getAvailableBatches = () => {
+    return eudrBatches.filter(batch => batch.available_kilograms > 0);
   };
 
   return {
     eudrDocuments,
+    eudrBatches,
     eudrSales,
     loading,
     addEUDRDocument,
+    updateBatchReceipts,
     createEUDRSale,
     fetchEUDRDocuments,
+    fetchEUDRBatches,
     fetchEUDRSales,
     getTotalAvailableKilograms,
     getTotalDocumentedKilograms,
     getTotalSoldKilograms,
     getDocumentsByStatus,
-    getSalesForDocument
+    getBatchesForDocument,
+    getSalesForBatch,
+    getAvailableBatches
   };
 };

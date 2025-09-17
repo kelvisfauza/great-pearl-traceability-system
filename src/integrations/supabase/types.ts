@@ -823,6 +823,152 @@ export type Database = {
         }
         Relationships: []
       }
+      eudr_batches: {
+        Row: {
+          available_kilograms: number
+          batch_identifier: string
+          batch_sequence: number
+          created_at: string | null
+          document_id: string
+          id: string
+          kilograms: number
+          receipts: string[]
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          available_kilograms?: number
+          batch_identifier: string
+          batch_sequence: number
+          created_at?: string | null
+          document_id: string
+          id?: string
+          kilograms?: number
+          receipts?: string[]
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          available_kilograms?: number
+          batch_identifier?: string
+          batch_sequence?: number
+          created_at?: string | null
+          document_id?: string
+          id?: string
+          kilograms?: number
+          receipts?: string[]
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eudr_batches_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "eudr_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eudr_documents: {
+        Row: {
+          available_kilograms: number
+          batch_number: string
+          coffee_type: string
+          created_at: string | null
+          date: string
+          documentation_notes: string | null
+          id: string
+          status: string
+          total_kilograms: number
+          total_receipts: number
+          updated_at: string | null
+        }
+        Insert: {
+          available_kilograms: number
+          batch_number: string
+          coffee_type: string
+          created_at?: string | null
+          date: string
+          documentation_notes?: string | null
+          id?: string
+          status?: string
+          total_kilograms: number
+          total_receipts?: number
+          updated_at?: string | null
+        }
+        Update: {
+          available_kilograms?: number
+          batch_number?: string
+          coffee_type?: string
+          created_at?: string | null
+          date?: string
+          documentation_notes?: string | null
+          id?: string
+          status?: string
+          total_kilograms?: number
+          total_receipts?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      eudr_sales: {
+        Row: {
+          batch_id: string
+          batch_identifier: string
+          coffee_type: string
+          created_at: string | null
+          document_id: string
+          id: string
+          kilograms: number
+          remaining_batch_kilograms: number
+          sale_date: string
+          sale_price: number
+          sold_to: string
+        }
+        Insert: {
+          batch_id: string
+          batch_identifier: string
+          coffee_type: string
+          created_at?: string | null
+          document_id: string
+          id?: string
+          kilograms: number
+          remaining_batch_kilograms: number
+          sale_date: string
+          sale_price: number
+          sold_to: string
+        }
+        Update: {
+          batch_id?: string
+          batch_identifier?: string
+          coffee_type?: string
+          created_at?: string | null
+          document_id?: string
+          id?: string
+          kilograms?: number
+          remaining_batch_kilograms?: number
+          sale_date?: string
+          sale_price?: number
+          sold_to?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eudr_sales_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "eudr_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eudr_sales_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "eudr_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       field_agents: {
         Row: {
           collections_count: number | null
