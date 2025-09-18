@@ -315,7 +315,7 @@ export const ExpenseManagement = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {request.status === 'Pending' && !request.financeApproved && (
+                        {!request.financeApproved && request.status !== 'Rejected' && (
                           <div className="flex gap-2">
                             <Button
                               size="sm"
@@ -341,8 +341,11 @@ export const ExpenseManagement = () => {
                         {request.financeApproved && !request.adminApproved && (
                           <Badge className="bg-blue-100 text-blue-800">Awaiting Admin</Badge>
                         )}
-                        {request.status === 'Approved' && (
+                        {request.financeApproved && request.adminApproved && (
                           <Badge className="bg-green-100 text-green-800">Fully Approved</Badge>
+                        )}
+                        {request.status === 'Rejected' && (
+                          <Badge className="bg-red-100 text-red-800">Rejected</Badge>
                         )}
                       </TableCell>
                     </TableRow>
