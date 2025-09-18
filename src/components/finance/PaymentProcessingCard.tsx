@@ -9,7 +9,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from '@/hooks/use-toast';
 
-import { PaymentRecord } from '@/hooks/useFirebaseFinance';
+// PaymentRecord type defined locally
+interface PaymentRecord {
+  id: string;
+  supplier: string;
+  batchNumber?: string;
+  amount: number;
+  paid_amount?: number;
+  status: string;
+  method?: string;
+  rejection_reason?: string;
+  rejection_comments?: string;
+  qualityAssessmentId?: string;
+}
 import { ModificationRequestModal } from '../workflow/ModificationRequestModal';
 import { useWorkflowTracking } from '@/hooks/useWorkflowTracking';
 

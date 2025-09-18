@@ -9,7 +9,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebaseFinance } from '@/hooks/useFirebaseFinance';
+import { useHRPayments } from '@/hooks/useHRPayments';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { format } from 'date-fns';
 
@@ -26,7 +29,8 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
   const [calendarOpen, setCalendarOpen] = useState(false);
   
   const { suppliers, loading: suppliersLoading } = useSuppliers();
-  const { addSupplierAdvance } = useFirebaseFinance();
+  const { processAdvancePayment } = useHRPayments();
+  const { employee } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async () => {
@@ -60,28 +64,27 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
     }
 
     try {
-      const success = await addSupplierAdvance({
-        supplierId: selectedSupplier,
-        supplierName: supplier.name,
+      // Create advance record first
+      await addDoc(collection(db, 'employee_advances'), {
+        employee_name: supplier.name,
         amount: numAmount,
-        purpose: purpose,
-        expectedDeliveryDate: expectedDeliveryDate.toISOString()
+        reason: purpose,
+        issued_by: employee?.name || 'Finance Department',
+        issued_at: new Date().toISOString(),
+        status: 'Pending',
+        expected_delivery: expectedDeliveryDate.toISOString()
       });
 
-      if (success) {
-        toast({
-          title: "Advance Created",
-          description: `Advance of UGX ${numAmount.toLocaleString()} given to ${supplier.name}`,
-        });
+      toast({
+        title: "Advance Created",
+        description: `Advance of UGX ${numAmount.toLocaleString()} given to ${supplier.name}`,
+      });
 
-        setSelectedSupplier('');
-        setAmount('');
-        setPurpose('');
-        setExpectedDeliveryDate(undefined);
-        onClose();
-      } else {
-        throw new Error('Failed to create advance');
-      }
+      setSelectedSupplier('');
+      setAmount('');
+      setPurpose('');
+      setExpectedDeliveryDate(undefined);
+      onClose();
     } catch (error) {
       console.error('Error creating supplier advance:', error);
       toast({

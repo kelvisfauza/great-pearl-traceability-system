@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Calendar, FileText, Printer, Download, Calculator } from 'lucide-react';
-import { useFirebaseFinance } from '@/hooks/useFirebaseFinance';
+import { useFinanceStats } from '@/hooks/useFinanceStats';
+import { useCompletedTransactions } from '@/hooks/useCompletedTransactions';
+import { useExpenseManagement } from '@/hooks/useExpenseManagement';
 import { useMillingData } from '@/hooks/useMillingData';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, parseISO } from 'date-fns';
 
@@ -45,8 +47,11 @@ const PrintReportGenerator = () => {
   const [reportType, setReportType] = useState('weekly');
   const [generating, setGenerating] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [loading] = useState(false);
 
-  const { transactions, expenses, payments, stats, loading: financeLoading } = useFirebaseFinance();
+  const { stats } = useFinanceStats();
+  const { transactions } = useCompletedTransactions();
+  const { companyExpenses, userExpenseRequests } = useExpenseManagement();
   const { transactions: millingTransactions, cashTransactions, stats: millingStats } = useMillingData();
 
   const setQuickDateRange = (type: string) => {
@@ -79,18 +84,13 @@ const PrintReportGenerator = () => {
 
       // Filter data by date range
       const filteredTransactions = transactions.filter(t => {
-        const transDate = parseISO(t.date);
+        const transDate = parseISO(t.dateCompleted);
         return transDate >= fromDate && transDate <= toDate;
       });
 
-      const filteredExpenses = expenses.filter(e => {
-        const expenseDate = parseISO(e.date);
+      const filteredExpenses = [...companyExpenses, ...userExpenseRequests].filter(e => {
+        const expenseDate = parseISO('dateRequested' in e ? e.dateRequested : e.dateCreated);
         return expenseDate >= fromDate && expenseDate <= toDate;
-      });
-
-      const filteredPayments = payments.filter(p => {
-        const paymentDate = parseISO(p.date);
-        return paymentDate >= fromDate && paymentDate <= toDate;
       });
 
       const filteredMillingTransactions = millingTransactions.filter(t => {
@@ -100,33 +100,26 @@ const PrintReportGenerator = () => {
 
       // Calculate balance sheet
       const totalRevenue = filteredTransactions
-        .filter(t => t.type === 'Income')
-        .reduce((sum, t) => sum + t.amount, 0);
+        .reduce((sum, t) => sum + t.amountPaid, 0);
 
       const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
       const netIncome = totalRevenue - totalExpenses;
 
-      const totalAdvances = filteredPayments
-        .filter(p => p.status === 'Paid')
-        .reduce((sum, p) => sum + p.amount, 0);
+      const totalAdvances = 0; // Will implement when advances system is ready
 
       // Calculate day book
       const dailySummary: { [key: string]: { income: number; expenses: number; net: number } } = {};
       
       filteredTransactions.forEach(t => {
-        const date = t.date;
+        const date = t.dateCompleted.split('T')[0];
         if (!dailySummary[date]) {
           dailySummary[date] = { income: 0, expenses: 0, net: 0 };
         }
-        if (t.type === 'Income') {
-          dailySummary[date].income += t.amount;
-        } else {
-          dailySummary[date].expenses += t.amount;
-        }
+        dailySummary[date].income += t.amountPaid;
       });
 
       filteredExpenses.forEach(e => {
-        const date = e.date;
+        const date = ('dateRequested' in e ? e.dateRequested : e.dateCreated).split('T')[0];
         if (!dailySummary[date]) {
           dailySummary[date] = { income: 0, expenses: 0, net: 0 };
         }
@@ -138,16 +131,13 @@ const PrintReportGenerator = () => {
         dailySummary[date].net = dailySummary[date].income - dailySummary[date].expenses;
       });
 
-      // Calculate average prices (mock calculation - you can implement based on your data)
-      const averageBuyingPrice = filteredPayments.length > 0 
-        ? filteredPayments.reduce((sum, p) => sum + p.amount, 0) / filteredPayments.length
-        : 0;
-
-      const averageSellingPrice = totalRevenue / (filteredTransactions.filter(t => t.type === 'Income').length || 1);
+      // Calculate average prices
+      const averageBuyingPrice = 0; // Will implement when price data is available
+      const averageSellingPrice = totalRevenue / (filteredTransactions.length || 1);
       const priceVariance = averageSellingPrice - averageBuyingPrice;
 
       // Operational data
-      const totalKgsProcessed = filteredMillingTransactions.reduce((sum, t) => sum + (t.kgs_hulled || 0), 0);
+      const totalKgsProcessed = 0; // Will implement when weight data is available
       const millingRevenue = filteredMillingTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
 
       const reportData: ReportData = {
@@ -156,12 +146,12 @@ const PrintReportGenerator = () => {
           totalRevenue,
           totalExpenses,
           netIncome,
-          cashOnHand: stats.cashOnHand,
-          pendingPayments: stats.pendingPayments,
+          cashOnHand: stats.availableCash,
+          pendingPayments: stats.pendingCoffeeAmount,
           totalAdvances
         },
         dayBook: {
-          transactions: [...filteredTransactions, ...filteredExpenses.map(e => ({ ...e, type: 'Expense' }))],
+          transactions: [...filteredTransactions, ...filteredExpenses],
           dailySummary
         },
         averagePrices: {
@@ -638,7 +628,7 @@ ${Object.entries(reportData.dayBook.dailySummary)
               <Label>&nbsp;</Label>
               <Button 
                 onClick={generateReportData} 
-                disabled={generating || financeLoading}
+                disabled={generating || loading}
                 className="w-full"
               >
                 <Calculator className="h-4 w-4 mr-2" />
