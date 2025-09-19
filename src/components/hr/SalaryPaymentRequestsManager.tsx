@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
 import { useApprovalSystem } from '@/hooks/useApprovalSystem';
-import { useSalaryPayments } from '@/hooks/useSalaryPayments';
+import { useSupabaseSalaryRequests } from '@/hooks/useSupabaseSalaryRequests';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import SalaryPaymentModal from './SalaryPaymentModal';
@@ -14,7 +14,7 @@ import { Send, DollarSign, Users, Calendar, CheckCircle, XCircle, Clock } from '
 const SalaryPaymentRequestsManager = () => {
   const { employees } = useFirebaseEmployees();
   const { createApprovalRequest, loading: submitting } = useApprovalSystem();
-  const { paymentRequests: payments, loading } = useSalaryPayments();
+  const { requests: payments, loading } = useSupabaseSalaryRequests();
   const { employee } = useAuth();
   const { toast } = useToast();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -174,7 +174,7 @@ const SalaryPaymentRequestsManager = () => {
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <div className="flex items-center gap-3">
-                        <h4 className="font-semibold">{payment.title}</h4>
+                        <h4 className="font-semibold">Salary Request - {payment.request_type}</h4>
                         <Badge className={getStatusColor(payment.status)}>
                           <div className="flex items-center gap-1">
                             {getStatusIcon(payment.status)}
@@ -183,12 +183,12 @@ const SalaryPaymentRequestsManager = () => {
                         </Badge>
                       </div>
                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                         <span>{payment.details?.employee_count || 0} employees</span>
-                         <span>{payment.amount}</span>
+                         <span>User: {payment.requested_by}</span>
+                         <span>UGX {payment.amount.toLocaleString()}</span>
                          <span>{new Date(payment.created_at).toLocaleDateString()}</span>
                        </div>
-                       {payment.details?.notes && (
-                         <p className="text-sm text-muted-foreground italic">{payment.details.notes}</p>
+                       {payment.reason && (
+                         <p className="text-sm text-muted-foreground italic">{payment.reason}</p>
                        )}
                     </div>
                     <Button

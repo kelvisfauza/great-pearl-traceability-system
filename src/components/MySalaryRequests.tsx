@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApprovalSystem } from '@/hooks/useApprovalSystem';
-import { useSalaryPayments } from '@/hooks/useSalaryPayments';
+import { useSupabaseSalaryRequests } from '@/hooks/useSupabaseSalaryRequests';
 import IndividualSalaryRequestModal from '@/components/hr/IndividualSalaryRequestModal';
 import { DollarSign, Clock, CheckCircle, XCircle, User, Phone } from 'lucide-react';
 
@@ -15,15 +15,17 @@ interface MySalaryRequestsProps {
 const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
   const { employee } = useAuth();
   const { createApprovalRequest, loading: submitting } = useApprovalSystem();
-  const { paymentRequests, loading } = useSalaryPayments();
+  const { requests, loading, fetchRequestsByEmail } = useSupabaseSalaryRequests();
   const [showRequestModal, setShowRequestModal] = useState(false);
 
-  // Filter salary requests for current user
-  const mySalaryRequests = paymentRequests.filter(
-    request => 
-      request.type === 'Employee Salary Request' && 
-      request.requestedby === employee?.email
-  );
+  // Filter salary requests for current user and fetch them
+  useEffect(() => {
+    if (employee?.email) {
+      fetchRequestsByEmail(employee.email);
+    }
+  }, [employee?.email, fetchRequestsByEmail]);
+
+  const mySalaryRequests = requests;
 
   const handleRequestSubmitted = async (requestData: any) => {
     try {
@@ -62,19 +64,15 @@ const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
   };
 
   const getApprovalStatus = (request: any) => {
-    const details = request.details || {};
-    if (!details.requires_dual_approval) {
-      return request.status;
-    }
-
-    if (details.finance_approved && details.admin_approved) {
+    // For Supabase money_requests
+    if (request.approval_stage === 'completed') {
       return 'Fully Approved';
-    } else if (details.finance_approved && !details.admin_approved) {
+    } else if (request.approval_stage === 'finance_approved') {
       return 'Finance Approved - Awaiting Admin';
-    } else if (!details.finance_approved && details.admin_approved) {
-      return 'Admin Approved - Awaiting Finance';
+    } else if (request.approval_stage === 'pending_finance') {
+      return 'Pending Finance Approval';
     } else {
-      return 'Pending Both Approvals';
+      return request.status || 'Pending';
     }
   };
 
@@ -165,15 +163,15 @@ const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
                 <div key={request.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h4 className="font-semibold">{request.title}</h4>
+                      <h4 className="font-semibold">Salary Request - {request.request_type}</h4>
                       <p className="text-sm text-muted-foreground">
-                        {request.details?.payment_type === 'mid-month' ? 'Mid-Month Payment' : 'End-Month Payment'}
+                        Type: {request.request_type}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-green-600">{request.amount}</p>
+                      <p className="text-lg font-bold text-green-600">UGX {request.amount.toLocaleString()}</p>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(request.daterequested).toLocaleDateString()}
+                        {new Date(request.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -187,36 +185,34 @@ const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
                         </div>
                       </Badge>
                       
-                      {request.details?.requires_dual_approval && (
-                        <div className="flex gap-1">
-                          <Badge 
-                            variant="outline" 
-                            className={request.details.finance_approved ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
-                          >
-                            Finance: {request.details.finance_approved ? 'Approved' : 'Pending'}
-                          </Badge>
-                          <Badge 
-                            variant="outline"
-                            className={request.details.admin_approved ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
-                          >
-                            Admin: {request.details.admin_approved ? 'Approved' : 'Pending'}
-                          </Badge>
-                        </div>
-                      )}
+                      <div className="flex gap-1">
+                        <Badge 
+                          variant="outline" 
+                          className={request.finance_approved_at ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
+                        >
+                          Finance: {request.finance_approved_at ? 'Approved' : 'Pending'}
+                        </Badge>
+                        <Badge 
+                          variant="outline"
+                          className={request.admin_approved_at ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
+                        >
+                          Admin: {request.admin_approved_at ? 'Approved' : 'Pending'}
+                        </Badge>
+                      </div>
                     </div>
 
-                    {request.status === 'Approved' && (
+                    {request.status === 'approved' && (
                       <Badge className="bg-blue-100 text-blue-800">
                         Ready for Withdrawal
                       </Badge>
                     )}
                   </div>
 
-                  {request.details?.reason && (
+                  {request.reason && (
                     <div className="mt-3 p-3 bg-muted rounded-lg">
                       <p className="text-sm">
                         <span className="font-medium">Reason: </span>
-                        {request.details.reason}
+                        {request.reason}
                       </p>
                     </div>
                   )}
