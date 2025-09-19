@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -26,7 +26,7 @@ export interface MoneyRequest {
 
 export const useSupabaseSalaryRequests = () => {
   const [requests, setRequests] = useState<MoneyRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   const fetchRequests = async () => {
@@ -80,11 +80,12 @@ export const useSupabaseSalaryRequests = () => {
     }
   };
 
-  const fetchRequestsByEmail = async (email: string) => {
+  const fetchRequestsByEmail = useCallback(async (email: string) => {
     try {
+      console.log('fetchRequestsByEmail called for:', email);
       setLoading(true);
       const { data, error } = await supabase
-        .from('money_requests')
+        .from('money_requests')  
         .select('*')
         .eq('requested_by', email)
         .order('created_at', { ascending: false });
@@ -93,6 +94,7 @@ export const useSupabaseSalaryRequests = () => {
       
       setRequests(data || []);
       console.log('Fetched email salary requests from Supabase:', data?.length || 0);
+      console.log('Setting loading to false');
     } catch (error) {
       console.error('Error fetching email salary requests:', error);
       toast({
@@ -102,9 +104,10 @@ export const useSupabaseSalaryRequests = () => {
       });
       setRequests([]);
     } finally {
+      console.log('fetchRequestsByEmail - Setting loading to false');
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   const createRequest = async (amount: number, reason: string, userId: string, requestedBy: string) => {
     try {
@@ -144,7 +147,7 @@ export const useSupabaseSalaryRequests = () => {
   };
 
   useEffect(() => {
-    fetchRequests();
+    // Don't auto-fetch on mount, let components control their own fetching
   }, []);
 
   return {

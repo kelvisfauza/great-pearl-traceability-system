@@ -21,11 +21,14 @@ const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
   // Filter salary requests for current user and fetch them
   useEffect(() => {
     if (employee?.email) {
+      console.log('Fetching salary requests for:', employee.email);
       fetchRequestsByEmail(employee.email);
     }
   }, [employee?.email, fetchRequestsByEmail]);
 
   const mySalaryRequests = requests;
+  
+  console.log('MySalaryRequests - loading:', loading, 'requests:', mySalaryRequests.length);
 
   const handleRequestSubmitted = async (requestData: any) => {
     try {
