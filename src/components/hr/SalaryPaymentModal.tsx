@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { DollarSign, Calendar, User, Send } from "lucide-react";
+import { DollarSign, Calendar, User, Send, AlertTriangle } from "lucide-react";
 
 interface SalaryPaymentModalProps {
   open: boolean;
@@ -23,8 +24,10 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentRequestSub
     bonuses: "",
     deductions: "",
     notes: "",
-    paymentMethod: "Bank Transfer"
+    paymentMethod: "Bank Transfer",
+    paymentType: "full" // 'full' or 'mid-month'
   });
+  const [showMidMonthAlert, setShowMidMonthAlert] = useState(false);
   const { toast } = useToast();
 
   const handleEmployeeToggle = (employeeId: string) => {
@@ -36,13 +39,25 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentRequestSub
   };
 
   const calculateTotalSalary = () => {
-    return selectedEmployees.reduce((total, empId) => {
+    const baseSalary = selectedEmployees.reduce((total, empId) => {
       const employee = employees.find(e => e.id === empId);
       if (employee) {
         return total + employee.salary;
       }
       return total;
     }, 0);
+    
+    // If mid-month payment, use half salary
+    return requestData.paymentType === "mid-month" ? baseSalary / 2 : baseSalary;
+  };
+
+  const handlePaymentTypeChange = (type: string) => {
+    setRequestData(prev => ({ ...prev, paymentType: type }));
+    if (type === "mid-month") {
+      setShowMidMonthAlert(true);
+    } else {
+      setShowMidMonthAlert(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -65,8 +80,8 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentRequestSub
     const paymentRequest = {
       department: "Human Resources",
       type: "Salary Payment",
-      title: `Salary Payment - ${requestData.month}`,
-      description: `Monthly salary payment for ${selectedEmployees.length} employees`,
+      title: `${requestData.paymentType === "mid-month" ? "Mid-Month " : ""}Salary Payment - ${requestData.month}`,
+      description: `${requestData.paymentType === "mid-month" ? "Mid-month " : "Monthly "}salary payment for ${selectedEmployees.length} employees`,
       amount: `UGX ${totalPayment.toLocaleString()}`,
       requestedby: "HR Manager", // This should come from auth context
       daterequested: new Date().toISOString().split('T')[0],
@@ -74,6 +89,7 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentRequestSub
       status: "Pending",
       details: {
         month: requestData.month,
+        payment_type: requestData.paymentType,
         employee_count: selectedEmployees.length,
         total_salary: totalBaseSalary,
         bonuses: bonuses,
@@ -86,7 +102,10 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentRequestSub
           return {
             id: employee?.id,
             name: employee?.name,
-            salary: employee?.salary,
+            email: employee?.email,
+            phone: employee?.phone,
+            salary: requestData.paymentType === "mid-month" ? employee?.salary / 2 : employee?.salary,
+            full_salary: employee?.salary,
             department: employee?.department,
             position: employee?.position
           };
@@ -103,8 +122,10 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentRequestSub
       bonuses: "", 
       deductions: "", 
       notes: "", 
-      paymentMethod: "Bank Transfer"
+      paymentMethod: "Bank Transfer",
+      paymentType: "full"
     });
+    setShowMidMonthAlert(false);
 
     toast({
       title: "Payment Request Submitted",
@@ -126,7 +147,7 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentRequestSub
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label htmlFor="month">Payment Month</Label>
               <Input
@@ -135,6 +156,18 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentRequestSub
                 value={requestData.month}
                 onChange={(e) => setRequestData(prev => ({ ...prev, month: e.target.value }))}
               />
+            </div>
+            <div>
+              <Label htmlFor="paymentType">Payment Type</Label>
+              <Select value={requestData.paymentType} onValueChange={handlePaymentTypeChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full">Full Monthly Salary</SelectItem>
+                  <SelectItem value="mid-month">Mid-Month Payment</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="paymentMethod">Payment Method</Label>
@@ -151,6 +184,16 @@ const SalaryPaymentModal = ({ open, onOpenChange, employees, onPaymentRequestSub
               </Select>
             </div>
           </div>
+
+          {showMidMonthAlert && (
+            <Alert className="border-orange-200 bg-orange-50">
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-800">
+                <strong>Mid-Month Payment Selected:</strong> You are issuing 50% of each employee's monthly salary. 
+                This request will require approval from both Finance and Admin departments.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div>
             <Label>Select Employees</Label>

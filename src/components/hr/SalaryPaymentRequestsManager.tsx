@@ -43,6 +43,20 @@ const SalaryPaymentRequestsManager = () => {
           title: "Payment Request Submitted",
           description: "Salary payment request has been sent to admin for approval"
         });
+
+        // Send SMS notifications to employees about salary initialization
+        if (paymentRequest.details?.employee_details) {
+          for (const emp of paymentRequest.details.employee_details) {
+            if (emp.phone) {
+              try {
+                // This would be implemented with the SMS service
+                console.log(`Sending SMS to ${emp.name} at ${emp.phone}: Dear ${emp.name}, your ${paymentRequest.details.payment_type === "mid-month" ? "mid month" : "end of month"} salary of UGX ${emp.salary.toLocaleString()} has been initialized. Once approved you will receive it ASAP.`);
+              } catch (smsError) {
+                console.error('SMS notification failed for:', emp.name, smsError);
+              }
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Error submitting payment request:', error);

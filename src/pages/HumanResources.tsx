@@ -31,6 +31,7 @@ import EmptyState from '@/components/hr/EmptyState';
 import RegistrationRequestsManager from '@/components/hr/RegistrationRequestsManager';
 import PrintCredentialsDialog from '@/components/hr/PrintCredentialsDialog';
 import SalaryPaymentRequestsManager from '@/components/hr/SalaryPaymentRequestsManager';
+import MySalaryRequests from '@/components/MySalaryRequests';
 import UserCreationForm from '@/components/hr/UserCreationForm';
 import PrintUserDetails from '@/components/hr/PrintUserDetails';
 import CreateTrainingAccountButton from '@/components/admin/CreateTrainingAccountButton';
@@ -183,7 +184,7 @@ const HumanResources = () => {
         </div>
 
         <Tabs defaultValue="employees" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-10">
             <TabsTrigger value="employees">System Users</TabsTrigger>
             <TabsTrigger value="company-employees">Company Employees</TabsTrigger>
             <TabsTrigger value="payslips">Payslips</TabsTrigger>
@@ -193,6 +194,7 @@ const HumanResources = () => {
             <TabsTrigger value="print-details">Print Details</TabsTrigger>
             <TabsTrigger value="requests">Registration Requests</TabsTrigger>
             <TabsTrigger value="payments">Salary Payments</TabsTrigger>
+            <TabsTrigger value="my-salary">My Salary Requests</TabsTrigger>
           </TabsList>
 
           <TabsContent value="employees" className="space-y-6">
@@ -309,6 +311,10 @@ const HumanResources = () => {
           
           <TabsContent value="payments">
             <SalaryPaymentRequestsManager />
+          </TabsContent>
+          
+          <TabsContent value="my-salary">
+            <MySalaryRequests />
           </TabsContent>
         </Tabs>
 
