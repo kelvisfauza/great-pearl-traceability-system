@@ -103,6 +103,7 @@ export type Database = {
       }
       approval_requests: {
         Row: {
+          admin_approved: boolean | null
           admin_approved_at: string | null
           admin_approved_by: string | null
           amount: string
@@ -112,6 +113,7 @@ export type Database = {
           department: string
           description: string
           details: Json | null
+          finance_approved: boolean | null
           finance_approved_at: string | null
           finance_approved_by: string | null
           id: string
@@ -125,6 +127,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_approved?: boolean | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           amount: string
@@ -134,6 +137,7 @@ export type Database = {
           department: string
           description: string
           details?: Json | null
+          finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
           id?: string
@@ -147,6 +151,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_approved?: boolean | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           amount?: string
@@ -156,6 +161,7 @@ export type Database = {
           department?: string
           description?: string
           details?: Json | null
+          finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
           id?: string

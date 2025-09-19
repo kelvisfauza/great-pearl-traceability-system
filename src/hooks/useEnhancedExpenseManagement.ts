@@ -146,7 +146,8 @@ export const useEnhancedExpenseManagement = () => {
       }));
 
       // Update overall status if both approvals are complete
-      if (data.finance_approved && data.admin_approved) {
+      const updatedData = data as any;
+      if (updatedData.finance_approved && updatedData.admin_approved) {
         await supabase
           .from('approval_requests')
           .update({ status: 'Approved' })

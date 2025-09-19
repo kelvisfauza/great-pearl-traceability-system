@@ -4,135 +4,66 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Receipt, PlusCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, AlertTriangle } from 'lucide-react';
-import { useExpenseManagement } from '@/hooks/useExpenseManagement';
+import { Receipt, CheckCircle, XCircle, Clock, DollarSign, User, Calendar } from 'lucide-react';
+import { useEnhancedExpenseManagement } from '@/hooks/useEnhancedExpenseManagement';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const ExpenseManagement = () => {
-  const { 
-    userExpenseRequests, 
-    companyExpenses, 
-    loading, 
-    approveExpenseRequest, 
-    rejectExpenseRequest,
-    createCompanyExpense 
-  } = useExpenseManagement();
+  const { expenseRequests, loading, updateRequestApproval } = useEnhancedExpenseManagement();
   const { toast } = useToast();
+  const { employee } = useAuth();
 
-  const [showCreateExpenseDialog, setShowCreateExpenseDialog] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
-  
-  // Company Expense Form State
-  const [expenseTitle, setExpenseTitle] = useState('');
-  const [expenseDescription, setExpenseDescription] = useState('');
-  const [expenseAmount, setExpenseAmount] = useState('');
-  const [expensePriority, setExpensePriority] = useState('Medium');
-  const [expenseCategory, setExpenseCategory] = useState('Operations');
+  // Filter different types of expense requests
+  const userExpenseRequests = expenseRequests.filter(
+    req => req.type === 'Employee Expense Request' || 
+           (req.type.includes('Expense') && req.type !== 'Employee Salary Request')
+  );
 
-  // Rejection Form State
-  const [rejectionReason, setRejectionReason] = useState('');
+  const salaryRequests = expenseRequests.filter(
+    req => req.type === 'Employee Salary Request' || req.type === 'Salary Payment'
+  );
 
-  const handleApproveRequest = async (requestId: string) => {
+  const handleApprove = async (requestId: string) => {
     try {
-      await approveExpenseRequest(requestId);
-      toast({
-        title: "Request Approved",
-        description: "Expense request approved by Finance. Awaiting Admin approval."
-      });
+      await updateRequestApproval(requestId, 'finance', true, employee?.name || 'Finance Team');
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to approve expense request",
-        variant: "destructive"
-      });
+      console.error('Error approving request:', error);
     }
   };
 
-  const handleRejectRequest = async () => {
-    if (!selectedRequest || !rejectionReason) return;
-
+  const handleReject = async (requestId: string) => {
     try {
-      await rejectExpenseRequest(selectedRequest.id, rejectionReason);
-      toast({
-        title: "Request Rejected",
-        description: "Expense request has been rejected"
-      });
-      setShowRejectionDialog(false);
-      setSelectedRequest(null);
-      setRejectionReason('');
+      await updateRequestApproval(requestId, 'finance', false, employee?.name || 'Finance Team');
     } catch (error) {
-      toast({
-        title: "Error", 
-        description: "Failed to reject expense request",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleCreateCompanyExpense = async () => {
-    if (!expenseTitle || !expenseDescription || !expenseAmount) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      await createCompanyExpense({
-        title: expenseTitle,
-        description: expenseDescription,
-        amount: parseFloat(expenseAmount),
-        priority: expensePriority,
-        category: expenseCategory
-      });
-
-      toast({
-        title: "Company Expense Created",
-        description: "Company expense submitted for dual approval (Finance & Admin)"
-      });
-
-      // Reset form
-      setExpenseTitle('');
-      setExpenseDescription('');
-      setExpenseAmount('');
-      setExpensePriority('Medium');
-      setExpenseCategory('Operations');
-      setShowCreateExpenseDialog(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create company expense",
-        variant: "destructive"
-      });
+      console.error('Error rejecting request:', error);
     }
   };
 
   const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
 
-  const getStatusBadgeColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'approved': return 'bg-green-100 text-green-800 border-green-200';
-      case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
-      case 'finance approved': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  const getStatusBadgeColor = (request: any) => {
+    if (request.status === 'Rejected') return 'bg-red-100 text-red-800';
+    if (request.financeApproved && request.adminApproved) return 'bg-green-100 text-green-800';
+    if (request.financeApproved && !request.adminApproved) return 'bg-blue-100 text-blue-800';
+    if (!request.financeApproved && request.adminApproved) return 'bg-purple-100 text-purple-800';
+    return 'bg-yellow-100 text-yellow-800';
+  };
+
+  const getStatusText = (request: any) => {
+    if (request.status === 'Rejected') return 'Rejected';
+    if (request.financeApproved && request.adminApproved) return 'Fully Approved';
+    if (request.financeApproved && !request.adminApproved) return 'Finance Approved - Awaiting Admin';
+    if (!request.financeApproved && request.adminApproved) return 'Admin Approved - Awaiting Finance';
+    return 'Pending Review';
   };
 
   const getPriorityBadgeColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    switch (priority?.toLowerCase()) {
+      case 'high': return 'bg-red-100 text-red-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -152,127 +83,24 @@ export const ExpenseManagement = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5" />
-            Expense Management
+            Finance Approval Center
           </CardTitle>
           <CardDescription>
-            Approve user expense requests and create company expenses (requires dual approval)
+            Review and approve expense requests and salary payments
           </CardDescription>
-          
-          <div className="pt-4">
-            <Dialog open={showCreateExpenseDialog} onOpenChange={setShowCreateExpenseDialog}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <PlusCircle className="h-4 w-4" />
-                  Create Company Expense
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create Company Expense</DialogTitle>
-                </DialogHeader>
-                
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="expense-title">Title *</Label>
-                    <Input
-                      id="expense-title"
-                      value={expenseTitle}
-                      onChange={(e) => setExpenseTitle(e.target.value)}
-                      placeholder="Expense title"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="expense-description">Description *</Label>
-                    <Textarea
-                      id="expense-description"
-                      value={expenseDescription}
-                      onChange={(e) => setExpenseDescription(e.target.value)}
-                      placeholder="Detailed description of the expense"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="expense-amount">Amount (UGX) *</Label>
-                    <Input
-                      id="expense-amount"
-                      type="number"
-                      value={expenseAmount}
-                      onChange={(e) => setExpenseAmount(e.target.value)}
-                      placeholder="0"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Priority</Label>
-                      <Select value={expensePriority} onValueChange={setExpensePriority}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="High">High</SelectItem>
-                          <SelectItem value="Medium">Medium</SelectItem>
-                          <SelectItem value="Low">Low</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>Category</Label>
-                      <Select value={expenseCategory} onValueChange={setExpenseCategory}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Operations">Operations</SelectItem>
-                          <SelectItem value="Equipment">Equipment</SelectItem>
-                          <SelectItem value="Maintenance">Maintenance</SelectItem>
-                          <SelectItem value="Utilities">Utilities</SelectItem>
-                          <SelectItem value="Marketing">Marketing</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 p-3 rounded-lg">
-                    <p className="text-sm text-blue-700">
-                      <AlertTriangle className="h-4 w-4 inline mr-1" />
-                      Company expenses require approval from both Finance and Admin departments.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2 pt-4">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowCreateExpenseDialog(false)}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button onClick={handleCreateCompanyExpense} className="flex-1">
-                      Create Expense
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="user-requests" className="w-full">
+          <Tabs defaultValue="expense-requests" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="user-requests">
-                User Expense Requests ({userExpenseRequests.length})
+              <TabsTrigger value="expense-requests">
+                Expense Requests ({userExpenseRequests.length})
               </TabsTrigger>
-              <TabsTrigger value="company-expenses">
-                Company Expenses ({companyExpenses.length})
+              <TabsTrigger value="salary-requests">
+                Salary Requests ({salaryRequests.length})
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="user-requests" className="space-y-4">
+            <TabsContent value="expense-requests" className="space-y-4">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -292,7 +120,7 @@ export const ExpenseManagement = () => {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
-                          {request.requestedBy}
+                          {request.requestedby}
                         </div>
                       </TableCell>
                       <TableCell className="font-bold text-blue-600">
@@ -306,12 +134,12 @@ export const ExpenseManagement = () => {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {request.dateRequested}
+                          {new Date(request.daterequested).toLocaleDateString()}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusBadgeColor(request.status)}>
-                          {request.status}
+                        <Badge className={getStatusBadgeColor(request)}>
+                          {getStatusText(request)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -319,7 +147,7 @@ export const ExpenseManagement = () => {
                           <div className="flex gap-2">
                             <Button
                               size="sm"
-                              onClick={() => handleApproveRequest(request.id)}
+                              onClick={() => handleApprove(request.id)}
                               className="bg-green-600 hover:bg-green-700"
                             >
                               <CheckCircle className="h-4 w-4 mr-1" />
@@ -328,10 +156,7 @@ export const ExpenseManagement = () => {
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => {
-                                setSelectedRequest(request);
-                                setShowRejectionDialog(true);
-                              }}
+                              onClick={() => handleReject(request.id)}
                             >
                               <XCircle className="h-4 w-4 mr-1" />
                               Reject
@@ -356,57 +181,102 @@ export const ExpenseManagement = () => {
               {userExpenseRequests.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Receipt className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p>No user expense requests</p>
+                  <p>No expense requests pending review</p>
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value="company-expenses" className="space-y-4">
+            <TabsContent value="salary-requests" className="space-y-4">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Title</TableHead>
-                    <TableHead>Category</TableHead>
+                    <TableHead>Employee</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Created Date</TableHead>
-                    <TableHead>Finance Status</TableHead>
-                    <TableHead>Admin Status</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Approval Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {companyExpenses.map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell className="font-medium">{expense.title}</TableCell>
+                  {salaryRequests.map((request) => (
+                    <TableRow key={request.id}>
+                      <TableCell className="font-medium">{request.title}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{expense.category}</Badge>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          {request.details?.employee_name || request.requestedby}
+                        </div>
                       </TableCell>
-                      <TableCell className="font-bold text-purple-600">
-                        {formatCurrency(expense.amount)}
+                      <TableCell className="font-bold text-green-600">
+                        {formatCurrency(request.amount)}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getPriorityBadgeColor(expense.priority)}>
-                          {expense.priority}
+                        <Badge variant="outline">
+                          {request.details?.payment_type === 'mid-month' ? 'Mid-Month' : 'Full Salary'}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {expense.dateCreated}
+                          {new Date(request.daterequested).toLocaleDateString()}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {expense.financeApproved ? (
-                          <Badge className="bg-green-100 text-green-800">Approved</Badge>
-                        ) : (
-                          <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
-                        )}
+                        <div className="flex gap-1">
+                          <Badge 
+                            variant="outline" 
+                            className={request.financeApproved ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
+                          >
+                            Finance: {request.financeApproved ? 'Approved' : 'Pending'}
+                          </Badge>
+                          <Badge 
+                            variant="outline"
+                            className={request.adminApproved ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
+                          >
+                            Admin: {request.adminApproved ? 'Approved' : 'Pending'}
+                          </Badge>
+                        </div>
                       </TableCell>
                       <TableCell>
-                        {expense.adminApproved ? (
-                          <Badge className="bg-green-100 text-green-800">Approved</Badge>
-                        ) : (
-                          <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+                        {!request.financeApproved && request.status !== 'Rejected' && (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleApprove(request.id)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleReject(request.id)}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
+                          </div>
+                        )}
+                        {request.financeApproved && request.adminApproved && (
+                          <Badge className="bg-green-100 text-green-800">
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Ready for Payment
+                          </Badge>
+                        )}
+                        {request.financeApproved && !request.adminApproved && (
+                          <Badge className="bg-blue-100 text-blue-800">
+                            <Clock className="h-4 w-4 mr-1" />
+                            Awaiting Admin
+                          </Badge>
+                        )}
+                        {request.status === 'Rejected' && (
+                          <Badge className="bg-red-100 text-red-800">
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Rejected
+                          </Badge>
                         )}
                       </TableCell>
                     </TableRow>
@@ -414,59 +284,16 @@ export const ExpenseManagement = () => {
                 </TableBody>
               </Table>
 
-              {companyExpenses.length === 0 && (
+              {salaryRequests.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p>No company expenses created</p>
+                  <p>No salary requests pending review</p>
                 </div>
               )}
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
-
-      {/* Rejection Modal */}
-      <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Reject Expense Request</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Please provide a reason for rejecting this expense request.
-            </p>
-            
-            <div>
-              <Label htmlFor="rejection-reason">Rejection Reason</Label>
-              <Textarea
-                id="rejection-reason"
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Explain why this expense is being rejected..."
-                rows={4}
-              />
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowRejectionDialog(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive"
-                onClick={handleRejectRequest}
-                className="flex-1"
-              >
-                Reject Request
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
