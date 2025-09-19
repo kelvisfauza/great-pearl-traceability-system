@@ -10,9 +10,10 @@ export const useSMSNotifications = () => {
       
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
-          to: phoneNumber,
+          phone: phoneNumber,
           message: `Dear ${employeeName}, your salary request of UGX ${amount.toLocaleString()} has been approved and is pending withdrawal. You will receive it ASAP.`,
-          type: 'salary_approval'
+          userName: employeeName,
+          messageType: 'salary_approval'
         }
       });
 
@@ -45,9 +46,10 @@ export const useSMSNotifications = () => {
       
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
-          to: phoneNumber,
+          phone: phoneNumber,
           message: `Dear ${employeeName}, your ${paymentType === 'mid-month' ? 'mid month' : 'end of month'} salary of UGX ${amount.toLocaleString()} has been initialized. Once approved you will receive it ASAP.`,
-          type: 'salary_initialized'
+          userName: employeeName,
+          messageType: 'salary_initialized'
         }
       });
 
