@@ -8,24 +8,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSMSNotifications } from "@/hooks/useSMSNotifications";
 import { DollarSign, AlertTriangle, Send, User } from "lucide-react";
 
 interface IndividualSalaryRequestModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRequestSubmitted: (request: any) => void;
+  employees?: any[]; // Add employees prop for HR to select from
 }
 
-const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted }: IndividualSalaryRequestModalProps) => {
-  const { employee } = useAuth();
+const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted, employees = [] }: IndividualSalaryRequestModalProps) => {
+  const { employee: currentUser } = useAuth();
   const { toast } = useToast();
+  const { sendSalaryInitializedSMS } = useSMSNotifications();
+  
   const [requestData, setRequestData] = useState({
+    selectedEmployeeId: "",
     paymentType: "mid-month",
     reason: "",
-    phoneNumber: employee?.phone || "",
+    phoneNumber: "",
     notes: ""
   });
   const [showMidMonthAlert, setShowMidMonthAlert] = useState(true);
+
+  // Check if current user is HR and has employees to select from
+  const isHR = employees.length > 0;
+  const selectedEmployee = isHR 
+    ? employees.find(emp => emp.id === requestData.selectedEmployeeId) 
+    : currentUser;
 
   const handlePaymentTypeChange = (type: string) => {
     setRequestData(prev => ({ ...prev, paymentType: type }));
@@ -33,17 +44,17 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted }
   };
 
   const calculateRequestAmount = () => {
-    if (!employee?.salary) return 0;
-    return requestData.paymentType === "mid-month" ? employee.salary / 2 : employee.salary;
+    if (!selectedEmployee?.salary) return 0;
+    return requestData.paymentType === "mid-month" ? selectedEmployee.salary / 2 : selectedEmployee.salary;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!employee) {
+    if (!selectedEmployee) {
       toast({
         title: "Error",
-        description: "Employee information not found",
+        description: isHR ? "Please select an employee" : "Employee information not found",
         variant: "destructive"
       });
       return;
@@ -58,10 +69,11 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted }
       return;
     }
 
-    if (!requestData.phoneNumber.trim()) {
+    const phoneNumber = requestData.phoneNumber || selectedEmployee.phone;
+    if (!phoneNumber?.trim()) {
       toast({
         title: "Error",
-        description: "Please provide your phone number for payment",
+        description: "Please provide a phone number for payment",
         variant: "destructive"
       });
       return;
@@ -69,8 +81,8 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted }
 
     const amount = calculateRequestAmount();
     const requestTitle = requestData.paymentType === "mid-month" 
-      ? `Mid-Month Salary Request - ${employee.name}`
-      : `End-Month Salary Request - ${employee.name}`;
+      ? `Mid-Month Salary Request - ${selectedEmployee.name}`
+      : `End-Month Salary Request - ${selectedEmployee.name}`;
 
     const salaryRequest = {
       department: "Human Resources",
@@ -78,25 +90,27 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted }
       title: requestTitle,
       description: `${requestData.paymentType === "mid-month" ? "Mid-month" : "End-of-month"} salary request`,
       amount: `UGX ${amount.toLocaleString()}`,
-      requestedby: employee.email,
+      requestedby: currentUser?.email || 'HR Manager',
       daterequested: new Date().toISOString().split('T')[0],
       priority: "Normal",
       status: "Pending",
       details: {
-        employee_id: employee.id,
-        employee_name: employee.name,
-        employee_email: employee.email,
-        employee_phone: requestData.phoneNumber,
-        employee_department: employee.department,
-        employee_position: employee.position,
+        employee_id: selectedEmployee.id,
+        employee_name: selectedEmployee.name,
+        employee_email: selectedEmployee.email,
+        employee_phone: phoneNumber,
+        employee_department: selectedEmployee.department,
+        employee_position: selectedEmployee.position,
         payment_type: requestData.paymentType,
-        monthly_salary: employee.salary,
+        monthly_salary: selectedEmployee.salary,
         requested_amount: amount,
         reason: requestData.reason,
         notes: requestData.notes,
         requires_dual_approval: true,
         finance_approved: false,
-        admin_approved: false
+        admin_approved: false,
+        requested_by_hr: isHR,
+        hr_user: currentUser?.name || 'HR Manager'
       }
     };
 
@@ -104,16 +118,23 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted }
     
     // Send SMS notification about salary initialization
     try {
-      console.log(`Sending SMS to ${employee.name} at ${requestData.phoneNumber}: Dear ${employee.name}, your ${requestData.paymentType === "mid-month" ? "mid month" : "end of month"} salary of UGX ${amount.toLocaleString()} has been initialized. Once approved you will receive it ASAP.`);
+      sendSalaryInitializedSMS(
+        selectedEmployee.name,
+        phoneNumber,
+        amount,
+        requestData.paymentType as 'mid-month' | 'end-month'
+      );
     } catch (smsError) {
       console.error('SMS notification failed:', smsError);
+      // Don't block the request if SMS fails
     }
     
     // Reset form
     setRequestData({
+      selectedEmployeeId: "",
       paymentType: "mid-month",
       reason: "",
-      phoneNumber: employee?.phone || "",
+      phoneNumber: "",
       notes: ""
     });
     setShowMidMonthAlert(true);
@@ -121,11 +142,11 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted }
     // Send in-app notification
     toast({
       title: "Salary Request Submitted",
-      description: `Dear ${employee.name}, your ${requestData.paymentType === "mid-month" ? "mid month" : "end of month"} salary of UGX ${amount.toLocaleString()} has been initialized. Once approved you will receive it ASAP.`,
+      description: `Dear ${selectedEmployee.name}, your ${requestData.paymentType === "mid-month" ? "mid month" : "end of month"} salary of UGX ${amount.toLocaleString()} has been initialized. Once approved you will receive it ASAP.`,
     });
   };
 
-  if (!employee) {
+  if (!isHR && !currentUser) {
     return null;
   }
 
@@ -140,16 +161,43 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted }
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="bg-blue-50 p-2 rounded text-xs space-y-1">
-            <div className="flex justify-between">
-              <span>Employee:</span>
-              <span className="font-medium">{employee.name}</span>
+          {isHR && (
+            <div className="space-y-1">
+              <Label htmlFor="employee" className="text-sm">Select Employee *</Label>
+              <Select 
+                value={requestData.selectedEmployeeId} 
+                onValueChange={(value) => setRequestData(prev => ({ 
+                  ...prev, 
+                  selectedEmployeeId: value,
+                  phoneNumber: employees.find(emp => emp.id === value)?.phone || ""
+                }))}
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Choose employee..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.name} - {emp.department} (UGX {emp.salary?.toLocaleString()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex justify-between">
-              <span>Monthly Salary:</span>
-              <span className="font-semibold">UGX {employee.salary?.toLocaleString() || 0}</span>
+          )}
+
+          {selectedEmployee && (
+            <div className="bg-blue-50 p-2 rounded text-xs space-y-1">
+              <div className="flex justify-between">
+                <span>Employee:</span>
+                <span className="font-medium">{selectedEmployee.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Monthly Salary:</span>
+                <span className="font-semibold">UGX {selectedEmployee.salary?.toLocaleString() || 0}</span>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-1">
             <Label htmlFor="paymentType" className="text-sm">Payment Type</Label>
@@ -164,11 +212,11 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted }
             </Select>
           </div>
 
-          {showMidMonthAlert && (
+          {showMidMonthAlert && selectedEmployee && (
             <Alert className="border-orange-200 bg-orange-50 py-2">
               <AlertTriangle className="h-3 w-3 text-orange-600" />
               <AlertDescription className="text-orange-800 text-xs">
-                <strong>Mid-Month:</strong> Requesting 50% salary (UGX {(employee.salary / 2).toLocaleString()}). Requires dual approval.
+                <strong>Mid-Month:</strong> Requesting 50% salary (UGX {(selectedEmployee.salary / 2).toLocaleString()}). Requires dual approval.
               </AlertDescription>
             </Alert>
           )}
@@ -211,20 +259,22 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted }
             />
           </div>
 
-          <div className="bg-green-50 p-2 rounded">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">Amount:</span>
-              <span className="font-bold text-green-700">
-                UGX {calculateRequestAmount().toLocaleString()}
-              </span>
+          {selectedEmployee && (
+            <div className="bg-green-50 p-2 rounded">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">Amount:</span>
+                <span className="font-bold text-green-700">
+                  UGX {calculateRequestAmount().toLocaleString()}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1 h-9">
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 h-9">
+            <Button type="submit" disabled={isHR && !selectedEmployee} className="flex-1 h-9">
               <Send className="h-3 w-3 mr-1" />
               Submit
             </Button>

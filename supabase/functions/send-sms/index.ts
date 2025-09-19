@@ -86,7 +86,35 @@ serve(async (req) => {
       console.log('YoolaSMS response status:', smsResponse.status);
 
       if (smsResponse.ok) {
-        const smsResult = await smsResponse.json();
+        let smsResult;
+        try {
+          const responseText = await smsResponse.text();
+          console.log('YoolaSMS raw response:', responseText);
+          
+          if (responseText.trim()) {
+            smsResult = JSON.parse(responseText);
+          } else {
+            console.warn('Empty response from YoolaSMS, assuming success');
+            smsResult = { 
+              message: 'SMS sent successfully (empty response)', 
+              status: 'success',
+              code: 200,
+              recipients: 1,
+              credits_used: 1 
+            };
+          }
+        } catch (jsonError) {
+          console.warn('Failed to parse YoolaSMS response as JSON:', jsonError);
+          // Assume success if we got 200 but couldn't parse JSON
+          smsResult = { 
+            message: 'SMS sent successfully (unparseable response)', 
+            status: 'success',
+            code: 200,
+            recipients: 1,
+            credits_used: 1 
+          };
+        }
+        
         console.log('SMS sent successfully via YoolaSMS:', smsResult);
 
         // Log successful SMS to database

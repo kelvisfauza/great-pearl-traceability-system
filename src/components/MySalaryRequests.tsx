@@ -8,7 +8,11 @@ import { useSalaryPayments } from '@/hooks/useSalaryPayments';
 import IndividualSalaryRequestModal from '@/components/hr/IndividualSalaryRequestModal';
 import { DollarSign, Clock, CheckCircle, XCircle, User, Phone } from 'lucide-react';
 
-const MySalaryRequests = () => {
+interface MySalaryRequestsProps {
+  employees?: any[];
+}
+
+const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
   const { employee } = useAuth();
   const { createApprovalRequest, loading: submitting } = useApprovalSystem();
   const { paymentRequests, loading } = useSalaryPayments();
@@ -227,6 +231,7 @@ const MySalaryRequests = () => {
         open={showRequestModal}
         onOpenChange={setShowRequestModal}
         onRequestSubmitted={handleRequestSubmitted}
+        employees={employees}
       />
     </div>
   );

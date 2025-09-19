@@ -314,7 +314,7 @@ const HumanResources = () => {
           </TabsContent>
           
           <TabsContent value="my-salary">
-            <MySalaryRequests />
+            <MySalaryRequests employees={employees} />
           </TabsContent>
         </Tabs>
 
