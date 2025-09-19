@@ -131,107 +131,102 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Request Salary Payment
+      <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <User className="h-4 w-4" />
+            Request Salary
           </DialogTitle>
-          <DialogDescription>
-            Submit a request for your salary payment
-          </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">Employee:</span>
-              <span>{employee.name}</span>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="bg-blue-50 p-2 rounded text-xs space-y-1">
+            <div className="flex justify-between">
+              <span>Employee:</span>
+              <span className="font-medium">{employee.name}</span>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">Department:</span>
-              <span>{employee.department}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">Monthly Salary:</span>
+            <div className="flex justify-between">
+              <span>Monthly Salary:</span>
               <span className="font-semibold">UGX {employee.salary?.toLocaleString() || 0}</span>
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="paymentType">Payment Type</Label>
+          <div className="space-y-1">
+            <Label htmlFor="paymentType" className="text-sm">Payment Type</Label>
             <Select value={requestData.paymentType} onValueChange={handlePaymentTypeChange}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="mid-month">Mid-Month Payment (50%)</SelectItem>
-                <SelectItem value="end-month">End-Month Payment (100%)</SelectItem>
+                <SelectItem value="mid-month">Mid-Month (50%)</SelectItem>
+                <SelectItem value="end-month">End-Month (100%)</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {showMidMonthAlert && (
-            <Alert className="border-orange-200 bg-orange-50">
-              <AlertTriangle className="h-4 w-4 text-orange-600" />
-              <AlertDescription className="text-orange-800 text-sm">
-                <strong>Mid-Month Payment:</strong> You are requesting 50% of your monthly salary 
-                (UGX {(employee.salary / 2).toLocaleString()}). This requires approval from both Finance and Admin.
+            <Alert className="border-orange-200 bg-orange-50 py-2">
+              <AlertTriangle className="h-3 w-3 text-orange-600" />
+              <AlertDescription className="text-orange-800 text-xs">
+                <strong>Mid-Month:</strong> Requesting 50% salary (UGX {(employee.salary / 2).toLocaleString()}). Requires dual approval.
               </AlertDescription>
             </Alert>
           )}
 
-          <div>
-            <Label htmlFor="reason">Reason for Request *</Label>
+          <div className="space-y-1">
+            <Label htmlFor="reason" className="text-sm">Reason *</Label>
             <Textarea
               id="reason"
               value={requestData.reason}
               onChange={(e) => setRequestData(prev => ({ ...prev, reason: e.target.value }))}
-              placeholder="Please explain why you need this salary payment..."
-              rows={3}
+              placeholder="Why do you need this payment?"
+              rows={2}
+              className="text-sm"
               required
             />
           </div>
 
-          <div>
-            <Label htmlFor="phoneNumber">Payment Phone Number *</Label>
+          <div className="space-y-1">
+            <Label htmlFor="phoneNumber" className="text-sm">Payment Phone *</Label>
             <Input
               id="phoneNumber"
               type="tel"
               value={requestData.phoneNumber}
               onChange={(e) => setRequestData(prev => ({ ...prev, phoneNumber: e.target.value }))}
               placeholder="+256XXXXXXXXX"
+              className="h-9 text-sm"
               required
             />
           </div>
 
-          <div>
-            <Label htmlFor="notes">Additional Notes</Label>
+          <div className="space-y-1">
+            <Label htmlFor="notes" className="text-sm">Notes</Label>
             <Textarea
               id="notes"
               value={requestData.notes}
               onChange={(e) => setRequestData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Any additional information..."
+              placeholder="Additional info..."
               rows={2}
+              className="text-sm"
             />
           </div>
 
-          <div className="bg-green-50 p-3 rounded-lg">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">Request Amount:</span>
-              <span className="text-lg font-bold text-green-700">
+          <div className="bg-green-50 p-2 rounded">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium">Amount:</span>
+              <span className="font-bold text-green-700">
                 UGX {calculateRequestAmount().toLocaleString()}
               </span>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1 h-9">
               Cancel
             </Button>
-            <Button type="submit">
-              <Send className="h-4 w-4 mr-2" />
-              Submit Request
+            <Button type="submit" className="flex-1 h-9">
+              <Send className="h-3 w-3 mr-1" />
+              Submit
             </Button>
           </div>
         </form>
