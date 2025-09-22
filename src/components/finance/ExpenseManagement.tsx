@@ -14,14 +14,26 @@ export const ExpenseManagement = () => {
   const { toast } = useToast();
   const { employee } = useAuth();
 
-  // Filter different types of expense requests
+  // Filter different types of expense requests that need finance action
   const userExpenseRequests = expenseRequests.filter(
-    req => req.type === 'Employee Expense Request' || 
-           (req.type.includes('Expense') && req.type !== 'Employee Salary Request')
+    req => {
+      const isExpenseRequest = req.type === 'Employee Expense Request' || 
+                              (req.type.includes('Expense') && req.type !== 'Employee Salary Request');
+      // Only show if it's an expense request AND not fully approved AND not rejected
+      return isExpenseRequest && 
+             !(req.financeApproved && req.adminApproved) && 
+             req.status !== 'Rejected';
+    }
   );
 
   const salaryRequests = expenseRequests.filter(
-    req => req.type === 'Employee Salary Request' || req.type === 'Salary Payment'
+    req => {
+      const isSalaryRequest = req.type === 'Employee Salary Request' || req.type === 'Salary Payment';
+      // Only show if it's a salary request AND not fully approved AND not rejected
+      return isSalaryRequest && 
+             !(req.financeApproved && req.adminApproved) && 
+             req.status !== 'Rejected';
+    }
   );
 
   const handleApprove = async (requestId: string) => {
