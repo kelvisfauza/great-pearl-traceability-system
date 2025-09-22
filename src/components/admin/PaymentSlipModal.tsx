@@ -29,7 +29,12 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
   request,
   recipientName 
 }) => {
-  if (!request) return null;
+  console.log('🎯 PaymentSlipModal render - open:', open, 'request:', !!request);
+  
+  if (!request) {
+    console.log('🎯 PaymentSlipModal - no request provided, returning null');
+    return null;
+  }
 
   const generatePaymentSlipNumber = () => {
     return `PS-${new Date().getFullYear()}-${new Date().getMonth() + 1}-${request.id.slice(0, 8).toUpperCase()}`;
