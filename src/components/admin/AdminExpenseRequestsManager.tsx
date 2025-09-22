@@ -310,13 +310,22 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
           </div>
 
           <div className="space-y-4">
-            {expenseRequests.length === 0 ? (
+            {/* Filter to only show requests that need admin review */}
+            {expenseRequests.filter(request => 
+              (request.status === 'Pending' || request.status === 'Finance Approved') && 
+              !request.admin_approved_at
+            ).length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p>No expense requests to review</p>
               </div>
             ) : (
-              expenseRequests.map((request) => {
+              expenseRequests
+                .filter(request => 
+                  (request.status === 'Pending' || request.status === 'Finance Approved') && 
+                  !request.admin_approved_at
+                )
+                .map((request) => {
                 const riskAssessment = assessExpenseRisk(request);
                 const paymentPhone = request.details?.phoneNumber || userProfiles[request.requestedby]?.phone || 'Not provided';
                 const expenseReason = request.details?.reason || 'No reason provided';
