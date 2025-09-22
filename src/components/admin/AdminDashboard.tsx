@@ -17,6 +17,9 @@ import ApprovedRequestsHistory from './ApprovedRequestsHistory';
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
+  console.log('🚀 AdminDashboard - activeTab:', activeTab);
+  console.log('🚀 AdminDashboard component loaded');
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">

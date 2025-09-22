@@ -20,6 +20,8 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   onApprove, 
   onReject 
 }) => {
+  console.log('🚀 AdminExpenseRequestsManager component loaded');
+  
   const { requests, loading, updateRequestStatus } = useApprovalRequests();
   const { assessExpenseRisk } = useRiskAssessment();
   const [rejectionModalOpen, setRejectionModalOpen] = React.useState(false);
@@ -31,6 +33,9 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
   const expenseRequests = requests.filter(request => request.type === 'Expense Request');
+  
+  console.log('🚀 AdminExpenseRequestsManager - expenseRequests count:', expenseRequests.length);
+  console.log('🚀 AdminExpenseRequestsManager - loading:', loading);
 
   // Fetch user profiles to get names and phone numbers
   useEffect(() => {
