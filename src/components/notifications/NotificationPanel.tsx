@@ -26,6 +26,7 @@ import {
 import { useNotifications } from "@/hooks/useNotifications";
 import { formatDistanceToNow } from "date-fns";
 import AnnouncementDialog from "@/components/notifications/AnnouncementDialog";
+import NotificationDetailModal from "@/components/notifications/NotificationDetailModal";
 
 interface NotificationPanelProps {
   isOpen: boolean;
@@ -42,6 +43,9 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
     deleteNotification,
     loading 
   } = useNotifications();
+  
+  const [selectedNotification, setSelectedNotification] = useState<any>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const getNotificationIcon = (type: string, priority: string) => {
     switch (type) {
@@ -68,6 +72,8 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
   };
 
   const handleNotificationClick = async (notification: any) => {
+    setSelectedNotification(notification);
+    setIsDetailModalOpen(true);
     if (!notification.isRead) {
       await markAsRead(notification.id);
     }
@@ -273,6 +279,17 @@ const NotificationPanel = ({ isOpen, onClose }: NotificationPanelProps) => {
           )}
         </div>
       </SheetContent>
+      
+      <NotificationDetailModal
+        notification={selectedNotification}
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedNotification(null);
+        }}
+        onMarkAsRead={markAsRead}
+        onDelete={deleteNotification}
+      />
     </Sheet>
   );
 };

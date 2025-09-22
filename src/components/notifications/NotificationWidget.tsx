@@ -4,18 +4,24 @@ import { Badge } from "@/components/ui/badge";
 import { Bell, Clock, DollarSign, User, AlertCircle, Eye } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import NotificationDetailModal from "@/components/notifications/NotificationDetailModal";
 
 interface NotificationWidgetProps {
   onViewAll: () => void;
 }
 
 const NotificationWidget = ({ onViewAll }: NotificationWidgetProps) => {
-  const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, deleteNotification } = useNotifications();
+  const [selectedNotification, setSelectedNotification] = useState<any>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   // Show only the most recent 3 notifications
   const recentNotifications = notifications.slice(0, 3);
   
   const handleNotificationClick = async (notification: any) => {
+    setSelectedNotification(notification);
+    setIsDetailModalOpen(true);
     if (!notification.isRead) {
       await markAsRead(notification.id);
     }
@@ -128,6 +134,17 @@ const NotificationWidget = ({ onViewAll }: NotificationWidgetProps) => {
           </div>
         )}
       </CardContent>
+      
+      <NotificationDetailModal
+        notification={selectedNotification}
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedNotification(null);
+        }}
+        onMarkAsRead={markAsRead}
+        onDelete={deleteNotification}
+      />
     </Card>
   );
 };
