@@ -106,6 +106,7 @@ export type Database = {
           admin_approved: boolean | null
           admin_approved_at: string | null
           admin_approved_by: string | null
+          admin_comments: string | null
           amount: string
           approval_stage: string | null
           created_at: string
@@ -117,6 +118,7 @@ export type Database = {
           finance_approved_at: string | null
           finance_approved_by: string | null
           id: string
+          payment_method: string | null
           priority: string
           rejection_comments: string | null
           rejection_reason: string | null
@@ -130,6 +132,7 @@ export type Database = {
           admin_approved?: boolean | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
+          admin_comments?: string | null
           amount: string
           approval_stage?: string | null
           created_at?: string
@@ -141,6 +144,7 @@ export type Database = {
           finance_approved_at?: string | null
           finance_approved_by?: string | null
           id?: string
+          payment_method?: string | null
           priority?: string
           rejection_comments?: string | null
           rejection_reason?: string | null
@@ -154,6 +158,7 @@ export type Database = {
           admin_approved?: boolean | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
+          admin_comments?: string | null
           amount?: string
           approval_stage?: string | null
           created_at?: string
@@ -165,6 +170,7 @@ export type Database = {
           finance_approved_at?: string | null
           finance_approved_by?: string | null
           id?: string
+          payment_method?: string | null
           priority?: string
           rejection_comments?: string | null
           rejection_reason?: string | null

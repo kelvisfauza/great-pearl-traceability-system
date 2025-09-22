@@ -2,7 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, Printer } from 'lucide-react';
-import { StandardPrintHeader } from '@/components/print/StandardPrintHeader';
+import StandardPrintHeader from '@/components/print/StandardPrintHeader';
 
 interface PaymentSlipModalProps {
   open: boolean;
