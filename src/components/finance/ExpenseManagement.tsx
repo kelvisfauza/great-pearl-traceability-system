@@ -19,7 +19,10 @@ export const ExpenseManagement = () => {
     req => {
       const isExpenseRequest = req.type === 'Employee Expense Request' || 
                               (req.type.includes('Expense') && req.type !== 'Employee Salary Request');
-      const isFullyApproved = req.financeApproved && req.adminApproved;
+      
+      // Use the same logic as admin section - check for actual approval timestamps
+      const hasFinanceApproval = req.financeApprovedAt; // finance_approved_at timestamp
+      const hasAdminApproval = req.adminApprovedAt; // admin_approved_at timestamp
       const isRejected = req.status === 'Rejected' || req.status === 'rejected';
       
       console.log('Filtering expense request:', {
@@ -27,23 +30,27 @@ export const ExpenseManagement = () => {
         title: req.title,
         type: req.type,
         status: req.status,
-        financeApproved: req.financeApproved,
-        adminApproved: req.adminApproved,
+        financeApprovedAt: req.financeApprovedAt,
+        adminApprovedAt: req.adminApprovedAt,
+        hasFinanceApproval,
+        hasAdminApproval,
         isExpenseRequest,
-        isFullyApproved,
         isRejected,
-        shouldShow: isExpenseRequest && !isFullyApproved && !isRejected
+        shouldShow: isExpenseRequest && !isRejected && !(hasFinanceApproval && hasAdminApproval)
       });
       
-      // Only show if it's an expense request AND not fully approved AND not rejected
-      return isExpenseRequest && !isFullyApproved && !isRejected;
+      // Only show if it's an expense request AND not rejected AND not fully approved (both finance and admin)
+      return isExpenseRequest && !isRejected && !(hasFinanceApproval && hasAdminApproval);
     }
   );
 
   const salaryRequests = expenseRequests.filter(
     req => {
       const isSalaryRequest = req.type === 'Employee Salary Request' || req.type === 'Salary Payment';
-      const isFullyApproved = req.financeApproved && req.adminApproved;
+      
+      // Use the same logic as admin section - check for actual approval timestamps
+      const hasFinanceApproval = req.financeApprovedAt; // finance_approved_at timestamp
+      const hasAdminApproval = req.adminApprovedAt; // admin_approved_at timestamp
       const isRejected = req.status === 'Rejected' || req.status === 'rejected';
       
       console.log('Filtering salary request:', {
@@ -51,16 +58,17 @@ export const ExpenseManagement = () => {
         title: req.title,
         type: req.type,
         status: req.status,
-        financeApproved: req.financeApproved,
-        adminApproved: req.adminApproved,
+        financeApprovedAt: req.financeApprovedAt,
+        adminApprovedAt: req.adminApprovedAt,
+        hasFinanceApproval,
+        hasAdminApproval,
         isSalaryRequest,
-        isFullyApproved,
         isRejected,
-        shouldShow: isSalaryRequest && !isFullyApproved && !isRejected
+        shouldShow: isSalaryRequest && !isRejected && !(hasFinanceApproval && hasAdminApproval)
       });
       
-      // Only show if it's a salary request AND not fully approved AND not rejected
-      return isSalaryRequest && !isFullyApproved && !isRejected;
+      // Only show if it's a salary request AND not rejected AND not fully approved (both finance and admin)
+      return isSalaryRequest && !isRejected && !(hasFinanceApproval && hasAdminApproval);
     }
   );
 
