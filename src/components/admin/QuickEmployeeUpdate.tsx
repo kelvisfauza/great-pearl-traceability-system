@@ -11,6 +11,7 @@ import { forceRefreshUserSession } from '@/utils/forceRefreshUserSession';
 import { syncSupabaseToFirebase } from '@/utils/syncSupabaseToFirebase';
 import { resetKibabaPassword } from '@/utils/resetKibabaPassword';
 import { cleanupAllUsers } from '@/utils/cleanupUsers';
+import { fixTumwinePermissions } from '@/utils/fixTumwinePermissions';
 import { supabase } from '@/integrations/supabase/client';
 
 const QuickEmployeeUpdate = () => {
@@ -198,6 +199,26 @@ const QuickEmployeeUpdate = () => {
     }
   };
 
+  const handleFixTumwinePermissions = async () => {
+    setLoading(true);
+    try {
+      const result = await fixTumwinePermissions();
+      toast({
+        title: "Success",
+        description: "Tumwine's permissions updated to Manager role with full access to Settings",
+      });
+    } catch (error) {
+      console.error('Error fixing Tumwine permissions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update Tumwine's permissions",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const createGreatpearlUser = async () => {
     setIsLoading(true);
     try {
@@ -345,6 +366,15 @@ const QuickEmployeeUpdate = () => {
           className="w-full"
         >
           {loading ? 'Cleaning...' : '🗑️ Delete All Users (Keep Main Account)'}
+        </Button>
+
+        <Button 
+          onClick={handleFixTumwinePermissions}
+          disabled={loading}
+          variant="default"
+          className="w-full"
+        >
+          {loading ? 'Fixing...' : '🔧 Fix Tumwine Settings Access'}
         </Button>
 
         <Button 
