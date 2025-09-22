@@ -75,13 +75,17 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   }, [expenseRequests]);
 
   const handleApprove = (request: any) => {
+    console.log('Admin Approve clicked for request:', request.id);
     setSelectedRequest(request);
     setSelectedRequestId(request.id);
     setSelectedRequestTitle(request.title);
     setApprovalModalOpen(true);
+    console.log('Approval modal should open now');
   };
 
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
+    console.log('Confirming approval with payment method:', paymentMethod);
+    
     const success = await updateRequestStatus(
       selectedRequestId, 
       'Approved', 
@@ -113,6 +117,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       
       // Show payment slip for transfers
       if (paymentMethod === 'transfer') {
+        console.log('Payment method is transfer, showing payment slip modal');
         const updatedRequest = {
           ...selectedRequest,
           paymentMethod: 'Bank Transfer',
@@ -123,13 +128,17 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         };
         setSelectedRequest(updatedRequest);
         setPaymentSlipModalOpen(true);
+        console.log('Payment slip modal should open now');
       }
     }
     
     setApprovalModalOpen(false);
     setSelectedRequestId('');
     setSelectedRequestTitle('');
-    setSelectedRequest(null);
+    // Don't clear selectedRequest yet if showing payment slip
+    if (paymentMethod !== 'transfer') {
+      setSelectedRequest(null);
+    }
   };
 
   const handleReject = (requestId: string, requestTitle: string) => {
