@@ -19,20 +19,48 @@ export const ExpenseManagement = () => {
     req => {
       const isExpenseRequest = req.type === 'Employee Expense Request' || 
                               (req.type.includes('Expense') && req.type !== 'Employee Salary Request');
+      const isFullyApproved = req.financeApproved && req.adminApproved;
+      const isRejected = req.status === 'Rejected' || req.status === 'rejected';
+      
+      console.log('Filtering expense request:', {
+        id: req.id,
+        title: req.title,
+        type: req.type,
+        status: req.status,
+        financeApproved: req.financeApproved,
+        adminApproved: req.adminApproved,
+        isExpenseRequest,
+        isFullyApproved,
+        isRejected,
+        shouldShow: isExpenseRequest && !isFullyApproved && !isRejected
+      });
+      
       // Only show if it's an expense request AND not fully approved AND not rejected
-      return isExpenseRequest && 
-             !(req.financeApproved && req.adminApproved) && 
-             req.status !== 'Rejected';
+      return isExpenseRequest && !isFullyApproved && !isRejected;
     }
   );
 
   const salaryRequests = expenseRequests.filter(
     req => {
       const isSalaryRequest = req.type === 'Employee Salary Request' || req.type === 'Salary Payment';
+      const isFullyApproved = req.financeApproved && req.adminApproved;
+      const isRejected = req.status === 'Rejected' || req.status === 'rejected';
+      
+      console.log('Filtering salary request:', {
+        id: req.id,
+        title: req.title,
+        type: req.type,
+        status: req.status,
+        financeApproved: req.financeApproved,
+        adminApproved: req.adminApproved,
+        isSalaryRequest,
+        isFullyApproved,
+        isRejected,
+        shouldShow: isSalaryRequest && !isFullyApproved && !isRejected
+      });
+      
       // Only show if it's a salary request AND not fully approved AND not rejected
-      return isSalaryRequest && 
-             !(req.financeApproved && req.adminApproved) && 
-             req.status !== 'Rejected';
+      return isSalaryRequest && !isFullyApproved && !isRejected;
     }
   );
 

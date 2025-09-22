@@ -44,6 +44,8 @@ export const useEnhancedExpenseManagement = () => {
         throw error;
       }
 
+      console.log('Raw data from Supabase:', data);
+
       const requests: ExpenseRequest[] = data.map((request: any) => ({
         id: request.id,
         type: request.type,
@@ -65,7 +67,16 @@ export const useEnhancedExpenseManagement = () => {
         updated_at: request.updated_at
       }));
 
-      console.log('Fetched expense requests:', requests.length);
+      console.log('Processed expense requests with approval status:', requests.map(r => ({
+        id: r.id,
+        title: r.title,
+        status: r.status,
+        financeApproved: r.financeApproved,
+        adminApproved: r.adminApproved,
+        finance_approved_raw: data.find(d => d.id === r.id)?.finance_approved,
+        admin_approved_raw: data.find(d => d.id === r.id)?.admin_approved
+      })));
+
       setExpenseRequests(requests);
     } catch (error) {
       console.error('Error fetching expense requests:', error);
