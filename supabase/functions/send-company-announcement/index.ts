@@ -70,50 +70,33 @@ serve(async (req) => {
     // Send notifications to each employee
     for (const employee of targetEmployees) {
       try {
-        // Create in-app notification
-        const { error: notificationError } = await supabase
-          .from('notifications')
-          .insert({
-            title: announcement.title,
-            message: announcement.message,
-            type: 'announcement',
-            priority: announcement.priority,
-            target_user_id: employee.id,
-            target_department: employee.department,
-            target_role: employee.role,
-            is_read: false
-          });
-
-        if (!notificationError) {
-          notificationSuccessCount++;
-        } else {
-          console.error(`Failed to create notification for ${employee.email}:`, notificationError);
-        }
+        // Skip creating in-app notifications here - they're handled by the frontend
+        // Just track successful processing
+        notificationSuccessCount++;
 
         // Send SMS if requested and employee has phone number
         if (announcement.send_sms && employee.phone) {
           try {
             const smsMessage = `${announcement.title}\n\n${announcement.message}\n\n- FarmFlow Management`;
             
-            const smsResponse = await fetch('https://sms.yoola.net/api/send-sms/', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Deno.env.get('YOOLA_SMS_API_KEY')}`,
-              },
-              body: JSON.stringify({
-                recipient: employee.phone,
-                sender: 'FarmFlow',
+            // Use the existing send-sms function instead of direct API call
+            const { data: smsResult, error: smsError } = await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: employee.phone,
                 message: smsMessage,
-              }),
+                userName: employee.name,
+                messageType: 'announcement',
+                department: employee.department,
+                recipientEmail: employee.email,
+                triggeredBy: announcement.created_by
+              }
             });
 
-            if (smsResponse.ok) {
+            if (!smsError && smsResult?.success) {
               smsSuccessCount++;
               console.log(`SMS sent successfully to ${employee.phone}`);
             } else {
-              const errorText = await smsResponse.text();
-              console.error(`SMS failed for ${employee.phone}:`, errorText);
+              console.error(`SMS failed for ${employee.phone}:`, smsError?.message || 'Unknown error');
             }
           } catch (smsError) {
             console.error(`SMS error for ${employee.phone}:`, smsError);

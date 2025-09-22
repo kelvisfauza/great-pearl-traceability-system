@@ -12,6 +12,7 @@ import { syncSupabaseToFirebase } from '@/utils/syncSupabaseToFirebase';
 import { resetKibabaPassword } from '@/utils/resetKibabaPassword';
 import { cleanupAllUsers } from '@/utils/cleanupUsers';
 import { fixTumwinePermissions } from '@/utils/fixTumwinePermissions';
+import { fixAnnouncementStatus } from '@/utils/fixAnnouncementStatus';
 import { supabase } from '@/integrations/supabase/client';
 
 const QuickEmployeeUpdate = () => {
@@ -219,6 +220,34 @@ const QuickEmployeeUpdate = () => {
     }
   };
 
+  const handleFixAnnouncement = async () => {
+    setLoading(true);
+    try {
+      const result = await fixAnnouncementStatus();
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Announcement status has been fixed successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to fix announcement",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error fixing announcement:', error);
+      toast({
+        title: "Error", 
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const createGreatpearlUser = async () => {
     setIsLoading(true);
     try {
@@ -375,6 +404,15 @@ const QuickEmployeeUpdate = () => {
           className="w-full"
         >
           {loading ? 'Fixing...' : '🔧 Fix Tumwine Settings Access'}
+        </Button>
+
+        <Button 
+          onClick={handleFixAnnouncement}
+          disabled={loading}
+          variant="outline"
+          className="w-full"
+        >
+          {loading ? 'Fixing...' : '📢 Fix Stuck Announcement'}
         </Button>
 
         <Button 
