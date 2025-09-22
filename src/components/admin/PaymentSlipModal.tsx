@@ -44,71 +44,75 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
     const paymentSlipNumber = generatePaymentSlipNumber();
     
     const slipContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 2px solid #333;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #333; margin: 0; font-size: 24px;">PAYMENT SLIP</h1>
-          <p style="margin: 5px 0; color: #666; font-size: 14px;">FarmFlow Coffee Company</p>
-          <p style="margin: 0; color: #666; font-size: 12px;">Finance Department</p>
-          <hr style="border: 1px solid #333; margin: 20px 0;">
+      <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 12px; border: 1px solid #333;">
+        <div style="text-align: center; margin-bottom: 15px;">
+          <h1 style="color: #333; margin: 0; font-size: 18px;">PAYMENT SLIP</h1>
+          <p style="margin: 2px 0; color: #666; font-size: 12px;">FarmFlow Coffee Company - Finance Department</p>
+          <hr style="border: 1px solid #333; margin: 8px 0;">
         </div>
         
-        <div style="background: #f5f5f5; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
-          <h3 style="margin: 0 0 10px 0; color: #333;">Payment Slip Details</h3>
-          <p style="margin: 5px 0;"><strong>Slip Number:</strong> ${paymentSlipNumber}</p>
-          <p style="margin: 5px 0;"><strong>Date Issued:</strong> ${new Date().toLocaleDateString()}</p>
-          <p style="margin: 5px 0;"><strong>Time:</strong> ${new Date().toLocaleTimeString()}</p>
+        <div style="display: flex; gap: 15px; margin-bottom: 12px;">
+          <div style="flex: 1; background: #f9f9f9; padding: 8px; border-radius: 3px;">
+            <h4 style="margin: 0 0 6px 0; color: #333; font-size: 12px;">Payment Details</h4>
+            <p style="margin: 2px 0; font-size: 10px;"><strong>Slip Number:</strong> ${paymentSlipNumber}</p>
+            <p style="margin: 2px 0; font-size: 10px;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+            <p style="margin: 2px 0; font-size: 10px;"><strong>Time:</strong> ${new Date().toLocaleTimeString()}</p>
+          </div>
+          <div style="flex: 1; background: #f9f9f9; padding: 8px; border-radius: 3px;">
+            <h4 style="margin: 0 0 6px 0; color: #333; font-size: 12px;">Amount</h4>
+            <p style="margin: 2px 0; font-size: 16px; font-weight: bold; color: #2563eb;">UGX ${request.amount.toLocaleString()}</p>
+            <p style="margin: 2px 0; font-size: 10px;"><strong>Method:</strong> ${request.paymentMethod}</p>
+            <p style="margin: 2px 0; font-size: 10px; color: green;"><strong>Status:</strong> Approved</p>
+          </div>
         </div>
         
-        <div style="margin-bottom: 20px;">
-          <h3 style="margin: 0 0 10px 0; color: #333;">Recipient Information</h3>
-          <p style="margin: 5px 0;"><strong>Name:</strong> ${recipientName || request.requestedby.split('@')[0]}</p>
-          <p style="margin: 5px 0;"><strong>Email:</strong> ${request.requestedby}</p>
-          <p style="margin: 5px 0;"><strong>Phone Number:</strong> ${request.phoneNumber || 'Not provided'}</p>
-          <p style="margin: 5px 0;"><strong>Request Type:</strong> ${request.title}</p>
-          ${request.reason ? `<p style="margin: 5px 0;"><strong>Reason:</strong> ${request.reason}</p>` : ''}
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-          <h3 style="margin: 0 0 10px 0; color: #333;">Payment Information</h3>
-          <p style="margin: 5px 0;"><strong>Amount:</strong> <span style="font-size: 18px; font-weight: bold;">UGX ${request.amount.toLocaleString()}</span></p>
-          <p style="margin: 5px 0;"><strong>Payment Method:</strong> ${request.paymentMethod}</p>
-          <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: green; font-weight: bold;">Approved & Ready for Payment</span></p>
-        </div>
-        
-        <div style="margin-bottom: 30px;">
-          <h3 style="margin: 0 0 10px 0; color: #333;">Approval Chain</h3>
-          <p style="margin: 5px 0;"><strong>Finance Approved By:</strong> ${request.financeApprovedBy || 'Finance Team'}</p>
-          <p style="margin: 5px 0;"><strong>Finance Approval Date:</strong> ${request.financeApprovedAt ? new Date(request.financeApprovedAt).toLocaleString() : 'N/A'}</p>
-          <p style="margin: 5px 0;"><strong>Final Approved By:</strong> ${request.adminApprovedBy || 'Admin Team'}</p>
-          <p style="margin: 5px 0;"><strong>Final Approval Date:</strong> ${request.adminApprovedAt ? new Date(request.adminApprovedAt).toLocaleString() : new Date().toLocaleString()}</p>
-        </div>
-        
-        <div style="border: 2px solid #333; padding: 20px; margin-bottom: 20px;">
-          <h3 style="margin: 0 0 15px 0; color: #333;">Recipient Acknowledgment</h3>
-          <p style="margin: 10px 0; font-size: 14px;">I acknowledge receipt of the above amount:</p>
-          
-          <div style="margin-top: 30px;">
-            <div style="display: inline-block; width: 200px; border-bottom: 1px solid #333; margin-right: 50px;">
-              <p style="margin: 20px 0 5px 0; font-size: 12px;">Recipient Signature</p>
+        <div style="margin-bottom: 12px;">
+          <h4 style="margin: 0 0 6px 0; color: #333; font-size: 12px;">Recipient Information</h4>
+          <div style="display: flex; gap: 15px;">
+            <div style="flex: 1;">
+              <p style="margin: 2px 0; font-size: 10px;"><strong>Name:</strong> ${recipientName || request.requestedby.split('@')[0]}</p>
+              <p style="margin: 2px 0; font-size: 10px;"><strong>Email:</strong> ${request.requestedby}</p>
             </div>
-            <div style="display: inline-block; width: 200px; border-bottom: 1px solid #333;">
-              <p style="margin: 20px 0 5px 0; font-size: 12px;">Date</p>
+            <div style="flex: 1;">
+              <p style="margin: 2px 0; font-size: 10px;"><strong>Phone:</strong> ${request.phoneNumber || 'Not provided'}</p>
+              <p style="margin: 2px 0; font-size: 10px;"><strong>Type:</strong> ${request.title}</p>
             </div>
           </div>
-          
-          <div style="margin-top: 30px;">
-            <div style="display: inline-block; width: 200px; border-bottom: 1px solid #333; margin-right: 50px;">
-              <p style="margin: 20px 0 5px 0; font-size: 12px;">Paymaster Signature</p>
+          ${request.reason ? `<p style="margin: 4px 0 0 0; font-size: 10px;"><strong>Reason:</strong> ${request.reason}</p>` : ''}
+        </div>
+        
+        <div style="margin-bottom: 12px;">
+          <h4 style="margin: 0 0 6px 0; color: #333; font-size: 12px;">Approval Chain</h4>
+          <div style="display: flex; gap: 15px; font-size: 10px;">
+            <div style="flex: 1;">
+              <p style="margin: 2px 0;"><strong>Finance:</strong> ${request.financeApprovedBy || 'Finance Team'}</p>
+              <p style="margin: 2px 0;">${request.financeApprovedAt ? new Date(request.financeApprovedAt).toLocaleDateString() : 'N/A'}</p>
             </div>
-            <div style="display: inline-block; width: 200px; border-bottom: 1px solid #333;">
-              <p style="margin: 20px 0 5px 0; font-size: 12px;">Date</p>
+            <div style="flex: 1;">
+              <p style="margin: 2px 0;"><strong>Admin:</strong> ${request.adminApprovedBy || 'Admin Team'}</p>
+              <p style="margin: 2px 0;">${request.adminApprovedAt ? new Date(request.adminApprovedAt).toLocaleDateString() : new Date().toLocaleDateString()}</p>
             </div>
           </div>
         </div>
         
-        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc;">
-          <p style="margin: 0; color: #666; font-size: 12px;">This is an official payment slip. Please retain for your records.</p>
-          <p style="margin: 10px 0 0 0; color: #666; font-size: 10px;">Generated on ${new Date().toLocaleString()}</p>
+        <div style="border: 1px solid #333; padding: 12px; margin-bottom: 8px;">
+          <h4 style="margin: 0 0 8px 0; color: #333; font-size: 12px;">Recipient Acknowledgment</h4>
+          <p style="margin: 4px 0; font-size: 10px;">I acknowledge receipt of the above amount:</p>
+          
+          <div style="display: flex; gap: 20px; margin-top: 15px;">
+            <div style="flex: 1; text-align: center;">
+              <div style="border-bottom: 1px solid #333; height: 25px; margin-bottom: 4px;"></div>
+              <p style="margin: 0; font-size: 9px;">Recipient Signature & Date</p>
+            </div>
+            <div style="flex: 1; text-align: center;">
+              <div style="border-bottom: 1px solid #333; height: 25px; margin-bottom: 4px;"></div>
+              <p style="margin: 0; font-size: 9px;">Paymaster Signature & Date</p>
+            </div>
+          </div>
+        </div>
+        
+        <div style="text-align: center; font-size: 9px; color: #666; border-top: 1px solid #ccc; padding-top: 6px;">
+          <p style="margin: 0;">Official payment slip - Retain for records</p>
         </div>
       </div>
     `;
@@ -121,8 +125,18 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
             <title>Payment Slip - ${paymentSlipNumber}</title>
             <style>
               @media print {
-                body { margin: 0; }
-                @page { margin: 1cm; }
+                body { margin: 0; padding: 0; }
+                @page { 
+                  margin: 0.5cm; 
+                  size: A4;
+                }
+                * {
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+              }
+              @media screen {
+                body { padding: 20px; background: #f5f5f5; }
               }
             </style>
           </head>
