@@ -7,6 +7,8 @@ import { useRiskAssessment } from '@/hooks/useRiskAssessment';
 import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield, Phone, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
+import { AdminApprovalModal } from './AdminApprovalModal';
+import { PaymentSlipModal } from './PaymentSlipModal';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AdminExpenseRequestsManagerProps {
@@ -24,6 +26,9 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const [selectedRequestId, setSelectedRequestId] = React.useState<string>('');
   const [selectedRequestTitle, setSelectedRequestTitle] = React.useState<string>('');
   const [userProfiles, setUserProfiles] = useState<Record<string, { name?: string; phone?: string }>>({});
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+  const [paymentSlipModalOpen, setPaymentSlipModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
   const expenseRequests = requests.filter(request => request.type === 'Expense Request');
 
@@ -69,15 +74,59 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     }
   }, [expenseRequests]);
 
-  const handleApprove = async (requestId: string) => {
-    const success = await updateRequestStatus(requestId, 'Approved', undefined, undefined, 'admin', 'Admin Team');
+  const handleApprove = (request: any) => {
+    setSelectedRequest(request);
+    setSelectedRequestId(request.id);
+    setSelectedRequestTitle(request.title);
+    setApprovalModalOpen(true);
+  };
+
+  const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
+    const success = await updateRequestStatus(
+      selectedRequestId, 
+      'Approved', 
+      undefined, 
+      comments, 
+      'admin', 
+      'Admin Team'
+    );
+    
     if (success) {
+      // Update the request with payment method
+      await supabase
+        .from('approval_requests')
+        .update({ 
+          payment_method: paymentMethod,
+          admin_comments: comments 
+        })
+        .eq('id', selectedRequestId);
+
       toast({
         title: "Admin Approval Recorded",
-        description: "Expense request approved by Admin. Checking for full approval..."
+        description: `Expense request approved for ${paymentMethod} payment`
       });
-      onApprove?.(requestId);
+      
+      onApprove?.(selectedRequestId);
+      
+      // Show payment slip for transfers
+      if (paymentMethod === 'transfer') {
+        const updatedRequest = {
+          ...selectedRequest,
+          paymentMethod: 'Bank Transfer',
+          adminApprovedBy: 'Admin Team',
+          adminApprovedAt: new Date().toISOString(),
+          phoneNumber: selectedRequest.details?.phoneNumber || userProfiles[selectedRequest.requestedby]?.phone,
+          reason: selectedRequest.details?.reason
+        };
+        setSelectedRequest(updatedRequest);
+        setPaymentSlipModalOpen(true);
+      }
     }
+    
+    setApprovalModalOpen(false);
+    setSelectedRequestId('');
+    setSelectedRequestTitle('');
+    setSelectedRequest(null);
   };
 
   const handleReject = (requestId: string, requestTitle: string) => {
