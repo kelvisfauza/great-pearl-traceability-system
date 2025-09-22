@@ -44,11 +44,24 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
     const paymentSlipNumber = generatePaymentSlipNumber();
     
     const slipContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 12px; border: 1px solid #333;">
-        <div style="text-align: center; margin-bottom: 15px;">
-          <h1 style="color: #333; margin: 0; font-size: 18px;">PAYMENT SLIP</h1>
-          <p style="margin: 2px 0; color: #666; font-size: 12px;">FarmFlow Coffee Company - Finance Department</p>
-          <hr style="border: 1px solid #333; margin: 8px 0;">
+      <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 8px; border: 1px solid #333;">
+        <!-- Company Header -->
+        <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 12px;">
+          <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+               alt="Great Pearl Coffee Factory Logo" 
+               style="height: 40px; width: auto; margin-bottom: 4px;" />
+          <h1 style="color: #333; margin: 2px 0; font-size: 14px; font-weight: bold; text-transform: uppercase;">
+            GREAT PEARL COFFEE FACTORY
+          </h1>
+          <div style="font-size: 8px; color: #666; line-height: 1.2;">
+            <p style="margin: 1px 0;">Specialty Coffee Processing & Export</p>
+            <p style="margin: 1px 0;">+256781121639 / +256778536681</p>
+            <p style="margin: 1px 0;">www.greatpearlcoffee.com | greatpearlcoffee@gmail.com</p>
+          </div>
+          <h2 style="color: #333; margin: 6px 0 2px 0; font-size: 16px; font-weight: bold; text-transform: uppercase;">
+            PAYMENT SLIP
+          </h2>
+          <p style="margin: 0; color: #666; font-size: 10px;">Finance Department</p>
         </div>
         
         <div style="display: flex; gap: 15px; margin-bottom: 12px;">
