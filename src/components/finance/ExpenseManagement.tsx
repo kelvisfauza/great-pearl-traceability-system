@@ -101,82 +101,147 @@ export const ExpenseManagement = () => {
             </TabsList>
 
             <TabsContent value="expense-requests" className="space-y-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Requester</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {userExpenseRequests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell className="font-medium">{request.title}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          {request.requestedby}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-bold text-blue-600">
-                        {formatCurrency(request.amount)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getPriorityBadgeColor(request.priority)}>
-                          {request.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {new Date(request.daterequested).toLocaleDateString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusBadgeColor(request)}>
-                          {getStatusText(request)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {!request.financeApproved && request.status !== 'Rejected' && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleApprove(request.id)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleReject(request.id)}
-                            >
-                              <XCircle className="h-4 w-4 mr-1" />
-                              Reject
-                            </Button>
+              <div className="space-y-4">
+                {userExpenseRequests.map((request) => {
+                  const details = typeof request.details === 'string' ? JSON.parse(request.details) : request.details || {};
+                  const phoneNumber = details.phoneNumber || 'Not provided';
+                  const reason = details.reason || request.description || 'No reason provided';
+                  const expenseCategory = details.expenseCategory || details.expenseType || 'Not specified';
+                  
+                  return (
+                    <Card key={request.id} className="border-l-4 border-l-blue-400">
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg">{request.title}</h3>
+                            <p className="text-muted-foreground">{request.description}</p>
+                            
+                            {/* Expense Details */}
+                            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                              <div className="space-y-2">
+                                <div>
+                                  <span className="text-sm font-medium text-blue-800">Reason for Expense:</span>
+                                  <p className="text-sm text-blue-700 mt-1">{reason}</p>
+                                </div>
+                                <div>
+                                  <span className="text-sm font-medium text-blue-800">Payment Phone Number:</span>
+                                  <p className="text-sm text-blue-700 font-mono">{phoneNumber}</p>
+                                </div>
+                                <div>
+                                  <span className="text-sm font-medium text-blue-800">Expense Category:</span>
+                                  <p className="text-sm text-blue-700">{expenseCategory}</p>
+                                </div>
+                                {details.urgency && (
+                                  <div>
+                                    <span className="text-sm font-medium text-blue-800">Urgency:</span>
+                                    <p className="text-sm text-blue-700">{details.urgency}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                        {request.financeApproved && !request.adminApproved && (
-                          <Badge className="bg-blue-100 text-blue-800">Awaiting Admin</Badge>
-                        )}
-                        {request.financeApproved && request.adminApproved && (
-                          <Badge className="bg-green-100 text-green-800">Fully Approved</Badge>
-                        )}
-                        {request.status === 'Rejected' && (
-                          <Badge className="bg-red-100 text-red-800">Rejected</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                          <div className="flex flex-col items-end gap-2 ml-4">
+                            <Badge className={getStatusBadgeColor(request)}>
+                              {getStatusText(request)}
+                            </Badge>
+                            <Badge className={getPriorityBadgeColor(request.priority)}>
+                              {request.priority}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-green-600">UGX {request.amount.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{request.requestedby}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Receipt className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{phoneNumber}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{new Date(request.daterequested).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+
+                        {/* Approval Status */}
+                        <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+                          <div className="text-sm font-medium mb-2">Approval Status:</div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="flex items-center gap-2">
+                              {request.financeApproved ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Clock className="h-4 w-4 text-yellow-500" />
+                              )}
+                              <span className={`text-sm ${request.financeApproved ? 'text-green-700' : 'text-yellow-700'}`}>
+                                Finance: {request.financeApproved ? 'Approved' : 'Pending Review'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {request.adminApproved ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Clock className="h-4 w-4 text-yellow-500" />
+                              )}
+                              <span className={`text-sm ${request.adminApproved ? 'text-green-700' : 'text-yellow-700'}`}>
+                                Admin: {request.adminApproved ? 'Approved' : 'Pending'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex justify-end gap-2">
+                          {!request.financeApproved && request.status !== 'Rejected' && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => handleApprove(request.id)}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleReject(request.id)}
+                              >
+                                <XCircle className="h-4 w-4 mr-1" />
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          {request.financeApproved && !request.adminApproved && (
+                            <Badge className="bg-blue-100 text-blue-800">
+                              <Clock className="h-4 w-4 mr-1" />
+                              Awaiting Admin Approval
+                            </Badge>
+                          )}
+                          {request.financeApproved && request.adminApproved && (
+                            <Badge className="bg-green-100 text-green-800">
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Fully Approved
+                            </Badge>
+                          )}
+                          {request.status === 'Rejected' && (
+                            <Badge className="bg-red-100 text-red-800">
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Rejected
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
 
               {userExpenseRequests.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
