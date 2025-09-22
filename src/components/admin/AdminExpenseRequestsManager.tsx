@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
 import { useRiskAssessment } from '@/hooks/useRiskAssessment';
-import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield, Phone, AlertTriangle } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield, Phone, AlertTriangle, Printer } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
 import { AdminApprovalModal } from './AdminApprovalModal';
 import { PaymentSlipModal } from './PaymentSlipModal';
+import { RecentPaymentSlipsModal } from './RecentPaymentSlipsModal';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AdminExpenseRequestsManagerProps {
@@ -20,8 +21,6 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   onApprove, 
   onReject 
 }) => {
-  console.log('🚀 AdminExpenseRequestsManager component loaded');
-  
   const { requests, loading, updateRequestStatus } = useApprovalRequests();
   const { assessExpenseRisk } = useRiskAssessment();
   const [rejectionModalOpen, setRejectionModalOpen] = React.useState(false);
@@ -30,12 +29,10 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const [userProfiles, setUserProfiles] = useState<Record<string, { name?: string; phone?: string }>>({});
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [paymentSlipModalOpen, setPaymentSlipModalOpen] = useState(false);
+  const [recentSlipsModalOpen, setRecentSlipsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
   const expenseRequests = requests.filter(request => request.type === 'Expense Request');
-  
-  console.log('🚀 AdminExpenseRequestsManager - expenseRequests count:', expenseRequests.length);
-  console.log('🚀 AdminExpenseRequestsManager - loading:', loading);
 
   // Fetch user profiles to get names and phone numbers
   useEffect(() => {
@@ -80,17 +77,13 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   }, [expenseRequests]);
 
   const handleApprove = (request: any) => {
-    console.log('Admin Approve clicked for request:', request.id);
     setSelectedRequest(request);
     setSelectedRequestId(request.id);
     setSelectedRequestTitle(request.title);
     setApprovalModalOpen(true);
-    console.log('Approval modal should open now');
   };
 
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
-    console.log('Confirming approval with payment method:', paymentMethod);
-    
     const success = await updateRequestStatus(
       selectedRequestId, 
       'Approved', 
@@ -122,10 +115,6 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       
       // Show payment slip for transfers
       if (paymentMethod === 'transfer') {
-        console.log('🎯 Payment method is transfer, preparing payment slip modal');
-        console.log('🎯 Selected request:', selectedRequest);
-        console.log('🎯 User profiles:', userProfiles);
-        
         const updatedRequest = {
           ...selectedRequest,
           paymentMethod: 'Bank Transfer',
@@ -135,15 +124,14 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
           reason: selectedRequest.details?.reason
         };
         
-        console.log('🎯 Updated request for payment slip:', updatedRequest);
         setSelectedRequest(updatedRequest);
         
-        console.log('🎯 Setting payment slip modal open to true');
-        setPaymentSlipModalOpen(true);
-        
-        console.log('🎯 Payment slip modal state should be:', true);
+        // For transfers, delay opening payment slip modal slightly to avoid conflicts
+        setTimeout(() => {
+          setPaymentSlipModalOpen(true);
+        }, 100);
       } else {
-        console.log('🎯 Payment method is cash, no payment slip needed');
+        setSelectedRequest(null);
       }
     }
     
@@ -151,17 +139,6 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     setApprovalModalOpen(false);
     setSelectedRequestId('');
     setSelectedRequestTitle('');
-    
-    // For transfers, delay opening payment slip modal slightly to avoid conflicts
-    if (paymentMethod === 'transfer') {
-      setTimeout(() => {
-        console.log('🎯 Delayed payment slip modal opening');
-        setPaymentSlipModalOpen(true);
-        console.log('🎯 Payment slip modal state after delay:', true);
-      }, 100);
-    } else {
-      setSelectedRequest(null);
-    }
   };
 
   const handleReject = (requestId: string, requestTitle: string) => {
@@ -319,6 +296,17 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
               <p className="text-sm text-green-600 font-medium">Fully Approved</p>
               <p className="text-2xl font-bold text-green-800">{fullyApprovedCount}</p>
             </div>
+          </div>
+
+          {/* Print Payment Slip Button */}
+          <div className="mb-6">
+            <Button 
+              onClick={() => setRecentSlipsModalOpen(true)}
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print Payment Slip
+            </Button>
           </div>
 
           <div className="space-y-4">
@@ -560,29 +548,6 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         description={`Please provide a reason for rejecting "${selectedRequestTitle}"`}
       />
       
-      {/* Test Payment Slip Button - Remove after debugging */}
-      <Button 
-        onClick={() => {
-          console.log('🧪 Test button clicked');
-          const testRequest = {
-            id: 'test-123',
-            title: 'Test Expense Request',
-            amount: 50000,
-            requestedby: 'test@example.com',
-            paymentMethod: 'Bank Transfer',
-            adminApprovedBy: 'Admin Team',
-            adminApprovedAt: new Date().toISOString(),
-            phoneNumber: '0700123456',
-            reason: 'Test reason'
-          };
-          setSelectedRequest(testRequest);
-          setPaymentSlipModalOpen(true);
-          console.log('🧪 Test payment slip modal opened');
-        }}
-        className="mb-4 bg-purple-600 hover:bg-purple-700"
-      >
-        🧪 Test Payment Slip Modal
-      </Button>
 
       {/* Admin Approval Modal */}
       <AdminApprovalModal
@@ -593,11 +558,16 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         amount={selectedRequest ? parseFloat(selectedRequest.amount) : 0}
       />
       
+      {/* Recent Payment Slips Modal */}
+      <RecentPaymentSlipsModal
+        open={recentSlipsModalOpen}
+        onOpenChange={setRecentSlipsModalOpen}
+      />
+
       {/* Payment Slip Modal */}
       <PaymentSlipModal
         open={paymentSlipModalOpen}
         onOpenChange={(open) => {
-          console.log('🎯 PaymentSlipModal onOpenChange called with:', open);
           setPaymentSlipModalOpen(open);
           // Clear selected request when modal closes
           if (!open) {
