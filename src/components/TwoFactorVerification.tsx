@@ -24,7 +24,7 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [error, setError] = useState('');
-  const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes
+  const [timeRemaining, setTimeRemaining] = useState(600); // 10 minutes instead of 5
   const [canResend, setCanResend] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   const [bypassEnabled, setBypassEnabled] = useState(false);
@@ -162,8 +162,8 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
 
       console.log('✅ Verification code sent successfully');
       setCodeSent(true);
-      // Reset timer
-      setTimeRemaining(300);
+      // Reset timer to 10 minutes
+      setTimeRemaining(600);
       setCanResend(false);
     } catch (err: any) {
       console.error('Send code error:', err);
@@ -261,8 +261,17 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
         </div>
         <CardTitle className="text-xl">Phone Verification</CardTitle>
         <CardDescription>
-          We've sent a 5-digit code to<br />
-          <strong>{phone}</strong>
+          {rateLimited ? (
+            <>
+              Please use the 5-digit code from your previous SMS to<br />
+              <strong>{phone}</strong>
+            </>
+          ) : (
+            <>
+              We've sent a 5-digit code to<br />
+              <strong>{phone}</strong>
+            </>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -322,12 +331,18 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
 
           <div className="text-center space-y-2">
             {rateLimited ? (
-              <div className="p-3 bg-orange-50 border border-orange-200 rounded-md">
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-md">
                 <p className="text-sm text-orange-800 font-medium">
-                  ⏰ Code Request Limit Reached
+                  ⏰ Code Already Sent
                 </p>
                 <p className="text-xs text-orange-700 mt-1">
-                  Use your existing verification code or contact IT department for assistance.
+                  Please use the verification code that was already sent to your phone.
+                </p>
+                <p className="text-xs text-orange-600 mt-2 font-medium">
+                  📱 Check your SMS messages for the 5-digit code
+                </p>
+                <p className="text-xs text-gray-600 mt-2">
+                  If you can't find the code, contact the IT department for assistance.
                 </p>
               </div>
             ) : !canResend ? (
