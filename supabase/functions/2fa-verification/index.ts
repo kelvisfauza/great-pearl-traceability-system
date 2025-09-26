@@ -93,6 +93,7 @@ Deno.serve(async (req) => {
       
       // Check if a code was sent in the last 6 hours
       const sixHoursAgo = new Date(Date.now() - (6 * 60 * 60 * 1000)); // 6 hours ago
+      const thirtySecondsAgo = new Date(Date.now() - (30 * 1000)); // 30 seconds ago
       
       const { data: recentCodes, error: recentError } = await supabaseAdmin
         .from('verification_codes')
@@ -112,11 +113,29 @@ Deno.serve(async (req) => {
       if (recentCodes && recentCodes.length > 0) {
         const lastCodeTime = new Date(recentCodes[0].created_at);
         const timeSinceLastCode = Date.now() - lastCodeTime.getTime();
+        
+        // If less than 30 seconds, it's definitely a duplicate request
+        if (timeSinceLastCode < 30000) {
+          console.log('🚫 Duplicate request detected - code sent less than 30 seconds ago');
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: 'A verification code was just sent. Please wait at least 30 seconds before requesting another code.'
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 429,
+            }
+          );
+        }
+        
+        // If less than 6 hours, apply the 6-hour rule
         const hoursRemaining = Math.ceil((6 * 60 * 60 * 1000 - timeSinceLastCode) / (60 * 60 * 1000));
         
         console.log('🚫 Code request denied - recent code exists:', {
           lastCodeSent: lastCodeTime.toISOString(),
-          hoursRemaining
+          hoursRemaining,
+          timeSinceLastCode: Math.floor(timeSinceLastCode / 1000) + ' seconds'
         });
         
         return new Response(
@@ -145,7 +164,7 @@ Deno.serve(async (req) => {
         .eq('email', email)
         .eq('phone', phone);
       
-      // Store verification code in database with expiry (5 minutes)
+      // Store verification code IMMEDIATELY to prevent race conditions
       const expiresAt = new Date(Date.now() + (5 * 60 * 1000)); // 5 minutes from now
       
       const { error: insertError } = await supabaseAdmin
@@ -163,7 +182,43 @@ Deno.serve(async (req) => {
         throw new Error('Failed to store verification code');
       }
       
-      console.log('✅ Verification code stored in database');
+      console.log('✅ Verification code stored in database - proceeding with SMS');
+      
+      // Check AGAIN after storing to prevent race conditions
+      const { data: duplicateCheck, error: duplicateError } = await supabaseAdmin
+        .from('verification_codes')
+        .select('code, created_at')
+        .eq('email', email)
+        .eq('phone', phone)
+        .gte('created_at', sixHoursAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(2); // Get up to 2 recent codes
+        
+      if (!duplicateError && duplicateCheck && duplicateCheck.length > 1) {
+        // Multiple codes found - this is a duplicate request
+        const timeDiff = new Date(duplicateCheck[0].created_at).getTime() - new Date(duplicateCheck[1].created_at).getTime();
+        
+        if (timeDiff < 10000) { // If codes were created within 10 seconds of each other
+          console.log('🚫 Duplicate request detected - aborting SMS send');
+          
+          // Delete the newer duplicate code
+          await supabaseAdmin
+            .from('verification_codes')
+            .delete()
+            .eq('code', verificationCode);
+            
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: 'A verification code was just sent. Please wait before requesting another code.'
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 429,
+            }
+          );
+        }
+      }
       
       // Get user details from employees table
       const { data: employeeData, error: employeeError } = await supabaseAdmin
@@ -443,10 +498,12 @@ LINK: ${loginLink}
   } catch (error) {
     console.error('Error in 2fa-verification function:', error);
     
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Internal server error'
+        error: errorMessage
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

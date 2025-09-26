@@ -33,7 +33,7 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
 
   // Auto-send code when component loads (check bypass first)
   useEffect(() => {
-    if (!hasSentInitialCode.current) {
+    if (!hasSentInitialCode.current && !isSendingCode) {
       hasSentInitialCode.current = true;
       console.log('🎯 Auto-sending initial verification code...');
       sendVerificationCode();
