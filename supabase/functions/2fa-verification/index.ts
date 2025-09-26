@@ -89,12 +89,56 @@ Deno.serve(async (req) => {
     // Create Supabase admin client
 
     if (action === 'send_code') {
-      console.log('📱 Generating new verification code for:', { email, phone: phone?.substring(0, 6) + '***' });
+      console.log('📱 Checking verification code eligibility for:', { email, phone: phone?.substring(0, 6) + '***' });
+      
+      // Check if a code was sent in the last 6 hours
+      const sixHoursAgo = new Date(Date.now() - (6 * 60 * 60 * 1000)); // 6 hours ago
+      
+      const { data: recentCodes, error: recentError } = await supabaseAdmin
+        .from('verification_codes')
+        .select('created_at, expires_at, code')
+        .eq('email', email)
+        .eq('phone', phone)
+        .gte('created_at', sixHoursAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      if (recentError) {
+        console.error('❌ Failed to check recent verification codes:', recentError);
+        throw new Error('Failed to check verification eligibility');
+      }
+      
+      // If a code was sent within the last 6 hours, deny the request
+      if (recentCodes && recentCodes.length > 0) {
+        const lastCodeTime = new Date(recentCodes[0].created_at);
+        const timeSinceLastCode = Date.now() - lastCodeTime.getTime();
+        const hoursRemaining = Math.ceil((6 * 60 * 60 * 1000 - timeSinceLastCode) / (60 * 60 * 1000));
+        
+        console.log('🚫 Code request denied - recent code exists:', {
+          lastCodeSent: lastCodeTime.toISOString(),
+          hoursRemaining
+        });
+        
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `You can only request a verification code once every 6 hours. Please use your existing code or contact IT department for assistance. Try again in ${hoursRemaining} hour(s).`,
+            lastCodeSent: lastCodeTime.toISOString(),
+            hoursRemaining
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 429, // Too Many Requests
+          }
+        );
+      }
+      
+      console.log('✅ Eligible for new verification code - generating...');
       
       // Generate 5-digit verification code
       const verificationCode = Math.floor(10000 + Math.random() * 90000).toString();
       
-      // Clean up any existing codes for this user
+      // Clean up any existing codes for this user (expired or older than 6 hours)
       await supabaseAdmin
         .from('verification_codes')
         .delete()

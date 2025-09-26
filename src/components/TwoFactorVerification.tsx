@@ -28,6 +28,7 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
   const [canResend, setCanResend] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   const [bypassEnabled, setBypassEnabled] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
   const hasSentInitialCode = React.useRef(false);
 
   // Auto-send code when component loads (check bypass first)
@@ -166,7 +167,14 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
       setCanResend(false);
     } catch (err: any) {
       console.error('Send code error:', err);
-      setError(err.message || 'Failed to send verification code');
+      const errorMessage = err.message || 'Failed to send verification code';
+      setError(errorMessage);
+      
+      // Check if it's the 6-hour rate limit error
+      if (errorMessage.includes('once every 6 hours') || errorMessage.includes('contact IT department')) {
+        setRateLimited(true);
+        setCanResend(false);
+      }
     } finally {
       setIsSendingCode(false);
     }
@@ -313,7 +321,16 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
           </Button>
 
           <div className="text-center space-y-2">
-            {!canResend ? (
+            {rateLimited ? (
+              <div className="p-3 bg-orange-50 border border-orange-200 rounded-md">
+                <p className="text-sm text-orange-800 font-medium">
+                  ⏰ Code Request Limit Reached
+                </p>
+                <p className="text-xs text-orange-700 mt-1">
+                  Use your existing verification code or contact IT department for assistance.
+                </p>
+              </div>
+            ) : !canResend ? (
               <p className="text-sm text-gray-600">
                 Code expires in <strong>{formatTime(timeRemaining)}</strong>
               </p>
