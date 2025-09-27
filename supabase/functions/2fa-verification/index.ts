@@ -109,10 +109,12 @@ Deno.serve(async (req) => {
         throw new Error('Failed to check verification eligibility');
       }
       
-      // If a code was sent within the last 6 hours, deny the request
+      // If a code was sent within the last 6 hours, check if it's still valid
       if (recentCodes && recentCodes.length > 0) {
         const lastCodeTime = new Date(recentCodes[0].created_at);
+        const lastCodeExpiry = new Date(recentCodes[0].expires_at);
         const timeSinceLastCode = Date.now() - lastCodeTime.getTime();
+        const now = new Date();
         
         // If less than 30 seconds, it's definitely a duplicate request
         if (timeSinceLastCode < 30000) {
@@ -129,27 +131,40 @@ Deno.serve(async (req) => {
           );
         }
         
-        // If less than 6 hours, apply the 6-hour rule
-        const hoursRemaining = Math.ceil((6 * 60 * 60 * 1000 - timeSinceLastCode) / (60 * 60 * 1000));
-        
-        console.log('🚫 Code request denied - recent code exists:', {
-          lastCodeSent: lastCodeTime.toISOString(),
-          hoursRemaining,
-          timeSinceLastCode: Math.floor(timeSinceLastCode / 1000) + ' seconds'
-        });
-        
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: `You can only request a verification code once every 6 hours. Please use your existing code or contact IT department for assistance. Try again in ${hoursRemaining} hour(s).`,
+        // If the previous code has expired, allow sending a new one even within 6 hours
+        if (now > lastCodeExpiry) {
+          console.log('✅ Previous code has expired - allowing new code generation');
+          
+          // Clean up the expired code
+          await supabaseAdmin
+            .from('verification_codes')
+            .delete()
+            .eq('email', email)
+            .eq('phone', phone);
+        } else {
+          // If less than 6 hours and code is still valid, apply the 6-hour rule
+          const hoursRemaining = Math.ceil((6 * 60 * 60 * 1000 - timeSinceLastCode) / (60 * 60 * 1000));
+          
+          console.log('🚫 Code request denied - recent valid code exists:', {
             lastCodeSent: lastCodeTime.toISOString(),
-            hoursRemaining
-          }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 429, // Too Many Requests
-          }
-        );
+            codeExpiry: lastCodeExpiry.toISOString(),
+            hoursRemaining,
+            timeSinceLastCode: Math.floor(timeSinceLastCode / 1000) + ' seconds'
+          });
+          
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: `You can only request a verification code once every 6 hours. Please use your existing code or contact IT department for assistance. Try again in ${hoursRemaining} hour(s).`,
+              lastCodeSent: lastCodeTime.toISOString(),
+              hoursRemaining
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 429, // Too Many Requests
+            }
+          );
+        }
       }
       
       console.log('✅ Eligible for new verification code - generating...');
