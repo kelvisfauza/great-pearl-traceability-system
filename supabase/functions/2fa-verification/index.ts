@@ -220,6 +220,9 @@ Deno.serve(async (req) => {
       
       console.log('✅ Verification code stored in database (expires in 6 hours) - proceeding with SMS');
       
+      // Define sixHoursAgo for duplicate check
+      const sixHoursAgo = new Date(Date.now() - (6 * 60 * 60 * 1000));
+      
       // Check AGAIN after storing to prevent race conditions
       const { data: duplicateCheck, error: duplicateError } = await supabaseAdmin
         .from('verification_codes')
