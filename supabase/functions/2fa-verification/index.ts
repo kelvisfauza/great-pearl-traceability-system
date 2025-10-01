@@ -137,54 +137,30 @@ Deno.serve(async (req) => {
           console.log('✅ Expired code deleted - skipping all rate limit checks and proceeding with new code');
           // DO NOT check any further rate limits - proceed directly to code generation
         } 
-        // If code is still valid (not expired), run rate limit checks
+        // If code is still valid (not expired), DON'T send a new code - tell user to use existing one
         else {
-          // Check if code was sent less than 30 seconds ago (duplicate request)
-          if (timeSinceLastCode < 30000) {
-            console.log('🚫 Duplicate request - code sent less than 30 seconds ago');
-            return new Response(
-              JSON.stringify({
-                success: false,
-                error: 'A verification code was just sent. Please wait at least 30 seconds before requesting another code.'
-              }),
-              {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 429,
-              }
-            );
-          }
+          const minutesRemaining = Math.ceil((lastCodeExpiry.getTime() - now.getTime()) / (60 * 1000));
+          const minutesSinceSent = Math.floor(timeSinceLastCode / (60 * 1000));
           
-          // Check if code is within the 6-hour window
-          const timeSinceCreation = now.getTime() - lastCodeTime.getTime();
-          const sixHourWindow = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
-          const isWithinSixHours = timeSinceCreation < sixHourWindow;
+          console.log('📋 Valid code already exists - informing user to use it:', {
+            sentAgo: minutesSinceSent + ' minutes',
+            expiresIn: minutesRemaining + ' minutes'
+          });
           
-          if (isWithinSixHours) {
-            const minutesRemaining = Math.ceil((lastCodeExpiry.getTime() - now.getTime()) / (60 * 1000));
-            const hoursUntilNextCode = Math.ceil((6 * 60 * 60 * 1000 - timeSinceLastCode) / (60 * 60 * 1000));
-            
-            console.log('🚫 Rate limit enforced - valid code exists within 6-hour window:', {
-              minutesUntilExpiry: minutesRemaining,
-              hoursUntilNextCode,
-              timeSinceLastCode: Math.floor(timeSinceLastCode / 1000) + ' seconds'
-            });
-            
-            return new Response(
-              JSON.stringify({
-                success: false,
-                error: `A valid verification code was sent and expires in ${minutesRemaining} minute(s). Please check your SMS and use that code. You can request a new code in ${hoursUntilNextCode} hour(s). Contact IT if you need assistance.`,
-                lastCodeSent: lastCodeTime.toISOString(),
-                expiresIn: minutesRemaining,
-                nextCodeAllowedIn: hoursUntilNextCode
-              }),
-              {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 429,
-              }
-            );
-          }
-          // Code is valid but outside the 6-hour window, allow new code
-          console.log('✅ Code exists but outside 6-hour window - allowing new code');
+          return new Response(
+            JSON.stringify({
+              success: true,
+              existingCodeUsed: true,
+              message: `A verification code was already sent ${minutesSinceSent} minute(s) ago. Please check your SMS and use that code.`,
+              sentAgo: minutesSinceSent,
+              expiresIn: minutesRemaining,
+              lastSent: lastCodeTime.toISOString()
+            }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200,
+            }
+          );
         }
       }
       

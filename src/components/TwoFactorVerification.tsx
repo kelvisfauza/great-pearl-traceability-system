@@ -161,11 +161,24 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
         return;
       }
 
+      // Check if existing code was used (no new SMS sent)
+      if (data?.existingCodeUsed) {
+        console.log('📋 Using existing verification code - no new SMS sent');
+        setCodeSent(true);
+        setError(''); // Clear any previous errors
+        // Set timer based on when code expires
+        if (data.expiresIn) {
+          setTimeRemaining(data.expiresIn * 60); // Convert minutes to seconds
+        }
+        setCanResend(false);
+        return;
+      }
+
       if (!data.success) {
         throw new Error(data.error || 'Failed to send verification code');
       }
 
-      console.log('✅ Verification code sent successfully');
+      console.log('✅ New verification code sent successfully');
       setCodeSent(true);
       // Reset timer to 6 hours
       setTimeRemaining(21600);
@@ -271,11 +284,16 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
               Please use the 5-digit code from your previous SMS to<br />
               <strong>{phone}</strong>
             </>
-          ) : (
+          ) : codeSent ? (
             <>
-              We've sent a 5-digit code to<br />
+              A verification code was sent to<br />
               <strong>{phone}</strong>
+              <p className="text-sm text-muted-foreground mt-2">
+                📱 Check your SMS - the code is valid for 6 hours
+              </p>
             </>
+          ) : (
+            <>Sending verification code to {phone}...</>
           )}
         </CardDescription>
       </CardHeader>
