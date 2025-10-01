@@ -24,7 +24,7 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [error, setError] = useState('');
-  const [timeRemaining, setTimeRemaining] = useState(600); // 10 minutes instead of 5
+  const [timeRemaining, setTimeRemaining] = useState(21600); // 6 hours = 21600 seconds
   const [canResend, setCanResend] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   const [bypassEnabled, setBypassEnabled] = useState(false);
@@ -120,10 +120,15 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
     return () => window.removeEventListener('autoFillCode', handleAutoFill as EventListener);
   }, [email, phone, onVerificationComplete]);
 
-  // Format time remaining
+  // Format time remaining (handles hours, minutes, seconds)
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -162,8 +167,8 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
 
       console.log('✅ Verification code sent successfully');
       setCodeSent(true);
-      // Reset timer to 10 minutes
-      setTimeRemaining(600);
+      // Reset timer to 6 hours
+      setTimeRemaining(21600);
       setCanResend(false);
     } catch (err: any) {
       console.error('Send code error:', err);
@@ -336,7 +341,7 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
                   ⏰ Code Already Sent
                 </p>
                 <p className="text-xs text-orange-700 mt-1">
-                  Please use the verification code that was already sent to your phone.
+                  Please use the verification code that was already sent to your phone (valid for 6 hours).
                 </p>
                 <p className="text-xs text-orange-600 mt-2 font-medium">
                   📱 Check your SMS messages for the 5-digit code

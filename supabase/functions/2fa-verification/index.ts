@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
         .eq('phone', phone);
       
       // Store verification code IMMEDIATELY to prevent race conditions
-      const expiresAt = new Date(Date.now() + (5 * 60 * 1000)); // 5 minutes from now
+      const expiresAt = new Date(Date.now() + (6 * 60 * 60 * 1000)); // 6 HOURS from now
       
       const { error: insertError } = await supabaseAdmin
         .from('verification_codes')
@@ -218,7 +218,7 @@ Deno.serve(async (req) => {
         throw new Error('Failed to store verification code');
       }
       
-      console.log('✅ Verification code stored in database - proceeding with SMS');
+      console.log('✅ Verification code stored in database (expires in 6 hours) - proceeding with SMS');
       
       // Check AGAIN after storing to prevent race conditions
       const { data: duplicateCheck, error: duplicateError } = await supabaseAdmin
@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
       const smsMessage = `${userName.split(' ')[0]} - Pearl Coffee
 Code: ${verificationCode}
 LINK: ${loginLink}
-(5min only)`;
+(Valid for 6 hours)`;
 
       console.log('📱 SMS Message prepared:', {
         messageLength: smsMessage.length,
