@@ -1,18 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { supabase } from '@/integrations/supabase/client';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 export type PresenceStatus = 'online' | 'away' | 'offline';
 
 export interface PresenceRecord {
-  id: string; // uid
+  id: string;
   name?: string | null;
   email?: string | null;
   department?: string | null;
   role?: string | null;
   status: PresenceStatus;
-  login_time?: any;
-  last_seen?: any;
+  online_at?: string;
 }
 
 export const usePresenceList = () => {
@@ -20,13 +19,48 @@ export const usePresenceList = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'presence'));
-    const unsub = onSnapshot(q, (snap) => {
-      const list: PresenceRecord[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-      setUsers(list);
-      setLoading(false);
-    });
-    return () => unsub();
+    console.log('Setting up presence list listener');
+    const channel: RealtimeChannel = supabase.channel('online-users');
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const presenceState = channel.presenceState();
+        console.log('Presence sync event:', presenceState);
+        
+        // Convert presence state to array of users
+        const userList: PresenceRecord[] = [];
+        
+        Object.keys(presenceState).forEach((key) => {
+          const presences = presenceState[key];
+          presences.forEach((presence: any) => {
+            userList.push({
+              id: presence.user_id,
+              email: presence.email,
+              name: presence.name,
+              department: presence.department,
+              role: presence.role,
+              status: presence.status || 'online',
+              online_at: presence.online_at,
+            });
+          });
+        });
+
+        console.log('Updated user list:', userList);
+        setUsers(userList);
+        setLoading(false);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log('User joined:', key, newPresences);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log('User left:', key, leftPresences);
+      })
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up presence list listener');
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const sorted = useMemo(() => {
@@ -35,9 +69,11 @@ export const usePresenceList = () => {
       const pa = priority[a.status] ?? 3;
       const pb = priority[b.status] ?? 3;
       if (pa !== pb) return pa - pb;
-      const la = (a.last_seen?.toMillis?.() ?? 0) as number;
-      const lb = (b.last_seen?.toMillis?.() ?? 0) as number;
-      return lb - la;
+      
+      // Sort by online_at timestamp
+      const dateA = a.online_at ? new Date(a.online_at).getTime() : 0;
+      const dateB = b.online_at ? new Date(b.online_at).getTime() : 0;
+      return dateB - dateA;
     });
   }, [users]);
 

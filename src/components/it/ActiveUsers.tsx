@@ -15,10 +15,11 @@ const statusBadge = (status: string) => {
   }
 };
 
-const formatTime = (ts?: any) => {
+const formatTime = (ts?: string) => {
   try {
-    const d = ts?.toDate ? ts.toDate() : ts ? new Date(ts) : null;
-    return d ? d.toLocaleTimeString() : '-';
+    if (!ts) return '-';
+    const date = new Date(ts);
+    return date.toLocaleTimeString();
   } catch {
     return '-';
   }
@@ -60,7 +61,7 @@ const ActiveUsers = () => {
                 <div>
                   <p className="font-medium">{u.name || u.email || 'User'}</p>
                   <p className="text-xs text-muted-foreground">
-                    {u.department || '—'} • Login: {formatTime(u.login_time)} • Last seen: {formatTime(u.last_seen)}
+                    {u.department || '—'} • {u.role || 'User'} • Online: {formatTime(u.online_at)}
                   </p>
                 </div>
               </div>

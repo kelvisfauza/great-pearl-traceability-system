@@ -16,10 +16,11 @@ const statusBadge = (status: string) => {
   }
 };
 
-const formatDateTime = (ts?: any) => {
+const formatDateTime = (ts?: string) => {
   try {
-    const d = ts?.toDate ? ts.toDate() : ts ? new Date(ts) : null;
-    return d ? d.toLocaleString() : '-';
+    if (!ts) return '-';
+    const date = new Date(ts);
+    return date.toLocaleString();
   } catch {
     return '-';
   }
@@ -58,7 +59,7 @@ const UserPresencePanel = () => {
               <div className="min-w-0">
                 <p className="font-medium truncate">{u.name || u.email || 'User'}</p>
                 <p className="text-xs text-muted-foreground truncate">{u.department || '—'} • {u.role || '—'}</p>
-                <p className="text-xs text-muted-foreground">Login: {formatDateTime(u.login_time)} • Last seen: {formatDateTime(u.last_seen)}</p>
+                <p className="text-xs text-muted-foreground">Online since: {formatDateTime(u.online_at)}</p>
               </div>
               {statusBadge(u.status)}
             </div>
