@@ -153,8 +153,9 @@ Deno.serve(async (req) => {
         }
         // If code is still valid, enforce rate limiting based on 6-hour window
         else {
-          const sixHoursAgo = new Date(now.getTime() - (6 * 60 * 60 * 1000));
-          const isWithinSixHours = lastCodeTime.getTime() > sixHoursAgo.getTime();
+          const timeSinceCreation = now.getTime() - lastCodeTime.getTime();
+          const sixHourWindow = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+          const isWithinSixHours = timeSinceCreation < sixHourWindow;
           
           if (isWithinSixHours) {
             const minutesRemaining = Math.ceil((lastCodeExpiry.getTime() - now.getTime()) / (60 * 1000));
