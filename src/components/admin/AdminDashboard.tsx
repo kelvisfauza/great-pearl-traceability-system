@@ -14,6 +14,7 @@ import AdminExpenseRequestsManager from './AdminExpenseRequestsManager';
 import ApprovedRequestsHistory from './ApprovedRequestsHistory';
 import { useUnifiedApprovalRequests } from '@/hooks/useUnifiedApprovalRequests';
 import { usePresenceList } from '@/hooks/usePresenceList';
+import ActiveUsers from '@/components/it/ActiveUsers';
 
 
 const AdminDashboard = () => {
@@ -148,7 +149,10 @@ const AdminDashboard = () => {
           </Card>
 
           {/* System Overview */}
-          <PermissionOverview />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PermissionOverview />
+            <ActiveUsers />
+          </div>
         </TabsContent>
 
         <TabsContent value="permissions" className="space-y-6">
