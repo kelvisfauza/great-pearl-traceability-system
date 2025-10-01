@@ -9,18 +9,22 @@ export const usePresence = (userId?: string) => {
 
   const updatePresence = useCallback(async (status: 'online' | 'away' | 'offline' = 'online') => {
     const id = userId || user?.id;
-    if (!id || !employee) return;
+    if (!id || !employee) {
+      console.log('❌ Cannot update presence - missing data:', { id, hasEmployee: !!employee, employee });
+      return;
+    }
 
     try {
-      console.log('Updating presence:', status, 'for user:', employee.email);
+      console.log('✅ Updating presence:', status, 'for user:', employee.email);
       
       if (!channelRef.current) {
         // Initialize presence channel
+        console.log('📡 Initializing presence channel');
         channelRef.current = supabase.channel('online-users');
       }
 
       // Track presence with user details
-      await channelRef.current.track({
+      const presenceData = {
         user_id: id,
         email: employee.email,
         name: employee.name,
@@ -28,10 +32,14 @@ export const usePresence = (userId?: string) => {
         role: employee.role,
         status: status,
         online_at: new Date().toISOString(),
-      });
+      };
+      
+      console.log('📤 Tracking presence with data:', presenceData);
+      await channelRef.current.track(presenceData);
+      console.log('✅ Presence tracked successfully');
 
     } catch (error) {
-      console.error('Error updating presence:', error);
+      console.error('❌ Error updating presence:', error);
     }
   }, [userId, user?.id, employee]);
 
@@ -43,18 +51,29 @@ export const usePresence = (userId?: string) => {
 
   useEffect(() => {
     const id = userId || user?.id;
-    if (!id || !employee) return;
+    if (!id || !employee) {
+      console.log('⏭️ Skipping presence initialization - missing data:', { 
+        hasId: !!id, 
+        hasEmployee: !!employee,
+        userId: user?.id,
+        employeeEmail: employee?.email 
+      });
+      return;
+    }
 
-    console.log('Initializing presence tracking for:', employee.email);
+    console.log('🚀 Initializing presence tracking for:', employee.email, 'with ID:', id);
 
     // Create and subscribe to presence channel
     const channel = supabase.channel('online-users');
     channelRef.current = channel;
 
     channel.subscribe(async (status) => {
+      console.log('📡 Presence channel status:', status);
       if (status === 'SUBSCRIBED') {
-        console.log('Presence channel subscribed, tracking user as online');
+        console.log('✅ Presence channel subscribed, tracking user as online');
         await updatePresence('online');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('❌ Presence channel error');
       }
     });
 
