@@ -125,34 +125,36 @@ Deno.serve(async (req) => {
           timeSinceCreation: Math.floor(timeSinceLastCode / 1000) + ' seconds'
         });
         
-        // If code has expired, delete it and allow new code generation
+        // If code has expired, delete it and IMMEDIATELY allow new code generation (skip all rate limits)
         if (codeHasExpired) {
-          console.log('✅ Code has expired - deleting and allowing new code');
+          console.log('✅ Code has expired - deleting and immediately allowing new code');
           
           await supabaseAdmin
             .from('verification_codes')
             .delete()
             .eq('id', existingCode.id);
             
-          console.log('✅ Expired code deleted, proceeding with new code generation');
-          // Continue to generate new code below (don't return)
+          console.log('✅ Expired code deleted - skipping all rate limit checks and proceeding with new code');
+          // DO NOT check any further rate limits - proceed directly to code generation
         } 
-        // If code is still valid and was created less than 30 seconds ago, it's a duplicate
-        else if (timeSinceLastCode < 30000) {
-          console.log('🚫 Duplicate request - code sent less than 30 seconds ago');
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: 'A verification code was just sent. Please wait at least 30 seconds before requesting another code.'
-            }),
-            {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 429,
-            }
-          );
-        }
-        // If code is still valid, enforce rate limiting based on 6-hour window
+        // If code is still valid (not expired), run rate limit checks
         else {
+          // Check if code was sent less than 30 seconds ago (duplicate request)
+          if (timeSinceLastCode < 30000) {
+            console.log('🚫 Duplicate request - code sent less than 30 seconds ago');
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: 'A verification code was just sent. Please wait at least 30 seconds before requesting another code.'
+              }),
+              {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 429,
+              }
+            );
+          }
+          
+          // Check if code is within the 6-hour window
           const timeSinceCreation = now.getTime() - lastCodeTime.getTime();
           const sixHourWindow = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
           const isWithinSixHours = timeSinceCreation < sixHourWindow;
