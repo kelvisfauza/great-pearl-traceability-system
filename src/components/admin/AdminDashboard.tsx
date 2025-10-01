@@ -12,10 +12,14 @@ import UserPermissionsList from './UserPermissionsList';
 import QuickPermissionAssignment from './QuickPermissionAssignment';
 import AdminExpenseRequestsManager from './AdminExpenseRequestsManager';
 import ApprovedRequestsHistory from './ApprovedRequestsHistory';
+import { useUnifiedApprovalRequests } from '@/hooks/useUnifiedApprovalRequests';
+import { usePresenceList } from '@/hooks/usePresenceList';
 
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const { requests, loading: requestsLoading } = useUnifiedApprovalRequests();
+  const { onlineCount, loading: presenceLoading } = usePresenceList();
 
   console.log('🚀 AdminDashboard - activeTab:', activeTab);
   console.log('🚀 AdminDashboard component loaded');
@@ -70,7 +74,9 @@ const AdminDashboard = () => {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-orange-600">3</Badge>
+                      <Badge variant="outline" className="text-orange-600">
+                        {requestsLoading ? '...' : requests.length}
+                      </Badge>
                       <span className="text-lg font-semibold">Requires Action</span>
                     </div>
                   </div>
@@ -85,7 +91,9 @@ const AdminDashboard = () => {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Active Users</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-blue-600">12</Badge>
+                      <Badge variant="outline" className="text-blue-600">
+                        {presenceLoading ? '...' : onlineCount}
+                      </Badge>
                       <span className="text-lg font-semibold">Online</span>
                     </div>
                   </div>
