@@ -91,42 +91,55 @@ Deno.serve(async (req) => {
     if (action === 'send_code') {
       console.log('📱 Checking verification code eligibility for:', { email, phone: phone?.substring(0, 6) + '***' });
       
-      // Check if a code was sent in the last 6 hours
-      const sixHoursAgo = new Date(Date.now() - (6 * 60 * 60 * 1000)); // 6 hours ago
       const thirtySecondsAgo = new Date(Date.now() - (30 * 1000)); // 30 seconds ago
+      const now = new Date();
       
-      const { data: recentCodes, error: recentError } = await supabaseAdmin
+      // First check if there's ANY existing code (regardless of age)
+      const { data: existingCodes, error: existingError } = await supabaseAdmin
         .from('verification_codes')
-        .select('created_at, expires_at, code')
+        .select('created_at, expires_at, code, id')
         .eq('email', email)
         .eq('phone', phone)
-        .gte('created_at', sixHoursAgo.toISOString())
         .order('created_at', { ascending: false })
         .limit(1);
         
-      if (recentError) {
-        console.error('❌ Failed to check recent verification codes:', recentError);
+      if (existingError) {
+        console.error('❌ Failed to check existing verification codes:', existingError);
         throw new Error('Failed to check verification eligibility');
       }
       
-      // If a code was sent within the last 6 hours, check if it's still valid or expired
-      if (recentCodes && recentCodes.length > 0) {
-        const lastCodeTime = new Date(recentCodes[0].created_at);
-        const lastCodeExpiry = new Date(recentCodes[0].expires_at);
-        const timeSinceLastCode = Date.now() - lastCodeTime.getTime();
-        const now = new Date();
+      // If there's an existing code, check if it's expired or still valid
+      if (existingCodes && existingCodes.length > 0) {
+        const existingCode = existingCodes[0];
+        const lastCodeTime = new Date(existingCode.created_at);
+        const lastCodeExpiry = new Date(existingCode.expires_at);
+        const timeSinceLastCode = now.getTime() - lastCodeTime.getTime();
+        const codeHasExpired = now.getTime() > lastCodeExpiry.getTime();
         
-        console.log('🔍 Checking existing code:', {
+        console.log('🔍 Found existing code:', {
+          id: existingCode.id,
           created: lastCodeTime.toISOString(),
           expires: lastCodeExpiry.toISOString(),
           now: now.toISOString(),
-          hasExpired: now > lastCodeExpiry,
+          hasExpired: codeHasExpired,
           timeSinceCreation: Math.floor(timeSinceLastCode / 1000) + ' seconds'
         });
         
-        // If less than 30 seconds since last code was created, it's a duplicate request
-        if (timeSinceLastCode < 30000) {
-          console.log('🚫 Duplicate request detected - code sent less than 30 seconds ago');
+        // If code has expired, delete it and allow new code generation
+        if (codeHasExpired) {
+          console.log('✅ Code has expired - deleting and allowing new code');
+          
+          await supabaseAdmin
+            .from('verification_codes')
+            .delete()
+            .eq('id', existingCode.id);
+            
+          console.log('✅ Expired code deleted, proceeding with new code generation');
+          // Continue to generate new code below (don't return)
+        } 
+        // If code is still valid and was created less than 30 seconds ago, it's a duplicate
+        else if (timeSinceLastCode < 30000) {
+          console.log('🚫 Duplicate request - code sent less than 30 seconds ago');
           return new Response(
             JSON.stringify({
               success: false,
@@ -138,46 +151,37 @@ Deno.serve(async (req) => {
             }
           );
         }
-        
-        // Check if the code has expired - if yes, allow new code generation
-        const codeHasExpired = now.getTime() > lastCodeExpiry.getTime();
-        
-        if (codeHasExpired) {
-          console.log('✅ Previous code has expired - cleaning up and allowing new code');
+        // If code is still valid, enforce rate limiting based on 6-hour window
+        else {
+          const sixHoursAgo = new Date(now.getTime() - (6 * 60 * 60 * 1000));
+          const isWithinSixHours = lastCodeTime.getTime() > sixHoursAgo.getTime();
           
-          // Delete the expired code
-          await supabaseAdmin
-            .from('verification_codes')
-            .delete()
-            .eq('email', email)
-            .eq('phone', phone);
+          if (isWithinSixHours) {
+            const minutesRemaining = Math.ceil((lastCodeExpiry.getTime() - now.getTime()) / (60 * 1000));
+            const hoursUntilNextCode = Math.ceil((6 * 60 * 60 * 1000 - timeSinceLastCode) / (60 * 60 * 1000));
             
-          // Continue to generate new code (don't return here)
-        } else {
-          // Code is still valid - enforce the 6-hour rule
-          const hoursRemaining = Math.ceil((6 * 60 * 60 * 1000 - timeSinceLastCode) / (60 * 60 * 1000));
-          const minutesRemaining = Math.ceil((lastCodeExpiry.getTime() - now.getTime()) / (60 * 1000));
-          
-          console.log('🚫 Code request denied - recent valid code exists:', {
-            lastCodeSent: lastCodeTime.toISOString(),
-            codeExpiry: lastCodeExpiry.toISOString(),
-            minutesUntilExpiry: minutesRemaining,
-            hoursRemaining,
-            timeSinceLastCode: Math.floor(timeSinceLastCode / 1000) + ' seconds'
-          });
-          
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: `A valid verification code was already sent and expires in ${minutesRemaining} minute(s). Please check your SMS and use that code. If you didn't receive it, contact IT department for assistance.`,
-              lastCodeSent: lastCodeTime.toISOString(),
-              expiresIn: minutesRemaining
-            }),
-            {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 429,
-            }
-          );
+            console.log('🚫 Rate limit enforced - valid code exists within 6-hour window:', {
+              minutesUntilExpiry: minutesRemaining,
+              hoursUntilNextCode,
+              timeSinceLastCode: Math.floor(timeSinceLastCode / 1000) + ' seconds'
+            });
+            
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: `A valid verification code was sent and expires in ${minutesRemaining} minute(s). Please check your SMS and use that code. You can request a new code in ${hoursUntilNextCode} hour(s). Contact IT if you need assistance.`,
+                lastCodeSent: lastCodeTime.toISOString(),
+                expiresIn: minutesRemaining,
+                nextCodeAllowedIn: hoursUntilNextCode
+              }),
+              {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 429,
+              }
+            );
+          }
+          // Code is valid but outside the 6-hour window, allow new code
+          console.log('✅ Code exists but outside 6-hour window - allowing new code');
         }
       }
       
