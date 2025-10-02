@@ -38,16 +38,47 @@ export const usePendingCoffeePayments = () => {
     try {
       setLoading(true);
       
-      // Fetch quality assessments ready for payment
+      const payments: CoffeePayment[] = [];
+      
+      // Fetch from Supabase finance_coffee_lots (new parallel workflow)
+      const { data: financeLots, error: financeError } = await supabase
+        .from('finance_coffee_lots')
+        .select('*')
+        .eq('finance_status', 'READY_FOR_FINANCE');
+
+      if (!financeError && financeLots) {
+        for (const lot of financeLots) {
+          // Get supplier name from coffee_records
+          const { data: coffeeRecord } = await supabase
+            .from('coffee_records')
+            .select('supplier_name, batch_number')
+            .eq('id', lot.coffee_record_id)
+            .maybeSingle();
+
+          const qualityJson = lot.quality_json as any;
+
+          payments.push({
+            id: lot.id,
+            batchNumber: coffeeRecord?.batch_number || qualityJson?.batch_number || 'Unknown',
+            supplier: coffeeRecord?.supplier_name || 'Unknown Supplier',
+            assessedBy: lot.assessed_by,
+            quantity: lot.quantity_kg,
+            pricePerKg: lot.unit_price_ugx,
+            totalAmount: lot.total_amount_ugx || (lot.quantity_kg * lot.unit_price_ugx),
+            dateAssessed: new Date(lot.assessed_at).toLocaleDateString(),
+            qualityAssessmentId: lot.id
+          });
+        }
+      }
+      
+      // Also fetch quality assessments from Firebase (legacy workflow)
       const qualityQuery = query(
         collection(db, 'quality_assessments'),
         where('status', 'in', ['assessed', 'submitted_to_finance'])
       );
       const qualitySnapshot = await getDocs(qualityQuery);
       
-      const payments: CoffeePayment[] = [];
-      
-      // Also fetch coffee records to get supplier names
+      // Fetch coffee records for legacy workflow
       const coffeeRecordsQuery = query(collection(db, 'coffee_records'));
       const coffeeSnapshot = await getDocs(coffeeRecordsQuery);
       const coffeeRecords = coffeeSnapshot.docs.map(doc => ({
@@ -57,6 +88,9 @@ export const usePendingCoffeePayments = () => {
       
       qualitySnapshot.docs.forEach(doc => {
         const data = doc.data();
+        
+        // Skip if already in payments from finance_coffee_lots
+        if (payments.some(p => p.qualityAssessmentId === doc.id)) return;
         
         // Find corresponding coffee record
         const coffeeRecord = coffeeRecords.find((cr: any) => 
@@ -86,6 +120,7 @@ export const usePendingCoffeePayments = () => {
         new Date(b.dateAssessed).getTime() - new Date(a.dateAssessed).getTime()
       );
       
+      console.log('Fetched pending coffee payments:', payments);
       setCoffeePayments(payments);
     } catch (error) {
       console.error('Error fetching pending coffee payments:', error);
