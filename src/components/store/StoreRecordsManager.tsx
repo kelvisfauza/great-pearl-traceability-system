@@ -191,11 +191,65 @@ export const StoreRecordsManager = () => {
           description: 'Your edit request has been submitted for admin approval',
         });
       } else {
-        const { error } = await supabase
+        // Insert into store_records
+        const { data: storeRecord, error } = await supabase
           .from('store_records')
-          .insert(recordData);
+          .insert(recordData)
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Get coffee type from inventory item
+        const inventoryItem = inventoryItems.find(item => item.id === formData.inventory_item_id);
+        const coffeeType = inventoryItem?.coffee_type || 'Arabica';
+
+        // Also add to coffee_records for legacy system compatibility
+        const { error: coffeeError } = await supabase
+          .from('coffee_records')
+          .insert({
+            id: storeRecord.id,
+            supplier_name: formData.supplier_name || 'Unknown',
+            coffee_type: coffeeType,
+            bags: Math.ceil(formData.quantity_kg / 60), // Estimate bags
+            kilograms: formData.quantity_kg,
+            date: formData.transaction_date,
+            batch_number: recordData.batch_number || 'N/A',
+            status: recordData.status || 'pending',
+            supplier_id: null
+          });
+
+        if (coffeeError) {
+          console.error('Error adding to coffee_records:', coffeeError);
+        }
+
+        // Immediately add to finance_coffee_lots for parallel workflow
+        if (formData.transaction_type === 'received' && recordData.batch_number) {
+          const unitPrice = formData.price_per_kg || 7000;
+          const { error: financeError } = await supabase
+            .from('finance_coffee_lots')
+            .insert({
+              coffee_record_id: storeRecord.id,
+              supplier_id: null,
+              assessed_by: user?.email || 'Store Department',
+              quality_json: {
+                batch_number: recordData.batch_number,
+                coffee_type: coffeeType,
+                status: 'pending_assessment',
+                note: 'Awaiting quality assessment - available for finance processing'
+              },
+              unit_price_ugx: unitPrice,
+              quantity_kg: formData.quantity_kg,
+              total_amount_ugx: unitPrice * formData.quantity_kg,
+              finance_status: 'READY_FOR_FINANCE'
+            });
+
+          if (financeError) {
+            console.error('Error adding to finance_coffee_lots:', financeError);
+          } else {
+            console.log('Added to finance_coffee_lots - ready for payment');
+          }
+        }
 
         // If this delivery completes a batch, update all pending deliveries
         if (shouldCreateBatch && batchInfo.pendingDeliveries) {
@@ -207,7 +261,7 @@ export const StoreRecordsManager = () => {
           
           toast({
             title: 'Batch Created',
-            description: `Delivery added and batch ${batchInfo.batchNumber} created with total weight: ${batchInfo.totalWeight}kg`,
+            description: `Delivery added and batch ${batchInfo.batchNumber} created. Sent to Quality & Finance.`,
           });
         } else if (recordData.status === 'pending_batch') {
           toast({
@@ -217,7 +271,7 @@ export const StoreRecordsManager = () => {
         } else {
           toast({
             title: 'Record Created',
-            description: 'Store record has been created successfully',
+            description: 'Store record created and sent to Quality & Finance for processing.',
           });
         }
         

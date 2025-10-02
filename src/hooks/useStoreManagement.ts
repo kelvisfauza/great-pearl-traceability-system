@@ -272,15 +272,75 @@ export const useStoreManagement = () => {
 
       const docRef = await addDoc(collection(db, 'coffee_records'), coffeeDoc);
       console.log('Coffee record added with ID:', docRef.id);
+
+      // Immediately add to Supabase coffee_records and finance_coffee_lots
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Insert into coffee_records
+      const { data: supabaseCoffeeRecord, error: coffeeError } = await supabase
+        .from('coffee_records')
+        .insert({
+          id: docRef.id,
+          supplier_name: recordData.supplierName,
+          coffee_type: recordData.coffeeType,
+          bags: recordData.bags,
+          kilograms: recordData.kilograms,
+          date: recordData.date,
+          batch_number: recordData.batchNumber,
+          status: recordData.status,
+          supplier_id: supplier?.id || null
+        })
+        .select()
+        .single();
+
+      if (coffeeError) {
+        console.error('Error adding to Supabase coffee_records:', coffeeError);
+      } else {
+        console.log('Added to Supabase coffee_records:', supabaseCoffeeRecord);
+      }
+
+      // Immediately add to finance_coffee_lots for parallel workflow
+      const unitPrice = contract?.pricePerKg || 7000; // Use contract price or default
+      const { error: financeError } = await supabase
+        .from('finance_coffee_lots')
+        .insert({
+          coffee_record_id: docRef.id,
+          supplier_id: supplier?.id || null,
+          assessed_by: 'Store Department',
+          quality_json: {
+            batch_number: recordData.batchNumber,
+            coffee_type: recordData.coffeeType,
+            status: 'pending_assessment',
+            note: 'Awaiting quality assessment - available for finance processing'
+          },
+          unit_price_ugx: unitPrice,
+          quantity_kg: recordData.kilograms,
+          total_amount_ugx: unitPrice * recordData.kilograms,
+          finance_status: 'READY_FOR_FINANCE'
+        });
+
+      if (financeError) {
+        console.error('Error adding to finance_coffee_lots:', financeError);
+      } else {
+        console.log('Added to finance_coffee_lots - ready for payment');
+      }
       
       await fetchStoreData();
       
-      // Notify Quality department about new coffee record for assessment
+      // Notify BOTH Quality AND Finance departments
       await createAnnouncement(
         'New Coffee Record for Quality Assessment',
         `New coffee received: ${recordData.kilograms}kg from ${recordData.supplierName}. Batch: ${recordData.batchNumber}. Requires quality assessment.`,
         'Store',
         ['Quality'],
+        'Medium'
+      );
+
+      await createAnnouncement(
+        'New Coffee Available for Payment',
+        `New coffee delivery: ${recordData.kilograms}kg from ${recordData.supplierName}. Batch: ${recordData.batchNumber}. Available for finance processing.`,
+        'Store',
+        ['Finance'],
         'Medium'
       );
       
@@ -290,7 +350,7 @@ export const useStoreManagement = () => {
       
       toast({
         title: "Success",
-        description: `Coffee record added successfully${contractMessage}`
+        description: `Coffee record added successfully${contractMessage}. Sent to Quality & Finance.`
       });
     } catch (error) {
       console.error('Error adding coffee record:', error);
