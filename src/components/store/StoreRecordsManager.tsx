@@ -240,7 +240,6 @@ export const StoreRecordsManager = () => {
               },
               unit_price_ugx: unitPrice,
               quantity_kg: formData.quantity_kg,
-              total_amount_ugx: unitPrice * formData.quantity_kg,
               finance_status: 'READY_FOR_FINANCE'
             });
 

@@ -315,7 +315,6 @@ export const useStoreManagement = () => {
           },
           unit_price_ugx: unitPrice,
           quantity_kg: recordData.kilograms,
-          total_amount_ugx: unitPrice * recordData.kilograms,
           finance_status: 'READY_FOR_FINANCE'
         });
 
