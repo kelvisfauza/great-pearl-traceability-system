@@ -250,8 +250,8 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
         // Handle different types of approved requests - only if fully approved
         if (updateData.status === 'Approved' && updateData.approval_stage === 'fully_approved') {
           
-          // Send approval notification for Expense Requests
-          if (request.type === 'Expense Request') {
+          // Send approval notification for Expense Requests and Employee Salary Requests
+          if (request.type === 'Expense Request' || request.type === 'Employee Salary Request') {
             await sendExpenseApprovalNotification(request);
           }
           
