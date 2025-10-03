@@ -32,7 +32,10 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const [recentSlipsModalOpen, setRecentSlipsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
-  const expenseRequests = requests.filter(request => request.type === 'Expense Request');
+  // Include both Expense Requests and Employee Salary Requests
+  const expenseRequests = requests.filter(request => 
+    request.type === 'Expense Request' || request.type === 'Employee Salary Request'
+  );
 
   // Fetch user profiles to get names and phone numbers
   useEffect(() => {
@@ -275,10 +278,10 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Admin Expense Review
+            Admin Approval Center
           </CardTitle>
           <CardDescription>
-            Review and approve expense requests that have passed initial finance review
+            Review and approve expense requests and salary payments that have passed finance review
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -317,7 +320,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
             ).length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p>No expense requests to review</p>
+                <p>No requests pending admin approval</p>
               </div>
             ) : (
               expenseRequests
