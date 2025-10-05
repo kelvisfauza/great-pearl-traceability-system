@@ -1,19 +1,19 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Download, Printer } from "lucide-react";
+import { CalendarIcon, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { useDayBookData } from "@/hooks/useDayBookData";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
 import StandardPrintHeader from "@/components/print/StandardPrintHeader";
 import { getStandardPrintStyles } from "@/utils/printStyles";
 
 const DayBook = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { dayBookData, loading } = useDayBookData(selectedDate);
+  const printRef = useRef<HTMLDivElement>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-UG', {
@@ -24,7 +24,31 @@ const DayBook = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    if (!printRef.current) return;
+    const content = printRef.current.innerHTML;
+    const printWindow = window.open('', '', 'width=900,height=1200');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <title>Day Book - ${format(selectedDate, "PPP")}</title>
+          <style>${getStandardPrintStyles()}</style>
+        </head>
+        <body>
+          ${content}
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   if (loading) {
@@ -43,17 +67,8 @@ const DayBook = () => {
 
   return (
     <div className="space-y-6">
-      {/* Print Header - Hidden on screen, visible on print */}
-      <div className="print-only">
-        <StandardPrintHeader 
-          title="DAY BOOK REPORT"
-          subtitle={`Financial Activities Summary - ${format(selectedDate, "PPP")}`}
-          includeDate={false}
-        />
-      </div>
-
-      {/* Date Selector - Hidden on print */}
-      <Card className="no-print">
+      {/* Date Selector */}
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Day Book Report</CardTitle>
@@ -81,6 +96,14 @@ const DayBook = () => {
           </div>
         </CardHeader>
       </Card>
+
+      {/* Print Content */}
+      <div ref={printRef}>
+        <StandardPrintHeader 
+          title="DAY BOOK REPORT"
+          subtitle={`Financial Activities Summary - ${format(selectedDate, "PPP")}`}
+          includeDate={false}
+        />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -308,6 +331,7 @@ const DayBook = () => {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };
