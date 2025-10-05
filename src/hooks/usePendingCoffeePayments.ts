@@ -53,12 +53,13 @@ export const usePendingCoffeePayments = () => {
       
       console.log('📦 Found coffee records:', coffeeSnapshot.size);
       
-      // Fetch all quality assessments to check for pricing
-      const qualityQuery = query(collection(db, 'quality_assessments'));
-      const qualitySnapshot = await getDocs(qualityQuery);
+      // Fetch all quality assessments from BOTH Firebase and Supabase
       const qualityAssessments = new Map();
       
-      qualitySnapshot.docs.forEach(doc => {
+      // Fetch from Firebase
+      const firebaseQualityQuery = query(collection(db, 'quality_assessments'));
+      const firebaseQualitySnapshot = await getDocs(firebaseQualityQuery);
+      firebaseQualitySnapshot.docs.forEach(doc => {
         const data = doc.data();
         if (data.store_record_id) {
           qualityAssessments.set(data.store_record_id, {
@@ -69,7 +70,25 @@ export const usePendingCoffeePayments = () => {
         }
       });
       
-      console.log('🔬 Found quality assessments:', qualityAssessments.size);
+      // Fetch from Supabase (Quality saves here!)
+      const { data: supabaseQualityData } = await supabase
+        .from('quality_assessments')
+        .select('*');
+      
+      if (supabaseQualityData) {
+        supabaseQualityData.forEach(assessment => {
+          if (assessment.store_record_id) {
+            // Supabase takes priority over Firebase
+            qualityAssessments.set(assessment.store_record_id, {
+              id: assessment.id,
+              pricePerKg: assessment.suggested_price || 0,
+              assessedBy: assessment.assessed_by || 'Quality Department'
+            });
+          }
+        });
+      }
+      
+      console.log('🔬 Found quality assessments:', qualityAssessments.size, '(Firebase + Supabase)');
       
       // Convert each coffee record to a payment entry
       coffeeSnapshot.docs.forEach(doc => {
