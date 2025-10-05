@@ -35,6 +35,7 @@ import SecurityMonitoring from '@/components/it/SecurityMonitoring';
 import UserManagement from '@/components/it/UserManagement';
 import BackupManagement from '@/components/it/BackupManagement';
 import NetworkMonitoring from '@/components/it/NetworkMonitoring';
+import { NetworkWhitelistManager } from '@/components/it/NetworkWhitelistManager';
 import TicketSystem from '@/components/it/TicketSystem';
 import SystemMaintenance from '@/components/it/SystemMaintenance';
 import SystemConsoleMonitor from '@/components/it/SystemConsoleMonitor';
@@ -190,7 +191,10 @@ const ITDepartment = () => {
           </TabsContent>
 
           <TabsContent value="network">
-            <NetworkMonitoring />
+            <div className="space-y-6">
+              <NetworkWhitelistManager />
+              <NetworkMonitoring />
+            </div>
           </TabsContent>
 
           <TabsContent value="tickets">

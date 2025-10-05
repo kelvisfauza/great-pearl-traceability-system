@@ -1965,6 +1965,36 @@ export type Database = {
         }
         Relationships: []
       }
+      network_whitelist: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          ip_address: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          ip_address: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          ip_address?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -3438,6 +3468,10 @@ export type Database = {
       }
       is_current_user_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_ip_whitelisted: {
+        Args: { check_ip: string }
         Returns: boolean
       }
       migrate_approved_assessments_to_finance: {

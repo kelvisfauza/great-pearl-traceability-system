@@ -56,3 +56,9 @@ verify_jwt = false
 
 [functions.sms-login-link]
 verify_jwt = false
+
+[functions.detect-ip]
+verify_jwt = false
+
+[functions.check-network-access]
+verify_jwt = false

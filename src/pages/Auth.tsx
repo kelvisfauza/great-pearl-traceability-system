@@ -80,6 +80,29 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // First, check network access
+      console.log('🌐 Checking network access for:', email);
+      const { data: networkCheck, error: networkError } = await supabase.functions.invoke('check-network-access', {
+        body: { email }
+      });
+
+      if (networkError) {
+        console.error('Network check error:', networkError);
+        setError('Failed to verify network access. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      if (!networkCheck.allowed) {
+        console.log('❌ Network access denied:', networkCheck.reason);
+        setError(networkCheck.reason || 'Access denied. You must be connected to the factory network.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Network access granted:', networkCheck.reason);
+
+      // Proceed with authentication
       const result = await signIn(email, password);
       
       if (result.requiresPasswordChange) {
