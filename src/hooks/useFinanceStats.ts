@@ -51,6 +51,19 @@ const fetchStats = async (): Promise<FinanceStats> => {
 
   const availableCash = totalCashIn - totalCashOut;
 
+  // Also include supplier advances given (from Firebase) as cash out
+  const advancesQuery = query(
+    collection(db, 'supplier_advances')
+  );
+  const advancesSnapshot = await getDocs(advancesQuery);
+  let totalAdvancesGiven = 0;
+  advancesSnapshot.forEach(doc => {
+    const advance = doc.data();
+    totalAdvancesGiven += Number(advance.amount_ugx) || 0;
+  });
+
+  const finalAvailableCash = availableCash - totalAdvancesGiven;
+
   // Fetch pending expense requests from Supabase
   const { data: expenseRequests } = await supabase
     .from('approval_requests')
@@ -89,7 +102,7 @@ const fetchStats = async (): Promise<FinanceStats> => {
   return {
     pendingCoffeePayments,
     pendingCoffeeAmount,
-    availableCash,
+    availableCash: finalAvailableCash,
     pendingExpenseRequests,
     pendingExpenseAmount,
     completedToday,
