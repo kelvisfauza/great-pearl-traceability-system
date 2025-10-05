@@ -1101,31 +1101,40 @@ export type Database = {
         Row: {
           amount: number
           balance_after: number
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           created_by: string
           id: string
           notes: string | null
           reference: string | null
+          status: string
           transaction_type: string
         }
         Insert: {
           amount: number
           balance_after: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           created_by: string
           id?: string
           notes?: string | null
           reference?: string | null
+          status?: string
           transaction_type: string
         }
         Update: {
           amount?: number
           balance_after?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string
           id?: string
           notes?: string | null
           reference?: string | null
+          status?: string
           transaction_type?: string
         }
         Relationships: []

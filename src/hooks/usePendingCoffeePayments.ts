@@ -149,13 +149,13 @@ export const usePendingCoffeePayments = () => {
         throw new Error('Missing required payment information');
       }
 
-      // Check available cash balance
+      // Check available cash balance (only confirmed balance)
       const { data: cashBalance, error: cashError } = await supabase
         .from('finance_cash_balance')
         .select('*')
         .order('last_updated', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (cashError) {
         console.error('Error fetching cash balance:', cashError);
@@ -217,7 +217,7 @@ export const usePendingCoffeePayments = () => {
         throw new Error('Failed to update cash balance');
       }
 
-      // Record cash transaction
+      // Record cash transaction as confirmed (immediate)
       const { error: transactionError } = await supabase
         .from('finance_cash_transactions')
         .insert({
@@ -226,7 +226,10 @@ export const usePendingCoffeePayments = () => {
           balance_after: newBalance,
           reference: paymentData.batchNumber,
           notes: `Payment to ${paymentData.supplier} - ${paymentData.notes || paymentData.method}`,
-          created_by: employee?.name || 'Finance'
+          created_by: employee?.name || 'Finance',
+          status: 'confirmed',
+          confirmed_by: employee?.name || 'Finance',
+          confirmed_at: new Date().toISOString()
         });
 
       if (transactionError) {

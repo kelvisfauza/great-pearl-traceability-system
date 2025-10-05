@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DollarSign, Plus, ArrowDownCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 interface CashManagementModalProps {
   open: boolean;
@@ -89,20 +90,21 @@ export const CashManagementModal: React.FC<CashManagementModalProps> = ({
 
       if (balanceError) throw balanceError;
 
-      // Record transaction
+      // Record transaction as PENDING (needs Finance confirmation)
       const { error: transactionError } = await supabase
         .from('finance_cash_transactions')
         .insert({
           transaction_type: 'DEPOSIT',
           amount: depositAmount,
-          balance_after: newBalance,
+          balance_after: newBalance, // This will be applied when confirmed
           notes: notes || 'Cash deposit by administrator',
-          created_by: 'Administrator'
+          created_by: 'Administrator',
+          status: 'pending' // Requires Finance confirmation
         });
 
       if (transactionError) throw transactionError;
 
-      toast.success('Cash added successfully');
+      toast.success('Cash deposit submitted. Awaiting Finance confirmation.');
       setAmount('');
       setNotes('');
       fetchCashData();
@@ -176,11 +178,10 @@ export const CashManagementModal: React.FC<CashManagementModalProps> = ({
             </Button>
           </div>
 
-          {/* Recent Transactions */}
           <div className="space-y-3">
             <h3 className="font-semibold flex items-center gap-2">
               <ArrowDownCircle className="h-4 w-4" />
-              Recent Transactions
+              Recent Transactions (Last 5)
             </h3>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {recentTransactions.map((transaction) => (
@@ -189,9 +190,21 @@ export const CashManagementModal: React.FC<CashManagementModalProps> = ({
                   className="flex items-center justify-between p-3 border rounded-lg"
                 >
                   <div className="flex-1">
-                    <p className="font-medium">
-                      {transaction.transaction_type === 'DEPOSIT' ? 'Cash Deposit' : 'Payment'}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">
+                        {transaction.transaction_type === 'DEPOSIT' ? 'Cash Deposit' : 'Payment'}
+                      </p>
+                      {transaction.status === 'pending' && (
+                        <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                          Pending Confirmation
+                        </Badge>
+                      )}
+                      {transaction.status === 'confirmed' && (
+                        <Badge variant="outline" className="text-green-600 border-green-600">
+                          Confirmed
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {new Date(transaction.created_at).toLocaleString()}
                     </p>
@@ -210,9 +223,11 @@ export const CashManagementModal: React.FC<CashManagementModalProps> = ({
                       {transaction.transaction_type === 'DEPOSIT' ? '+' : ''}
                       UGX {Math.abs(Number(transaction.amount)).toLocaleString()}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Balance: UGX {Number(transaction.balance_after).toLocaleString()}
-                    </p>
+                    {transaction.status === 'confirmed' && (
+                      <p className="text-xs text-muted-foreground">
+                        Balance: UGX {Number(transaction.balance_after).toLocaleString()}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}

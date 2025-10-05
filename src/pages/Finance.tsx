@@ -11,6 +11,7 @@ import { HRPayments } from '@/components/finance/HRPayments';
 import { FinanceStats } from '@/components/finance/FinanceStats';
 import { PaymentHistory } from '@/components/finance/PaymentHistory';
 import { FinanceReports } from '@/components/finance/FinanceReports';
+import { PendingCashDeposits } from '@/components/finance/PendingCashDeposits';
 
 const Finance = () => {
   const { hasPermission } = useAuth();
@@ -48,6 +49,9 @@ const Finance = () => {
 
           {/* Finance Statistics */}
           <FinanceStats />
+          
+          {/* Pending Cash Deposits for Finance Confirmation */}
+          <PendingCashDeposits />
 
           {/* Main Finance Tabs */}
           <Card>

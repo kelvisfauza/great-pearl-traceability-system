@@ -70,13 +70,13 @@ export const useFinanceStats = () => {
         pendingCoffeeAmount += kilograms * pricePerKg;
       });
 
-      // Fetch available cash from Supabase
+      // Fetch available cash from Supabase (only confirmed balance)
       const { data: cashBalance } = await supabase
         .from('finance_cash_balance')
         .select('current_balance')
         .order('last_updated', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       const availableCash = cashBalance?.current_balance || 0;
 

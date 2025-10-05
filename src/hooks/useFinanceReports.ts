@@ -13,7 +13,7 @@ export interface FinanceReportData {
   paidCoffeeKgs: number;
   transactions: {
     id: string;
-    type: 'coffee' | 'expense' | 'salary';
+    type: 'coffee' | 'expense' | 'salary' | 'cash_deposit';
     supplier: string;
     amount: number;
     amountPaid: number;
@@ -49,10 +49,11 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
         transactions: []
       };
 
-      // Fetch cash transactions for the date
+      // Fetch confirmed cash transactions for the date
       const { data: cashTransactions } = await supabase
         .from('finance_cash_transactions')
         .select('*')
+        .eq('status', 'confirmed')
         .gte('created_at', dateStr)
         .lt('created_at', new Date(new Date(dateStr).getTime() + 86400000).toISOString());
 
@@ -60,6 +61,19 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
         cashTransactions.forEach(transaction => {
           if (transaction.transaction_type === 'DEPOSIT') {
             report.totalCashIn += Number(transaction.amount);
+            
+            // Add cash deposit to transactions list
+            report.transactions.push({
+              id: transaction.id,
+              type: 'cash_deposit',
+              supplier: transaction.created_by || 'Admin',
+              amount: Number(transaction.amount),
+              amountPaid: Number(transaction.amount),
+              balance: 0,
+              status: 'Confirmed',
+              date: new Date(transaction.created_at).toLocaleDateString(),
+              batchNumber: transaction.reference || 'CASH-DEPOSIT'
+            });
           } else if (transaction.transaction_type === 'PAYMENT') {
             report.totalCashOut += Math.abs(Number(transaction.amount));
           }
