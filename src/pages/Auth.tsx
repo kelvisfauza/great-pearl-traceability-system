@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, AlertCircle, Phone, Mail, MessageCircle } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
-import TwoFactorVerification from '@/components/TwoFactorVerification';
+import BiometricVerification from '@/components/BiometricVerification';
 import { supabase } from '@/integrations/supabase/client';
 import { smsService } from '@/services/smsService';
 
@@ -19,58 +19,19 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
-  const [showTwoFactor, setShowTwoFactor] = useState(false);
-  const [userPhone, setUserPhone] = useState('');
+  const [showBiometric, setShowBiometric] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
-  // Check for auto-fill parameters from SMS link
+  // Check for auto-login token
   React.useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const loginToken = urlParams.get('login_token');
-    const autoCode = urlParams.get('auto_code');
-    const autoEmail = urlParams.get('email');
-    const autoPhone = urlParams.get('phone');
     
     // Handle direct auto-login via token
     if (loginToken) {
       handleAutoLogin(loginToken);
       return;
-    }
-    
-    // Check for auto-fill code from URL hash (from SMS approval page)
-    const hash = window.location.hash;
-    if (hash.includes('code=')) {
-      const codeMatch = hash.match(/code=([^&]+)/);
-      if (codeMatch) {
-        console.log('🔗 Auto-filling code from SMS approval:', codeMatch[1]);
-        // Clear the hash
-        window.location.hash = '';
-        
-        // Auto-fill the verification code in TwoFactor component
-        setTimeout(() => {
-          const event = new CustomEvent('autoFillCode', { detail: { code: codeMatch[1] } });
-          window.dispatchEvent(event);
-        }, 500);
-      }
-    }
-    
-    // Handle auto-fill from SMS link
-    if (autoCode && autoEmail && autoPhone) {
-      console.log('🔗 Auto-filling from SMS link:', { email: autoEmail, phone: autoPhone, code: autoCode });
-      setEmail(autoEmail);
-      setUserPhone(autoPhone);
-      setShowTwoFactor(true);
-      
-      // Clear URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
-      
-      // Auto-fill the verification code
-      setTimeout(() => {
-        // Trigger auto-verification if TwoFactorVerification component is ready
-        const event = new CustomEvent('autoFillCode', { detail: { code: autoCode } });
-        window.dispatchEvent(event);
-      }, 500);
     }
   }, []);
 
@@ -126,19 +87,19 @@ const Auth = () => {
         return;
       }
 
-      // After successful email/password authentication, get user's phone for 2FA
+      // Check if user is admin - only admins need biometric verification
       const { data: employee } = await supabase
         .from('employees')
-        .select('phone')
+        .select('role')
         .eq('email', email)
         .single();
 
-      if (employee?.phone) {
-        setUserPhone(employee.phone);
-        setShowTwoFactor(true);
+      if (employee?.role === 'Administrator') {
+        // Admin user - require biometric verification
+        setShowBiometric(true);
         setLoading(false);
       } else {
-        // No phone number found, proceed without 2FA
+        // Regular user - no additional verification needed
         navigate('/');
         setLoading(false);
       }
@@ -167,58 +128,24 @@ const Auth = () => {
     navigate('/');
   };
 
-  const handleTwoFactorComplete = async () => {
-    setShowTwoFactor(false);
-    
-    // Send login success SMS notification after successful 2FA
-    try {
-      const { data: employee } = await supabase
-        .from('employees')
-        .select('name, phone')
-        .eq('email', email)
-        .single();
-
-      if (employee?.phone) {
-        const now = new Date();
-        const timeStr = now.toLocaleString('en-US', { 
-          timeZone: 'Africa/Kampala',
-          year: 'numeric',
-          month: 'long', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        
-        // Get basic browser/location info
-        const browserInfo = navigator.userAgent.split(' ').slice(-2).join(' ');
-        const location = `${browserInfo} browser`;
-
-        await smsService.sendSMS(
-          employee.phone,
-          `Dear ${employee.name}, you have successfully logged in at ${timeStr} from ${location}. If this wasn't you, contact your admin immediately.`
-        );
-      }
-    } catch (error) {
-      console.error('Failed to send login SMS:', error);
-    }
-    
+  const handleBiometricComplete = () => {
+    setShowBiometric(false);
     navigate('/');
   };
 
-  const handleTwoFactorCancel = () => {
-    setShowTwoFactor(false);
+  const handleBiometricCancel = () => {
+    setShowBiometric(false);
     setLoading(false);
   };
 
-  // Show 2FA verification screen
-  if (showTwoFactor) {
+  // Show biometric verification screen for admins
+  if (showBiometric) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
-        <TwoFactorVerification
+        <BiometricVerification
           email={email}
-          phone={userPhone}
-          onVerificationComplete={handleTwoFactorComplete}
-          onCancel={handleTwoFactorCancel}
+          onVerificationComplete={handleBiometricComplete}
+          onCancel={handleBiometricCancel}
         />
       </div>
     );
