@@ -21,6 +21,7 @@ export const useCompletedTransactions = () => {
   const { data: transactions = [], isLoading: loading, refetch } = useQuery({
     queryKey: ['completed-transactions'],
     queryFn: fetchCompletedTransactions,
+    refetchInterval: 10000, // Refetch every 10 seconds
   });
 
   return {
@@ -63,12 +64,18 @@ const fetchCompletedTransactions = async (): Promise<CompletedTransaction[]> => 
       });
 
       // Fetch confirmed cash deposits
-      const { data: confirmedDeposits } = await supabase
+      const { data: confirmedDeposits, error: depositError } = await supabase
         .from('finance_cash_transactions')
         .select('*')
         .eq('transaction_type', 'DEPOSIT')
         .eq('status', 'confirmed')
         .order('confirmed_at', { ascending: false });
+
+      if (depositError) {
+        console.error('Error fetching confirmed deposits:', depositError);
+      } else {
+        console.log('Confirmed deposits fetched:', confirmedDeposits);
+      }
 
       confirmedDeposits?.forEach(deposit => {
         const dateToUse = deposit.confirmed_at || deposit.created_at || new Date().toISOString();
@@ -86,6 +93,8 @@ const fetchCompletedTransactions = async (): Promise<CompletedTransaction[]> => 
           notes: deposit.notes || 'Cash deposit confirmed'
         });
       });
+
+      console.log('Total transactions after cash deposits:', allTransactions.length);
 
       // Fetch completed expense payments
       const { data: expenseRequests } = await supabase
