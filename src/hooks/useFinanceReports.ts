@@ -91,7 +91,21 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
 
       if (cashPayments) {
         cashPayments.forEach(payment => {
-          report.totalCashOut += Math.abs(Number(payment.amount));
+          const paymentAmount = Math.abs(Number(payment.amount));
+          report.totalCashOut += paymentAmount;
+          
+          // Add cash payment to transactions list
+          report.transactions.push({
+            id: payment.id,
+            type: 'coffee',
+            supplier: payment.notes || 'Cash Payment',
+            amount: paymentAmount,
+            amountPaid: paymentAmount,
+            balance: 0,
+            status: 'Paid',
+            date: new Date(payment.confirmed_at).toLocaleDateString(),
+            batchNumber: payment.reference || 'CASH-PMT'
+          });
         });
       }
 
@@ -145,7 +159,21 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
       if (dailyTasks) {
         dailyTasks.forEach(task => {
           if (task.amount && task.amount > 0) {
-            report.totalCashOut += Number(task.amount);
+            const taskAmount = Number(task.amount);
+            report.totalCashOut += taskAmount;
+            
+            // Add task to transactions for visibility
+            report.transactions.push({
+              id: task.id,
+              type: 'expense',
+              supplier: task.description || 'Finance Task',
+              amount: taskAmount,
+              amountPaid: taskAmount,
+              balance: 0,
+              status: 'Completed',
+              date: task.date,
+              batchNumber: task.batch_number || 'TASK'
+            });
           }
         });
       }
