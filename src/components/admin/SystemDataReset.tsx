@@ -183,6 +183,8 @@ const SystemDataReset = () => {
         'supplier_payments',
         'supplier_advances',
         'finance_coffee_lots',
+        'finance_cash_transactions', // Day book data
+        'money_requests', // Salary advances/overtime
         'contract_approvals',
         'supplier_contracts',
         'payment_records',
@@ -195,7 +197,7 @@ const SystemDataReset = () => {
         'workflow_steps',
         'reports', // Clear reports (but NOT store_reports)
         'metrics', // Clear analytics/metrics data
-        'cash_sessions', // Clear finance cash sessions (day book depends on this)
+        'cash_sessions', // Clear finance cash sessions
         
         // Delete parent tables last
         'suppliers',
