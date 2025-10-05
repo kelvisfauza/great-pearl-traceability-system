@@ -112,15 +112,28 @@ export const PendingCashDeposits = () => {
 
       console.log('Transaction status updated successfully');
 
-      // Use the balance_after from the transaction (already calculated when deposit was created)
+      // Get the current balance and add the deposit amount to it
+      const { data: currentBalance, error: balanceError } = await supabase
+        .from('finance_cash_balance')
+        .select('*')
+        .order('last_updated', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (balanceError) {
+        console.error('Balance fetch error:', balanceError);
+        throw balanceError;
+      }
+
+      const newBalance = (currentBalance?.current_balance || 0) + Number(transaction.amount);
+
       const { error: updateError } = await supabase
         .from('finance_cash_balance')
         .update({
-          current_balance: transaction.balance_after,
+          current_balance: newBalance,
           updated_by: user?.email || 'Finance'
         })
-        .order('last_updated', { ascending: false })
-        .limit(1);
+        .eq('id', currentBalance?.id || '');
 
       if (updateError) {
         console.error('Balance update error:', updateError);
