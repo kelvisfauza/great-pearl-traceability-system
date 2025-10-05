@@ -224,8 +224,11 @@ export const StoreRecordsManager = () => {
         }
 
         // Immediately add to finance_coffee_lots for parallel workflow
+        // Only add if it has a batch number (completed batches only)
         if (formData.transaction_type === 'received' && recordData.batch_number) {
           const unitPrice = formData.price_per_kg || 7000;
+          console.log('🏦 Creating finance record for batch:', recordData.batch_number);
+          
           const { error: financeError } = await supabase
             .from('finance_coffee_lots')
             .insert({
@@ -236,6 +239,7 @@ export const StoreRecordsManager = () => {
                 batch_number: recordData.batch_number,
                 coffee_type: coffeeType,
                 status: 'pending_assessment',
+                supplier_name: formData.supplier_name,
                 note: 'Awaiting quality assessment - available for finance processing'
               },
               unit_price_ugx: unitPrice,
@@ -244,10 +248,12 @@ export const StoreRecordsManager = () => {
             });
 
           if (financeError) {
-            console.error('Error adding to finance_coffee_lots:', financeError);
+            console.error('❌ Error adding to finance_coffee_lots:', financeError);
           } else {
-            console.log('Added to finance_coffee_lots - ready for payment');
+            console.log('✅ Successfully added to finance_coffee_lots - ready for payment');
           }
+        } else {
+          console.log('⏳ Transaction is pending batch accumulation, not yet sent to finance');
         }
 
         // If this delivery completes a batch, update all pending deliveries

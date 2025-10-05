@@ -40,12 +40,16 @@ export const usePendingCoffeePayments = () => {
       
       const payments: CoffeePayment[] = [];
       
+      console.log('🔍 Fetching pending coffee payments from finance_coffee_lots...');
+      
       // Fetch from Supabase finance_coffee_lots (new parallel workflow)
       const { data: financeLots, error: financeError } = await supabase
         .from('finance_coffee_lots')
         .select('*')
         .eq('finance_status', 'READY_FOR_FINANCE');
 
+      console.log('📊 Finance lots found:', financeLots?.length || 0, 'Error:', financeError);
+      
       if (!financeError && financeLots) {
         for (const lot of financeLots) {
           // Get supplier name from coffee_records
