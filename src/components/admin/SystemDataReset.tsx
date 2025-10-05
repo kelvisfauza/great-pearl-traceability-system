@@ -162,8 +162,11 @@ const SystemDataReset = () => {
 
       // Delete from Firebase
       for (const collectionName of firebaseCollections) {
+        console.log(`🗑️ Deleting Firebase collection: ${collectionName}...`);
         const collectionRef = collection(db, collectionName);
         const snapshot = await getDocs(collectionRef);
+        
+        console.log(`📊 Found ${snapshot.size} documents in ${collectionName}`);
         
         for (const docSnapshot of snapshot.docs) {
           await deleteDoc(doc(db, collectionName, docSnapshot.id));
