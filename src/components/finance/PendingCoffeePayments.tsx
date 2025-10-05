@@ -45,6 +45,7 @@ export const PendingCoffeePayments = () => {
     try {
       await processPayment({
         paymentId: selectedPayment.id,
+        qualityAssessmentId: selectedPayment.qualityAssessmentId,
         method: paymentMethod,
         amount: actualAmount,
         notes: paymentNotes,

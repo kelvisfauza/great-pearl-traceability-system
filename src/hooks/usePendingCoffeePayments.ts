@@ -19,7 +19,8 @@ interface CoffeePayment {
 }
 
 interface ProcessPaymentData {
-  paymentId: string;
+  paymentId: string; // Coffee record ID
+  qualityAssessmentId: string; // Quality assessment ID
   method: 'Cash' | 'Bank';
   amount: number;
   notes?: string;
@@ -141,6 +142,8 @@ export const usePendingCoffeePayments = () => {
 
   const processPayment = async (paymentData: ProcessPaymentData) => {
     try {
+      console.log('💰 Processing payment:', paymentData);
+      
       // Create payment record in Firebase
       const paymentRecord = {
         supplier: paymentData.supplier,
@@ -150,39 +153,54 @@ export const usePendingCoffeePayments = () => {
         method: paymentData.method === 'Cash' ? 'Cash' : 'Bank Transfer',
         date: new Date().toLocaleDateString(),
         batchNumber: paymentData.batchNumber,
-        qualityAssessmentId: paymentData.paymentId,
+        qualityAssessmentId: paymentData.qualityAssessmentId,
         notes: paymentData.notes || '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         processed_by: employee?.name || 'Finance Department'
       };
 
+      console.log('📝 Creating payment record...');
       await addDoc(collection(db, 'payment_records'), paymentRecord);
+      console.log('✅ Payment record created');
 
       // Update coffee_record status to "paid" in Firebase
+      console.log('📦 Updating coffee record:', paymentData.paymentId);
       await updateDoc(doc(db, 'coffee_records', paymentData.paymentId), {
         status: 'paid',
         updated_at: new Date().toISOString()
       });
+      console.log('✅ Coffee record updated to paid');
 
-      // Update quality assessment status
-      const newStatus = paymentData.method === 'Cash' ? 'payment_processed' : 'submitted_to_finance';
-      
-      // Try updating in Supabase first
-      const { error: supabaseError } = await supabase
-        .from('quality_assessments')
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', paymentData.paymentId);
+      // Update quality assessment status (if it exists)
+      if (paymentData.qualityAssessmentId && paymentData.qualityAssessmentId !== paymentData.paymentId) {
+        const newStatus = paymentData.method === 'Cash' ? 'payment_processed' : 'submitted_to_finance';
+        
+        console.log('🔬 Updating quality assessment:', paymentData.qualityAssessmentId);
+        // Try updating in Supabase first
+        const { error: supabaseError } = await supabase
+          .from('quality_assessments')
+          .update({
+            status: newStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', paymentData.qualityAssessmentId);
 
-      // Fallback to Firebase if Supabase fails
-      if (supabaseError) {
-        await updateDoc(doc(db, 'quality_assessments', paymentData.paymentId), {
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        });
+        // Fallback to Firebase if Supabase fails
+        if (supabaseError) {
+          console.log('⚠️ Supabase update failed, trying Firebase:', supabaseError);
+          try {
+            await updateDoc(doc(db, 'quality_assessments', paymentData.qualityAssessmentId), {
+              status: newStatus,
+              updated_at: new Date().toISOString()
+            });
+            console.log('✅ Quality assessment updated in Firebase');
+          } catch (fbError) {
+            console.error('❌ Firebase update also failed:', fbError);
+          }
+        } else {
+          console.log('✅ Quality assessment updated in Supabase');
+        }
       }
 
       // If bank transfer, create approval request
