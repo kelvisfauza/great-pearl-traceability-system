@@ -10,6 +10,7 @@ interface CoffeePayment {
   batchNumber: string;
   supplier: string;
   supplierId: string;
+  supplierCode?: string;
   assessedBy: string;
   quantity: number;
   pricePerKg: number;
@@ -122,6 +123,7 @@ export const usePendingCoffeePayments = () => {
           batchNumber: data.batch_number || 'Unknown',
           supplier: data.supplier_name || 'Unknown Supplier',
           supplierId: data.supplier_id || '',
+          supplierCode: data.supplier_code || '',
           assessedBy,
           quantity,
           pricePerKg,

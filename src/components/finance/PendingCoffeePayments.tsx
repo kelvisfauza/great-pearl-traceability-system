@@ -36,9 +36,10 @@ export const PendingCoffeePayments = () => {
     if (selectedPayment && showPaymentDialog) {
       console.log('🔍 Checking advances for supplier:', {
         supplierId: selectedPayment.supplierId,
+        supplierCode: selectedPayment.supplierCode,
         supplierName: selectedPayment.supplier
       });
-      const outstanding = getTotalOutstanding(selectedPayment.supplierId);
+      const outstanding = getTotalOutstanding(selectedPayment.supplierId, selectedPayment.supplierCode);
       console.log('💰 Outstanding advance found:', outstanding);
       setSupplierOutstanding(outstanding);
       setRecoverAdvance(outstanding > 0);

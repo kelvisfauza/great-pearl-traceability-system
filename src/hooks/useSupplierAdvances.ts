@@ -5,6 +5,8 @@ import { db } from '@/lib/firebase';
 interface SupplierAdvance {
   id: string;
   supplier_id: string;
+  supplier_code?: string;
+  supplier_name?: string;
   amount_ugx: number;
   outstanding_ugx: number;
   issued_by: string;
@@ -41,14 +43,20 @@ export const useSupplierAdvances = (supplierId?: string) => {
     enabled: true,
   });
 
-  const getTotalOutstanding = (supplierId: string) => {
-    console.log('📊 Getting outstanding for supplier ID:', supplierId);
+  const getTotalOutstanding = (supplierId: string, supplierCode?: string) => {
+    console.log('📊 Getting outstanding for supplier:', { supplierId, supplierCode });
     console.log('📋 All advances:', advances?.map(a => ({ 
-      supplier_id: a.supplier_id, 
+      supplier_id: a.supplier_id,
+      supplier_code: a.supplier_code,
       outstanding: a.outstanding_ugx 
     })));
     if (!advances) return 0;
-    const filtered = advances.filter(adv => adv.supplier_id === supplierId);
+    
+    // Match by supplier ID or supplier code for more flexible matching
+    const filtered = advances.filter(adv => 
+      adv.supplier_id === supplierId || 
+      (supplierCode && adv.supplier_code === supplierCode)
+    );
     console.log('✅ Filtered advances:', filtered);
     return filtered.reduce((sum, adv) => sum + Number(adv.outstanding_ugx), 0);
   };
