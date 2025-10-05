@@ -10,7 +10,8 @@ import RecentReports from "@/components/reports/RecentReports";
 import StoreReportForm from "@/components/reports/StoreReportForm";
 import StoreReportsList from "@/components/reports/StoreReportsList";
 import SalesReportsList from "@/components/reports/SalesReportsList";
-import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart } from "lucide-react";
+import DayBook from "@/components/reports/DayBook";
+import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart, BookOpen } from "lucide-react";
 
 const Reports = () => {
   return (
@@ -24,10 +25,14 @@ const Reports = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="daybook" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Day Book
             </TabsTrigger>
             <TabsTrigger value="generator" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
@@ -57,6 +62,10 @@ const Reports = () => {
 
           <TabsContent value="dashboard" className="space-y-6">
             <PerformanceDashboard />
+          </TabsContent>
+
+          <TabsContent value="daybook" className="space-y-6">
+            <DayBook />
           </TabsContent>
 
           <TabsContent value="generator" className="space-y-6">
