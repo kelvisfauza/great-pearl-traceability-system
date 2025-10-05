@@ -3,11 +3,12 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Package, AlertTriangle, TrendingDown, Warehouse, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Shield, Package, AlertTriangle, TrendingDown, Warehouse, MapPin, RefreshCw } from "lucide-react";
 import { useInventoryManagement } from "@/hooks/useInventoryManagement";
 
 const Inventory = () => {
-  const { inventoryItems, storageLocations, loading, summary } = useInventoryManagement();
+  const { inventoryItems, storageLocations, loading, summary, fetchInventoryData } = useInventoryManagement();
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -37,9 +38,22 @@ const Inventory = () => {
   return (
     <Layout 
       title="Inventory Management" 
-      subtitle="Track stock levels, storage, and inventory movements"
+      subtitle="Track stock levels, storage, and inventory movements - Real-time updates"
     >
       <div className="space-y-6">
+        <div className="flex justify-end">
+          <Button 
+            onClick={fetchInventoryData} 
+            disabled={loading}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Inventory
+          </Button>
+        </div>
+        
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>

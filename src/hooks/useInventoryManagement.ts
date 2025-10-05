@@ -1,6 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { firebaseClient } from '@/lib/firebaseClient';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 export interface InventoryItem {
   id: string;
@@ -141,6 +143,15 @@ export const useInventoryManagement = () => {
 
   useEffect(() => {
     fetchInventoryData();
+
+    // Set up real-time listener for coffee_records changes
+    const coffeeRecordsRef = collection(db, 'coffee_records');
+    const unsubscribe = onSnapshot(coffeeRecordsRef, (snapshot) => {
+      console.log('📊 Inventory updated - coffee records changed');
+      fetchInventoryData();
+    });
+
+    return () => unsubscribe();
   }, []);
 
   return {
