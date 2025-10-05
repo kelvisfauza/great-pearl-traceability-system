@@ -3,12 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Coffee, DollarSign, Banknote, CreditCard, Eye, User, Calendar } from 'lucide-react';
+import { Coffee, DollarSign, Banknote, CreditCard, Eye, User, Calendar, AlertCircle, XCircle } from 'lucide-react';
 import { usePendingCoffeePayments } from '@/hooks/usePendingCoffeePayments';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,6 +23,8 @@ export const PendingCoffeePayments = () => {
   const [paymentNotes, setPaymentNotes] = useState('');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [financePrice, setFinancePrice] = useState('');
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorDetails, setErrorDetails] = useState({ available: 0, required: 0 });
 
   const handleProcessPayment = async () => {
     if (!selectedPayment) return;
@@ -72,11 +75,26 @@ export const PendingCoffeePayments = () => {
       setFinancePrice('');
     } catch (error: any) {
       console.error('Payment processing error:', error);
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to process payment. Please try again.",
-        variant: "destructive"
-      });
+      
+      // Check if it's an insufficient funds error
+      if (error.message && error.message.includes('Insufficient funds')) {
+        // Extract the amounts from the error message
+        const availableMatch = error.message.match(/Available: UGX ([0-9,]+)/);
+        const requiredMatch = error.message.match(/Required: UGX ([0-9,]+)/);
+        
+        const available = availableMatch ? parseFloat(availableMatch[1].replace(/,/g, '')) : 0;
+        const required = requiredMatch ? parseFloat(requiredMatch[1].replace(/,/g, '')) : actualAmount;
+        
+        setErrorDetails({ available, required });
+        setErrorDialogOpen(true);
+        setShowPaymentDialog(false);
+      } else {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to process payment. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -300,6 +318,67 @@ export const PendingCoffeePayments = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Insufficient Funds Error Dialog */}
+      <Dialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="h-5 w-5" />
+              Insufficient Funds
+            </DialogTitle>
+            <DialogDescription>
+              Unable to process payment due to insufficient available cash
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Alert variant="destructive" className="my-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Payment Cannot Be Processed</AlertTitle>
+            <AlertDescription>
+              The Finance department does not have enough cash to complete this payment.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Available Cash</Label>
+                <div className="text-2xl font-bold text-orange-600">
+                  UGX {errorDetails.available.toLocaleString()}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Required Amount</Label>
+                <div className="text-2xl font-bold text-red-600">
+                  UGX {errorDetails.required.toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t">
+              <Label className="text-muted-foreground">Shortage</Label>
+              <div className="text-xl font-bold text-red-600 mt-1">
+                UGX {(errorDetails.required - errorDetails.available).toLocaleString()}
+              </div>
+            </div>
+
+            <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              <AlertTitle className="text-blue-900 dark:text-blue-100">Action Required</AlertTitle>
+              <AlertDescription className="text-blue-800 dark:text-blue-200">
+                Please contact the Administrator to add more cash to the Finance department before processing this payment.
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setErrorDialogOpen(false)} variant="default">
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
