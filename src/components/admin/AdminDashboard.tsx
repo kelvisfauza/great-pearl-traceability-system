@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp } from 'lucide-react';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import MoneyRequestsFinalApproval from './MoneyRequestsFinalApproval';
@@ -12,6 +12,7 @@ import UserPermissionsList from './UserPermissionsList';
 import QuickPermissionAssignment from './QuickPermissionAssignment';
 import AdminExpenseRequestsManager from './AdminExpenseRequestsManager';
 import ApprovedRequestsHistory from './ApprovedRequestsHistory';
+import CashManagementModal from './CashManagementModal';
 import { useUnifiedApprovalRequests } from '@/hooks/useUnifiedApprovalRequests';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import ActiveUsers from '@/components/it/ActiveUsers';
@@ -19,6 +20,7 @@ import ActiveUsers from '@/components/it/ActiveUsers';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  const [cashModalOpen, setCashModalOpen] = useState(false);
   const { requests, loading: requestsLoading } = useUnifiedApprovalRequests();
   const { onlineCount, loading: presenceLoading } = usePresenceList();
 
@@ -27,13 +29,21 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">Administrator Hub</h1>
-          <p className="text-muted-foreground">System oversight, approvals, and critical administrative tasks</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Shield className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold">Administrator Hub</h1>
+            <p className="text-muted-foreground">System oversight, approvals, and critical administrative tasks</p>
+          </div>
         </div>
+        <Button onClick={() => setCashModalOpen(true)} className="flex items-center gap-2">
+          <DollarSign className="h-4 w-4" />
+          Manage Finance Cash
+        </Button>
       </div>
+
+      <CashManagementModal open={cashModalOpen} onOpenChange={setCashModalOpen} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid grid-cols-3 lg:w-auto">

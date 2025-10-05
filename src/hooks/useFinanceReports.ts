@@ -49,6 +49,23 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
         transactions: []
       };
 
+      // Fetch cash transactions for the date
+      const { data: cashTransactions } = await supabase
+        .from('finance_cash_transactions')
+        .select('*')
+        .gte('created_at', dateStr)
+        .lt('created_at', new Date(new Date(dateStr).getTime() + 86400000).toISOString());
+
+      if (cashTransactions) {
+        cashTransactions.forEach(transaction => {
+          if (transaction.transaction_type === 'DEPOSIT') {
+            report.totalCashIn += Number(transaction.amount);
+          } else if (transaction.transaction_type === 'PAYMENT') {
+            report.totalCashOut += Math.abs(Number(transaction.amount));
+          }
+        });
+      }
+
       // Fetch payment records from Supabase
       const { data: paymentRecords, error: paymentError } = await supabase
         .from('payment_records')

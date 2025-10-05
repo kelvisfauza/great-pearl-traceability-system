@@ -1073,6 +1073,63 @@ export type Database = {
           },
         ]
       }
+      finance_cash_balance: {
+        Row: {
+          created_at: string
+          current_balance: number
+          id: string
+          last_updated: string
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string
+          current_balance?: number
+          id?: string
+          last_updated?: string
+          updated_by: string
+        }
+        Update: {
+          created_at?: string
+          current_balance?: number
+          id?: string
+          last_updated?: string
+          updated_by?: string
+        }
+        Relationships: []
+      }
+      finance_cash_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          reference: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          reference?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          reference?: string | null
+          transaction_type?: string
+        }
+        Relationships: []
+      }
       finance_coffee_lots: {
         Row: {
           assessed_at: string

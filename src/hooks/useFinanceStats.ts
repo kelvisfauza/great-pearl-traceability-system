@@ -17,7 +17,7 @@ export const useFinanceStats = () => {
   const [stats, setStats] = useState<FinanceStats>({
     pendingCoffeePayments: 0,
     pendingCoffeeAmount: 0,
-    availableCash: 2400000, // Mock data
+    availableCash: 0,
     pendingExpenseRequests: 0,
     pendingExpenseAmount: 0,
     completedToday: 0,
@@ -27,6 +27,26 @@ export const useFinanceStats = () => {
 
   useEffect(() => {
     fetchStats();
+    
+    // Set up real-time subscription for cash balance
+    const cashChannel = supabase
+      .channel('finance-cash-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'finance_cash_balance'
+        },
+        () => {
+          fetchStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(cashChannel);
+    };
   }, []);
 
   const fetchStats = async () => {
@@ -50,6 +70,16 @@ export const useFinanceStats = () => {
         pendingCoffeeAmount += kilograms * pricePerKg;
       });
 
+      // Fetch available cash from Supabase
+      const { data: cashBalance } = await supabase
+        .from('finance_cash_balance')
+        .select('current_balance')
+        .order('last_updated', { ascending: false })
+        .limit(1)
+        .single();
+
+      const availableCash = cashBalance?.current_balance || 0;
+
       // Fetch pending expense requests from Supabase
       const { data: expenseRequests } = await supabase
         .from('approval_requests')
@@ -61,14 +91,22 @@ export const useFinanceStats = () => {
       const pendingExpenseAmount = expenseRequests?.reduce((sum, req) => 
         sum + parseFloat(req.amount || '0'), 0) || 0;
 
-      // Mock completed today data
-      const completedToday = 8;
-      const completedTodayAmount = 1250000;
+      // Get today's completed payments
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todayPayments } = await supabase
+        .from('payment_records')
+        .select('amount')
+        .eq('date', today)
+        .eq('status', 'Paid');
+
+      const completedToday = todayPayments?.length || 0;
+      const completedTodayAmount = todayPayments?.reduce((sum, payment) => 
+        sum + Number(payment.amount), 0) || 0;
 
       setStats({
         pendingCoffeePayments,
         pendingCoffeeAmount,
-        availableCash: 2400000,
+        availableCash,
         pendingExpenseRequests,
         pendingExpenseAmount,
         completedToday,
