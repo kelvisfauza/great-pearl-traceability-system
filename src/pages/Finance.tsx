@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DollarSign, Wallet, Receipt, Users, TrendingUp, Coffee, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DollarSign, Wallet, Receipt, Users, TrendingUp, Coffee, CheckCircle, HandCoins } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 import { PendingCoffeePayments } from '@/components/finance/PendingCoffeePayments';
@@ -13,9 +14,11 @@ import { PaymentHistory } from '@/components/finance/PaymentHistory';
 import { FinanceReports } from '@/components/finance/FinanceReports';
 import { PendingCashDeposits } from '@/components/finance/PendingCashDeposits';
 import { CompletedTransactions } from '@/components/finance/CompletedTransactions';
+import SupplierAdvanceModal from '@/components/finance/SupplierAdvanceModal';
 
 const Finance = () => {
   const { hasPermission } = useAuth();
+  const [showAdvanceModal, setShowAdvanceModal] = useState(false);
 
   if (!hasPermission('Finance')) {
     return (
@@ -41,10 +44,22 @@ const Finance = () => {
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-primary mb-2 flex items-center justify-center gap-3">
-              <Wallet className="h-10 w-10" />
-              Finance Department
-            </h1>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-1"></div>
+              <h1 className="text-4xl font-bold text-primary flex items-center gap-3">
+                <Wallet className="h-10 w-10" />
+                Finance Department
+              </h1>
+              <div className="flex-1 flex justify-end">
+                <Button 
+                  onClick={() => setShowAdvanceModal(true)}
+                  className="bg-amber-600 hover:bg-amber-700"
+                >
+                  <HandCoins className="h-4 w-4 mr-2" />
+                  Give Supplier Advance
+                </Button>
+              </div>
+            </div>
             <p className="text-muted-foreground">Manage coffee payments, expenses, and financial operations</p>
           </div>
 
@@ -122,6 +137,11 @@ const Finance = () => {
           </Card>
         </div>
       </div>
+      
+      <SupplierAdvanceModal 
+        open={showAdvanceModal}
+        onClose={() => setShowAdvanceModal(false)}
+      />
     </Layout>
   );
 };
