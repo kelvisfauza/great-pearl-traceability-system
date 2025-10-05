@@ -57,12 +57,14 @@ export const useQualityControl = () => {
       
       const coffeeQuery = query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'));
       const coffeeSnapshot = await getDocs(coffeeQuery);
-      const coffeeData = coffeeSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as StoreRecord[];
+      const coffeeData = coffeeSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as StoreRecord))
+        .filter(record => record.status !== 'paid'); // Filter out paid records
 
-      console.log('Loaded coffee records:', coffeeData.length, 'records');
+      console.log('Loaded coffee records (excluding paid):', coffeeData.length, 'records');
       setStoreRecords(coffeeData || []);
       return coffeeData;
     } catch (error) {

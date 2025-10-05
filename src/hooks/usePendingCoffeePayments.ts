@@ -75,7 +75,7 @@ export const usePendingCoffeePayments = () => {
       coffeeSnapshot.docs.forEach(doc => {
         const data = doc.data();
         
-        // Only show records that are pending or ready for payment
+        // Only show records that are pending (not paid or completed)
         if (data.status === 'paid' || data.status === 'completed') {
           return;
         }
@@ -139,6 +139,12 @@ export const usePendingCoffeePayments = () => {
       };
 
       await addDoc(collection(db, 'payment_records'), paymentRecord);
+
+      // Update coffee_record status to "paid" in Firebase
+      await updateDoc(doc(db, 'coffee_records', paymentData.paymentId), {
+        status: 'paid',
+        updated_at: new Date().toISOString()
+      });
 
       // Update quality assessment status
       const newStatus = paymentData.method === 'Cash' ? 'payment_processed' : 'submitted_to_finance';
