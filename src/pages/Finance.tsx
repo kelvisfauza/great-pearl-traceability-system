@@ -10,6 +10,7 @@ import { ExpenseManagement } from '@/components/finance/ExpenseManagement';
 import { HRPayments } from '@/components/finance/HRPayments';
 import { FinanceStats } from '@/components/finance/FinanceStats';
 import { PaymentHistory } from '@/components/finance/PaymentHistory';
+import { FinanceReports } from '@/components/finance/FinanceReports';
 
 const Finance = () => {
   const { hasPermission } = useAuth();
@@ -61,7 +62,7 @@ const Finance = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="pending-coffee" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="pending-coffee" className="flex items-center gap-2">
                     <Coffee className="h-4 w-4" />
                     Pending Coffee
@@ -77,6 +78,10 @@ const Finance = () => {
                   <TabsTrigger value="hr-payments" className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     HR Payments
+                  </TabsTrigger>
+                  <TabsTrigger value="reports" className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Reports
                   </TabsTrigger>
                 </TabsList>
 
@@ -94,6 +99,10 @@ const Finance = () => {
 
                 <TabsContent value="hr-payments" className="mt-6">
                   <HRPayments />
+                </TabsContent>
+
+                <TabsContent value="reports" className="mt-6">
+                  <FinanceReports />
                 </TabsContent>
               </Tabs>
             </CardContent>
