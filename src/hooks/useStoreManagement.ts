@@ -271,16 +271,16 @@ export const useStoreManagement = () => {
       };
 
       const docRef = await addDoc(collection(db, 'coffee_records'), coffeeDoc);
-      console.log('Coffee record added with ID:', docRef.id);
+      console.log('✅ Coffee record added to Firebase with ID:', docRef.id);
 
-      // Immediately add to Supabase coffee_records and finance_coffee_lots
+      // Immediately add to Supabase tables for parallel workflow
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // Insert into coffee_records
+      console.log('📤 Attempting to save to Supabase coffee_records...');
+      // Insert into coffee_records (don't set ID, let Supabase generate it)
       const { data: supabaseCoffeeRecord, error: coffeeError } = await supabase
         .from('coffee_records')
         .insert({
-          id: docRef.id,
           supplier_name: recordData.supplierName,
           coffee_type: recordData.coffeeType,
           bags: recordData.bags,
@@ -294,34 +294,36 @@ export const useStoreManagement = () => {
         .single();
 
       if (coffeeError) {
-        console.error('Error adding to Supabase coffee_records:', coffeeError);
+        console.error('❌ Error adding to Supabase coffee_records:', coffeeError);
       } else {
-        console.log('Added to Supabase coffee_records:', supabaseCoffeeRecord);
-      }
+        console.log('✅ Added to Supabase coffee_records:', supabaseCoffeeRecord);
+        
+        // Only add to finance if coffee_records was successful
+        console.log('📤 Attempting to save to finance_coffee_lots...');
+        const unitPrice = contract?.pricePerKg || 7000;
+        const { error: financeError } = await supabase
+          .from('finance_coffee_lots')
+          .insert({
+            coffee_record_id: supabaseCoffeeRecord.id,
+            supplier_id: supplier?.id || null,
+            assessed_by: 'Store Department',
+            quality_json: {
+              batch_number: recordData.batchNumber,
+              coffee_type: recordData.coffeeType,
+              supplier_name: recordData.supplierName,
+              status: 'pending_assessment',
+              note: 'Awaiting quality assessment - available for finance processing'
+            },
+            unit_price_ugx: unitPrice,
+            quantity_kg: recordData.kilograms,
+            finance_status: 'READY_FOR_FINANCE'
+          });
 
-      // Immediately add to finance_coffee_lots for parallel workflow
-      const unitPrice = contract?.pricePerKg || 7000; // Use contract price or default
-      const { error: financeError } = await supabase
-        .from('finance_coffee_lots')
-        .insert({
-          coffee_record_id: docRef.id,
-          supplier_id: supplier?.id || null,
-          assessed_by: 'Store Department',
-          quality_json: {
-            batch_number: recordData.batchNumber,
-            coffee_type: recordData.coffeeType,
-            status: 'pending_assessment',
-            note: 'Awaiting quality assessment - available for finance processing'
-          },
-          unit_price_ugx: unitPrice,
-          quantity_kg: recordData.kilograms,
-          finance_status: 'READY_FOR_FINANCE'
-        });
-
-      if (financeError) {
-        console.error('Error adding to finance_coffee_lots:', financeError);
-      } else {
-        console.log('Added to finance_coffee_lots - ready for payment');
+        if (financeError) {
+          console.error('❌ Error adding to finance_coffee_lots:', financeError);
+        } else {
+          console.log('✅ Successfully added to finance_coffee_lots - ready for Finance department!');
+        }
       }
       
       await fetchStoreData();
