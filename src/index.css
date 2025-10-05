@@ -151,4 +151,38 @@ All colors MUST be HSL.
       margin-top: 0.75rem !important;
     }
   }
+
+  /* Print styles */
+  @media screen {
+    .print-only {
+      display: none !important;
+    }
+  }
+
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+    
+    .print-only {
+      display: block !important;
+    }
+
+    /* Remove backgrounds and shadows for print */
+    * {
+      background: transparent !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+    }
+
+    /* Keep table borders visible */
+    table, th, td {
+      border: 1px solid #000 !important;
+    }
+
+    /* Avoid page breaks inside elements */
+    tr, img, blockquote {
+      page-break-inside: avoid;
+    }
+  }
 }

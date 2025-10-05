@@ -135,6 +135,16 @@ export const getStandardPrintStyles = () => `
     display: none !important;
   }
   
+  .print-only {
+    display: block !important;
+  }
+  
+  @media screen {
+    .print-only {
+      display: none !important;
+    }
+  }
+  
   .page-break {
     page-break-before: always;
   }

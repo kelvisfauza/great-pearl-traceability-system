@@ -8,6 +8,8 @@ import { format } from "date-fns";
 import { useDayBookData } from "@/hooks/useDayBookData";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import StandardPrintHeader from "@/components/print/StandardPrintHeader";
+import { getStandardPrintStyles } from "@/utils/printStyles";
 
 const DayBook = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -22,7 +24,19 @@ const DayBook = () => {
   };
 
   const handlePrint = () => {
+    const printStyles = `
+      <style>
+        ${getStandardPrintStyles()}
+      </style>
+    `;
+    
+    const originalContents = document.body.innerHTML;
+    const printContents = document.querySelector('.space-y-6')?.innerHTML || '';
+    
+    document.body.innerHTML = printStyles + printContents;
     window.print();
+    document.body.innerHTML = originalContents;
+    window.location.reload(); // Reload to restore event listeners
   };
 
   if (loading) {
@@ -41,8 +55,17 @@ const DayBook = () => {
 
   return (
     <div className="space-y-6">
-      {/* Date Selector */}
-      <Card>
+      {/* Print Header - Hidden on screen, visible on print */}
+      <div className="print-only">
+        <StandardPrintHeader 
+          title="DAY BOOK REPORT"
+          subtitle={`Financial Activities Summary - ${format(selectedDate, "PPP")}`}
+          includeDate={false}
+        />
+      </div>
+
+      {/* Date Selector - Hidden on print */}
+      <Card className="no-print">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Day Book Report</CardTitle>
