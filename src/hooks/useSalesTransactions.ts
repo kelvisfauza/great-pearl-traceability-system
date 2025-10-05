@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 
 export interface SalesTransaction {
   id: string;
@@ -47,9 +49,100 @@ export const useSalesTransactions = () => {
     }
   };
 
+  const checkInventoryAvailability = async (coffeeType: string, weightNeeded: number) => {
+    try {
+      const coffeeRecordsRef = collection(db, 'coffee_records');
+      const q = query(
+        coffeeRecordsRef,
+        where('coffee_type', '==', coffeeType),
+        where('status', '==', 'in_stock')
+      );
+      
+      const snapshot = await getDocs(q);
+      let totalAvailable = 0;
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        totalAvailable += Number(data.kilograms) || 0;
+      });
+
+      return {
+        available: totalAvailable,
+        sufficient: totalAvailable >= weightNeeded
+      };
+    } catch (error) {
+      console.error('Error checking inventory:', error);
+      return { available: 0, sufficient: false };
+    }
+  };
+
+  const deductFromInventory = async (coffeeType: string, weightToDeduct: number) => {
+    try {
+      const coffeeRecordsRef = collection(db, 'coffee_records');
+      const q = query(
+        coffeeRecordsRef,
+        where('coffee_type', '==', coffeeType),
+        where('status', '==', 'in_stock')
+      );
+      
+      const snapshot = await getDocs(q);
+      let remainingToDeduct = weightToDeduct;
+      
+      // Deduct from oldest records first (FIFO)
+      for (const docSnap of snapshot.docs) {
+        if (remainingToDeduct <= 0) break;
+        
+        const data = docSnap.data();
+        const currentKg = Number(data.kilograms) || 0;
+        
+        if (currentKg <= remainingToDeduct) {
+          // This entire record is consumed
+          await updateDoc(doc(db, 'coffee_records', docSnap.id), {
+            status: 'sold',
+            kilograms: 0,
+            updated_at: new Date().toISOString()
+          });
+          remainingToDeduct -= currentKg;
+        } else {
+          // Partial deduction
+          await updateDoc(doc(db, 'coffee_records', docSnap.id), {
+            kilograms: currentKg - remainingToDeduct,
+            updated_at: new Date().toISOString()
+          });
+          remainingToDeduct = 0;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deducting from inventory:', error);
+      throw error;
+    }
+  };
+
   const createTransaction = async (transactionData: Omit<SalesTransaction, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       setLoading(true);
+
+      // Check inventory availability first
+      const inventoryCheck = await checkInventoryAvailability(
+        transactionData.coffee_type,
+        transactionData.weight
+      );
+
+      if (!inventoryCheck.sufficient) {
+        toast({
+          title: "Insufficient Inventory",
+          description: `Only ${inventoryCheck.available.toFixed(2)} kg available. Cannot sell ${transactionData.weight} kg.`,
+          variant: "destructive"
+        });
+        throw new Error('Insufficient inventory');
+      }
+
+      // Deduct from inventory
+      await deductFromInventory(transactionData.coffee_type, transactionData.weight);
+
+      // Create the sales transaction
       const { data, error } = await supabase
         .from('sales_transactions')
         .insert([transactionData])
@@ -60,18 +153,20 @@ export const useSalesTransactions = () => {
 
       toast({
         title: "Success",
-        description: "Sales transaction recorded successfully",
+        description: `Sale recorded successfully. ${transactionData.weight} kg deducted from inventory.`,
       });
 
       await fetchTransactions();
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating sales transaction:', error);
-      toast({
-        title: "Error",
-        description: "Failed to record sales transaction",
-        variant: "destructive"
-      });
+      if (error.message !== 'Insufficient inventory') {
+        toast({
+          title: "Error",
+          description: "Failed to record sales transaction",
+          variant: "destructive"
+        });
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -186,6 +281,7 @@ export const useSalesTransactions = () => {
     updateTransaction,
     deleteTransaction,
     uploadGRNFile,
-    getGRNFileUrl
+    getGRNFileUrl,
+    checkInventoryAvailability
   };
 };

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,12 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Printer, Save, Upload, FileText } from 'lucide-react';
+import { CalendarIcon, Printer, Save, Upload, FileText, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useSalesTransactions } from '@/hooks/useSalesTransactions';
 import DeliveryNoteModal from './DeliveryNoteModal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface SalesFormData {
   date: Date;
@@ -42,10 +43,25 @@ const SalesForm = () => {
   const [showDeliveryNote, setShowDeliveryNote] = useState(false);
   const [lastSaleRecord, setLastSaleRecord] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [availableInventory, setAvailableInventory] = useState<number>(0);
+  const [checkingInventory, setCheckingInventory] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
-  const { createTransaction, uploadGRNFile } = useSalesTransactions();
+  const { createTransaction, uploadGRNFile, checkInventoryAvailability } = useSalesTransactions();
+
+  // Check inventory when coffee type changes
+  useEffect(() => {
+    if (formData.coffeeType) {
+      setCheckingInventory(true);
+      checkInventoryAvailability(formData.coffeeType, 0).then(result => {
+        setAvailableInventory(result.available);
+        setCheckingInventory(false);
+      });
+    } else {
+      setAvailableInventory(0);
+    }
+  }, [formData.coffeeType]);
 
   const customers = [
     'Starbucks Uganda',
@@ -207,8 +223,8 @@ const SalesForm = () => {
               </Select>
             </div>
 
-            {/* Coffee Type */}
-            <div className="space-y-2">
+            {/* Coffee Type with Inventory Info */}
+            <div className="space-y-2 col-span-2">
               <Label>Coffee Type *</Label>
               <Select value={formData.coffeeType} onValueChange={(value) => handleInputChange('coffeeType', value)}>
                 <SelectTrigger>
@@ -220,6 +236,18 @@ const SalesForm = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {formData.coffeeType && (
+                <Alert className={availableInventory > 0 ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}>
+                  <AlertCircle className={`h-4 w-4 ${availableInventory > 0 ? "text-green-600" : "text-red-600"}`} />
+                  <AlertDescription className={availableInventory > 0 ? "text-green-800" : "text-red-800"}>
+                    {checkingInventory ? 'Checking inventory...' : 
+                      availableInventory > 0 
+                        ? `Available in inventory: ${availableInventory.toFixed(2)} kg`
+                        : 'No inventory available for this coffee type'
+                    }
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
 
             {/* Moisture */}
@@ -242,7 +270,13 @@ const SalesForm = () => {
                 value={formData.weight || ''}
                 onChange={(e) => handleInputChange('weight', parseFloat(e.target.value) || 0)}
                 placeholder="Enter weight in kg"
+                max={availableInventory}
               />
+              {formData.weight > availableInventory && formData.coffeeType && (
+                <p className="text-sm text-red-600">
+                  Cannot sell more than available inventory ({availableInventory.toFixed(2)} kg)
+                </p>
+              )}
             </div>
 
             {/* Unit Price */}
@@ -330,7 +364,7 @@ const SalesForm = () => {
             
             <Button 
               onClick={handleSave}
-              disabled={loading}
+              disabled={loading || formData.weight > availableInventory || availableInventory === 0}
               className="flex items-center gap-2"
             >
               <Save className="h-4 w-4" />
