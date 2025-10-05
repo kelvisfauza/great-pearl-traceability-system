@@ -218,6 +218,30 @@ export type Database = {
         }
         Relationships: []
       }
+      biometric_credentials: {
+        Row: {
+          created_at: string | null
+          credential_id: string
+          email: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          credential_id: string
+          email: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          credential_id?: string
+          email?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       buying_stations: {
         Row: {
           capacity: number
