@@ -28,7 +28,7 @@ export const useFinanceStats = () => {
   useEffect(() => {
     fetchStats();
     
-    // Set up real-time subscription for cash balance
+    // Set up real-time subscription for cash balance and transactions
     const cashChannel = supabase
       .channel('finance-cash-changes')
       .on(
@@ -37,6 +37,17 @@ export const useFinanceStats = () => {
           event: '*',
           schema: 'public',
           table: 'finance_cash_balance'
+        },
+        () => {
+          fetchStats();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'finance_cash_transactions'
         },
         () => {
           fetchStats();
@@ -91,17 +102,29 @@ export const useFinanceStats = () => {
       const pendingExpenseAmount = expenseRequests?.reduce((sum, req) => 
         sum + parseFloat(req.amount || '0'), 0) || 0;
 
-      // Get today's completed payments
+      // Get today's completed payments and confirmed cash deposits
       const today = new Date().toISOString().split('T')[0];
+      
+      // Get completed payments
       const { data: todayPayments } = await supabase
         .from('payment_records')
         .select('amount')
         .eq('date', today)
         .eq('status', 'Paid');
 
-      const completedToday = todayPayments?.length || 0;
-      const completedTodayAmount = todayPayments?.reduce((sum, payment) => 
-        sum + Number(payment.amount), 0) || 0;
+      // Get confirmed cash deposits
+      const { data: todayDeposits } = await supabase
+        .from('finance_cash_transactions')
+        .select('amount, confirmed_at')
+        .eq('transaction_type', 'DEPOSIT')
+        .eq('status', 'confirmed')
+        .gte('confirmed_at', `${today}T00:00:00`)
+        .lte('confirmed_at', `${today}T23:59:59`);
+
+      const completedToday = (todayPayments?.length || 0) + (todayDeposits?.length || 0);
+      const completedTodayAmount = 
+        (todayPayments?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 0) +
+        (todayDeposits?.reduce((sum, deposit) => sum + Number(deposit.amount), 0) || 0);
 
       setStats({
         pendingCoffeePayments,

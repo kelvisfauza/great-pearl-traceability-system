@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,18 +18,21 @@ interface CompletedTransaction {
 }
 
 export const useCompletedTransactions = () => {
-  const [transactions, setTransactions] = useState<CompletedTransaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: transactions = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ['completed-transactions'],
+    queryFn: fetchCompletedTransactions,
+  });
 
-  useEffect(() => {
-    fetchCompletedTransactions();
-  }, []);
+  return {
+    transactions,
+    loading,
+    refetch
+  };
+};
 
-  const fetchCompletedTransactions = async () => {
-    try {
-      setLoading(true);
-      
-      const allTransactions: CompletedTransaction[] = [];
+const fetchCompletedTransactions = async (): Promise<CompletedTransaction[]> => {
+  try {
+    const allTransactions: CompletedTransaction[] = [];
 
       // Fetch completed coffee payments
       const coffeePaymentsQuery = query(
@@ -56,6 +59,29 @@ export const useCompletedTransactions = () => {
           dateCompleted: new Date(data.updated_at || data.created_at).toLocaleDateString(),
           processedBy: data.processed_by || 'Finance Department',
           notes: data.notes
+        });
+      });
+
+      // Fetch confirmed cash deposits
+      const { data: confirmedDeposits } = await supabase
+        .from('finance_cash_transactions')
+        .select('*')
+        .eq('transaction_type', 'DEPOSIT')
+        .eq('status', 'confirmed')
+        .order('confirmed_at', { ascending: false });
+
+      confirmedDeposits?.forEach(deposit => {
+        allTransactions.push({
+          id: deposit.id,
+          type: 'coffee',
+          batchNumber: 'CASH-DEP',
+          supplier: deposit.created_by || 'Cash Deposit',
+          method: 'Cash',
+          amountPaid: Number(deposit.amount),
+          balance: 0,
+          dateCompleted: new Date(deposit.confirmed_at).toLocaleDateString(),
+          processedBy: deposit.confirmed_by || 'Finance Department',
+          notes: deposit.notes || 'Cash deposit confirmed'
         });
       });
 
@@ -100,24 +126,16 @@ export const useCompletedTransactions = () => {
         }
       ];
 
-      allTransactions.push(...mockHRPayments);
-      
-      // Sort all transactions by date
-      allTransactions.sort((a, b) => 
-        new Date(b.dateCompleted).getTime() - new Date(a.dateCompleted).getTime()
-      );
-      
-      setTransactions(allTransactions);
-    } catch (error) {
-      console.error('Error fetching completed transactions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return {
-    transactions,
-    loading,
-    refetch: fetchCompletedTransactions
-  };
+    allTransactions.push(...mockHRPayments);
+    
+    // Sort all transactions by date
+    allTransactions.sort((a, b) => 
+      new Date(b.dateCompleted).getTime() - new Date(a.dateCompleted).getTime()
+    );
+    
+    return allTransactions;
+  } catch (error) {
+    console.error('Error fetching completed transactions:', error);
+    return [];
+  }
 };

@@ -67,6 +67,7 @@ export const PendingCashDeposits = () => {
       toast.success('Cash deposit confirmed successfully');
       queryClient.invalidateQueries({ queryKey: ['pending-cash-deposits'] });
       queryClient.invalidateQueries({ queryKey: ['finance-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['completed-transactions'] });
     } catch (error: any) {
       console.error('Error confirming deposit:', error);
       toast.error(error.message || 'Failed to confirm deposit');

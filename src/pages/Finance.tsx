@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DollarSign, Wallet, Receipt, Users, TrendingUp, Coffee } from 'lucide-react';
+import { DollarSign, Wallet, Receipt, Users, TrendingUp, Coffee, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 import { PendingCoffeePayments } from '@/components/finance/PendingCoffeePayments';
@@ -12,6 +12,7 @@ import { FinanceStats } from '@/components/finance/FinanceStats';
 import { PaymentHistory } from '@/components/finance/PaymentHistory';
 import { FinanceReports } from '@/components/finance/FinanceReports';
 import { PendingCashDeposits } from '@/components/finance/PendingCashDeposits';
+import { CompletedTransactions } from '@/components/finance/CompletedTransactions';
 
 const Finance = () => {
   const { hasPermission } = useAuth();
@@ -66,10 +67,14 @@ const Finance = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="pending-coffee" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="pending-coffee" className="flex items-center gap-2">
                     <Coffee className="h-4 w-4" />
                     Pending Coffee
+                  </TabsTrigger>
+                  <TabsTrigger value="completed" className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    Completed
                   </TabsTrigger>
                   <TabsTrigger value="payments" className="flex items-center gap-2">
                     <Receipt className="h-4 w-4" />
@@ -91,6 +96,10 @@ const Finance = () => {
 
                 <TabsContent value="pending-coffee" className="mt-6">
                   <PendingCoffeePayments />
+                </TabsContent>
+
+                <TabsContent value="completed" className="mt-6">
+                  <CompletedTransactions />
                 </TabsContent>
 
                 <TabsContent value="payments" className="mt-6">
