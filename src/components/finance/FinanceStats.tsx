@@ -38,18 +38,32 @@ export const FinanceStats = () => {
       </Card>
 
       {/* Available Cash */}
-      <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+      <Card className={`bg-gradient-to-br ${stats.availableCash >= 0 ? 'from-green-50 to-green-100 border-green-200' : 'from-red-50 to-red-100 border-red-200'}`}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-green-700">Available Cash</p>
-              <p className="text-2xl font-bold text-green-900">UGX {stats.availableCash.toLocaleString()}</p>
+              <p className={`text-sm font-medium ${stats.availableCash >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                {stats.availableCash >= 0 ? 'Available Cash' : 'Cash Overdraft'}
+              </p>
+              <p className={`text-2xl font-bold ${stats.availableCash >= 0 ? 'text-green-900' : 'text-red-900'}`}>
+                UGX {Math.abs(stats.availableCash).toLocaleString()}
+                {stats.availableCash < 0 && <span className="text-sm ml-1">(DR)</span>}
+              </p>
               <div className="flex items-center gap-1">
-                <TrendingUp className="h-3 w-3 text-green-600" />
-                <p className="text-xs text-green-600">+12% from last week</p>
+                {stats.availableCash >= 0 ? (
+                  <>
+                    <TrendingUp className="h-3 w-3 text-green-600" />
+                    <p className="text-xs text-green-600">Positive balance</p>
+                  </>
+                ) : (
+                  <>
+                    <TrendingDown className="h-3 w-3 text-red-600" />
+                    <p className="text-xs text-red-600">Requires deposit</p>
+                  </>
+                )}
               </div>
             </div>
-            <DollarSign className="h-8 w-8 text-green-600" />
+            <DollarSign className={`h-8 w-8 ${stats.availableCash >= 0 ? 'text-green-600' : 'text-red-600'}`} />
           </div>
         </CardContent>
       </Card>
