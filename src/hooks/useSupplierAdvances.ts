@@ -19,26 +19,42 @@ export const useSupplierAdvances = (supplierId?: string) => {
   const { data: advances, isLoading, refetch } = useQuery({
     queryKey: ['supplier-advances', supplierId],
     queryFn: async () => {
-      let q = query(
-        collection(db, 'supplier_advances'),
-        where('is_closed', '==', false),
-        orderBy('issued_at', 'desc')
-      );
-
+      let q;
+      
       if (supplierId) {
+        // Get all advances for specific supplier (including closed ones)
         q = query(
           collection(db, 'supplier_advances'),
           where('supplier_id', '==', supplierId),
-          where('is_closed', '==', false),
+          orderBy('issued_at', 'desc')
+        );
+      } else {
+        // Get all advances (including closed ones) for the advances management page
+        q = query(
+          collection(db, 'supplier_advances'),
           orderBy('issued_at', 'desc')
         );
       }
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as SupplierAdvance[];
+      return snapshot.docs
+        .map(doc => {
+          const data = doc.data() as any;
+          if (!data) return null;
+          return {
+            id: doc.id,
+            supplier_id: data.supplier_id || '',
+            supplier_code: data.supplier_code,
+            supplier_name: data.supplier_name,
+            amount_ugx: data.amount_ugx || 0,
+            outstanding_ugx: data.outstanding_ugx || 0,
+            issued_by: data.issued_by || '',
+            issued_at: data.issued_at || '',
+            description: data.description || '',
+            is_closed: data.is_closed || false,
+          } as SupplierAdvance;
+        })
+        .filter((adv): adv is SupplierAdvance => adv !== null);
     },
     enabled: true,
   });

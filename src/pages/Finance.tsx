@@ -15,6 +15,7 @@ import { FinanceReports } from '@/components/finance/FinanceReports';
 import { PendingCashDeposits } from '@/components/finance/PendingCashDeposits';
 import { CompletedTransactions } from '@/components/finance/CompletedTransactions';
 import SupplierAdvanceModal from '@/components/finance/SupplierAdvanceModal';
+import { SupplierAdvancesPage } from '@/components/finance/SupplierAdvancesPage';
 
 const Finance = () => {
   const { hasPermission } = useAuth();
@@ -82,7 +83,7 @@ const Finance = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="pending-coffee" className="w-full">
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="pending-coffee" className="flex items-center gap-2">
                     <Coffee className="h-4 w-4" />
                     Pending Coffee
@@ -90,6 +91,10 @@ const Finance = () => {
                   <TabsTrigger value="completed" className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4" />
                     Completed
+                  </TabsTrigger>
+                  <TabsTrigger value="advances" className="flex items-center gap-2">
+                    <HandCoins className="h-4 w-4" />
+                    Advances
                   </TabsTrigger>
                   <TabsTrigger value="payments" className="flex items-center gap-2">
                     <Receipt className="h-4 w-4" />
@@ -115,6 +120,10 @@ const Finance = () => {
 
                 <TabsContent value="completed" className="mt-6">
                   <CompletedTransactions />
+                </TabsContent>
+
+                <TabsContent value="advances" className="mt-6">
+                  <SupplierAdvancesPage />
                 </TabsContent>
 
                 <TabsContent value="payments" className="mt-6">
