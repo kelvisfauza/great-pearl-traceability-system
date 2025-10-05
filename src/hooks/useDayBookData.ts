@@ -94,8 +94,19 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
       if (cashTransactions) {
         cashTransactions.forEach(transaction => {
           const amount = Math.abs(Number(transaction.amount));
+          
+          // Create friendly type labels
+          let typeLabel = transaction.transaction_type;
+          if (transaction.transaction_type === 'ADVANCE_RECOVERY') {
+            typeLabel = 'Advance Recovery';
+          } else if (transaction.transaction_type === 'DEPOSIT') {
+            typeLabel = 'Cash Deposit';
+          } else if (transaction.transaction_type === 'PAYMENT') {
+            typeLabel = 'Payment';
+          }
+          
           const txData = {
-            type: transaction.transaction_type,
+            type: typeLabel,
             description: transaction.notes || transaction.transaction_type,
             amount: amount,
             reference: transaction.reference || ''
@@ -141,7 +152,7 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
         });
 
         report.cashOutTransactions.push({
-          type: 'ADVANCE_GIVEN',
+          type: 'Advance Given',
           description: `Advance to ${advance.supplier_name || 'Unknown'}`,
           amount: advanceAmount,
           reference: advance.supplier_code || doc.id
