@@ -100,7 +100,7 @@ export const useFinanceStats = () => {
   const { data: stats, isLoading: loading, refetch } = useQuery({
     queryKey: ['finance-stats'],
     queryFn: fetchStats,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 1000, // Refetch every 1 second
   });
 
   return { 
