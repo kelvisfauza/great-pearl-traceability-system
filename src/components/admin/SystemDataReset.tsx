@@ -225,11 +225,11 @@ const SystemDataReset = () => {
             continue;
           }
 
-          // Delete all records from the table
+          // Delete all records from the table - use gte to match all records
           const { error } = await supabase
             .from(tableName as any)
             .delete()
-            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete everything
+            .gte('created_at', '1970-01-01T00:00:00Z'); // Match all records
             
           if (error) {
             console.error(`❌ Error deleting from ${tableName}:`, error);
