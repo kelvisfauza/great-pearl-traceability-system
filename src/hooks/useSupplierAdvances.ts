@@ -42,10 +42,15 @@ export const useSupplierAdvances = (supplierId?: string) => {
   });
 
   const getTotalOutstanding = (supplierId: string) => {
+    console.log('📊 Getting outstanding for supplier ID:', supplierId);
+    console.log('📋 All advances:', advances?.map(a => ({ 
+      supplier_id: a.supplier_id, 
+      outstanding: a.outstanding_ugx 
+    })));
     if (!advances) return 0;
-    return advances
-      .filter(adv => adv.supplier_id === supplierId)
-      .reduce((sum, adv) => sum + Number(adv.outstanding_ugx), 0);
+    const filtered = advances.filter(adv => adv.supplier_id === supplierId);
+    console.log('✅ Filtered advances:', filtered);
+    return filtered.reduce((sum, adv) => sum + Number(adv.outstanding_ugx), 0);
   };
 
   return {
