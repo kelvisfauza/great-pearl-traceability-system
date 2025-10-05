@@ -20,15 +20,41 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Check if biometric is available
-    if (!window.PublicKeyCredential) {
-      setError('Biometric authentication is not supported on this device.');
-    }
+    // Check if biometric is available on this device
+    const checkBiometricAvailability = async () => {
+      if (!window.PublicKeyCredential) {
+        setIsBiometricAvailable(false);
+        setError('This device does not support biometric authentication. Please use a device with fingerprint or face ID capabilities.');
+        return;
+      }
+
+      try {
+        // Check if platform authenticator is available (fingerprint, face ID, etc.)
+        const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        setIsBiometricAvailable(available);
+        
+        if (!available) {
+          setError('No biometric sensor detected on this device. Please use a device with fingerprint or face ID capabilities.');
+        }
+      } catch (err) {
+        console.error('Error checking biometric availability:', err);
+        setIsBiometricAvailable(false);
+        setError('Unable to detect biometric capabilities on this device.');
+      }
+    };
+
+    checkBiometricAvailability();
   }, []);
 
   const startBiometricAuth = async () => {
+    if (!isBiometricAvailable) {
+      setError('Biometric authentication is not available on this device.');
+      return;
+    }
+
     try {
       setIsVerifying(true);
       setError('');
@@ -74,12 +100,14 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       console.error('Biometric authentication error:', err);
       
       if (err.name === 'NotAllowedError') {
-        setError('Biometric authentication was cancelled or denied.');
+        setError('Biometric authentication was cancelled. Please try again or contact IT support.');
       } else if (err.name === 'InvalidStateError') {
         setError('No biometric credentials found. Please register first.');
         setIsRegistering(true);
+      } else if (err.name === 'NotSupportedError') {
+        setError('Your device does not support biometric authentication.');
       } else {
-        setError('Biometric authentication failed. Please try again.');
+        setError(`Authentication failed: ${err.message || 'Please try again.'}`);
       }
     } finally {
       setIsVerifying(false);
@@ -87,6 +115,11 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
   };
 
   const registerBiometric = async () => {
+    if (!isBiometricAvailable) {
+      setError('Biometric authentication is not available on this device.');
+      return;
+    }
+
     try {
       setIsVerifying(true);
       setError('');
@@ -141,13 +174,55 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       console.error('Biometric registration error:', err);
       
       if (err.name === 'NotAllowedError') {
-        setError('Biometric registration was cancelled.');
+        setError('Registration was cancelled. Please try again when ready.');
+      } else if (err.name === 'NotSupportedError') {
+        setError('Your device does not support this type of biometric authentication.');
       } else {
-        setError('Failed to register biometric authentication. Please try again.');
+        setError(`Registration failed: ${err.message || 'Please try again or contact IT support.'}`);
       }
       setIsVerifying(false);
     }
   };
+
+  // Show device not supported message
+  if (isBiometricAvailable === false) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 p-4 bg-red-100 rounded-full w-fit">
+            <AlertCircle className="h-12 w-12 text-red-600" />
+          </div>
+          <CardTitle>Biometric Not Available</CardTitle>
+          <CardDescription>
+            Your device does not support biometric authentication or no fingerprint sensor was detected.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>To use biometric authentication, you need:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>A device with a fingerprint sensor or Face ID</li>
+              <li>Biometric authentication enabled in your device settings</li>
+              <li>A modern browser that supports WebAuthn</li>
+            </ul>
+          </div>
+
+          <Button 
+            onClick={onCancel} 
+            variant="outline"
+            className="w-full"
+          >
+            Go Back to Login
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isRegistering) {
     return (
@@ -169,10 +244,17 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
             </Alert>
           )}
 
+          <Alert>
+            <CheckCircle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              ✓ Biometric sensor detected on your device
+            </AlertDescription>
+          </Alert>
+
           <div className="space-y-4">
             <Button 
               onClick={registerBiometric} 
-              disabled={isVerifying}
+              disabled={isVerifying || !isBiometricAvailable}
               className="w-full"
               size="lg"
             >
@@ -221,11 +303,18 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
           </Alert>
         )}
 
-        {!window.PublicKeyCredential && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Biometric authentication is not supported on this device. Please use a device with fingerprint or face ID capabilities.
+        {isBiometricAvailable === null && (
+          <Alert>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertDescription>Checking device capabilities...</AlertDescription>
+          </Alert>
+        )}
+
+        {isBiometricAvailable && (
+          <Alert>
+            <CheckCircle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              ✓ Biometric sensor detected on your device
             </AlertDescription>
           </Alert>
         )}
@@ -233,7 +322,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
         <div className="space-y-4">
           <Button 
             onClick={startBiometricAuth} 
-            disabled={isVerifying || !window.PublicKeyCredential}
+            disabled={isVerifying || !isBiometricAvailable || isBiometricAvailable === null}
             className="w-full"
             size="lg"
           >
