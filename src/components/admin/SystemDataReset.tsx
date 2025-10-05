@@ -177,7 +177,7 @@ const SystemDataReset = () => {
       }
 
       // Supabase Tables to delete - ordered by foreign key dependencies (children first)
-      // EXCLUDING: milling_transactions, milling_customers, milling_cash_transactions, eudr_documents, eudr_batches
+      // EXCLUDING: milling_transactions, milling_customers, milling_cash_transactions, eudr_documents, eudr_batches, store_reports
       const supabaseTables = [
         // Delete child tables first (tables with foreign keys)
         'supplier_payments',
@@ -193,6 +193,9 @@ const SystemDataReset = () => {
         'audit_logs',
         'edit_requests',
         'workflow_steps',
+        'reports', // Clear reports (but NOT store_reports)
+        'metrics', // Clear analytics/metrics data
+        'cash_sessions', // Clear finance cash sessions (day book depends on this)
         
         // Delete parent tables last
         'suppliers',
@@ -312,11 +315,14 @@ const SystemDataReset = () => {
               <li>All sales transactions</li>
               <li>All purchase orders and contracts</li>
               <li>All daily tasks and audit logs</li>
+              <li>All reports and analytics data</li>
+              <li>All finance cash sessions (day book data)</li>
             </ul>
             <p className="mt-2 font-bold text-green-700">PRESERVED (NOT deleted):</p>
             <ul className="list-disc ml-6 mt-1 space-y-1">
               <li>All milling transactions and customers</li>
               <li>All EUDR documentation and batches</li>
+              <li>All store reports</li>
             </ul>
             <p className="mt-2 font-bold">This action CANNOT be undone!</p>
           </AlertDescription>
