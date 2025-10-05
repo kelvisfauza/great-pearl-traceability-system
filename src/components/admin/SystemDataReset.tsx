@@ -5,20 +5,132 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Trash2, AlertTriangle, Shield } from 'lucide-react';
+import { Trash2, AlertTriangle, Shield, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import JSZip from 'jszip';
 
 const SystemDataReset = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showFinalConfirm, setShowFinalConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const { toast } = useToast();
 
   const requiredConfirmText = 'DELETE ALL DATA';
+
+  const downloadAllData = async () => {
+    setDownloading(true);
+    try {
+      const zip = new JSZip();
+      const timestamp = new Date().toISOString().split('T')[0];
+      
+      toast({
+        title: "Starting Backup",
+        description: "Collecting data from Firebase and Supabase..."
+      });
+
+      // Firebase Collections to backup
+      const firebaseCollections = [
+        'coffee_records',
+        'suppliers',
+        'supplier_advances',
+        'payment_records',
+        'quality_assessments'
+      ];
+
+      // Backup Firebase data
+      const firebaseFolder = zip.folder('firebase');
+      for (const collectionName of firebaseCollections) {
+        const collectionRef = collection(db, collectionName);
+        const snapshot = await getDocs(collectionRef);
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        firebaseFolder?.file(`${collectionName}.json`, JSON.stringify(data, null, 2));
+        console.log(`✅ Backed up ${data.length} documents from Firebase ${collectionName}`);
+      }
+
+      // Supabase Tables to backup
+      const supabaseTables = [
+        'sales_transactions',
+        'inventory_items',
+        'purchase_orders',
+        'supplier_contracts',
+        'payment_records',
+        'suppliers',
+        'marketing_campaigns',
+        'customers',
+        'sales_contracts',
+        'milling_transactions',
+        'milling_customers',
+        'finance_coffee_lots',
+        'cash_transactions',
+        'daily_tasks',
+        'audit_logs',
+        'employees',
+        'company_employees'
+      ];
+
+      // Backup Supabase data
+      const supabaseFolder = zip.folder('supabase');
+      for (const tableName of supabaseTables) {
+        try {
+          const { data, error } = await supabase
+            .from(tableName as any)
+            .select('*');
+          
+          if (!error && data) {
+            supabaseFolder?.file(`${tableName}.json`, JSON.stringify(data, null, 2));
+            console.log(`✅ Backed up ${data.length} records from Supabase ${tableName}`);
+          }
+        } catch (err) {
+          console.error(`Failed to backup ${tableName}:`, err);
+        }
+      }
+
+      // Create backup info file
+      const backupInfo = {
+        backup_date: new Date().toISOString(),
+        backup_type: 'complete_system_backup',
+        firebase_collections: firebaseCollections,
+        supabase_tables: supabaseTables,
+        note: 'Complete system backup before data reset'
+      };
+      zip.file('backup_info.json', JSON.stringify(backupInfo, null, 2));
+
+      // Generate and download zip file
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `farmflow_backup_${timestamp}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Backup Complete",
+        description: `All data has been downloaded as farmflow_backup_${timestamp}.zip`,
+      });
+
+    } catch (error) {
+      console.error('Error downloading backup:', error);
+      toast({
+        title: "Backup Failed",
+        description: "Failed to create backup. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const deleteAllData = async () => {
     if (confirmText !== requiredConfirmText) {
@@ -183,11 +295,23 @@ const SystemDataReset = () => {
           </AlertDescription>
         </Alert>
 
-        <div className="flex justify-center">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={downloadAllData}
+            disabled={downloading}
+            className="flex items-center gap-2 border-green-500 text-green-700 hover:bg-green-50"
+          >
+            <Download className="h-5 w-5" />
+            {downloading ? 'Downloading Backup...' : 'Download Complete Backup'}
+          </Button>
+          
           <Button
             variant="destructive"
             size="lg"
             onClick={() => setShowConfirmDialog(true)}
+            disabled={downloading}
             className="flex items-center gap-2"
           >
             <Trash2 className="h-5 w-5" />
