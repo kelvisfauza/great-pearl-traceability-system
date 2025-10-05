@@ -6,7 +6,6 @@ import { DollarSign, Wallet, Receipt, Users, TrendingUp, Coffee } from 'lucide-r
 import { useAuth } from '@/contexts/AuthContext';
 
 import { PendingCoffeePayments } from '@/components/finance/PendingCoffeePayments';
-import { CompletedTransactions } from '@/components/finance/CompletedTransactions';
 import { ExpenseManagement } from '@/components/finance/ExpenseManagement';
 import { HRPayments } from '@/components/finance/HRPayments';
 import { FinanceStats } from '@/components/finance/FinanceStats';
@@ -62,7 +61,7 @@ const Finance = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="pending-coffee" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="pending-coffee" className="flex items-center gap-2">
                     <Coffee className="h-4 w-4" />
                     Pending Coffee
@@ -70,10 +69,6 @@ const Finance = () => {
                   <TabsTrigger value="payments" className="flex items-center gap-2">
                     <Receipt className="h-4 w-4" />
                     Payments
-                  </TabsTrigger>
-                  <TabsTrigger value="completed" className="flex items-center gap-2">
-                    <Receipt className="h-4 w-4" />
-                    Completed
                   </TabsTrigger>
                   <TabsTrigger value="expenses" className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4" />
@@ -91,10 +86,6 @@ const Finance = () => {
 
                 <TabsContent value="payments" className="mt-6">
                   <PaymentHistory />
-                </TabsContent>
-
-                <TabsContent value="completed" className="mt-6">
-                  <CompletedTransactions />
                 </TabsContent>
 
                 <TabsContent value="expenses" className="mt-6">
