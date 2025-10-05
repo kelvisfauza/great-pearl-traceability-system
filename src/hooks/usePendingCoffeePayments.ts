@@ -307,6 +307,8 @@ export const usePendingCoffeePayments = () => {
 
       // If advance was recovered, record it as CASH IN first
       if (paymentData.advanceRecovered && paymentData.advanceRecovered > 0) {
+        console.log('💰 Recording advance recovery:', paymentData.advanceRecovered);
+        
         const { error: recoveryError } = await supabase
           .from('finance_cash_transactions')
           .insert({
@@ -322,10 +324,14 @@ export const usePendingCoffeePayments = () => {
           });
 
         if (recoveryError) {
-          console.error('Error recording advance recovery:', recoveryError);
+          console.error('❌ Error recording advance recovery:', recoveryError);
+          throw new Error('Failed to record advance recovery: ' + recoveryError.message);
         }
         
         currentBalance += paymentData.advanceRecovered;
+        console.log('✅ Advance recovery recorded successfully');
+      } else {
+        console.log('ℹ️ No advance recovery for this payment. advanceRecovered:', paymentData.advanceRecovered);
       }
 
       // Record the payment as CASH OUT

@@ -78,6 +78,14 @@ export const PendingCoffeePayments = () => {
       advanceRecovered = Math.min(supplierOutstanding, actualAmount);
     }
 
+    console.log('💵 Payment calculation:', {
+      recoverAdvance,
+      supplierOutstanding,
+      actualAmount,
+      advanceRecovered,
+      netPayment: actualAmount - advanceRecovered
+    });
+
     setProcessing(true);
     try {
       await processPayment({

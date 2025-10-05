@@ -91,6 +91,8 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
         .lt('confirmed_at', endOfDay.toISOString())
         .order('confirmed_at', { ascending: true });
 
+      console.log('📊 Day Book - Cash Transactions for', dateStr, ':', cashTransactions);
+
       if (cashTransactions) {
         cashTransactions.forEach(transaction => {
           const amount = Math.abs(Number(transaction.amount));
@@ -115,6 +117,7 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
           if (transaction.transaction_type === 'DEPOSIT' || transaction.transaction_type === 'ADVANCE_RECOVERY') {
             report.totalCashIn += amount;
             report.cashInTransactions.push(txData);
+            console.log('✅ Adding Cash In:', typeLabel, amount, transaction);
           } else if (transaction.transaction_type === 'PAYMENT') {
             report.totalCashOut += amount;
             report.cashOutTransactions.push(txData);
