@@ -71,26 +71,15 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
         totalOvertimeAdvances: 0
       };
 
-      // Get opening balance (balance at start of day)
-      const { data: balanceAtStart } = await supabase
-        .from('finance_cash_balance')
-        .select('current_balance')
-        .single();
+      // Calculate opening balance (sum of all confirmed transactions before today)
+      const { data: transactionsBeforeToday } = await supabase
+        .from('finance_cash_transactions')
+        .select('amount')
+        .eq('status', 'confirmed')
+        .lt('confirmed_at', startOfDay.toISOString());
 
-      if (balanceAtStart) {
-        // Calculate balance at start of selected day
-        const { data: transactionsBeforeDate } = await supabase
-          .from('finance_cash_transactions')
-          .select('amount')
-          .eq('status', 'confirmed')
-          .lt('confirmed_at', startOfDay.toISOString());
-
-        let adjustedOpeningBalance = balanceAtStart.current_balance;
-        if (transactionsBeforeDate) {
-          const totalAdjustment = transactionsBeforeDate.reduce((sum, t) => sum + Number(t.amount), 0);
-          adjustedOpeningBalance = balanceAtStart.current_balance - totalAdjustment;
-        }
-        report.openingBalance = adjustedOpeningBalance;
+      if (transactionsBeforeToday && transactionsBeforeToday.length > 0) {
+        report.openingBalance = transactionsBeforeToday.reduce((sum, t) => sum + Number(t.amount), 0);
       }
 
       // Fetch all cash transactions for the day
