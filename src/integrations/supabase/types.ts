@@ -3380,6 +3380,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_all_system_data: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       calculate_daily_salary_credit: {
         Args: { employee_salary: number }
         Returns: number

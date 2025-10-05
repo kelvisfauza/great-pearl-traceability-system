@@ -173,100 +173,27 @@ const SystemDataReset = () => {
           totalDeleted++;
         }
         
-        console.log(`✅ Deleted ${snapshot.size} documents from Firebase ${collectionName}`);
+      console.log(`✅ Deleted ${snapshot.size} documents from Firebase ${collectionName}`);
       }
 
-      // Supabase Tables to delete - ordered by foreign key dependencies (children first)
-      // EXCLUDING: milling_transactions, milling_customers, milling_cash_transactions, eudr_documents, eudr_batches, store_reports
-      const supabaseTables = [
-        // Delete child tables first (tables with foreign keys)
-        'supplier_payments',
-        'supplier_advances',
-        'finance_coffee_lots',
-        'finance_cash_transactions', // Day book data
-        'money_requests', // Salary advances/overtime
-        'contract_approvals',
-        'supplier_contracts',
-        'payment_records',
-        'sales_transactions',
-        'purchase_orders',
-        'inventory_items',
-        'daily_tasks',
-        'audit_logs',
-        'edit_requests',
-        'workflow_steps',
-        'reports', // Clear reports (but NOT store_reports)
-        'metrics', // Clear analytics/metrics data
-        'cash_sessions', // Clear finance cash sessions
-        
-        // Delete parent tables last
-        'suppliers',
-        'marketing_campaigns',
-        'sales_contracts'
-      ];
+      // Call the database function to delete all Supabase data
+      console.log(`🗑️ Calling admin_delete_all_system_data() function...`);
+      const { data: deleteResult, error: deleteError } = await supabase
+        .rpc('admin_delete_all_system_data');
 
-      // Delete from Supabase
-      for (const tableName of supabaseTables) {
-        try {
-          console.log(`🗑️ Attempting to delete from ${tableName}...`);
-          
-          // First check if table has data
-          const { count, error: countError } = await supabase
-            .from(tableName as any)
-            .select('*', { count: 'exact', head: true });
-
-          if (countError) {
-            console.warn(`⚠️ Could not access ${tableName}:`, countError.message);
-            continue;
-          }
-
-          if (!count || count === 0) {
-            console.log(`ℹ️ ${tableName} is empty, skipping`);
-            continue;
-          }
-
-          // Delete all records from the table - use gte to match all records
-          const { error } = await supabase
-            .from(tableName as any)
-            .delete()
-            .gte('created_at', '1970-01-01T00:00:00Z'); // Match all records
-            
-          if (error) {
-            console.error(`❌ Error deleting from ${tableName}:`, error);
-            toast({
-              title: "Partial Deletion Error",
-              description: `Could not delete from ${tableName}: ${error.message}`,
-              variant: "destructive"
-            });
-          } else {
-            console.log(`✅ Deleted all records from Supabase ${tableName}`);
-            totalDeleted += count;
-          }
-        } catch (err: any) {
-          console.error(`❌ Failed to delete from ${tableName}:`, err);
-        }
+      if (deleteError) {
+        console.error(`❌ Error calling admin_delete_all_system_data:`, deleteError);
+        throw deleteError;
       }
 
-      // Reset storage locations to default
-      await supabase
-        .from('storage_locations')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      await supabase.from('storage_locations').insert([
-        {
-          name: 'Store 1',
-          capacity: 30000,
-          current_occupancy: 0,
-          occupancy_percentage: 0
-        },
-        {
-          name: 'Store 2',
-          capacity: 40000,
-          current_occupancy: 0,
-          occupancy_percentage: 0
-        }
-      ]);
+      const result = deleteResult as { success: boolean; message: string; deleted_count?: number };
+      
+      if (result && result.success) {
+        console.log(`✅ ${result.message}`);
+        totalDeleted += result.deleted_count || 0;
+      } else {
+        throw new Error(result?.message || 'Unknown error during deletion');
+      }
 
       toast({
         title: "System Reset Complete",
