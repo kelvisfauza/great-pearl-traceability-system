@@ -49,34 +49,49 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
         transactions: []
       };
 
-      // Fetch confirmed cash transactions for the date
-      const { data: cashTransactions } = await supabase
+      // Fetch confirmed cash deposits for the date (using confirmed_at)
+      const { data: cashDeposits } = await supabase
         .from('finance_cash_transactions')
         .select('*')
+        .eq('transaction_type', 'DEPOSIT')
         .eq('status', 'confirmed')
-        .gte('created_at', dateStr)
-        .lt('created_at', new Date(new Date(dateStr).getTime() + 86400000).toISOString());
+        .gte('confirmed_at', dateStr)
+        .lt('confirmed_at', new Date(new Date(dateStr).getTime() + 86400000).toISOString());
 
-      if (cashTransactions) {
-        cashTransactions.forEach(transaction => {
-          if (transaction.transaction_type === 'DEPOSIT') {
-            report.totalCashIn += Number(transaction.amount);
-            
-            // Add cash deposit to transactions list
-            report.transactions.push({
-              id: transaction.id,
-              type: 'cash_deposit',
-              supplier: transaction.created_by || 'Admin',
-              amount: Number(transaction.amount),
-              amountPaid: Number(transaction.amount),
-              balance: 0,
-              status: 'Confirmed',
-              date: new Date(transaction.created_at).toLocaleDateString(),
-              batchNumber: transaction.reference || 'CASH-DEPOSIT'
-            });
-          } else if (transaction.transaction_type === 'PAYMENT') {
-            report.totalCashOut += Math.abs(Number(transaction.amount));
-          }
+      console.log('Cash deposits for date', dateStr, ':', cashDeposits);
+
+      if (cashDeposits) {
+        cashDeposits.forEach(deposit => {
+          const depositAmount = Number(deposit.amount);
+          report.totalCashIn += depositAmount;
+          
+          // Add cash deposit to transactions list
+          report.transactions.push({
+            id: deposit.id,
+            type: 'cash_deposit',
+            supplier: `Cash Deposit by ${deposit.created_by || 'Admin'}`,
+            amount: depositAmount,
+            amountPaid: depositAmount,
+            balance: 0,
+            status: 'Confirmed',
+            date: new Date(deposit.confirmed_at).toLocaleDateString(),
+            batchNumber: deposit.reference || 'CASH-DEPOSIT'
+          });
+        });
+      }
+
+      // Fetch cash payment transactions for the date (using confirmed_at)
+      const { data: cashPayments } = await supabase
+        .from('finance_cash_transactions')
+        .select('*')
+        .eq('transaction_type', 'PAYMENT')
+        .eq('status', 'confirmed')
+        .gte('confirmed_at', dateStr)
+        .lt('confirmed_at', new Date(new Date(dateStr).getTime() + 86400000).toISOString());
+
+      if (cashPayments) {
+        cashPayments.forEach(payment => {
+          report.totalCashOut += Math.abs(Number(payment.amount));
         });
       }
 

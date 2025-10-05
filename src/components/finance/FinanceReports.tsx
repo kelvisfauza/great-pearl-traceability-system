@@ -35,7 +35,8 @@ export const FinanceReports = () => {
     const typeColors: Record<string, string> = {
       'coffee': 'bg-blue-500',
       'expense': 'bg-purple-500',
-      'salary': 'bg-indigo-500'
+      'salary': 'bg-indigo-500',
+      'cash_deposit': 'bg-green-500'
     };
     return typeColors[type] || 'bg-gray-500';
   };
@@ -85,7 +86,22 @@ export const FinanceReports = () => {
       {/* Summary Cards */}
       {reportData && (
         <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Cash In</CardTitle>
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency(reportData.totalCashIn)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Deposits received
+                </p>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Cash Out</CardTitle>
@@ -95,6 +111,9 @@ export const FinanceReports = () => {
                 <div className="text-2xl font-bold text-red-600">
                   {formatCurrency(reportData.totalCashOut)}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Net: {formatCurrency(reportData.totalCashIn - reportData.totalCashOut)}
+                </p>
               </CardContent>
             </Card>
 
