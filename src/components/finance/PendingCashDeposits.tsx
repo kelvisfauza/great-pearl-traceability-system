@@ -85,7 +85,7 @@ export const PendingCashDeposits = () => {
       });
 
       // Update transaction status to confirmed
-      const { error: transactionError } = await supabase
+      const { data: updateResult, error: transactionError } = await supabase
         .from('finance_cash_transactions')
         .update({
           status: 'confirmed',
@@ -93,13 +93,21 @@ export const PendingCashDeposits = () => {
           confirmed_at: new Date().toISOString()
         })
         .eq('id', transactionId)
-        .eq('status', 'pending'); // Only update if still pending
+        .select();
 
       if (transactionError) {
         console.error('Transaction update error:', transactionError);
         // Rollback optimistic update
         await queryClient.refetchQueries({ queryKey: ['pending-cash-deposits'] });
         throw transactionError;
+      }
+
+      if (!updateResult || updateResult.length === 0) {
+        console.error('No rows updated - transaction may have already been confirmed');
+        // Rollback optimistic update
+        await queryClient.refetchQueries({ queryKey: ['pending-cash-deposits'] });
+        toast.error('Transaction has already been confirmed');
+        return;
       }
 
       console.log('Transaction status updated successfully');
