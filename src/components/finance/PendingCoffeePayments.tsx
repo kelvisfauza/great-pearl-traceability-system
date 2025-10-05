@@ -254,7 +254,9 @@ export const PendingCoffeePayments = () => {
               <div className="bg-muted/50 p-4 rounded-lg space-y-2">
                 <p><span className="font-medium">Batch:</span> {selectedPayment.batchNumber}</p>
                 <p><span className="font-medium">Supplier:</span> {selectedPayment.supplier}</p>
+                <p><span className="font-medium">Supplier ID:</span> <code className="text-xs bg-gray-200 px-2 py-1 rounded">{selectedPayment.supplierId || 'NOT SET'}</code></p>
                 <p><span className="font-medium">Quantity:</span> {selectedPayment.quantity} kg</p>
+                <p><span className="font-medium">Advance Outstanding:</span> <span className={supplierOutstanding > 0 ? 'text-amber-600 font-bold' : 'text-gray-500'}>UGX {supplierOutstanding.toLocaleString()}</span></p>
                 {selectedPayment.isPricedByQuality ? (
                   <>
                     <p><span className="font-medium">Price/kg:</span> {formatCurrency(selectedPayment.pricePerKg)} <Badge variant="secondary" className="ml-2">Set by Quality</Badge></p>
