@@ -3,6 +3,7 @@ import { collection, getDocs, query, where, addDoc, updateDoc, doc, orderBy } fr
 import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface CoffeePayment {
   id: string;
@@ -32,6 +33,7 @@ export const usePendingCoffeePayments = () => {
   const [coffeePayments, setCoffeePayments] = useState<CoffeePayment[]>([]);
   const [loading, setLoading] = useState(true);
   const { employee } = useAuth();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     fetchPendingPayments();
@@ -293,6 +295,9 @@ export const usePendingCoffeePayments = () => {
 
       // Refresh the payments list
       await fetchPendingPayments();
+      
+      // Invalidate finance stats to update available cash
+      queryClient.invalidateQueries({ queryKey: ['finance-stats'] });
       
       console.log('✅ Payment processing completed successfully');
     } catch (error: any) {
