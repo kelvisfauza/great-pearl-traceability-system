@@ -55,6 +55,8 @@ export const PendingCashDeposits = () => {
 
   const handleConfirm = async (transactionId: string, amount: number) => {
     try {
+      console.log('Starting confirmation for transaction:', transactionId);
+      
       // Get the transaction to check its balance_after value
       const { data: transaction, error: fetchError } = await supabase
         .from('finance_cash_transactions')
@@ -62,14 +64,25 @@ export const PendingCashDeposits = () => {
         .eq('id', transactionId)
         .single();
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('Fetch error:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('Transaction data:', transaction);
 
       // Only update the balance if this is truly a pending transaction
       if (transaction.status !== 'pending') {
         toast.error('This deposit has already been confirmed');
-        queryClient.invalidateQueries({ queryKey: ['pending-cash-deposits'] });
+        await queryClient.refetchQueries({ queryKey: ['pending-cash-deposits'] });
         return;
       }
+
+      // Optimistically update the UI by removing this deposit from the list
+      queryClient.setQueryData(['pending-cash-deposits'], (old: any) => {
+        if (!old) return [];
+        return old.filter((d: any) => d.id !== transactionId);
+      });
 
       // Update transaction status to confirmed
       const { error: transactionError } = await supabase
@@ -82,7 +95,14 @@ export const PendingCashDeposits = () => {
         .eq('id', transactionId)
         .eq('status', 'pending'); // Only update if still pending
 
-      if (transactionError) throw transactionError;
+      if (transactionError) {
+        console.error('Transaction update error:', transactionError);
+        // Rollback optimistic update
+        await queryClient.refetchQueries({ queryKey: ['pending-cash-deposits'] });
+        throw transactionError;
+      }
+
+      console.log('Transaction status updated successfully');
 
       // Use the balance_after from the transaction (already calculated when deposit was created)
       const { error: updateError } = await supabase
@@ -94,15 +114,24 @@ export const PendingCashDeposits = () => {
         .order('last_updated', { ascending: false })
         .limit(1);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Balance update error:', updateError);
+        throw updateError;
+      }
+
+      console.log('Balance updated successfully');
 
       toast.success('Cash deposit confirmed successfully');
       
-      // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: ['pending-cash-deposits'] });
-      queryClient.invalidateQueries({ queryKey: ['finance-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['completed-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['finance-cash-balance'] });
+      // Force refetch all relevant queries
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['pending-cash-deposits'] }),
+        queryClient.refetchQueries({ queryKey: ['finance-stats'] }),
+        queryClient.refetchQueries({ queryKey: ['completed-transactions'] }),
+        queryClient.refetchQueries({ queryKey: ['finance-cash-balance'] })
+      ]);
+      
+      console.log('All queries refetched');
     } catch (error: any) {
       console.error('Error confirming deposit:', error);
       toast.error(error.message || 'Failed to confirm deposit');
