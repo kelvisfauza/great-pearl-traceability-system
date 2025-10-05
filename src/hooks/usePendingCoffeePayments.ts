@@ -286,7 +286,7 @@ export const usePendingCoffeePayments = () => {
       // Calculate net payment after advance recovery
       const netPayment = paymentData.amount - (paymentData.advanceRecovered || 0);
 
-      // Deduct from cash balance and record transaction (only net payment)
+      // Update cash balance (net effect)
       const newBalance = availableCash - netPayment;
       
       const { error: balanceUpdateError } = await supabase
@@ -302,23 +302,49 @@ export const usePendingCoffeePayments = () => {
         throw new Error('Failed to update cash balance');
       }
 
-      // Record cash transaction as confirmed (immediate)
-      const { error: transactionError } = await supabase
+      // Record transactions for proper cash flow tracking
+      let currentBalance = availableCash;
+
+      // If advance was recovered, record it as CASH IN first
+      if (paymentData.advanceRecovered && paymentData.advanceRecovered > 0) {
+        const { error: recoveryError } = await supabase
+          .from('finance_cash_transactions')
+          .insert({
+            transaction_type: 'ADVANCE_RECOVERY',
+            amount: paymentData.advanceRecovered,
+            balance_after: currentBalance + paymentData.advanceRecovered,
+            reference: paymentData.batchNumber,
+            notes: `Advance recovery from ${paymentData.supplier} - ${paymentData.batchNumber}`,
+            created_by: employee?.name || 'Finance',
+            status: 'confirmed',
+            confirmed_by: employee?.name || 'Finance',
+            confirmed_at: new Date().toISOString()
+          });
+
+        if (recoveryError) {
+          console.error('Error recording advance recovery:', recoveryError);
+        }
+        
+        currentBalance += paymentData.advanceRecovered;
+      }
+
+      // Record the payment as CASH OUT
+      const { error: paymentError } = await supabase
         .from('finance_cash_transactions')
         .insert({
           transaction_type: 'PAYMENT',
-          amount: -netPayment,
+          amount: -paymentData.amount,
           balance_after: newBalance,
           reference: paymentData.batchNumber,
-          notes: `Payment to ${paymentData.supplier}${paymentData.advanceRecovered ? ` (Advance recovered: UGX ${paymentData.advanceRecovered.toLocaleString()})` : ''} - ${paymentData.notes || paymentData.method}`,
+          notes: `Payment to ${paymentData.supplier} - ${paymentData.batchNumber}${paymentData.notes ? ' - ' + paymentData.notes : ''}`,
           created_by: employee?.name || 'Finance',
           status: 'confirmed',
           confirmed_by: employee?.name || 'Finance',
           confirmed_at: new Date().toISOString()
         });
 
-      if (transactionError) {
-        console.error('Error recording transaction:', transactionError);
+      if (paymentError) {
+        console.error('Error recording payment transaction:', paymentError);
       }
 
       // Update quality assessment status (if it exists)
