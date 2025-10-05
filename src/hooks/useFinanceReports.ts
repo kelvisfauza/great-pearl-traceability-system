@@ -95,18 +95,26 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
         });
       }
 
-      // Fetch payment records from Supabase
+      // Fetch payment records from Supabase (filter by created_at timestamp, not date field)
+      const startOfDay = new Date(dateStr);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(dateStr);
+      endOfDay.setHours(23, 59, 59, 999);
+
       const { data: paymentRecords, error: paymentError } = await supabase
         .from('payment_records')
         .select('*')
-        .eq('date', dateStr);
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
+        .eq('status', 'Paid');
 
       if (paymentError) {
         console.error('Error fetching payment records:', paymentError);
       } else if (paymentRecords) {
+        console.log('📊 Payment records found for date:', paymentRecords.length);
+        
         paymentRecords.forEach(payment => {
           const amountPaid = Number(payment.amount) || 0;
-          const balance = 0; // Payment records are completed
           
           report.totalPaid += amountPaid;
           report.totalCashOut += amountPaid;
@@ -117,57 +125,15 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
             supplier: payment.supplier,
             amount: amountPaid,
             amountPaid: amountPaid,
-            balance: balance,
+            balance: 0,
             status: payment.status,
-            date: payment.date,
+            date: new Date(payment.created_at).toLocaleDateString(),
             batchNumber: payment.batch_number || ''
           });
         });
       }
 
-      // Fetch quality assessments with payments from Firebase
-      const qualityRef = collection(db, 'qualityAssessments');
-      const qualityQuery = query(
-        qualityRef,
-        where('status', '==', 'approved')
-      );
-      const qualitySnapshot = await getDocs(qualityQuery);
-
-      for (const doc of qualitySnapshot.docs) {
-        const assessment = doc.data();
-        const assessmentDate = new Date(assessment.createdAt?.seconds * 1000 || assessment.createdAt);
-        
-        if (assessmentDate.toISOString().split('T')[0] === dateStr) {
-          const totalAmount = Number(assessment.totalAmount) || 0;
-          const amountPaid = Number(assessment.amountPaid) || 0;
-          const balance = totalAmount - amountPaid;
-          const kgs = Number(assessment.kilograms) || 0;
-
-          if (amountPaid > 0) {
-            report.totalCashOut += amountPaid;
-            report.paidCoffeeKgs += kgs;
-
-            if (balance === 0) {
-              report.totalPaid += totalAmount;
-            } else if (amountPaid > 0 && balance > 0) {
-              report.totalPartialPaid += amountPaid;
-              report.totalBalance += balance;
-            }
-
-            report.transactions.push({
-              id: doc.id,
-              type: 'coffee',
-              supplier: assessment.supplierName || 'Unknown',
-              amount: totalAmount,
-              amountPaid: amountPaid,
-              balance: balance,
-              status: balance === 0 ? 'Paid' : 'Partial',
-              date: dateStr,
-              batchNumber: assessment.batchNumber || ''
-            });
-          }
-        }
-      }
+      // Remove duplicate quality assessments check - now using Supabase payment_records only
 
       // Fetch daily tasks for additional financial activities
       const { data: dailyTasks } = await supabase

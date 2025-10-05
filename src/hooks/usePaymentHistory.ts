@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export interface PaymentRecord {
   id: string;
@@ -25,18 +25,22 @@ export const usePaymentHistory = () => {
   const fetchPaymentHistory = async () => {
     try {
       setLoading(true);
-      console.log('📊 Fetching payment history...');
+      console.log('📊 Fetching payment history from Supabase...');
 
-      // Fetch payment records from Firebase
-      const paymentsQuery = query(
-        collection(db, 'payment_records'),
-        orderBy('created_at', 'desc')
-      );
-      const paymentsSnapshot = await getDocs(paymentsQuery);
+      // Fetch payment records from Supabase
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payment_records')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      // Fetch coffee records to get total amounts
-      const coffeeQuery = query(collection(db, 'coffee_records'));
-      const coffeeSnapshot = await getDocs(coffeeQuery);
+      if (paymentsError) {
+        console.error('Error fetching payments:', paymentsError);
+        setPaymentRecords([]);
+        return;
+      }
+
+      // Fetch coffee records from Firebase to get batch details
+      const coffeeSnapshot = await getDocs(collection(db, 'coffee_records'));
       const coffeeMap = new Map();
       
       coffeeSnapshot.docs.forEach(doc => {
@@ -60,18 +64,16 @@ export const usePaymentHistory = () => {
         });
       }
 
-      // Group payments by batch number to calculate totals
+      // Group payments by batch number
       const batchPayments = new Map<string, any[]>();
-      paymentsSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        const batchNumber = data.batchNumber || data.batch_number;
+      (paymentsData || []).forEach(payment => {
+        const batchNumber = payment.batch_number;
+        if (!batchNumber) return;
+        
         if (!batchPayments.has(batchNumber)) {
           batchPayments.set(batchNumber, []);
         }
-        batchPayments.get(batchNumber)?.push({
-          id: doc.id,
-          ...data
-        });
+        batchPayments.get(batchNumber)?.push(payment);
       });
 
       const records: PaymentRecord[] = [];
@@ -84,12 +86,18 @@ export const usePaymentHistory = () => {
         if (coffeeData) {
           const pricePerKg = qualityPrice || coffeeData.pricePerKg || 0;
           const totalAmount = coffeeData.kilograms * pricePerKg;
-          const paidAmount = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+          
+          // Calculate total paid for this batch
+          const paidAmount = payments.reduce((sum, p) => {
+            return sum + (Number(p.amount) || 0);
+          }, 0);
+          
           const balance = totalAmount - paidAmount;
           const status = balance <= 0 ? 'Paid' : 'Partially Paid';
 
-          // Add a record for this batch (combining all payments)
-          const latestPayment = payments[0]; // Most recent
+          // Use the most recent payment for display
+          const latestPayment = payments[0];
+          
           records.push({
             id: latestPayment.id,
             supplier: latestPayment.supplier || coffeeData.supplier,
@@ -98,10 +106,10 @@ export const usePaymentHistory = () => {
             paidAmount,
             balance: Math.max(0, balance),
             status,
-            method: latestPayment.method || 'Cash',
+            method: latestPayment.method || 'Bank Transfer',
             date: latestPayment.date || new Date().toLocaleDateString(),
-            processedBy: latestPayment.processed_by || 'Finance',
-            notes: latestPayment.notes,
+            processedBy: 'Finance',
+            notes: `${payments.length} payment(s)`,
             created_at: latestPayment.created_at || new Date().toISOString()
           });
         }
@@ -112,7 +120,8 @@ export const usePaymentHistory = () => {
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      console.log('📊 Payment history loaded:', records.length, 'records');
+      console.log('📊 Payment history loaded:', records.length, 'batches');
+      console.log('📊 Sample record:', records[0]);
       setPaymentRecords(records);
     } catch (error) {
       console.error('Error fetching payment history:', error);
