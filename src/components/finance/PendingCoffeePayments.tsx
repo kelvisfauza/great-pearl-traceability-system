@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,13 +9,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Coffee, DollarSign, Banknote, CreditCard, Eye, User, Calendar, AlertCircle, XCircle } from 'lucide-react';
 import { usePendingCoffeePayments } from '@/hooks/usePendingCoffeePayments';
 import { useToast } from '@/hooks/use-toast';
+import { useSupplierAdvances } from '@/hooks/useSupplierAdvances';
 
 export const PendingCoffeePayments = () => {
   const { coffeePayments, loading, processPayment } = usePendingCoffeePayments();
   const { toast } = useToast();
+  const { getTotalOutstanding } = useSupplierAdvances();
   
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Bank'>('Cash');
@@ -26,6 +29,16 @@ export const PendingCoffeePayments = () => {
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [errorDetails, setErrorDetails] = useState({ available: 0, required: 0 });
   const [processing, setProcessing] = useState(false);
+  const [recoverAdvance, setRecoverAdvance] = useState(false);
+  const [supplierOutstanding, setSupplierOutstanding] = useState(0);
+
+  useEffect(() => {
+    if (selectedPayment && showPaymentDialog) {
+      const outstanding = getTotalOutstanding(selectedPayment.supplierId);
+      setSupplierOutstanding(outstanding);
+      setRecoverAdvance(outstanding > 0);
+    }
+  }, [selectedPayment, showPaymentDialog, getTotalOutstanding]);
 
   const handleProcessPayment = async () => {
     if (!selectedPayment || processing) return;
@@ -46,6 +59,12 @@ export const PendingCoffeePayments = () => {
     const totalAmount = selectedPayment.quantity * pricePerKg;
     const actualAmount = paymentMethod === 'Cash' ? parseFloat(cashAmount) || totalAmount : totalAmount;
 
+    // Calculate advance recovery
+    let advanceRecovered = 0;
+    if (recoverAdvance && supplierOutstanding > 0) {
+      advanceRecovered = Math.min(supplierOutstanding, actualAmount);
+    }
+
     setProcessing(true);
     try {
       await processPayment({
@@ -55,13 +74,17 @@ export const PendingCoffeePayments = () => {
         amount: actualAmount,
         notes: paymentNotes,
         batchNumber: selectedPayment.batchNumber,
-        supplier: selectedPayment.supplier
+        supplier: selectedPayment.supplier,
+        supplierId: selectedPayment.supplierId,
+        advanceRecovered: advanceRecovered
       });
 
+      const netPayment = actualAmount - advanceRecovered;
+      
       if (paymentMethod === 'Cash') {
         toast({
           title: "Cash Payment Processed",
-          description: `Payment of UGX ${actualAmount.toLocaleString()} processed successfully`
+          description: `Payment of UGX ${netPayment.toLocaleString()} processed${advanceRecovered > 0 ? ` (Advance recovered: UGX ${advanceRecovered.toLocaleString()})` : ''}`
         });
       } else {
         toast({
@@ -75,6 +98,8 @@ export const PendingCoffeePayments = () => {
       setCashAmount('');
       setPaymentNotes('');
       setFinancePrice('');
+      setRecoverAdvance(false);
+      setSupplierOutstanding(0);
     } catch (error: any) {
       console.error('Payment processing error:', error);
       
@@ -303,6 +328,38 @@ export const PendingCoffeePayments = () => {
                     rows={3}
                   />
                 </div>
+
+                {supplierOutstanding > 0 && (
+                  <div className="space-y-3 p-4 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-amber-900 dark:text-amber-100">
+                          Outstanding Advance
+                        </p>
+                        <p className="text-sm text-amber-700 dark:text-amber-300">
+                          UGX {supplierOutstanding.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="recover-advance"
+                        checked={recoverAdvance}
+                        onCheckedChange={(checked) => setRecoverAdvance(checked as boolean)}
+                      />
+                      <Label htmlFor="recover-advance" className="text-sm cursor-pointer">
+                        Recover advance from this payment
+                      </Label>
+                    </div>
+                    {recoverAdvance && (
+                      <div className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
+                        <p>Gross Payment: UGX {parseFloat(cashAmount || financePrice && (selectedPayment.quantity * parseFloat(financePrice)).toString() || '0').toLocaleString()}</p>
+                        <p>Advance Recovery: UGX {Math.min(supplierOutstanding, parseFloat(cashAmount || financePrice && (selectedPayment.quantity * parseFloat(financePrice)).toString() || '0')).toLocaleString()}</p>
+                        <p className="font-semibold">Net Payment: UGX {Math.max(0, parseFloat(cashAmount || financePrice && (selectedPayment.quantity * parseFloat(financePrice)).toString() || '0') - supplierOutstanding).toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2 pt-4">

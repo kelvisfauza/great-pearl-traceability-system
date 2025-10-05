@@ -9,6 +9,7 @@ interface CoffeePayment {
   id: string;
   batchNumber: string;
   supplier: string;
+  supplierId: string;
   assessedBy: string;
   quantity: number;
   pricePerKg: number;
@@ -27,6 +28,8 @@ interface ProcessPaymentData {
   notes?: string;
   batchNumber: string;
   supplier: string;
+  supplierId?: string;
+  advanceRecovered?: number;
 }
 
 export const usePendingCoffeePayments = () => {
@@ -117,6 +120,7 @@ export const usePendingCoffeePayments = () => {
           id: doc.id,
           batchNumber: data.batch_number || 'Unknown',
           supplier: data.supplier_name || 'Unknown Supplier',
+          supplierId: data.supplier_id || '',
           assessedBy,
           quantity,
           pricePerKg,
@@ -203,8 +207,44 @@ export const usePendingCoffeePayments = () => {
         throw new Error(`Failed to update coffee record: ${coffeeUpdateError.message}`);
       }
 
-      // Deduct from cash balance and record transaction
-      const newBalance = availableCash - paymentData.amount;
+      // Handle advance recovery if applicable
+      if (paymentData.advanceRecovered && paymentData.advanceRecovered > 0 && paymentData.supplierId) {
+        // Get supplier advances
+        const { data: advances, error: advError } = await supabase
+          .from('supplier_advances')
+          .select('*')
+          .eq('supplier_id', paymentData.supplierId)
+          .eq('is_closed', false)
+          .order('issued_at', { ascending: true });
+
+        if (advError) throw new Error('Failed to fetch supplier advances');
+
+        let remainingRecovery = paymentData.advanceRecovered;
+        
+        // Recover from oldest advances first
+        for (const advance of advances || []) {
+          if (remainingRecovery <= 0) break;
+
+          const recoveryAmount = Math.min(remainingRecovery, Number(advance.outstanding_ugx));
+          const newOutstanding = Number(advance.outstanding_ugx) - recoveryAmount;
+
+          await supabase
+            .from('supplier_advances')
+            .update({
+              outstanding_ugx: newOutstanding,
+              is_closed: newOutstanding === 0
+            })
+            .eq('id', advance.id);
+
+          remainingRecovery -= recoveryAmount;
+        }
+      }
+
+      // Calculate net payment after advance recovery
+      const netPayment = paymentData.amount - (paymentData.advanceRecovered || 0);
+
+      // Deduct from cash balance and record transaction (only net payment)
+      const newBalance = availableCash - netPayment;
       
       const { error: balanceUpdateError } = await supabase
         .from('finance_cash_balance')
@@ -224,10 +264,10 @@ export const usePendingCoffeePayments = () => {
         .from('finance_cash_transactions')
         .insert({
           transaction_type: 'PAYMENT',
-          amount: -paymentData.amount,
+          amount: -netPayment,
           balance_after: newBalance,
           reference: paymentData.batchNumber,
-          notes: `Payment to ${paymentData.supplier} - ${paymentData.notes || paymentData.method}`,
+          notes: `Payment to ${paymentData.supplier}${paymentData.advanceRecovered ? ` (Advance recovered: UGX ${paymentData.advanceRecovered.toLocaleString()})` : ''} - ${paymentData.notes || paymentData.method}`,
           created_by: employee?.name || 'Finance',
           status: 'confirmed',
           confirmed_by: employee?.name || 'Finance',

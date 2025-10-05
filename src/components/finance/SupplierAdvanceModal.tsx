@@ -10,11 +10,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useHRPayments } from '@/hooks/useHRPayments';
-import { addDoc, collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SupplierAdvanceModalProps {
   open: boolean;
@@ -34,7 +33,7 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
   const { toast } = useToast();
 
   const handleSubmit = async () => {
-    if (!selectedSupplier || !amount || !purpose || !expectedDeliveryDate) {
+    if (!selectedSupplier || !amount || !purpose) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
@@ -64,19 +63,67 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
     }
 
     try {
-      // Create advance record first
-      await addDoc(collection(db, 'employee_advances'), {
-        employee_name: supplier.name,
-        amount: numAmount,
-        reason: purpose,
-        issued_by: employee?.name || 'Finance Department',
-        issued_at: new Date().toISOString(),
-        status: 'Pending',
-        expected_delivery: expectedDeliveryDate.toISOString()
-      });
+      // Get current cash balance
+      const { data: cashBalance, error: cashError } = await supabase
+        .from('finance_cash_balance')
+        .select('*')
+        .order('last_updated', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cashError) throw new Error('Failed to fetch cash balance');
+      if (!cashBalance) throw new Error('No cash balance record found');
+
+      const availableCash = cashBalance.current_balance || 0;
+      if (availableCash < numAmount) {
+        throw new Error(`Insufficient funds. Available: UGX ${availableCash.toLocaleString()}`);
+      }
+
+      // Create advance record in Supabase
+      const { error: advanceError } = await supabase
+        .from('supplier_advances')
+        .insert({
+          supplier_id: supplier.id,
+          amount_ugx: numAmount,
+          outstanding_ugx: numAmount,
+          issued_by: employee?.name || 'Finance Department',
+          description: purpose,
+          is_closed: false
+        });
+
+      if (advanceError) throw advanceError;
+
+      // Update cash balance
+      const newBalance = availableCash - numAmount;
+      const { error: balanceError } = await supabase
+        .from('finance_cash_balance')
+        .update({
+          current_balance: newBalance,
+          updated_by: employee?.name || 'Finance'
+        })
+        .eq('id', cashBalance.id);
+
+      if (balanceError) throw new Error('Failed to update cash balance');
+
+      // Record cash transaction
+      const { error: txError } = await supabase
+        .from('finance_cash_transactions')
+        .insert({
+          transaction_type: 'PAYMENT',
+          amount: -numAmount,
+          balance_after: newBalance,
+          reference: `ADV-${supplier.code}`,
+          notes: `Advance to ${supplier.name} - ${purpose}`,
+          created_by: employee?.name || 'Finance',
+          status: 'confirmed',
+          confirmed_by: employee?.name || 'Finance',
+          confirmed_at: new Date().toISOString()
+        });
+
+      if (txError) console.error('Failed to record transaction:', txError);
 
       toast({
-        title: "Advance Created",
+        title: "Advance Issued",
         description: `Advance of UGX ${numAmount.toLocaleString()} given to ${supplier.name}`,
       });
 
@@ -160,31 +207,6 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Expected Delivery Date</Label>
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {expectedDeliveryDate ? format(expectedDeliveryDate, "PPP") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={expectedDeliveryDate}
-                  onSelect={(date) => {
-                    setExpectedDeliveryDate(date);
-                    setCalendarOpen(false);
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
         </div>
 
         <DialogFooter>
