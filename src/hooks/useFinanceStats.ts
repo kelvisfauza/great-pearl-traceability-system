@@ -31,15 +31,25 @@ const fetchStats = async (): Promise<FinanceStats> => {
     pendingCoffeeAmount += kilograms * pricePerKg;
   });
 
-  // Get available cash from finance_cash_balance table (single source of truth)
-  const { data: cashBalance } = await supabase
-    .from('finance_cash_balance')
-    .select('current_balance')
-    .order('last_updated', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Calculate available cash from all confirmed transactions: Cash In - Cash Out
+  const { data: allTransactions } = await supabase
+    .from('finance_cash_transactions')
+    .select('amount, transaction_type, status')
+    .eq('status', 'confirmed');
 
-  const availableCash = cashBalance?.current_balance || 0;
+  let totalCashIn = 0;
+  let totalCashOut = 0;
+  
+  allTransactions?.forEach(transaction => {
+    const amount = Math.abs(Number(transaction.amount));
+    if (transaction.transaction_type === 'DEPOSIT') {
+      totalCashIn += amount;
+    } else if (transaction.transaction_type === 'PAYMENT') {
+      totalCashOut += amount;
+    }
+  });
+
+  const availableCash = totalCashIn - totalCashOut;
 
   // Fetch pending expense requests from Supabase
   const { data: expenseRequests } = await supabase
