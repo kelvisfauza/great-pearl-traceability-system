@@ -42,9 +42,16 @@ export const PendingCoffeePayments = () => {
       const outstanding = getTotalOutstanding(selectedPayment.supplierId, selectedPayment.supplierCode);
       console.log('💰 Outstanding advance found:', outstanding);
       setSupplierOutstanding(outstanding);
-      setRecoverAdvance(outstanding > 0);
+      // Only auto-check on initial dialog open, not on every change
+      if (outstanding > 0) {
+        setRecoverAdvance(true);
+      }
+    } else {
+      // Reset when dialog closes
+      setRecoverAdvance(false);
+      setSupplierOutstanding(0);
     }
-  }, [selectedPayment, showPaymentDialog, getTotalOutstanding]);
+  }, [selectedPayment, showPaymentDialog]); // Removed getTotalOutstanding from dependencies
 
   const handleProcessPayment = async () => {
     if (!selectedPayment || processing) return;
