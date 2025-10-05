@@ -21,11 +21,25 @@ export const PendingCoffeePayments = () => {
   const [cashAmount, setCashAmount] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [financePrice, setFinancePrice] = useState('');
 
   const handleProcessPayment = async () => {
     if (!selectedPayment) return;
 
-    const totalAmount = selectedPayment.totalAmount;
+    // If not priced by Quality, Finance must set a price
+    if (!selectedPayment.isPricedByQuality && !financePrice) {
+      toast({
+        title: "Price Required",
+        description: "Please set a price per kg before processing payment",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const pricePerKg = selectedPayment.isPricedByQuality 
+      ? selectedPayment.pricePerKg 
+      : parseFloat(financePrice);
+    const totalAmount = selectedPayment.quantity * pricePerKg;
     const actualAmount = paymentMethod === 'Cash' ? parseFloat(cashAmount) || totalAmount : totalAmount;
 
     try {
@@ -54,6 +68,7 @@ export const PendingCoffeePayments = () => {
       setSelectedPayment(null);
       setCashAmount('');
       setPaymentNotes('');
+      setFinancePrice('');
     } catch (error) {
       toast({
         title: "Error",
@@ -122,9 +137,18 @@ export const PendingCoffeePayments = () => {
                       </div>
                     </TableCell>
                     <TableCell>{payment.quantity}</TableCell>
-                    <TableCell>{formatCurrency(payment.pricePerKg)}</TableCell>
+                    <TableCell>
+                      {payment.isPricedByQuality ? (
+                        <div className="flex items-center gap-1">
+                          {formatCurrency(payment.pricePerKg)}
+                          <Badge variant="secondary" className="ml-2 text-xs">Quality</Badge>
+                        </div>
+                      ) : (
+                        <Badge variant="outline" className="text-yellow-600">Not Priced</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="font-bold text-green-600">
-                      {formatCurrency(payment.totalAmount)}
+                      {payment.isPricedByQuality ? formatCurrency(payment.totalAmount) : '-'}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -146,12 +170,13 @@ export const PendingCoffeePayments = () => {
                           onClick={() => {
                             setSelectedPayment(payment);
                             setCashAmount(payment.totalAmount.toString());
+                            setFinancePrice('');
                             setShowPaymentDialog(true);
                           }}
                           className="bg-green-600 hover:bg-green-700"
                         >
                           <DollarSign className="h-4 w-4 mr-1" />
-                          Process Payment
+                          {payment.isPricedByQuality ? 'Process Payment' : 'Price & Pay'}
                         </Button>
                       </div>
                     </TableCell>
@@ -176,10 +201,35 @@ export const PendingCoffeePayments = () => {
                 <p><span className="font-medium">Batch:</span> {selectedPayment.batchNumber}</p>
                 <p><span className="font-medium">Supplier:</span> {selectedPayment.supplier}</p>
                 <p><span className="font-medium">Quantity:</span> {selectedPayment.quantity} kg</p>
-                <p><span className="font-medium">Total:</span> {formatCurrency(selectedPayment.totalAmount)}</p>
+                {selectedPayment.isPricedByQuality ? (
+                  <>
+                    <p><span className="font-medium">Price/kg:</span> {formatCurrency(selectedPayment.pricePerKg)} <Badge variant="secondary" className="ml-2">Set by Quality</Badge></p>
+                    <p><span className="font-medium">Total:</span> {formatCurrency(selectedPayment.totalAmount)}</p>
+                  </>
+                ) : (
+                  <Badge variant="outline" className="text-yellow-600">⚠️ Not yet priced by Quality - Finance can set price</Badge>
+                )}
               </div>
 
               <div className="space-y-4">
+                {!selectedPayment.isPricedByQuality && (
+                  <div>
+                    <Label htmlFor="finance-price">Set Price per Kg (UGX)</Label>
+                    <Input
+                      id="finance-price"
+                      type="number"
+                      value={financePrice}
+                      onChange={(e) => setFinancePrice(e.target.value)}
+                      placeholder="Enter price per kilogram"
+                    />
+                    {financePrice && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Total: {formatCurrency(selectedPayment.quantity * parseFloat(financePrice || '0'))}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <Label>Payment Method</Label>
                   <Select value={paymentMethod} onValueChange={(value: 'Cash' | 'Bank') => setPaymentMethod(value)}>

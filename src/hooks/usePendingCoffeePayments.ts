@@ -14,6 +14,8 @@ interface CoffeePayment {
   totalAmount: number;
   dateAssessed: string;
   qualityAssessmentId: string;
+  isPricedByQuality: boolean;
+  qualityAssessmentExists: boolean;
 }
 
 interface ProcessPaymentData {
@@ -40,9 +42,9 @@ export const usePendingCoffeePayments = () => {
       
       const payments: CoffeePayment[] = [];
       
-      console.log('🔍 Finance fetching from same source as Quality (Firebase coffee_records)...');
+      console.log('🔍 Finance fetching coffee records and checking Quality pricing...');
       
-      // Fetch ALL coffee records from Firebase (same as Quality does)
+      // Fetch ALL coffee records from Firebase
       const coffeeRecordsQuery = query(
         collection(db, 'coffee_records'),
         orderBy('date', 'desc')
@@ -51,32 +53,56 @@ export const usePendingCoffeePayments = () => {
       
       console.log('📦 Found coffee records:', coffeeSnapshot.size);
       
+      // Fetch all quality assessments to check for pricing
+      const qualityQuery = query(collection(db, 'quality_assessments'));
+      const qualitySnapshot = await getDocs(qualityQuery);
+      const qualityAssessments = new Map();
+      
+      qualitySnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.store_record_id) {
+          qualityAssessments.set(data.store_record_id, {
+            id: doc.id,
+            pricePerKg: data.suggested_price || 0,
+            assessedBy: data.assessed_by || 'Quality Department'
+          });
+        }
+      });
+      
+      console.log('🔬 Found quality assessments:', qualityAssessments.size);
+      
       // Convert each coffee record to a payment entry
       coffeeSnapshot.docs.forEach(doc => {
         const data = doc.data();
         
         // Only show records that are pending or ready for payment
-        // Exclude records that have already been paid
         if (data.status === 'paid' || data.status === 'completed') {
           return;
         }
         
         const quantity = Number(data.kilograms) || 0;
-        const pricePerKg = Number(data.price_per_kg) || 7000; // Use stored price or default
-        const totalAmount = quantity * pricePerKg;
+        const qualityAssessment = qualityAssessments.get(doc.id);
         
-        console.log(`📝 Processing: ${data.supplier_name} - ${quantity}kg @ ${pricePerKg}/kg`);
+        // Check if Quality has priced this
+        const isPricedByQuality = !!qualityAssessment && qualityAssessment.pricePerKg > 0;
+        const pricePerKg = isPricedByQuality ? qualityAssessment.pricePerKg : (Number(data.price_per_kg) || 0);
+        const totalAmount = quantity * pricePerKg;
+        const assessedBy = isPricedByQuality ? qualityAssessment.assessedBy : (data.assessed_by || 'Store Department');
+        
+        console.log(`📝 ${data.supplier_name}: ${isPricedByQuality ? '✅ Priced by Quality' : '⏳ Awaiting pricing'}`);
         
         payments.push({
           id: doc.id,
           batchNumber: data.batch_number || 'Unknown',
           supplier: data.supplier_name || 'Unknown Supplier',
-          assessedBy: data.assessed_by || 'Store Department',
+          assessedBy,
           quantity,
           pricePerKg,
           totalAmount,
           dateAssessed: data.date || new Date().toLocaleDateString(),
-          qualityAssessmentId: doc.id
+          qualityAssessmentId: qualityAssessment?.id || doc.id,
+          isPricedByQuality,
+          qualityAssessmentExists: !!qualityAssessment
         });
       });
       
