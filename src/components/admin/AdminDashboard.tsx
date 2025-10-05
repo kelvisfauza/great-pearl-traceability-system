@@ -13,6 +13,7 @@ import QuickPermissionAssignment from './QuickPermissionAssignment';
 import AdminExpenseRequestsManager from './AdminExpenseRequestsManager';
 import ApprovedRequestsHistory from './ApprovedRequestsHistory';
 import CashManagementModal from './CashManagementModal';
+import SystemDataReset from './SystemDataReset';
 import { useUnifiedApprovalRequests } from '@/hooks/useUnifiedApprovalRequests';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import ActiveUsers from '@/components/it/ActiveUsers';
@@ -157,6 +158,9 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* System Data Reset - Admin Only */}
+          <SystemDataReset />
 
           {/* System Overview */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
