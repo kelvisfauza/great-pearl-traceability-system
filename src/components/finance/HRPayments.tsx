@@ -34,8 +34,13 @@ export const HRPayments = () => {
   const [advanceEmployee, setAdvanceEmployee] = useState('');
   const [advanceAmount, setAdvanceAmount] = useState('');
   const [advanceReason, setAdvanceReason] = useState('');
+  const [processingSalary, setProcessingSalary] = useState<string | null>(null);
+  const [processingAdvance, setProcessingAdvance] = useState<string | null>(null);
 
   const handleProcessSalaryPayment = async (paymentId: string, method: 'Cash' | 'Bank') => {
+    if (processingSalary) return;
+    
+    setProcessingSalary(paymentId);
     try {
       await processSalaryPayment(paymentId, method);
       
@@ -56,10 +61,15 @@ export const HRPayments = () => {
         description: "Failed to process salary payment",
         variant: "destructive"
       });
+    } finally {
+      setProcessingSalary(null);
     }
   };
 
   const handleProcessAdvancePayment = async (advanceId: string, method: 'Cash' | 'Bank') => {
+    if (processingAdvance) return;
+    
+    setProcessingAdvance(advanceId);
     try {
       await processAdvancePayment(advanceId, method);
       
@@ -80,6 +90,8 @@ export const HRPayments = () => {
         description: "Failed to process advance payment",
         variant: "destructive"
       });
+    } finally {
+      setProcessingAdvance(null);
     }
   };
 
@@ -283,17 +295,35 @@ export const HRPayments = () => {
                               size="sm"
                               onClick={() => handleProcessSalaryPayment(request.id, 'Cash')}
                               className="bg-green-600 hover:bg-green-700"
+                              disabled={processingSalary === request.id}
                             >
-                              <Banknote className="h-4 w-4 mr-1" />
-                              Pay Cash
+                              {processingSalary === request.id ? (
+                                <div className="flex items-center gap-1">
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                                </div>
+                              ) : (
+                                <>
+                                  <Banknote className="h-4 w-4 mr-1" />
+                                  Pay Cash
+                                </>
+                              )}
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleProcessSalaryPayment(request.id, 'Bank')}
+                              disabled={processingSalary === request.id}
                             >
-                              <CreditCard className="h-4 w-4 mr-1" />
-                              Bank Transfer
+                              {processingSalary === request.id ? (
+                                <div className="flex items-center gap-1">
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                                </div>
+                              ) : (
+                                <>
+                                  <CreditCard className="h-4 w-4 mr-1" />
+                                  Bank Transfer
+                                </>
+                              )}
                             </Button>
                           </div>
                         )}
@@ -365,17 +395,35 @@ export const HRPayments = () => {
                               size="sm"
                               onClick={() => handleProcessAdvancePayment(advance.id, 'Cash')}
                               className="bg-green-600 hover:bg-green-700"
+                              disabled={processingAdvance === advance.id}
                             >
-                              <Banknote className="h-4 w-4 mr-1" />
-                              Pay Cash
+                              {processingAdvance === advance.id ? (
+                                <div className="flex items-center gap-1">
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                                </div>
+                              ) : (
+                                <>
+                                  <Banknote className="h-4 w-4 mr-1" />
+                                  Pay Cash
+                                </>
+                              )}
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleProcessAdvancePayment(advance.id, 'Bank')}
+                              disabled={processingAdvance === advance.id}
                             >
-                              <CreditCard className="h-4 w-4 mr-1" />
-                              Bank Transfer
+                              {processingAdvance === advance.id ? (
+                                <div className="flex items-center gap-1">
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                                </div>
+                              ) : (
+                                <>
+                                  <CreditCard className="h-4 w-4 mr-1" />
+                                  Bank Transfer
+                                </>
+                              )}
                             </Button>
                           </div>
                         )}

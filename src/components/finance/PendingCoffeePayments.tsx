@@ -25,9 +25,10 @@ export const PendingCoffeePayments = () => {
   const [financePrice, setFinancePrice] = useState('');
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [errorDetails, setErrorDetails] = useState({ available: 0, required: 0 });
+  const [processing, setProcessing] = useState(false);
 
   const handleProcessPayment = async () => {
-    if (!selectedPayment) return;
+    if (!selectedPayment || processing) return;
 
     // If not priced by Quality, Finance must set a price
     if (!selectedPayment.isPricedByQuality && !financePrice) {
@@ -45,6 +46,7 @@ export const PendingCoffeePayments = () => {
     const totalAmount = selectedPayment.quantity * pricePerKg;
     const actualAmount = paymentMethod === 'Cash' ? parseFloat(cashAmount) || totalAmount : totalAmount;
 
+    setProcessing(true);
     try {
       await processPayment({
         paymentId: selectedPayment.id,
@@ -95,6 +97,8 @@ export const PendingCoffeePayments = () => {
           variant: "destructive"
         });
       }
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -306,14 +310,23 @@ export const PendingCoffeePayments = () => {
                   variant="outline" 
                   onClick={() => setShowPaymentDialog(false)}
                   className="flex-1"
+                  disabled={processing}
                 >
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleProcessPayment}
                   className="flex-1"
+                  disabled={processing}
                 >
-                  {paymentMethod === 'Cash' ? 'Pay Cash' : 'Submit for Approval'}
+                  {processing ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    paymentMethod === 'Cash' ? 'Pay Cash' : 'Submit for Approval'
+                  )}
                 </Button>
               </div>
             </div>
