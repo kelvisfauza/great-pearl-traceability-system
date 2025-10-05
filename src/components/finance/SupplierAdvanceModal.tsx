@@ -134,6 +134,9 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
         description: `Advance of UGX ${numAmount.toLocaleString()} given to ${supplier.name}`,
       });
 
+      // Force refresh of advances
+      window.location.reload();
+      
       setSelectedSupplier('');
       setAmount('');
       setPurpose('');
