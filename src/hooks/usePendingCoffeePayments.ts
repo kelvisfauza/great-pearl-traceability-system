@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, where, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, where, addDoc, updateDoc, doc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,81 +40,42 @@ export const usePendingCoffeePayments = () => {
       
       const payments: CoffeePayment[] = [];
       
-      console.log('🔍 Fetching pending coffee payments from finance_coffee_lots...');
+      console.log('🔍 Finance fetching from same source as Quality (Firebase coffee_records)...');
       
-      // Fetch from Supabase finance_coffee_lots (new parallel workflow)
-      const { data: financeLots, error: financeError } = await supabase
-        .from('finance_coffee_lots')
-        .select('*')
-        .eq('finance_status', 'READY_FOR_FINANCE');
-
-      console.log('📊 Finance lots found:', financeLots?.length || 0, 'Error:', financeError);
-      
-      if (!financeError && financeLots) {
-        for (const lot of financeLots) {
-          // Get supplier name from coffee_records
-          const { data: coffeeRecord } = await supabase
-            .from('coffee_records')
-            .select('supplier_name, batch_number')
-            .eq('id', lot.coffee_record_id)
-            .maybeSingle();
-
-          const qualityJson = lot.quality_json as any;
-
-          payments.push({
-            id: lot.id,
-            batchNumber: coffeeRecord?.batch_number || qualityJson?.batch_number || 'Unknown',
-            supplier: coffeeRecord?.supplier_name || 'Unknown Supplier',
-            assessedBy: lot.assessed_by,
-            quantity: lot.quantity_kg,
-            pricePerKg: lot.unit_price_ugx,
-            totalAmount: lot.total_amount_ugx || (lot.quantity_kg * lot.unit_price_ugx),
-            dateAssessed: new Date(lot.assessed_at).toLocaleDateString(),
-            qualityAssessmentId: lot.id
-          });
-        }
-      }
-      
-      // Also fetch quality assessments from Firebase (legacy workflow)
-      const qualityQuery = query(
-        collection(db, 'quality_assessments'),
-        where('status', 'in', ['assessed', 'submitted_to_finance'])
+      // Fetch ALL coffee records from Firebase (same as Quality does)
+      const coffeeRecordsQuery = query(
+        collection(db, 'coffee_records'),
+        orderBy('date', 'desc')
       );
-      const qualitySnapshot = await getDocs(qualityQuery);
-      
-      // Fetch coffee records for legacy workflow
-      const coffeeRecordsQuery = query(collection(db, 'coffee_records'));
       const coffeeSnapshot = await getDocs(coffeeRecordsQuery);
-      const coffeeRecords = coffeeSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
       
-      qualitySnapshot.docs.forEach(doc => {
+      console.log('📦 Found coffee records:', coffeeSnapshot.size);
+      
+      // Convert each coffee record to a payment entry
+      coffeeSnapshot.docs.forEach(doc => {
         const data = doc.data();
         
-        // Skip if already in payments from finance_coffee_lots
-        if (payments.some(p => p.qualityAssessmentId === doc.id)) return;
+        // Only show records that are pending or ready for payment
+        // Exclude records that have already been paid
+        if (data.status === 'paid' || data.status === 'completed') {
+          return;
+        }
         
-        // Find corresponding coffee record
-        const coffeeRecord = coffeeRecords.find((cr: any) => 
-          cr.id === data.store_record_id || 
-          cr.batch_number === data.batch_number
-        );
-        
-        const quantity = (coffeeRecord as any)?.kilograms || data.kilograms || 0;
-        const pricePerKg = data.suggested_price || 0;
+        const quantity = Number(data.kilograms) || 0;
+        const pricePerKg = Number(data.price_per_kg) || 7000; // Use stored price or default
         const totalAmount = quantity * pricePerKg;
+        
+        console.log(`📝 Processing: ${data.supplier_name} - ${quantity}kg @ ${pricePerKg}/kg`);
         
         payments.push({
           id: doc.id,
           batchNumber: data.batch_number || 'Unknown',
-          supplier: (coffeeRecord as any)?.supplier_name || data.supplier_name || 'Unknown Supplier',
-          assessedBy: data.assessed_by || 'Unknown',
+          supplier: data.supplier_name || 'Unknown Supplier',
+          assessedBy: data.assessed_by || 'Store Department',
           quantity,
           pricePerKg,
           totalAmount,
-          dateAssessed: new Date(data.created_at || data.date_assessed).toLocaleDateString(),
+          dateAssessed: data.date || new Date().toLocaleDateString(),
           qualityAssessmentId: doc.id
         });
       });
