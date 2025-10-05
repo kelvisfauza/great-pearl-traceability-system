@@ -55,7 +55,23 @@ export const PendingCashDeposits = () => {
 
   const handleConfirm = async (transactionId: string, amount: number) => {
     try {
-      // Update transaction status
+      // Get the transaction to check its balance_after value
+      const { data: transaction, error: fetchError } = await supabase
+        .from('finance_cash_transactions')
+        .select('*')
+        .eq('id', transactionId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Only update the balance if this is truly a pending transaction
+      if (transaction.status !== 'pending') {
+        toast.error('This deposit has already been confirmed');
+        queryClient.invalidateQueries({ queryKey: ['pending-cash-deposits'] });
+        return;
+      }
+
+      // Update transaction status to confirmed
       const { error: transactionError } = await supabase
         .from('finance_cash_transactions')
         .update({
@@ -63,37 +79,30 @@ export const PendingCashDeposits = () => {
           confirmed_by: user?.email || 'Finance',
           confirmed_at: new Date().toISOString()
         })
-        .eq('id', transactionId);
+        .eq('id', transactionId)
+        .eq('status', 'pending'); // Only update if still pending
 
       if (transactionError) throw transactionError;
 
-      // Get current balance
-      const { data: balanceData, error: balanceError } = await supabase
-        .from('finance_cash_balance')
-        .select('*')
-        .order('last_updated', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (balanceError) throw balanceError;
-
-      // Update balance
-      const newBalance = (balanceData.current_balance || 0) + amount;
-      
+      // Use the balance_after from the transaction (already calculated when deposit was created)
       const { error: updateError } = await supabase
         .from('finance_cash_balance')
         .update({
-          current_balance: newBalance,
+          current_balance: transaction.balance_after,
           updated_by: user?.email || 'Finance'
         })
-        .eq('id', balanceData.id);
+        .order('last_updated', { ascending: false })
+        .limit(1);
 
       if (updateError) throw updateError;
 
       toast.success('Cash deposit confirmed successfully');
+      
+      // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: ['pending-cash-deposits'] });
       queryClient.invalidateQueries({ queryKey: ['finance-stats'] });
       queryClient.invalidateQueries({ queryKey: ['completed-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-cash-balance'] });
     } catch (error: any) {
       console.error('Error confirming deposit:', error);
       toast.error(error.message || 'Failed to confirm deposit');

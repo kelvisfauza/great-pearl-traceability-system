@@ -29,6 +29,7 @@ export const CompletedTransactions = () => {
   const coffeeTransactions = filteredTransactions.filter(t => t.type === 'coffee');
   const expenseTransactions = filteredTransactions.filter(t => t.type === 'expense');
   const hrTransactions = filteredTransactions.filter(t => t.type === 'hr');
+  const cashTransactions = filteredTransactions.filter(t => t.type === 'cash');
 
   if (loading) {
     return (
@@ -66,9 +67,12 @@ export const CompletedTransactions = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="coffee" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="coffee">
                 Coffee Payments ({coffeeTransactions.length})
+              </TabsTrigger>
+              <TabsTrigger value="cash">
+                Cash Deposits ({cashTransactions.length})
               </TabsTrigger>
               <TabsTrigger value="expenses">
                 Expense Payments ({expenseTransactions.length})
@@ -136,6 +140,58 @@ export const CompletedTransactions = () => {
                 <div className="text-center py-8 text-muted-foreground">
                   <Receipt className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                   <p>No completed coffee payments</p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="cash" className="space-y-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Added By</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Date Confirmed</TableHead>
+                    <TableHead>Confirmed By</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cashTransactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell>
+                        <Badge variant="outline" className="bg-green-50">
+                          {transaction.batchNumber}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          {transaction.supplier}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-bold text-green-600">
+                        {formatCurrency(transaction.amountPaid)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          {transaction.dateCompleted}
+                        </div>
+                      </TableCell>
+                      <TableCell>{transaction.processedBy}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {transaction.notes || 'N/A'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {cashTransactions.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p>No confirmed cash deposits</p>
                 </div>
               )}
             </TabsContent>

@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface CompletedTransaction {
   id: string;
-  type: 'coffee' | 'expense' | 'hr';
+  type: 'coffee' | 'expense' | 'hr' | 'cash';
   batchNumber: string;
   supplier: string;
   method: string;
@@ -71,16 +71,18 @@ const fetchCompletedTransactions = async (): Promise<CompletedTransaction[]> => 
         .order('confirmed_at', { ascending: false });
 
       confirmedDeposits?.forEach(deposit => {
+        const dateToUse = deposit.confirmed_at || deposit.created_at || new Date().toISOString();
         allTransactions.push({
           id: deposit.id,
-          type: 'coffee',
-          batchNumber: 'CASH-DEP',
+          type: 'cash',
+          batchNumber: 'CASH-DEPOSIT',
           supplier: deposit.created_by || 'Cash Deposit',
           method: 'Cash',
           amountPaid: Number(deposit.amount),
           balance: 0,
-          dateCompleted: new Date(deposit.confirmed_at).toLocaleDateString(),
+          dateCompleted: new Date(dateToUse).toLocaleDateString(),
           processedBy: deposit.confirmed_by || 'Finance Department',
+          description: 'Cash Deposit',
           notes: deposit.notes || 'Cash deposit confirmed'
         });
       });
