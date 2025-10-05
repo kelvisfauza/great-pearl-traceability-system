@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Supplier {
@@ -24,17 +23,21 @@ export const useSuppliers = () => {
   const fetchSuppliers = async () => {
     try {
       setLoading(true);
-      console.log('Fetching suppliers from Firebase...');
+      console.log('Fetching suppliers from Supabase...');
       
-      const suppliersQuery = query(collection(db, 'suppliers'), orderBy('created_at', 'desc'));
-      const querySnapshot = await getDocs(suppliersQuery);
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .order('created_at', { ascending: false });
       
-      const suppliersData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      if (error) throw error;
+      
+      const suppliersData = (data || []).map(supplier => ({
+        ...supplier,
+        date_registered: supplier.date_registered || new Date().toISOString().split('T')[0]
       })) as Supplier[];
       
-      console.log('Firebase suppliers:', suppliersData);
+      console.log('Supabase suppliers:', suppliersData);
       setSuppliers(suppliersData);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
@@ -51,7 +54,7 @@ export const useSuppliers = () => {
     opening_balance: number;
   }) => {
     try {
-      console.log('Adding supplier to Firebase:', supplierData);
+      console.log('Adding supplier to Supabase:', supplierData);
       
       const supplierToAdd = {
         name: supplierData.name,
@@ -59,14 +62,16 @@ export const useSuppliers = () => {
         phone: supplierData.phone || null,
         code: `SUP${Date.now()}`,
         opening_balance: supplierData.opening_balance || 0,
-        date_registered: new Date().toISOString().split('T')[0],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        date_registered: new Date().toISOString().split('T')[0]
       };
 
       console.log('Supplier object to add:', supplierToAdd);
 
-      await addDoc(collection(db, 'suppliers'), supplierToAdd);
+      const { error } = await supabase
+        .from('suppliers')
+        .insert(supplierToAdd);
+
+      if (error) throw error;
       
       console.log('Supplier added successfully');
       toast({
