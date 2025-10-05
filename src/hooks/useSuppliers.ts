@@ -1,6 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Supplier {
@@ -23,22 +25,49 @@ export const useSuppliers = () => {
   const fetchSuppliers = async () => {
     try {
       setLoading(true);
-      console.log('Fetching suppliers from Supabase...');
+      console.log('Fetching suppliers from both Supabase and Firebase...');
       
-      const { data, error } = await supabase
+      // Fetch from Supabase
+      const { data: supabaseData, error } = await supabase
         .from('suppliers')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) console.error('Supabase error:', error);
       
-      const suppliersData = (data || []).map(supplier => ({
+      const supabaseSuppliers = (supabaseData || []).map(supplier => ({
         ...supplier,
-        date_registered: supplier.date_registered || new Date().toISOString().split('T')[0]
+        date_registered: supplier.date_registered || new Date().toISOString().split('T')[0],
+        source: 'supabase'
       })) as Supplier[];
       
-      console.log('Supabase suppliers:', suppliersData);
-      setSuppliers(suppliersData);
+      // Fetch from Firebase
+      const suppliersQuery = query(collection(db, 'suppliers'), orderBy('created_at', 'desc'));
+      const querySnapshot = await getDocs(suppliersQuery);
+      
+      const firebaseSuppliers = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || '',
+          code: data.code || '',
+          phone: data.phone || null,
+          origin: data.origin || '',
+          opening_balance: data.opening_balance || 0,
+          date_registered: data.date_registered || new Date().toISOString().split('T')[0],
+          created_at: data.created_at || new Date().toISOString(),
+          updated_at: data.updated_at || new Date().toISOString()
+        } as Supplier;
+      });
+      
+      // Combine both sources
+      const allSuppliers = [...supabaseSuppliers, ...firebaseSuppliers];
+      
+      console.log('Supabase suppliers:', supabaseSuppliers.length);
+      console.log('Firebase suppliers:', firebaseSuppliers.length);
+      console.log('Total suppliers:', allSuppliers.length);
+      
+      setSuppliers(allSuppliers);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       setSuppliers([]);
@@ -54,7 +83,7 @@ export const useSuppliers = () => {
     opening_balance: number;
   }) => {
     try {
-      console.log('Adding supplier to Supabase:', supplierData);
+      console.log('Adding supplier to Supabase (new suppliers go to Supabase only):', supplierData);
       
       const supplierToAdd = {
         name: supplierData.name,
