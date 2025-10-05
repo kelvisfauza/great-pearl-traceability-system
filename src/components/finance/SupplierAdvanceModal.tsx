@@ -32,6 +32,12 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
   const { employee } = useAuth();
   const { toast } = useToast();
 
+  // Filter to only suppliers with valid UUID format (from Supabase)
+  const validSuppliers = suppliers.filter(s => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(s.id);
+  });
+
   const handleSubmit = async () => {
     if (!selectedSupplier || !amount || !purpose) {
       toast({
@@ -52,7 +58,7 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
       return;
     }
 
-    const supplier = suppliers.find(s => s.id === selectedSupplier);
+    const supplier = validSuppliers.find(s => s.id === selectedSupplier);
     if (!supplier) {
       toast({
         title: "Error",
@@ -91,7 +97,10 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
           is_closed: false
         });
 
-      if (advanceError) throw advanceError;
+      if (advanceError) {
+        console.error('Advance insert error:', advanceError);
+        throw new Error(`Failed to create advance: ${advanceError.message}`);
+      }
 
       // Update cash balance
       const newBalance = availableCash - numAmount;
@@ -132,11 +141,11 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
       setPurpose('');
       setExpectedDeliveryDate(undefined);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating supplier advance:', error);
       toast({
         title: "Error",
-        description: "Failed to create supplier advance",
+        description: error.message || "Failed to create supplier advance",
         variant: "destructive"
       });
     }
@@ -176,11 +185,17 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
                 <SelectValue placeholder="Select supplier" />
               </SelectTrigger>
               <SelectContent>
-                {suppliers.map((supplier) => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    {supplier.name} - {supplier.code}
-                  </SelectItem>
-                ))}
+                {validSuppliers.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground">
+                    No suppliers available. Add suppliers in Procurement.
+                  </div>
+                ) : (
+                  validSuppliers.map((supplier) => (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      {supplier.name} - {supplier.code}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
