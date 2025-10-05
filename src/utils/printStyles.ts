@@ -1,16 +1,18 @@
 export const getStandardPrintStyles = () => `
   @page {
-    margin: 0.4in;
-    size: A4;
+    margin: 0.5in 0.3in;
+    size: A4 portrait;
   }
   
-  body { 
-    font-family: Arial, sans-serif; 
-    margin: 0; 
-    padding: 15px;
-    line-height: 1.2;
-    color: #333;
-    font-size: 12px;
+  @media print {
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 0; 
+      padding: 0;
+      line-height: 1.1;
+      color: #000;
+      font-size: 9px;
+    }
   }
   
   .print-header {
@@ -72,27 +74,41 @@ export const getStandardPrintStyles = () => `
     border-left: 3px solid #007bff;
   }
   
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 10px 0;
-    font-size: 11px;
-  }
-  
-  th, td {
-    border: 1px solid #ddd;
-    padding: 4px 6px;
-    text-align: left;
-  }
-  
-  th {
-    background-color: #f8f9fa;
-    font-weight: bold;
-  }
-  
-  .amount {
-    text-align: right;
-    font-weight: 500;
+  @media print {
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6px 0;
+      font-size: 8px;
+      page-break-inside: auto;
+    }
+    
+    th, td {
+      border: 1px solid #333;
+      padding: 2px 4px;
+      text-align: left;
+      word-wrap: break-word;
+    }
+    
+    th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+      font-size: 8px;
+    }
+    
+    .amount {
+      text-align: right;
+      font-weight: 500;
+    }
+    
+    tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+    
+    thead {
+      display: table-header-group;
+    }
   }
   
   .signatures {

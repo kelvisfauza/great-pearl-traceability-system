@@ -24,19 +24,7 @@ const DayBook = () => {
   };
 
   const handlePrint = () => {
-    const printStyles = `
-      <style>
-        ${getStandardPrintStyles()}
-      </style>
-    `;
-    
-    const originalContents = document.body.innerHTML;
-    const printContents = document.querySelector('.space-y-6')?.innerHTML || '';
-    
-    document.body.innerHTML = printStyles + printContents;
     window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload(); // Reload to restore event listeners
   };
 
   if (loading) {
