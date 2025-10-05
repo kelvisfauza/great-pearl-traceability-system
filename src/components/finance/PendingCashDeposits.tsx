@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,8 +24,34 @@ export const PendingCashDeposits = () => {
 
       if (error) throw error;
       return data || [];
-    }
+    },
+    refetchInterval: 5000 // Refetch every 5 seconds to ensure fresh data
   });
+
+  // Real-time subscription for cash transactions
+  useEffect(() => {
+    const channel = supabase
+      .channel('cash-transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'finance_cash_transactions'
+        },
+        () => {
+          // Refetch queries when any change happens
+          queryClient.invalidateQueries({ queryKey: ['pending-cash-deposits'] });
+          queryClient.invalidateQueries({ queryKey: ['finance-stats'] });
+          queryClient.invalidateQueries({ queryKey: ['completed-transactions'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const handleConfirm = async (transactionId: string, amount: number) => {
     try {
