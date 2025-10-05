@@ -118,12 +118,16 @@ const Auth = () => {
         .eq('email', email)
         .single();
 
-      if (employee?.role === 'Administrator') {
-        // Admin user - require biometric verification
+      // Bypass biometric in preview/development environments
+      const isPreviewOrDev = window.location.hostname.includes('lovable.app') || 
+                              window.location.hostname === 'localhost';
+
+      if (employee?.role === 'Administrator' && !isPreviewOrDev) {
+        // Admin user in production - require biometric verification
         setShowBiometric(true);
         setLoading(false);
       } else {
-        // Regular user - no additional verification needed
+        // Regular user or preview environment - no biometric verification
         navigate('/');
         setLoading(false);
       }
