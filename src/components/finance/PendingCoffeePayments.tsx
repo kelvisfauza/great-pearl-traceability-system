@@ -82,6 +82,7 @@ export const PendingCoffeePayments = () => {
         batchNumber: selectedPayment.batchNumber,
         supplier: selectedPayment.supplier,
         supplierId: selectedPayment.supplierId,
+        supplierCode: selectedPayment.supplierCode,
         advanceRecovered: advanceRecovered
       });
 
@@ -359,11 +360,29 @@ export const PendingCoffeePayments = () => {
                         Recover advance from this payment
                       </Label>
                     </div>
-                    {recoverAdvance && (
-                      <div className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
-                        <p>Gross Payment: UGX {parseFloat(cashAmount || financePrice && (selectedPayment.quantity * parseFloat(financePrice)).toString() || '0').toLocaleString()}</p>
-                        <p>Advance Recovery: UGX {Math.min(supplierOutstanding, parseFloat(cashAmount || financePrice && (selectedPayment.quantity * parseFloat(financePrice)).toString() || '0')).toLocaleString()}</p>
-                        <p className="font-semibold">Net Payment: UGX {Math.max(0, parseFloat(cashAmount || financePrice && (selectedPayment.quantity * parseFloat(financePrice)).toString() || '0') - supplierOutstanding).toLocaleString()}</p>
+                     {recoverAdvance && (
+                      <div className="text-sm text-amber-800 dark:text-amber-200 space-y-1 bg-white/50 dark:bg-black/20 p-3 rounded border border-amber-300">
+                        <p className="flex justify-between">
+                          <span>Gross Payment:</span>
+                          <span className="font-semibold">UGX {parseFloat(cashAmount || financePrice && (selectedPayment.quantity * parseFloat(financePrice)).toString() || '0').toLocaleString()}</span>
+                        </p>
+                        <p className="flex justify-between text-orange-700 dark:text-orange-400">
+                          <span>- Advance Recovery:</span>
+                          <span className="font-semibold">UGX {Math.min(supplierOutstanding, parseFloat(cashAmount || financePrice && (selectedPayment.quantity * parseFloat(financePrice)).toString() || '0')).toLocaleString()}</span>
+                        </p>
+                        <div className="border-t border-amber-300 pt-2 mt-2">
+                          <p className="flex justify-between text-base font-bold text-green-700 dark:text-green-400">
+                            <span>Net Payment to Supplier:</span>
+                            <span>UGX {Math.max(0, parseFloat(cashAmount || financePrice && (selectedPayment.quantity * parseFloat(financePrice)).toString() || '0') - supplierOutstanding).toLocaleString()}</span>
+                          </p>
+                        </div>
+                        {Math.min(supplierOutstanding, parseFloat(cashAmount || financePrice && (selectedPayment.quantity * parseFloat(financePrice)).toString() || '0')) === supplierOutstanding ? (
+                          <p className="text-xs text-green-700 dark:text-green-400 font-medium mt-2">✓ Advance will be fully paid</p>
+                        ) : (
+                          <p className="text-xs text-amber-700 dark:text-amber-400 font-medium mt-2">
+                            Remaining advance: UGX {(supplierOutstanding - Math.min(supplierOutstanding, parseFloat(cashAmount || financePrice && (selectedPayment.quantity * parseFloat(financePrice)).toString() || '0'))).toLocaleString()}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

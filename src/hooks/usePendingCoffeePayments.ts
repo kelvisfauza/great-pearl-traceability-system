@@ -30,6 +30,7 @@ interface ProcessPaymentData {
   batchNumber: string;
   supplier: string;
   supplierId?: string;
+  supplierCode?: string;
   advanceRecovered?: number;
 }
 
@@ -212,45 +213,74 @@ export const usePendingCoffeePayments = () => {
 
       // Handle advance recovery if applicable
       if (paymentData.advanceRecovered && paymentData.advanceRecovered > 0 && paymentData.supplierId) {
-        // Get supplier advances from Firebase
+        console.log('💰 Processing advance recovery:', {
+          supplierId: paymentData.supplierId,
+          supplierCode: paymentData.supplierCode,
+          amountToRecover: paymentData.advanceRecovered
+        });
+
+        // Get supplier advances from Firebase - match by ID OR code for flexibility
         const advancesQuery = query(
           collection(db, 'supplier_advances'),
-          where('supplier_id', '==', paymentData.supplierId),
           where('is_closed', '==', false),
           orderBy('issued_at', 'asc')
         );
         
         const advancesSnapshot = await getDocs(advancesQuery);
-        const advances = advancesSnapshot.docs.map(doc => ({
+        const allAdvances = advancesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Array<{
           id: string;
           supplier_id: string;
+          supplier_code?: string;
           outstanding_ugx: number;
           amount_ugx: number;
           is_closed: boolean;
           [key: string]: any;
         }>;
 
+        // Filter advances for this supplier (match by ID or code)
+        const advances = allAdvances.filter(adv => 
+          adv.supplier_id === paymentData.supplierId || 
+          (paymentData.supplierCode && adv.supplier_code === paymentData.supplierCode)
+        );
+
+        console.log('📋 Found advances to recover:', advances.length);
+
         let remainingRecovery = paymentData.advanceRecovered;
+        let totalRecovered = 0;
         
-        // Recover from oldest advances first
+        // Recover from oldest advances first (FIFO)
         for (const advance of advances || []) {
           if (remainingRecovery <= 0) break;
 
-          const recoveryAmount = Math.min(remainingRecovery, Number(advance.outstanding_ugx));
-          const newOutstanding = Number(advance.outstanding_ugx) - recoveryAmount;
+          const currentOutstanding = Number(advance.outstanding_ugx);
+          const recoveryAmount = Math.min(remainingRecovery, currentOutstanding);
+          const newOutstanding = currentOutstanding - recoveryAmount;
+          const isClosed = newOutstanding === 0;
+
+          console.log(`   💵 Recovering from advance ${advance.id}:`, {
+            outstanding: currentOutstanding,
+            recovering: recoveryAmount,
+            newOutstanding,
+            willClose: isClosed
+          });
 
           const advanceRef = doc(db, 'supplier_advances', advance.id);
           await updateDoc(advanceRef, {
             outstanding_ugx: newOutstanding,
-            is_closed: newOutstanding === 0,
+            is_closed: isClosed,
             updated_at: new Date().toISOString()
           });
 
+          totalRecovered += recoveryAmount;
           remainingRecovery -= recoveryAmount;
+          
+          console.log(`   ✅ Advance ${isClosed ? 'fully paid' : 'partially recovered'}`);
         }
+
+        console.log('✅ Total advance recovered:', totalRecovered);
       }
 
       // Calculate net payment after advance recovery
