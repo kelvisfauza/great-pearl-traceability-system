@@ -206,8 +206,12 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
         });
       });
 
-      // Sort transactions by amount (descending)
-      report.transactions.sort((a, b) => b.amount - a.amount);
+      // Sort transactions by date (most recent first)
+      report.transactions.sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return dateB - dateA; // Most recent first
+      });
 
       setReportData(report);
     } catch (error) {
