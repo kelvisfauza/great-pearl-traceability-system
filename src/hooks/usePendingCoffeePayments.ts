@@ -144,6 +144,11 @@ export const usePendingCoffeePayments = () => {
     try {
       console.log('💰 Processing payment:', paymentData);
       
+      // Validate payment data
+      if (!paymentData.paymentId || !paymentData.supplier || !paymentData.batchNumber) {
+        throw new Error('Missing required payment information');
+      }
+
       // Create payment record in Firebase
       const paymentRecord = {
         supplier: paymentData.supplier,
@@ -160,17 +165,22 @@ export const usePendingCoffeePayments = () => {
         processed_by: employee?.name || 'Finance Department'
       };
 
-      console.log('📝 Creating payment record...');
-      await addDoc(collection(db, 'payment_records'), paymentRecord);
-      console.log('✅ Payment record created');
+      console.log('📝 Creating payment record...', paymentRecord);
+      const paymentDocRef = await addDoc(collection(db, 'payment_records'), paymentRecord);
+      console.log('✅ Payment record created:', paymentDocRef.id);
 
       // Update coffee_record status to "paid" in Firebase
-      console.log('📦 Updating coffee record:', paymentData.paymentId);
-      await updateDoc(doc(db, 'coffee_records', paymentData.paymentId), {
-        status: 'paid',
-        updated_at: new Date().toISOString()
-      });
-      console.log('✅ Coffee record updated to paid');
+      console.log('📦 Updating coffee record status:', paymentData.paymentId);
+      try {
+        await updateDoc(doc(db, 'coffee_records', paymentData.paymentId), {
+          status: 'paid',
+          updated_at: new Date().toISOString()
+        });
+        console.log('✅ Coffee record updated to paid');
+      } catch (coffeeUpdateError: any) {
+        console.error('❌ Failed to update coffee record:', coffeeUpdateError);
+        throw new Error(`Failed to update coffee record: ${coffeeUpdateError.message}`);
+      }
 
       // Update quality assessment status (if it exists)
       if (paymentData.qualityAssessmentId && paymentData.qualityAssessmentId !== paymentData.paymentId) {
@@ -195,8 +205,9 @@ export const usePendingCoffeePayments = () => {
               updated_at: new Date().toISOString()
             });
             console.log('✅ Quality assessment updated in Firebase');
-          } catch (fbError) {
+          } catch (fbError: any) {
             console.error('❌ Firebase update also failed:', fbError);
+            // Don't throw here, quality assessment update is optional
           }
         } else {
           console.log('✅ Quality assessment updated in Supabase');
@@ -228,8 +239,15 @@ export const usePendingCoffeePayments = () => {
 
       // Refresh the payments list
       await fetchPendingPayments();
-    } catch (error) {
-      console.error('Error processing payment:', error);
+      
+      console.log('✅ Payment processing completed successfully');
+    } catch (error: any) {
+      console.error('❌ Error processing payment:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        code: error?.code,
+        stack: error?.stack
+      });
       throw error;
     }
   };

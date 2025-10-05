@@ -70,10 +70,11 @@ export const PendingCoffeePayments = () => {
       setCashAmount('');
       setPaymentNotes('');
       setFinancePrice('');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Payment processing error:', error);
       toast({
         title: "Error",
-        description: "Failed to process payment. Please try again.",
+        description: error?.message || "Failed to process payment. Please try again.",
         variant: "destructive"
       });
     }
