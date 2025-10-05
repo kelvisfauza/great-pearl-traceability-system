@@ -42,7 +42,7 @@ const fetchStats = async (): Promise<FinanceStats> => {
   
   allTransactions?.forEach(transaction => {
     const amount = Math.abs(Number(transaction.amount));
-    if (transaction.transaction_type === 'DEPOSIT') {
+    if (transaction.transaction_type === 'DEPOSIT' || transaction.transaction_type === 'ADVANCE_RECOVERY') {
       totalCashIn += amount;
     } else if (transaction.transaction_type === 'PAYMENT') {
       totalCashOut += amount;
