@@ -82,6 +82,7 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
       }
 
       // Create advance record in Firebase
+      console.log('💰 Creating advance with supplier ID:', supplier.id);
       await addDoc(collection(db, 'supplier_advances'), {
         supplier_id: supplier.id,
         supplier_name: supplier.name,

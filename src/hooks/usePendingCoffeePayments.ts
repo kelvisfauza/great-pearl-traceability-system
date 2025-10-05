@@ -115,6 +115,7 @@ export const usePendingCoffeePayments = () => {
         const assessedBy = isPricedByQuality ? qualityAssessment.assessedBy : (data.assessed_by || 'Store Department');
         
         console.log(`📝 ${data.supplier_name}: ${isPricedByQuality ? '✅ Priced by Quality' : '⏳ Awaiting pricing'}`);
+        console.log(`   Supplier ID from coffee record: "${data.supplier_id}"`);
         
         payments.push({
           id: doc.id,
