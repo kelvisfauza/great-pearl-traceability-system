@@ -178,6 +178,34 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
         });
       }
 
+      // Fetch supplier advances from Firebase
+      const advancesQuery = query(
+        collection(db, 'supplier_advances'),
+        where('issued_at', '>=', startOfDay.toISOString()),
+        where('issued_at', '<=', endOfDay.toISOString())
+      );
+
+      const advancesSnapshot = await getDocs(advancesQuery);
+      advancesSnapshot.forEach(doc => {
+        const advance = doc.data();
+        const advanceAmount = Number(advance.amount_ugx) || 0;
+        
+        report.totalCashOut += advanceAmount;
+        
+        // Add advance to transactions for visibility
+        report.transactions.push({
+          id: doc.id,
+          type: 'expense',
+          supplier: `Supplier Advance - ${advance.supplier_name || 'Unknown'}`,
+          amount: advanceAmount,
+          amountPaid: advanceAmount,
+          balance: 0,
+          status: 'Advance Given',
+          date: new Date(advance.issued_at).toLocaleDateString(),
+          batchNumber: advance.supplier_code || 'ADV'
+        });
+      });
+
       // Sort transactions by amount (descending)
       report.transactions.sort((a, b) => b.amount - a.amount);
 

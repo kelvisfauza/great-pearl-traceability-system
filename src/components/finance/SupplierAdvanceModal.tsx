@@ -123,7 +123,10 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
           confirmed_at: new Date().toISOString()
         });
 
-      if (txError) console.error('Failed to record transaction:', txError);
+      if (txError) {
+        console.error('Failed to record transaction:', txError);
+        throw new Error(`Failed to record transaction: ${txError.message}`);
+      }
 
       toast({
         title: "Advance Issued",
