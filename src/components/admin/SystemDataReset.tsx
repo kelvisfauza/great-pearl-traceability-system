@@ -173,49 +173,71 @@ const SystemDataReset = () => {
         console.log(`✅ Deleted ${snapshot.size} documents from Firebase ${collectionName}`);
       }
 
-      // Supabase Tables to delete
+      // Supabase Tables to delete - ordered by foreign key dependencies (children first)
       const supabaseTables = [
-        'sales_transactions',
-        'inventory_items',
-        'purchase_orders',
+        // Delete child tables first (tables with foreign keys)
+        'supplier_payments',
+        'supplier_advances',
+        'finance_coffee_lots',
+        'milling_cash_transactions',
+        'contract_approvals',
         'supplier_contracts',
         'payment_records',
+        'sales_transactions',
+        'milling_transactions',
+        'purchase_orders',
+        'inventory_items',
+        'daily_tasks',
+        'audit_logs',
+        'edit_requests',
+        'workflow_steps',
+        
+        // Delete parent tables last
+        'milling_customers',
         'suppliers',
         'marketing_campaigns',
-        'customers',
-        'sales_contracts',
-        'milling_transactions',
-        'milling_customers',
-        'finance_coffee_lots',
-        'cash_transactions',
-        'daily_tasks',
-        'audit_logs'
+        'sales_contracts'
       ];
 
       // Delete from Supabase
       for (const tableName of supabaseTables) {
         try {
-          // Use a more specific delete query
-          const { data: existingData } = await supabase
+          console.log(`🗑️ Attempting to delete from ${tableName}...`);
+          
+          // First check if table has data
+          const { count, error: countError } = await supabase
             .from(tableName as any)
-            .select('id')
-            .limit(1000);
+            .select('*', { count: 'exact', head: true });
 
-          if (existingData && existingData.length > 0) {
-            const { error } = await supabase
-              .from(tableName as any)
-              .delete()
-              .in('id', existingData.map((item: any) => item.id));
-            
-            if (error) {
-              console.error(`Error deleting from ${tableName}:`, error);
-            } else {
-              console.log(`✅ Deleted ${existingData.length} records from Supabase ${tableName}`);
-              totalDeleted += existingData.length;
-            }
+          if (countError) {
+            console.warn(`⚠️ Could not access ${tableName}:`, countError.message);
+            continue;
           }
-        } catch (err) {
-          console.error(`Failed to delete from ${tableName}:`, err);
+
+          if (!count || count === 0) {
+            console.log(`ℹ️ ${tableName} is empty, skipping`);
+            continue;
+          }
+
+          // Delete all records from the table
+          const { error } = await supabase
+            .from(tableName as any)
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete everything
+            
+          if (error) {
+            console.error(`❌ Error deleting from ${tableName}:`, error);
+            toast({
+              title: "Partial Deletion Error",
+              description: `Could not delete from ${tableName}: ${error.message}`,
+              variant: "destructive"
+            });
+          } else {
+            console.log(`✅ Deleted all records from Supabase ${tableName}`);
+            totalDeleted += count;
+          }
+        } catch (err: any) {
+          console.error(`❌ Failed to delete from ${tableName}:`, err);
         }
       }
 
