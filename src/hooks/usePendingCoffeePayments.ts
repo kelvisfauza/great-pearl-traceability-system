@@ -209,15 +209,26 @@ export const usePendingCoffeePayments = () => {
 
       // Handle advance recovery if applicable
       if (paymentData.advanceRecovered && paymentData.advanceRecovered > 0 && paymentData.supplierId) {
-        // Get supplier advances
-        const { data: advances, error: advError } = await supabase
-          .from('supplier_advances')
-          .select('*')
-          .eq('supplier_id', paymentData.supplierId)
-          .eq('is_closed', false)
-          .order('issued_at', { ascending: true });
-
-        if (advError) throw new Error('Failed to fetch supplier advances');
+        // Get supplier advances from Firebase
+        const advancesQuery = query(
+          collection(db, 'supplier_advances'),
+          where('supplier_id', '==', paymentData.supplierId),
+          where('is_closed', '==', false),
+          orderBy('issued_at', 'asc')
+        );
+        
+        const advancesSnapshot = await getDocs(advancesQuery);
+        const advances = advancesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Array<{
+          id: string;
+          supplier_id: string;
+          outstanding_ugx: number;
+          amount_ugx: number;
+          is_closed: boolean;
+          [key: string]: any;
+        }>;
 
         let remainingRecovery = paymentData.advanceRecovered;
         
@@ -228,13 +239,12 @@ export const usePendingCoffeePayments = () => {
           const recoveryAmount = Math.min(remainingRecovery, Number(advance.outstanding_ugx));
           const newOutstanding = Number(advance.outstanding_ugx) - recoveryAmount;
 
-          await supabase
-            .from('supplier_advances')
-            .update({
-              outstanding_ugx: newOutstanding,
-              is_closed: newOutstanding === 0
-            })
-            .eq('id', advance.id);
+          const advanceRef = doc(db, 'supplier_advances', advance.id);
+          await updateDoc(advanceRef, {
+            outstanding_ugx: newOutstanding,
+            is_closed: newOutstanding === 0,
+            updated_at: new Date().toISOString()
+          });
 
           remainingRecovery -= recoveryAmount;
         }

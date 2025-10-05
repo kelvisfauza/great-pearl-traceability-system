@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface SupplierAdvance {
   id: string;
@@ -16,20 +17,26 @@ export const useSupplierAdvances = (supplierId?: string) => {
   const { data: advances, isLoading, refetch } = useQuery({
     queryKey: ['supplier-advances', supplierId],
     queryFn: async () => {
-      let query = supabase
-        .from('supplier_advances')
-        .select('*')
-        .eq('is_closed', false)
-        .order('issued_at', { ascending: false });
+      let q = query(
+        collection(db, 'supplier_advances'),
+        where('is_closed', '==', false),
+        orderBy('issued_at', 'desc')
+      );
 
       if (supplierId) {
-        query = query.eq('supplier_id', supplierId);
+        q = query(
+          collection(db, 'supplier_advances'),
+          where('supplier_id', '==', supplierId),
+          where('is_closed', '==', false),
+          orderBy('issued_at', 'desc')
+        );
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as SupplierAdvance[];
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as SupplierAdvance[];
     },
     enabled: true,
   });

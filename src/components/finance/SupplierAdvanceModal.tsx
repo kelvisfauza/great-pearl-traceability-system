@@ -14,6 +14,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface SupplierAdvanceModalProps {
   open: boolean;
@@ -31,12 +33,6 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
   const { processAdvancePayment } = useHRPayments();
   const { employee } = useAuth();
   const { toast } = useToast();
-
-  // Filter to only suppliers with valid UUID format (from Supabase)
-  const validSuppliers = suppliers.filter(s => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(s.id);
-  });
 
   const handleSubmit = async () => {
     if (!selectedSupplier || !amount || !purpose) {
@@ -58,7 +54,7 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
       return;
     }
 
-    const supplier = validSuppliers.find(s => s.id === selectedSupplier);
+    const supplier = suppliers.find(s => s.id === selectedSupplier);
     if (!supplier) {
       toast({
         title: "Error",
@@ -85,22 +81,20 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
         throw new Error(`Insufficient funds. Available: UGX ${availableCash.toLocaleString()}`);
       }
 
-      // Create advance record in Supabase
-      const { error: advanceError } = await supabase
-        .from('supplier_advances')
-        .insert({
-          supplier_id: supplier.id,
-          amount_ugx: numAmount,
-          outstanding_ugx: numAmount,
-          issued_by: employee?.name || 'Finance Department',
-          description: purpose,
-          is_closed: false
-        });
-
-      if (advanceError) {
-        console.error('Advance insert error:', advanceError);
-        throw new Error(`Failed to create advance: ${advanceError.message}`);
-      }
+      // Create advance record in Firebase
+      await addDoc(collection(db, 'supplier_advances'), {
+        supplier_id: supplier.id,
+        supplier_name: supplier.name,
+        supplier_code: supplier.code,
+        amount_ugx: numAmount,
+        outstanding_ugx: numAmount,
+        issued_by: employee?.name || 'Finance Department',
+        description: purpose,
+        is_closed: false,
+        issued_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
 
       // Update cash balance
       const newBalance = availableCash - numAmount;
@@ -185,12 +179,12 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
                 <SelectValue placeholder="Select supplier" />
               </SelectTrigger>
               <SelectContent>
-                {validSuppliers.length === 0 ? (
+                {suppliers.length === 0 ? (
                   <div className="p-2 text-sm text-muted-foreground">
                     No suppliers available. Add suppliers in Procurement.
                   </div>
                 ) : (
-                  validSuppliers.map((supplier) => (
+                  suppliers.map((supplier) => (
                     <SelectItem key={supplier.id} value={supplier.id}>
                       {supplier.name} - {supplier.code}
                     </SelectItem>
