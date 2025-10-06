@@ -4,15 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Receipt, CheckCircle, XCircle, Clock, DollarSign, User, Calendar } from 'lucide-react';
+import { Receipt, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, Plus } from 'lucide-react';
 import { useEnhancedExpenseManagement } from '@/hooks/useEnhancedExpenseManagement';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { AddExpenseModal } from './AddExpenseModal';
 
 export const ExpenseManagement = () => {
-  const { expenseRequests, loading, updateRequestApproval } = useEnhancedExpenseManagement();
+  const { expenseRequests, loading, updateRequestApproval, refetch } = useEnhancedExpenseManagement();
   const { toast } = useToast();
   const { employee } = useAuth();
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
 
   // Filter different types of expense requests that need finance action
   const userExpenseRequests = expenseRequests.filter(
@@ -148,13 +150,24 @@ export const ExpenseManagement = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5" />
-            Finance Approval Center
-          </CardTitle>
-          <CardDescription>
-            Review and approve expense requests and salary payments
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                Finance Approval Center
+              </CardTitle>
+              <CardDescription>
+                Review and approve expense requests and salary payments
+              </CardDescription>
+            </div>
+            <Button 
+              onClick={() => setShowAddExpenseModal(true)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Expense
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="expense-requests" className="w-full">
@@ -314,6 +327,7 @@ export const ExpenseManagement = () => {
                 <div className="text-center py-8 text-muted-foreground">
                   <Receipt className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                   <p>No expense requests pending review</p>
+                  <p className="text-sm mt-2">Use "Add Expense" button above to record direct expenses</p>
                 </div>
               )}
             </TabsContent>
@@ -426,6 +440,12 @@ export const ExpenseManagement = () => {
           </Tabs>
         </CardContent>
       </Card>
+      
+      <AddExpenseModal 
+        open={showAddExpenseModal}
+        onClose={() => setShowAddExpenseModal(false)}
+        onSuccess={refetch}
+      />
     </div>
   );
 };

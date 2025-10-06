@@ -44,7 +44,7 @@ const fetchStats = async (): Promise<FinanceStats> => {
     const amount = Math.abs(Number(transaction.amount));
     if (transaction.transaction_type === 'DEPOSIT' || transaction.transaction_type === 'ADVANCE_RECOVERY') {
       totalCashIn += amount;
-    } else if (transaction.transaction_type === 'PAYMENT') {
+    } else if (transaction.transaction_type === 'PAYMENT' || transaction.transaction_type === 'EXPENSE') {
       totalCashOut += amount;
     }
   });

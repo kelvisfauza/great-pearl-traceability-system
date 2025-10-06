@@ -105,6 +105,8 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
             typeLabel = 'Cash Deposit';
           } else if (transaction.transaction_type === 'PAYMENT') {
             typeLabel = 'Payment';
+          } else if (transaction.transaction_type === 'EXPENSE') {
+            typeLabel = 'Expense';
           }
           
           const txData = {
@@ -118,18 +120,20 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
             report.totalCashIn += amount;
             report.cashInTransactions.push(txData);
             console.log('✅ Adding Cash In:', typeLabel, amount, transaction);
-          } else if (transaction.transaction_type === 'PAYMENT') {
+          } else if (transaction.transaction_type === 'PAYMENT' || transaction.transaction_type === 'EXPENSE') {
             report.totalCashOut += amount;
             report.cashOutTransactions.push(txData);
             
-            // Add to suppliers paid
-            const supplierMatch = transaction.notes?.match(/Payment to (.+?) -/);
-            if (supplierMatch) {
-              report.suppliersPaid.push({
-                supplier: supplierMatch[1],
-                amount: amount,
-                batchNumber: transaction.reference || '',
-              });
+            // Add to suppliers paid (only for PAYMENT type)
+            if (transaction.transaction_type === 'PAYMENT') {
+              const supplierMatch = transaction.notes?.match(/Payment to (.+?) -/);
+              if (supplierMatch) {
+                report.suppliersPaid.push({
+                  supplier: supplierMatch[1],
+                  amount: amount,
+                  batchNumber: transaction.reference || '',
+                });
+              }
             }
           }
         });
