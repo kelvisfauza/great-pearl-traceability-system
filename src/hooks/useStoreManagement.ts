@@ -46,7 +46,6 @@ export const useStoreManagement = () => {
       
       const transformedRecords: StoreRecord[] = querySnapshot.docs.map(doc => {
         const data = doc.data();
-        console.log('Document data:', data);
         
         return {
           id: doc.id,
@@ -60,8 +59,7 @@ export const useStoreManagement = () => {
         };
       });
 
-      console.log('Transformed records:', transformedRecords);
-      console.log('Sample dates from records:', transformedRecords.slice(0, 3).map(r => ({ id: r.id, date: r.date })));
+      console.log('✅ Loaded records with statuses:', transformedRecords.map(r => ({ batch: r.batchNumber, status: r.status })));
       setStoreRecords(transformedRecords);
     } catch (error) {
       console.error('Error fetching store data:', error);
@@ -500,6 +498,13 @@ export const useStoreManagement = () => {
   useEffect(() => {
     fetchStoreData();
     fetchSuppliers();
+    
+    // Auto-refresh every 10 seconds to catch status updates from Quality Control
+    const refreshInterval = setInterval(() => {
+      fetchStoreData();
+    }, 10000);
+    
+    return () => clearInterval(refreshInterval);
   }, []);
 
   return {
