@@ -70,6 +70,9 @@ const Suppliers = () => {
   const loadSupplierTransactions = async (supplierId: string) => {
     setLoadingTransactions(true);
     try {
+      console.log('🔍 Loading transactions for supplier ID:', supplierId);
+      console.log('🔍 Selected supplier:', selectedSupplier);
+      
       // Get coffee records from BOTH Supabase AND Firebase
       const { data: supabaseCoffeeRecords, error } = await supabase
         .from('coffee_records')
@@ -78,15 +81,37 @@ const Suppliers = () => {
         .order('date', { ascending: false });
 
       if (error) throw error;
+      
+      console.log('📦 Supabase coffee records by supplier_id:', supabaseCoffeeRecords);
 
-      // Also fetch from Firebase
-      const coffeeQuery = query(
+      // Also try fetching by supplier name from Supabase
+      const { data: supabaseCoffeeByName } = await supabase
+        .from('coffee_records')
+        .select('*')
+        .eq('supplier_name', selectedSupplier?.name)
+        .order('date', { ascending: false });
+      
+      console.log('📦 Supabase coffee records by supplier_name:', supabaseCoffeeByName);
+
+      // Also fetch from Firebase by ID
+      const coffeeQueryById = query(
         collection(db, 'coffee_records'),
         where('supplier_id', '==', supplierId)
       );
-      const firebaseSnapshot = await getDocs(coffeeQuery);
+      const firebaseSnapshotById = await getDocs(coffeeQueryById);
       
-      const firebaseCoffeeRecords = firebaseSnapshot.docs.map(doc => {
+      console.log('🔥 Firebase coffee records by supplier_id:', firebaseSnapshotById.size);
+      
+      // Also fetch from Firebase by name
+      const coffeeQueryByName = query(
+        collection(db, 'coffee_records'),
+        where('supplier_name', '==', selectedSupplier?.name)
+      );
+      const firebaseSnapshotByName = await getDocs(coffeeQueryByName);
+      
+      console.log('🔥 Firebase coffee records by supplier_name:', firebaseSnapshotByName.size);
+      
+      const firebaseCoffeeRecords = [...firebaseSnapshotById.docs, ...firebaseSnapshotByName.docs].map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -95,12 +120,19 @@ const Suppliers = () => {
           coffee_type: data.coffee_type || '',
           kilograms: Number(data.kilograms) || 0,
           bags: Number(data.bags) || 0,
-          status: data.status || 'pending'
+          status: data.status || 'pending',
+          supplier_id: data.supplier_id
         };
       });
 
-      // Combine both sources
-      const allCoffeeRecords = [...(supabaseCoffeeRecords || []), ...firebaseCoffeeRecords];
+      // Combine both sources (Supabase by ID, Supabase by name, Firebase records)
+      const allCoffeeRecords = [
+        ...(supabaseCoffeeRecords || []), 
+        ...(supabaseCoffeeByName || []),
+        ...firebaseCoffeeRecords
+      ];
+      
+      console.log('📊 Total combined coffee records:', allCoffeeRecords.length);
 
       // Get payment records for these batches from both sources
       const batchNumbers = allCoffeeRecords.map(r => r.batch_number);
