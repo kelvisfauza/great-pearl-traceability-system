@@ -424,11 +424,11 @@ const QualityControl = () => {
         clean_d14: Number(assessmentForm.clean_d14) || 0,
         outturn: Number(assessmentForm.outturn) || 0,
         outturn_price: Number(assessmentForm.outturn_price) || 0,
-        final_price: Number(assessmentForm.final_price) || finalPrice,
+        final_price: finalPrice, // Use the determined final price (calculator or manual)
         quality_note: assessmentForm.quality_note || '',
         reject_outturn_price: Boolean(assessmentForm.reject_outturn_price),
         reject_final: Boolean(assessmentForm.reject_final),
-        // Final values
+        // Final values - suggested_price stores the final price to be paid
         suggested_price: finalPrice,
         status: 'assessed' as const,
         comments: assessmentForm.comments || '',
