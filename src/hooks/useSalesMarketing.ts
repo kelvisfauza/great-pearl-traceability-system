@@ -40,6 +40,7 @@ export const useSalesMarketing = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [campaigns, setCampaigns] = useState<MarketingCampaign[]>([]);
   const [contracts, setContracts] = useState<SalesContract[]>([]);
+  const [salesTransactions, setSalesTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSalesMarketingData = async () => {
@@ -111,6 +112,18 @@ export const useSalesMarketing = () => {
           contractDate: contract.contract_date
         }));
         setContracts(transformedContracts);
+      }
+
+      // Fetch sales transactions
+      const { data: salesData, error: salesError } = await supabase
+        .from('sales_transactions')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (salesError) {
+        console.error('Error fetching sales transactions:', salesError);
+      } else {
+        setSalesTransactions(salesData || []);
       }
     } catch (error) {
       console.error('Error fetching sales & marketing data:', error);
@@ -194,17 +207,41 @@ export const useSalesMarketing = () => {
     }
   };
 
-  const getStats = () => ({
-    totalCustomers: customers.length,
-    activeCustomers: customers.filter(c => c.status === 'Active').length,
-    totalCampaigns: campaigns.length,
-    activeCampaigns: campaigns.filter(c => c.status === 'Active').length,
-    totalContracts: contracts.length,
-    totalValue: contracts.reduce((sum, c) => sum + c.price, 0),
-    // Add backward compatibility properties
-    monthlySales: 285000,
-    exportRevenue: 1250000
-  });
+  const getStats = () => {
+    // Calculate current month sales
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const monthlySales = salesTransactions
+      .filter(transaction => {
+        const transactionDate = new Date(transaction.date);
+        return transactionDate.getMonth() === currentMonth && 
+               transactionDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, transaction) => sum + Number(transaction.total_amount || 0), 0);
+
+    // Calculate export revenue (international customers)
+    const exportCustomers = ['export', 'international', 'overseas'];
+    const exportRevenue = salesTransactions
+      .filter(transaction => 
+        exportCustomers.some(keyword => 
+          transaction.customer?.toLowerCase().includes(keyword)
+        )
+      )
+      .reduce((sum, transaction) => sum + Number(transaction.total_amount || 0), 0);
+
+    return {
+      totalCustomers: customers.length,
+      activeCustomers: customers.filter(c => c.status === 'Active').length,
+      totalCampaigns: campaigns.length,
+      activeCampaigns: campaigns.filter(c => c.status === 'Active').length,
+      totalContracts: contracts.length,
+      totalValue: contracts.reduce((sum, c) => sum + c.price, 0),
+      monthlySales: Math.round(monthlySales),
+      exportRevenue: Math.round(exportRevenue)
+    };
+  };
 
   useEffect(() => {
     fetchSalesMarketingData();
