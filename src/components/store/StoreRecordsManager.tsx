@@ -112,6 +112,7 @@ export const StoreRecordsManager = () => {
   };
 
   const handleSubmit = async () => {
+    console.log('🚀 handleSubmit called!', { editMode, selectedRecord, formData });
     try {
       const { checkBatchAccumulation, batchAccumulatedDeliveries } = await import('@/utils/batchUtils');
       
