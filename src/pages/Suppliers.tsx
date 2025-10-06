@@ -23,6 +23,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface SupplierTransaction {
   id: string;
@@ -68,8 +70,8 @@ const Suppliers = () => {
   const loadSupplierTransactions = async (supplierId: string) => {
     setLoadingTransactions(true);
     try {
-      // Get coffee records for this supplier
-      const { data: coffeeRecords, error } = await supabase
+      // Get coffee records from BOTH Supabase AND Firebase
+      const { data: supabaseCoffeeRecords, error } = await supabase
         .from('coffee_records')
         .select('*')
         .eq('supplier_id', supplierId)
@@ -77,16 +79,60 @@ const Suppliers = () => {
 
       if (error) throw error;
 
-      // Get payment records for these batches
-      const batchNumbers = coffeeRecords?.map(r => r.batch_number) || [];
-      const { data: payments } = await supabase
+      // Also fetch from Firebase
+      const coffeeQuery = query(
+        collection(db, 'coffee_records'),
+        where('supplier_id', '==', supplierId)
+      );
+      const firebaseSnapshot = await getDocs(coffeeQuery);
+      
+      const firebaseCoffeeRecords = firebaseSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          date: data.date || '',
+          batch_number: data.batch_number || '',
+          coffee_type: data.coffee_type || '',
+          kilograms: Number(data.kilograms) || 0,
+          bags: Number(data.bags) || 0,
+          status: data.status || 'pending'
+        };
+      });
+
+      // Combine both sources
+      const allCoffeeRecords = [...(supabaseCoffeeRecords || []), ...firebaseCoffeeRecords];
+
+      // Get payment records for these batches from both sources
+      const batchNumbers = allCoffeeRecords.map(r => r.batch_number);
+      
+      // Supabase payments
+      const { data: supabasePayments } = await supabase
         .from('payment_records')
         .select('*')
         .in('batch_number', batchNumbers);
 
+      // Firebase payments
+      const paymentsQuery = query(
+        collection(db, 'payment_records'),
+        where('batch_number', 'in', batchNumbers.length > 0 ? batchNumbers : [''])
+      );
+      const paymentsSnapshot = await getDocs(paymentsQuery);
+      
+      const firebasePayments = paymentsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          batch_number: data.batch_number,
+          amount: Number(data.amount) || 0,
+          status: data.status || 'Pending'
+        };
+      });
+
+      // Combine all payments
+      const allPayments = [...(supabasePayments || []), ...firebasePayments];
+
       // Merge the data
-      const transactionsData: SupplierTransaction[] = (coffeeRecords || []).map(record => {
-        const payment = payments?.find(p => p.batch_number === record.batch_number);
+      const transactionsData: SupplierTransaction[] = allCoffeeRecords.map(record => {
+        const payment = allPayments.find(p => p.batch_number === record.batch_number);
         return {
           id: record.id,
           date: record.date,
@@ -100,6 +146,7 @@ const Suppliers = () => {
         };
       });
 
+      console.log(`✅ Loaded ${transactionsData.length} transactions for supplier ${supplierId}`);
       setTransactions(transactionsData);
     } catch (error) {
       console.error('Error loading supplier transactions:', error);
