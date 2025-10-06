@@ -383,17 +383,19 @@ const QualityControl = () => {
       return;
     }
 
-    // Use manual price if toggle is on and manual price is provided, otherwise use calculator price
-    const finalPrice = assessmentForm.use_manual_price 
-      ? (parseFloat(assessmentForm.manual_price) || 0)
-      : (assessmentForm.final_price || calculateSuggestedPrice());
+    // Prioritize manual price if entered, otherwise use calculator price
+    const manualPriceValue = parseFloat(assessmentForm.manual_price);
+    const calculatorPrice = assessmentForm.final_price || calculateSuggestedPrice();
+    
+    // Use manual price if it's a valid number greater than 0, otherwise use calculator
+    const finalPrice = (manualPriceValue && manualPriceValue > 0) 
+      ? manualPriceValue 
+      : calculatorPrice;
     
     if (finalPrice <= 0) {
       toast({
         title: "Error",
-        description: assessmentForm.use_manual_price 
-          ? "Please enter a valid manual price for the assessment."
-          : "Please calculate a valid price using the calculator.",
+        description: "Please either enter a manual price or calculate a price using the calculator.",
         variant: "destructive"
       });
       return;
@@ -1086,7 +1088,11 @@ const QualityControl = () => {
                       disabled={
                         readOnly || 
                         isSubmitting ||
-                        (!assessmentForm.manual_price && !assessmentForm.final_price && !calculateSuggestedPrice())
+                        (
+                          !(parseFloat(assessmentForm.manual_price) > 0) && 
+                          !assessmentForm.final_price && 
+                          !calculateSuggestedPrice()
+                        )
                       }
                     >
                       {isSubmitting ? (
