@@ -70,32 +70,52 @@ const Suppliers = () => {
   const loadSupplierTransactions = async (supplierId: string) => {
     setLoadingTransactions(true);
     try {
-      console.log('🔍 Loading transactions for supplier ID:', supplierId);
+      console.log('🔍 Loading transactions for supplier:', { id: supplierId, name: selectedSupplier?.name });
       const cutoffDate = '2025-10-01';
       
-      // Get coffee records from Supabase (from Oct 1, 2025 onwards)
-      const { data: supabaseCoffeeRecords, error } = await supabase
+      // Get coffee records from Supabase by BOTH supplier_id AND supplier_name
+      const { data: supabaseById, error: errorById } = await supabase
         .from('coffee_records')
         .select('*')
         .eq('supplier_id', supplierId)
         .gte('date', cutoffDate)
         .order('date', { ascending: false });
 
-      if (error) throw error;
-      
-      console.log('📦 Supabase coffee records (from Oct 1):', supabaseCoffeeRecords?.length || 0);
+      const { data: supabaseByName, error: errorByName } = await supabase
+        .from('coffee_records')
+        .select('*')
+        .eq('supplier_name', selectedSupplier?.name)
+        .gte('date', cutoffDate)
+        .order('date', { ascending: false });
 
-      // Also fetch from Firebase (from Oct 1, 2025 onwards)
-      const coffeeQuery = query(
+      if (errorById) console.error('Supabase error (by ID):', errorById);
+      if (errorByName) console.error('Supabase error (by name):', errorByName);
+      
+      console.log('📦 Supabase records by supplier_id:', supabaseById?.length || 0);
+      console.log('📦 Supabase records by supplier_name:', supabaseByName?.length || 0);
+
+      // Also fetch from Firebase by BOTH ID and name
+      const firebaseByIdQuery = query(
         collection(db, 'coffee_records'),
         where('supplier_id', '==', supplierId),
         where('date', '>=', cutoffDate)
       );
-      const firebaseSnapshot = await getDocs(coffeeQuery);
+      const firebaseByIdSnapshot = await getDocs(firebaseByIdQuery);
       
-      console.log('🔥 Firebase coffee records (from Oct 1):', firebaseSnapshot.size);
+      const firebaseByNameQuery = query(
+        collection(db, 'coffee_records'),
+        where('supplier_name', '==', selectedSupplier?.name),
+        where('date', '>=', cutoffDate)
+      );
+      const firebaseByNameSnapshot = await getDocs(firebaseByNameQuery);
       
-      const firebaseCoffeeRecords = firebaseSnapshot.docs.map(doc => {
+      console.log('🔥 Firebase records by supplier_id:', firebaseByIdSnapshot.size);
+      console.log('🔥 Firebase records by supplier_name:', firebaseByNameSnapshot.size);
+      
+      const firebaseCoffeeRecords = [
+        ...firebaseByIdSnapshot.docs,
+        ...firebaseByNameSnapshot.docs
+      ].map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
@@ -108,11 +128,22 @@ const Suppliers = () => {
         };
       });
 
-      const allCoffeeRecords = [...(supabaseCoffeeRecords || []), ...firebaseCoffeeRecords];
-      console.log('📊 Total combined coffee records (from Oct 1):', allCoffeeRecords.length);
+      // Combine all sources and remove duplicates
+      const allCoffeeRecords = [
+        ...(supabaseById || []), 
+        ...(supabaseByName || []), 
+        ...firebaseCoffeeRecords
+      ];
+      
+      // Remove duplicates based on batch_number
+      const uniqueRecords = allCoffeeRecords.filter((record, index, self) =>
+        index === self.findIndex((r) => r.batch_number === record.batch_number)
+      );
+      
+      console.log('📊 Total unique coffee records (from Oct 1):', uniqueRecords.length);
 
       // Get payment records from both sources
-      const batchNumbers = allCoffeeRecords.map(r => r.batch_number);
+      const batchNumbers = uniqueRecords.map(r => r.batch_number);
       
       // Supabase payments
       const { data: supabasePayments } = await supabase
@@ -139,7 +170,7 @@ const Suppliers = () => {
       const allPayments = [...(supabasePayments || []), ...firebasePayments];
 
       // Merge the data
-      const transactionsData: SupplierTransaction[] = allCoffeeRecords.map(record => {
+      const transactionsData: SupplierTransaction[] = uniqueRecords.map(record => {
         const payment = allPayments.find(p => p.batch_number === record.batch_number);
         return {
           id: record.id,
