@@ -20,7 +20,7 @@ const GlobalSearch = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
   const navigate = useNavigate();
-  const searchRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
   const { results, loading } = useGlobalSearch(searchTerm);
@@ -82,7 +82,7 @@ const GlobalSearch = () => {
   // Close search when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -171,7 +171,7 @@ const GlobalSearch = () => {
   };
 
   return (
-    <div className="relative" ref={searchRef}>
+    <div className="relative">
       <Button
         onClick={() => setIsOpen(true)}
         variant="ghost"
@@ -185,12 +185,11 @@ const GlobalSearch = () => {
         <>
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40" 
-            onClick={() => setIsOpen(false)}
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
           />
           
           {/* Search Modal */}
-          <div className="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4">
+          <div ref={modalRef} className="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4">
             <div className="bg-card border border-border rounded-lg shadow-2xl">
               {/* Search Input */}
               <div className="flex items-center gap-2 p-4 border-b border-border">
