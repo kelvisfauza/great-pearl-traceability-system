@@ -87,7 +87,7 @@ const Navigation = () => {
     {
       title: "Management",
       items: [
-        { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: "Store Management" },
+        { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
         { name: "Finance", icon: DollarSign, path: "/finance", permission: "Finance" },
         { name: "Expenses", icon: Receipt, path: "/expenses", permission: null },

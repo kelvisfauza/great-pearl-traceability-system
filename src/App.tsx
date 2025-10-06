@@ -168,7 +168,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/suppliers" element={
-                  <ProtectedRoute requiredPermissions={["Store Management", "Procurement", "Finance"]}>
+                  <ProtectedRoute>
                     <Suppliers />
                   </ProtectedRoute>
                 } />
