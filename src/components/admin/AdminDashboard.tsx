@@ -16,13 +16,51 @@ import CashManagementModal from './CashManagementModal';
 import { useUnifiedApprovalRequests } from '@/hooks/useUnifiedApprovalRequests';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import ActiveUsers from '@/components/it/ActiveUsers';
+import { clearCoffeeData } from '@/utils/clearCoffeeData';
+import { useToast } from '@/hooks/use-toast';
 
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [cashModalOpen, setCashModalOpen] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const { requests, loading: requestsLoading } = useUnifiedApprovalRequests();
   const { onlineCount, loading: presenceLoading } = usePresenceList();
+  const { toast } = useToast();
+
+  const handleClearOldData = async () => {
+    if (!confirm('This will permanently delete all old coffee data from Firebase (coffee records, quality assessments, payment records). Are you sure?')) {
+      return;
+    }
+
+    setIsClearing(true);
+    try {
+      const result = await clearCoffeeData();
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: result.message,
+        });
+        // Reload the page to refresh all data
+        window.location.reload();
+      } else {
+        toast({
+          title: "Error",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear old data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   console.log('🚀 AdminDashboard - activeTab:', activeTab);
   console.log('🚀 AdminDashboard component loaded');
@@ -37,10 +75,21 @@ const AdminDashboard = () => {
             <p className="text-muted-foreground">System oversight, approvals, and critical administrative tasks</p>
           </div>
         </div>
-        <Button onClick={() => setCashModalOpen(true)} className="flex items-center gap-2">
-          <DollarSign className="h-4 w-4" />
-          Manage Finance Cash
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleClearOldData} 
+            variant="destructive"
+            disabled={isClearing}
+            className="flex items-center gap-2"
+          >
+            <AlertTriangle className="h-4 w-4" />
+            {isClearing ? 'Clearing...' : 'Clear Old Data'}
+          </Button>
+          <Button onClick={() => setCashModalOpen(true)} className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Manage Finance Cash
+          </Button>
+        </div>
       </div>
 
       <CashManagementModal open={cashModalOpen} onOpenChange={setCashModalOpen} />
