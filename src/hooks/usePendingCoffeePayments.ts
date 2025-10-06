@@ -61,6 +61,32 @@ export const usePendingCoffeePayments = () => {
       
       console.log('📦 Found coffee records:', coffeeSnapshot.size);
       
+      // Fetch all PAID payment records from Firebase to exclude them
+      const paidPaymentsQuery = query(
+        collection(db, 'payment_records'),
+        where('status', '==', 'Paid')
+      );
+      const paidPaymentsSnapshot = await getDocs(paidPaymentsQuery);
+      const paidBatchNumbers = new Set(
+        paidPaymentsSnapshot.docs.map(doc => doc.data().batchNumber)
+      );
+
+      // Also fetch paid payment records from Supabase
+      const { data: supabasePaidPayments } = await supabase
+        .from('payment_records')
+        .select('batch_number')
+        .eq('status', 'Paid');
+      
+      if (supabasePaidPayments) {
+        supabasePaidPayments.forEach(payment => {
+          if (payment.batch_number) {
+            paidBatchNumbers.add(payment.batch_number);
+          }
+        });
+      }
+
+      console.log('💳 Found paid batch numbers:', paidBatchNumbers.size);
+      
       // Fetch all quality assessments from BOTH Firebase and Supabase
       const qualityAssessments = new Map();
       
@@ -101,6 +127,13 @@ export const usePendingCoffeePayments = () => {
       // Convert each coffee record to a payment entry
       coffeeSnapshot.docs.forEach(doc => {
         const data = doc.data();
+        const batchNumber = data.batch_number || 'Unknown';
+        
+        // Skip if already paid in payment_records
+        if (paidBatchNumbers.has(batchNumber)) {
+          console.log(`⏭️ Skipping ${batchNumber} - already paid`);
+          return;
+        }
         
         // Only show records that are pending (not paid or completed)
         if (data.status === 'paid' || data.status === 'completed') {
