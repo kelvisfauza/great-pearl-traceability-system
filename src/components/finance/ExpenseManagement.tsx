@@ -81,10 +81,29 @@ export const ExpenseManagement = () => {
   };
 
   const handleReject = async (requestId: string) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) {
+      toast({
+        title: "Rejection Cancelled",
+        description: "Rejection reason is required",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
-      await updateRequestApproval(requestId, 'finance', false, employee?.name || 'Finance Team');
+      await updateRequestApproval(requestId, 'finance', false, employee?.name || 'Finance Team', reason);
+      toast({
+        title: "Request Rejected",
+        description: "The expense request has been rejected successfully",
+      });
     } catch (error) {
       console.error('Error rejecting request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject the request",
+        variant: "destructive"
+      });
     }
   };
 

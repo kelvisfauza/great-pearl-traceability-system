@@ -264,9 +264,9 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     );
   }
 
-  // Filter requests that need admin review or have been processed by admin
+  // Filter requests that need admin review (must have Finance approval first)
   const needsReviewCount = expenseRequests.filter(r => 
-    (r.status === 'Pending' || r.status === 'Finance Approved') && !r.admin_approved_at
+    r.status === 'Finance Approved' && r.finance_approved_at && !r.admin_approved_at
   ).length;
   
   const totalAmount = expenseRequests.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
@@ -313,19 +313,24 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
           </div>
 
           <div className="space-y-4">
-            {/* Filter to only show requests that need admin review */}
+            {/* Filter to only show requests that have been approved by Finance first */}
             {expenseRequests.filter(request => 
-              (request.status === 'Pending' || request.status === 'Finance Approved') && 
+              request.status === 'Finance Approved' && 
+              request.finance_approved_at && 
               !request.admin_approved_at
             ).length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p>No requests pending admin approval</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Requests must be approved by Finance before Admin review
+                </p>
               </div>
             ) : (
               expenseRequests
                 .filter(request => 
-                  (request.status === 'Pending' || request.status === 'Finance Approved') && 
+                  request.status === 'Finance Approved' && 
+                  request.finance_approved_at && 
                   !request.admin_approved_at
                 )
                 .map((request) => {

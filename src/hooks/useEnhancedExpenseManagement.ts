@@ -94,20 +94,42 @@ export const useEnhancedExpenseManagement = () => {
     requestId: string, 
     approvalType: 'finance' | 'admin', 
     approved: boolean,
-    approvedBy: string
+    approvedBy: string,
+    rejectionReason?: string
   ) => {
     try {
       console.log(`Updating ${approvalType} approval for request ${requestId}:`, approved);
 
       const updateData: any = {};
-      if (approvalType === 'finance') {
-        updateData.finance_approved = approved;
-        updateData.finance_approved_at = approved ? new Date().toISOString() : null;
-        updateData.finance_approved_by = approved ? approvedBy : null;
+      
+      if (approved) {
+        // Approval logic
+        if (approvalType === 'finance') {
+          updateData.finance_approved = true;
+          updateData.finance_approved_at = new Date().toISOString();
+          updateData.finance_approved_by = approvedBy;
+          updateData.status = 'Finance Approved';
+        } else {
+          updateData.admin_approved = true;
+          updateData.admin_approved_at = new Date().toISOString();
+          updateData.admin_approved_by = approvedBy;
+        }
       } else {
-        updateData.admin_approved = approved;
-        updateData.admin_approved_at = approved ? new Date().toISOString() : null;
-        updateData.admin_approved_by = approved ? approvedBy : null;
+        // Rejection logic - mark as rejected with reason
+        updateData.status = 'Rejected';
+        updateData.rejection_reason = rejectionReason || 'No reason provided';
+        updateData.rejected_at = new Date().toISOString();
+        updateData.rejected_by = approvedBy;
+        
+        if (approvalType === 'finance') {
+          updateData.finance_approved = false;
+          updateData.finance_approved_at = null;
+          updateData.finance_approved_by = null;
+        } else {
+          updateData.admin_approved = false;
+          updateData.admin_approved_at = null;
+          updateData.admin_approved_by = null;
+        }
       }
 
       const { data, error } = await supabase
