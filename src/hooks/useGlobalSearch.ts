@@ -30,13 +30,16 @@ export const useGlobalSearch = (searchTerm: string) => {
 
       try {
         const lowerSearch = searchTerm.toLowerCase();
+        console.log('🔍 Global search - term:', searchTerm, 'hasPermission check:', hasPermission('Store Management'));
 
         // Search Suppliers (visible to all)
-        const { data: suppliers } = await supabase
+        const { data: suppliers, error: suppliersError } = await supabase
           .from('suppliers')
           .select('*')
           .or(`name.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
           .limit(10);
+
+        if (suppliersError) console.error('Suppliers search error:', suppliersError);
 
         if (suppliers) {
           suppliers.forEach(supplier => {
@@ -51,13 +54,20 @@ export const useGlobalSearch = (searchTerm: string) => {
           });
         }
 
-        // Search Coffee Records by Batch Number (Store Management)
-        if (hasPermission('Store Management')) {
-          const { data: coffeeRecords } = await supabase
+        // Search Coffee Records by Batch Number - Check both Store Management permission and wildcard
+        const canAccessStore = hasPermission('Store Management') || employee?.permissions?.includes('*');
+        console.log('🔍 Can access store:', canAccessStore, 'Employee permissions:', employee?.permissions);
+        
+        if (canAccessStore) {
+          const { data: coffeeRecords, error: coffeeError } = await supabase
             .from('coffee_records')
             .select('*')
             .or(`batch_number.ilike.%${searchTerm}%,supplier_name.ilike.%${searchTerm}%`)
             .limit(10);
+
+          console.log('🔍 Coffee records search result:', coffeeRecords, 'Error:', coffeeError);
+
+          if (coffeeError) console.error('Coffee records search error:', coffeeError);
 
           if (coffeeRecords) {
             coffeeRecords.forEach(record => {
@@ -74,7 +84,8 @@ export const useGlobalSearch = (searchTerm: string) => {
         }
 
         // Search Quality Assessments
-        if (hasPermission('Quality Control')) {
+        const canAccessQuality = hasPermission('Quality Control') || employee?.permissions?.includes('*');
+        if (canAccessQuality) {
           const { data: qualityAssessments } = await supabase
             .from('quality_assessments')
             .select('*')
@@ -96,7 +107,8 @@ export const useGlobalSearch = (searchTerm: string) => {
         }
 
         // Search Employees (HR permission)
-        if (hasPermission('User Management') || hasPermission('HR Management')) {
+        const canAccessHR = hasPermission('User Management') || hasPermission('HR Management') || employee?.permissions?.includes('*');
+        if (canAccessHR) {
           const { data: employees } = await supabase
             .from('employees')
             .select('*')
@@ -118,7 +130,8 @@ export const useGlobalSearch = (searchTerm: string) => {
         }
 
         // Search Payment Records (Finance permission)
-        if (hasPermission('Finance Management')) {
+        const canAccessFinance = hasPermission('Finance Management') || employee?.permissions?.includes('*');
+        if (canAccessFinance) {
           const { data: payments } = await supabase
             .from('payment_records')
             .select('*')
@@ -140,7 +153,8 @@ export const useGlobalSearch = (searchTerm: string) => {
         }
 
         // Search Sales Transactions
-        if (hasPermission('Sales Management')) {
+        const canAccessSales = hasPermission('Sales Management') || employee?.permissions?.includes('*');
+        if (canAccessSales) {
           const { data: sales } = await supabase
             .from('sales_transactions')
             .select('*')
@@ -161,6 +175,7 @@ export const useGlobalSearch = (searchTerm: string) => {
           }
         }
 
+        console.log('🔍 Total search results found:', searchResults.length);
         setResults(searchResults);
       } catch (error) {
         console.error('Global search error:', error);
