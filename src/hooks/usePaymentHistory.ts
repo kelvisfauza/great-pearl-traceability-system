@@ -27,10 +27,11 @@ export const usePaymentHistory = () => {
       setLoading(true);
       console.log('📊 Fetching payment history from Supabase...');
 
-      // Fetch payment records from Supabase
+      // Fetch only PAID payment records from Supabase
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payment_records')
         .select('*')
+        .eq('status', 'Paid')
         .order('created_at', { ascending: false });
 
       if (paymentsError) {
