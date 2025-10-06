@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText, Printer } from "lucide-react";
+import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText, Printer, Calendar } from "lucide-react";
 import { useStoreManagement } from "@/hooks/useStoreManagement";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -77,6 +77,7 @@ const Store = () => {
     supplierName: '',
     batchNumber: ''
   });
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   // Modal states
   const [showAddRecordModal, setShowAddRecordModal] = useState(false);
@@ -411,7 +412,33 @@ const Store = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                {coffeeRecords.length > 0 ? (
+                {/* Date Filter */}
+                <div className="mb-4 flex items-center gap-2">
+                  <Label htmlFor="date-filter">View Records for:</Label>
+                  <Input
+                    id="date-filter"
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-auto"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Today
+                  </Button>
+                </div>
+
+                {coffeeRecords.filter(record => record.date === selectedDate).length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No coffee records found for {new Date(selectedDate).toLocaleDateString()}</p>
+                    <p className="text-sm mt-2">Select a different date to view other records</p>
+                  </div>
+                ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -426,7 +453,7 @@ const Store = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {coffeeRecords.map((record) => (
+                      {coffeeRecords.filter(record => record.date === selectedDate).map((record) => (
                         <TableRow key={record.id}>
                           <TableCell className="font-mono">{record.batchNumber}</TableCell>
                           <TableCell>{record.date}</TableCell>
@@ -487,12 +514,6 @@ const Store = () => {
                       ))}
                     </TableBody>
                   </Table>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No coffee records yet</p>
-                    <p className="text-sm">Add your first coffee delivery record below</p>
-                  </div>
                 )}
               </CardContent>
             </Card>

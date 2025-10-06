@@ -50,6 +50,7 @@ export const StoreRecordsManager = () => {
   const [editMode, setEditMode] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<StoreRecord | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [formData, setFormData] = useState({
     inventory_item_id: '',
     transaction_type: 'received',
@@ -396,6 +397,11 @@ export const StoreRecordsManager = () => {
     );
   }
 
+  // Filter records by selected date
+  const filteredRecords = records.filter(record => 
+    record.transaction_date === selectedDate
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -592,8 +598,44 @@ export const StoreRecordsManager = () => {
 
       <PendingBatchSummary refreshTrigger={refreshTrigger} />
 
+      {/* Date Filter */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Filter by Date</CardTitle>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-auto"
+              />
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+              >
+                Today
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
       <div className="grid gap-4">
-        {records.map((record) => (
+        {records.filter(record => record.transaction_date === selectedDate).length === 0 ? (
+          <Card>
+            <CardContent className="py-8">
+              <div className="text-center text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No records found for {new Date(selectedDate).toLocaleDateString()}</p>
+                <p className="text-sm mt-2">Select a different date to view other records</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          records.filter(record => record.transaction_date === selectedDate).map((record) => (
           <Card key={record.id} className="transition-all hover:shadow-md">
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -686,7 +728,7 @@ export const StoreRecordsManager = () => {
               </div>
             </CardContent>
           </Card>
-        ))}
+        )))}
       </div>
     </div>
   );
