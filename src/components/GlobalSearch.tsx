@@ -1,20 +1,83 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, FileText, User, Package, DollarSign, ClipboardCheck, TrendingUp } from 'lucide-react';
+import { Search, X, FileText, User, Package, DollarSign, ClipboardCheck, TrendingUp, History, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGlobalSearch, SearchResult } from '@/hooks/useGlobalSearch';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+
+interface SearchHistory {
+  id: string;
+  search_term: string;
+  result_count: number;
+  searched_at: string;
+}
 
 const GlobalSearch = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
   const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
   const { results, loading } = useGlobalSearch(searchTerm);
+
+  // Load search history when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadSearchHistory();
+    }
+  }, [isOpen]);
+
+  // Save search to history when results are loaded
+  useEffect(() => {
+    if (searchTerm && !loading && results.length >= 0) {
+      saveSearchToHistory(searchTerm, results.length);
+    }
+  }, [results, loading, searchTerm]);
+
+  const loadSearchHistory = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('search_history')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('searched_at', { ascending: false })
+      .limit(5);
+
+    if (!error && data) {
+      setSearchHistory(data);
+    }
+  };
+
+  const saveSearchToHistory = async (term: string, count: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || term.length < 2) return;
+
+    await supabase.from('search_history').insert({
+      user_id: user.id,
+      search_term: term,
+      result_count: count
+    });
+  };
+
+  const deleteSearchHistory = async (id: string) => {
+    await supabase.from('search_history').delete().eq('id', id);
+    setSearchHistory(prev => prev.filter(item => item.id !== id));
+  };
+
+  const clearAllHistory = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from('search_history').delete().eq('user_id', user.id);
+    setSearchHistory([]);
+  };
 
   // Close search when clicking outside
   useEffect(() => {
@@ -179,7 +242,53 @@ const GlobalSearch = () => {
                   </div>
                 )}
 
-                {!searchTerm && (
+                {!searchTerm && searchHistory.length > 0 && (
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <History className="h-4 w-4" />
+                        <span>Recent Searches</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearAllHistory}
+                        className="h-7 text-xs"
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+                    <div className="space-y-1">
+                      {searchHistory.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-accent group"
+                        >
+                          <button
+                            onClick={() => setSearchTerm(item.search_term)}
+                            className="flex-1 flex items-center gap-2 text-left"
+                          >
+                            <Search className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-sm">{item.search_term}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({item.result_count} results)
+                            </span>
+                          </button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteSearchHistory(item.id)}
+                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!searchTerm && searchHistory.length === 0 && (
                   <div className="p-8 text-center text-muted-foreground">
                     <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
                     <p className="text-sm">
