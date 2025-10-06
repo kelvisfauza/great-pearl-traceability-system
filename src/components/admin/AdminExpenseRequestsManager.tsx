@@ -32,9 +32,19 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const [recentSlipsModalOpen, setRecentSlipsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
-  // Include both Expense Requests and Employee Salary Requests
+  // Include all expense-related requests (Expense Request, Employee Salary Request, category-specific requests)
   const expenseRequests = requests.filter(request => 
-    request.type === 'Expense Request' || request.type === 'Employee Salary Request'
+    request.type === 'Expense Request' || 
+    request.type === 'Employee Salary Request' ||
+    request.type === 'Employee Expense Request' ||
+    request.type.includes('Request') && (
+      request.type.includes('Expense') || 
+      request.type.includes('Airtime') ||
+      request.type.includes('Meals') ||
+      request.type.includes('Refreshments') ||
+      request.type.includes('Transport') ||
+      request.type.includes('Salary')
+    )
   );
 
   // Fetch user profiles to get names and phone numbers
