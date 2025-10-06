@@ -611,8 +611,11 @@ export const StoreRecordsManager = () => {
               <Button variant="outline" onClick={() => setFormOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmit}>
-                {editMode ? 'Submit Edit Request' : 'Create Record'}
+              <Button onClick={() => {
+                console.log('🔘 Button clicked!', { editMode, selectedRecord });
+                handleSubmit();
+              }}>
+                {editMode ? 'Update Record' : 'Create Record'}
               </Button>
             </div>
           </DialogContent>
