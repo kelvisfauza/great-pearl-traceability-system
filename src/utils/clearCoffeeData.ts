@@ -1,11 +1,60 @@
 import { collection, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 export const clearCoffeeData = async () => {
   try {
-    console.log('Starting to clear coffee data (excluding pending assessments)...');
+    console.log('Starting to clear coffee data from both Firebase and Supabase (excluding pending assessments)...');
     
     let totalDeleted = 0;
+
+    // Clear from Supabase first
+    console.log('Clearing Supabase quality_assessments (excluding pending)...');
+    const { data: supabaseAssessments, error: fetchError } = await supabase
+      .from('quality_assessments')
+      .select('id, status')
+      .not('status', 'in', '("pending","quality_review")');
+
+    if (fetchError) {
+      console.error('Error fetching Supabase assessments:', fetchError);
+    } else if (supabaseAssessments && supabaseAssessments.length > 0) {
+      const idsToDelete = supabaseAssessments.map(a => a.id);
+      const { error: deleteError } = await supabase
+        .from('quality_assessments')
+        .delete()
+        .in('id', idsToDelete);
+      
+      if (deleteError) {
+        console.error('Error deleting Supabase assessments:', deleteError);
+      } else {
+        totalDeleted += supabaseAssessments.length;
+        console.log(`Cleared ${supabaseAssessments.length} quality assessments from Supabase`);
+      }
+    }
+
+    // Clear Supabase coffee_records (excluding pending)
+    console.log('Clearing Supabase coffee_records (excluding pending)...');
+    const { data: supabaseCoffee, error: coffeeFetchError } = await supabase
+      .from('coffee_records')
+      .select('id, status')
+      .not('status', 'in', '("pending","quality_review")');
+
+    if (coffeeFetchError) {
+      console.error('Error fetching Supabase coffee records:', coffeeFetchError);
+    } else if (supabaseCoffee && supabaseCoffee.length > 0) {
+      const coffeeIdsToDelete = supabaseCoffee.map(c => c.id);
+      const { error: coffeeDeleteError } = await supabase
+        .from('coffee_records')
+        .delete()
+        .in('id', coffeeIdsToDelete);
+      
+      if (coffeeDeleteError) {
+        console.error('Error deleting Supabase coffee records:', coffeeDeleteError);
+      } else {
+        totalDeleted += supabaseCoffee.length;
+        console.log(`Cleared ${supabaseCoffee.length} coffee records from Supabase`);
+      }
+    }
 
     // Clear quality assessments (excluding pending and quality_review status)
     console.log('Clearing quality_assessments (excluding pending)...');
