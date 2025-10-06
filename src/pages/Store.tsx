@@ -79,6 +79,37 @@ const Store = () => {
   });
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
+  // Helper function to normalize date for comparison
+  const normalizeDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    // If already in YYYY-MM-DD format, return as-is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+    // Try to parse and convert to YYYY-MM-DD
+    try {
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+    } catch (e) {
+      console.error('Error parsing date:', dateStr, e);
+    }
+    return dateStr;
+  };
+
+  // Filter records by selected date
+  const filteredRecords = coffeeRecords.filter(record => {
+    const recordDate = normalizeDate(record.date);
+    const filterDate = normalizeDate(selectedDate);
+    console.log('Comparing dates:', { recordDate, filterDate, match: recordDate === filterDate });
+    return recordDate === filterDate;
+  });
+
+  useEffect(() => {
+    console.log('Date filter changed:', selectedDate);
+    console.log('Total records:', coffeeRecords.length);
+    console.log('Filtered records:', filteredRecords.length);
+  }, [selectedDate, coffeeRecords.length]);
+
   // Modal states
   const [showAddRecordModal, setShowAddRecordModal] = useState(false);
   const [showGRNModal, setShowGRNModal] = useState(false);
@@ -432,11 +463,12 @@ const Store = () => {
                   </Button>
                 </div>
 
-                {coffeeRecords.filter(record => record.date === selectedDate).length === 0 ? (
+                {filteredRecords.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No coffee records found for {new Date(selectedDate).toLocaleDateString()}</p>
                     <p className="text-sm mt-2">Select a different date to view other records</p>
+                    <p className="text-xs mt-1 text-muted-foreground">Total records in system: {coffeeRecords.length}</p>
                   </div>
                 ) : (
                   <Table>
@@ -453,7 +485,7 @@ const Store = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {coffeeRecords.filter(record => record.date === selectedDate).map((record) => (
+                      {filteredRecords.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell className="font-mono">{record.batchNumber}</TableCell>
                           <TableCell>{record.date}</TableCell>

@@ -61,6 +61,7 @@ export const useStoreManagement = () => {
       });
 
       console.log('Transformed records:', transformedRecords);
+      console.log('Sample dates from records:', transformedRecords.slice(0, 3).map(r => ({ id: r.id, date: r.date })));
       setStoreRecords(transformedRecords);
     } catch (error) {
       console.error('Error fetching store data:', error);
