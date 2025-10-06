@@ -150,19 +150,103 @@ export const useStoreManagement = () => {
 
   const updateCoffeeRecord = async (recordId: string, recordData: Partial<Omit<StoreRecord, 'id'>>) => {
     try {
-      console.log('Updating coffee record in Firebase:', recordId, recordData);
+      console.log('🔄 Updating coffee record across all systems:', recordId, recordData);
       
+      // Get the current record to know the batch number
+      const currentRecord = storeRecords.find(r => r.id === recordId);
+      if (!currentRecord) {
+        throw new Error('Record not found');
+      }
+      
+      const batchNumber = currentRecord.batchNumber;
+      
+      // 1. Update Firebase
+      console.log('📝 Updating Firebase...');
       const docRef = doc(db, 'coffee_records', recordId);
-      await updateDoc(docRef, {
-        ...recordData,
+      const firebaseUpdate = {
+        supplier_name: recordData.supplierName,
+        coffee_type: recordData.coffeeType,
+        bags: recordData.bags,
+        kilograms: recordData.kilograms,
+        date: recordData.date,
+        batch_number: recordData.batchNumber,
+        status: recordData.status,
         updated_at: new Date().toISOString()
-      });
+      };
+      await updateDoc(docRef, firebaseUpdate);
+      
+      // 2. Update Supabase coffee_records by batch_number
+      console.log('📝 Updating Supabase coffee_records...');
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { error: supabaseError } = await supabase
+        .from('coffee_records')
+        .update({
+          supplier_name: recordData.supplierName,
+          coffee_type: recordData.coffeeType,
+          bags: recordData.bags,
+          kilograms: recordData.kilograms,
+          date: recordData.date,
+          batch_number: recordData.batchNumber,
+          status: recordData.status
+        })
+        .eq('batch_number', batchNumber);
+      
+      if (supabaseError) {
+        console.error('Supabase update error:', supabaseError);
+      }
+      
+      // 3. Update quality_assessments (by batch_number and store_record_id)
+      console.log('📝 Updating quality assessments...');
+      const { error: qualityError } = await supabase
+        .from('quality_assessments')
+        .update({
+          batch_number: recordData.batchNumber,
+          kilograms: recordData.kilograms
+        })
+        .eq('batch_number', batchNumber);
+      
+      if (qualityError) {
+        console.error('Quality assessment update error:', qualityError);
+      }
+      
+      // Also try updating by store_record_id (Firebase ID)
+      await supabase
+        .from('quality_assessments')
+        .update({
+          batch_number: recordData.batchNumber,
+          kilograms: recordData.kilograms
+        })
+        .eq('store_record_id', recordId);
+      
+      // 4. Update finance_coffee_lots (by batch number)
+      console.log('📝 Updating finance coffee lots...');
+      // First get the Supabase coffee_record IDs with this batch number
+      const { data: supabaseCoffeeRecords } = await supabase
+        .from('coffee_records')
+        .select('id')
+        .eq('batch_number', batchNumber);
+      
+      if (supabaseCoffeeRecords && supabaseCoffeeRecords.length > 0) {
+        const coffeeRecordIds = supabaseCoffeeRecords.map(r => r.id);
+        
+        const { error: financeError } = await supabase
+          .from('finance_coffee_lots')
+          .update({
+            quantity_kg: recordData.kilograms
+          })
+          .in('coffee_record_id', coffeeRecordIds);
+        
+        if (financeError) {
+          console.error('Finance coffee lots update error:', financeError);
+        }
+      }
 
       await fetchStoreData();
       
+      console.log('✅ Successfully updated record across all systems');
       toast({
         title: "Success",
-        description: "Coffee record updated successfully"
+        description: "Coffee record updated successfully in Store, Quality, and Finance"
       });
     } catch (error) {
       console.error('Error updating coffee record:', error);
