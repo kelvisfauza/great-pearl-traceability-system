@@ -130,6 +130,7 @@ export const AddExpenseModal = ({ open, onClose, onSuccess }: AddExpenseModalPro
       toast({
         title: "Expense Added",
         description: `Successfully recorded expense of UGX ${amount.toLocaleString()}`,
+        duration: 3000,
       });
 
       setFormData({

@@ -49,7 +49,7 @@ export const useUnifiedApprovalRequests = () => {
         const { data: supabaseRequests, error } = await supabase
           .from('approval_requests')
           .select('*')
-          .eq('status', 'Pending')
+          .or('status.eq.Pending,status.eq.Finance Approved - Awaiting Admin')
           .order('created_at', { ascending: false });
         
         if (!error && supabaseRequests) {
