@@ -71,9 +71,8 @@ const Suppliers = () => {
     setLoadingTransactions(true);
     try {
       console.log('🔍 Loading transactions for supplier ID:', supplierId);
-      console.log('🔍 Selected supplier:', selectedSupplier);
       
-      // Get coffee records from BOTH Supabase AND Firebase
+      // Get coffee records ONLY from Supabase (no old Firebase data)
       const { data: supabaseCoffeeRecords, error } = await supabase
         .from('coffee_records')
         .select('*')
@@ -82,89 +81,21 @@ const Suppliers = () => {
 
       if (error) throw error;
       
-      console.log('📦 Supabase coffee records by supplier_id:', supabaseCoffeeRecords);
+      console.log('📦 Supabase coffee records:', supabaseCoffeeRecords?.length || 0);
 
-      // Also try fetching by supplier name from Supabase
-      const { data: supabaseCoffeeByName } = await supabase
-        .from('coffee_records')
-        .select('*')
-        .eq('supplier_name', selectedSupplier?.name)
-        .order('date', { ascending: false });
-      
-      console.log('📦 Supabase coffee records by supplier_name:', supabaseCoffeeByName);
+      const allCoffeeRecords = supabaseCoffeeRecords || [];
 
-      // Also fetch from Firebase by ID
-      const coffeeQueryById = query(
-        collection(db, 'coffee_records'),
-        where('supplier_id', '==', supplierId)
-      );
-      const firebaseSnapshotById = await getDocs(coffeeQueryById);
-      
-      console.log('🔥 Firebase coffee records by supplier_id:', firebaseSnapshotById.size);
-      
-      // Also fetch from Firebase by name
-      const coffeeQueryByName = query(
-        collection(db, 'coffee_records'),
-        where('supplier_name', '==', selectedSupplier?.name)
-      );
-      const firebaseSnapshotByName = await getDocs(coffeeQueryByName);
-      
-      console.log('🔥 Firebase coffee records by supplier_name:', firebaseSnapshotByName.size);
-      
-      const firebaseCoffeeRecords = [...firebaseSnapshotById.docs, ...firebaseSnapshotByName.docs].map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          date: data.date || '',
-          batch_number: data.batch_number || '',
-          coffee_type: data.coffee_type || '',
-          kilograms: Number(data.kilograms) || 0,
-          bags: Number(data.bags) || 0,
-          status: data.status || 'pending',
-          supplier_id: data.supplier_id
-        };
-      });
-
-      // Combine both sources (Supabase by ID, Supabase by name, Firebase records)
-      const allCoffeeRecords = [
-        ...(supabaseCoffeeRecords || []), 
-        ...(supabaseCoffeeByName || []),
-        ...firebaseCoffeeRecords
-      ];
-      
-      console.log('📊 Total combined coffee records:', allCoffeeRecords.length);
-
-      // Get payment records for these batches from both sources
+      // Get payment records ONLY from Supabase
       const batchNumbers = allCoffeeRecords.map(r => r.batch_number);
       
-      // Supabase payments
       const { data: supabasePayments } = await supabase
         .from('payment_records')
         .select('*')
         .in('batch_number', batchNumbers);
 
-      // Firebase payments
-      const paymentsQuery = query(
-        collection(db, 'payment_records'),
-        where('batch_number', 'in', batchNumbers.length > 0 ? batchNumbers : [''])
-      );
-      const paymentsSnapshot = await getDocs(paymentsQuery);
-      
-      const firebasePayments = paymentsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          batch_number: data.batch_number,
-          amount: Number(data.amount) || 0,
-          status: data.status || 'Pending'
-        };
-      });
-
-      // Combine all payments
-      const allPayments = [...(supabasePayments || []), ...firebasePayments];
-
       // Merge the data
       const transactionsData: SupplierTransaction[] = allCoffeeRecords.map(record => {
-        const payment = allPayments.find(p => p.batch_number === record.batch_number);
+        const payment = supabasePayments?.find(p => p.batch_number === record.batch_number);
         return {
           id: record.id,
           date: record.date,

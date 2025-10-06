@@ -25,9 +25,9 @@ export const useSuppliers = () => {
   const fetchSuppliers = async () => {
     try {
       setLoading(true);
-      console.log('Fetching suppliers from both Supabase and Firebase...');
+      console.log('Fetching suppliers from Supabase only (excluding old Firebase data)...');
       
-      // Fetch from Supabase
+      // Fetch ONLY from Supabase - no Firebase
       const { data: supabaseData, error } = await supabase
         .from('suppliers')
         .select('*')
@@ -37,37 +37,12 @@ export const useSuppliers = () => {
       
       const supabaseSuppliers = (supabaseData || []).map(supplier => ({
         ...supplier,
-        date_registered: supplier.date_registered || new Date().toISOString().split('T')[0],
-        source: 'supabase'
+        date_registered: supplier.date_registered || new Date().toISOString().split('T')[0]
       })) as Supplier[];
       
-      // Fetch from Firebase
-      const suppliersQuery = query(collection(db, 'suppliers'), orderBy('created_at', 'desc'));
-      const querySnapshot = await getDocs(suppliersQuery);
+      console.log('✅ Supabase suppliers only:', supabaseSuppliers.length);
       
-      const firebaseSuppliers = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.name || '',
-          code: data.code || '',
-          phone: data.phone || null,
-          origin: data.origin || '',
-          opening_balance: data.opening_balance || 0,
-          date_registered: data.date_registered || new Date().toISOString().split('T')[0],
-          created_at: data.created_at || new Date().toISOString(),
-          updated_at: data.updated_at || new Date().toISOString()
-        } as Supplier;
-      });
-      
-      // Combine both sources
-      const allSuppliers = [...supabaseSuppliers, ...firebaseSuppliers];
-      
-      console.log('Supabase suppliers:', supabaseSuppliers.length);
-      console.log('Firebase suppliers:', firebaseSuppliers.length);
-      console.log('Total suppliers:', allSuppliers.length);
-      
-      setSuppliers(allSuppliers);
+      setSuppliers(supabaseSuppliers);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       setSuppliers([]);
