@@ -45,19 +45,34 @@ export const useGlobalErrorHandler = () => {
     // Catch React errors (if using error boundaries)
     const originalError = console.error;
     console.error = (...args) => {
-      const errorMessage = args.join(' ');
-      
-      // Filter React-specific errors to avoid spam
-      if (errorMessage.includes('React') || errorMessage.includes('Warning:')) {
-        if (errorMessage.includes('Error:') || errorMessage.includes('Failed')) {
-          reportError(
-            'React Error',
-            errorMessage,
-            'system',
-            'React',
-            new Error().stack
-          );
+      try {
+        // Convert args to serializable strings to avoid DataCloneError
+        const errorMessage = args.map(arg => {
+          if (arg instanceof Error) return arg.message;
+          if (typeof arg === 'object') {
+            try {
+              return JSON.stringify(arg);
+            } catch {
+              return String(arg);
+            }
+          }
+          return String(arg);
+        }).join(' ');
+        
+        // Filter React-specific errors to avoid spam
+        if (errorMessage.includes('React') || errorMessage.includes('Warning:')) {
+          if (errorMessage.includes('Error:') || errorMessage.includes('Failed')) {
+            reportError(
+              'React Error',
+              errorMessage,
+              'system',
+              'React',
+              new Error().stack
+            );
+          }
         }
+      } catch (err) {
+        // Silently ignore errors in error handler to prevent loops
       }
       
       // Call original console.error
