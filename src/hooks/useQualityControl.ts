@@ -384,6 +384,35 @@ export const useQualityControl = () => {
 
       console.log('Quality assessment saved successfully:', newAssessment);
       
+      // Update coffee_records status to 'assessed' in Supabase
+      console.log('Updating coffee record status to assessed in Supabase...');
+      const { error: supabaseStatusError } = await supabase
+        .from('coffee_records')
+        .update({ 
+          status: 'assessed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', coffeeRecordId);
+
+      if (supabaseStatusError) {
+        console.error('Error updating coffee record status in Supabase:', supabaseStatusError);
+      } else {
+        console.log('✅ Coffee record status updated to "assessed" in Supabase');
+      }
+
+      // Update coffee_records status to 'assessed' in Firebase as well
+      try {
+        const coffeeDocRef = doc(db, 'coffee_records', assessment.store_record_id);
+        await updateDoc(coffeeDocRef, {
+          status: 'assessed',
+          updated_at: new Date().toISOString()
+        });
+        console.log('✅ Coffee record status updated to "assessed" in Firebase');
+      } catch (firebaseError) {
+        console.error('Error updating coffee record status in Firebase:', firebaseError);
+        // Don't throw - this is a sync issue but not critical
+      }
+      
       // Calculate total payment amount: kilograms × price per kg
       const kilograms = coffeeRecord?.kilograms || 0;
       const totalPaymentAmount = kilograms * finalPrice;

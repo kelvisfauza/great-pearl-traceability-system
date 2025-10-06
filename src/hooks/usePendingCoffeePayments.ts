@@ -205,10 +205,50 @@ export const usePendingCoffeePayments = () => {
           status: 'paid',
           updated_at: new Date().toISOString()
         });
-      console.log('✅ Coffee record updated to paid');
+        console.log('✅ Coffee record updated to paid in Firebase');
       } catch (coffeeUpdateError: any) {
-        console.error('❌ Failed to update coffee record:', coffeeUpdateError);
+        console.error('❌ Failed to update coffee record in Firebase:', coffeeUpdateError);
         throw new Error(`Failed to update coffee record: ${coffeeUpdateError.message}`);
+      }
+
+      // Also update coffee_record status in Supabase
+      console.log('📦 Updating coffee record in Supabase by batch number:', paymentData.batchNumber);
+      try {
+        const { error: supabaseUpdateError } = await supabase
+          .from('coffee_records')
+          .update({ 
+            status: 'paid',
+            updated_at: new Date().toISOString()
+          })
+          .eq('batch_number', paymentData.batchNumber);
+        
+        if (supabaseUpdateError) {
+          console.error('❌ Failed to update coffee record in Supabase:', supabaseUpdateError);
+        } else {
+          console.log('✅ Coffee record updated to paid in Supabase');
+        }
+      } catch (supabaseError: any) {
+        console.error('❌ Error updating Supabase coffee record:', supabaseError);
+      }
+
+      // Update payment_records status in Supabase
+      console.log('💳 Updating payment_records in Supabase...');
+      try {
+        const { error: paymentUpdateError } = await supabase
+          .from('payment_records')
+          .update({ 
+            status: paymentData.method === 'Cash' ? 'Paid' : 'Processing',
+            updated_at: new Date().toISOString()
+          })
+          .eq('batch_number', paymentData.batchNumber);
+        
+        if (paymentUpdateError) {
+          console.error('❌ Failed to update payment_records in Supabase:', paymentUpdateError);
+        } else {
+          console.log('✅ Payment_records updated in Supabase');
+        }
+      } catch (paymentSupabaseError: any) {
+        console.error('❌ Error updating Supabase payment_records:', paymentSupabaseError);
       }
 
       // Handle advance recovery if applicable
