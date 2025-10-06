@@ -47,6 +47,18 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     )
   );
 
+  // Log for debugging
+  console.log('📋 All requests:', requests.length);
+  console.log('📋 Expense requests after type filter:', expenseRequests.length);
+  console.log('📋 Expense requests:', expenseRequests.map(r => ({
+    id: r.id,
+    title: r.title,
+    type: r.type,
+    status: r.status,
+    finance_approved_at: r.finance_approved_at,
+    admin_approved_at: r.admin_approved_at
+  })));
+
   // Fetch user profiles to get names and phone numbers
   useEffect(() => {
     const fetchUserProfiles = async () => {
@@ -275,9 +287,11 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   }
 
   // Filter requests that need admin review (must have Finance approval first)
-  const needsReviewCount = expenseRequests.filter(r => 
-    r.status === 'Finance Approved' && r.finance_approved_at && !r.admin_approved_at
-  ).length;
+  const needsReviewCount = expenseRequests.filter(r => {
+    const needsReview = r.finance_approved_at && !r.admin_approved_at;
+    console.log(`📋 Request ${r.title}: finance_approved_at=${r.finance_approved_at}, admin_approved_at=${r.admin_approved_at}, needsReview=${needsReview}`);
+    return needsReview;
+  }).length;
   
   const totalAmount = expenseRequests.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
   const fullyApprovedCount = expenseRequests.filter(r => r.status === 'Approved').length;
@@ -324,11 +338,11 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
 
           <div className="space-y-4">
             {/* Filter to only show requests that have been approved by Finance first */}
-            {expenseRequests.filter(request => 
-              request.status === 'Finance Approved' && 
-              request.finance_approved_at && 
-              !request.admin_approved_at
-            ).length === 0 ? (
+            {expenseRequests.filter(request => {
+              const hasFinanceApproval = request.finance_approved_at && !request.admin_approved_at;
+              console.log(`📋 Filtering request ${request.title}: hasFinanceApproval=${hasFinanceApproval}`);
+              return hasFinanceApproval;
+            }).length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p>No requests pending admin approval</p>
@@ -338,11 +352,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
               </div>
             ) : (
               expenseRequests
-                .filter(request => 
-                  request.status === 'Finance Approved' && 
-                  request.finance_approved_at && 
-                  !request.admin_approved_at
-                )
+                .filter(request => request.finance_approved_at && !request.admin_approved_at)
                 .map((request) => {
                 const riskAssessment = assessExpenseRisk(request);
                 const paymentPhone = request.details?.phoneNumber || userProfiles[request.requestedby]?.phone || 'Not provided';
