@@ -34,9 +34,11 @@ export const useStoreManagement = () => {
   const { getActiveContractForSupplier } = useSupplierContracts();
   const { createAnnouncement } = useNotifications();
 
-  const fetchStoreData = async () => {
+  const fetchStoreData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       console.log('Fetching store records from Firebase...');
       
       const recordsQuery = query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'));
@@ -63,14 +65,18 @@ export const useStoreManagement = () => {
       setStoreRecords(transformedRecords);
     } catch (error) {
       console.error('Error fetching store data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch store records",
-        variant: "destructive"
-      });
+      if (!silent) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch store records",
+          variant: "destructive"
+        });
+      }
       setStoreRecords([]);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -499,9 +505,9 @@ export const useStoreManagement = () => {
     fetchStoreData();
     fetchSuppliers();
     
-    // Auto-refresh every 10 seconds to catch status updates from Quality Control
+    // Auto-refresh every 10 seconds to catch status updates (silent background refresh)
     const refreshInterval = setInterval(() => {
-      fetchStoreData();
+      fetchStoreData(true); // Pass true for silent refresh
     }, 10000);
     
     return () => clearInterval(refreshInterval);
