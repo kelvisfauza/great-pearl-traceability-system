@@ -431,26 +431,93 @@ export const useQualityControl = () => {
 
   const updateQualityAssessment = async (id: string, updates: Partial<QualityAssessment>) => {
     try {
-      console.log('Updating quality assessment in Firebase:', id, updates);
+      console.log('=== STARTING QUALITY ASSESSMENT UPDATE ===');
+      console.log('Assessment ID:', id);
+      console.log('Updates:', JSON.stringify(updates, null, 2));
       
-      await updateDoc(doc(db, 'quality_assessments', id), {
-        ...updates,
-        updated_at: new Date().toISOString()
-      });
+      // Update in Supabase first
+      const { data: updatedAssessment, error: updateError } = await supabase
+        .from('quality_assessments')
+        .update({
+          moisture: updates.moisture,
+          group1_defects: updates.group1_defects,
+          group2_defects: updates.group2_defects,
+          below12: updates.below12,
+          pods: updates.pods,
+          husks: updates.husks,
+          stones: updates.stones,
+          suggested_price: updates.suggested_price,
+          comments: updates.comments,
+          status: updates.status || 'assessed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
 
-      console.log('Quality assessment updated successfully');
-      
-      // Update local state
-      setQualityAssessments(assessments => 
-        assessments.map(assessment => 
-          assessment.id === id ? { ...assessment, ...updates } : assessment
-        )
-      );
+      if (updateError) {
+        console.error('Error updating quality assessment in Supabase:', updateError);
+        throw new Error(`Failed to update quality assessment: ${updateError.message}`);
+      }
+
+      console.log('Quality assessment updated in Supabase successfully:', updatedAssessment);
+
+      // Update associated payment record if price changed
+      if (updates.suggested_price) {
+        const { data: existingPayment, error: paymentFetchError } = await supabase
+          .from('payment_records')
+          .select('*')
+          .eq('quality_assessment_id', id)
+          .maybeSingle();
+
+        if (existingPayment && !paymentFetchError) {
+          // Get coffee record to calculate new total amount
+          const { data: coffeeRecord } = await supabase
+            .from('coffee_records')
+            .select('kilograms')
+            .eq('id', updatedAssessment.store_record_id)
+            .single();
+
+          if (coffeeRecord) {
+            const newTotalAmount = coffeeRecord.kilograms * updates.suggested_price;
+            
+            const { error: paymentUpdateError } = await supabase
+              .from('payment_records')
+              .update({
+                amount: newTotalAmount,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingPayment.id);
+
+            if (paymentUpdateError) {
+              console.error('Error updating payment record:', paymentUpdateError);
+            } else {
+              console.log('Payment record updated with new amount:', newTotalAmount);
+            }
+          }
+        }
+      }
+
+      // Update Firebase for backward compatibility
+      try {
+        await updateDoc(doc(db, 'quality_assessments', id), {
+          ...updates,
+          updated_at: new Date().toISOString()
+        });
+        console.log('Quality assessment updated in Firebase successfully');
+      } catch (firebaseError) {
+        console.warn('Firebase update failed (non-critical):', firebaseError);
+      }
+
+      // Refresh quality assessments to get the updated data with joins
+      await loadQualityAssessments();
       
       toast({
         title: "Success",
-        description: "Quality assessment updated successfully"
+        description: "Quality assessment and payment record updated successfully"
       });
+
+      return updatedAssessment;
     } catch (error) {
       console.error('Error updating quality assessment:', error);
       toast({

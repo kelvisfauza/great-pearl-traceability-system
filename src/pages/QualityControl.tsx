@@ -45,6 +45,7 @@ const QualityControl = () => {
     loading,
     error,
     addQualityAssessment,
+    updateQualityAssessment,
     updateStoreRecord,
     submitToFinance,
     refreshData
@@ -97,6 +98,7 @@ const QualityControl = () => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingAssessmentId, setEditingAssessmentId] = useState<string | null>(null);
   const [grnPrintModal, setGrnPrintModal] = useState<{
     open: boolean;
     grnData: {
@@ -206,6 +208,64 @@ const QualityControl = () => {
       use_manual_price: false
     });
     setActiveTab("price-calculator");
+  };
+
+  const handleEditAssessment = (assessment: any) => {
+    if (readOnly) {
+      toast({
+        title: 'View-only mode',
+        description: "You can't perform Quality tasks. You may view and approve only.",
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Find the corresponding store record
+    const record = storeRecords.find(r => r.id === assessment.store_record_id);
+    
+    if (!record) {
+      toast({
+        title: "Error",
+        description: "Cannot find the original coffee record for this assessment",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSelectedRecord(record);
+    setEditingAssessmentId(assessment.id);
+    
+    // Populate form with existing assessment data
+    setAssessmentForm({
+      moisture: assessment.moisture?.toString() || '',
+      group1_defects: assessment.group1_defects?.toString() || '',
+      group2_defects: assessment.group2_defects?.toString() || '',
+      below12: assessment.below12?.toString() || '',
+      pods: assessment.pods?.toString() || '',
+      husks: assessment.husks?.toString() || '',
+      stones: assessment.stones?.toString() || '',
+      discretion: assessment.discretion?.toString() || '',
+      ref_price: assessment.ref_price?.toString() || '',
+      fm: Number(assessment.fm) || 0,
+      actual_ott: Number(assessment.actual_ott) || 0,
+      clean_d14: Number(assessment.clean_d14) || 0,
+      outturn: Number(assessment.outturn) || 0,
+      outturn_price: Number(assessment.outturn_price) || 0,
+      final_price: Number(assessment.final_price) || 0,
+      quality_note: assessment.quality_note || '',
+      reject_outturn_price: Boolean(assessment.reject_outturn_price),
+      reject_final: Boolean(assessment.reject_final),
+      manual_price: '',
+      comments: assessment.comments || '',
+      use_manual_price: false
+    });
+    
+    setActiveTab("price-calculator");
+    
+    toast({
+      title: "Edit Mode",
+      description: "Editing existing assessment. Make your changes and save."
+    });
   };
 
   const handleStartModification = async (modificationRequest: any) => {
@@ -403,7 +463,7 @@ const QualityControl = () => {
 
     setIsSubmitting(true);
     try {
-      console.log('Submitting quality assessment...');
+      console.log(editingAssessmentId ? 'Updating quality assessment...' : 'Submitting quality assessment...');
       console.log('Selected record:', selectedRecord);
       console.log('Assessment form data:', assessmentForm);
       
@@ -440,8 +500,16 @@ const QualityControl = () => {
 
       console.log('Final assessment data to submit:', assessment);
       
-      const result = await addQualityAssessment(assessment);
-      console.log('Assessment submission result:', result);
+      let result;
+      if (editingAssessmentId) {
+        // Update existing assessment
+        result = await updateQualityAssessment(editingAssessmentId, assessment);
+        console.log('Assessment update result:', result);
+      } else {
+        // Create new assessment
+        result = await addQualityAssessment(assessment);
+        console.log('Assessment submission result:', result);
+      }
       
       if (selectedRecord.isModification) {
         await completeModificationRequest(selectedRecord.modificationRequestId);
@@ -462,6 +530,7 @@ const QualityControl = () => {
       await updateStoreRecord(selectedRecord.id, { status: 'assessed' });
       
       setSelectedRecord(null);
+      setEditingAssessmentId(null);
       setAssessmentForm({
         moisture: '',
         group1_defects: '',
@@ -488,10 +557,12 @@ const QualityControl = () => {
       setActiveTab("assessments");
       
       toast({
-        title: "Assessment Complete",
-        description: selectedRecord.isModification 
-          ? "Quality reassessment completed and sent back to finance"
-          : "Quality assessment saved and sent to finance for payment processing"
+        title: editingAssessmentId ? "Assessment Updated" : "Assessment Complete",
+        description: editingAssessmentId 
+          ? "Quality assessment updated successfully and changes reflected in finance"
+          : (selectedRecord.isModification 
+            ? "Quality reassessment completed and sent back to finance"
+            : "Quality assessment saved and sent to finance for payment processing")
       });
       
     } catch (error) {
@@ -894,8 +965,17 @@ const QualityControl = () => {
                           </TableCell>
                           <TableCell>{assessment.date_assessed}</TableCell>
                           <TableCell>{getStatusBadge(assessment.status)}</TableCell>
-                          <TableCell>
+                           <TableCell>
                             <div className="flex gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleEditAssessment(assessment)}
+                                disabled={readOnly}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
                               {assessment.status === 'assessed' && (
                                 <Button 
                                   size="sm" 
@@ -940,9 +1020,14 @@ const QualityControl = () => {
             {selectedRecord && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Price Assessment - {selectedRecord.batch_number}</CardTitle>
+                  <CardTitle>
+                    {editingAssessmentId ? 'Edit' : 'Price'} Assessment - {selectedRecord.batch_number}
+                  </CardTitle>
                   <CardDescription>
                     Supplier: {selectedRecord.supplier_name} | Coffee Type: {selectedRecord.coffee_type} | Weight: {selectedRecord.kilograms} kg
+                    {editingAssessmentId && (
+                      <Badge variant="outline" className="ml-2">Editing Existing Assessment</Badge>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -1103,7 +1188,7 @@ const QualityControl = () => {
                       ) : (
                         <>
                           <CheckCircle2 className="h-4 w-4 mr-2" />
-                          Save Assessment & Send to Finance
+                          {editingAssessmentId ? 'Update Assessment' : 'Save Assessment & Send to Finance'}
                         </>
                       )}
                     </Button>
@@ -1111,6 +1196,7 @@ const QualityControl = () => {
                       variant="outline" 
                       onClick={() => {
                         setSelectedRecord(null);
+                        setEditingAssessmentId(null);
                         setActiveTab("pending");
                       }}
                     >
