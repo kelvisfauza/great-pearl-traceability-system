@@ -1,0 +1,584 @@
+import Layout from "@/components/Layout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Users, 
+  Search, 
+  Filter,
+  Package,
+  DollarSign,
+  TrendingUp,
+  Calendar,
+  FileText,
+  ArrowLeft,
+  Phone,
+  MapPin
+} from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { useStoreManagement } from "@/hooks/useStoreManagement";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface SupplierTransaction {
+  id: string;
+  date: string;
+  batch_number: string;
+  coffee_type: string;
+  kilograms: number;
+  bags: number;
+  status: string;
+  payment_amount?: number;
+  payment_status?: string;
+}
+
+const Suppliers = () => {
+  const { suppliers, loading: suppliersLoading } = useStoreManagement();
+  const { toast } = useToast();
+  
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [transactions, setTransactions] = useState<SupplierTransaction[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  
+  // Filters
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [coffeeTypeFilter, setCoffeeTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  // Load transactions when supplier is selected
+  useEffect(() => {
+    if (selectedSupplier) {
+      loadSupplierTransactions(selectedSupplier.id);
+    }
+  }, [selectedSupplier]);
+
+  const loadSupplierTransactions = async (supplierId: string) => {
+    setLoadingTransactions(true);
+    try {
+      // Get coffee records for this supplier
+      const { data: coffeeRecords, error } = await supabase
+        .from('coffee_records')
+        .select('*')
+        .eq('supplier_id', supplierId)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+
+      // Get payment records for these batches
+      const batchNumbers = coffeeRecords?.map(r => r.batch_number) || [];
+      const { data: payments } = await supabase
+        .from('payment_records')
+        .select('*')
+        .in('batch_number', batchNumbers);
+
+      // Merge the data
+      const transactionsData: SupplierTransaction[] = (coffeeRecords || []).map(record => {
+        const payment = payments?.find(p => p.batch_number === record.batch_number);
+        return {
+          id: record.id,
+          date: record.date,
+          batch_number: record.batch_number,
+          coffee_type: record.coffee_type,
+          kilograms: record.kilograms,
+          bags: record.bags,
+          status: record.status,
+          payment_amount: payment?.amount,
+          payment_status: payment?.status
+        };
+      });
+
+      setTransactions(transactionsData);
+    } catch (error) {
+      console.error('Error loading supplier transactions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load supplier transactions",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
+
+  // Filter suppliers by search query
+  const filteredSuppliers = useMemo(() => {
+    if (!searchQuery) return suppliers;
+    
+    return suppliers.filter(supplier => 
+      supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      supplier.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      supplier.origin.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [suppliers, searchQuery]);
+
+  // Filter transactions
+  const filteredTransactions = useMemo(() => {
+    let filtered = transactions;
+
+    // Date filter
+    if (dateFrom) {
+      filtered = filtered.filter(t => t.date >= dateFrom);
+    }
+    if (dateTo) {
+      filtered = filtered.filter(t => t.date <= dateTo);
+    }
+
+    // Coffee type filter
+    if (coffeeTypeFilter !== "all") {
+      filtered = filtered.filter(t => t.coffee_type.toLowerCase().includes(coffeeTypeFilter.toLowerCase()));
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(t => t.status === statusFilter);
+    }
+
+    return filtered;
+  }, [transactions, dateFrom, dateTo, coffeeTypeFilter, statusFilter]);
+
+  // Calculate statistics for selected supplier
+  const supplierStats = useMemo(() => {
+    if (!selectedSupplier || filteredTransactions.length === 0) {
+      return {
+        totalKilograms: 0,
+        totalBags: 0,
+        totalTransactions: 0,
+        totalPayments: 0,
+        pendingPayments: 0
+      };
+    }
+
+    return {
+      totalKilograms: filteredTransactions.reduce((sum, t) => sum + t.kilograms, 0),
+      totalBags: filteredTransactions.reduce((sum, t) => sum + t.bags, 0),
+      totalTransactions: filteredTransactions.length,
+      totalPayments: filteredTransactions.reduce((sum, t) => sum + (t.payment_amount || 0), 0),
+      pendingPayments: filteredTransactions.filter(t => t.payment_status === 'Pending').length
+    };
+  }, [selectedSupplier, filteredTransactions]);
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, any> = {
+      'pending': 'secondary',
+      'assessed': 'default',
+      'paid': 'default'
+    };
+    
+    const labels: Record<string, string> = {
+      'pending': 'Pending',
+      'assessed': 'Assessed',
+      'paid': 'Paid'
+    };
+
+    return (
+      <Badge variant={variants[status] || 'secondary'}>
+        {labels[status] || status}
+      </Badge>
+    );
+  };
+
+  const getPaymentStatusBadge = (status?: string) => {
+    if (!status) return <Badge variant="secondary">No Payment</Badge>;
+    
+    const variants: Record<string, any> = {
+      'Pending': 'secondary',
+      'Paid': 'default',
+      'completed': 'default'
+    };
+
+    return <Badge variant={variants[status] || 'secondary'}>{status}</Badge>;
+  };
+
+  if (suppliersLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading suppliers...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <div className="container mx-auto p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Suppliers Management</h1>
+            <p className="text-muted-foreground mt-1">
+              View and manage supplier information and transactions
+            </p>
+          </div>
+          {selectedSupplier && (
+            <Button variant="outline" onClick={() => setSelectedSupplier(null)}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to List
+            </Button>
+          )}
+        </div>
+
+        {/* List View */}
+        {!selectedSupplier && (
+          <div className="space-y-4">
+            {/* Search */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Search Suppliers</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name, code, or location..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Suppliers List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>All Suppliers ({filteredSuppliers.length})</CardTitle>
+                <CardDescription>Click on a supplier to view detailed information</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {filteredSuppliers.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Suppliers Found</h3>
+                    <p className="text-muted-foreground">
+                      {searchQuery ? "Try adjusting your search criteria" : "No suppliers registered yet"}
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Date Registered</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSuppliers.map((supplier) => (
+                        <TableRow key={supplier.id}>
+                          <TableCell className="font-mono font-medium">{supplier.code}</TableCell>
+                          <TableCell className="font-medium">{supplier.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                              {supplier.origin}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {supplier.phone ? (
+                              <div className="flex items-center gap-1">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                {supplier.phone}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{supplier.date_registered}</TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              onClick={() => setSelectedSupplier(supplier)}
+                            >
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Detail View */}
+        {selectedSupplier && (
+          <div className="space-y-4">
+            {/* Supplier Info */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-2xl">{selectedSupplier.name}</CardTitle>
+                    <CardDescription className="mt-1">
+                      <span className="font-mono">{selectedSupplier.code}</span>
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline" className="text-lg px-3 py-1">
+                    Supplier
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Location</p>
+                      <p className="font-medium">{selectedSupplier.origin}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Phone</p>
+                      <p className="font-medium">{selectedSupplier.phone || '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Registered</p>
+                      <p className="font-medium">{selectedSupplier.date_registered}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total Kilograms
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    <p className="text-2xl font-bold">{supplierStats.totalKilograms.toLocaleString()}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total Bags
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    <p className="text-2xl font-bold">{supplierStats.totalBags.toLocaleString()}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Transactions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <p className="text-2xl font-bold">{supplierStats.totalTransactions}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total Payments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-green-600" />
+                    <p className="text-2xl font-bold">UGX {supplierStats.totalPayments.toLocaleString()}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Pending Payments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-orange-600" />
+                    <p className="text-2xl font-bold">{supplierStats.pendingPayments}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  Transaction Filters
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <Label htmlFor="dateFrom">Date From</Label>
+                    <Input
+                      id="dateFrom"
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="dateTo">Date To</Label>
+                    <Input
+                      id="dateTo"
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="coffeeType">Coffee Type</Label>
+                    <Select value={coffeeTypeFilter} onValueChange={setCoffeeTypeFilter}>
+                      <SelectTrigger id="coffeeType">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="arabica">Arabica</SelectItem>
+                        <SelectItem value="robusta">Robusta</SelectItem>
+                        <SelectItem value="drugar">Drugar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger id="status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="assessed">Assessed</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {(dateFrom || dateTo || coffeeTypeFilter !== "all" || statusFilter !== "all") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => {
+                      setDateFrom("");
+                      setDateTo("");
+                      setCoffeeTypeFilter("all");
+                      setStatusFilter("all");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Transactions Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Transaction History ({filteredTransactions.length})</CardTitle>
+                <CardDescription>All coffee deliveries from this supplier</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingTransactions ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading transactions...</p>
+                  </div>
+                ) : filteredTransactions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Transactions Found</h3>
+                    <p className="text-muted-foreground">
+                      {dateFrom || dateTo || coffeeTypeFilter !== "all" || statusFilter !== "all"
+                        ? "Try adjusting your filters"
+                        : "No transactions recorded yet"}
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Batch Number</TableHead>
+                        <TableHead>Coffee Type</TableHead>
+                        <TableHead>Kilograms</TableHead>
+                        <TableHead>Bags</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Payment Amount</TableHead>
+                        <TableHead>Payment Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTransactions.map((transaction) => (
+                        <TableRow key={transaction.id}>
+                          <TableCell>{transaction.date}</TableCell>
+                          <TableCell className="font-mono">{transaction.batch_number}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{transaction.coffee_type}</Badge>
+                          </TableCell>
+                          <TableCell>{transaction.kilograms.toLocaleString()} kg</TableCell>
+                          <TableCell>{transaction.bags}</TableCell>
+                          <TableCell>{getStatusBadge(transaction.status)}</TableCell>
+                          <TableCell>
+                            {transaction.payment_amount ? (
+                              <span className="font-medium">
+                                UGX {transaction.payment_amount.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{getPaymentStatusBadge(transaction.payment_status)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
+};
+
+export default Suppliers;
