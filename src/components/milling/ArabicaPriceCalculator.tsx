@@ -33,20 +33,38 @@ interface CalculationResults {
 interface ArabicaPriceCalculatorProps {
   onPriceChange?: (finalPrice: number | null) => void;
   onCalculationChange?: (results: CalculationResults, calculatorState: PriceCalculatorState) => void;
+  initialValues?: Partial<PriceCalculatorState>;
 }
 
-const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange }: ArabicaPriceCalculatorProps) => {
+const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange, initialValues }: ArabicaPriceCalculatorProps) => {
   const [state, setState] = useState<PriceCalculatorState>({
-    refPrice: '',
-    moisture: '',
-    gp1: '',
-    gp2: '',
-    less12: '',
-    pods: '',
-    husks: '',
-    stones: '',
-    discretion: ''
+    refPrice: initialValues?.refPrice || '',
+    moisture: initialValues?.moisture || '',
+    gp1: initialValues?.gp1 || '',
+    gp2: initialValues?.gp2 || '',
+    less12: initialValues?.less12 || '',
+    pods: initialValues?.pods || '',
+    husks: initialValues?.husks || '',
+    stones: initialValues?.stones || '',
+    discretion: initialValues?.discretion || ''
   });
+  
+  // Update state when initialValues change (e.g., when editing)
+  useEffect(() => {
+    if (initialValues) {
+      setState({
+        refPrice: initialValues.refPrice || '',
+        moisture: initialValues.moisture || '',
+        gp1: initialValues.gp1 || '',
+        gp2: initialValues.gp2 || '',
+        less12: initialValues.less12 || '',
+        pods: initialValues.pods || '',
+        husks: initialValues.husks || '',
+        stones: initialValues.stones || '',
+        discretion: initialValues.discretion || ''
+      });
+    }
+  }, [initialValues]);
 
   const [results, setResults] = useState<CalculationResults>({
     fm: 0,

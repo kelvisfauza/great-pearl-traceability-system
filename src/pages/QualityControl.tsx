@@ -1024,6 +1024,17 @@ const QualityControl = () => {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <ArabicaPriceCalculator 
+                    initialValues={{
+                      refPrice: assessmentForm.ref_price,
+                      moisture: assessmentForm.moisture,
+                      gp1: assessmentForm.group1_defects,
+                      gp2: assessmentForm.group2_defects,
+                      less12: assessmentForm.below12,
+                      pods: assessmentForm.pods,
+                      husks: assessmentForm.husks,
+                      stones: assessmentForm.stones,
+                      discretion: assessmentForm.discretion
+                    }}
                     onPriceChange={(price) => {
                       setAssessmentForm(prev => ({
                         ...prev,
