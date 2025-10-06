@@ -71,31 +71,76 @@ const Suppliers = () => {
     setLoadingTransactions(true);
     try {
       console.log('🔍 Loading transactions for supplier ID:', supplierId);
+      const cutoffDate = '2025-10-01';
       
-      // Get coffee records ONLY from Supabase (no old Firebase data)
+      // Get coffee records from Supabase (from Oct 1, 2025 onwards)
       const { data: supabaseCoffeeRecords, error } = await supabase
         .from('coffee_records')
         .select('*')
         .eq('supplier_id', supplierId)
+        .gte('date', cutoffDate)
         .order('date', { ascending: false });
 
       if (error) throw error;
       
-      console.log('📦 Supabase coffee records:', supabaseCoffeeRecords?.length || 0);
+      console.log('📦 Supabase coffee records (from Oct 1):', supabaseCoffeeRecords?.length || 0);
 
-      const allCoffeeRecords = supabaseCoffeeRecords || [];
+      // Also fetch from Firebase (from Oct 1, 2025 onwards)
+      const coffeeQuery = query(
+        collection(db, 'coffee_records'),
+        where('supplier_id', '==', supplierId),
+        where('date', '>=', cutoffDate)
+      );
+      const firebaseSnapshot = await getDocs(coffeeQuery);
+      
+      console.log('🔥 Firebase coffee records (from Oct 1):', firebaseSnapshot.size);
+      
+      const firebaseCoffeeRecords = firebaseSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          date: data.date || '',
+          batch_number: data.batch_number || '',
+          coffee_type: data.coffee_type || '',
+          kilograms: Number(data.kilograms) || 0,
+          bags: Number(data.bags) || 0,
+          status: data.status || 'pending'
+        };
+      });
 
-      // Get payment records ONLY from Supabase
+      const allCoffeeRecords = [...(supabaseCoffeeRecords || []), ...firebaseCoffeeRecords];
+      console.log('📊 Total combined coffee records (from Oct 1):', allCoffeeRecords.length);
+
+      // Get payment records from both sources
       const batchNumbers = allCoffeeRecords.map(r => r.batch_number);
       
+      // Supabase payments
       const { data: supabasePayments } = await supabase
         .from('payment_records')
         .select('*')
         .in('batch_number', batchNumbers);
 
+      // Firebase payments
+      const paymentsQuery = query(
+        collection(db, 'payment_records'),
+        where('batch_number', 'in', batchNumbers.length > 0 ? batchNumbers : [''])
+      );
+      const paymentsSnapshot = await getDocs(paymentsQuery);
+      
+      const firebasePayments = paymentsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          batch_number: data.batch_number,
+          amount: Number(data.amount) || 0,
+          status: data.status || 'Pending'
+        };
+      });
+
+      const allPayments = [...(supabasePayments || []), ...firebasePayments];
+
       // Merge the data
       const transactionsData: SupplierTransaction[] = allCoffeeRecords.map(record => {
-        const payment = supabasePayments?.find(p => p.batch_number === record.batch_number);
+        const payment = allPayments.find(p => p.batch_number === record.batch_number);
         return {
           id: record.id,
           date: record.date,
