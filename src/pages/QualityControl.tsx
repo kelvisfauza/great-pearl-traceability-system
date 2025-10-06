@@ -936,6 +936,7 @@ const QualityControl = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Batch Number</TableHead>
+                        <TableHead>Supplier</TableHead>
                         <TableHead>Moisture %</TableHead>
                         <TableHead>Defects</TableHead>
                         <TableHead>Final Price</TableHead>
@@ -948,6 +949,7 @@ const QualityControl = () => {
                       {qualityAssessments.map((assessment) => (
                         <TableRow key={assessment.id}>
                           <TableCell className="font-medium">{assessment.batch_number}</TableCell>
+                          <TableCell>{assessment.supplier_name || 'Unknown'}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Droplets className="h-4 w-4 text-blue-500" />
@@ -976,16 +978,6 @@ const QualityControl = () => {
                                 <Edit className="h-4 w-4 mr-1" />
                                 Edit
                               </Button>
-                              {assessment.status === 'assessed' && (
-                                <Button 
-                                  size="sm" 
-                                  onClick={() => handleSubmitToFinance(assessment.id)}
-                                  disabled={readOnly}
-                                >
-                                  <Send className="h-4 w-4 mr-1" />
-                                  Send to Finance
-                                </Button>
-                              )}
                               {(assessment.status === 'paid' || assessment.status === 'submitted_to_finance') && (
                                 <Button 
                                   size="sm" 

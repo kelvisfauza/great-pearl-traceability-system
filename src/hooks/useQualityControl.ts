@@ -39,6 +39,9 @@ export interface QualityAssessment {
   assessed_by: string;
   created_at: string;
   updated_at: string;
+  supplier_name?: string;
+  coffee_type?: string;
+  kilograms?: number;
 }
 
 export const useQualityControl = () => {
