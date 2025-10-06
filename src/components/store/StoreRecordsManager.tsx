@@ -435,7 +435,10 @@ export const StoreRecordsManager = () => {
           </p>
         </div>
         
-        <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <Dialog open={formOpen} onOpenChange={(open) => {
+          console.log('Dialog state changing:', open);
+          setFormOpen(open);
+        }}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>
               <Plus className="h-4 w-4 mr-2" />
@@ -445,177 +448,180 @@ export const StoreRecordsManager = () => {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editMode ? 'Request Edit for Store Record' : 'Add New Store Record'}
+                {editMode ? 'Edit Store Record' : 'Add New Store Record'}
               </DialogTitle>
+              {editMode && (
+                <p className="text-sm text-muted-foreground">
+                  Update the record details below. Changes will be saved immediately.
+                </p>
+              )}
             </DialogHeader>
             
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="inventory_item">Inventory Item</Label>
-                <Select value={formData.inventory_item_id} onValueChange={(value) => 
-                  setFormData({...formData, inventory_item_id: value})
-                }>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select inventory item" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {inventoryItems.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.coffee_type} - {item.location}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="transaction_type">Transaction Type</Label>
-                <Select value={formData.transaction_type} onValueChange={(value) => 
-                  setFormData({...formData, transaction_type: value})
-                }>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="received">Received</SelectItem>
-                    <SelectItem value="dispatched">Dispatched</SelectItem>
-                    <SelectItem value="transferred">Transferred</SelectItem>
-                    <SelectItem value="adjusted">Adjusted</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="quantity_bags">Quantity (Bags)</Label>
+              {/* Supplier Name - Key field for editing */}
+              <div className="col-span-2">
+                <Label htmlFor="supplier_name" className="text-base font-semibold">
+                  Supplier Name *
+                </Label>
                 <Input
-                  type="number"
-                  value={formData.quantity_bags}
-                  onChange={(e) => setFormData({...formData, quantity_bags: parseInt(e.target.value) || 0})}
+                  id="supplier_name"
+                  value={formData.supplier_name}
+                  onChange={(e) => setFormData({...formData, supplier_name: e.target.value})}
+                  placeholder="Enter supplier name"
+                  className="mt-1"
                 />
               </div>
 
+              {/* Quantity Fields */}
               <div>
-                <Label htmlFor="quantity_kg">Quantity (KG)</Label>
+                <Label htmlFor="quantity_kg" className="text-base font-semibold">
+                  Quantity (KG) *
+                </Label>
                 <Input
+                  id="quantity_kg"
                   type="number"
                   step="0.01"
                   value={formData.quantity_kg}
                   onChange={(e) => setFormData({...formData, quantity_kg: parseFloat(e.target.value) || 0})}
+                  placeholder="Enter weight"
+                  className="mt-1"
                 />
-                {!editMode && formData.quantity_kg > 0 && formData.transaction_type === 'received' && formData.supplier_name && (
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    {validateBatchWeight(formData.quantity_kg) ? (
-                      <div className="flex items-center gap-1 text-green-600">
-                        ✓ Will create new batch immediately
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 text-blue-600">
-                        📦 Will be added to pending batch (needs {getMinimumBatchWeight()}kg total)
-                      </div>
-                    )}
-                  </div>
-                )}
-                {!editMode && formData.quantity_kg > 0 && formData.transaction_type !== 'received' && !validateBatchWeight(formData.quantity_kg) && (
-                  <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
-                    <AlertTriangle className="h-4 w-4" />
-                    Minimum {getMinimumBatchWeight()}kg required for non-received transactions
-                  </div>
-                )}
               </div>
 
               <div>
-                <Label htmlFor="batch_number">Batch Number</Label>
+                <Label htmlFor="quantity_bags" className="text-base font-semibold">
+                  Number of Bags *
+                </Label>
                 <Input
-                  value={formData.batch_number}
-                  onChange={(e) => setFormData({...formData, batch_number: e.target.value})}
-                  placeholder={editMode ? "Enter batch number" : "Auto-generated (B00001 format)"}
-                  disabled={!editMode && !formData.batch_number}
+                  id="quantity_bags"
+                  type="number"
+                  value={formData.quantity_bags}
+                  onChange={(e) => setFormData({...formData, quantity_bags: parseInt(e.target.value) || 0})}
+                  placeholder="Enter number of bags"
+                  className="mt-1"
                 />
-                {!editMode && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Batch number will be auto-generated in format B00001
-                  </p>
-                )}
               </div>
 
-              <div>
-                <Label htmlFor="transaction_date">Transaction Date</Label>
+              {/* Transaction Date */}
+              <div className="col-span-2">
+                <Label htmlFor="transaction_date" className="text-base font-semibold">
+                  Transaction Date *
+                </Label>
                 <Input
+                  id="transaction_date"
                   type="date"
                   value={formData.transaction_date}
                   onChange={(e) => setFormData({...formData, transaction_date: e.target.value})}
+                  className="mt-1"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="supplier_name">Supplier Name</Label>
-                <Input
-                  value={formData.supplier_name}
-                  onChange={(e) => setFormData({...formData, supplier_name: e.target.value})}
-                />
-              </div>
+              {!editMode && (
+                <>
+                  {/* These fields only show for new records */}
+                  <div>
+                    <Label htmlFor="inventory_item">Inventory Item</Label>
+                    <Select value={formData.inventory_item_id} onValueChange={(value) => 
+                      setFormData({...formData, inventory_item_id: value})
+                    }>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select inventory item" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {inventoryItems.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.coffee_type} - {item.location}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div>
-                <Label htmlFor="buyer_name">Buyer Name</Label>
-                <Input
-                  value={formData.buyer_name}
-                  onChange={(e) => setFormData({...formData, buyer_name: e.target.value})}
-                />
-              </div>
+                  <div>
+                    <Label htmlFor="transaction_type">Transaction Type</Label>
+                    <Select value={formData.transaction_type} onValueChange={(value) => 
+                      setFormData({...formData, transaction_type: value})
+                    }>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="received">Received</SelectItem>
+                        <SelectItem value="dispatched">Dispatched</SelectItem>
+                        <SelectItem value="transferred">Transferred</SelectItem>
+                        <SelectItem value="adjusted">Adjusted</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
 
+              {/* Additional Optional Fields */}
               <div>
                 <Label htmlFor="price_per_kg">Price per KG</Label>
                 <Input
+                  id="price_per_kg"
                   type="number"
                   step="0.01"
                   value={formData.price_per_kg}
                   onChange={(e) => setFormData({...formData, price_per_kg: parseFloat(e.target.value) || 0})}
+                  placeholder="Optional"
+                  className="mt-1"
                 />
               </div>
 
               <div>
                 <Label htmlFor="reference_number">Reference Number</Label>
                 <Input
+                  id="reference_number"
                   value={formData.reference_number}
                   onChange={(e) => setFormData({...formData, reference_number: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="from_location">From Location</Label>
-                <Input
-                  value={formData.from_location}
-                  onChange={(e) => setFormData({...formData, from_location: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="to_location">To Location</Label>
-                <Input
-                  value={formData.to_location}
-                  onChange={(e) => setFormData({...formData, to_location: e.target.value})}
+                  placeholder="Optional"
+                  className="mt-1"
                 />
               </div>
 
               <div className="col-span-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
+                  id="notes"
                   value={formData.notes}
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
                   rows={3}
+                  placeholder="Optional notes about this transaction"
+                  className="mt-1"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setFormOpen(false)}>
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  console.log('❌ Cancel clicked');
+                  setFormOpen(false);
+                }}
+                type="button"
+              >
                 Cancel
               </Button>
-              <Button onClick={() => {
-                console.log('🔘 Button clicked!', { editMode, selectedRecord });
-                handleSubmit();
-              }}>
-                {editMode ? 'Update Record' : 'Create Record'}
+              <Button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🔘 Submit button clicked!', { 
+                    editMode, 
+                    selectedRecord,
+                    formData,
+                    hasSupplierName: !!formData.supplier_name,
+                    hasQuantity: formData.quantity_kg > 0
+                  });
+                  handleSubmit();
+                }}
+                className="min-w-[140px]"
+                type="button"
+              >
+                {editMode ? '✓ Update Record' : '+ Create Record'}
               </Button>
             </div>
           </DialogContent>
