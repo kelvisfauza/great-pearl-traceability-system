@@ -70,42 +70,45 @@ const Suppliers = () => {
   const loadSupplierTransactions = async (supplierId: string) => {
     setLoadingTransactions(true);
     try {
-      console.log('🔍 Loading transactions for supplier:', { id: supplierId, name: selectedSupplier?.name });
+      console.log('🔍 Loading transactions for supplier:', { 
+        id: supplierId, 
+        name: selectedSupplier?.name,
+        code: selectedSupplier?.code 
+      });
       const cutoffDate = '2025-10-01';
       
-      // Get coffee records from Supabase by BOTH supplier_id AND supplier_name
-      const { data: supabaseById, error: errorById } = await supabase
-        .from('coffee_records')
-        .select('*')
-        .eq('supplier_id', supplierId)
-        .gte('date', cutoffDate)
-        .order('date', { ascending: false });
-
-      const { data: supabaseByName, error: errorByName } = await supabase
-        .from('coffee_records')
-        .select('*')
-        .eq('supplier_name', selectedSupplier?.name)
-        .gte('date', cutoffDate)
-        .order('date', { ascending: false });
-
-      if (errorById) console.error('Supabase error (by ID):', errorById);
-      if (errorByName) console.error('Supabase error (by name):', errorByName);
+      // Strategy: Fetch ALL coffee records from Oct 1st onwards, then filter by supplier
+      // This ensures we catch records regardless of how they're linked
       
-      console.log('📦 Supabase records by supplier_id:', supabaseById?.length || 0);
-      console.log('📦 Supabase records by supplier_name:', supabaseByName?.length || 0);
+      // Get ALL coffee records from Supabase (from Oct 1, 2025 onwards)
+      const { data: allSupabaseCoffee, error: supabaseError } = await supabase
+        .from('coffee_records')
+        .select('*')
+        .gte('date', cutoffDate)
+        .order('date', { ascending: false });
 
-      // Fetch from Firebase - simplified queries without compound where clauses
+      if (supabaseError) console.error('Supabase error:', supabaseError);
+      
+      // Filter to match this supplier by ID, name, or code
+      const supabaseRecords = (allSupabaseCoffee || []).filter(record => 
+        record.supplier_id === supplierId ||
+        record.supplier_name === selectedSupplier?.name ||
+        record.supplier_name?.toLowerCase().includes(selectedSupplier?.name?.toLowerCase())
+      );
+      
+      console.log('📦 Supabase coffee records matching supplier:', supabaseRecords.length);
+
+      // Fetch ALL Firebase records from Oct 1st onwards
       let firebaseCoffeeRecords: any[] = [];
       
       try {
-        // Query by supplier_id only, then filter by date in code
-        const firebaseByIdQuery = query(
-          collection(db, 'coffee_records'),
-          where('supplier_id', '==', supplierId)
+        const allFirebaseQuery = query(
+          collection(db, 'coffee_records')
         );
-        const firebaseByIdSnapshot = await getDocs(firebaseByIdQuery);
+        const allFirebaseSnapshot = await getDocs(allFirebaseQuery);
         
-        const recordsById = firebaseByIdSnapshot.docs
+        // Filter to match this supplier and date
+        firebaseCoffeeRecords = allFirebaseSnapshot.docs
           .map(doc => {
             const data = doc.data();
             return {
@@ -115,47 +118,29 @@ const Suppliers = () => {
               coffee_type: data.coffee_type || '',
               kilograms: Number(data.kilograms) || 0,
               bags: Number(data.bags) || 0,
-              status: data.status || 'pending'
+              status: data.status || 'pending',
+              supplier_id: data.supplier_id,
+              supplier_name: data.supplier_name
             };
           })
-          .filter(record => record.date >= cutoffDate);
+          .filter(record => {
+            const matchesDate = record.date >= cutoffDate;
+            const matchesSupplier = 
+              record.supplier_id === supplierId ||
+              record.supplier_name === selectedSupplier?.name ||
+              record.supplier_name?.toLowerCase().includes(selectedSupplier?.name?.toLowerCase());
+            
+            return matchesDate && matchesSupplier;
+          });
         
-        console.log('🔥 Firebase records by supplier_id (filtered):', recordsById.length);
-        
-        // Query by supplier_name only, then filter by date in code
-        const firebaseByNameQuery = query(
-          collection(db, 'coffee_records'),
-          where('supplier_name', '==', selectedSupplier?.name)
-        );
-        const firebaseByNameSnapshot = await getDocs(firebaseByNameQuery);
-        
-        const recordsByName = firebaseByNameSnapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              date: data.date || '',
-              batch_number: data.batch_number || '',
-              coffee_type: data.coffee_type || '',
-              kilograms: Number(data.kilograms) || 0,
-              bags: Number(data.bags) || 0,
-              status: data.status || 'pending'
-            };
-          })
-          .filter(record => record.date >= cutoffDate);
-        
-        console.log('🔥 Firebase records by supplier_name (filtered):', recordsByName.length);
-        
-        firebaseCoffeeRecords = [...recordsById, ...recordsByName];
+        console.log('🔥 Firebase records matching supplier:', firebaseCoffeeRecords.length);
       } catch (firebaseError) {
         console.error('Firebase query error:', firebaseError);
-        // Continue without Firebase data if there's an error
       }
 
       // Combine all sources and remove duplicates
       const allCoffeeRecords = [
-        ...(supabaseById || []), 
-        ...(supabaseByName || []), 
+        ...supabaseRecords, 
         ...firebaseCoffeeRecords
       ];
       
@@ -164,7 +149,10 @@ const Suppliers = () => {
         index === self.findIndex((r) => r.batch_number === record.batch_number)
       );
       
-      console.log('📊 Total unique coffee records (from Oct 1):', uniqueRecords.length);
+      console.log('📊 Total unique coffee records for this supplier:', uniqueRecords.length);
+      if (uniqueRecords.length > 0) {
+        console.log('Sample record:', uniqueRecords[0]);
+      }
 
       // Get payment records from both sources
       const batchNumbers = uniqueRecords.map(r => r.batch_number);
