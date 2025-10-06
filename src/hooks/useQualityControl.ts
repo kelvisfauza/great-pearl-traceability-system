@@ -320,9 +320,12 @@ export const useQualityControl = () => {
       }
 
       // Prepare assessment data with proper validation
-      const finalPrice = assessment.manual_price 
-        ? Number(assessment.manual_price) 
-        : (assessment.final_price || assessment.suggested_price || 0);
+      // Use suggested_price which contains the final price (calculator or manual)
+      const finalPrice = Number(assessment.suggested_price) || 0;
+      
+      if (finalPrice <= 0) {
+        throw new Error('Invalid price: Price must be greater than 0');
+      }
       
       // Use the existing batch number or generate a new one if missing
       let batchNumber = assessment.batch_number || coffeeRecord.batch_number;
@@ -342,7 +345,7 @@ export const useQualityControl = () => {
         pods: Number(assessment.pods) || 0,
         husks: Number(assessment.husks) || 0,
         stones: Number(assessment.stones) || 0,
-        suggested_price: finalPrice,
+        suggested_price: finalPrice, // This is the price that finance will see
         status: 'assessed',
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed || new Date().toISOString().split('T')[0],

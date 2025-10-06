@@ -1010,30 +1010,56 @@ const QualityControl = () => {
                     {!assessmentForm.use_manual_price ? (
                       <div className="bg-background rounded-md p-4 border-2 border-primary/20">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-muted-foreground">Calculator Final Price:</span>
+                          <span className="text-sm font-medium text-muted-foreground">Calculator Final Price (per kg):</span>
                           <span className="text-2xl font-bold text-primary">
                             UGX {assessmentForm.final_price ? assessmentForm.final_price.toLocaleString() : '0'}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          This price is automatically calculated based on quality parameters above
+                          This unit price is automatically calculated based on quality parameters above
                         </p>
+                        {selectedRecord && (
+                          <div className="mt-3 pt-3 border-t">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Total Amount:</span>
+                              <span className="font-semibold">
+                                UGX {((assessmentForm.final_price || 0) * (selectedRecord.kilograms || 0)).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {assessmentForm.final_price?.toLocaleString()} × {selectedRecord.kilograms} kg
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div>
-                        <Label htmlFor="manual_price">Enter Manual Price (UGX)</Label>
+                        <Label htmlFor="manual_price">Enter Manual Price (UGX per kg)</Label>
                         <Input
                           id="manual_price"
                           type="number"
                           step="1"
                           value={assessmentForm.manual_price}
                           onChange={(e) => setAssessmentForm({...assessmentForm, manual_price: e.target.value})}
-                          placeholder="Enter your custom price"
+                          placeholder="Enter unit price per kilogram"
                           disabled={readOnly}
                           className="text-lg font-semibold"
                         />
+                        {selectedRecord && assessmentForm.manual_price && (
+                          <div className="mt-2 p-2 bg-muted rounded text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Total Amount:</span>
+                              <span className="font-semibold">
+                                UGX {(parseFloat(assessmentForm.manual_price) * (selectedRecord.kilograms || 0)).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {parseFloat(assessmentForm.manual_price).toLocaleString()} × {selectedRecord.kilograms} kg
+                            </p>
+                          </div>
+                        )}
                         <p className="text-sm text-muted-foreground mt-1">
-                          Enter a custom price if calculator result doesn't apply
+                          Enter unit price per kg (not total amount)
                         </p>
                       </div>
                     )}
