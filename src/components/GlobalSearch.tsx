@@ -129,7 +129,12 @@ const GlobalSearch = () => {
       case 'quality':
         return <ClipboardCheck className="h-4 w-4" />;
       case 'payment':
+      case 'expense':
         return <DollarSign className="h-4 w-4" />;
+      case 'department':
+        return <Search className="h-4 w-4" />;
+      case 'eudr':
+        return <FileText className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
@@ -148,7 +153,12 @@ const GlobalSearch = () => {
       case 'quality':
         return 'text-teal-500';
       case 'payment':
+      case 'expense':
         return 'text-emerald-500';
+      case 'department':
+        return 'text-primary';
+      case 'eudr':
+        return 'text-yellow-500';
       default:
         return 'text-gray-500';
     }
@@ -227,14 +237,21 @@ const GlobalSearch = () => {
                           {getResultIcon(result.type)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">
-                            {result.title}
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-sm truncate">
+                              {result.title}
+                            </div>
+                            {(result.department || result.module) && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">
+                                {result.module || result.department}
+                              </span>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground truncate">
                             {result.subtitle}
                           </div>
                         </div>
-                        <div className="text-xs text-muted-foreground capitalize">
+                        <div className="text-xs text-muted-foreground capitalize shrink-0">
                           {result.type}
                         </div>
                       </button>

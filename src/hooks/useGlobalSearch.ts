@@ -6,10 +6,12 @@ import { db } from '@/lib/firebase';
 
 export interface SearchResult {
   id: string;
-  type: 'supplier' | 'batch' | 'employee' | 'transaction' | 'quality' | 'payment';
+  type: 'supplier' | 'batch' | 'employee' | 'transaction' | 'quality' | 'payment' | 'expense' | 'department' | 'eudr';
   title: string;
   subtitle: string;
   navigateTo: string;
+  department?: string;
+  module?: string;
   metadata?: any;
 }
 
@@ -32,6 +34,31 @@ export const useGlobalSearch = (searchTerm: string) => {
         const lowerSearch = searchTerm.toLowerCase();
         console.log('🔍 Global search - term:', searchTerm, 'hasPermission check:', hasPermission('Store Management'));
 
+        // Department/Module suggestions based on keywords
+        const departmentKeywords: Record<string, { name: string; path: string; keywords: string[] }> = {
+          expenses: { name: 'Expenses & Finance', path: '/expenses', keywords: ['expense', 'expens', 'money', 'payment', 'finance', 'cash'] },
+          eudr: { name: 'EUDR Documentation', path: '/eudr-documentation', keywords: ['eudr', 'eud', 'documentation', 'compliance', 'eu'] },
+          hr: { name: 'Human Resources', path: '/human-resources', keywords: ['hr', 'human', 'employee', 'staff', 'salary', 'payroll'] },
+          store: { name: 'Store Management', path: '/store', keywords: ['store', 'inventory', 'stock', 'warehouse'] },
+          quality: { name: 'Quality Control', path: '/quality-control', keywords: ['quality', 'assessment', 'inspection'] },
+          finance: { name: 'Finance Department', path: '/finance', keywords: ['finance', 'accounting', 'ledger', 'transaction'] },
+          sales: { name: 'Sales & Marketing', path: '/sales-marketing', keywords: ['sales', 'marketing', 'customer', 'order'] },
+        };
+
+        // Check department matches
+        Object.entries(departmentKeywords).forEach(([key, dept]) => {
+          if (dept.keywords.some(keyword => keyword.includes(lowerSearch) || lowerSearch.includes(keyword))) {
+            searchResults.push({
+              id: `dept-${key}`,
+              type: 'department',
+              title: dept.name,
+              subtitle: `Navigate to ${dept.name} module`,
+              navigateTo: dept.path,
+              module: dept.name
+            });
+          }
+        });
+
         // Search Suppliers (visible to all)
         const { data: suppliers, error: suppliersError } = await supabase
           .from('suppliers')
@@ -49,9 +76,61 @@ export const useGlobalSearch = (searchTerm: string) => {
               title: supplier.name,
               subtitle: `Code: ${supplier.code} | Origin: ${supplier.origin}`,
               navigateTo: `/suppliers?id=${supplier.id}`,
+              department: 'Procurement',
               metadata: supplier
             });
           });
+        }
+
+        // Search Money/Expense Requests
+        if (hasPermission('Finance Management') || employee?.permissions?.includes('*')) {
+          const { data: expenseRequests } = await supabase
+            .from('money_requests')
+            .select('*')
+            .or(`reason.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%,request_type.ilike.%${searchTerm}%`)
+            .limit(10);
+
+          if (expenseRequests) {
+            expenseRequests.forEach(request => {
+              searchResults.push({
+                id: request.id,
+                type: 'expense',
+                title: `${request.request_type}: ${request.reason}`,
+                subtitle: `${request.amount} UGX | Status: ${request.status}`,
+                navigateTo: `/expenses`,
+                department: 'Finance',
+                module: 'Expense Requests',
+                metadata: request
+              });
+            });
+          }
+        }
+
+        // Search EUDR Documentation
+        if (hasPermission('Store Management') || employee?.permissions?.includes('*')) {
+          // Fuzzy match for EUDR
+          if ('eudr'.includes(lowerSearch) || lowerSearch.includes('eud') || lowerSearch.includes('documentation')) {
+            const { data: eudrDocs } = await supabase
+              .from('eudr_documents')
+              .select('*')
+              .ilike('batch_number', `%${searchTerm}%`)
+              .limit(5);
+
+            if (eudrDocs) {
+              eudrDocs.forEach(doc => {
+                searchResults.push({
+                  id: doc.id,
+                  type: 'eudr',
+                  title: `EUDR: ${doc.batch_number}`,
+                  subtitle: `${doc.coffee_type} | ${doc.total_kilograms}kg | Status: ${doc.status}`,
+                  navigateTo: `/eudr-documentation`,
+                  department: 'Store',
+                  module: 'EUDR Compliance',
+                  metadata: doc
+                });
+              });
+            }
+          }
         }
 
         // Search Coffee Records by Batch Number - Check both Store Management permission and wildcard
@@ -77,6 +156,8 @@ export const useGlobalSearch = (searchTerm: string) => {
                 title: `Batch: ${record.batch_number}`,
                 subtitle: `${record.supplier_name} | ${record.kilograms}kg | ${record.date}`,
                 navigateTo: `/store?batch=${record.batch_number}`,
+                department: 'Store',
+                module: 'Coffee Records',
                 metadata: record
               });
             });
@@ -100,6 +181,8 @@ export const useGlobalSearch = (searchTerm: string) => {
                 title: `Quality: ${assessment.batch_number}`,
                 subtitle: `Moisture: ${assessment.moisture}% | Status: ${assessment.status}`,
                 navigateTo: `/quality-control?batch=${assessment.batch_number}`,
+                department: 'Quality',
+                module: 'Quality Assessment',
                 metadata: assessment
               });
             });
@@ -112,7 +195,7 @@ export const useGlobalSearch = (searchTerm: string) => {
           const { data: employees } = await supabase
             .from('employees')
             .select('*')
-            .or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,employee_id.ilike.%${searchTerm}%`)
+            .or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,employee_id.ilike.%${searchTerm}%,department.ilike.%${searchTerm}%`)
             .limit(10);
 
           if (employees) {
@@ -123,6 +206,8 @@ export const useGlobalSearch = (searchTerm: string) => {
                 title: emp.name,
                 subtitle: `${emp.position} | ${emp.department}`,
                 navigateTo: `/human-resources?employee=${emp.id}`,
+                department: 'HR',
+                module: 'Employee Management',
                 metadata: emp
               });
             });
@@ -135,7 +220,7 @@ export const useGlobalSearch = (searchTerm: string) => {
           const { data: payments } = await supabase
             .from('payment_records')
             .select('*')
-            .or(`batch_number.ilike.%${searchTerm}%,supplier.ilike.%${searchTerm}%`)
+            .or(`batch_number.ilike.%${searchTerm}%,supplier.ilike.%${searchTerm}%,status.ilike.%${searchTerm}%`)
             .limit(10);
 
           if (payments) {
@@ -146,6 +231,8 @@ export const useGlobalSearch = (searchTerm: string) => {
                 title: `Payment: ${payment.supplier}`,
                 subtitle: `${payment.amount} UGX | ${payment.status} | ${payment.date}`,
                 navigateTo: `/finance?payment=${payment.id}`,
+                department: 'Finance',
+                module: 'Payment Processing',
                 metadata: payment
               });
             });
@@ -158,7 +245,7 @@ export const useGlobalSearch = (searchTerm: string) => {
           const { data: sales } = await supabase
             .from('sales_transactions')
             .select('*')
-            .or(`customer.ilike.%${searchTerm}%,truck_details.ilike.%${searchTerm}%`)
+            .or(`customer.ilike.%${searchTerm}%,truck_details.ilike.%${searchTerm}%,coffee_type.ilike.%${searchTerm}%`)
             .limit(10);
 
           if (sales) {
@@ -169,6 +256,8 @@ export const useGlobalSearch = (searchTerm: string) => {
                 title: `Sale: ${sale.customer}`,
                 subtitle: `${sale.weight}kg | ${sale.total_amount} UGX | ${sale.date}`,
                 navigateTo: `/sales-marketing?sale=${sale.id}`,
+                department: 'Sales',
+                module: 'Sales Transactions',
                 metadata: sale
               });
             });
