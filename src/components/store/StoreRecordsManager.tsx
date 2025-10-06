@@ -172,25 +172,36 @@ export const StoreRecordsManager = () => {
       }
 
       if (editMode && selectedRecord) {
-        // Create edit request instead of direct update
-        const { error } = await supabase
-          .from('edit_requests')
-          .insert({
-            table_name: 'store_records',
-            record_id: selectedRecord.id,
-            original_data: JSON.parse(JSON.stringify(selectedRecord)),
-            proposed_changes: JSON.parse(JSON.stringify(recordData)),
-            reason: 'Transaction modification requested',
-            requested_by: user?.email || 'Unknown',
-            requested_by_department: 'Store'
-          });
+        // Direct update to store_records
+        const { error: updateError } = await supabase
+          .from('store_records')
+          .update(recordData)
+          .eq('id', selectedRecord.id);
 
-        if (error) throw error;
+        if (updateError) throw updateError;
+
+        // Also update coffee_records if it exists
+        const { error: coffeeUpdateError } = await supabase
+          .from('coffee_records')
+          .update({
+            supplier_name: formData.supplier_name || 'Unknown',
+            kilograms: formData.quantity_kg,
+            bags: Math.ceil(formData.quantity_kg / 60),
+            date: formData.transaction_date,
+            batch_number: recordData.batch_number || 'N/A'
+          })
+          .eq('id', selectedRecord.id);
+
+        if (coffeeUpdateError) {
+          console.error('Error updating coffee_records:', coffeeUpdateError);
+        }
 
         toast({
-          title: 'Edit Request Submitted',
-          description: 'Your edit request has been submitted for admin approval',
+          title: 'Record Updated',
+          description: 'Store record updated successfully',
         });
+        
+        fetchRecords();
       } else {
         // Insert into store_records
         const { data: storeRecord, error } = await supabase
