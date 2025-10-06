@@ -7,6 +7,7 @@ import NotificationButton from "./notifications/NotificationButton";
 import { AccountButton } from "./AccountButton";
 import NotificationPanel from "./notifications/NotificationPanel";
 import { ThemeToggle } from "./ThemeToggle";
+import GlobalSearch from "./GlobalSearch";
 import { useMessages } from "@/hooks/useMessages";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/contexts/AuthContext";
@@ -88,6 +89,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
                 </div>
                 <div className="flex items-center gap-1 xs:gap-2 flex-shrink-0">
                   <AccountButton />
+                  <GlobalSearch />
                   <NotificationButton
                     onToggle={toggleNotifications}
                     unreadCount={notificationUnreadCount}
