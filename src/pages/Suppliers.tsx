@@ -94,39 +94,63 @@ const Suppliers = () => {
       console.log('📦 Supabase records by supplier_id:', supabaseById?.length || 0);
       console.log('📦 Supabase records by supplier_name:', supabaseByName?.length || 0);
 
-      // Also fetch from Firebase by BOTH ID and name
-      const firebaseByIdQuery = query(
-        collection(db, 'coffee_records'),
-        where('supplier_id', '==', supplierId),
-        where('date', '>=', cutoffDate)
-      );
-      const firebaseByIdSnapshot = await getDocs(firebaseByIdQuery);
+      // Fetch from Firebase - simplified queries without compound where clauses
+      let firebaseCoffeeRecords: any[] = [];
       
-      const firebaseByNameQuery = query(
-        collection(db, 'coffee_records'),
-        where('supplier_name', '==', selectedSupplier?.name),
-        where('date', '>=', cutoffDate)
-      );
-      const firebaseByNameSnapshot = await getDocs(firebaseByNameQuery);
-      
-      console.log('🔥 Firebase records by supplier_id:', firebaseByIdSnapshot.size);
-      console.log('🔥 Firebase records by supplier_name:', firebaseByNameSnapshot.size);
-      
-      const firebaseCoffeeRecords = [
-        ...firebaseByIdSnapshot.docs,
-        ...firebaseByNameSnapshot.docs
-      ].map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          date: data.date || '',
-          batch_number: data.batch_number || '',
-          coffee_type: data.coffee_type || '',
-          kilograms: Number(data.kilograms) || 0,
-          bags: Number(data.bags) || 0,
-          status: data.status || 'pending'
-        };
-      });
+      try {
+        // Query by supplier_id only, then filter by date in code
+        const firebaseByIdQuery = query(
+          collection(db, 'coffee_records'),
+          where('supplier_id', '==', supplierId)
+        );
+        const firebaseByIdSnapshot = await getDocs(firebaseByIdQuery);
+        
+        const recordsById = firebaseByIdSnapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              date: data.date || '',
+              batch_number: data.batch_number || '',
+              coffee_type: data.coffee_type || '',
+              kilograms: Number(data.kilograms) || 0,
+              bags: Number(data.bags) || 0,
+              status: data.status || 'pending'
+            };
+          })
+          .filter(record => record.date >= cutoffDate);
+        
+        console.log('🔥 Firebase records by supplier_id (filtered):', recordsById.length);
+        
+        // Query by supplier_name only, then filter by date in code
+        const firebaseByNameQuery = query(
+          collection(db, 'coffee_records'),
+          where('supplier_name', '==', selectedSupplier?.name)
+        );
+        const firebaseByNameSnapshot = await getDocs(firebaseByNameQuery);
+        
+        const recordsByName = firebaseByNameSnapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              date: data.date || '',
+              batch_number: data.batch_number || '',
+              coffee_type: data.coffee_type || '',
+              kilograms: Number(data.kilograms) || 0,
+              bags: Number(data.bags) || 0,
+              status: data.status || 'pending'
+            };
+          })
+          .filter(record => record.date >= cutoffDate);
+        
+        console.log('🔥 Firebase records by supplier_name (filtered):', recordsByName.length);
+        
+        firebaseCoffeeRecords = [...recordsById, ...recordsByName];
+      } catch (firebaseError) {
+        console.error('Firebase query error:', firebaseError);
+        // Continue without Firebase data if there's an error
+      }
 
       // Combine all sources and remove duplicates
       const allCoffeeRecords = [
