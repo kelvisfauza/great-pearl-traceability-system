@@ -180,7 +180,9 @@ export const useStoreManagement = () => {
         throw new Error('Coffee record not found');
       }
 
-      // Check if there are any payment records for this batch that are paid or processing
+      const { supabase } = await import('@/integrations/supabase/client');
+
+      // Check payment status in both Firebase AND Supabase
       const paymentQuery = query(
         collection(db, 'payment_records'), 
         where('batch_number', '==', coffeeRecord.batchNumber)
@@ -189,10 +191,17 @@ export const useStoreManagement = () => {
       
       const paidPayments = paymentSnapshot.docs.filter(doc => {
         const data = doc.data();
-        return ['Paid', 'Processing', 'Approved'].includes(data.status);
+        return ['Paid', 'paid', 'Processing', 'Approved', 'completed', 'Completed'].includes(data.status);
       });
 
-      if (paidPayments.length > 0) {
+      // Also check Supabase payment_records
+      const { data: supabasePayments } = await supabase
+        .from('payment_records')
+        .select('*')
+        .eq('batch_number', coffeeRecord.batchNumber)
+        .in('status', ['Paid', 'paid', 'Processing', 'Approved', 'completed', 'Completed']);
+
+      if (paidPayments.length > 0 || (supabasePayments && supabasePayments.length > 0)) {
         toast({
           title: "Cannot Delete",
           description: `Cannot delete coffee record: Payment has been processed or approved for batch ${coffeeRecord.batchNumber}`,
@@ -222,16 +231,63 @@ export const useStoreManagement = () => {
         return;
       }
 
-      console.log('Coffee record can be deleted, proceeding...');
+      console.log('Coffee record can be deleted, proceeding with cascading deletions...');
       
+      // DELETE FROM FIREBASE
       const docRef = doc(db, 'coffee_records', recordId);
       await deleteDoc(docRef);
+      
+      // DELETE FROM SUPABASE - Cascade through all related tables
+      console.log('Deleting from Supabase...');
+      
+      // 1. Delete quality assessments by store_record_id (Firebase ID)
+      const { error: qaDeleteError } = await supabase
+        .from('quality_assessments')
+        .delete()
+        .eq('store_record_id', recordId);
+        
+      if (qaDeleteError) console.error('Error deleting quality assessments:', qaDeleteError);
+      
+      // 2. Delete payment records by batch number
+      const { error: paymentDeleteError } = await supabase
+        .from('payment_records')
+        .delete()
+        .eq('batch_number', coffeeRecord.batchNumber);
+        
+      if (paymentDeleteError) console.error('Error deleting payment records:', paymentDeleteError);
+      
+      // 3. Get Supabase coffee_record by batch_number to delete finance_coffee_lots
+      const { data: supabaseCoffeeRecords } = await supabase
+        .from('coffee_records')
+        .select('id')
+        .eq('batch_number', coffeeRecord.batchNumber);
+      
+      if (supabaseCoffeeRecords && supabaseCoffeeRecords.length > 0) {
+        const supabaseRecordIds = supabaseCoffeeRecords.map(r => r.id);
+        
+        // 4. Delete finance_coffee_lots
+        const { error: financeDeleteError } = await supabase
+          .from('finance_coffee_lots')
+          .delete()
+          .in('coffee_record_id', supabaseRecordIds);
+          
+        if (financeDeleteError) console.error('Error deleting finance lots:', financeDeleteError);
+        
+        // 5. Finally delete the coffee_records from Supabase
+        const { error: coffeeDeleteError } = await supabase
+          .from('coffee_records')
+          .delete()
+          .in('id', supabaseRecordIds);
+          
+        if (coffeeDeleteError) console.error('Error deleting coffee records from Supabase:', coffeeDeleteError);
+      }
 
+      console.log('✅ Successfully deleted record from both Firebase and Supabase');
       await fetchStoreData();
       
       toast({
         title: "Success",
-        description: "Coffee record deleted successfully"
+        description: `Coffee record deleted successfully from all systems (Batch: ${coffeeRecord.batchNumber})`
       });
     } catch (error) {
       console.error('Error deleting coffee record:', error);
