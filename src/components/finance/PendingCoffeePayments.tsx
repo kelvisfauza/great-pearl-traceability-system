@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Coffee, DollarSign, Banknote, CreditCard, Eye, User, Calendar, AlertCircle, XCircle } from 'lucide-react';
+import { Coffee, DollarSign, Banknote, CreditCard, Eye, User, Calendar, AlertCircle, XCircle, Search, X } from 'lucide-react';
 import { usePendingCoffeePayments } from '@/hooks/usePendingCoffeePayments';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierAdvances } from '@/hooks/useSupplierAdvances';
@@ -19,6 +19,7 @@ export const PendingCoffeePayments = () => {
   const { coffeePayments, loading, processPayment } = usePendingCoffeePayments();
   const { toast } = useToast();
   const { getTotalOutstanding } = useSupplierAdvances();
+  const [searchTerm, setSearchTerm] = useState('');
   
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Bank'>('Cash');
@@ -151,6 +152,19 @@ export const PendingCoffeePayments = () => {
 
   const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
 
+  // Filter coffee payments based on search term
+  const filteredPayments = useMemo(() => {
+    if (!searchTerm) return coffeePayments;
+    
+    const lowerSearch = searchTerm.toLowerCase();
+    return coffeePayments.filter(payment => 
+      payment.batchNumber?.toLowerCase().includes(lowerSearch) ||
+      payment.supplier?.toLowerCase().includes(lowerSearch) ||
+      payment.assessedBy?.toLowerCase().includes(lowerSearch) ||
+      payment.dateAssessed?.toLowerCase().includes(lowerSearch)
+    );
+  }, [coffeePayments, searchTerm]);
+
   if (loading) {
     return (
       <Card>
@@ -165,13 +179,37 @@ export const PendingCoffeePayments = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Coffee className="h-5 w-5" />
-            Incoming Coffee Payments
-          </CardTitle>
-          <CardDescription>
-            Coffee assessments completed by Quality Control ready for payment processing
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Coffee className="h-5 w-5" />
+                Incoming Coffee Payments
+              </CardTitle>
+              <CardDescription>
+                Coffee assessments completed by Quality Control ready for payment processing
+              </CardDescription>
+            </div>
+            <div className="relative w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search by batch, supplier, assessor..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-9"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {coffeePayments.length === 0 ? (
@@ -179,6 +217,20 @@ export const PendingCoffeePayments = () => {
               <Coffee className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <p>No pending coffee payments</p>
               <p className="text-sm mt-2">Completed quality assessments will appear here</p>
+            </div>
+          ) : filteredPayments.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p>No results found for "{searchTerm}"</p>
+              <p className="text-sm mt-2">Try adjusting your search terms</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSearchTerm('')}
+                className="mt-4"
+              >
+                Clear Search
+              </Button>
             </div>
           ) : (
             <Table>
@@ -195,7 +247,7 @@ export const PendingCoffeePayments = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {coffeePayments.map((payment) => (
+                {filteredPayments.map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell className="font-medium">
                       <Badge variant="outline">{payment.batchNumber}</Badge>
