@@ -51,6 +51,13 @@ const Suppliers = () => {
   const [coffeeTypeFilter, setCoffeeTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  // Debug log
+  useEffect(() => {
+    console.log('📊 Suppliers page - suppliers data:', suppliers);
+    console.log('📊 Suppliers page - loading state:', suppliersLoading);
+    console.log('📊 Suppliers count:', suppliers?.length);
+  }, [suppliers, suppliersLoading]);
+
   // Load transactions when supplier is selected
   useEffect(() => {
     if (selectedSupplier) {
