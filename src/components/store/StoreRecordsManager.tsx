@@ -172,16 +172,24 @@ export const StoreRecordsManager = () => {
       }
 
       if (editMode && selectedRecord) {
+        console.log('🔄 Starting update process...', { selectedRecord, recordData });
+        
         // Direct update to store_records
-        const { error: updateError } = await supabase
+        const { data: updateData, error: updateError } = await supabase
           .from('store_records')
           .update(recordData)
-          .eq('id', selectedRecord.id);
+          .eq('id', selectedRecord.id)
+          .select();
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('❌ Store records update error:', updateError);
+          throw updateError;
+        }
+        
+        console.log('✅ Store records updated:', updateData);
 
         // Also update coffee_records if it exists
-        const { error: coffeeUpdateError } = await supabase
+        const { data: coffeeData, error: coffeeUpdateError } = await supabase
           .from('coffee_records')
           .update({
             supplier_name: formData.supplier_name || 'Unknown',
@@ -190,10 +198,13 @@ export const StoreRecordsManager = () => {
             date: formData.transaction_date,
             batch_number: recordData.batch_number || 'N/A'
           })
-          .eq('id', selectedRecord.id);
+          .eq('id', selectedRecord.id)
+          .select();
 
         if (coffeeUpdateError) {
-          console.error('Error updating coffee_records:', coffeeUpdateError);
+          console.error('⚠️ Coffee records update error:', coffeeUpdateError);
+        } else {
+          console.log('✅ Coffee records updated:', coffeeData);
         }
 
         toast({
