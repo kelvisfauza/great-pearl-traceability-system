@@ -184,7 +184,10 @@ const GlobalSearch = () => {
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40" />
+          <div 
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40" 
+            onClick={() => setIsOpen(false)}
+          />
           
           {/* Search Modal */}
           <div className="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4">

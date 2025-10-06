@@ -138,15 +138,38 @@ export const useGlobalSearch = (searchTerm: string) => {
         console.log('🔍 Can access store:', canAccessStore, 'Employee permissions:', employee?.permissions);
         
         if (canAccessStore) {
+          // Search in store_records table
+          const { data: storeRecords, error: storeError } = await supabase
+            .from('store_records')
+            .select('*')
+            .or(`batch_number.ilike.%${searchTerm}%,supplier_name.ilike.%${searchTerm}%,reference_number.ilike.%${searchTerm}%`)
+            .limit(10);
+
+          console.log('🔍 Store records search result:', storeRecords, 'Error:', storeError);
+
+          if (storeError) console.error('Store records search error:', storeError);
+
+          if (storeRecords) {
+            storeRecords.forEach(record => {
+              searchResults.push({
+                id: record.id,
+                type: 'batch',
+                title: `Batch: ${record.batch_number || 'N/A'}`,
+                subtitle: `${record.supplier_name} | ${record.quantity_kg}kg | ${record.transaction_date}`,
+                navigateTo: `/store`,
+                department: 'Store',
+                module: 'Store Records',
+                metadata: record
+              });
+            });
+          }
+
+          // Also search coffee_records for backward compatibility
           const { data: coffeeRecords, error: coffeeError } = await supabase
             .from('coffee_records')
             .select('*')
             .or(`batch_number.ilike.%${searchTerm}%,supplier_name.ilike.%${searchTerm}%`)
             .limit(10);
-
-          console.log('🔍 Coffee records search result:', coffeeRecords, 'Error:', coffeeError);
-
-          if (coffeeError) console.error('Coffee records search error:', coffeeError);
 
           if (coffeeRecords) {
             coffeeRecords.forEach(record => {
@@ -155,7 +178,7 @@ export const useGlobalSearch = (searchTerm: string) => {
                 type: 'batch',
                 title: `Batch: ${record.batch_number}`,
                 subtitle: `${record.supplier_name} | ${record.kilograms}kg | ${record.date}`,
-                navigateTo: `/store?batch=${record.batch_number}`,
+                navigateTo: `/store`,
                 department: 'Store',
                 module: 'Coffee Records',
                 metadata: record
