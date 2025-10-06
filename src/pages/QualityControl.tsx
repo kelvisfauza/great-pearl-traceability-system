@@ -23,7 +23,9 @@ import {
   FileDown,
   Edit,
   RefreshCw,
-  Loader2
+  Loader2,
+  Calculator,
+  Edit3
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -90,7 +92,8 @@ const QualityControl = () => {
     
     // Manual override and comments
     manual_price: '',
-    comments: ''
+    comments: '',
+    use_manual_price: false  // Toggle between calculator and manual price
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -199,7 +202,8 @@ const QualityControl = () => {
       reject_outturn_price: false,
       reject_final: false,
       manual_price: '',
-      comments: ''
+      comments: '',
+      use_manual_price: false
     });
     setActiveTab("price-calculator");
   };
@@ -301,7 +305,8 @@ const QualityControl = () => {
       reject_outturn_price: false,
       reject_final: false,
       manual_price: '',
-      comments: `Modification requested due to: ${modificationRequest.reason}${modificationRequest.comments ? '. Additional notes: ' + modificationRequest.comments : ''}`
+      comments: `Modification requested due to: ${modificationRequest.reason}${modificationRequest.comments ? '. Additional notes: ' + modificationRequest.comments : ''}`,
+      use_manual_price: false
     });
     
     setActiveTab("price-calculator");
@@ -378,12 +383,17 @@ const QualityControl = () => {
       return;
     }
 
-    const finalPrice = parseFloat(assessmentForm.manual_price) || assessmentForm.final_price || calculateSuggestedPrice();
+    // Use manual price if toggle is on and manual price is provided, otherwise use calculator price
+    const finalPrice = assessmentForm.use_manual_price 
+      ? (parseFloat(assessmentForm.manual_price) || 0)
+      : (assessmentForm.final_price || calculateSuggestedPrice());
     
     if (finalPrice <= 0) {
       toast({
         title: "Error",
-        description: "Please calculate or enter a valid price for the assessment.",
+        description: assessmentForm.use_manual_price 
+          ? "Please enter a valid manual price for the assessment."
+          : "Please calculate a valid price using the calculator.",
         variant: "destructive"
       });
       return;
@@ -470,7 +480,8 @@ const QualityControl = () => {
         reject_outturn_price: false,
         reject_final: false,
         manual_price: '',
-        comments: ''
+        comments: '',
+        use_manual_price: false
       });
       setActiveTab("assessments");
       
@@ -967,23 +978,68 @@ const QualityControl = () => {
                     }}
                   />
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <div>
-                      <Label htmlFor="offered_price">Offered Price (UGX)</Label>
-                      <Input
-                        id="offered_price"
-                        type="number"
-                        step="1"
-                        value={assessmentForm.manual_price}
-                        onChange={(e) => setAssessmentForm({...assessmentForm, manual_price: e.target.value})}
-                        placeholder="Enter final offered price"
-                        disabled={readOnly}
-                      />
-                      <p className="text-sm text-gray-500 mt-1">
-                        You can manually adjust the price if needed
-                      </p>
+                  {/* Price Selection Toggle */}
+                  <div className="border rounded-lg p-4 bg-muted/50 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-base font-semibold">Price Selection Method</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={!assessmentForm.use_manual_price ? "default" : "outline"}
+                          onClick={() => setAssessmentForm({...assessmentForm, use_manual_price: false})}
+                          disabled={readOnly}
+                        >
+                          <Calculator className="h-4 w-4 mr-2" />
+                          Use Calculator Price
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={assessmentForm.use_manual_price ? "default" : "outline"}
+                          onClick={() => setAssessmentForm({...assessmentForm, use_manual_price: true})}
+                          disabled={readOnly}
+                        >
+                          <Edit3 className="h-4 w-4 mr-2" />
+                          Enter Manual Price
+                        </Button>
+                      </div>
                     </div>
-                    
+
+                    {/* Show calculated price or manual input based on toggle */}
+                    {!assessmentForm.use_manual_price ? (
+                      <div className="bg-background rounded-md p-4 border-2 border-primary/20">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Calculator Final Price:</span>
+                          <span className="text-2xl font-bold text-primary">
+                            UGX {assessmentForm.final_price ? assessmentForm.final_price.toLocaleString() : '0'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          This price is automatically calculated based on quality parameters above
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Label htmlFor="manual_price">Enter Manual Price (UGX)</Label>
+                        <Input
+                          id="manual_price"
+                          type="number"
+                          step="1"
+                          value={assessmentForm.manual_price}
+                          onChange={(e) => setAssessmentForm({...assessmentForm, manual_price: e.target.value})}
+                          placeholder="Enter your custom price"
+                          disabled={readOnly}
+                          className="text-lg font-semibold"
+                        />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Enter a custom price if calculator result doesn't apply
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-6 mt-6">
                     <div>
                       <Label htmlFor="assessment_comments">Assessment Comments</Label>
                       <Textarea
