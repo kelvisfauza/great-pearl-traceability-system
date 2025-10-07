@@ -106,7 +106,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     return conversations.find(c => c.id === selectedConversation);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -328,7 +328,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                 <Input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyDown}
                   placeholder="Type a message"
                   className="flex-1 rounded-full bg-background"
                 />
