@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, orderBy } from 'firebase/firestore';
 
 export interface SalesTransaction {
   id: string;
@@ -52,9 +52,9 @@ export const useSalesTransactions = () => {
   const checkInventoryAvailability = async (coffeeType: string, weightNeeded: number) => {
     try {
       const coffeeRecordsRef = collection(db, 'coffee_records');
+      // Query all in_stock records and filter by coffee type
       const q = query(
         coffeeRecordsRef,
-        where('coffee_type', '==', coffeeType),
         where('status', '==', 'in_stock')
       );
       
@@ -63,7 +63,12 @@ export const useSalesTransactions = () => {
       
       snapshot.forEach(doc => {
         const data = doc.data();
-        totalAvailable += Number(data.kilograms) || 0;
+        const recordCoffeeType = data.coffee_type || '';
+        
+        // Check if the record's coffee type contains the selected type (case-insensitive)
+        if (recordCoffeeType.toLowerCase().includes(coffeeType.toLowerCase())) {
+          totalAvailable += Number(data.kilograms) || 0;
+        }
       });
 
       return {
@@ -79,20 +84,28 @@ export const useSalesTransactions = () => {
   const deductFromInventory = async (coffeeType: string, weightToDeduct: number) => {
     try {
       const coffeeRecordsRef = collection(db, 'coffee_records');
+      // Query all in_stock records
       const q = query(
         coffeeRecordsRef,
-        where('coffee_type', '==', coffeeType),
-        where('status', '==', 'in_stock')
+        where('status', '==', 'in_stock'),
+        orderBy('created_at', 'asc') // FIFO - oldest first
       );
       
       const snapshot = await getDocs(q);
       let remainingToDeduct = weightToDeduct;
       
-      // Deduct from oldest records first (FIFO)
+      // Filter and deduct from matching coffee types (oldest first)
       for (const docSnap of snapshot.docs) {
         if (remainingToDeduct <= 0) break;
         
         const data = docSnap.data();
+        const recordCoffeeType = data.coffee_type || '';
+        
+        // Only process records that match the coffee type (case-insensitive partial match)
+        if (!recordCoffeeType.toLowerCase().includes(coffeeType.toLowerCase())) {
+          continue;
+        }
+        
         const currentKg = Number(data.kilograms) || 0;
         
         if (currentKg <= remainingToDeduct) {
