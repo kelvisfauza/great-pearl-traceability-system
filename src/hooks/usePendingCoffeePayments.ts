@@ -140,7 +140,24 @@ export const usePendingCoffeePayments = () => {
           return;
         }
         
-        const quantity = Number(data.kilograms) || 0;
+        // Get quantity - try multiple field names and ensure we get the ORIGINAL purchase quantity
+        // This should NOT be affected by sales or inventory movements
+        const quantity = Number(data.kilograms || data.quantity_kg || data.weight_kg || 0);
+        
+        console.log(`📦 Processing ${batchNumber}:`, {
+          kilograms: data.kilograms,
+          quantity_kg: data.quantity_kg,
+          weight_kg: data.weight_kg,
+          finalQuantity: quantity,
+          supplier: data.supplier_name
+        });
+        
+        // Skip records with zero quantity - likely data issue
+        if (quantity === 0) {
+          console.warn(`⚠️ Skipping ${batchNumber} - zero quantity detected. Check coffee_records data.`);
+          return;
+        }
+        
         const qualityAssessment = qualityAssessments.get(doc.id);
         
         // Check if Quality has priced this
