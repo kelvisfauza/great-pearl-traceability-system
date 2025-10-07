@@ -1,97 +1,79 @@
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 
 export async function restoreFirebaseCoffeeRecords() {
   try {
-    console.log('🔄 Starting restoration of Firebase coffee records...');
+    console.log('🔄 Starting sync from Supabase to Firebase...');
     
-    // 1. Fetch all coffee records from Firebase
-    const coffeeRecordsRef = collection(db, 'coffee_records');
-    const snapshot = await getDocs(coffeeRecordsRef);
+    // 1. Fetch all coffee records from Supabase (source of truth)
+    const { data: supabaseRecords, error: supabaseError } = await supabase
+      .from('coffee_records')
+      .select('batch_number, kilograms, bags, coffee_type, supplier_name, date, status');
     
-    console.log(`📦 Found ${snapshot.docs.length} coffee records in Firebase`);
+    if (supabaseError) throw supabaseError;
     
-    // Log sample record to see structure
-    if (snapshot.docs.length > 0) {
-      const sampleRecord = snapshot.docs[0].data();
-      console.log('📋 Sample coffee record structure:', sampleRecord);
+    console.log(`📊 Found ${supabaseRecords?.length || 0} records in Supabase`);
+    
+    if (!supabaseRecords || supabaseRecords.length === 0) {
+      console.log('⚠️ No records found in Supabase');
+      return { success: true, restoredCount: 0 };
     }
     
-    // 2. Fetch all inventory movements from Supabase
-    const { data: movements, error } = await supabase
-      .from('inventory_movements')
-      .select('coffee_record_id, quantity_kg');
-    
-    if (error) throw error;
-    
-    console.log(`📊 Found ${movements?.length || 0} inventory movements in Supabase`);
-    
-    // 3. Calculate movements per record
-    const movementsByRecord: Record<string, number> = {};
-    movements?.forEach(m => {
-      movementsByRecord[m.coffee_record_id] = 
-        (movementsByRecord[m.coffee_record_id] || 0) + Number(m.quantity_kg);
-    });
-    
-    console.log('📊 Movements by record:', movementsByRecord);
-    console.log('📊 Total unique records with movements:', Object.keys(movementsByRecord).length);
-    
-    // 4. Restore original quantities
+    // 2. For each Supabase record, find and update the corresponding Firebase record by batch_number
     let restoredCount = 0;
     const updates: Promise<void>[] = [];
     
-    snapshot.docs.forEach(docSnapshot => {
-      const record = docSnapshot.data();
-      const recordId = docSnapshot.id;
-      const currentKg = Number(record.kilograms || record.weight || 0);
-      const totalMovements = movementsByRecord[recordId] || 0;
+    for (const supabaseRecord of supabaseRecords) {
+      if (!supabaseRecord.batch_number) continue;
       
-      console.log(`🔍 Checking record ${record.batch_number || recordId}: currentKg=${currentKg}, movements=${totalMovements}`);
+      // Find matching Firebase record by batch_number
+      const firebaseQuery = query(
+        collection(db, 'coffee_records'),
+        where('batch_number', '==', supabaseRecord.batch_number)
+      );
       
-      // If current is 0 and there are negative movements (sales), restore original
-      if (currentKg === 0 && totalMovements < 0) {
-        // Original = current - movements (movements are negative, so this adds back)
-        const originalKg = currentKg - totalMovements;
-        
-        console.log(`✅ Restoring ${record.batch_number}: ${currentKg}kg -> ${originalKg}kg (movements: ${totalMovements}kg)`);
-        
-        // Update Firebase record
-        updates.push(
-          updateDoc(doc(db, 'coffee_records', recordId), {
-            kilograms: originalKg,
-            weight: originalKg,
-            updated_at: new Date()
-          })
-        );
-        
-        restoredCount++;
-      } else if (currentKg < 100 && totalMovements < 0) {
-        // Also restore records with suspiciously low quantities
-        const originalKg = currentKg - totalMovements;
-        
-        console.log(`✅ Restoring ${record.batch_number}: ${currentKg}kg -> ${originalKg}kg (movements: ${totalMovements}kg)`);
-        
-        updates.push(
-          updateDoc(doc(db, 'coffee_records', recordId), {
-            kilograms: originalKg,
-            weight: originalKg,
-            updated_at: new Date()
-          })
-        );
-        
-        restoredCount++;
+      const firebaseSnapshot = await getDocs(firebaseQuery);
+      
+      if (firebaseSnapshot.empty) {
+        console.log(`⚠️ No Firebase record found for batch ${supabaseRecord.batch_number}`);
+        continue;
       }
-    });
+      
+      // Update each matching Firebase record
+      firebaseSnapshot.docs.forEach(firebaseDoc => {
+        const firebaseData = firebaseDoc.data();
+        const currentFirebaseKg = Number(firebaseData.kilograms || 0);
+        const supabaseKg = Number(supabaseRecord.kilograms || 0);
+        
+        // Only update if values differ
+        if (currentFirebaseKg !== supabaseKg) {
+          console.log(`🔄 Syncing ${supabaseRecord.batch_number}: ${currentFirebaseKg}kg → ${supabaseKg}kg`);
+          
+          updates.push(
+            updateDoc(doc(db, 'coffee_records', firebaseDoc.id), {
+              kilograms: supabaseKg,
+              bags: supabaseRecord.bags || firebaseData.bags,
+              coffee_type: supabaseRecord.coffee_type || firebaseData.coffee_type,
+              supplier_name: supabaseRecord.supplier_name || firebaseData.supplier_name,
+              status: supabaseRecord.status || firebaseData.status,
+              updated_at: new Date().toISOString()
+            })
+          );
+          
+          restoredCount++;
+        }
+      });
+    }
     
-    // Execute all updates
+    // Execute all updates in parallel
     await Promise.all(updates);
     
-    console.log(`✅ Restoration complete! Updated ${restoredCount} records.`);
+    console.log(`✅ Sync complete! Updated ${restoredCount} records.`);
     return { success: true, restoredCount };
     
   } catch (error) {
-    console.error('❌ Error restoring coffee records:', error);
+    console.error('❌ Error syncing coffee records:', error);
     return { success: false, error };
   }
 }

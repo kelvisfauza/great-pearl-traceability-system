@@ -16,7 +16,7 @@ export const RestoreDataButton = () => {
       if (result.success) {
         toast({
           title: 'Success!',
-          description: `Restored ${result.restoredCount} coffee records to their original quantities.`,
+          description: `Synced ${result.restoredCount} coffee records from Supabase to Firebase.`,
         });
         // Reload the page to show updated data
         setTimeout(() => window.location.reload(), 1000);
@@ -24,10 +24,10 @@ export const RestoreDataButton = () => {
         throw result.error;
       }
     } catch (error) {
-      console.error('Restore failed:', error);
+      console.error('Sync failed:', error);
       toast({
-        title: 'Restoration Failed',
-        description: 'Failed to restore coffee records. Please check console for details.',
+        title: 'Sync Failed',
+        description: 'Failed to sync coffee records. Please check console for details.',
         variant: 'destructive',
       });
     } finally {
@@ -45,12 +45,12 @@ export const RestoreDataButton = () => {
       {restoring ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Restoring...
+          Syncing...
         </>
       ) : (
         <>
           <RefreshCw className="mr-2 h-4 w-4" />
-          Restore Original Weights
+          Sync Data
         </>
       )}
     </Button>
