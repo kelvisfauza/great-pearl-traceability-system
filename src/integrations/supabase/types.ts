@@ -1100,6 +1100,36 @@ export type Database = {
           },
         ]
       }
+      finance_advances: {
+        Row: {
+          amount: number
+          cleared_at: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          reference: string | null
+          status: string | null
+        }
+        Insert: {
+          amount?: number
+          cleared_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          reference?: string | null
+          status?: string | null
+        }
+        Update: {
+          amount?: number
+          cleared_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          reference?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       finance_cash_balance: {
         Row: {
           created_at: string

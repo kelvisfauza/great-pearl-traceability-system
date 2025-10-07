@@ -7,6 +7,8 @@ interface FinanceStats {
   pendingCoffeePayments: number;
   pendingCoffeeAmount: number;
   availableCash: number;
+  advanceAmount: number;
+  netCash: number;
   pendingExpenseRequests: number;
   pendingExpenseAmount: number;
   completedToday: number;
@@ -49,7 +51,7 @@ const fetchStats = async (): Promise<FinanceStats> => {
     }
   });
 
-  const availableCash = totalCashIn - totalCashOut;
+  const rawBalance = totalCashIn - totalCashOut;
 
   // Also include supplier advances given (from Firebase) as cash out
   const advancesQuery = query(
@@ -62,7 +64,13 @@ const fetchStats = async (): Promise<FinanceStats> => {
     totalAdvancesGiven += Number(advance.amount_ugx) || 0;
   });
 
-  const finalAvailableCash = availableCash - totalAdvancesGiven;
+  const netBalance = rawBalance - totalAdvancesGiven;
+  
+  // Calculate advance amount (when balance is negative)
+  const advanceAmount = netBalance < 0 ? Math.abs(netBalance) : 0;
+  
+  // Available cash is 0 if there's an advance, otherwise show the balance
+  const availableCash = Math.max(0, netBalance);
 
   // Fetch pending expense requests from Supabase
   const { data: expenseRequests } = await supabase
@@ -102,7 +110,9 @@ const fetchStats = async (): Promise<FinanceStats> => {
   return {
     pendingCoffeePayments,
     pendingCoffeeAmount,
-    availableCash: finalAvailableCash,
+    availableCash,
+    advanceAmount,
+    netCash: netBalance,
     pendingExpenseRequests,
     pendingExpenseAmount,
     completedToday,
@@ -122,6 +132,8 @@ export const useFinanceStats = () => {
       pendingCoffeePayments: 0,
       pendingCoffeeAmount: 0,
       availableCash: 0,
+      advanceAmount: 0,
+      netCash: 0,
       pendingExpenseRequests: 0,
       pendingExpenseAmount: 0,
       completedToday: 0,
