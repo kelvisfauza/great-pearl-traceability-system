@@ -10,12 +10,22 @@ export async function restoreFirebaseCoffeeRecords() {
     const coffeeRecordsRef = collection(db, 'coffee_records');
     const snapshot = await getDocs(coffeeRecordsRef);
     
+    console.log(`📦 Found ${snapshot.docs.length} coffee records in Firebase`);
+    
+    // Log sample record to see structure
+    if (snapshot.docs.length > 0) {
+      const sampleRecord = snapshot.docs[0].data();
+      console.log('📋 Sample coffee record structure:', sampleRecord);
+    }
+    
     // 2. Fetch all inventory movements from Supabase
     const { data: movements, error } = await supabase
       .from('inventory_movements')
       .select('coffee_record_id, quantity_kg');
     
     if (error) throw error;
+    
+    console.log(`📊 Found ${movements?.length || 0} inventory movements in Supabase`);
     
     // 3. Calculate movements per record
     const movementsByRecord: Record<string, number> = {};
@@ -25,6 +35,7 @@ export async function restoreFirebaseCoffeeRecords() {
     });
     
     console.log('📊 Movements by record:', movementsByRecord);
+    console.log('📊 Total unique records with movements:', Object.keys(movementsByRecord).length);
     
     // 4. Restore original quantities
     let restoredCount = 0;
@@ -33,8 +44,10 @@ export async function restoreFirebaseCoffeeRecords() {
     snapshot.docs.forEach(docSnapshot => {
       const record = docSnapshot.data();
       const recordId = docSnapshot.id;
-      const currentKg = Number(record.kilograms || 0);
+      const currentKg = Number(record.kilograms || record.weight || 0);
       const totalMovements = movementsByRecord[recordId] || 0;
+      
+      console.log(`🔍 Checking record ${record.batch_number || recordId}: currentKg=${currentKg}, movements=${totalMovements}`);
       
       // If current is 0 and there are negative movements (sales), restore original
       if (currentKg === 0 && totalMovements < 0) {
@@ -47,6 +60,7 @@ export async function restoreFirebaseCoffeeRecords() {
         updates.push(
           updateDoc(doc(db, 'coffee_records', recordId), {
             kilograms: originalKg,
+            weight: originalKg,
             updated_at: new Date()
           })
         );
@@ -61,6 +75,7 @@ export async function restoreFirebaseCoffeeRecords() {
         updates.push(
           updateDoc(doc(db, 'coffee_records', recordId), {
             kilograms: originalKg,
+            weight: originalKg,
             updated_at: new Date()
           })
         );
