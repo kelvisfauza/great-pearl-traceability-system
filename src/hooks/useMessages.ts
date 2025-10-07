@@ -404,9 +404,11 @@ export const useMessages = () => {
   };
 
   useEffect(() => {
+    console.log('🚀 useMessages hook initialized - setting up real-time subscription');
     fetchConversations();
 
     // Subscribe to new messages for real-time updates
+    console.log('📡 Creating messages-changes channel...');
     const channel = supabase
       .channel('messages-changes')
       .on(
@@ -482,9 +484,21 @@ export const useMessages = () => {
           );
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Messages channel subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to messages channel');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error subscribing to messages channel');
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️ Messages channel subscription timed out');
+        }
+      });
+
+    console.log('📡 Setting up messages real-time subscription');
 
     return () => {
+      console.log('🧹 Cleaning up messages subscription');
       supabase.removeChannel(channel);
     };
   }, [fetchConversations]);
