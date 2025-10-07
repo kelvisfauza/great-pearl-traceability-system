@@ -791,6 +791,7 @@ export type Database = {
         Row: {
           address: string | null
           auth_user_id: string | null
+          avatar_url: string | null
           bypass_sms_verification: boolean | null
           created_at: string
           department: string
@@ -814,6 +815,7 @@ export type Database = {
         Insert: {
           address?: string | null
           auth_user_id?: string | null
+          avatar_url?: string | null
           bypass_sms_verification?: boolean | null
           created_at?: string
           department: string
@@ -837,6 +839,7 @@ export type Database = {
         Update: {
           address?: string | null
           auth_user_id?: string | null
+          avatar_url?: string | null
           bypass_sms_verification?: boolean | null
           created_at?: string
           department?: string

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
@@ -80,6 +80,13 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     return otherParticipant?.employee_name || 'Unknown';
   };
 
+  const getConversationAvatar = (conversation: any) => {
+    const otherParticipant = conversation.participants?.find(
+      (p: any) => p.user_id !== employee?.authUserId
+    );
+    return otherParticipant?.avatar_url;
+  };
+
   const getOtherParticipantStatus = (conversation: any) => {
     const otherParticipant = conversation.participants?.find(
       (p: any) => p.user_id !== employee?.authUserId
@@ -145,6 +152,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <Avatar className="h-9 w-9">
+                  <AvatarImage src={getConversationAvatar(currentConversation)} alt={getConversationName(currentConversation)} />
                   <AvatarFallback className="bg-primary-foreground/20 text-primary-foreground text-sm">
                     {getConversationName(currentConversation)?.charAt(0).toUpperCase()}
                   </AvatarFallback>
@@ -373,6 +381,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                       className="w-full p-3 hover:bg-muted/50 transition-colors text-left flex items-center gap-3 border-b border-border/50"
                     >
                       <Avatar className="h-12 w-12 flex-shrink-0">
+                        <AvatarImage src={getConversationAvatar(conversation)} alt={conversationName} />
                         <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                           {conversationName?.charAt(0).toUpperCase()}
                         </AvatarFallback>

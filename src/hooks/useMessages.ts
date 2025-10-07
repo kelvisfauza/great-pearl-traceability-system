@@ -17,6 +17,7 @@ interface ConversationParticipant {
   user_id: string;
   employee_name: string;
   employee_email: string;
+  avatar_url?: string;
 }
 
 interface Conversation {
@@ -83,14 +84,15 @@ export const useMessages = () => {
             (participants || []).map(async (p) => {
               const { data: employee } = await supabase
                 .from('employees')
-                .select('name, email, auth_user_id')
+                .select('name, email, auth_user_id, avatar_url')
                 .eq('auth_user_id', p.user_id)
                 .single();
 
               return {
                 user_id: p.user_id,
                 employee_name: employee?.name || 'Unknown',
-                employee_email: employee?.email || ''
+                employee_email: employee?.email || '',
+                avatar_url: employee?.avatar_url || undefined
               };
             })
           );
