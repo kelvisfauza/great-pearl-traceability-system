@@ -52,29 +52,21 @@ export const useSalesTransactions = () => {
   const checkInventoryAvailability = async (coffeeType: string, weightNeeded: number) => {
     try {
       const coffeeRecordsRef = collection(db, 'coffee_records');
-      // Query ALL coffee records to see what we have
       const snapshot = await getDocs(coffeeRecordsRef);
       
       console.log(`🔍 Checking inventory for: "${coffeeType}"`);
       console.log(`📦 Total records in database: ${snapshot.size}`);
       
-      let totalAvailable = 0;
-      let statusCounts: Record<string, number> = {};
+      // Step 1: Get total original delivery quantity from coffee_records
+      let totalDelivered = 0;
+      const matchedRecordIds: string[] = [];
       
       snapshot.forEach(doc => {
         const data = doc.data();
         const recordCoffeeType = (data.coffee_type || '').toString();
         const kilograms = Number(data.kilograms) || 0;
-        const status = (data.status || 'no_status').toString();
         
-        // Count statuses
-        statusCounts[status] = (statusCounts[status] || 0) + 1;
-        
-        console.log(`   Record ${doc.id}: type="${recordCoffeeType}", kg=${kilograms}, status=${status}`);
-        
-        // Only count records that have inventory and are not sold
-        if (kilograms > 0 && status !== 'sold') {
-          // Flexible matching: check both ways (case-insensitive)
+        if (kilograms > 0) {
           const searchLower = coffeeType.toLowerCase().trim();
           const recordLower = recordCoffeeType.toLowerCase().trim();
           
@@ -83,19 +75,37 @@ export const useSalesTransactions = () => {
                          recordLower === searchLower;
           
           if (matches) {
-            console.log(`   ✅ Matched! Adding ${kilograms} kg`);
-            totalAvailable += kilograms;
-          } else {
-            console.log(`   ❌ No match: "${recordLower}" vs "${searchLower}"`);
+            console.log(`   ✅ Original delivery: ${doc.id} = ${kilograms} kg`);
+            totalDelivered += kilograms;
+            matchedRecordIds.push(doc.id);
           }
         }
       });
 
-      console.log(`📊 Status counts:`, statusCounts);
-      console.log(`📊 Total available for "${coffeeType}": ${totalAvailable} kg`);
+      // Step 2: Get total movements (sales, wastage, etc.) from Supabase
+      let totalMoved = 0;
+      if (matchedRecordIds.length > 0) {
+        const { data: movements, error } = await supabase
+          .from('inventory_movements')
+          .select('quantity_kg')
+          .in('coffee_record_id', matchedRecordIds);
+        
+        if (!error && movements) {
+          totalMoved = movements.reduce((sum, m) => sum + Number(m.quantity_kg), 0);
+          console.log(`📦 Total movements: ${totalMoved} kg (negative = sold)`);
+        }
+      }
+
+      // Step 3: Calculate available = delivered - moved (movements are negative for sales)
+      const totalAvailable = totalDelivered + totalMoved; // totalMoved is negative for sales
+      
+      console.log(`📊 Summary for "${coffeeType}":`);
+      console.log(`   - Total delivered: ${totalDelivered} kg`);
+      console.log(`   - Total moved: ${totalMoved} kg`);
+      console.log(`   - Available: ${totalAvailable} kg`);
 
       return {
-        available: totalAvailable,
+        available: Math.max(0, totalAvailable),
         sufficient: totalAvailable >= weightNeeded
       };
     } catch (error) {
@@ -104,25 +114,26 @@ export const useSalesTransactions = () => {
     }
   };
 
-  const deductFromInventory = async (coffeeType: string, weightToDeduct: number) => {
+  const recordInventoryMovement = async (
+    coffeeType: string, 
+    quantityKg: number, 
+    referenceId: string,
+    movementType: 'sale' | 'wastage' | 'adjustment',
+    createdBy: string
+  ) => {
     try {
+      // Get matching coffee records to distribute the movement
       const coffeeRecordsRef = collection(db, 'coffee_records');
-      // Query all records that have inventory and are not sold
       const snapshot = await getDocs(coffeeRecordsRef);
       
-      let remainingToDeduct = weightToDeduct;
-      const matchedRecords: any[] = [];
+      const matchedRecords: Array<{ id: string; kilograms: number; created_at: string }> = [];
       
-      // First, collect all matching records with available inventory
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
         const recordCoffeeType = (data.coffee_type || '').toString();
         const kilograms = Number(data.kilograms) || 0;
-        const bags = Number(data.bags) || 0;
-        const status = (data.status || '').toString();
         
-        // Only process records with inventory that aren't sold
-        if (kilograms > 0 && status !== 'sold') {
+        if (kilograms > 0) {
           const searchLower = coffeeType.toLowerCase().trim();
           const recordLower = recordCoffeeType.toLowerCase().trim();
           
@@ -134,8 +145,7 @@ export const useSalesTransactions = () => {
             matchedRecords.push({
               id: docSnap.id,
               kilograms,
-              bags,
-              created_at: data.created_at
+              created_at: data.created_at || new Date().toISOString()
             });
           }
         }
@@ -143,41 +153,62 @@ export const useSalesTransactions = () => {
       
       // Sort by creation date (FIFO - oldest first)
       matchedRecords.sort((a, b) => {
-        const dateA = new Date(a.created_at || 0).getTime();
-        const dateB = new Date(b.created_at || 0).getTime();
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
         return dateA - dateB;
       });
       
-      // Deduct from oldest records first (FIFO)
+      // Get existing movements for these records to calculate available per record
+      const recordIds = matchedRecords.map(r => r.id);
+      const { data: existingMovements } = await supabase
+        .from('inventory_movements')
+        .select('coffee_record_id, quantity_kg')
+        .in('coffee_record_id', recordIds);
+      
+      // Calculate available quantity per record
+      const movementsByRecord: Record<string, number> = {};
+      existingMovements?.forEach(m => {
+        movementsByRecord[m.coffee_record_id] = (movementsByRecord[m.coffee_record_id] || 0) + Number(m.quantity_kg);
+      });
+      
+      // Distribute movement across records (FIFO)
+      let remainingToMove = quantityKg;
+      const movementsToCreate: any[] = [];
+      
       for (const record of matchedRecords) {
-        if (remainingToDeduct <= 0) break;
+        if (remainingToMove <= 0) break;
         
-        if (record.kilograms <= remainingToDeduct) {
-          // This entire record is consumed
-          await updateDoc(doc(db, 'coffee_records', record.id), {
-            status: 'sold',
-            kilograms: 0,
-            bags: 0,
-            updated_at: new Date().toISOString()
-          });
-          remainingToDeduct -= record.kilograms;
-        } else {
-          // Partial deduction - calculate proportional bag reduction
-          const kgRatio = (record.kilograms - remainingToDeduct) / record.kilograms;
-          const newBags = Math.ceil(record.bags * kgRatio); // Round up to keep whole bags
-          
-          await updateDoc(doc(db, 'coffee_records', record.id), {
-            kilograms: record.kilograms - remainingToDeduct,
-            bags: newBags,
-            updated_at: new Date().toISOString()
-          });
-          remainingToDeduct = 0;
-        }
+        const available = record.kilograms + (movementsByRecord[record.id] || 0);
+        if (available <= 0) continue;
+        
+        const toMoveFromThis = Math.min(available, remainingToMove);
+        
+        movementsToCreate.push({
+          movement_type: movementType,
+          coffee_record_id: record.id,
+          quantity_kg: -toMoveFromThis, // Negative for deductions
+          reference_id: referenceId,
+          reference_type: movementType,
+          created_by: createdBy
+        });
+        
+        remainingToMove -= toMoveFromThis;
       }
-
+      
+      // Insert all movements in one batch
+      if (movementsToCreate.length > 0) {
+        const { error } = await supabase
+          .from('inventory_movements')
+          .insert(movementsToCreate);
+        
+        if (error) throw error;
+        
+        console.log(`✅ Recorded ${movementsToCreate.length} inventory movements for ${quantityKg} kg`);
+      }
+      
       return true;
     } catch (error) {
-      console.error('Error deducting from inventory:', error);
+      console.error('Error recording inventory movement:', error);
       throw error;
     }
   };
@@ -201,9 +232,6 @@ export const useSalesTransactions = () => {
         throw new Error('Insufficient inventory');
       }
 
-      // Deduct from inventory
-      await deductFromInventory(transactionData.coffee_type, transactionData.weight);
-
       // Create the sales transaction
       const { data, error } = await supabase
         .from('sales_transactions')
@@ -213,9 +241,18 @@ export const useSalesTransactions = () => {
 
       if (error) throw error;
 
+      // Record inventory movement (doesn't modify original coffee_records)
+      await recordInventoryMovement(
+        transactionData.coffee_type,
+        transactionData.weight,
+        data.id,
+        'sale',
+        'Sales Department' // You can pass actual user name here
+      );
+
       toast({
         title: "Success",
-        description: `Sale recorded successfully. ${transactionData.weight} kg deducted from inventory.`,
+        description: `Sale recorded successfully. ${transactionData.weight} kg tracked in inventory movements.`,
       });
 
       await fetchTransactions();
