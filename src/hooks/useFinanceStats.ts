@@ -53,18 +53,9 @@ const fetchStats = async (): Promise<FinanceStats> => {
 
   const rawBalance = totalCashIn - totalCashOut;
 
-  // Also include supplier advances given (from Firebase) as cash out
-  const advancesQuery = query(
-    collection(db, 'supplier_advances')
-  );
-  const advancesSnapshot = await getDocs(advancesQuery);
-  let totalAdvancesGiven = 0;
-  advancesSnapshot.forEach(doc => {
-    const advance = doc.data();
-    totalAdvancesGiven += Number(advance.amount_ugx) || 0;
-  });
-
-  const netBalance = rawBalance - totalAdvancesGiven;
+  // Skip Firebase supplier advances for fresh start with real data
+  // Old test data should not affect current balance calculations
+  const netBalance = rawBalance;
   
   // Calculate advance amount (when balance is negative)
   const advanceAmount = netBalance < 0 ? Math.abs(netBalance) : 0;
