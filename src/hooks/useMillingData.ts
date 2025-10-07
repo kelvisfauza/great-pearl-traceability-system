@@ -461,6 +461,70 @@ export const useMillingData = () => {
     }
   };
 
+  const clearAllDebts = async () => {
+    try {
+      setLoading(true);
+
+      // Get all customers with non-zero balances
+      const customersWithDebts = customers.filter(c => c.current_balance > 0);
+
+      if (customersWithDebts.length === 0) {
+        toast({
+          title: "No Debts",
+          description: "All customers have zero balance"
+        });
+        return;
+      }
+
+      // Update all customer balances to 0
+      const { error: updateError } = await supabase
+        .from('milling_customers')
+        .update({ current_balance: 0 })
+        .gt('current_balance', 0);
+
+      if (updateError) throw updateError;
+
+      // Record cash transactions for each customer
+      const cashTransactionRecords = customersWithDebts.map(customer => ({
+        customer_id: customer.id,
+        customer_name: customer.full_name,
+        amount_paid: customer.current_balance,
+        previous_balance: customer.current_balance,
+        new_balance: 0,
+        payment_method: 'Bulk Clear',
+        date: new Date().toISOString().split('T')[0],
+        notes: 'Bulk debt clearance',
+        created_by: 'System'
+      }));
+
+      const { error: cashError } = await supabase
+        .from('milling_cash_transactions')
+        .insert(cashTransactionRecords);
+
+      if (cashError) throw cashError;
+
+      toast({
+        title: "Success",
+        description: `Cleared debts for ${customersWithDebts.length} customers`
+      });
+
+      // Refresh data
+      await fetchData();
+      
+      return true;
+    } catch (error) {
+      console.error('Error clearing all debts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear debts. Please try again.",
+        variant: "destructive"
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -479,6 +543,7 @@ export const useMillingData = () => {
     getReportData,
     fetchData,
     clearAllData,
+    clearAllDebts,
     updateMillingTransaction: async (id: string, updates: Partial<MillingTransaction>) => {
       try {
         const { error } = await supabase

@@ -18,7 +18,7 @@ import MillingExpenses from '@/components/milling/MillingExpenses';
 import MillingPrintReportModal from '@/components/milling/MillingPrintReportModal';
 
 const Milling = () => {
-  const { stats, loading, customers, transactions, getReportData, clearAllData } = useMillingData();
+  const { stats, loading, customers, transactions, getReportData, clearAllData, clearAllDebts } = useMillingData();
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showCashTransactionForm, setShowCashTransactionForm] = useState(false);
@@ -27,6 +27,10 @@ const Milling = () => {
 
   const handleClearAll = async () => {
     await clearAllData();
+  };
+
+  const handleClearAllDebts = async () => {
+    await clearAllDebts();
   };
 
   const statsCards = [
@@ -190,10 +194,34 @@ const Milling = () => {
           <TabsContent value="customers" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Customer Management</h2>
-              <Button onClick={() => setShowCustomerForm(true)} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Customer
-              </Button>
+              <div className="flex gap-2">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      Clear All Debts
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear All Customer Debts?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will set all customer balances to zero and record payment transactions. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleClearAllDebts}>
+                        Clear All Debts
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <Button onClick={() => setShowCustomerForm(true)} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Customer
+                </Button>
+              </div>
             </div>
             <MillingCustomersList />
           </TabsContent>
