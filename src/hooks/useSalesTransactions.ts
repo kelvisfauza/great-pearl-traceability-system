@@ -61,15 +61,33 @@ export const useSalesTransactions = () => {
       const snapshot = await getDocs(q);
       let totalAvailable = 0;
       
+      console.log(`🔍 Checking inventory for: "${coffeeType}"`);
+      console.log(`📦 Found ${snapshot.size} in_stock records`);
+      
       snapshot.forEach(doc => {
         const data = doc.data();
-        const recordCoffeeType = data.coffee_type || '';
+        const recordCoffeeType = (data.coffee_type || '').toString();
+        const kilograms = Number(data.kilograms) || 0;
         
-        // Check if the record's coffee type contains the selected type (case-insensitive)
-        if (recordCoffeeType.toLowerCase().includes(coffeeType.toLowerCase())) {
-          totalAvailable += Number(data.kilograms) || 0;
+        console.log(`   Record: type="${recordCoffeeType}", kg=${kilograms}`);
+        
+        // Flexible matching: check both ways (case-insensitive)
+        const searchLower = coffeeType.toLowerCase().trim();
+        const recordLower = recordCoffeeType.toLowerCase().trim();
+        
+        const matches = recordLower.includes(searchLower) || 
+                       searchLower.includes(recordLower) ||
+                       recordLower === searchLower;
+        
+        if (matches) {
+          console.log(`   ✅ Matched! Adding ${kilograms} kg`);
+          totalAvailable += kilograms;
+        } else {
+          console.log(`   ❌ No match: "${recordLower}" vs "${searchLower}"`);
         }
       });
+
+      console.log(`📊 Total available for "${coffeeType}": ${totalAvailable} kg`);
 
       return {
         available: totalAvailable,
