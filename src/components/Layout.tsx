@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Navigation from "./Navigation";
 import MessagingPanel from "./messaging/MessagingPanel";
-import MessageButton from "./messaging/MessageButton";
+import ChatButton from "./messaging/ChatButton";
 import NotificationButton from "./notifications/NotificationButton";
 import { AccountButton } from "./AccountButton";
 import NotificationPanel from "./notifications/NotificationPanel";
@@ -27,7 +27,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const { unreadCount } = useMessages();
+  const { unreadCount: messagesUnreadCount } = useMessages();
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const { user } = useAuth();
   usePresence(user?.id);
@@ -90,6 +90,10 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
                 <div className="flex items-center gap-1 xs:gap-2 flex-shrink-0">
                   <AccountButton />
                   <GlobalSearch />
+                  <ChatButton
+                    onClick={toggleMessaging}
+                    unreadCount={messagesUnreadCount}
+                  />
                   <NotificationButton
                     onToggle={toggleNotifications}
                     unreadCount={notificationUnreadCount}
@@ -105,13 +109,6 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
         </div>
       </main>
 
-      {showMessageButton && (
-        <MessageButton 
-          onToggleMessaging={toggleMessaging}
-          unreadCount={unreadCount}
-        />
-      )}
-      
       <MessagingPanel 
         isOpen={isMessagingOpen}
         onClose={() => setIsMessagingOpen(false)}

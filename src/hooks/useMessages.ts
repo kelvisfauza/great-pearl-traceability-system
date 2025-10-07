@@ -1,26 +1,34 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-// Remove supabase import - will be handled by compatibility layer
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
   content: string;
-  senderId: string;
-  conversationId: string;
-  createdAt: string;
+  sender_id: string;
+  conversation_id: string;
+  created_at: string;
   type: 'text' | 'image' | 'file';
+  metadata?: any;
+}
+
+interface ConversationParticipant {
+  user_id: string;
+  employee_name: string;
+  employee_email: string;
 }
 
 interface Conversation {
   id: string;
-  name: string;
-  type: 'direct' | 'group' | 'channel';
-  createdAt: string;
+  name?: string;
+  type: 'direct' | 'group';
+  created_at: string;
+  participants: ConversationParticipant[];
   lastMessage?: Message;
-  participants: string[];
+  unread_count?: number;
 }
 
-export const useMessages = (userId?: string) => {
+export const useMessages = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,12 +37,87 @@ export const useMessages = (userId?: string) => {
   const { toast } = useToast();
 
   const fetchConversations = useCallback(async () => {
-    if (!userId) return;
-    
     try {
       setLoading(true);
-      // Temporarily return empty data - will be implemented with Firebase later
-      setConversations([]);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get conversations where user is a participant
+      const { data: participantData, error: participantError } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', user.id);
+
+      if (participantError) throw participantError;
+
+      const conversationIds = participantData?.map(p => p.conversation_id) || [];
+      
+      if (conversationIds.length === 0) {
+        setConversations([]);
+        return;
+      }
+
+      // Get conversations details
+      const { data: conversationsData, error: conversationsError } = await supabase
+        .from('conversations')
+        .select('*')
+        .in('id', conversationIds)
+        .order('updated_at', { ascending: false });
+
+      if (conversationsError) throw conversationsError;
+
+      // Get participants for each conversation
+      const conversationsWithParticipants = await Promise.all(
+        (conversationsData || []).map(async (conv) => {
+          const { data: participants } = await supabase
+            .from('conversation_participants')
+            .select(`
+              user_id,
+              last_read_at
+            `)
+            .eq('conversation_id', conv.id);
+
+          // Get employee details for participants
+          const participantDetails = await Promise.all(
+            (participants || []).map(async (p) => {
+              const { data: employee } = await supabase
+                .from('employees')
+                .select('name, email, auth_user_id')
+                .eq('auth_user_id', p.user_id)
+                .single();
+
+              return {
+                user_id: p.user_id,
+                employee_name: employee?.name || 'Unknown',
+                employee_email: employee?.email || ''
+              };
+            })
+          );
+
+          // Get last message
+          const { data: lastMsg } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          return {
+            id: conv.id,
+            name: conv.name,
+            type: conv.type as 'direct' | 'group',
+            created_at: conv.created_at,
+            participants: participantDetails,
+            lastMessage: lastMsg ? {
+              ...lastMsg,
+              type: lastMsg.type as 'text' | 'image' | 'file'
+            } : undefined
+          };
+        })
+      );
+
+      setConversations(conversationsWithParticipants);
     } catch (error) {
       console.error('Error fetching conversations:', error);
       toast({
@@ -45,13 +128,33 @@ export const useMessages = (userId?: string) => {
     } finally {
       setLoading(false);
     }
-  }, [userId, toast]);
+  }, [toast]);
 
   const fetchMessages = useCallback(async (conversationId: string) => {
     try {
       setLoadingMessages(true);
-      // Temporarily return empty data
-      setMessages([]);
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      const mappedMessages = (data || []).map(msg => ({
+        ...msg,
+        type: msg.type as 'text' | 'image' | 'file'
+      }));
+      setMessages(mappedMessages);
+
+      // Mark messages as read
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('conversation_participants')
+          .update({ last_read_at: new Date().toISOString() })
+          .eq('conversation_id', conversationId)
+          .eq('user_id', user.id);
+      }
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -64,81 +167,129 @@ export const useMessages = (userId?: string) => {
     }
   }, [toast]);
 
-  const sendMessage = async ({ content, conversationId, senderId, type = 'text' }: {
+  const sendMessage = async ({ content, conversationId }: {
     content: string;
-    conversationId: string | null;
-    senderId: string;  // Use Firebase User.uid
-    type?: string;
+    conversationId: string;
   }) => {
     try {
-      // Temporarily do nothing - will be implemented with Firebase later
-      console.log('Message would be sent:', { content, conversationId, senderId, type });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          content,
+          type: 'text'
+        });
+
+      if (error) throw error;
+
+      // Update conversation's updated_at
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
+
+      // Refresh messages
+      await fetchMessages(conversationId);
     } catch (error) {
       console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive"
+      });
       throw error;
     }
   };
 
-  const createConversation = async ({ name, type, participantIds }: {
-    name?: string;
-    type: 'direct' | 'group' | 'channel';
-    participantIds: string[];
+  const createConversation = async ({ participantId, type = 'direct' }: {
+    participantId: string;
+    type?: 'direct' | 'group';
   }) => {
-    if (!userId) throw new Error('User not authenticated');
-
     try {
-      // Temporarily return mock data
-      return { id: 'temp-id', name: name || 'New Conversation' };
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Check if conversation already exists
+      const { data: existingParticipants } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .in('user_id', [user.id, participantId]);
+
+      if (existingParticipants && existingParticipants.length > 0) {
+        // Find conversation where both users are participants
+        const conversationCounts: Record<string, number> = {};
+        existingParticipants.forEach(p => {
+          conversationCounts[p.conversation_id] = (conversationCounts[p.conversation_id] || 0) + 1;
+        });
+
+        const existingConvId = Object.keys(conversationCounts).find(
+          id => conversationCounts[id] === 2
+        );
+
+        if (existingConvId) {
+          return { id: existingConvId };
+        }
+      }
+
+      // Create new conversation
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .insert({ type, created_by: user.id })
+        .select()
+        .single();
+
+      if (convError) throw convError;
+
+      // Add participants
+      const { error: participantsError } = await supabase
+        .from('conversation_participants')
+        .insert([
+          { conversation_id: conversation.id, user_id: user.id },
+          { conversation_id: conversation.id, user_id: participantId }
+        ]);
+
+      if (participantsError) throw participantsError;
+
+      await fetchConversations();
+      return { id: conversation.id };
     } catch (error) {
       console.error('Error creating conversation:', error);
-      throw error;
-    }
-  };
-
-  const markAsRead = async (conversationId: string) => {
-    if (!userId) return;
-
-    try {
-      // Temporarily do nothing
-      console.log('Would mark as read:', conversationId);
-    } catch (error) {
-      console.error('Error marking as read:', error);
-    }
-  };
-
-  const deleteConversation = async (conversationId: string) => {
-    try {
-      // Temporarily do nothing
-      console.log('Would delete conversation:', conversationId);
-    } catch (error) {
-      console.error('Error deleting conversation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create conversation",
+        variant: "destructive"
+      });
       throw error;
     }
   };
 
   useEffect(() => {
-    if (!userId) return;
-
     fetchConversations();
-    // Mock subscription setup
-    const unsubscribe = () => {
-      console.log('Unsubscribing from conversation updates');
-    };
+
+    // Subscribe to new messages
+    const channel = supabase
+      .channel('messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages'
+        },
+        () => {
+          fetchConversations();
+        }
+      )
+      .subscribe();
 
     return () => {
-      unsubscribe();
+      supabase.removeChannel(channel);
     };
-  }, [userId, fetchConversations]);
-
-  useEffect(() => {
-    let unread = 0;
-    conversations.forEach(conversation => {
-      if (conversation.lastMessage?.senderId !== userId) {
-        unread++;
-      }
-    });
-    setUnreadCount(unread);
-  }, [conversations, userId]);
+  }, [fetchConversations]);
 
   return {
     conversations,
@@ -149,8 +300,6 @@ export const useMessages = (userId?: string) => {
     fetchConversations,
     fetchMessages,
     sendMessage,
-    createConversation,
-    markAsRead,
-    deleteConversation
+    createConversation
   };
 };
