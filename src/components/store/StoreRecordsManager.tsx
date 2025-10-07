@@ -45,6 +45,7 @@ interface InventoryItem {
 export const StoreRecordsManager = () => {
   const [records, setRecords] = useState<StoreRecord[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [availableQuantities, setAvailableQuantities] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -75,6 +76,13 @@ export const StoreRecordsManager = () => {
     fetchRecords();
     fetchInventoryItems();
   }, []);
+
+  // Fetch available quantities considering inventory movements
+  useEffect(() => {
+    if (records.length > 0) {
+      calculateAvailableQuantities();
+    }
+  }, [records]);
 
   const fetchRecords = async () => {
     try {
@@ -108,6 +116,35 @@ export const StoreRecordsManager = () => {
       setInventoryItems(data || []);
     } catch (error) {
       console.error('Error fetching inventory items:', error);
+    }
+  };
+
+  const calculateAvailableQuantities = async () => {
+    try {
+      // Get all inventory movements
+      const { data: movements, error } = await supabase
+        .from('inventory_movements')
+        .select('coffee_record_id, quantity_kg');
+
+      if (error) throw error;
+
+      // Calculate net movements per record
+      const movementsByRecord: Record<string, number> = {};
+      movements?.forEach(m => {
+        movementsByRecord[m.coffee_record_id] = 
+          (movementsByRecord[m.coffee_record_id] || 0) + Number(m.quantity_kg);
+      });
+
+      // Calculate available = original - movements (movements are negative for sales)
+      const available: Record<string, number> = {};
+      records.forEach(record => {
+        const movements = movementsByRecord[record.id] || 0;
+        available[record.id] = Math.max(0, record.quantity_kg + movements);
+      });
+
+      setAvailableQuantities(available);
+    } catch (error) {
+      console.error('Error calculating available quantities:', error);
     }
   };
 
@@ -679,7 +716,17 @@ export const StoreRecordsManager = () => {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Package className="h-4 w-4" />
-                      {record.quantity_bags} bags / {record.quantity_kg} kg
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground">
+                          Original: {record.quantity_bags} bags / {record.quantity_kg} kg
+                        </span>
+                        {availableQuantities[record.id] !== undefined && 
+                         availableQuantities[record.id] !== record.quantity_kg && (
+                          <span className="text-xs text-amber-600">
+                            Available: {availableQuantities[record.id].toFixed(2)} kg
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
