@@ -3521,6 +3521,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      user_is_conversation_participant: {
+        Args: { conversation_uuid: string }
+        Returns: boolean
+      }
     }
     Enums: {
       expense_status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "POSTED"
