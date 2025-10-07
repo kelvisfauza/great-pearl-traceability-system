@@ -189,6 +189,20 @@ export const useMessages = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Optimistically add message to UI
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        conversation_id: conversationId,
+        sender_id: user.id,
+        content,
+        type: 'text',
+        created_at: new Date().toISOString(),
+        metadata: {}
+      };
+      
+      setMessages(prev => [...prev, optimisticMessage]);
+
+      // Send to database
       const { error } = await supabase
         .from('messages')
         .insert({
@@ -205,9 +219,6 @@ export const useMessages = () => {
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', conversationId);
-
-      // Refresh messages
-      await fetchMessages(conversationId);
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -244,6 +255,23 @@ export const useMessages = () => {
       // Determine message type
       const messageType = file.type.startsWith('image/') ? 'image' : 'file';
 
+      // Optimistically add message
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        conversation_id: conversationId,
+        sender_id: user.id,
+        content: publicUrl,
+        type: messageType,
+        created_at: new Date().toISOString(),
+        metadata: { 
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type
+        }
+      };
+      
+      setMessages(prev => [...prev, optimisticMessage]);
+
       // Insert message
       const { error } = await supabase
         .from('messages')
@@ -266,9 +294,6 @@ export const useMessages = () => {
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', conversationId);
-
-      // Refresh messages
-      await fetchMessages(conversationId);
       
       toast({
         title: "Success",
@@ -350,18 +375,46 @@ export const useMessages = () => {
   useEffect(() => {
     fetchConversations();
 
-    // Subscribe to new messages
+    // Subscribe to new messages for real-time updates
     const channel = supabase
       .channel('messages-changes')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'messages'
         },
-        () => {
+        (payload) => {
+          const newMessage = payload.new as Message;
+          
+          // Update messages if viewing this conversation
+          setMessages(prev => {
+            // Remove any optimistic message
+            const filtered = prev.filter(m => !m.id.startsWith('temp-'));
+            // Add new message if not already present
+            if (!filtered.find(m => m.id === newMessage.id)) {
+              return [...filtered, newMessage];
+            }
+            return filtered;
+          });
+          
+          // Refresh conversations list
           fetchConversations();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload) => {
+          const updatedMessage = payload.new as Message;
+          setMessages(prev => 
+            prev.map(m => m.id === updatedMessage.id ? updatedMessage : m)
+          );
         }
       )
       .subscribe();
