@@ -137,6 +137,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           join_date: employeeData.join_date,
           address: employeeData.address,
           emergency_contact: employeeData.emergency_contact,
+          avatar_url: employeeData.avatar_url,
           isOneTimePassword: false,
           mustChangePassword: false,
           authUserId: targetUserId,
