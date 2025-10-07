@@ -82,26 +82,26 @@ export const useSalesTransactions = () => {
         }
       });
 
-      // Step 2: Get total movements (sales, wastage, etc.) from Supabase
-      let totalMoved = 0;
+      // Step 2: Get total already sold from sales tracking (does NOT modify coffee_records)
+      let totalSold = 0;
       if (matchedRecordIds.length > 0) {
-        const { data: movements, error } = await supabase
-          .from('inventory_movements')
+        const { data: salesTracking, error } = await supabase
+          .from('sales_inventory_tracking')
           .select('quantity_kg')
           .in('coffee_record_id', matchedRecordIds);
         
-        if (!error && movements) {
-          totalMoved = movements.reduce((sum, m) => sum + Number(m.quantity_kg), 0);
-          console.log(`📦 Total movements: ${totalMoved} kg (negative = sold)`);
+        if (!error && salesTracking) {
+          totalSold = salesTracking.reduce((sum, s) => sum + Number(s.quantity_kg), 0);
+          console.log(`📦 Total sold: ${totalSold} kg`);
         }
       }
 
-      // Step 3: Calculate available = delivered - moved (movements are negative for sales)
-      const totalAvailable = totalDelivered + totalMoved; // totalMoved is negative for sales
+      // Step 3: Calculate available = delivered - sold
+      const totalAvailable = totalDelivered - totalSold;
       
       console.log(`📊 Summary for "${coffeeType}":`);
       console.log(`   - Total delivered: ${totalDelivered} kg`);
-      console.log(`   - Total moved: ${totalMoved} kg`);
+      console.log(`   - Total sold: ${totalSold} kg`);
       console.log(`   - Available: ${totalAvailable} kg`);
 
       return {
@@ -119,19 +119,28 @@ export const useSalesTransactions = () => {
     quantityKg: number, 
     referenceId: string,
     movementType: 'sale' | 'wastage' | 'adjustment',
-    createdBy: string
+    createdBy: string,
+    customerName?: string
   ) => {
     try {
-      // Get matching coffee records to distribute the movement
+      console.log(`📊 Recording sale tracking for ${quantityKg}kg of ${coffeeType}`);
+      
+      // Get matching coffee records from Firebase (read-only, never modify!)
       const coffeeRecordsRef = collection(db, 'coffee_records');
       const snapshot = await getDocs(coffeeRecordsRef);
       
-      const matchedRecords: Array<{ id: string; kilograms: number; created_at: string }> = [];
+      const matchedRecords: Array<{ 
+        id: string; 
+        kilograms: number; 
+        batch_number: string;
+        created_at: string 
+      }> = [];
       
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
         const recordCoffeeType = (data.coffee_type || '').toString();
         const kilograms = Number(data.kilograms) || 0;
+        const batchNumber = data.batch_number || '';
         
         if (kilograms > 0) {
           const searchLower = coffeeType.toLowerCase().trim();
@@ -145,6 +154,7 @@ export const useSalesTransactions = () => {
             matchedRecords.push({
               id: docSnap.id,
               kilograms,
+              batch_number: batchNumber,
               created_at: data.created_at || new Date().toISOString()
             });
           }
@@ -158,57 +168,60 @@ export const useSalesTransactions = () => {
         return dateA - dateB;
       });
       
-      // Get existing movements for these records to calculate available per record
+      // Get existing sales tracking to calculate what's been sold from each record
       const recordIds = matchedRecords.map(r => r.id);
-      const { data: existingMovements } = await supabase
-        .from('inventory_movements')
+      const { data: existingSales } = await supabase
+        .from('sales_inventory_tracking')
         .select('coffee_record_id, quantity_kg')
         .in('coffee_record_id', recordIds);
       
-      // Calculate available quantity per record
-      const movementsByRecord: Record<string, number> = {};
-      existingMovements?.forEach(m => {
-        movementsByRecord[m.coffee_record_id] = (movementsByRecord[m.coffee_record_id] || 0) + Number(m.quantity_kg);
+      // Calculate sold quantity per record
+      const soldByRecord: Record<string, number> = {};
+      existingSales?.forEach(s => {
+        soldByRecord[s.coffee_record_id] = (soldByRecord[s.coffee_record_id] || 0) + Number(s.quantity_kg);
       });
       
-      // Distribute movement across records (FIFO)
-      let remainingToMove = quantityKg;
-      const movementsToCreate: any[] = [];
+      // Distribute sale across records (FIFO) WITHOUT modifying original records
+      let remainingToSell = quantityKg;
+      const salesToTrack: any[] = [];
       
       for (const record of matchedRecords) {
-        if (remainingToMove <= 0) break;
+        if (remainingToSell <= 0) break;
         
-        const available = record.kilograms + (movementsByRecord[record.id] || 0);
+        const alreadySold = soldByRecord[record.id] || 0;
+        const available = record.kilograms - alreadySold;
+        
         if (available <= 0) continue;
         
-        const toMoveFromThis = Math.min(available, remainingToMove);
+        const toSellFromThis = Math.min(available, remainingToSell);
         
-        movementsToCreate.push({
-          movement_type: movementType,
+        salesToTrack.push({
+          sale_id: referenceId,
           coffee_record_id: record.id,
-          quantity_kg: -toMoveFromThis, // Negative for deductions
-          reference_id: referenceId,
-          reference_type: movementType,
+          batch_number: record.batch_number,
+          coffee_type: coffeeType,
+          quantity_kg: toSellFromThis,
+          customer_name: customerName,
           created_by: createdBy
         });
         
-        remainingToMove -= toMoveFromThis;
+        remainingToSell -= toSellFromThis;
       }
       
-      // Insert all movements in one batch
-      if (movementsToCreate.length > 0) {
+      // Insert sale tracking records (does NOT modify coffee_records!)
+      if (salesToTrack.length > 0) {
         const { error } = await supabase
-          .from('inventory_movements')
-          .insert(movementsToCreate);
+          .from('sales_inventory_tracking')
+          .insert(salesToTrack);
         
         if (error) throw error;
         
-        console.log(`✅ Recorded ${movementsToCreate.length} inventory movements for ${quantityKg} kg`);
+        console.log(`✅ Tracked ${salesToTrack.length} sales records for ${quantityKg}kg (original coffee records UNCHANGED)`);
       }
       
       return true;
     } catch (error) {
-      console.error('Error recording inventory movement:', error);
+      console.error('Error recording sales tracking:', error);
       throw error;
     }
   };
@@ -241,13 +254,14 @@ export const useSalesTransactions = () => {
 
       if (error) throw error;
 
-      // Record inventory movement (doesn't modify original coffee_records)
+      // Record sale tracking (does NOT modify coffee_records in Firebase or Supabase!)
       await recordInventoryMovement(
         transactionData.coffee_type,
         transactionData.weight,
         data.id,
         'sale',
-        'Sales Department' // You can pass actual user name here
+        'Sales Department',
+        transactionData.customer
       );
 
       toast({

@@ -2615,6 +2615,45 @@ export type Database = {
           },
         ]
       }
+      sales_inventory_tracking: {
+        Row: {
+          batch_number: string | null
+          coffee_record_id: string
+          coffee_type: string
+          created_at: string | null
+          created_by: string | null
+          customer_name: string | null
+          id: string
+          quantity_kg: number
+          sale_date: string | null
+          sale_id: string
+        }
+        Insert: {
+          batch_number?: string | null
+          coffee_record_id: string
+          coffee_type: string
+          created_at?: string | null
+          created_by?: string | null
+          customer_name?: string | null
+          id?: string
+          quantity_kg: number
+          sale_date?: string | null
+          sale_id: string
+        }
+        Update: {
+          batch_number?: string | null
+          coffee_record_id?: string
+          coffee_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          customer_name?: string | null
+          id?: string
+          quantity_kg?: number
+          sale_date?: string | null
+          sale_id?: string
+        }
+        Relationships: []
+      }
       sales_transactions: {
         Row: {
           coffee_type: string
