@@ -118,6 +118,26 @@ const SalesForm = () => {
   const handleSave = async () => {
     if (!validateForm()) return;
     
+    // Check if trying to sell more than available inventory
+    if (formData.weight > availableInventory) {
+      toast({
+        title: "Insufficient Inventory",
+        description: `Cannot sell ${formData.weight} kg. Only ${availableInventory.toFixed(2)} kg available in store for ${formData.coffeeType}.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if no inventory available
+    if (availableInventory === 0) {
+      toast({
+        title: "No Inventory Available",
+        description: `No ${formData.coffeeType} available in store. Please check procurement records.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setLoading(true);
     try {
       // Create sales transaction
