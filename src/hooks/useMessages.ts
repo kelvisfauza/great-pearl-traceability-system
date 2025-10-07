@@ -403,14 +403,32 @@ export const useMessages = () => {
     }
   };
 
+  // Fetch conversations on mount and set up polling
   useEffect(() => {
-    console.log('🚀 useMessages hook initialized - setting up real-time subscription');
+    console.log('🚀 useMessages hook initialized');
     fetchConversations();
+    
+    // Poll for new messages every 3 seconds as fallback
+    const pollInterval = setInterval(() => {
+      console.log('🔄 Polling for new conversations...');
+      fetchConversations();
+    }, 3000);
 
-    // Subscribe to new messages for real-time updates
-    console.log('📡 Creating messages-changes channel...');
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [fetchConversations]);
+
+  // Set up real-time subscription
+  useEffect(() => {
+    console.log('📡 Setting up real-time subscription for messages');
+    
     const channel = supabase
-      .channel('messages-changes')
+      .channel('messages-realtime-channel', {
+        config: {
+          broadcast: { self: false }
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -426,9 +444,7 @@ export const useMessages = () => {
           
           // Update messages if viewing this conversation
           setMessages(prev => {
-            // Remove any optimistic message
             const filtered = prev.filter(m => !m.id.startsWith('temp-'));
-            // Add new message if not already present
             if (!filtered.find(m => m.id === newMessage.id)) {
               return [...filtered, newMessage];
             }
@@ -478,6 +494,7 @@ export const useMessages = () => {
           table: 'messages'
         },
         (payload) => {
+          console.log('📝 Message updated:', payload);
           const updatedMessage = payload.new as Message;
           setMessages(prev => 
             prev.map(m => m.id === updatedMessage.id ? updatedMessage : m)
@@ -495,13 +512,11 @@ export const useMessages = () => {
         }
       });
 
-    console.log('📡 Setting up messages real-time subscription');
-
     return () => {
       console.log('🧹 Cleaning up messages subscription');
       supabase.removeChannel(channel);
     };
-  }, [fetchConversations]);
+  }, []);
 
   return {
     conversations,
