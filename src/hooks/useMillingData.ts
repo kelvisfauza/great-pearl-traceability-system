@@ -486,6 +486,14 @@ export const useMillingData = () => {
         return;
       }
 
+      // Delete all cash transactions first
+      const { error: deleteCashError } = await supabase
+        .from('milling_cash_transactions')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (deleteCashError) throw deleteCashError;
+
       // Reset ALL customer balances to 0 (including negative ones)
       const { error: updateError } = await supabase
         .from('milling_customers')
@@ -494,32 +502,9 @@ export const useMillingData = () => {
 
       if (updateError) throw updateError;
 
-      // Record cash transactions only for customers who had positive balances
-      const customersWithPositiveDebts = allCustomers.filter(c => c.current_balance > 0);
-      
-      if (customersWithPositiveDebts.length > 0) {
-        const cashTransactionRecords = customersWithPositiveDebts.map(customer => ({
-          customer_id: customer.id,
-          customer_name: customer.full_name,
-          amount_paid: customer.current_balance,
-          previous_balance: customer.current_balance,
-          new_balance: 0,
-          payment_method: 'Bulk Clear',
-          date: new Date().toISOString().split('T')[0],
-          notes: 'Bulk debt clearance',
-          created_by: 'System'
-        }));
-
-        const { error: cashError } = await supabase
-          .from('milling_cash_transactions')
-          .insert(cashTransactionRecords);
-
-        if (cashError) throw cashError;
-      }
-
       toast({
         title: "Success",
-        description: `Reset all customer balances to zero`
+        description: `Reset all customer balances and cleared payment history`
       });
 
       // Refresh data
