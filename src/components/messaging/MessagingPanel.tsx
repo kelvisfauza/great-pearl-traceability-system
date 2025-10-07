@@ -28,7 +28,6 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     conversations,
     messages,
     loading,
-    loadingMessages,
     sendMessage,
     sendFile,
     fetchMessages,
@@ -212,11 +211,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
           <>
             {/* WhatsApp-style Messages Area */}
             <ScrollArea className="flex-1 px-4 py-2 bg-muted/20">
-              {loadingMessages ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-muted-foreground">Loading messages...</p>
-                </div>
-              ) : messages.length === 0 ? (
+              {messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <MessageSquarePlus className="h-12 w-12 text-muted-foreground mx-auto mb-2" />

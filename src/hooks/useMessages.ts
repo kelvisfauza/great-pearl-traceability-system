@@ -41,7 +41,6 @@ export const useMessages = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [latestMessageNotification, setLatestMessageNotification] = useState<LatestMessageNotification | null>(null);
   const { toast } = useToast();
@@ -161,7 +160,6 @@ export const useMessages = () => {
 
   const fetchMessages = useCallback(async (conversationId: string) => {
     try {
-      setLoadingMessages(true);
       const { data: { user } } = await supabase.auth.getUser();
       
       const { data, error } = await supabase
@@ -202,13 +200,6 @@ export const useMessages = () => {
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch messages",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingMessages(false);
     }
   }, [toast]);
 
@@ -403,16 +394,15 @@ export const useMessages = () => {
     }
   };
 
-  // Fetch conversations on mount and set up polling
+  // Fetch conversations on mount and set up aggressive polling
   useEffect(() => {
     console.log('🚀 useMessages hook initialized');
     fetchConversations();
     
-    // Poll for new messages every 3 seconds as fallback
+    // Poll for new messages every 1 second for instant updates
     const pollInterval = setInterval(() => {
-      console.log('🔄 Polling for new conversations...');
       fetchConversations();
-    }, 3000);
+    }, 1000);
 
     return () => {
       clearInterval(pollInterval);
@@ -522,7 +512,6 @@ export const useMessages = () => {
     conversations,
     messages,
     loading,
-    loadingMessages,
     unreadCount,
     latestMessageNotification,
     clearLatestNotification: () => setLatestMessageNotification(null),
