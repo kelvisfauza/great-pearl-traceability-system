@@ -121,6 +121,24 @@ export const useMessages = () => {
       );
 
       setConversations(conversationsWithParticipants);
+      
+      // Calculate total unread count
+      let totalUnread = 0;
+      for (const conv of conversationsWithParticipants) {
+        const { data: unreadMessages } = await supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('conversation_id', conv.id)
+          .neq('sender_id', user.id)
+          .is('read_at', null);
+        
+        if (unreadMessages) {
+          totalUnread += (unreadMessages as any).count || 0;
+        }
+      }
+      
+      setUnreadCount(totalUnread);
+      console.log('📊 Total unread messages:', totalUnread);
     } catch (error) {
       console.error('Error fetching conversations:', error);
       toast({
@@ -162,6 +180,9 @@ export const useMessages = () => {
             .from('messages')
             .update({ read_at: new Date().toISOString() })
             .in('id', unreadMessages.map(m => m.id));
+          
+          // Decrease unread count by the number of messages marked as read
+          setUnreadCount(prev => Math.max(0, prev - unreadMessages.length));
         }
 
         // Update last_read_at in conversation_participants
@@ -387,8 +408,9 @@ export const useMessages = () => {
           schema: 'public',
           table: 'messages'
         },
-        (payload) => {
+        async (payload) => {
           const newMessage = payload.new as Message;
+          const { data: { user } } = await supabase.auth.getUser();
           
           // Update messages if viewing this conversation
           setMessages(prev => {
@@ -400,6 +422,11 @@ export const useMessages = () => {
             }
             return filtered;
           });
+          
+          // If message is not from current user, increment unread count
+          if (user && newMessage.sender_id !== user.id && !newMessage.read_at) {
+            setUnreadCount(prev => prev + 1);
+          }
           
           // Refresh conversations list
           fetchConversations();
