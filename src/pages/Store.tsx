@@ -22,7 +22,6 @@ import PricingGuidance from "@/components/PricingGuidance";
 
 import { StoreRecordsManager } from "@/components/store/StoreRecordsManager";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
-import { RestoreDataButton } from "@/components/store/RestoreDataButton";
 
 const Store = () => {
   const [searchParams] = useSearchParams();
@@ -425,7 +424,6 @@ const Store = () => {
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    <RestoreDataButton />
                     <Button 
                       onClick={() => setShowAddRecordModal(true)}
                     >
