@@ -64,6 +64,7 @@ export const useMessages = () => {
       
       if (conversationIds.length === 0) {
         setConversations([]);
+        setLoading(false);
         return;
       }
 
@@ -130,23 +131,22 @@ export const useMessages = () => {
 
       setConversations(conversationsWithParticipants);
       
-      // Calculate total unread count
+      // Calculate total unread count - count messages not sent by current user that are unread
       let totalUnread = 0;
       for (const conv of conversationsWithParticipants) {
-        const { data: unreadMessages } = await supabase
+        const { count } = await supabase
           .from('messages')
           .select('id', { count: 'exact', head: true })
           .eq('conversation_id', conv.id)
           .neq('sender_id', user.id)
           .is('read_at', null);
         
-        if (unreadMessages) {
-          totalUnread += (unreadMessages as any).count || 0;
-        }
+        totalUnread += (count || 0);
       }
       
-      setUnreadCount(totalUnread);
       console.log('📊 Total unread messages:', totalUnread);
+      setUnreadCount(totalUnread);
+      
     } catch (error) {
       console.error('Error fetching conversations:', error);
       toast({
