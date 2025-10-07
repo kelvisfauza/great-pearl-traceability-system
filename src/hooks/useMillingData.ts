@@ -147,6 +147,16 @@ export const useMillingData = () => {
     const activeCustomers = customers.filter(c => c.status === 'Active').length;
     const totalDebts = customers.reduce((sum, c) => sum + (c.current_balance || 0), 0);
     
+    // Debug logging
+    console.log('📊 Stats Calculation Debug:', {
+      totalCustomers,
+      activeCustomers,
+      totalDebts,
+      customerBalances: customers.map(c => ({ name: c.full_name, balance: c.current_balance })),
+      transactionsCount: transactions.length,
+      cashTransactionsCount: cashTransactions.length
+    });
+    
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     
