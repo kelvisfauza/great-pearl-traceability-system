@@ -50,139 +50,91 @@ export const usePendingCoffeePayments = () => {
       
       const payments: CoffeePayment[] = [];
       
-      console.log('🔍 Finance fetching coffee records and checking Quality pricing...');
+      console.log('🔍 Finance fetching coffee records from Supabase...');
       
-      // Fetch ALL coffee records from Firebase
-      const coffeeRecordsQuery = query(
-        collection(db, 'coffee_records'),
-        orderBy('date', 'desc')
-      );
-      const coffeeSnapshot = await getDocs(coffeeRecordsQuery);
+      // Fetch coffee records from SUPABASE (which has the correct data)
+      const { data: coffeeRecords, error: coffeeError } = await supabase
+        .from('coffee_records')
+        .select('*')
+        .not('status', 'in', '("paid","completed")')
+        .order('date', { ascending: false });
       
-      console.log('📦 Found coffee records:', coffeeSnapshot.size);
+      if (coffeeError) {
+        console.error('Error fetching coffee records:', coffeeError);
+        throw coffeeError;
+      }
       
-      // Fetch all PAID payment records from Firebase to exclude them
-      const paidPaymentsQuery = query(
-        collection(db, 'payment_records'),
-        where('status', '==', 'Paid')
-      );
-      const paidPaymentsSnapshot = await getDocs(paidPaymentsQuery);
-      const paidBatchNumbers = new Set(
-        paidPaymentsSnapshot.docs.map(doc => doc.data().batchNumber)
-      );
-
-      // Also fetch paid payment records from Supabase
-      const { data: supabasePaidPayments } = await supabase
+      console.log('📦 Found coffee records in Supabase:', coffeeRecords?.length || 0);
+      
+      // Fetch all PAID payment records from Supabase to exclude them
+      const { data: paidPayments } = await supabase
         .from('payment_records')
         .select('batch_number')
         .eq('status', 'Paid');
       
-      if (supabasePaidPayments) {
-        supabasePaidPayments.forEach(payment => {
-          if (payment.batch_number) {
-            paidBatchNumbers.add(payment.batch_number);
-          }
-        });
-      }
+      const paidBatchNumbers = new Set(
+        paidPayments?.map(p => p.batch_number).filter(Boolean) || []
+      );
 
       console.log('💳 Found paid batch numbers:', paidBatchNumbers.size);
       
-      // Fetch all quality assessments from BOTH Firebase and Supabase
-      const qualityAssessments = new Map();
+      // Fetch all quality assessments from Supabase
+      const { data: qualityAssessments } = await supabase
+        .from('quality_assessments')
+        .select('*');
       
-      // Fetch from Firebase
-      const firebaseQualityQuery = query(collection(db, 'quality_assessments'));
-      const firebaseQualitySnapshot = await getDocs(firebaseQualityQuery);
-      firebaseQualitySnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        if (data.store_record_id) {
-          qualityAssessments.set(data.store_record_id, {
-            id: doc.id,
-            pricePerKg: data.suggested_price || 0,
-            assessedBy: data.assessed_by || 'Quality Department'
+      const qualityMap = new Map();
+      qualityAssessments?.forEach(assessment => {
+        if (assessment.store_record_id) {
+          qualityMap.set(assessment.store_record_id, {
+            id: assessment.id,
+            pricePerKg: assessment.suggested_price || 0,
+            assessedBy: assessment.assessed_by || 'Quality Department'
           });
         }
       });
       
-      // Fetch from Supabase (Quality saves here!)
-      const { data: supabaseQualityData } = await supabase
-        .from('quality_assessments')
-        .select('*');
-      
-      if (supabaseQualityData) {
-        supabaseQualityData.forEach(assessment => {
-          if (assessment.store_record_id) {
-            // Supabase takes priority over Firebase
-            qualityAssessments.set(assessment.store_record_id, {
-              id: assessment.id,
-              pricePerKg: assessment.suggested_price || 0,
-              assessedBy: assessment.assessed_by || 'Quality Department'
-            });
-          }
-        });
-      }
-      
-      console.log('🔬 Found quality assessments:', qualityAssessments.size, '(Firebase + Supabase)');
+      console.log('🔬 Found quality assessments:', qualityMap.size);
       
       // Convert each coffee record to a payment entry
-      coffeeSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        const batchNumber = data.batch_number || 'Unknown';
+      coffeeRecords?.forEach(record => {
+        const batchNumber = record.batch_number || 'Unknown';
         
-        // Skip if already paid in payment_records
+        // Skip if already paid
         if (paidBatchNumbers.has(batchNumber)) {
           console.log(`⏭️ Skipping ${batchNumber} - already paid`);
           return;
         }
         
-        // Only show records that are NOT already paid or completed
-        // Note: 'active', 'pending', 'pending_batch', null, undefined should all show as pending for finance
-        if (data.status === 'paid' || data.status === 'completed') {
-          console.log(`⏭️ Skipping ${batchNumber} - status is ${data.status}`);
-          return;
-        }
+        // Get quantity from the coffee record
+        const quantity = Number(record.kilograms) || 0;
         
-        // Get quantity - try multiple field names and ensure we get the ORIGINAL purchase quantity
-        // This should NOT be affected by sales or inventory movements
-        const quantity = Number(data.kilograms || data.quantity_kg || data.weight_kg || 0);
+        console.log(`📦 ${batchNumber}: ${record.supplier_name} - ${quantity}kg`);
         
-        console.log(`📦 Processing ${batchNumber}:`, {
-          kilograms: data.kilograms,
-          quantity_kg: data.quantity_kg,
-          weight_kg: data.weight_kg,
-          finalQuantity: quantity,
-          supplier: data.supplier_name,
-          allDataFields: Object.keys(data)
-        });
-        
-        // Warn about zero quantity but DON'T skip - let Finance see the issue
         if (quantity === 0) {
-          console.warn(`⚠️ WARNING: ${batchNumber} has zero quantity. Displaying anyway for Finance review.`);
+          console.warn(`⚠️ ${batchNumber} has zero quantity!`);
         }
         
-        const qualityAssessment = qualityAssessments.get(doc.id);
+        const qualityAssessment = qualityMap.get(record.id);
         
         // Check if Quality has priced this
         const isPricedByQuality = !!qualityAssessment && qualityAssessment.pricePerKg > 0;
-        const pricePerKg = isPricedByQuality ? qualityAssessment.pricePerKg : (Number(data.price_per_kg) || 0);
+        const pricePerKg = isPricedByQuality ? qualityAssessment.pricePerKg : 0;
         const totalAmount = quantity * pricePerKg;
-        const assessedBy = isPricedByQuality ? qualityAssessment.assessedBy : (data.assessed_by || 'Store Department');
-        
-        console.log(`📝 ${data.supplier_name}: ${isPricedByQuality ? '✅ Priced by Quality' : '⏳ Awaiting pricing'}`);
-        console.log(`   Supplier ID from coffee record: "${data.supplier_id}"`);
+        const assessedBy = isPricedByQuality ? qualityAssessment.assessedBy : 'Store Department';
         
         payments.push({
-          id: doc.id,
-          batchNumber: data.batch_number || 'Unknown',
-          supplier: data.supplier_name || 'Unknown Supplier',
-          supplierId: data.supplier_id || '',
-          supplierCode: data.supplier_code || '',
+          id: record.id,
+          batchNumber: record.batch_number || 'Unknown',
+          supplier: record.supplier_name || 'Unknown Supplier',
+          supplierId: record.supplier_id || '',
+          supplierCode: '', // Not in Supabase schema
           assessedBy,
           quantity,
           pricePerKg,
           totalAmount,
-          dateAssessed: data.date || new Date().toLocaleDateString(),
-          qualityAssessmentId: qualityAssessment?.id || doc.id,
+          dateAssessed: record.date || new Date().toLocaleDateString(),
+          qualityAssessmentId: qualityAssessment?.id || record.id,
           isPricedByQuality,
           qualityAssessmentExists: !!qualityAssessment
         });
