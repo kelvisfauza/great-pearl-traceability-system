@@ -135,8 +135,10 @@ export const usePendingCoffeePayments = () => {
           return;
         }
         
-        // Only show records that are pending (not paid or completed)
+        // Only show records that are NOT already paid or completed
+        // Note: 'active', 'pending', 'pending_batch', null, undefined should all show as pending for finance
         if (data.status === 'paid' || data.status === 'completed') {
+          console.log(`⏭️ Skipping ${batchNumber} - status is ${data.status}`);
           return;
         }
         
@@ -149,13 +151,13 @@ export const usePendingCoffeePayments = () => {
           quantity_kg: data.quantity_kg,
           weight_kg: data.weight_kg,
           finalQuantity: quantity,
-          supplier: data.supplier_name
+          supplier: data.supplier_name,
+          allDataFields: Object.keys(data)
         });
         
-        // Skip records with zero quantity - likely data issue
+        // Warn about zero quantity but DON'T skip - let Finance see the issue
         if (quantity === 0) {
-          console.warn(`⚠️ Skipping ${batchNumber} - zero quantity detected. Check coffee_records data.`);
-          return;
+          console.warn(`⚠️ WARNING: ${batchNumber} has zero quantity. Displaying anyway for Finance review.`);
         }
         
         const qualityAssessment = qualityAssessments.get(doc.id);
@@ -191,7 +193,13 @@ export const usePendingCoffeePayments = () => {
         new Date(b.dateAssessed).getTime() - new Date(a.dateAssessed).getTime()
       );
       
-      console.log('Fetched pending coffee payments:', payments);
+      console.log('✅ Fetched pending coffee payments:', payments.length, 'records');
+      console.log('📊 Summary:', {
+        total: payments.length,
+        withZeroQuantity: payments.filter(p => p.quantity === 0).length,
+        priced: payments.filter(p => p.isPricedByQuality).length,
+        unpriced: payments.filter(p => !p.isPricedByQuality).length
+      });
       setCoffeePayments(payments);
     } catch (error) {
       console.error('Error fetching pending coffee payments:', error);
