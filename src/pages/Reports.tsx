@@ -11,7 +11,8 @@ import StoreReportForm from "@/components/reports/StoreReportForm";
 import StoreReportsList from "@/components/reports/StoreReportsList";
 import SalesReportsList from "@/components/reports/SalesReportsList";
 import DayBook from "@/components/reports/DayBook";
-import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart, BookOpen } from "lucide-react";
+import MonthlyReconciliation from "@/components/reports/MonthlyReconciliation";
+import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart, BookOpen, Calculator } from "lucide-react";
 
 const Reports = () => {
   return (
@@ -25,7 +26,7 @@ const Reports = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
@@ -57,6 +58,10 @@ const Reports = () => {
             <TabsTrigger value="sales" className="flex items-center gap-2">
               <ShoppingCart className="h-4 w-4" />
               Sales Reports
+            </TabsTrigger>
+            <TabsTrigger value="reconciliation" className="flex items-center gap-2">
+              <Calculator className="h-4 w-4" />
+              Monthly Reconciliation
             </TabsTrigger>
           </TabsList>
 
@@ -94,6 +99,10 @@ const Reports = () => {
 
           <TabsContent value="sales" className="space-y-6">
             <SalesReportsList />
+          </TabsContent>
+
+          <TabsContent value="reconciliation" className="space-y-6">
+            <MonthlyReconciliation />
           </TabsContent>
         </Tabs>
       </div>
