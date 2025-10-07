@@ -118,6 +118,7 @@ export const useSalesTransactions = () => {
         const data = docSnap.data();
         const recordCoffeeType = (data.coffee_type || '').toString();
         const kilograms = Number(data.kilograms) || 0;
+        const bags = Number(data.bags) || 0;
         const status = (data.status || '').toString();
         
         // Only process records with inventory that aren't sold
@@ -133,6 +134,7 @@ export const useSalesTransactions = () => {
             matchedRecords.push({
               id: docSnap.id,
               kilograms,
+              bags,
               created_at: data.created_at
             });
           }
@@ -155,13 +157,18 @@ export const useSalesTransactions = () => {
           await updateDoc(doc(db, 'coffee_records', record.id), {
             status: 'sold',
             kilograms: 0,
+            bags: 0,
             updated_at: new Date().toISOString()
           });
           remainingToDeduct -= record.kilograms;
         } else {
-          // Partial deduction
+          // Partial deduction - calculate proportional bag reduction
+          const kgRatio = (record.kilograms - remainingToDeduct) / record.kilograms;
+          const newBags = Math.ceil(record.bags * kgRatio); // Round up to keep whole bags
+          
           await updateDoc(doc(db, 'coffee_records', record.id), {
             kilograms: record.kilograms - remainingToDeduct,
+            bags: newBags,
             updated_at: new Date().toISOString()
           });
           remainingToDeduct = 0;
