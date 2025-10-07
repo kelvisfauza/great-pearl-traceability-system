@@ -12,6 +12,7 @@ import { useMessages } from "@/hooks/useMessages";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePresence } from "@/hooks/usePresence";
+import { useToast } from "@/hooks/use-toast";
 import FeatureAnnouncementModal from "./FeatureAnnouncementModal";
 import AnnouncementDialog from "./notifications/AnnouncementDialog";
 import TrainingTour from "./training/TrainingTour";
@@ -27,9 +28,14 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const { unreadCount: messagesUnreadCount } = useMessages();
+  const { 
+    unreadCount: messagesUnreadCount, 
+    latestMessageNotification,
+    clearLatestNotification 
+  } = useMessages();
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const { user } = useAuth();
+  const { toast } = useToast();
   usePresence(user?.id);
   
   console.log('Layout - notification unread count:', notificationUnreadCount);
@@ -41,6 +47,25 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   const handleOpenAnnouncement = () => {
     toggleNotifications();
   };
+
+  // Show toast notification for new messages
+  useEffect(() => {
+    if (latestMessageNotification && !isMessagingOpen) {
+      toast({
+        title: latestMessageNotification.senderName,
+        description: latestMessageNotification.content.length > 50 
+          ? latestMessageNotification.content.substring(0, 50) + '...'
+          : latestMessageNotification.content,
+        duration: 5000,
+        onClick: () => {
+          setIsMessagingOpen(true);
+          clearLatestNotification();
+        },
+        className: "cursor-pointer"
+      });
+      clearLatestNotification();
+    }
+  }, [latestMessageNotification, isMessagingOpen, toast, clearLatestNotification]);
 
   return (
     <div className="min-h-screen bg-background flex relative">

@@ -30,12 +30,20 @@ interface Conversation {
   unread_count?: number;
 }
 
+interface LatestMessageNotification {
+  content: string;
+  senderName: string;
+  conversationId: string;
+  timestamp: string;
+}
+
 export const useMessages = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [latestMessageNotification, setLatestMessageNotification] = useState<LatestMessageNotification | null>(null);
   const { toast } = useToast();
 
   const fetchConversations = useCallback(async () => {
@@ -423,9 +431,23 @@ export const useMessages = () => {
             return filtered;
           });
           
-          // If message is not from current user, increment unread count
+          // If message is not from current user, show notification and increment unread count
           if (user && newMessage.sender_id !== user.id && !newMessage.read_at) {
             setUnreadCount(prev => prev + 1);
+            
+            // Fetch sender info for notification
+            const { data: senderEmployee } = await supabase
+              .from('employees')
+              .select('name')
+              .eq('auth_user_id', newMessage.sender_id)
+              .single();
+            
+            setLatestMessageNotification({
+              content: newMessage.content || 'Sent an attachment',
+              senderName: senderEmployee?.name || 'Someone',
+              conversationId: newMessage.conversation_id,
+              timestamp: newMessage.created_at
+            });
           }
           
           // Refresh conversations list
@@ -459,6 +481,8 @@ export const useMessages = () => {
     loading,
     loadingMessages,
     unreadCount,
+    latestMessageNotification,
+    clearLatestNotification: () => setLatestMessageNotification(null),
     fetchConversations,
     fetchMessages,
     sendMessage,
