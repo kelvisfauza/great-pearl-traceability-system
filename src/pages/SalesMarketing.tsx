@@ -12,6 +12,7 @@ import { TrendingUp, Users, DollarSign, Target, Plus, Search, Eye, Edit, Send } 
 import { useState } from "react";
 import { useSalesMarketing } from "@/hooks/useSalesMarketing";
 import SalesForm from "@/components/sales/SalesForm";
+import SalesHistory from "@/components/sales/SalesHistory";
 
 const SalesMarketing = () => {
   const {
@@ -159,6 +160,7 @@ const SalesMarketing = () => {
 
           <TabsContent value="sales-form" className="space-y-4">
             <SalesForm />
+            <SalesHistory />
           </TabsContent>
 
           <TabsContent value="customers" className="space-y-4">
