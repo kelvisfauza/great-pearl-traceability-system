@@ -53,12 +53,8 @@ const UserSelectorDialog = ({ open, onClose, onSelectUser }: UserSelectorDialogP
     try {
       setLoading(true);
       
-      // UUID validation regex
-      const isValidUUID = (str: string) => {
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        return uuidRegex.test(str);
-      };
-
+      const { data: { user } } = await supabase.auth.getUser();
+      
       let query = supabase
         .from('employees')
         .select('id, auth_user_id, name, email, department, position')
@@ -66,9 +62,9 @@ const UserSelectorDialog = ({ open, onClose, onSelectUser }: UserSelectorDialogP
         .not('auth_user_id', 'is', null)
         .order('name');
 
-      // Only exclude current user if we have a valid UUID
-      if (employee?.id && isValidUUID(employee.id)) {
-        query = query.neq('id', employee.id);
+      // Exclude current user by auth_user_id
+      if (user?.id) {
+        query = query.neq('auth_user_id', user.id);
       }
 
       const { data, error } = await query;
