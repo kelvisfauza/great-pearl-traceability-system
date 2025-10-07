@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, Phone, Video, MoreVertical } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePresenceList } from '@/hooks/usePresenceList';
 import UserSelectorDialog from './UserSelectorDialog';
 import { format } from 'date-fns';
 
@@ -20,6 +21,8 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
   const [showUserSelector, setShowUserSelector] = useState(false);
   const { employee } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { users: presenceUsers } = usePresenceList();
   
   const {
     conversations,
@@ -27,6 +30,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     loading,
     loadingMessages,
     sendMessage,
+    sendFile,
     fetchMessages,
     createConversation
   } = useMessages();
@@ -74,6 +78,28 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
       (p: any) => p.user_id !== employee?.authUserId
     );
     return otherParticipant?.employee_name || 'Unknown';
+  };
+
+  const getOtherParticipantStatus = (conversation: any) => {
+    const otherParticipant = conversation.participants?.find(
+      (p: any) => p.user_id !== employee?.authUserId
+    );
+    if (!otherParticipant) return 'offline';
+    
+    const presenceUser = presenceUsers.find(u => u.id === otherParticipant.user_id);
+    return presenceUser?.status || 'offline';
+  };
+
+  const handleFileAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !selectedConversation) return;
+    
+    const file = e.target.files[0];
+    try {
+      await sendFile({ file, conversationId: selectedConversation });
+      e.target.value = '';
+    } catch (error) {
+      console.error('Failed to send file:', error);
+    }
   };
 
   const getCurrentConversation = () => {
@@ -127,15 +153,11 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                   <p className="font-semibold text-sm truncate">
                     {getConversationName(currentConversation)}
                   </p>
-                  <p className="text-xs opacity-80">Online</p>
+                  <p className="text-xs opacity-80 capitalize">
+                    {getOtherParticipantStatus(currentConversation)}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary-foreground/10">
-                    <Video className="h-5 w-5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary-foreground/10">
-                    <Phone className="h-5 w-5" />
-                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary-foreground/10">
                     <MoreVertical className="h-5 w-5" />
                   </Button>
@@ -202,18 +224,52 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                           className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[75%] rounded-lg px-3 py-2 shadow-sm ${
+                            className={`max-w-[75%] rounded-lg shadow-sm ${
                               isOwnMessage
                                 ? 'bg-primary text-primary-foreground rounded-br-none'
                                 : 'bg-card border border-border rounded-bl-none'
-                            }`}
+                            } ${message.type === 'image' ? 'p-1' : 'px-3 py-2'}`}
                           >
-                            <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
-                            <p className={`text-[10px] mt-1 text-right ${
-                              isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
-                            }`}>
-                              {format(new Date(message.created_at), 'HH:mm')}
-                            </p>
+                            {message.type === 'image' ? (
+                              <div>
+                                <img 
+                                  src={message.content} 
+                                  alt="Attachment" 
+                                  className="max-w-full rounded-lg max-h-64 object-cover"
+                                />
+                                <p className={`text-[10px] mt-1 text-right px-2 pb-1 ${
+                                  isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
+                                }`}>
+                                  {format(new Date(message.created_at), 'HH:mm')}
+                                </p>
+                              </div>
+                            ) : message.type === 'file' ? (
+                              <div>
+                                <a 
+                                  href={message.content} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 hover:underline"
+                                >
+                                  <Paperclip className="h-4 w-4" />
+                                  <span className="text-sm">{message.metadata?.fileName || 'File'}</span>
+                                </a>
+                                <p className={`text-[10px] mt-1 text-right ${
+                                  isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
+                                }`}>
+                                  {format(new Date(message.created_at), 'HH:mm')}
+                                </p>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
+                                <p className={`text-[10px] mt-1 text-right ${
+                                  isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
+                                }`}>
+                                  {format(new Date(message.created_at), 'HH:mm')}
+                                </p>
+                              </>
+                            )}
                           </div>
                         </div>
                       </React.Fragment>
@@ -227,6 +283,21 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
             {/* WhatsApp-style Message Input */}
             <div className="p-3 bg-muted/30 border-t">
               <div className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileAttachment}
+                  accept="image/*,.pdf,.doc,.docx,.txt"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 hover:bg-muted"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip className="h-5 w-5" />
+                </Button>
                 <Input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}

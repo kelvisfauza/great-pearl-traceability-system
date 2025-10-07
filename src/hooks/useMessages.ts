@@ -205,6 +205,72 @@ export const useMessages = () => {
     }
   };
 
+  const sendFile = async ({ file, conversationId }: {
+    file: File;
+    conversationId: string;
+  }) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Upload file to storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      const { error: uploadError, data } = await supabase.storage
+        .from('chat-attachments')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('chat-attachments')
+        .getPublicUrl(fileName);
+
+      // Determine message type
+      const messageType = file.type.startsWith('image/') ? 'image' : 'file';
+
+      // Insert message
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          content: publicUrl,
+          type: messageType,
+          metadata: { 
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type
+          }
+        });
+
+      if (error) throw error;
+
+      // Update conversation's updated_at
+      await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
+
+      // Refresh messages
+      await fetchMessages(conversationId);
+      
+      toast({
+        title: "Success",
+        description: "File sent successfully"
+      });
+    } catch (error) {
+      console.error('Error sending file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send file",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   const createConversation = async ({ participantId, type = 'direct' }: {
     participantId: string;
     type?: 'direct' | 'group';
@@ -300,6 +366,7 @@ export const useMessages = () => {
     fetchConversations,
     fetchMessages,
     sendMessage,
+    sendFile,
     createConversation
   };
 };
