@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, TrendingUp, DollarSign, Package2, Plus, Receipt, CreditCard, FileText, TrendingDown } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Package2, Plus, Receipt, CreditCard, FileText, TrendingDown, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import Layout from '@/components/Layout';
 import { useMillingData } from '@/hooks/useMillingData';
 import MillingCustomerForm from '@/components/milling/MillingCustomerForm';
@@ -17,12 +18,16 @@ import MillingExpenses from '@/components/milling/MillingExpenses';
 import MillingPrintReportModal from '@/components/milling/MillingPrintReportModal';
 
 const Milling = () => {
-  const { stats, loading, customers, transactions, getReportData } = useMillingData();
+  const { stats, loading, customers, transactions, getReportData, clearAllData } = useMillingData();
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [showCashTransactionForm, setShowCashTransactionForm] = useState(false);
   const [showReports, setShowReports] = useState(false);
   const [showPrintReport, setShowPrintReport] = useState(false);
+
+  const handleClearAll = async () => {
+    await clearAllData();
+  };
 
   const statsCards = [
     {
@@ -82,6 +87,28 @@ const Milling = () => {
               <Plus className="h-4 w-4" />
               Add Customer
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  Clear All
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete all milling data including customers, transactions, payments, and expenses. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Delete All Data
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 

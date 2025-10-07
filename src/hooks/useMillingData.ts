@@ -406,6 +406,61 @@ export const useMillingData = () => {
     };
   };
 
+  const clearAllData = async () => {
+    try {
+      setLoading(true);
+
+      // Delete all records from each table
+      const { error: transactionsError } = await supabase
+        .from('milling_transactions')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (transactionsError) throw transactionsError;
+
+      const { error: cashTransactionsError } = await supabase
+        .from('milling_cash_transactions')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (cashTransactionsError) throw cashTransactionsError;
+
+      const { error: expensesError } = await supabase
+        .from('milling_expenses')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (expensesError) throw expensesError;
+
+      const { error: customersError } = await supabase
+        .from('milling_customers')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (customersError) throw customersError;
+
+      toast({
+        title: "Success",
+        description: "All milling data cleared successfully"
+      });
+
+      // Refresh data to show empty state
+      await fetchData();
+      
+      return true;
+    } catch (error) {
+      console.error('Error clearing milling data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear data. Please try again.",
+        variant: "destructive"
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -423,6 +478,7 @@ export const useMillingData = () => {
     addExpense,
     getReportData,
     fetchData,
+    clearAllData,
     updateMillingTransaction: async (id: string, updates: Partial<MillingTransaction>) => {
       try {
         const { error } = await supabase
