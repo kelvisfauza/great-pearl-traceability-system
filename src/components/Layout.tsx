@@ -50,7 +50,14 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
 
   // Show toast notification for new messages
   useEffect(() => {
+    console.log('🔍 Notification effect triggered:', {
+      hasNotification: !!latestMessageNotification,
+      isMessagingOpen,
+      notification: latestMessageNotification
+    });
+    
     if (latestMessageNotification && !isMessagingOpen) {
+      console.log('✅ Showing toast notification for:', latestMessageNotification);
       toast({
         title: latestMessageNotification.senderName,
         description: latestMessageNotification.content.length > 50 
@@ -58,6 +65,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
           : latestMessageNotification.content,
         duration: 5000,
         onClick: () => {
+          console.log('🖱️ Toast clicked, opening messaging panel');
           setIsMessagingOpen(true);
           clearLatestNotification();
         },

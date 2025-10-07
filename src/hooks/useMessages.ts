@@ -417,8 +417,10 @@ export const useMessages = () => {
           table: 'messages'
         },
         async (payload) => {
+          console.log('🔔 New message received via WebSocket:', payload);
           const newMessage = payload.new as Message;
           const { data: { user } } = await supabase.auth.getUser();
+          console.log('👤 Current user:', user?.id, 'Message sender:', newMessage.sender_id);
           
           // Update messages if viewing this conversation
           setMessages(prev => {
@@ -433,7 +435,12 @@ export const useMessages = () => {
           
           // If message is not from current user, show notification and increment unread count
           if (user && newMessage.sender_id !== user.id && !newMessage.read_at) {
-            setUnreadCount(prev => prev + 1);
+            console.log('📨 Message is from another user, showing notification');
+            setUnreadCount(prev => {
+              const newCount = prev + 1;
+              console.log('📊 Updated unread count:', newCount);
+              return newCount;
+            });
             
             // Fetch sender info for notification
             const { data: senderEmployee } = await supabase
@@ -442,12 +449,19 @@ export const useMessages = () => {
               .eq('auth_user_id', newMessage.sender_id)
               .single();
             
-            setLatestMessageNotification({
+            console.log('👤 Sender employee:', senderEmployee);
+            
+            const notification = {
               content: newMessage.content || 'Sent an attachment',
               senderName: senderEmployee?.name || 'Someone',
               conversationId: newMessage.conversation_id,
               timestamp: newMessage.created_at
-            });
+            };
+            
+            console.log('🔔 Setting notification:', notification);
+            setLatestMessageNotification(notification);
+          } else {
+            console.log('⏭️ Skipping notification - message is from current user or already read');
           }
           
           // Refresh conversations list
