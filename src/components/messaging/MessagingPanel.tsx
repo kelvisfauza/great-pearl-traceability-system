@@ -93,7 +93,11 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     );
     if (!otherParticipant) return 'offline';
     
-    const presenceUser = presenceUsers.find(u => u.id === otherParticipant.user_id);
+    // Try to find by user_id first, then fallback to email matching
+    const presenceUser = presenceUsers.find(u => 
+      u.id === otherParticipant.user_id || 
+      u.email === otherParticipant.employee_email
+    );
     return presenceUser?.status || 'offline';
   };
 
