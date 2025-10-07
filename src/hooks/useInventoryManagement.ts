@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { firebaseClient } from '@/lib/firebaseClient';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface InventoryItem {
   id: string;
@@ -32,7 +33,7 @@ export const useInventoryManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch coffee_records from Firebase directly as inventory
+      // Fetch coffee_records from Firebase (original deliveries - NEVER modified by sales)
       const { data: coffeeRecords, error: coffeeError } = await firebaseClient
         .from('coffee_records')
         .select()
@@ -43,44 +44,54 @@ export const useInventoryManagement = () => {
         console.error('Error fetching coffee records from Firebase:', coffeeError);
         setInventoryItems([]);
       } else if (coffeeRecords && coffeeRecords.length > 0) {
-        console.log('Coffee records from Firebase:', coffeeRecords);
+        console.log('📦 Coffee records from Firebase (original deliveries):', coffeeRecords.length);
         
-        // Filter out sold items and items with 0 kg
-        const activeRecords = coffeeRecords.filter((record: any) => {
-          const kilograms = record.kilograms || record.weight || 0;
-          const status = (record.status || '').toString().toLowerCase();
-          return kilograms > 0 && status !== 'sold';
+        // Get all sales tracking to calculate what's been sold
+        const { data: salesTracking } = await supabase
+          .from('sales_inventory_tracking')
+          .select('coffee_record_id, quantity_kg');
+        
+        console.log('🛒 Sales tracking records:', salesTracking?.length || 0);
+        
+        // Calculate sold quantities per record
+        const soldByRecord: Record<string, number> = {};
+        salesTracking?.forEach(sale => {
+          soldByRecord[sale.coffee_record_id] = (soldByRecord[sale.coffee_record_id] || 0) + Number(sale.quantity_kg);
         });
         
-        console.log('Active inventory records (excluding sold):', activeRecords);
+        // Transform coffee_records into inventory items with AVAILABLE quantities
+        const transformedInventory: InventoryItem[] = coffeeRecords
+          .map((record: any) => {
+            const originalKg = Number(record.kilograms || record.weight || 0);
+            const soldKg = soldByRecord[record.id] || 0;
+            const availableKg = originalKg - soldKg;
+            
+            console.log(`📊 Batch ${record.batch_number}: Original=${originalKg}kg, Sold=${soldKg}kg, Available=${availableKg}kg`);
+            
+            return {
+              id: record.id,
+              coffeeType: record.coffee_type || record.coffeeType || 'Arabica',
+              totalBags: record.bags || record.quantity || 0,
+              totalKilograms: Math.max(0, availableKg), // Available = Original - Sold
+              location: 'Store 1',
+              status: availableKg <= 0 ? 'out_of_stock' : availableKg < 100 ? 'low_stock' : 'available',
+              batchNumbers: [record.batch_number || record.batchNumber || 'N/A'],
+              lastUpdated: record.updated_at || record.updatedAt || record.created_at || record.createdAt || new Date().toISOString()
+            };
+          })
+          .filter(item => item.totalKilograms > 0); // Only show items with available stock
         
-        // Transform coffee_records into inventory items
-        const transformedInventory: InventoryItem[] = activeRecords.map((record: any) => ({
-          id: record.id,
-          coffeeType: record.coffee_type || record.coffeeType || 'Arabica',
-          totalBags: record.bags || record.quantity || 0,
-          totalKilograms: record.kilograms || record.weight || 0,
-          location: 'Store 1',
-          status: record.status || 'in_stock',
-          batchNumbers: [record.batch_number || record.batchNumber || 'N/A'],
-          lastUpdated: record.updated_at || record.updatedAt || record.created_at || record.createdAt || new Date().toISOString()
-        }));
-        
-        console.log('Transformed inventory from coffee records:', transformedInventory);
+        console.log('✅ Available inventory (after sales):', transformedInventory.length, 'items');
         setInventoryItems(transformedInventory);
       } else {
         console.log('No coffee records found in Firebase');
         setInventoryItems([]);
       }
 
-      // Calculate total occupancy from active records only (excluding sold)
-      const totalKilograms = coffeeRecords ? coffeeRecords.reduce((sum: number, record: any) => {
-        const kilograms = record.kilograms || record.weight || 0;
-        const status = (record.status || '').toString().toLowerCase();
-        return (kilograms > 0 && status !== 'sold') ? sum + kilograms : sum;
-      }, 0) : 0;
+      // Calculate total occupancy from AVAILABLE quantities only
+      const totalAvailableKg = inventoryItems.reduce((sum, item) => sum + item.totalKilograms, 0);
 
-      console.log('Total kilograms calculated:', totalKilograms);
+      console.log('📊 Total available kilograms (original - sold):', totalAvailableKg);
 
       // Create or update storage locations
       const defaultStorageLocations: StorageLocation[] = [
@@ -88,8 +99,8 @@ export const useInventoryManagement = () => {
           id: '1',
           name: 'Store 1',
           capacity: 30000,
-          currentOccupancy: totalKilograms,
-          occupancyPercentage: Math.round((totalKilograms / 30000) * 100)
+          currentOccupancy: totalAvailableKg,
+          occupancyPercentage: Math.round((totalAvailableKg / 30000) * 100)
         },
         {
           id: '2',
