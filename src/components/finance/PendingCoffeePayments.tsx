@@ -574,8 +574,11 @@ export const PendingCoffeePayments = () => {
                 </h3>
                 <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
                   <div>
-                    <Label className="text-muted-foreground">Created By (Store)</Label>
-                    <p className="font-medium mt-1">{selectedPayment.createdBy || 'Store Department'}</p>
+                    <Label className="text-muted-foreground">Input By (Store User)</Label>
+                    <p className="font-medium mt-1 flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      {selectedPayment.createdBy || 'Store Department'}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Date Received</Label>
@@ -595,7 +598,7 @@ export const PendingCoffeePayments = () => {
                 </h3>
                 <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
                   <div>
-                    <Label className="text-muted-foreground">Assessed By</Label>
+                    <Label className="text-muted-foreground">Assessed By (Quality User)</Label>
                     <p className="font-medium mt-1 flex items-center gap-2">
                       <User className="h-4 w-4" />
                       {selectedPayment.assessedBy}

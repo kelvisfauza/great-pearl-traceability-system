@@ -63,7 +63,7 @@ const QualityControl = () => {
 
   const { prices, refreshPrices } = usePrices();
   const { toast } = useToast();
-  const { hasPermission } = useAuth();
+  const { hasPermission, employee } = useAuth();
   const access = useRoleBasedAccess();
   const readOnly = !access.canManageQuality;
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
@@ -517,7 +517,7 @@ const QualityControl = () => {
         status: 'assessed' as const,
         comments: assessmentForm.comments || '',
         date_assessed: new Date().toISOString().split('T')[0],
-        assessed_by: 'Quality Controller',
+        assessed_by: employee?.name || employee?.email || 'Quality Controller',
       };
 
       console.log('Final assessment data to submit:', assessment);

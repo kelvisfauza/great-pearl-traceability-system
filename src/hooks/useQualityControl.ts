@@ -352,7 +352,7 @@ export const useQualityControl = () => {
         status: 'assessed',
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed || new Date().toISOString().split('T')[0],
-        assessed_by: assessment.assessed_by || 'Quality Controller'
+        assessed_by: assessment.assessed_by // This should now contain the actual user's name from the form
       };
       
       console.log('Prepared assessment data:', JSON.stringify(assessmentData, null, 2));

@@ -412,6 +412,7 @@ export type Database = {
           batch_number: string
           coffee_type: string
           created_at: string
+          created_by: string | null
           date: string
           id: string
           kilograms: number
@@ -425,6 +426,7 @@ export type Database = {
           batch_number: string
           coffee_type: string
           created_at?: string
+          created_by?: string | null
           date: string
           id?: string
           kilograms: number
@@ -438,6 +440,7 @@ export type Database = {
           batch_number?: string
           coffee_type?: string
           created_at?: string
+          created_by?: string | null
           date?: string
           id?: string
           kilograms?: number

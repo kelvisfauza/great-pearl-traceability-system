@@ -71,7 +71,7 @@ const [availableQuantities, setAvailableQuantities] = useState<Record<string, nu
     notes: ''
   });
   
-  const { user } = useAuth();
+  const { user, employee } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -256,7 +256,8 @@ const [availableQuantities, setAvailableQuantities] = useState<Record<string, nu
             kilograms: formData.quantity_kg,
             bags: Math.ceil(formData.quantity_kg / 60),
             date: formData.transaction_date,
-            batch_number: recordData.batch_number || 'N/A'
+            batch_number: recordData.batch_number || 'N/A',
+            created_by: employee?.name || user?.email || 'Store Department'
           })
           .eq('id', selectedRecord.id)
           .select();
@@ -299,7 +300,8 @@ const [availableQuantities, setAvailableQuantities] = useState<Record<string, nu
             date: formData.transaction_date,
             batch_number: recordData.batch_number || 'N/A',
             status: recordData.status || 'pending',
-            supplier_id: null
+            supplier_id: null,
+            created_by: employee?.name || user?.email || 'Store Department'
           });
 
         if (coffeeError) {

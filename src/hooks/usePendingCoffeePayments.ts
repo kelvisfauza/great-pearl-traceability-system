@@ -143,7 +143,7 @@ export const usePendingCoffeePayments = () => {
           qualityAssessmentId: qualityAssessment?.id || record.id,
           isPricedByQuality,
           qualityAssessmentExists: !!qualityAssessment,
-          createdBy: 'Store Department',
+          createdBy: record.created_by || 'Store Department',
           coffeeType: record.coffee_type || 'Not specified',
           bags: record.bags || 0,
           dateReceived: record.date || record.created_at?.split('T')[0] || new Date().toLocaleDateString(),
