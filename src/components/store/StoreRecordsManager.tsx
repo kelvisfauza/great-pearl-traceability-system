@@ -128,6 +128,8 @@ export const StoreRecordsManager = () => {
 
       if (error) throw error;
 
+      console.log('📦 Inventory movements:', movements);
+
       // Calculate net movements per record
       const movementsByRecord: Record<string, number> = {};
       movements?.forEach(m => {
@@ -135,11 +137,15 @@ export const StoreRecordsManager = () => {
           (movementsByRecord[m.coffee_record_id] || 0) + Number(m.quantity_kg);
       });
 
-      // Calculate available = original - movements (movements are negative for sales)
+      console.log('📊 Movements by record:', movementsByRecord);
+
+      // Calculate available = original + movements (movements are negative for sales)
       const available: Record<string, number> = {};
       records.forEach(record => {
         const movements = movementsByRecord[record.id] || 0;
-        available[record.id] = Math.max(0, record.quantity_kg + movements);
+        const availableQty = Math.max(0, Number(record.quantity_kg) + movements);
+        available[record.id] = availableQty;
+        console.log(`Record ${record.batch_number}: original=${record.quantity_kg}, movements=${movements}, available=${availableQty}`);
       });
 
       setAvailableQuantities(available);
@@ -716,13 +722,16 @@ export const StoreRecordsManager = () => {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Package className="h-4 w-4" />
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
-                          Original: {record.quantity_bags} bags / {record.quantity_kg} kg
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm">
+                          {record.quantity_bags} bags / {record.quantity_kg} kg
                         </span>
-                        {availableQuantities[record.id] !== undefined && 
-                         availableQuantities[record.id] !== record.quantity_kg && (
-                          <span className="text-xs text-amber-600">
+                        {availableQuantities[record.id] !== undefined && (
+                          <span className={`text-xs font-medium ${
+                            availableQuantities[record.id] < record.quantity_kg 
+                              ? 'text-amber-600' 
+                              : 'text-green-600'
+                          }`}>
                             Available: {availableQuantities[record.id].toFixed(2)} kg
                           </span>
                         )}
