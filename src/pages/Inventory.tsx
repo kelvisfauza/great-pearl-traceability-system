@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Shield, Package, AlertTriangle, TrendingDown, Warehouse, MapPin, RefreshCw } from "lucide-react";
 import { useInventoryManagement } from "@/hooks/useInventoryManagement";
-import { BackfillSalesButton } from "@/components/store/BackfillSalesButton";
 
 const Inventory = () => {
   const { inventoryItems, storageLocations, loading, summary, fetchInventoryData } = useInventoryManagement();
@@ -43,7 +42,6 @@ const Inventory = () => {
     >
       <div className="space-y-6">
         <div className="flex justify-end gap-2">
-          <BackfillSalesButton />
           <Button 
             onClick={fetchInventoryData} 
             disabled={loading}
