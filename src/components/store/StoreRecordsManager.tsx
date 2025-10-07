@@ -45,7 +45,8 @@ interface InventoryItem {
 export const StoreRecordsManager = () => {
   const [records, setRecords] = useState<StoreRecord[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
-  const [availableQuantities, setAvailableQuantities] = useState<Record<string, number>>({});
+const [availableQuantities, setAvailableQuantities] = useState<Record<string, number>>({});
+  const [originalQuantities, setOriginalQuantities] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -139,16 +140,30 @@ export const StoreRecordsManager = () => {
 
       console.log('📊 Movements by record:', movementsByRecord);
 
-      // Calculate available = original + movements (movements are negative for sales)
+      // Calculate quantities
       const available: Record<string, number> = {};
+      const original: Record<string, number> = {};
+      
       records.forEach(record => {
         const movements = movementsByRecord[record.id] || 0;
-        const availableQty = Math.max(0, Number(record.quantity_kg) + movements);
+        const currentQty = Number(record.quantity_kg);
+        
+        // If current is 0 and there are negative movements, this was depleted by old system
+        // Reconstruct original by subtracting movements (which are negative)
+        // original = current - movements = 0 - (-100) = 100
+        const originalQty = currentQty === 0 && movements < 0 
+          ? currentQty - movements 
+          : currentQty;
+        
+        const availableQty = Math.max(0, originalQty + movements);
+        
         available[record.id] = availableQty;
-        console.log(`Record ${record.batch_number}: original=${record.quantity_kg}, movements=${movements}, available=${availableQty}`);
+        original[record.id] = originalQty;
+        console.log(`Record ${record.batch_number}: stored=${currentQty}kg, movements=${movements}kg, reconstructed_original=${originalQty}kg, available=${availableQty}kg`);
       });
 
       setAvailableQuantities(available);
+      setOriginalQuantities(original);
     } catch (error) {
       console.error('Error calculating available quantities:', error);
     }
@@ -723,16 +738,20 @@ export const StoreRecordsManager = () => {
                     <div className="flex items-center gap-1">
                       <Package className="h-4 w-4" />
                       <div className="flex flex-col gap-1">
-                        <span className="text-sm">
-                          {record.quantity_bags} bags / {record.quantity_kg} kg
-                        </span>
-                        {availableQuantities[record.id] !== undefined && (
-                          <span className={`text-xs font-medium ${
-                            availableQuantities[record.id] < record.quantity_kg 
-                              ? 'text-amber-600' 
-                              : 'text-green-600'
-                          }`}>
-                            Available: {availableQuantities[record.id].toFixed(2)} kg
+                        {originalQuantities[record.id] !== undefined ? (
+                          <>
+                            <span className="text-sm font-medium">
+                              {record.quantity_bags} bags / {originalQuantities[record.id].toFixed(2)} kg
+                            </span>
+                            {availableQuantities[record.id] !== originalQuantities[record.id] && (
+                              <span className="text-xs text-amber-600">
+                                Available: {availableQuantities[record.id].toFixed(2)} kg
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-sm">
+                            {record.quantity_bags} bags / {record.quantity_kg} kg
                           </span>
                         )}
                       </div>
