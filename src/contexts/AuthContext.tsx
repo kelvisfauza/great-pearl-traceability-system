@@ -140,7 +140,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           avatar_url: employeeData.avatar_url,
           isOneTimePassword: false,
           mustChangePassword: false,
-          authUserId: targetUserId,
+          authUserId: employeeData.auth_user_id || targetUserId, // Use auth_user_id from database
           disabled: employeeData.disabled || false
         };
 
