@@ -1594,6 +1594,7 @@ export type Database = {
           created_at: string
           id: string
           metadata: Json | null
+          read_at: string | null
           sender_id: string | null
           type: string
           updated_at: string
@@ -1604,6 +1605,7 @@ export type Database = {
           created_at?: string
           id?: string
           metadata?: Json | null
+          read_at?: string | null
           sender_id?: string | null
           type?: string
           updated_at?: string
@@ -1614,6 +1616,7 @@ export type Database = {
           created_at?: string
           id?: string
           metadata?: Json | null
+          read_at?: string | null
           sender_id?: string | null
           type?: string
           updated_at?: string

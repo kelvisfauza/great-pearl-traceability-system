@@ -10,6 +10,7 @@ interface Message {
   created_at: string;
   type: 'text' | 'image' | 'file';
   metadata?: any;
+  read_at?: string;
 }
 
 interface ConversationParticipant {
@@ -133,6 +134,8 @@ export const useMessages = () => {
   const fetchMessages = useCallback(async (conversationId: string) => {
     try {
       setLoadingMessages(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('messages')
         .select('*')
@@ -146,9 +149,20 @@ export const useMessages = () => {
       }));
       setMessages(mappedMessages);
 
-      // Mark messages as read
-      const { data: { user } } = await supabase.auth.getUser();
+      // Mark messages as read (for messages not sent by current user)
       if (user) {
+        const unreadMessages = mappedMessages.filter(
+          msg => !msg.read_at && msg.sender_id !== user.id
+        );
+        
+        if (unreadMessages.length > 0) {
+          await supabase
+            .from('messages')
+            .update({ read_at: new Date().toISOString() })
+            .in('id', unreadMessages.map(m => m.id));
+        }
+
+        // Update last_read_at in conversation_participants
         await supabase
           .from('conversation_participants')
           .update({ last_read_at: new Date().toISOString() })

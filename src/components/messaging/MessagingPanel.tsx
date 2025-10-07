@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -214,10 +214,16 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                     return (
                       <React.Fragment key={message.id}>
                         {showDate && (
-                          <div className="flex justify-center my-2">
-                            <span className="bg-muted/80 text-xs px-3 py-1 rounded-full text-muted-foreground">
-                              {format(new Date(message.created_at), 'MMM dd, yyyy')}
-                            </span>
+                          <div className="flex justify-center my-3">
+                            <div className="flex items-center gap-3 w-full">
+                              <div className="flex-1 h-px bg-border"></div>
+                              <span className="bg-muted/80 text-xs px-3 py-1 rounded-full text-muted-foreground font-medium">
+                                {format(new Date(message.created_at), 'dd/MM/yyyy') === format(new Date(), 'dd/MM/yyyy')
+                                  ? 'Today'
+                                  : format(new Date(message.created_at), 'MMM dd, yyyy')}
+                              </span>
+                              <div className="flex-1 h-px bg-border"></div>
+                            </div>
                           </div>
                         )}
                         <div
@@ -237,11 +243,18 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                                   alt="Attachment" 
                                   className="max-w-full rounded-lg max-h-64 object-cover"
                                 />
-                                <p className={`text-[10px] mt-1 text-right px-2 pb-1 ${
+                                <div className={`flex items-center justify-end gap-1 mt-1 px-2 pb-1 text-[10px] ${
                                   isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
                                 }`}>
-                                  {format(new Date(message.created_at), 'HH:mm')}
-                                </p>
+                                  <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+                                  {isOwnMessage && (
+                                    message.read_at ? (
+                                      <CheckCheck className="h-3 w-3" />
+                                    ) : (
+                                      <Check className="h-3 w-3" />
+                                    )
+                                  )}
+                                </div>
                               </div>
                             ) : message.type === 'file' ? (
                               <div>
@@ -254,20 +267,34 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                                   <Paperclip className="h-4 w-4" />
                                   <span className="text-sm">{message.metadata?.fileName || 'File'}</span>
                                 </a>
-                                <p className={`text-[10px] mt-1 text-right ${
+                                <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
                                   isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
                                 }`}>
-                                  {format(new Date(message.created_at), 'HH:mm')}
-                                </p>
+                                  <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+                                  {isOwnMessage && (
+                                    message.read_at ? (
+                                      <CheckCheck className="h-3 w-3" />
+                                    ) : (
+                                      <Check className="h-3 w-3" />
+                                    )
+                                  )}
+                                </div>
                               </div>
                             ) : (
                               <>
                                 <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
-                                <p className={`text-[10px] mt-1 text-right ${
+                                <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
                                   isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
                                 }`}>
-                                  {format(new Date(message.created_at), 'HH:mm')}
-                                </p>
+                                  <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+                                  {isOwnMessage && (
+                                    message.read_at ? (
+                                      <CheckCheck className="h-3 w-3" />
+                                    ) : (
+                                      <Check className="h-3 w-3" />
+                                    )
+                                  )}
+                                </div>
                               </>
                             )}
                           </div>
