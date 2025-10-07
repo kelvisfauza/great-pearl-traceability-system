@@ -52,13 +52,19 @@ const UserSelectorDialog = ({ open, onClose, onSelectUser }: UserSelectorDialogP
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('employees')
         .select('id, auth_user_id, name, email, department, position')
         .eq('status', 'Active')
         .not('auth_user_id', 'is', null)
-        .neq('id', employee?.id || '')
         .order('name');
+
+      // Only exclude current user if we have a valid employee id
+      if (employee?.id) {
+        query = query.neq('id', employee.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setUsers(data || []);
