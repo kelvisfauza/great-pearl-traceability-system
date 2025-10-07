@@ -47,7 +47,6 @@ export const useMessages = () => {
 
   const fetchConversations = useCallback(async () => {
     try {
-      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -63,7 +62,6 @@ export const useMessages = () => {
       
       if (conversationIds.length === 0) {
         setConversations([]);
-        setLoading(false);
         return;
       }
 
@@ -148,13 +146,6 @@ export const useMessages = () => {
       
     } catch (error) {
       console.error('Error fetching conversations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch conversations",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
     }
   }, [toast]);
 

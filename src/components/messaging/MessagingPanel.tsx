@@ -361,11 +361,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
           </>
         ) : (
           <ScrollArea className="flex-1 bg-background">
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">Loading conversations...</p>
-              </div>
-            ) : sortedConversations.length === 0 ? (
+            {sortedConversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                 <MessageSquarePlus className="h-16 w-16 text-muted-foreground mb-4" />
                 <p className="text-lg font-semibold mb-2">No conversations yet</p>
