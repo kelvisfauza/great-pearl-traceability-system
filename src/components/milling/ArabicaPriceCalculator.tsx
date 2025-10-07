@@ -48,23 +48,6 @@ const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange, initialVal
     stones: initialValues?.stones || '',
     discretion: initialValues?.discretion || ''
   });
-  
-  // Update state when initialValues change (e.g., when editing)
-  useEffect(() => {
-    if (initialValues) {
-      setState({
-        refPrice: initialValues.refPrice || '',
-        moisture: initialValues.moisture || '',
-        gp1: initialValues.gp1 || '',
-        gp2: initialValues.gp2 || '',
-        less12: initialValues.less12 || '',
-        pods: initialValues.pods || '',
-        husks: initialValues.husks || '',
-        stones: initialValues.stones || '',
-        discretion: initialValues.discretion || ''
-      });
-    }
-  }, [initialValues]);
 
   const [results, setResults] = useState<CalculationResults>({
     fm: 0,
