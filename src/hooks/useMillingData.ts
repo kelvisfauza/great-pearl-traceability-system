@@ -475,47 +475,51 @@ export const useMillingData = () => {
     try {
       setLoading(true);
 
-      // Get all customers with non-zero balances
-      const customersWithDebts = customers.filter(c => c.current_balance > 0);
+      // Get all customers
+      const allCustomers = customers;
 
-      if (customersWithDebts.length === 0) {
+      if (allCustomers.length === 0) {
         toast({
-          title: "No Debts",
-          description: "All customers have zero balance"
+          title: "No Customers",
+          description: "No customers found"
         });
         return;
       }
 
-      // Update all customer balances to 0
+      // Reset ALL customer balances to 0 (including negative ones)
       const { error: updateError } = await supabase
         .from('milling_customers')
         .update({ current_balance: 0 })
-        .gt('current_balance', 0);
+        .neq('current_balance', 0);
 
       if (updateError) throw updateError;
 
-      // Record cash transactions for each customer
-      const cashTransactionRecords = customersWithDebts.map(customer => ({
-        customer_id: customer.id,
-        customer_name: customer.full_name,
-        amount_paid: customer.current_balance,
-        previous_balance: customer.current_balance,
-        new_balance: 0,
-        payment_method: 'Bulk Clear',
-        date: new Date().toISOString().split('T')[0],
-        notes: 'Bulk debt clearance',
-        created_by: 'System'
-      }));
+      // Record cash transactions only for customers who had positive balances
+      const customersWithPositiveDebts = allCustomers.filter(c => c.current_balance > 0);
+      
+      if (customersWithPositiveDebts.length > 0) {
+        const cashTransactionRecords = customersWithPositiveDebts.map(customer => ({
+          customer_id: customer.id,
+          customer_name: customer.full_name,
+          amount_paid: customer.current_balance,
+          previous_balance: customer.current_balance,
+          new_balance: 0,
+          payment_method: 'Bulk Clear',
+          date: new Date().toISOString().split('T')[0],
+          notes: 'Bulk debt clearance',
+          created_by: 'System'
+        }));
 
-      const { error: cashError } = await supabase
-        .from('milling_cash_transactions')
-        .insert(cashTransactionRecords);
+        const { error: cashError } = await supabase
+          .from('milling_cash_transactions')
+          .insert(cashTransactionRecords);
 
-      if (cashError) throw cashError;
+        if (cashError) throw cashError;
+      }
 
       toast({
         title: "Success",
-        description: `Cleared debts for ${customersWithDebts.length} customers`
+        description: `Reset all customer balances to zero`
       });
 
       // Refresh data
