@@ -10,6 +10,7 @@ const DynamicHeader = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [showMainGreeting, setShowMainGreeting] = useState(true);
+  const [showCoffeeChain, setShowCoffeeChain] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -19,25 +20,53 @@ const DynamicHeader = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Hide main greeting after 3 seconds and start cycling messages
+  // Hide main greeting after 3 seconds and start showing coffee chain
   useEffect(() => {
     const greetingTimer = setTimeout(() => {
       setShowMainGreeting(false);
+      setShowCoffeeChain(true);
     }, 3000);
 
     return () => clearTimeout(greetingTimer);
   }, []);
 
-  // Cycle through messages every 4 seconds after main greeting is hidden
+  // Cycle through coffee chain messages every 5 seconds after main greeting is hidden
   useEffect(() => {
-    if (!showMainGreeting) {
+    if (showCoffeeChain) {
       const messageTimer = setInterval(() => {
-        setCurrentMessageIndex((prev) => (prev + 1) % getGreeting().messages.length);
-      }, 4000);
+        setCurrentMessageIndex((prev) => (prev + 1) % getCoffeeChainMessages().length);
+      }, 5000);
 
       return () => clearInterval(messageTimer);
     }
-  }, [showMainGreeting]); // Removed currentTime from dependencies
+  }, [showCoffeeChain]);
+
+  const getCoffeeChainMessages = () => {
+    return [
+      "🌱 From Farmer to Cup: Our coffee journey starts with smallholder farmers across Uganda's highland regions",
+      "👨‍🌾 Sourcing Excellence: We work directly with over 500 local farmers, ensuring fair prices and sustainable practices",
+      "🌍 Growing Regions: Premium Arabica from Mt. Elgon and Rwenzori Mountains, Robusta from Central Uganda",
+      "🤝 Farmer Partnerships: Building long-term relationships based on trust, quality, and mutual growth",
+      "📦 Cherry Collection: Fresh coffee cherries are collected within 24 hours of harvest for optimal quality",
+      "🏭 Processing Methods: Wet processing (washed), dry processing (natural), and honey processing for diverse flavor profiles",
+      "💧 Washing Stations: State-of-the-art facilities ensure consistent quality and environmental sustainability",
+      "☀️ Drying Process: Sun-dried on raised beds for 14-21 days to achieve optimal moisture content (10-12%)",
+      "🔍 Quality Sorting: Multiple sorting stages remove defects - hand-picking, density sorting, and electronic color sorting",
+      "📊 Grading Standards: Strictly adhering to AA, A, B, and C grades based on screen size and quality",
+      "🎯 Cupping Scores: Only beans scoring 80+ on the SCA scale make it to our premium selection",
+      "🏆 Quality Control: Our Q-graders evaluate every batch for flavor, aroma, body, and aftertaste",
+      "🔥 Roasting Profiles: Light, medium, and dark roasts crafted to bring out unique flavor characteristics",
+      "⚙️ Modern Roasting: Computer-controlled roasters ensure consistency and precision in every batch",
+      "🌡️ Temperature Precision: Roasting between 195°C-220°C to develop optimal flavor compounds",
+      "⏱️ Roast Development: Carefully timed first and second crack for perfect caramelization",
+      "🎨 Flavor Development: Creating flavor notes from fruity and floral to chocolaty and nutty",
+      "📦 Packaging Excellence: Immediately packed in valve bags to preserve freshness and aroma",
+      "🚚 Logistics & Distribution: Efficient supply chain ensures farm-to-cup in optimal timeframes",
+      "☕ Final Product: Every cup tells a story of dedication, quality, and sustainable coffee production",
+      "💚 Sustainability: Carbon-neutral processing, water recycling, and organic farming initiatives",
+      "🌟 Our Promise: Exceptional quality, fair trade, and environmental stewardship in every bean"
+    ];
+  };
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
@@ -227,16 +256,16 @@ const DynamicHeader = () => {
               <p className="text-lg text-muted-foreground mt-1">
                 Welcome to your dashboard
               </p>
-            ) : (
+            ) : showCoffeeChain ? (
               <div className="mt-2">
                 <p 
                   key={currentMessageIndex} 
-                  className="text-base text-foreground/80 bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg px-4 py-2 border-l-4 border-primary/30 transition-all duration-500 animate-fade-in"
+                  className="text-base text-foreground/80 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-yellow-600/10 rounded-lg px-4 py-2.5 border-l-4 border-amber-500/40 transition-all duration-700 animate-fade-in shadow-sm"
                 >
-                  {greeting.messages[currentMessageIndex % greeting.messages.length]}
+                  {getCoffeeChainMessages()[currentMessageIndex % getCoffeeChainMessages().length]}
                 </p>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
