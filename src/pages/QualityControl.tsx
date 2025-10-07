@@ -125,7 +125,7 @@ const QualityControl = () => {
     grnData: null
   });
 
-  // Date filtering for assessments
+  // Date filtering state for quality assessments
   const [selectedDate, setSelectedDate] = useState<string>('today');
   const [customDate, setCustomDate] = useState<string>('');
   
