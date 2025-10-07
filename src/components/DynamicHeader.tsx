@@ -44,12 +44,57 @@ const DynamicHeader = () => {
     const dayOfWeek = currentTime.toLocaleDateString('en-US', { weekday: 'long' });
     const firstName = employee?.name?.split(' ')[0] || 'there';
     
+    // Diverse content categories
+    const motivationalQuotes = [
+      `"Success is the sum of small efforts repeated day in and day out" - Keep pushing forward! 💪`,
+      `"The only way to do great work is to love what you do" - Steve Jobs`,
+      `"Excellence is not a destination, it's a continuous journey" 🚀`,
+      `"Quality is never an accident; it is always the result of intelligent effort" ✨`,
+      `"Your work is going to fill a large part of your life. Make it count!" 🎯`
+    ];
+
+    const productivityTips = [
+      `💡 Pro tip: Take a 5-minute break every hour to boost your focus and productivity!`,
+      `⏰ Time block your tasks today - your future self will thank you!`,
+      `📊 Review your progress regularly - small wins lead to big achievements!`,
+      `🎯 Prioritize your most important task first - eat that frog!`,
+      `✅ Break large tasks into smaller chunks - progress over perfection!`
+    ];
+
+    const coffeeFacts = [
+      `☕ Coffee fact: Ethiopia is the birthplace of coffee - our beans carry centuries of tradition!`,
+      `🌍 Did you know? Coffee is the world's second-most traded commodity after oil!`,
+      `📈 Quality matters: Specialty coffee can have over 800 different flavor compounds!`,
+      `🌱 Sustainable sourcing: Every cup of quality coffee supports farming communities!`,
+      `⭐ Coffee grading: Our premium Arabica beans are carefully selected for excellence!`
+    ];
+
+    const dailyInsights = [
+      `📈 Stay focused on quality - it's what sets us apart from the competition!`,
+      `🤝 Teamwork makes the dream work - collaborate and conquer today's challenges!`,
+      `💼 Your role matters: Every task contributes to our collective success!`,
+      `🎨 Innovation starts with you - don't be afraid to suggest improvements!`,
+      `🌟 Customer satisfaction is our priority - deliver excellence in everything!`
+    ];
+
+    // Combine all messages for variety
+    const allMessages = [
+      ...motivationalQuotes,
+      ...productivityTips,
+      ...coffeeFacts,
+      ...dailyInsights
+    ];
+    
     if (hour < 6) {
       return { 
         text: 'Good Night', 
         icon: Moon, 
         color: 'from-purple-500 to-indigo-600',
-        messages: [`Rest well ${firstName}, tomorrow brings new coffee adventures!`]
+        messages: [
+          `Rest well ${firstName}, tomorrow brings new opportunities! 🌙`,
+          `Sweet dreams! Recharge for another day of excellence 😴`,
+          ...allMessages.slice(0, 3)
+        ]
       };
     }
     
@@ -59,10 +104,10 @@ const DynamicHeader = () => {
         icon: Sunrise, 
         color: 'from-orange-500 to-yellow-500',
         messages: [
-          `It's a fresh ${dayOfWeek} morning! Grab a cup of our finest coffee to kickstart your day ☕`,
-          `Rise and grind ${firstName}! Let the aroma of coffee fuel your productivity today`,
-          `Monday motivation or Friday feels? Either way, coffee makes everything better!`,
-          `Start your day right with a perfect brew - your mind will thank you later!`
+          `It's a fresh ${dayOfWeek} morning! Ready to make it count? ☀️`,
+          `Rise and shine ${firstName}! Today is full of possibilities! 🌅`,
+          `Morning energy is peak productivity time - let's maximize it! ⚡`,
+          ...allMessages.slice(3, 9)
         ]
       };
     }
@@ -72,7 +117,11 @@ const DynamicHeader = () => {
         text: 'Good Afternoon', 
         icon: Sun, 
         color: 'from-blue-500 to-cyan-500',
-        messages: [`${firstName}, have you had lunch yet? Don't forget to pair it with our signature coffee blend!`]
+        messages: [
+          `Lunch time ${firstName}! Take a proper break to recharge 🍽️`,
+          `Half the day done - you're doing great! Fuel up and continue! 💪`,
+          ...allMessages.slice(9, 12)
+        ]
       };
     }
     
@@ -82,10 +131,10 @@ const DynamicHeader = () => {
         icon: Sun, 
         color: 'from-blue-500 to-cyan-500',
         messages: [
-          `Afternoon energy dip? Try our premium espresso for that perfect pick-me-up!`,
-          `The day is halfway done ${firstName} - celebrate with a refreshing iced coffee!`,
-          `Productivity flowing? Keep it going with our smooth afternoon blend`,
-          `Take a coffee break and let your mind relax - you've earned it!`
+          `Afternoon momentum ${firstName} - keep that energy flowing! 🔥`,
+          `You're in the productivity zone - make these hours count! ⚡`,
+          `Crushing your goals one task at a time! Keep it up! 🎯`,
+          ...allMessages.slice(12, 18)
         ]
       };
     }
@@ -96,10 +145,10 @@ const DynamicHeader = () => {
         icon: Sunset, 
         color: 'from-orange-600 to-red-500',
         messages: [
-          `Winding down ${firstName}? How about a decaf coffee to end the day peacefully?`,
-          `Evening reflection time - pair your thoughts with our mild evening roast`,
-          `Great work today! Celebrate with a warm cup of our specialty blend`,
-          `As the sun sets, let the warmth of coffee embrace your evening`
+          `Winding down ${firstName}? Great work today! 🌅`,
+          `Evening reflection: What did you accomplish today? Celebrate it! 🎉`,
+          `You made it through another productive day - well done! ⭐`,
+          ...allMessages.slice(18, 23)
         ]
       };
     }
@@ -108,7 +157,11 @@ const DynamicHeader = () => {
       text: 'Good Night', 
       icon: Moon, 
       color: 'from-purple-500 to-indigo-600',
-      messages: [`Sweet dreams ${firstName}! Tomorrow's coffee adventures await...`]
+      messages: [
+        `Sweet dreams ${firstName}! Tomorrow awaits with new opportunities 🌙`,
+        `Rest well - you've earned it! See you tomorrow! 😴`,
+        ...allMessages.slice(23, 26)
+      ]
     };
   };
 
