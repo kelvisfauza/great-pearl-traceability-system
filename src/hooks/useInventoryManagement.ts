@@ -45,8 +45,17 @@ export const useInventoryManagement = () => {
       } else if (coffeeRecords && coffeeRecords.length > 0) {
         console.log('Coffee records from Firebase:', coffeeRecords);
         
+        // Filter out sold items and items with 0 kg
+        const activeRecords = coffeeRecords.filter((record: any) => {
+          const kilograms = record.kilograms || record.weight || 0;
+          const status = (record.status || '').toString().toLowerCase();
+          return kilograms > 0 && status !== 'sold';
+        });
+        
+        console.log('Active inventory records (excluding sold):', activeRecords);
+        
         // Transform coffee_records into inventory items
-        const transformedInventory: InventoryItem[] = coffeeRecords.map((record: any) => ({
+        const transformedInventory: InventoryItem[] = activeRecords.map((record: any) => ({
           id: record.id,
           coffeeType: record.coffee_type || record.coffeeType || 'Arabica',
           totalBags: record.bags || record.quantity || 0,
@@ -64,10 +73,12 @@ export const useInventoryManagement = () => {
         setInventoryItems([]);
       }
 
-      // Calculate total occupancy from all coffee records
-      const totalKilograms = coffeeRecords ? coffeeRecords.reduce((sum: number, record: any) => 
-        sum + (record.kilograms || record.weight || 0), 0
-      ) : 0;
+      // Calculate total occupancy from active records only (excluding sold)
+      const totalKilograms = coffeeRecords ? coffeeRecords.reduce((sum: number, record: any) => {
+        const kilograms = record.kilograms || record.weight || 0;
+        const status = (record.status || '').toString().toLowerCase();
+        return (kilograms > 0 && status !== 'sold') ? sum + kilograms : sum;
+      }, 0) : 0;
 
       console.log('Total kilograms calculated:', totalKilograms);
 
