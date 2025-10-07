@@ -55,7 +55,19 @@ const UserProfile = ({ employee }: UserProfileProps) => {
     
     setIsSaving(true);
     try {
-      // Update Supabase employee record
+      // For main admin or users without proper employee records, skip database update
+      if (employee.id === 'main-admin' || !employee.authUserId) {
+        toast({ 
+          title: "Info", 
+          description: "Profile updates are not available for this account type.",
+          variant: "default"
+        });
+        setIsSaving(false);
+        setIsEditing(false);
+        return;
+      }
+
+      // Update Supabase employee record using auth_user_id
       const { error } = await supabase
         .from('employees')
         .update({
@@ -65,7 +77,7 @@ const UserProfile = ({ employee }: UserProfileProps) => {
           emergency_contact: formData.emergency_contact,
           updated_at: new Date().toISOString()
         })
-        .eq('id', employee.id);
+        .eq('auth_user_id', employee.authUserId);
 
       if (error) {
         throw error;
@@ -101,12 +113,13 @@ const UserProfile = ({ employee }: UserProfileProps) => {
           description: "Please select an image under 5MB",
           variant: "destructive"
         });
+        setIsUploadingPhoto(false);
         return;
       }
 
       // Upload to Supabase storage
       const fileExt = file.name.split('.').pop();
-      const fileName = `${employee.id}-${Date.now()}.${fileExt}`;
+      const fileName = `${employee.authUserId || employee.id}-${Date.now()}.${fileExt}`;
       
       const { data, error } = await supabase.storage
         .from('profile_pictures')
@@ -121,14 +134,26 @@ const UserProfile = ({ employee }: UserProfileProps) => {
         .from('profile_pictures')
         .getPublicUrl(fileName);
 
-      // Update employee record with new avatar URL
+      // For main admin or users without proper employee records, only update local state
+      if (employee.id === 'main-admin' || !employee.authUserId) {
+        setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
+        toast({ 
+          title: "Success", 
+          description: "Profile picture uploaded! Note: Changes are temporary for this account type." 
+        });
+        setIsUploadingPhoto(false);
+        event.target.value = '';
+        return;
+      }
+
+      // Update employee record with new avatar URL using auth_user_id
       const { error: updateError } = await supabase
         .from('employees')
         .update({ 
           avatar_url: publicUrl,
           updated_at: new Date().toISOString()
         })
-        .eq('id', employee.id);
+        .eq('auth_user_id', employee.authUserId);
 
       if (updateError) {
         throw updateError;
