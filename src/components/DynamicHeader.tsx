@@ -120,7 +120,9 @@ const DynamicHeader = () => {
         messages: [
           `Lunch time ${firstName}! Take a proper break to recharge 🍽️`,
           `Half the day done - you're doing great! Fuel up and continue! 💪`,
-          ...allMessages.slice(9, 12)
+          `💡 A good lunch break can boost afternoon productivity by 30%!`,
+          `🌟 You've accomplished so much this morning - celebrate with a break!`,
+          ...allMessages.slice(9, 14)
         ]
       };
     }
@@ -134,7 +136,11 @@ const DynamicHeader = () => {
           `Afternoon momentum ${firstName} - keep that energy flowing! 🔥`,
           `You're in the productivity zone - make these hours count! ⚡`,
           `Crushing your goals one task at a time! Keep it up! 🎯`,
-          ...allMessages.slice(12, 18)
+          `🌞 Peak afternoon hours - this is when champions are made!`,
+          `📊 Data shows afternoon focus can surpass morning productivity!`,
+          `💼 Professional excellence isn't an act, it's a habit - keep building yours!`,
+          `🎨 Creative solutions often emerge in the afternoon - stay open to inspiration!`,
+          ...allMessages.slice(14, 20)
         ]
       };
     }
