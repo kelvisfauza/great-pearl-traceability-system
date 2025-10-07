@@ -52,41 +52,46 @@ export const useSalesTransactions = () => {
   const checkInventoryAvailability = async (coffeeType: string, weightNeeded: number) => {
     try {
       const coffeeRecordsRef = collection(db, 'coffee_records');
-      // Query all in_stock records and filter by coffee type
-      const q = query(
-        coffeeRecordsRef,
-        where('status', '==', 'in_stock')
-      );
-      
-      const snapshot = await getDocs(q);
-      let totalAvailable = 0;
+      // Query ALL coffee records to see what we have
+      const snapshot = await getDocs(coffeeRecordsRef);
       
       console.log(`🔍 Checking inventory for: "${coffeeType}"`);
-      console.log(`📦 Found ${snapshot.size} in_stock records`);
+      console.log(`📦 Total records in database: ${snapshot.size}`);
+      
+      let totalAvailable = 0;
+      let statusCounts: Record<string, number> = {};
       
       snapshot.forEach(doc => {
         const data = doc.data();
         const recordCoffeeType = (data.coffee_type || '').toString();
         const kilograms = Number(data.kilograms) || 0;
+        const status = (data.status || 'no_status').toString();
         
-        console.log(`   Record: type="${recordCoffeeType}", kg=${kilograms}`);
+        // Count statuses
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
         
-        // Flexible matching: check both ways (case-insensitive)
-        const searchLower = coffeeType.toLowerCase().trim();
-        const recordLower = recordCoffeeType.toLowerCase().trim();
+        console.log(`   Record ${doc.id}: type="${recordCoffeeType}", kg=${kilograms}, status=${status}`);
         
-        const matches = recordLower.includes(searchLower) || 
-                       searchLower.includes(recordLower) ||
-                       recordLower === searchLower;
-        
-        if (matches) {
-          console.log(`   ✅ Matched! Adding ${kilograms} kg`);
-          totalAvailable += kilograms;
-        } else {
-          console.log(`   ❌ No match: "${recordLower}" vs "${searchLower}"`);
+        // Only count records that have inventory and are not sold
+        if (kilograms > 0 && status !== 'sold') {
+          // Flexible matching: check both ways (case-insensitive)
+          const searchLower = coffeeType.toLowerCase().trim();
+          const recordLower = recordCoffeeType.toLowerCase().trim();
+          
+          const matches = recordLower.includes(searchLower) || 
+                         searchLower.includes(recordLower) ||
+                         recordLower === searchLower;
+          
+          if (matches) {
+            console.log(`   ✅ Matched! Adding ${kilograms} kg`);
+            totalAvailable += kilograms;
+          } else {
+            console.log(`   ❌ No match: "${recordLower}" vs "${searchLower}"`);
+          }
         }
       });
 
+      console.log(`📊 Status counts:`, statusCounts);
       console.log(`📊 Total available for "${coffeeType}": ${totalAvailable} kg`);
 
       return {
@@ -102,42 +107,61 @@ export const useSalesTransactions = () => {
   const deductFromInventory = async (coffeeType: string, weightToDeduct: number) => {
     try {
       const coffeeRecordsRef = collection(db, 'coffee_records');
-      // Query all in_stock records
-      const q = query(
-        coffeeRecordsRef,
-        where('status', '==', 'in_stock'),
-        orderBy('created_at', 'asc') // FIFO - oldest first
-      );
+      // Query all records that have inventory and are not sold
+      const snapshot = await getDocs(coffeeRecordsRef);
       
-      const snapshot = await getDocs(q);
       let remainingToDeduct = weightToDeduct;
+      const matchedRecords: any[] = [];
       
-      // Filter and deduct from matching coffee types (oldest first)
-      for (const docSnap of snapshot.docs) {
+      // First, collect all matching records with available inventory
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const recordCoffeeType = (data.coffee_type || '').toString();
+        const kilograms = Number(data.kilograms) || 0;
+        const status = (data.status || '').toString();
+        
+        // Only process records with inventory that aren't sold
+        if (kilograms > 0 && status !== 'sold') {
+          const searchLower = coffeeType.toLowerCase().trim();
+          const recordLower = recordCoffeeType.toLowerCase().trim();
+          
+          const matches = recordLower.includes(searchLower) || 
+                         searchLower.includes(recordLower) ||
+                         recordLower === searchLower;
+          
+          if (matches) {
+            matchedRecords.push({
+              id: docSnap.id,
+              kilograms,
+              created_at: data.created_at
+            });
+          }
+        }
+      });
+      
+      // Sort by creation date (FIFO - oldest first)
+      matchedRecords.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateA - dateB;
+      });
+      
+      // Deduct from oldest records first (FIFO)
+      for (const record of matchedRecords) {
         if (remainingToDeduct <= 0) break;
         
-        const data = docSnap.data();
-        const recordCoffeeType = data.coffee_type || '';
-        
-        // Only process records that match the coffee type (case-insensitive partial match)
-        if (!recordCoffeeType.toLowerCase().includes(coffeeType.toLowerCase())) {
-          continue;
-        }
-        
-        const currentKg = Number(data.kilograms) || 0;
-        
-        if (currentKg <= remainingToDeduct) {
+        if (record.kilograms <= remainingToDeduct) {
           // This entire record is consumed
-          await updateDoc(doc(db, 'coffee_records', docSnap.id), {
+          await updateDoc(doc(db, 'coffee_records', record.id), {
             status: 'sold',
             kilograms: 0,
             updated_at: new Date().toISOString()
           });
-          remainingToDeduct -= currentKg;
+          remainingToDeduct -= record.kilograms;
         } else {
           // Partial deduction
-          await updateDoc(doc(db, 'coffee_records', docSnap.id), {
-            kilograms: currentKg - remainingToDeduct,
+          await updateDoc(doc(db, 'coffee_records', record.id), {
+            kilograms: record.kilograms - remainingToDeduct,
             updated_at: new Date().toISOString()
           });
           remainingToDeduct = 0;
