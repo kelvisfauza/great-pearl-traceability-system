@@ -32,6 +32,7 @@ export const PendingCoffeePayments = () => {
   const [processing, setProcessing] = useState(false);
   const [recoverAdvance, setRecoverAdvance] = useState(false);
   const [supplierOutstanding, setSupplierOutstanding] = useState(0);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   useEffect(() => {
     if (selectedPayment && showPaymentDialog) {
@@ -284,9 +285,13 @@ export const PendingCoffeePayments = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setSelectedPayment(payment)}
+                          onClick={() => {
+                            setSelectedPayment(payment);
+                            setShowDetailsDialog(true);
+                          }}
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-4 w-4 mr-1" />
+                          View Details
                         </Button>
                         <Button
                           size="sm"
@@ -482,6 +487,221 @@ export const PendingCoffeePayments = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Transaction Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Coffee Transaction Details</DialogTitle>
+            <DialogDescription>
+              Complete information about this coffee delivery and assessment
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPayment && (
+            <div className="space-y-6">
+              {/* Batch Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Coffee className="h-5 w-5" />
+                  Batch Information
+                </h3>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <Label className="text-muted-foreground">Batch Number</Label>
+                    <p className="font-medium mt-1">
+                      <Badge variant="outline">{selectedPayment.batchNumber}</Badge>
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Coffee Type</Label>
+                    <p className="font-medium mt-1">{selectedPayment.coffeeType || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Quantity</Label>
+                    <p className="font-medium mt-1">{selectedPayment.quantity} kg</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Number of Bags</Label>
+                    <p className="font-medium mt-1">{selectedPayment.bags || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Supplier Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Supplier Information
+                </h3>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <Label className="text-muted-foreground">Supplier Name</Label>
+                    <p className="font-medium mt-1">{selectedPayment.supplier}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Supplier Code</Label>
+                    <p className="font-medium mt-1">
+                      <code className="text-xs bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded">
+                        {selectedPayment.supplierCode || 'Not set'}
+                      </code>
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Supplier ID</Label>
+                    <p className="font-medium mt-1">
+                      <code className="text-xs bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded">
+                        {selectedPayment.supplierId || 'Not set'}
+                      </code>
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Outstanding Advance</Label>
+                    <p className={`font-medium mt-1 ${supplierOutstanding > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                      UGX {supplierOutstanding.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Store/Input Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Input & Creation Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <Label className="text-muted-foreground">Created By (Store)</Label>
+                    <p className="font-medium mt-1">{selectedPayment.createdBy || 'Store Department'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Date Received</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium">{selectedPayment.dateReceived || selectedPayment.dateAssessed}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quality Assessment */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Quality Assessment
+                </h3>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <Label className="text-muted-foreground">Assessed By</Label>
+                    <p className="font-medium mt-1 flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      {selectedPayment.assessedBy}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Assessment Date</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium">{selectedPayment.dateAssessed}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Quality Grade</Label>
+                    <p className="font-medium mt-1">
+                      <Badge>{selectedPayment.qualityGrade || 'Standard'}</Badge>
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Assessment ID</Label>
+                    <p className="font-medium mt-1">
+                      <code className="text-xs bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded">
+                        {selectedPayment.qualityAssessmentId?.substring(0, 8) || 'N/A'}
+                      </code>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Pricing Information
+                </h3>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                  <div>
+                    <Label className="text-muted-foreground">Price per Kg</Label>
+                    {selectedPayment.isPricedByQuality ? (
+                      <div className="mt-1">
+                        <p className="font-bold text-lg text-green-600">
+                          {formatCurrency(selectedPayment.pricePerKg)}
+                        </p>
+                        <Badge variant="secondary" className="mt-1">Set by Quality Department</Badge>
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-yellow-600 mt-1">
+                        ⚠️ Not yet priced
+                      </Badge>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Total Amount</Label>
+                    <p className="font-bold text-lg text-green-600 mt-1">
+                      {selectedPayment.isPricedByQuality ? formatCurrency(selectedPayment.totalAmount) : 'Pending pricing'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quality Parameters */}
+              {selectedPayment.qualityParams && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">Quality Parameters</h3>
+                  <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg text-sm">
+                    {selectedPayment.qualityParams.moisture && (
+                      <div>
+                        <Label className="text-muted-foreground">Moisture</Label>
+                        <p className="font-medium mt-1">{selectedPayment.qualityParams.moisture}%</p>
+                      </div>
+                    )}
+                    {selectedPayment.qualityParams.defects && (
+                      <div>
+                        <Label className="text-muted-foreground">Defects</Label>
+                        <p className="font-medium mt-1">{selectedPayment.qualityParams.defects}%</p>
+                      </div>
+                    )}
+                    {selectedPayment.qualityParams.grade && (
+                      <div>
+                        <Label className="text-muted-foreground">Grade</Label>
+                        <p className="font-medium mt-1">{selectedPayment.qualityParams.grade}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setShowDetailsDialog(false)} variant="outline">
+              Close
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowDetailsDialog(false);
+                setCashAmount(selectedPayment?.totalAmount.toString() || '');
+                setFinancePrice('');
+                setShowPaymentDialog(true);
+              }}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Process Payment
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

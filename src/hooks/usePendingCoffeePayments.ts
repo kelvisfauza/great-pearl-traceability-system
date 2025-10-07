@@ -19,6 +19,12 @@ interface CoffeePayment {
   qualityAssessmentId: string;
   isPricedByQuality: boolean;
   qualityAssessmentExists: boolean;
+  createdBy?: string;
+  coffeeType?: string;
+  bags?: number;
+  dateReceived?: string;
+  qualityGrade?: string;
+  qualityParams?: any;
 }
 
 interface ProcessPaymentData {
@@ -136,7 +142,17 @@ export const usePendingCoffeePayments = () => {
           dateAssessed: record.date || new Date().toLocaleDateString(),
           qualityAssessmentId: qualityAssessment?.id || record.id,
           isPricedByQuality,
-          qualityAssessmentExists: !!qualityAssessment
+          qualityAssessmentExists: !!qualityAssessment,
+          createdBy: 'Store Department',
+          coffeeType: record.coffee_type || 'Not specified',
+          bags: record.bags || 0,
+          dateReceived: record.date || record.created_at?.split('T')[0] || new Date().toLocaleDateString(),
+          qualityGrade: qualityAssessment?.grade || 'Standard',
+          qualityParams: qualityAssessment ? {
+            moisture: qualityAssessment.moisture,
+            defects: qualityAssessment.group1_defects || qualityAssessment.group2_defects,
+            grade: qualityAssessment.grade
+          } : null
         });
       });
       
