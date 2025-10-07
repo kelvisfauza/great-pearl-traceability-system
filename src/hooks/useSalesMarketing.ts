@@ -208,28 +208,28 @@ export const useSalesMarketing = () => {
   };
 
   const getStats = () => {
-    // Calculate current month sales
+    // Calculate current month sales in kilograms, not total amount
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     
-    const monthlySales = salesTransactions
+    const monthlySalesKg = salesTransactions
       .filter(transaction => {
         const transactionDate = new Date(transaction.date);
         return transactionDate.getMonth() === currentMonth && 
                transactionDate.getFullYear() === currentYear;
       })
-      .reduce((sum, transaction) => sum + Number(transaction.total_amount || 0), 0);
+      .reduce((sum, transaction) => sum + Number(transaction.weight || 0), 0);
 
     // Calculate export revenue (international customers)
     const exportCustomers = ['export', 'international', 'overseas'];
-    const exportRevenue = salesTransactions
+    const exportRevenueKg = salesTransactions
       .filter(transaction => 
         exportCustomers.some(keyword => 
           transaction.customer?.toLowerCase().includes(keyword)
         )
       )
-      .reduce((sum, transaction) => sum + Number(transaction.total_amount || 0), 0);
+      .reduce((sum, transaction) => sum + Number(transaction.weight || 0), 0);
 
     return {
       totalCustomers: customers.length,
@@ -238,8 +238,8 @@ export const useSalesMarketing = () => {
       activeCampaigns: campaigns.filter(c => c.status === 'Active').length,
       totalContracts: contracts.length,
       totalValue: contracts.reduce((sum, c) => sum + c.price, 0),
-      monthlySales: Math.round(monthlySales),
-      exportRevenue: Math.round(exportRevenue)
+      monthlySales: `${Math.round(monthlySalesKg).toLocaleString()} kg`,
+      exportRevenue: `${Math.round(exportRevenueKg).toLocaleString()} kg`
     };
   };
 
