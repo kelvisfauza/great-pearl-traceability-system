@@ -93,11 +93,20 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     );
     if (!otherParticipant) return 'offline';
     
-    // Try to find by user_id first, then fallback to email matching
+    // Debug logging
+    console.log('🔍 Checking presence for participant:', {
+      participant_user_id: otherParticipant.user_id,
+      participant_email: otherParticipant.employee_email,
+      presenceUsers: presenceUsers.map(u => ({ id: u.id, email: u.email, status: u.status }))
+    });
+    
+    // Try to find by user_id first, then fallback to email matching (case-insensitive)
     const presenceUser = presenceUsers.find(u => 
       u.id === otherParticipant.user_id || 
-      u.email === otherParticipant.employee_email
+      u.email?.toLowerCase() === otherParticipant.employee_email?.toLowerCase()
     );
+    
+    console.log('✅ Found presence user:', presenceUser);
     return presenceUser?.status || 'offline';
   };
 

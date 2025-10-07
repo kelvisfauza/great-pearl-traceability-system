@@ -8,14 +8,15 @@ export const usePresence = (userId?: string) => {
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   const updatePresence = useCallback(async (status: 'online' | 'away' | 'offline' = 'online') => {
-    const id = userId || user?.id;
+    // Use authUserId if available, otherwise fall back to user.id
+    const id = userId || employee?.authUserId || user?.id;
     if (!id || !employee) {
       console.log('❌ Cannot update presence - missing data:', { id, hasEmployee: !!employee, employee });
       return;
     }
 
     try {
-      console.log('✅ Updating presence:', status, 'for user:', employee.email);
+      console.log('✅ Updating presence:', status, 'for user:', employee.email, 'with ID:', id);
       
       if (!channelRef.current) {
         // Initialize presence channel
@@ -50,18 +51,20 @@ export const usePresence = (userId?: string) => {
   }, []);
 
   useEffect(() => {
-    const id = userId || user?.id;
+    // Use authUserId if available, otherwise fall back to user.id
+    const id = userId || employee?.authUserId || user?.id;
     if (!id || !employee) {
       console.log('⏭️ Skipping presence initialization - missing data:', { 
         hasId: !!id, 
         hasEmployee: !!employee,
         userId: user?.id,
+        authUserId: employee?.authUserId,
         employeeEmail: employee?.email 
       });
       return;
     }
 
-    console.log('🚀 Initializing presence tracking for:', employee.email, 'with ID:', id);
+    console.log('🚀 Initializing presence tracking for:', employee.email, 'with ID:', id, '(authUserId:', employee.authUserId, ')');
 
     // Create and subscribe to presence channel
     const channel = supabase.channel('online-users');
