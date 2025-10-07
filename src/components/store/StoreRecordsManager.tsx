@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Edit, Trash2, Package, Calendar, User, MapPin, AlertTriangle } from 'lucide-react';
 import { generateBatchNumber, validateBatchWeight, getMinimumBatchWeight, checkBatchAccumulation, batchAccumulatedDeliveries } from '@/utils/batchUtils';
 import { PendingBatchSummary } from '@/components/PendingBatchSummary';
+import { RestoreDataButton } from './RestoreDataButton';
 
 interface StoreRecord {
   id: string;
@@ -493,16 +494,18 @@ const [availableQuantities, setAvailableQuantities] = useState<Record<string, nu
           </p>
         </div>
         
-        <Dialog open={formOpen} onOpenChange={(open) => {
-          console.log('Dialog state changing:', open);
-          setFormOpen(open);
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Record
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <RestoreDataButton />
+          <Dialog open={formOpen} onOpenChange={(open) => {
+            console.log('Dialog state changing:', open);
+            setFormOpen(open);
+          }}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Record
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -684,6 +687,7 @@ const [availableQuantities, setAvailableQuantities] = useState<Record<string, nu
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <PendingBatchSummary refreshTrigger={refreshTrigger} />
