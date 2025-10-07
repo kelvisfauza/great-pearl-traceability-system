@@ -9,9 +9,18 @@ export const usePresence = (userId?: string) => {
 
   const updatePresence = useCallback(async (status: 'online' | 'away' | 'offline' = 'online') => {
     // Use authUserId if available, otherwise fall back to user.id
-    const id = userId || employee?.authUserId || user?.id;
+    // Handle both camelCase and snake_case for auth_user_id
+    const authUserId = employee?.authUserId || (employee as any)?.auth_user_id;
+    const id = userId || authUserId || user?.id;
+    
     if (!id || !employee) {
-      console.log('❌ Cannot update presence - missing data:', { id, hasEmployee: !!employee, employee });
+      console.log('❌ Cannot update presence - missing data:', { 
+        id, 
+        hasEmployee: !!employee, 
+        authUserId,
+        employeeEmail: employee?.email,
+        userName: employee?.name
+      });
       return;
     }
 
@@ -52,14 +61,20 @@ export const usePresence = (userId?: string) => {
 
   useEffect(() => {
     // Use authUserId if available, otherwise fall back to user.id
-    const id = userId || employee?.authUserId || user?.id;
+    // Handle both camelCase and snake_case for auth_user_id
+    const authUserId = employee?.authUserId || (employee as any)?.auth_user_id;
+    const id = userId || authUserId || user?.id;
+    
     if (!id || !employee) {
       console.log('⏭️ Skipping presence initialization - missing data:', { 
         hasId: !!id, 
         hasEmployee: !!employee,
         userId: user?.id,
-        authUserId: employee?.authUserId,
-        employeeEmail: employee?.email 
+        authUserId,
+        employeeAuthUserId: employee?.authUserId,
+        employeeAuthUserIdSnake: (employee as any)?.auth_user_id,
+        employeeEmail: employee?.email,
+        employeeName: employee?.name
       });
       return;
     }
