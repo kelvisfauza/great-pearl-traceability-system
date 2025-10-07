@@ -185,20 +185,30 @@ export const usePendingCoffeePayments = () => {
         throw new Error('Missing required payment information');
       }
 
-      // Check available cash balance (only confirmed balance)
-      const { data: cashBalance, error: cashError } = await supabase
-        .from('finance_cash_balance')
-        .select('*')
-        .order('last_updated', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Calculate available cash from all confirmed transactions
+      const { data: allTransactions, error: cashError } = await supabase
+        .from('finance_cash_transactions')
+        .select('amount, transaction_type, status')
+        .eq('status', 'confirmed');
 
       if (cashError) {
-        console.error('Error fetching cash balance:', cashError);
+        console.error('Error fetching cash transactions:', cashError);
         throw new Error('Failed to check available cash');
       }
 
-      const availableCash = cashBalance?.current_balance || 0;
+      let totalCashIn = 0;
+      let totalCashOut = 0;
+      
+      allTransactions?.forEach(transaction => {
+        const amount = Math.abs(Number(transaction.amount));
+        if (transaction.transaction_type === 'DEPOSIT' || transaction.transaction_type === 'ADVANCE_RECOVERY') {
+          totalCashIn += amount;
+        } else if (transaction.transaction_type === 'PAYMENT' || transaction.transaction_type === 'EXPENSE') {
+          totalCashOut += amount;
+        }
+      });
+
+      const availableCash = totalCashIn - totalCashOut;
 
       if (availableCash < paymentData.amount) {
         throw new Error(`Insufficient funds. Available: UGX ${availableCash.toLocaleString()}, Required: UGX ${paymentData.amount.toLocaleString()}`);
@@ -349,25 +359,6 @@ export const usePendingCoffeePayments = () => {
         console.log('✅ Total advance recovered:', totalRecovered);
       }
 
-      // Calculate net payment after advance recovery
-      const netPayment = paymentData.amount - (paymentData.advanceRecovered || 0);
-
-      // Update cash balance (net effect)
-      const newBalance = availableCash - netPayment;
-      
-      const { error: balanceUpdateError } = await supabase
-        .from('finance_cash_balance')
-        .update({
-          current_balance: newBalance,
-          updated_by: employee?.name || 'Finance'
-        })
-        .eq('id', cashBalance.id);
-
-      if (balanceUpdateError) {
-        console.error('Error updating cash balance:', balanceUpdateError);
-        throw new Error('Failed to update cash balance');
-      }
-
       // Record transactions for proper cash flow tracking
       let currentBalance = availableCash;
 
@@ -401,12 +392,14 @@ export const usePendingCoffeePayments = () => {
       }
 
       // Record the payment as CASH OUT
+      currentBalance -= paymentData.amount;
+      
       const { error: paymentError } = await supabase
         .from('finance_cash_transactions')
         .insert({
           transaction_type: 'PAYMENT',
           amount: -paymentData.amount,
-          balance_after: newBalance,
+          balance_after: currentBalance,
           reference: paymentData.batchNumber,
           notes: `Payment to ${paymentData.supplier} - ${paymentData.batchNumber}${paymentData.notes ? ' - ' + paymentData.notes : ''}`,
           created_by: employee?.name || 'Finance',
