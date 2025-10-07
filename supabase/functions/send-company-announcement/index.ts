@@ -77,7 +77,7 @@ serve(async (req) => {
         // Send SMS if requested and employee has phone number
         if (announcement.send_sms && employee.phone) {
           try {
-            const smsMessage = `${announcement.title}\n\n${announcement.message}\n\n- FarmFlow Management`;
+            const smsMessage = `${announcement.title}\n\n${announcement.message}\n\n- Great Pearl Coffee Management`;
             
             // Use the existing send-sms function instead of direct API call
             const { data: smsResult, error: smsError } = await supabase.functions.invoke('send-sms', {

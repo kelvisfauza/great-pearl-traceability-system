@@ -53,7 +53,7 @@ serve(async (req) => {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Invalid Code - FarmFlow</title>
+          <title>Invalid Code - Great Pearl Coffee</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
@@ -101,7 +101,7 @@ serve(async (req) => {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>User Not Found - FarmFlow</title>
+          <title>User Not Found - Great Pearl Coffee</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
@@ -130,7 +130,7 @@ serve(async (req) => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Login Code - FarmFlow</title>
+        <title>Login Code - Great Pearl Coffee</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
           body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
@@ -143,7 +143,7 @@ serve(async (req) => {
       <body>
         <div class="container">
           <h2>Your Login Code</h2>
-          <p>Use this code to login to FarmFlow:</p>
+          <p>Use this code to login to Great Pearl Coffee:</p>
           <div class="code">${code}</div>
           <p>Enter this code on the login page to access your account.</p>
           <a href="https://id-preview--0ab47c69-3f36-4407-b03c-de1f9684ac9a.lovable.app/auth" class="button">Go to Login Page</a>
