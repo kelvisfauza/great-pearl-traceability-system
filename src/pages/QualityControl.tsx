@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   CheckCircle2, 
   XCircle, 
@@ -27,7 +28,7 @@ import {
   Calculator,
   Edit3
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQualityControl } from "@/hooks/useQualityControl";
 import { useWorkflowTracking } from "@/hooks/useWorkflowTracking";
 import { usePrices } from "@/contexts/PriceContext";
@@ -123,6 +124,27 @@ const QualityControl = () => {
     open: false,
     grnData: null
   });
+
+  // Date filtering for assessments
+  const [selectedDate, setSelectedDate] = useState<string>('today');
+  const [customDate, setCustomDate] = useState<string>('');
+  
+  // Filter assessments by date
+  const filteredAssessments = useMemo(() => {
+    if (selectedDate === 'all') return qualityAssessments;
+    
+    const today = new Date().toISOString().split('T')[0];
+    let targetDate = today;
+    
+    if (selectedDate === 'custom' && customDate) {
+      targetDate = customDate;
+    }
+    
+    return qualityAssessments.filter(assessment => {
+      const assessmentDate = new Date(assessment.date_assessed || assessment.created_at).toISOString().split('T')[0];
+      return assessmentDate === targetDate;
+    });
+  }, [qualityAssessments, selectedDate, customDate]);
 
   // Get pending modification requests for quality department
   const pendingModificationRequests = getPendingModificationRequests('Quality');
@@ -921,15 +943,49 @@ const QualityControl = () => {
           <TabsContent value="assessments">
             <Card>
               <CardHeader>
-                <CardTitle>Quality Assessments</CardTitle>
-                <CardDescription>Completed and submitted quality assessments</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Quality Assessments</CardTitle>
+                    <CardDescription>Completed and submitted quality assessments</CardDescription>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <Select value={selectedDate} onValueChange={setSelectedDate}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select date" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="custom">Custom Date</SelectItem>
+                        <SelectItem value="all">All Dates</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {selectedDate === 'custom' && (
+                      <input
+                        type="date"
+                        value={customDate}
+                        onChange={(e) => setCustomDate(e.target.value)}
+                        className="px-3 py-2 border rounded-md"
+                      />
+                    )}
+                    <Badge variant="outline" className="ml-2">
+                      {filteredAssessments.length} assessment{filteredAssessments.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                {qualityAssessments.length === 0 ? (
+                {filteredAssessments.length === 0 ? (
                   <div className="text-center py-12">
                     <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Assessments Yet</h3>
-                    <p className="text-gray-500">Quality assessments will appear here once completed</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {selectedDate === 'today' ? 'No Assessments Today' : 'No Assessments Found'}
+                    </h3>
+                    <p className="text-gray-500">
+                      {selectedDate === 'today' 
+                        ? 'No quality assessments completed today. Try selecting "All Dates" to view past assessments.'
+                        : 'No quality assessments found for the selected date.'
+                      }
+                    </p>
                   </div>
                 ) : (
                   <Table>
@@ -946,7 +1002,7 @@ const QualityControl = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {qualityAssessments.map((assessment) => (
+                      {filteredAssessments.map((assessment) => (
                         <TableRow key={assessment.id}>
                           <TableCell className="font-medium">{assessment.batch_number}</TableCell>
                           <TableCell>{assessment.supplier_name || 'Unknown'}</TableCell>
