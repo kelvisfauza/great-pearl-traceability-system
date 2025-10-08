@@ -260,12 +260,12 @@ export const usePendingCoffeePayments = () => {
       }
       console.log('✅ Payment record created in Supabase');
 
-      // Update coffee_record status to "paid" in Supabase
+      // Update coffee_record status to "Paid" in Supabase
       console.log('📦 Updating coffee record in Supabase...');
       const { error: coffeeUpdateError } = await supabase
         .from('coffee_records')
         .update({ 
-          status: 'paid',
+          status: 'Paid',
           updated_at: new Date().toISOString()
         })
         .eq('batch_number', paymentData.batchNumber);
