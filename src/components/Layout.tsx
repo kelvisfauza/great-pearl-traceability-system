@@ -51,7 +51,10 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
 
   // Show toast notification for new messages
   useEffect(() => {
-    console.log('🔍 Toast effect running - notification:', latestMessageNotification, 'isOpen:', isMessagingOpen);
+    console.log('🔍🔍🔍 LAYOUT TOAST EFFECT TRIGGERED! 🔍🔍🔍');
+    console.log('🔍 Timestamp:', new Date().toISOString());
+    console.log('🔍 latestMessageNotification:', JSON.stringify(latestMessageNotification, null, 2));
+    console.log('🔍 isMessagingOpen:', isMessagingOpen);
     
     if (!latestMessageNotification) {
       console.log('⏭️ No notification to show');

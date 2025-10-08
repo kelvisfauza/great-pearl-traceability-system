@@ -458,6 +458,7 @@ export const useMessages = () => {
         },
         async (payload) => {
           console.log('🔔🔔🔔 NEW MESSAGE RECEIVED VIA WEBSOCKET! 🔔🔔🔔');
+          console.log('🔔 Timestamp:', new Date().toISOString());
           console.log('🔔 Full payload:', JSON.stringify(payload, null, 2));
           const newMessage = payload.new as Message;
           console.log('📧 Message details:', {
@@ -553,14 +554,21 @@ export const useMessages = () => {
           });
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         console.log('📡 Messages channel subscription status:', status);
+        console.log('📡 Status timestamp:', new Date().toISOString());
+        if (err) {
+          console.error('❌ Subscription error details:', err);
+        }
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to messages channel');
+          console.log('✅✅✅ Successfully subscribed to messages channel! ✅✅✅');
+          console.log('🎧 Now listening for INSERT and UPDATE events on messages table');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error subscribing to messages channel');
+          console.error('❌❌❌ Error subscribing to messages channel');
         } else if (status === 'TIMED_OUT') {
-          console.error('⏱️ Messages channel subscription timed out');
+          console.error('⏱️⏱️⏱️ Messages channel subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.warn('🔒 Messages channel subscription closed');
         }
       });
 
