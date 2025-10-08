@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Navigation from "./Navigation";
 import MessagingPanel from "./messaging/MessagingPanel";
 import ChatButton from "./messaging/ChatButton";
@@ -28,6 +28,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const lastShownMessageId = useRef<string | null>(null);
   const { 
     unreadCount: messagesUnreadCount, 
     latestMessageNotification,
@@ -54,7 +55,18 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
       return;
     }
 
+    // Create a unique ID for this message notification
+    const messageId = `${latestMessageNotification.conversationId}-${latestMessageNotification.timestamp}`;
+    
+    // Only show toast if we haven't shown it for this specific message
+    if (lastShownMessageId.current === messageId) {
+      return;
+    }
+
     console.log('✅ Showing toast notification for:', latestMessageNotification);
+    
+    // Mark this message as shown
+    lastShownMessageId.current = messageId;
     
     // Show toast
     toast({
@@ -67,16 +79,12 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
       onClick: () => {
         console.log('🖱️ Toast clicked, opening messaging panel');
         setIsMessagingOpen(true);
+        clearLatestNotification();
       }
     });
     
-    // Clear notification after a delay to allow the toast to render
-    const timer = setTimeout(() => {
-      console.log('🧹 Clearing notification state');
-      clearLatestNotification();
-    }, 2000);
-
-    return () => clearTimeout(timer);
+    // Clear notification state after showing
+    clearLatestNotification();
   }, [latestMessageNotification, isMessagingOpen, toast, clearLatestNotification]);
 
   return (
