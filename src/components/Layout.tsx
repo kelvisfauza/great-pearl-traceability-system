@@ -53,8 +53,13 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   useEffect(() => {
     console.log('🔍 Toast effect running - notification:', latestMessageNotification, 'isOpen:', isMessagingOpen);
     
-    if (!latestMessageNotification || isMessagingOpen) {
-      console.log('⏭️ Skipping toast - no notification or messaging is open');
+    if (!latestMessageNotification) {
+      console.log('⏭️ No notification to show');
+      return;
+    }
+
+    if (isMessagingOpen) {
+      console.log('⏭️ Messaging panel is open, skipping toast');
       return;
     }
 
@@ -63,11 +68,12 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
     
     // Only show toast if we haven't shown it for this specific message
     if (lastShownMessageId.current === messageId) {
-      console.log('⏭️ Skipping toast - already shown for this message:', messageId);
+      console.log('⏭️ Already shown toast for this message:', messageId);
       return;
     }
 
-    console.log('✅ Showing toast notification for:', latestMessageNotification);
+    console.log('✅ Showing toast notification for message:', messageId);
+    console.log('📝 Notification details:', latestMessageNotification);
     
     // Mark this message as shown
     lastShownMessageId.current = messageId;
@@ -87,14 +93,19 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
       }
     });
     
+    console.log('🎉 Toast displayed successfully');
+    
     // Clear notification state after a delay to ensure toast renders
     const timeoutId = setTimeout(() => {
-      console.log('🧹 Clearing notification after delay');
+      console.log('🧹 Clearing notification state after delay');
       clearLatestNotification();
-    }, 100);
+    }, 500);
     
-    return () => clearTimeout(timeoutId);
-  }, [latestMessageNotification, isMessagingOpen, toast, clearLatestNotification]);
+    return () => {
+      console.log('🧹 Cleanup: clearing timeout');
+      clearTimeout(timeoutId);
+    };
+  }, [latestMessageNotification, isMessagingOpen, toast]);
 
   return (
     <div className="min-h-screen bg-background flex relative">
