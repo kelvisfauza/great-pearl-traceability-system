@@ -477,9 +477,17 @@ export const useMessages = () => {
         (payload) => {
           console.log('📝 Message updated:', payload);
           const updatedMessage = payload.new as Message;
-          setMessages(prev => 
-            prev.map(m => m.id === updatedMessage.id ? updatedMessage : m)
-          );
+          console.log('🔄 Updated message read_at:', updatedMessage.read_at);
+          setMessages(prev => {
+            const updated = prev.map(m => {
+              if (m.id === updatedMessage.id) {
+                console.log('✅ Updating message in state:', m.id, 'read_at:', updatedMessage.read_at);
+                return updatedMessage;
+              }
+              return m;
+            });
+            return updated;
+          });
         }
       )
       .subscribe((status) => {

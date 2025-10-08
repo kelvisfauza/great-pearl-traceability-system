@@ -228,7 +228,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                       format(new Date(messages[index - 1].created_at), 'yyyy-MM-dd');
                     
                     return (
-                      <React.Fragment key={message.id}>
+                      <div key={message.id}>
                         {showDate && (
                           <div className="flex justify-center my-3">
                             <div className="flex items-center gap-3 w-full">
@@ -265,7 +265,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                                   <span>{format(new Date(message.created_at), 'HH:mm')}</span>
                                   {isOwnMessage && (
                                     message.read_at ? (
-                                      <CheckCheck className="h-3 w-3" />
+                                      <CheckCheck className="h-3 w-3 text-blue-400" />
                                     ) : (
                                       <Check className="h-3 w-3" />
                                     )
@@ -289,7 +289,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                                   <span>{format(new Date(message.created_at), 'HH:mm')}</span>
                                   {isOwnMessage && (
                                     message.read_at ? (
-                                      <CheckCheck className="h-3 w-3" />
+                                      <CheckCheck className="h-3 w-3 text-blue-400" />
                                     ) : (
                                       <Check className="h-3 w-3" />
                                     )
@@ -305,7 +305,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                                   <span>{format(new Date(message.created_at), 'HH:mm')}</span>
                                   {isOwnMessage && (
                                     message.read_at ? (
-                                      <CheckCheck className="h-3 w-3" />
+                                      <CheckCheck className="h-3 w-3 text-blue-400" />
                                     ) : (
                                       <Check className="h-3 w-3" />
                                     )
@@ -315,7 +315,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                             )}
                           </div>
                         </div>
-                      </React.Fragment>
+                      </div>
                     );
                   })}
                   <div ref={messagesEndRef} />

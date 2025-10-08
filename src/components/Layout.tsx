@@ -68,16 +68,20 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
         onClick: () => {
           console.log('🖱️ Toast clicked, opening messaging panel');
           setIsMessagingOpen(true);
+          clearLatestNotification();
           if (toastInstance) {
             toastInstance.dismiss();
           }
         }
       });
       
-      // Clear the notification state after a short delay to prevent re-triggering
-      setTimeout(() => {
+      // Clear the notification state after it has been displayed
+      const clearTimer = setTimeout(() => {
+        console.log('🧹 Clearing notification after display');
         clearLatestNotification();
-      }, 500);
+      }, 1000);
+
+      return () => clearTimeout(clearTimer);
     }
   }, [latestMessageNotification, isMessagingOpen, toast, clearLatestNotification]);
 
