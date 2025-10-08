@@ -23,7 +23,6 @@ interface CoffeePayment {
   coffeeType?: string;
   bags?: number;
   dateReceived?: string;
-  qualityGrade?: string;
   qualityParams?: any;
 }
 
@@ -56,38 +55,50 @@ export const usePendingCoffeePayments = () => {
       
       const payments: CoffeePayment[] = [];
       
-      console.log('🔍 Finance fetching coffee records from Supabase...');
+      console.log('🔍 Finance fetching pending coffee payments...');
       
-      // Fetch coffee records from SUPABASE (which has the correct data)
+      // Optimized: Fetch only unpaid coffee records with minimal fields first
       const { data: coffeeRecords, error: coffeeError } = await supabase
         .from('coffee_records')
-        .select('*')
-        .not('status', 'in', '("paid","completed")')
-        .order('date', { ascending: false });
+        .select('id, batch_number, supplier_name, supplier_id, kilograms, bags, coffee_type, date, created_at, created_by')
+        .in('status', ['pending', 'assessed', 'submitted_to_finance'])
+        .order('date', { ascending: false })
+        .limit(100);
       
       if (coffeeError) {
         console.error('Error fetching coffee records:', coffeeError);
         throw coffeeError;
       }
       
-      console.log('📦 Found coffee records in Supabase:', coffeeRecords?.length || 0);
+      if (!coffeeRecords || coffeeRecords.length === 0) {
+        console.log('📦 No pending coffee records found');
+        setCoffeePayments([]);
+        setLoading(false);
+        return;
+      }
       
-      // Fetch all PAID payment records from Supabase to exclude them
+      console.log('📦 Found coffee records:', coffeeRecords.length);
+      
+      // Get batch numbers to check for payments
+      const batchNumbers = coffeeRecords.map(r => r.batch_number).filter(Boolean);
+      
+      // Fetch paid batch numbers in one query
       const { data: paidPayments } = await supabase
         .from('payment_records')
         .select('batch_number')
+        .in('batch_number', batchNumbers)
         .eq('status', 'Paid');
       
       const paidBatchNumbers = new Set(
         paidPayments?.map(p => p.batch_number).filter(Boolean) || []
       );
 
-      console.log('💳 Found paid batch numbers:', paidBatchNumbers.size);
-      
-      // Fetch all quality assessments from Supabase
+      // Fetch quality assessments for these records only
+      const recordIds = coffeeRecords.map(r => r.id);
       const { data: qualityAssessments } = await supabase
         .from('quality_assessments')
-        .select('*');
+        .select('id, store_record_id, suggested_price, assessed_by, moisture, group1_defects, group2_defects')
+        .in('store_record_id', recordIds);
       
       const qualityMap = new Map();
       qualityAssessments?.forEach(assessment => {
@@ -95,7 +106,10 @@ export const usePendingCoffeePayments = () => {
           qualityMap.set(assessment.store_record_id, {
             id: assessment.id,
             pricePerKg: assessment.suggested_price || 0,
-            assessedBy: assessment.assessed_by || 'Quality Department'
+            assessedBy: assessment.assessed_by || 'Quality Department',
+            moisture: assessment.moisture,
+            group1_defects: assessment.group1_defects,
+            group2_defects: assessment.group2_defects
           });
         }
       });
@@ -147,11 +161,9 @@ export const usePendingCoffeePayments = () => {
           coffeeType: record.coffee_type || 'Not specified',
           bags: record.bags || 0,
           dateReceived: record.date || record.created_at?.split('T')[0] || new Date().toLocaleDateString(),
-          qualityGrade: qualityAssessment?.grade || 'Standard',
           qualityParams: qualityAssessment ? {
             moisture: qualityAssessment.moisture,
-            defects: qualityAssessment.group1_defects || qualityAssessment.group2_defects,
-            grade: qualityAssessment.grade
+            defects: qualityAssessment.group1_defects || qualityAssessment.group2_defects
           } : null
         });
       });
