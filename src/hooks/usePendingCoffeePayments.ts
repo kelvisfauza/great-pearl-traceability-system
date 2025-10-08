@@ -318,40 +318,9 @@ export const usePendingCoffeePayments = () => {
 
       // Calculate net payment after advance recovery
       const netPayment = paymentData.amount - (paymentData.advanceRecovered || 0);
-
-      // Update cash balance (net effect)
       const newBalance = availableCash - netPayment;
-      
-      // Update or create cash balance record
-      if (cashBalance?.id) {
-        const { error: balanceUpdateError } = await supabase
-          .from('finance_cash_balance')
-          .update({
-            current_balance: newBalance,
-            updated_by: employee?.name || 'Finance'
-          })
-          .eq('id', cashBalance.id);
 
-        if (balanceUpdateError) {
-          console.error('Error updating cash balance:', balanceUpdateError);
-          throw new Error('Failed to update cash balance');
-        }
-      } else {
-        // Create initial balance record if it doesn't exist
-        const { error: balanceCreateError } = await supabase
-          .from('finance_cash_balance')
-          .insert({
-            current_balance: newBalance,
-            updated_by: employee?.name || 'Finance'
-          });
-
-        if (balanceCreateError) {
-          console.error('Error creating cash balance:', balanceCreateError);
-          throw new Error('Failed to create cash balance record');
-        }
-      }
-
-      // Record transactions for proper cash flow tracking
+      // Record transactions FIRST, then balance will be calculated from transactions
       let currentBalance = availableCash;
 
       // If advance was recovered, record it as CASH IN first
@@ -395,6 +364,25 @@ export const usePendingCoffeePayments = () => {
 
       if (paymentError) {
         console.error('Error recording payment transaction:', paymentError);
+        throw new Error('Failed to record payment transaction');
+      }
+
+      // Update cash balance table based on final balance
+      if (cashBalance?.id) {
+        await supabase
+          .from('finance_cash_balance')
+          .update({
+            current_balance: newBalance,
+            updated_by: employee?.name || 'Finance'
+          })
+          .eq('id', cashBalance.id);
+      } else {
+        await supabase
+          .from('finance_cash_balance')
+          .insert({
+            current_balance: newBalance,
+            updated_by: employee?.name || 'Finance'
+          });
       }
 
       // Record in daily tasks (day book)
