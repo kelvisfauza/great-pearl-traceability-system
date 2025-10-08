@@ -191,13 +191,15 @@ export const useMessages = () => {
         );
         
         if (unreadMessages.length > 0) {
+          console.log(`📩 Marking ${unreadMessages.length} messages as read`);
           await supabase
             .from('messages')
             .update({ read_at: new Date().toISOString() })
             .in('id', unreadMessages.map(m => m.id));
           
-          // Decrease unread count by the number of messages marked as read
-          setUnreadCount(prev => Math.max(0, prev - unreadMessages.length));
+          // Refresh conversations to recalculate unread count accurately
+          console.log('🔄 Refreshing unread count');
+          fetchConversations();
         }
 
         // Update last_read_at in conversation_participants
