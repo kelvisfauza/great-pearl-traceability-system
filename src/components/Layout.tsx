@@ -84,7 +84,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
       description: latestMessageNotification.content.length > 50 
         ? latestMessageNotification.content.substring(0, 50) + '...'
         : latestMessageNotification.content,
-      duration: 5000,
+      duration: 10000,
       className: "cursor-pointer",
       onClick: () => {
         console.log('🖱️ Toast clicked, opening messaging panel');
