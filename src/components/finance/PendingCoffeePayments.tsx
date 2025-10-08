@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,9 @@ export const PendingCoffeePayments = () => {
   const [recoverAdvance, setRecoverAdvance] = useState(false);
   const [supplierOutstanding, setSupplierOutstanding] = useState(0);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  
+  // Ref to prevent duplicate submissions (synchronous check)
+  const isProcessingRef = useRef(false);
 
   useEffect(() => {
     if (selectedPayment && showPaymentDialog) {
@@ -56,7 +59,11 @@ export const PendingCoffeePayments = () => {
   }, [selectedPayment, showPaymentDialog]); // Removed getTotalOutstanding from dependencies
 
   const handleProcessPayment = async () => {
-    if (!selectedPayment || processing) return;
+    // Synchronous check to prevent duplicate submissions
+    if (!selectedPayment || processing || isProcessingRef.current) {
+      console.log('⚠️ Payment blocked - already processing');
+      return;
+    }
 
     // If not priced by Quality, Finance must set a price
     if (!selectedPayment.isPricedByQuality && !financePrice) {
@@ -88,6 +95,8 @@ export const PendingCoffeePayments = () => {
       netPayment: actualAmount - advanceRecovered
     });
 
+    // Set both synchronous ref flag and async state
+    isProcessingRef.current = true;
     setProcessing(true);
     try {
       await processPayment({
@@ -148,6 +157,7 @@ export const PendingCoffeePayments = () => {
       }
     } finally {
       setProcessing(false);
+      isProcessingRef.current = false;
     }
   };
 
