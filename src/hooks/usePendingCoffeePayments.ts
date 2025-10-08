@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, where, addDoc, updateDoc, doc, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -228,118 +228,57 @@ export const usePendingCoffeePayments = () => {
         throw new Error(`Insufficient funds. Available: UGX ${availableCash.toLocaleString()}, Required: UGX ${paymentData.amount.toLocaleString()}`);
       }
 
-      // Create payment record in Firebase
-      const paymentRecord = {
-        supplier: paymentData.supplier,
-        amount: paymentData.amount,
-        paid_amount: paymentData.method === 'Cash' ? paymentData.amount : 0,
-        status: paymentData.method === 'Cash' ? 'Paid' : 'Processing',
-        method: paymentData.method === 'Cash' ? 'Cash' : 'Bank Transfer',
-        date: new Date().toLocaleDateString(),
-        batchNumber: paymentData.batchNumber,
-        qualityAssessmentId: paymentData.qualityAssessmentId,
-        notes: paymentData.notes || '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        processed_by: employee?.name || 'Finance Department'
-      };
+      // Create payment record in Supabase
+      console.log('📝 Creating payment record in Supabase...');
+      const { error: paymentInsertError } = await supabase
+        .from('payment_records')
+        .insert({
+          supplier: paymentData.supplier,
+          amount: paymentData.amount,
+          status: paymentData.method === 'Cash' ? 'Paid' : 'Processing',
+          method: paymentData.method === 'Cash' ? 'Cash' : 'Bank Transfer',
+          date: new Date().toISOString().split('T')[0],
+          batch_number: paymentData.batchNumber,
+          quality_assessment_id: paymentData.qualityAssessmentId
+        });
 
-      console.log('📝 Creating payment record...', paymentRecord);
-      const paymentDocRef = await addDoc(collection(db, 'payment_records'), paymentRecord);
-      console.log('✅ Payment record created:', paymentDocRef.id);
+      if (paymentInsertError) {
+        console.error('❌ Failed to create payment record:', paymentInsertError);
+        throw new Error(`Failed to create payment record: ${paymentInsertError.message}`);
+      }
+      console.log('✅ Payment record created in Supabase');
 
-      // Update coffee_record status to "paid" in Firebase
-      console.log('📦 Updating coffee record status:', paymentData.paymentId);
-      try {
-        await updateDoc(doc(db, 'coffee_records', paymentData.paymentId), {
+      // Update coffee_record status to "paid" in Supabase
+      console.log('📦 Updating coffee record in Supabase...');
+      const { error: coffeeUpdateError } = await supabase
+        .from('coffee_records')
+        .update({ 
           status: 'paid',
           updated_at: new Date().toISOString()
-        });
-        console.log('✅ Coffee record updated to paid in Firebase');
-      } catch (coffeeUpdateError: any) {
-        console.error('❌ Failed to update coffee record in Firebase:', coffeeUpdateError);
+        })
+        .eq('batch_number', paymentData.batchNumber);
+      
+      if (coffeeUpdateError) {
+        console.error('❌ Failed to update coffee record:', coffeeUpdateError);
         throw new Error(`Failed to update coffee record: ${coffeeUpdateError.message}`);
       }
+      console.log('✅ Coffee record updated to paid');
 
-      // Also update coffee_record status in Supabase
-      console.log('📦 Updating coffee record in Supabase by batch number:', paymentData.batchNumber);
-      try {
-        const { error: supabaseUpdateError } = await supabase
-          .from('coffee_records')
-          .update({ 
-            status: 'paid',
-            updated_at: new Date().toISOString()
-          })
-          .eq('batch_number', paymentData.batchNumber);
-        
-        if (supabaseUpdateError) {
-          console.error('❌ Failed to update coffee record in Supabase:', supabaseUpdateError);
-        } else {
-          console.log('✅ Coffee record updated to paid in Supabase');
-        }
-      } catch (supabaseError: any) {
-        console.error('❌ Error updating Supabase coffee record:', supabaseError);
-      }
-
-      // Update payment_records status in Supabase
-      console.log('💳 Updating payment_records in Supabase...');
-      try {
-        const { error: paymentUpdateError } = await supabase
-          .from('payment_records')
-          .update({ 
-            status: paymentData.method === 'Cash' ? 'Paid' : 'Processing',
-            updated_at: new Date().toISOString()
-          })
-          .eq('batch_number', paymentData.batchNumber);
-        
-        if (paymentUpdateError) {
-          console.error('❌ Failed to update payment_records in Supabase:', paymentUpdateError);
-        } else {
-          console.log('✅ Payment_records updated in Supabase');
-        }
-      } catch (paymentSupabaseError: any) {
-        console.error('❌ Error updating Supabase payment_records:', paymentSupabaseError);
-      }
-
-      // Handle advance recovery if applicable
+      // Handle advance recovery if applicable  
       if (paymentData.advanceRecovered && paymentData.advanceRecovered > 0 && paymentData.supplierId) {
-        console.log('💰 Processing advance recovery:', {
-          supplierId: paymentData.supplierId,
-          supplierCode: paymentData.supplierCode,
-          amountToRecover: paymentData.advanceRecovered
-        });
+        console.log('💰 Processing advance recovery from Supabase...');
 
-        // Get supplier advances from Firebase - match by ID OR code for flexibility
-        const advancesQuery = query(
-          collection(db, 'supplier_advances'),
-          where('is_closed', '==', false),
-          orderBy('issued_at', 'asc')
-        );
-        
-        const advancesSnapshot = await getDocs(advancesQuery);
-        const allAdvances = advancesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Array<{
-          id: string;
-          supplier_id: string;
-          supplier_code?: string;
-          outstanding_ugx: number;
-          amount_ugx: number;
-          is_closed: boolean;
-          [key: string]: any;
-        }>;
+        // Get supplier advances from Supabase
+        const { data: advances } = await supabase
+          .from('supplier_advances')
+          .select('*')
+          .eq('supplier_id', paymentData.supplierId)
+          .eq('is_closed', false)
+          .order('issued_at', { ascending: true });
 
-        // Filter advances for this supplier (match by ID or code)
-        const advances = allAdvances.filter(adv => 
-          adv.supplier_id === paymentData.supplierId || 
-          (paymentData.supplierCode && adv.supplier_code === paymentData.supplierCode)
-        );
-
-        console.log('📋 Found advances to recover:', advances.length);
+        console.log('📋 Found advances to recover:', advances?.length || 0);
 
         let remainingRecovery = paymentData.advanceRecovered;
-        let totalRecovered = 0;
         
         // Recover from oldest advances first (FIFO)
         for (const advance of advances || []) {
@@ -350,27 +289,19 @@ export const usePendingCoffeePayments = () => {
           const newOutstanding = currentOutstanding - recoveryAmount;
           const isClosed = newOutstanding === 0;
 
-          console.log(`   💵 Recovering from advance ${advance.id}:`, {
-            outstanding: currentOutstanding,
-            recovering: recoveryAmount,
-            newOutstanding,
-            willClose: isClosed
-          });
+          await supabase
+            .from('supplier_advances')
+            .update({
+              outstanding_ugx: newOutstanding,
+              is_closed: isClosed,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', advance.id);
 
-          const advanceRef = doc(db, 'supplier_advances', advance.id);
-          await updateDoc(advanceRef, {
-            outstanding_ugx: newOutstanding,
-            is_closed: isClosed,
-            updated_at: new Date().toISOString()
-          });
-
-          totalRecovered += recoveryAmount;
           remainingRecovery -= recoveryAmount;
-          
-          console.log(`   ✅ Advance ${isClosed ? 'fully paid' : 'partially recovered'}`);
         }
 
-        console.log('✅ Total advance recovered:', totalRecovered);
+        console.log('✅ Advance recovery completed');
       }
 
       // Calculate net payment after advance recovery
@@ -454,36 +385,30 @@ export const usePendingCoffeePayments = () => {
         console.error('Error recording payment transaction:', paymentError);
       }
 
-      // Update quality assessment status (if it exists)
+      // Record in daily tasks (day book)
+      await supabase
+        .from('daily_tasks')
+        .insert({
+          task_type: 'coffee_payment',
+          description: `Coffee payment to ${paymentData.supplier} - Batch ${paymentData.batchNumber}`,
+          amount: paymentData.amount,
+          batch_number: paymentData.batchNumber,
+          completed_by: employee?.name || 'Finance',
+          department: 'Finance',
+          date: new Date().toISOString().split('T')[0]
+        });
+
+      // Update quality assessment status (if it exists) in Supabase only
       if (paymentData.qualityAssessmentId && paymentData.qualityAssessmentId !== paymentData.paymentId) {
         const newStatus = paymentData.method === 'Cash' ? 'payment_processed' : 'submitted_to_finance';
         
-        console.log('🔬 Updating quality assessment:', paymentData.qualityAssessmentId);
-        // Try updating in Supabase first
-        const { error: supabaseError } = await supabase
+        await supabase
           .from('quality_assessments')
           .update({
             status: newStatus,
             updated_at: new Date().toISOString()
           })
           .eq('id', paymentData.qualityAssessmentId);
-
-        // Fallback to Firebase if Supabase fails
-        if (supabaseError) {
-          console.log('⚠️ Supabase update failed, trying Firebase:', supabaseError);
-          try {
-            await updateDoc(doc(db, 'quality_assessments', paymentData.qualityAssessmentId), {
-              status: newStatus,
-              updated_at: new Date().toISOString()
-            });
-            console.log('✅ Quality assessment updated in Firebase');
-          } catch (fbError: any) {
-            console.error('❌ Firebase update also failed:', fbError);
-            // Don't throw here, quality assessment update is optional
-          }
-        } else {
-          console.log('✅ Quality assessment updated in Supabase');
-        }
       }
 
       // If bank transfer, create approval request
