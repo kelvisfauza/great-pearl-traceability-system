@@ -471,8 +471,11 @@ export const useMessages = () => {
           });
           
           // If message is not from current user, show notification and increment unread count
-          if (user && newMessage.sender_id !== user.id && !newMessage.read_at) {
-            console.log('📨 Message is from another user, showing notification');
+          // TEST MODE: Show notifications for all messages (including own messages) for testing
+          const TEST_MODE = true; // Set to false in production
+          
+          if (user && !newMessage.read_at && (TEST_MODE || newMessage.sender_id !== user.id)) {
+            console.log('📨 Showing notification for message');
             setUnreadCount(prev => {
               const newCount = prev + 1;
               console.log('📊 Updated unread count:', newCount);
