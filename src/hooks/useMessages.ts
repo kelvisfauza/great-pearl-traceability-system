@@ -441,6 +441,7 @@ export const useMessages = () => {
   // Set up real-time subscription
   useEffect(() => {
     console.log('📡 Setting up real-time subscription for messages');
+    console.log('📡 Subscription setup at:', new Date().toISOString());
     
     const channel = supabase
       .channel('messages-realtime-channel', {
@@ -456,10 +457,22 @@ export const useMessages = () => {
           table: 'messages'
         },
         async (payload) => {
-          console.log('🔔 New message received via WebSocket:', payload);
+          console.log('🔔🔔🔔 NEW MESSAGE RECEIVED VIA WEBSOCKET! 🔔🔔🔔');
+          console.log('🔔 Full payload:', JSON.stringify(payload, null, 2));
           const newMessage = payload.new as Message;
+          console.log('📧 Message details:', {
+            id: newMessage.id,
+            content: newMessage.content,
+            sender_id: newMessage.sender_id,
+            conversation_id: newMessage.conversation_id,
+            created_at: newMessage.created_at,
+            read_at: newMessage.read_at
+          });
+          
           const { data: { user } } = await supabase.auth.getUser();
-          console.log('👤 Current user:', user?.id, 'Message sender:', newMessage.sender_id);
+          console.log('👤 Current user ID:', user?.id);
+          console.log('👤 Message sender ID:', newMessage.sender_id);
+          console.log('🔍 Is same user?', user?.id === newMessage.sender_id);
           
           // Update messages if viewing this conversation
           setMessages(prev => {
@@ -474,8 +487,11 @@ export const useMessages = () => {
           // TEST MODE: Show notifications for all messages (including own messages) for testing
           const TEST_MODE = true; // Set to false in production
           
+          console.log('🧪 TEST_MODE enabled:', TEST_MODE);
+          console.log('🔍 Should show notification?', !newMessage.read_at && (TEST_MODE || newMessage.sender_id !== user?.id));
+          
           if (user && !newMessage.read_at && (TEST_MODE || newMessage.sender_id !== user.id)) {
-            console.log('📨 Showing notification for message');
+            console.log('✅ CONDITIONS MET - SHOWING NOTIFICATION!');
             setUnreadCount(prev => {
               const newCount = prev + 1;
               console.log('📊 Updated unread count:', newCount);
