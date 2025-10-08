@@ -51,7 +51,10 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
 
   // Show toast notification for new messages
   useEffect(() => {
+    console.log('🔍 Toast effect running - notification:', latestMessageNotification, 'isOpen:', isMessagingOpen);
+    
     if (!latestMessageNotification || isMessagingOpen) {
+      console.log('⏭️ Skipping toast - no notification or messaging is open');
       return;
     }
 
@@ -60,6 +63,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
     
     // Only show toast if we haven't shown it for this specific message
     if (lastShownMessageId.current === messageId) {
+      console.log('⏭️ Skipping toast - already shown for this message:', messageId);
       return;
     }
 
@@ -83,8 +87,13 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
       }
     });
     
-    // Clear notification state after showing
-    clearLatestNotification();
+    // Clear notification state after a delay to ensure toast renders
+    const timeoutId = setTimeout(() => {
+      console.log('🧹 Clearing notification after delay');
+      clearLatestNotification();
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, [latestMessageNotification, isMessagingOpen, toast, clearLatestNotification]);
 
   return (
