@@ -50,32 +50,33 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
 
   // Show toast notification for new messages
   useEffect(() => {
-    console.log('🔍 Notification effect triggered:', {
-      hasNotification: !!latestMessageNotification,
-      isMessagingOpen,
-      notification: latestMessageNotification
+    if (!latestMessageNotification || isMessagingOpen) {
+      return;
+    }
+
+    console.log('✅ Showing toast notification for:', latestMessageNotification);
+    
+    // Show toast
+    toast({
+      title: `💬 ${latestMessageNotification.senderName}`,
+      description: latestMessageNotification.content.length > 50 
+        ? latestMessageNotification.content.substring(0, 50) + '...'
+        : latestMessageNotification.content,
+      duration: 5000,
+      className: "cursor-pointer",
+      onClick: () => {
+        console.log('🖱️ Toast clicked, opening messaging panel');
+        setIsMessagingOpen(true);
+      }
     });
     
-    if (latestMessageNotification && !isMessagingOpen) {
-      console.log('✅ Showing toast notification for:', latestMessageNotification);
-      
-      // Show toast
-      toast({
-        title: `💬 ${latestMessageNotification.senderName}`,
-        description: latestMessageNotification.content.length > 50 
-          ? latestMessageNotification.content.substring(0, 50) + '...'
-          : latestMessageNotification.content,
-        duration: 5000,
-        className: "cursor-pointer",
-        onClick: () => {
-          console.log('🖱️ Toast clicked, opening messaging panel');
-          setIsMessagingOpen(true);
-        }
-      });
-      
-      // Clear immediately to prevent re-triggering
+    // Clear notification after a delay to allow the toast to render
+    const timer = setTimeout(() => {
+      console.log('🧹 Clearing notification state');
       clearLatestNotification();
-    }
+    }, 2000);
+
+    return () => clearTimeout(timer);
   }, [latestMessageNotification, isMessagingOpen, toast, clearLatestNotification]);
 
   return (
