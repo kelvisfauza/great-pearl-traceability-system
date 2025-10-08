@@ -115,6 +115,14 @@ export const useMessages = () => {
             .limit(1)
             .single();
 
+          // Calculate unread count for this conversation
+          const { count: unreadCount } = await supabase
+            .from('messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id)
+            .neq('sender_id', user.id)
+            .is('read_at', null);
+
           return {
             id: conv.id,
             name: conv.name,
@@ -124,7 +132,8 @@ export const useMessages = () => {
             lastMessage: lastMsg ? {
               ...lastMsg,
               type: lastMsg.type as 'text' | 'image' | 'file'
-            } : undefined
+            } : undefined,
+            unread_count: unreadCount || 0
           };
         })
       );
