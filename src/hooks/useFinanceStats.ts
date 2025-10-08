@@ -39,16 +39,30 @@ const fetchStats = async (): Promise<FinanceStats> => {
     .select('amount, transaction_type, status')
     .eq('status', 'confirmed');
 
+  console.log('💰 Finance Stats - All confirmed transactions:', allTransactions?.length);
+
   let totalCashIn = 0;
   let totalCashOut = 0;
   
   allTransactions?.forEach(transaction => {
     const amount = Math.abs(Number(transaction.amount));
+    console.log('📊 Transaction:', {
+      type: transaction.transaction_type,
+      rawAmount: transaction.amount,
+      absAmount: amount
+    });
+    
     if (transaction.transaction_type === 'DEPOSIT' || transaction.transaction_type === 'ADVANCE_RECOVERY') {
       totalCashIn += amount;
     } else if (transaction.transaction_type === 'PAYMENT' || transaction.transaction_type === 'EXPENSE') {
       totalCashOut += amount;
     }
+  });
+
+  console.log('💵 Cash Summary:', {
+    totalCashIn,
+    totalCashOut,
+    netBalance: totalCashIn - totalCashOut
   });
 
   const rawBalance = totalCashIn - totalCashOut;
@@ -115,8 +129,8 @@ export const useFinanceStats = () => {
   const { data: stats, isLoading: loading, refetch } = useQuery({
     queryKey: ['finance-stats'],
     queryFn: fetchStats,
-    refetchInterval: 30000, // Refetch every 30 seconds instead of 1 second
-    staleTime: 20000, // Consider data fresh for 20 seconds
+    refetchInterval: 5000, // Refetch every 5 seconds for more responsive updates
+    staleTime: 0, // Always consider data stale to ensure fresh calculations
   });
 
   return { 
