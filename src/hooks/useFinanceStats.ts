@@ -115,7 +115,8 @@ export const useFinanceStats = () => {
   const { data: stats, isLoading: loading, refetch } = useQuery({
     queryKey: ['finance-stats'],
     queryFn: fetchStats,
-    refetchInterval: 1000, // Refetch every 1 second
+    refetchInterval: 30000, // Refetch every 30 seconds instead of 1 second
+    staleTime: 20000, // Consider data fresh for 20 seconds
   });
 
   return { 
