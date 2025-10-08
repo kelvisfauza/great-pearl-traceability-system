@@ -49,18 +49,25 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
         transactions: []
       };
 
+      // Set up date boundaries
+      const startOfDay = new Date(dateStr);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(dateStr);
+      endOfDay.setHours(23, 59, 59, 999);
+
       // Fetch confirmed cash deposits for the date (using confirmed_at)
       const { data: cashDeposits } = await supabase
         .from('finance_cash_transactions')
         .select('*')
         .eq('transaction_type', 'DEPOSIT')
         .eq('status', 'confirmed')
-        .gte('confirmed_at', dateStr)
-        .lt('confirmed_at', new Date(new Date(dateStr).getTime() + 86400000).toISOString());
+        .gte('confirmed_at', startOfDay.toISOString())
+        .lte('confirmed_at', endOfDay.toISOString());
 
-      console.log('Cash deposits for date', dateStr, ':', cashDeposits);
+      console.log('💰 Cash deposits for date', dateStr, ':', cashDeposits?.length || 0);
 
       if (cashDeposits) {
+        console.log('💵 Processing', cashDeposits.length, 'cash deposits');
         cashDeposits.forEach(deposit => {
           const depositAmount = Number(deposit.amount);
           report.totalCashIn += depositAmount;
@@ -74,8 +81,38 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
             amountPaid: depositAmount,
             balance: 0,
             status: 'Confirmed',
-            date: new Date(deposit.confirmed_at).toLocaleDateString(),
+            date: new Date(deposit.confirmed_at || deposit.created_at).toLocaleDateString(),
             batchNumber: deposit.reference || 'CASH-DEPOSIT'
+          });
+        });
+      }
+
+      // Fetch advance recoveries for the date
+      const { data: advanceRecoveries } = await supabase
+        .from('finance_cash_transactions')
+        .select('*')
+        .eq('transaction_type', 'ADVANCE_RECOVERY')
+        .eq('status', 'confirmed')
+        .gte('confirmed_at', startOfDay.toISOString())
+        .lte('confirmed_at', endOfDay.toISOString());
+
+      if (advanceRecoveries) {
+        console.log('🔄 Processing', advanceRecoveries.length, 'advance recoveries');
+        advanceRecoveries.forEach(recovery => {
+          const recoveryAmount = Number(recovery.amount);
+          report.totalCashIn += recoveryAmount;
+          
+          // Add recovery to transactions list
+          report.transactions.push({
+            id: recovery.id,
+            type: 'cash_deposit',
+            supplier: recovery.notes || `Advance Recovery - ${recovery.reference}`,
+            amount: recoveryAmount,
+            amountPaid: recoveryAmount,
+            balance: 0,
+            status: 'Confirmed',
+            date: new Date(recovery.confirmed_at || recovery.created_at).toLocaleDateString(),
+            batchNumber: recovery.reference || 'ADV-RECOVERY'
           });
         });
       }
@@ -86,10 +123,11 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
         .select('*')
         .eq('transaction_type', 'PAYMENT')
         .eq('status', 'confirmed')
-        .gte('confirmed_at', dateStr)
-        .lt('confirmed_at', new Date(new Date(dateStr).getTime() + 86400000).toISOString());
+        .gte('confirmed_at', startOfDay.toISOString())
+        .lte('confirmed_at', endOfDay.toISOString());
 
       if (cashPayments) {
+        console.log('💸 Processing', cashPayments.length, 'cash payments');
         cashPayments.forEach(payment => {
           const paymentAmount = Math.abs(Number(payment.amount));
           report.totalCashOut += paymentAmount;
@@ -103,17 +141,13 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
             amountPaid: paymentAmount,
             balance: 0,
             status: 'Paid',
-            date: new Date(payment.confirmed_at).toLocaleDateString(),
+            date: new Date(payment.confirmed_at || payment.created_at).toLocaleDateString(),
             batchNumber: payment.reference || 'CASH-PMT'
           });
         });
       }
 
       // Fetch payment records from Supabase (filter by created_at timestamp, not date field)
-      const startOfDay = new Date(dateStr);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(dateStr);
-      endOfDay.setHours(23, 59, 59, 999);
 
       const { data: paymentRecords, error: paymentError } = await supabase
         .from('payment_records')
