@@ -198,7 +198,31 @@ export const usePendingCoffeePayments = () => {
         throw new Error('Failed to check available cash');
       }
 
-      const availableCash = cashBalance?.current_balance || 0;
+      let availableCash = cashBalance?.current_balance || 0;
+
+      // If finance_cash_balance is empty/zero, calculate from transactions
+      if (!cashBalance || availableCash === 0) {
+        console.log('📊 Calculating cash from transactions (balance table empty)');
+        const { data: allTransactions } = await supabase
+          .from('finance_cash_transactions')
+          .select('amount, transaction_type, status')
+          .eq('status', 'confirmed');
+
+        let totalCashIn = 0;
+        let totalCashOut = 0;
+        
+        allTransactions?.forEach(transaction => {
+          const amount = Math.abs(Number(transaction.amount));
+          if (transaction.transaction_type === 'DEPOSIT' || transaction.transaction_type === 'ADVANCE_RECOVERY') {
+            totalCashIn += amount;
+          } else if (transaction.transaction_type === 'PAYMENT' || transaction.transaction_type === 'EXPENSE') {
+            totalCashOut += amount;
+          }
+        });
+
+        availableCash = totalCashIn - totalCashOut;
+        console.log('💰 Calculated available cash:', availableCash.toLocaleString());
+      }
 
       if (availableCash < paymentData.amount) {
         throw new Error(`Insufficient funds. Available: UGX ${availableCash.toLocaleString()}, Required: UGX ${paymentData.amount.toLocaleString()}`);
@@ -355,17 +379,33 @@ export const usePendingCoffeePayments = () => {
       // Update cash balance (net effect)
       const newBalance = availableCash - netPayment;
       
-      const { error: balanceUpdateError } = await supabase
-        .from('finance_cash_balance')
-        .update({
-          current_balance: newBalance,
-          updated_by: employee?.name || 'Finance'
-        })
-        .eq('id', cashBalance.id);
+      // Update or create cash balance record
+      if (cashBalance?.id) {
+        const { error: balanceUpdateError } = await supabase
+          .from('finance_cash_balance')
+          .update({
+            current_balance: newBalance,
+            updated_by: employee?.name || 'Finance'
+          })
+          .eq('id', cashBalance.id);
 
-      if (balanceUpdateError) {
-        console.error('Error updating cash balance:', balanceUpdateError);
-        throw new Error('Failed to update cash balance');
+        if (balanceUpdateError) {
+          console.error('Error updating cash balance:', balanceUpdateError);
+          throw new Error('Failed to update cash balance');
+        }
+      } else {
+        // Create initial balance record if it doesn't exist
+        const { error: balanceCreateError } = await supabase
+          .from('finance_cash_balance')
+          .insert({
+            current_balance: newBalance,
+            updated_by: employee?.name || 'Finance'
+          });
+
+        if (balanceCreateError) {
+          console.error('Error creating cash balance:', balanceCreateError);
+          throw new Error('Failed to create cash balance record');
+        }
       }
 
       // Record transactions for proper cash flow tracking
