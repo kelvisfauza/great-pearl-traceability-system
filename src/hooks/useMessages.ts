@@ -6,11 +6,14 @@ interface Message {
   id: string;
   content: string;
   sender_id: string;
+  sender_name?: string;
   conversation_id: string;
   created_at: string;
   type: 'text' | 'image' | 'file';
   metadata?: any;
   read_at?: string;
+  reply_to_id?: string;
+  replied_message?: Message;
 }
 
 interface ConversationParticipant {
@@ -155,14 +158,29 @@ export const useMessages = () => {
       
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select(`
+          *,
+          replied_message:reply_to_id (
+            id,
+            content,
+            sender_name,
+            sender_id,
+            conversation_id,
+            created_at,
+            type
+          )
+        `)
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
       const mappedMessages = (data || []).map(msg => ({
         ...msg,
-        type: msg.type as 'text' | 'image' | 'file'
+        type: msg.type as 'text' | 'image' | 'file',
+        replied_message: msg.replied_message ? {
+          ...msg.replied_message,
+          type: msg.replied_message.type as 'text' | 'image' | 'file'
+        } as Message : undefined
       }));
       setMessages(mappedMessages);
 
@@ -194,9 +212,11 @@ export const useMessages = () => {
     }
   }, [toast]);
 
-  const sendMessage = async ({ content, conversationId }: {
+  const sendMessage = async ({ content, conversationId, replyToId, senderName }: {
     content: string;
     conversationId: string;
+    replyToId?: string;
+    senderName?: string;
   }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -207,10 +227,12 @@ export const useMessages = () => {
         id: `temp-${Date.now()}`,
         conversation_id: conversationId,
         sender_id: user.id,
+        sender_name: senderName,
         content,
         type: 'text',
         created_at: new Date().toISOString(),
-        metadata: {}
+        metadata: {},
+        reply_to_id: replyToId
       };
       
       setMessages(prev => [...prev, optimisticMessage]);
@@ -221,8 +243,10 @@ export const useMessages = () => {
         .insert({
           conversation_id: conversationId,
           sender_id: user.id,
+          sender_name: senderName,
           content,
-          type: 'text'
+          type: 'text',
+          reply_to_id: replyToId
         });
 
       if (error) throw error;
@@ -243,9 +267,10 @@ export const useMessages = () => {
     }
   };
 
-  const sendFile = async ({ file, conversationId }: {
+  const sendFile = async ({ file, conversationId, senderName }: {
     file: File;
     conversationId: string;
+    senderName?: string;
   }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -273,6 +298,7 @@ export const useMessages = () => {
         id: `temp-${Date.now()}`,
         conversation_id: conversationId,
         sender_id: user.id,
+        sender_name: senderName,
         content: publicUrl,
         type: messageType,
         created_at: new Date().toISOString(),
@@ -291,6 +317,7 @@ export const useMessages = () => {
         .insert({
           conversation_id: conversationId,
           sender_id: user.id,
+          sender_name: senderName,
           content: publicUrl,
           type: messageType,
           metadata: { 
