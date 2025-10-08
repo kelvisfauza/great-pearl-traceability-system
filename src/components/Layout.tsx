@@ -58,30 +58,23 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
     
     if (latestMessageNotification && !isMessagingOpen) {
       console.log('✅ Showing toast notification for:', latestMessageNotification);
-      const toastInstance = toast({
+      
+      // Show toast
+      toast({
         title: `💬 ${latestMessageNotification.senderName}`,
         description: latestMessageNotification.content.length > 50 
           ? latestMessageNotification.content.substring(0, 50) + '...'
           : latestMessageNotification.content,
-        duration: 8000,
+        duration: 5000,
         className: "cursor-pointer",
         onClick: () => {
           console.log('🖱️ Toast clicked, opening messaging panel');
           setIsMessagingOpen(true);
-          clearLatestNotification();
-          if (toastInstance) {
-            toastInstance.dismiss();
-          }
         }
       });
       
-      // Clear the notification state after it has been displayed
-      const clearTimer = setTimeout(() => {
-        console.log('🧹 Clearing notification after display');
-        clearLatestNotification();
-      }, 1000);
-
-      return () => clearTimeout(clearTimer);
+      // Clear immediately to prevent re-triggering
+      clearLatestNotification();
     }
   }, [latestMessageNotification, isMessagingOpen, toast, clearLatestNotification]);
 
