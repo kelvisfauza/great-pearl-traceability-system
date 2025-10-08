@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "./Navigation";
 import MessagingPanel from "./messaging/MessagingPanel";
 import ChatButton from "./messaging/ChatButton";
@@ -28,7 +28,6 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const lastShownMessageId = useRef<string | null>(null);
   const { 
     unreadCount: messagesUnreadCount, 
     latestMessageNotification,
@@ -51,40 +50,32 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
 
   // Show toast notification for new messages
   useEffect(() => {
-    if (!latestMessageNotification || isMessagingOpen) {
-      return;
-    }
-
-    // Create a unique ID for this message notification
-    const messageId = `${latestMessageNotification.conversationId}-${latestMessageNotification.timestamp}`;
-    
-    // Only show toast if we haven't shown it for this specific message
-    if (lastShownMessageId.current === messageId) {
-      return;
-    }
-
-    console.log('✅ Showing toast notification for:', latestMessageNotification);
-    
-    // Mark this message as shown
-    lastShownMessageId.current = messageId;
-    
-    // Show toast
-    toast({
-      title: `💬 ${latestMessageNotification.senderName}`,
-      description: latestMessageNotification.content.length > 50 
-        ? latestMessageNotification.content.substring(0, 50) + '...'
-        : latestMessageNotification.content,
-      duration: 5000,
-      className: "cursor-pointer",
-      onClick: () => {
-        console.log('🖱️ Toast clicked, opening messaging panel');
-        setIsMessagingOpen(true);
-        clearLatestNotification();
-      }
+    console.log('🔍 Notification effect triggered:', {
+      hasNotification: !!latestMessageNotification,
+      isMessagingOpen,
+      notification: latestMessageNotification
     });
     
-    // Clear notification state after showing
-    clearLatestNotification();
+    if (latestMessageNotification && !isMessagingOpen) {
+      console.log('✅ Showing toast notification for:', latestMessageNotification);
+      
+      // Show toast
+      toast({
+        title: `💬 ${latestMessageNotification.senderName}`,
+        description: latestMessageNotification.content.length > 50 
+          ? latestMessageNotification.content.substring(0, 50) + '...'
+          : latestMessageNotification.content,
+        duration: 5000,
+        className: "cursor-pointer",
+        onClick: () => {
+          console.log('🖱️ Toast clicked, opening messaging panel');
+          setIsMessagingOpen(true);
+        }
+      });
+      
+      // Clear immediately to prevent re-triggering
+      clearLatestNotification();
+    }
   }, [latestMessageNotification, isMessagingOpen, toast, clearLatestNotification]);
 
   return (

@@ -1670,9 +1670,7 @@ export type Database = {
           id: string
           metadata: Json | null
           read_at: string | null
-          reply_to_id: string | null
           sender_id: string | null
-          sender_name: string | null
           type: string
           updated_at: string
         }
@@ -1683,9 +1681,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           read_at?: string | null
-          reply_to_id?: string | null
           sender_id?: string | null
-          sender_name?: string | null
           type?: string
           updated_at?: string
         }
@@ -1696,9 +1692,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           read_at?: string | null
-          reply_to_id?: string | null
           sender_id?: string | null
-          sender_name?: string | null
           type?: string
           updated_at?: string
         }
@@ -1708,13 +1702,6 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_reply_to_id_fkey"
-            columns: ["reply_to_id"]
-            isOneToOne: false
-            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck, Reply } from 'lucide-react';
+import { Send, X, MessageSquarePlus, ArrowLeft, MoreVertical, Paperclip, Check, CheckCheck } from 'lucide-react';
 import { useMessages } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -15,25 +15,10 @@ interface MessagingPanelProps {
   onClose: () => void;
 }
 
-interface Message {
-  id: string;
-  content: string;
-  sender_id: string;
-  sender_name?: string;
-  conversation_id: string;
-  created_at: string;
-  type: 'text' | 'image' | 'file';
-  metadata?: any;
-  read_at?: string;
-  reply_to_id?: string;
-  replied_message?: Message;
-}
-
 const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [showUserSelector, setShowUserSelector] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const { employee } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,24 +50,13 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     try {
       await sendMessage({
         content: newMessage,
-        conversationId: selectedConversation,
-        replyToId: replyingTo?.id,
-        senderName: employee?.name
+        conversationId: selectedConversation
       });
       
       setNewMessage('');
-      setReplyingTo(null);
     } catch (error) {
       console.error('Failed to send message:', error);
     }
-  };
-
-  const handleReply = (message: Message) => {
-    setReplyingTo(message);
-  };
-
-  const cancelReply = () => {
-    setReplyingTo(null);
   };
 
   const handleSelectUser = async (userId: string) => {
@@ -140,11 +114,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     
     const file = e.target.files[0];
     try {
-      await sendFile({ 
-        file, 
-        conversationId: selectedConversation,
-        senderName: employee?.name
-      });
+      await sendFile({ file, conversationId: selectedConversation });
       e.target.value = '';
     } catch (error) {
       console.error('Failed to send file:', error);
@@ -250,7 +220,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                   </div>
                 </div>
               ) : (
-                  <div className="space-y-2 py-2">
+                <div className="space-y-2 py-2">
                   {messages.map((message, index) => {
                     const isOwnMessage = message.sender_id === employee?.authUserId;
                     const showDate = index === 0 || 
@@ -272,114 +242,78 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
                             </div>
                           </div>
                         )}
-                        
-                        {/* Show sender name for incoming messages */}
-                        {!isOwnMessage && message.sender_name && (
-                          <div className="text-xs text-muted-foreground ml-2 mb-1">
-                            {message.sender_name}
-                          </div>
-                        )}
-                        
-                        <div className="group relative">
+                        <div
+                          className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                        >
                           <div
-                            className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                            className={`max-w-[75%] rounded-lg shadow-sm ${
+                              isOwnMessage
+                                ? 'bg-primary text-primary-foreground rounded-br-none'
+                                : 'bg-card border border-border rounded-bl-none'
+                            } ${message.type === 'image' ? 'p-1' : 'px-3 py-2'}`}
                           >
-                            <div
-                              className={`max-w-[75%] rounded-lg shadow-sm ${
-                                isOwnMessage
-                                  ? 'bg-primary text-primary-foreground rounded-br-none'
-                                  : 'bg-card border border-border rounded-bl-none'
-                              } ${message.type === 'image' ? 'p-1' : 'px-3 py-2'}`}
-                            >
-                              {/* Show replied message if exists */}
-                              {message.replied_message && (
-                                <div className={`mb-2 pb-2 border-l-2 pl-2 text-xs opacity-70 ${
-                                  isOwnMessage ? 'border-primary-foreground/30' : 'border-primary/30'
+                            {message.type === 'image' ? (
+                              <div>
+                                <img 
+                                  src={message.content} 
+                                  alt="Attachment" 
+                                  className="max-w-full rounded-lg max-h-64 object-cover"
+                                />
+                                <div className={`flex items-center justify-end gap-1 mt-1 px-2 pb-1 text-[10px] ${
+                                  isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
                                 }`}>
-                                  <div className="font-semibold">{message.replied_message.sender_name || 'Someone'}</div>
-                                  <div className="truncate">
-                                    {message.replied_message.type === 'text' 
-                                      ? message.replied_message.content 
-                                      : `[${message.replied_message.type}]`}
-                                  </div>
+                                  <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+                                  {isOwnMessage && (
+                                    message.read_at ? (
+                                      <CheckCheck className="h-3 w-3 text-blue-400" />
+                                    ) : (
+                                      <Check className="h-3 w-3" />
+                                    )
+                                  )}
                                 </div>
-                              )}
-                              
-                              {message.type === 'image' ? (
-                                <div>
-                                  <img 
-                                    src={message.content} 
-                                    alt="Attachment" 
-                                    className="max-w-full rounded-lg max-h-64 object-cover"
-                                  />
-                                  <div className={`flex items-center justify-end gap-1 mt-1 px-2 pb-1 text-[10px] ${
-                                    isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
-                                  }`}>
-                                    <span>{format(new Date(message.created_at), 'HH:mm')}</span>
-                                    {isOwnMessage && (
-                                      message.read_at ? (
-                                        <CheckCheck className="h-3 w-3 text-blue-400" />
-                                      ) : (
-                                        <Check className="h-3 w-3" />
-                                      )
-                                    )}
-                                  </div>
+                              </div>
+                            ) : message.type === 'file' ? (
+                              <div>
+                                <a 
+                                  href={message.content} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 hover:underline"
+                                >
+                                  <Paperclip className="h-4 w-4" />
+                                  <span className="text-sm">{message.metadata?.fileName || 'File'}</span>
+                                </a>
+                                <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
+                                  isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
+                                }`}>
+                                  <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+                                  {isOwnMessage && (
+                                    message.read_at ? (
+                                      <CheckCheck className="h-3 w-3 text-blue-400" />
+                                    ) : (
+                                      <Check className="h-3 w-3" />
+                                    )
+                                  )}
                                 </div>
-                              ) : message.type === 'file' ? (
-                                <div>
-                                  <a 
-                                    href={message.content} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 hover:underline"
-                                  >
-                                    <Paperclip className="h-4 w-4" />
-                                    <span className="text-sm">{message.metadata?.fileName || 'File'}</span>
-                                  </a>
-                                  <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
-                                    isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
-                                  }`}>
-                                    <span>{format(new Date(message.created_at), 'HH:mm')}</span>
-                                    {isOwnMessage && (
-                                      message.read_at ? (
-                                        <CheckCheck className="h-3 w-3 text-blue-400" />
-                                      ) : (
-                                        <Check className="h-3 w-3" />
-                                      )
-                                    )}
-                                  </div>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
+                                <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
+                                  isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
+                                }`}>
+                                  <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+                                  {isOwnMessage && (
+                                    message.read_at ? (
+                                      <CheckCheck className="h-3 w-3 text-blue-400" />
+                                    ) : (
+                                      <Check className="h-3 w-3" />
+                                    )
+                                  )}
                                 </div>
-                              ) : (
-                                <>
-                                  <p className="text-sm break-words whitespace-pre-wrap">{message.content}</p>
-                                  <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${
-                                    isOwnMessage ? 'opacity-70' : 'text-muted-foreground'
-                                  }`}>
-                                    <span>{format(new Date(message.created_at), 'HH:mm')}</span>
-                                    {isOwnMessage && (
-                                      message.read_at ? (
-                                        <CheckCheck className="h-3 w-3 text-blue-400" />
-                                      ) : (
-                                        <Check className="h-3 w-3" />
-                                      )
-                                    )}
-                                  </div>
-                                </>
-                              )}
-                            </div>
+                              </>
+                            )}
                           </div>
-                          
-                          {/* Reply button - shown on hover */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`absolute top-0 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity ${
-                              isOwnMessage ? 'left-0' : 'right-0'
-                            }`}
-                            onClick={() => handleReply(message)}
-                          >
-                            <Reply className="h-3 w-3" />
-                          </Button>
                         </div>
                       </div>
                     );
@@ -391,30 +325,6 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
 
             {/* WhatsApp-style Message Input */}
             <div className="p-3 bg-muted/30 border-t">
-              {/* Reply preview */}
-              {replyingTo && (
-                <div className="mb-2 p-2 bg-muted rounded-lg flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-primary">
-                      Replying to {replyingTo.sender_name || 'Someone'}
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {replyingTo.type === 'text' 
-                        ? replyingTo.content 
-                        : `[${replyingTo.type}]`}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 flex-shrink-0"
-                    onClick={cancelReply}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-              
               <div className="flex items-center gap-2">
                 <input
                   ref={fileInputRef}
