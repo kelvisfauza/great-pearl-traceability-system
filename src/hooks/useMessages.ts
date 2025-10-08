@@ -496,13 +496,19 @@ export const useMessages = () => {
             };
             
             console.log('🔔 Setting notification:', notification);
+            console.log('🔔 About to call setLatestMessageNotification');
             setLatestMessageNotification(notification);
+            
+            // Add a small delay to ensure state is set before fetchConversations
+            setTimeout(() => {
+              console.log('🔄 Now fetching conversations after notification set');
+              fetchConversations();
+            }, 100);
           } else {
             console.log('⏭️ Skipping notification - message is from current user or already read');
+            // Still refresh conversations for unread counts
+            fetchConversations();
           }
-          
-          // Refresh conversations list
-          fetchConversations();
         }
       )
       .on(
