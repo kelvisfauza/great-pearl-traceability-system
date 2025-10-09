@@ -39,8 +39,11 @@ export const OvertimeNotification = () => {
       setAwardToClaim(pendingAward); // Save the award before closing
       console.log('🔔 Opening claim modal...');
       setShowClaimModal(true);
-      console.log('🔔 Closing notification...');
-      handleClose(); // Close the notification
+      // Close notification after a short delay to ensure modal opens first
+      setTimeout(() => {
+        console.log('🔔 Closing notification...');
+        setPendingAward(null);
+      }, 100);
     } else {
       console.error('❌ No pending award found!');
     }
