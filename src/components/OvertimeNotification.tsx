@@ -32,10 +32,17 @@ export const OvertimeNotification = () => {
   };
 
   const handleClaim = () => {
+    console.log('🔔 Claim Now clicked!');
+    console.log('🔔 Pending award:', pendingAward);
     if (pendingAward) {
+      console.log('🔔 Setting award to claim:', pendingAward);
       setAwardToClaim(pendingAward); // Save the award before closing
+      console.log('🔔 Opening claim modal...');
       setShowClaimModal(true);
+      console.log('🔔 Closing notification...');
       handleClose(); // Close the notification
+    } else {
+      console.error('❌ No pending award found!');
     }
   };
 

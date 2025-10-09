@@ -19,13 +19,23 @@ export const OvertimeClaimModal = ({ open, onOpenChange, award }: OvertimeClaimM
   
   const { claimOvertime } = useOvertimeAwards();
 
-  const handleClaim = async () => {
-    if (!award) return;
+  console.log('📋 OvertimeClaimModal - open:', open);
+  console.log('📋 OvertimeClaimModal - award:', award);
 
+  const handleClaim = async () => {
+    console.log('📋 Submit Claim clicked!');
+    console.log('📋 Award to claim:', award);
+    if (!award) {
+      console.error('❌ No award to claim!');
+      return;
+    }
+
+    console.log('📋 Claiming overtime for award ID:', award.id);
     setClaiming(true);
     const refNumber = await claimOvertime(award.id);
     setClaiming(false);
 
+    console.log('📋 Claim result - Reference number:', refNumber);
     if (refNumber) {
       setReferenceNumber(refNumber);
     }
