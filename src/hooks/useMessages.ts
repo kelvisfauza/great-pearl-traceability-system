@@ -493,6 +493,15 @@ export const useMessages = () => {
           
           console.log('📢 Calling toast NOW with:', { senderName, messagePreview });
           
+          // Play notification sound
+          try {
+            const audio = new Audio('/notification-sound.mp3');
+            audio.volume = 0.5; // Set volume to 50%
+            audio.play().catch(err => console.log('Could not play notification sound:', err));
+          } catch (err) {
+            console.log('Error playing notification sound:', err);
+          }
+          
           // Call toast directly
           toast({
             title: `💬 New message from ${senderName}`,
