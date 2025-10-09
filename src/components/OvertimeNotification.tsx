@@ -8,6 +8,7 @@ import { OvertimeClaimModal } from './OvertimeClaimModal';
 export const OvertimeNotification = () => {
   const [pendingAward, setPendingAward] = useState<OvertimeAward | null>(null);
   const [showClaimModal, setShowClaimModal] = useState(false);
+  const [awardToClaim, setAwardToClaim] = useState<OvertimeAward | null>(null);
   const { myAwards } = useOvertimeAwards();
 
   useEffect(() => {
@@ -32,8 +33,9 @@ export const OvertimeNotification = () => {
 
   const handleClaim = () => {
     if (pendingAward) {
+      setAwardToClaim(pendingAward); // Save the award before closing
       setShowClaimModal(true);
-      handleClose(); // Close the notification immediately
+      handleClose(); // Close the notification
     }
   };
 
@@ -107,8 +109,11 @@ export const OvertimeNotification = () => {
 
       <OvertimeClaimModal
         open={showClaimModal}
-        onOpenChange={setShowClaimModal}
-        award={pendingAward}
+        onOpenChange={(open) => {
+          setShowClaimModal(open);
+          if (!open) setAwardToClaim(null); // Clear when modal closes
+        }}
+        award={awardToClaim}
       />
     </>
   );
