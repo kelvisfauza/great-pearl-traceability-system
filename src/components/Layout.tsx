@@ -27,7 +27,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const { unreadCount: messagesUnreadCount } = useMessages();
+  const messagesData = useMessages();
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const { user } = useAuth();
   usePresence(user?.id);
@@ -92,7 +92,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
                   <GlobalSearch />
                   <ChatButton
                     onClick={toggleMessaging}
-                    unreadCount={messagesUnreadCount}
+                    unreadCount={messagesData.unreadCount}
                   />
                   <NotificationButton
                     onToggle={toggleNotifications}
@@ -112,6 +112,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
       <MessagingPanel 
         isOpen={isMessagingOpen}
         onClose={() => setIsMessagingOpen(false)}
+        messagesData={messagesData}
       />
       
       <NotificationPanel 

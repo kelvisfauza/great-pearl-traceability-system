@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 interface MessagingPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  messagesData: ReturnType<typeof useMessages>;
 }
 
 interface Message {
@@ -29,7 +30,7 @@ interface Message {
   replied_message?: Message;
 }
 
-const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
+const MessagingPanel = ({ isOpen, onClose, messagesData }: MessagingPanelProps) => {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [showUserSelector, setShowUserSelector] = useState(false);
@@ -47,7 +48,7 @@ const MessagingPanel = ({ isOpen, onClose }: MessagingPanelProps) => {
     sendFile,
     fetchMessages,
     createConversation
-  } = useMessages();
+  } = messagesData;
 
   useEffect(() => {
     if (selectedConversation) {
