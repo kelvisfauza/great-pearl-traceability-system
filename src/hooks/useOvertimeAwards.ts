@@ -163,31 +163,53 @@ export const useOvertimeAwards = () => {
 
   const claimOvertime = async (awardId: string) => {
     try {
+      console.log('🎯 Claiming overtime award:', awardId);
+      console.log('🎯 Current employee:', employee);
+      
       // Generate reference number
       const refNumber = `OT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-      const { error } = await supabase
+      console.log('🎯 Generated reference:', refNumber);
+      console.log('🎯 Attempting database update...');
+
+      const { data, error } = await supabase
         .from('overtime_awards')
         .update({
           status: 'claimed',
           reference_number: refNumber,
           claimed_at: new Date().toISOString()
         })
-        .eq('id', awardId);
+        .eq('id', awardId)
+        .select()
+        .single();
 
-      if (error) throw error;
+      console.log('🎯 Update result:', { data, error });
+
+      if (error) {
+        console.error('🎯 Database error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.error('🎯 No data returned - likely RLS policy blocking update');
+        throw new Error('Update failed - you may not have permission to claim this award');
+      }
 
       toast({
         title: "Overtime Claimed",
         description: `Your claim reference: ${refNumber}`
       });
 
+      // Refresh data
+      fetchAllAwards();
+      fetchMyAwards();
+
       return refNumber;
-    } catch (error) {
-      console.error('Error claiming overtime:', error);
+    } catch (error: any) {
+      console.error('🎯 Error claiming overtime:', error);
       toast({
         title: "Error",
-        description: "Failed to claim overtime",
+        description: error.message || "Failed to claim overtime",
         variant: "destructive"
       });
       return null;
