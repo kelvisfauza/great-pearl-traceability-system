@@ -452,10 +452,12 @@ export const useMessages = () => {
           table: 'messages'
         },
         async (payload) => {
-          console.log('🔔 NEW MESSAGE RECEIVED!');
+          console.log('🔔🔔🔔 NEW MESSAGE RECEIVED! Payload:', payload);
           const newMessage = payload.new as Message;
+          console.log('📩 Message details:', newMessage);
           
           const { data: { user } } = await supabase.auth.getUser();
+          console.log('👤 Current user:', user?.id);
           
           // Update messages state
           setMessages(prev => {
@@ -466,37 +468,42 @@ export const useMessages = () => {
             return filtered;
           });
           
-          // Show popup for all new unread messages (including own for testing)
-          if (!newMessage.read_at) {
-            console.log('✅ Showing popup notification!');
-            
-            // Fetch sender info
-            const { data: senderEmployee } = await supabase
-              .from('employees')
-              .select('name')
-              .eq('auth_user_id', newMessage.sender_id)
-              .single();
-            
-            const senderName = senderEmployee?.name || 'Someone';
-            const messagePreview = newMessage.content?.length > 50 
-              ? newMessage.content.substring(0, 50) + '...'
-              : newMessage.content || '📎 Attachment';
-            
-            // SHOW TOAST DIRECTLY HERE
+          // ALWAYS show popup for testing (remove read_at check)
+          console.log('✅ Attempting to show popup notification!');
+          
+          // Fetch sender info
+          const { data: senderEmployee } = await supabase
+            .from('employees')
+            .select('name')
+            .eq('auth_user_id', newMessage.sender_id)
+            .single();
+          
+          console.log('👥 Sender employee data:', senderEmployee);
+          
+          const senderName = senderEmployee?.name || 'Someone';
+          const messagePreview = newMessage.content?.length > 50 
+            ? newMessage.content.substring(0, 50) + '...'
+            : newMessage.content || '📎 Attachment';
+          
+          console.log('🎯 About to call toast with:', { senderName, messagePreview });
+          
+          // SHOW TOAST DIRECTLY HERE
+          try {
             toast({
               title: `💬 ${senderName}`,
               description: messagePreview,
               duration: 8000,
             });
-            
-            console.log('🎉 Toast shown for message from:', senderName);
-            
-            // Update unread count
-            setUnreadCount(prev => prev + 1);
-            
-            // Refresh conversations
-            setTimeout(() => fetchConversations(), 100);
+            console.log('🎉 Toast called successfully!');
+          } catch (error) {
+            console.error('❌ Error calling toast:', error);
           }
+          
+          // Update unread count
+          setUnreadCount(prev => prev + 1);
+          
+          // Refresh conversations
+          setTimeout(() => fetchConversations(), 100);
         }
       )
       .on(
