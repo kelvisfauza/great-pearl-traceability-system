@@ -497,7 +497,7 @@ export const useMessages = () => {
           toast({
             title: `💬 New message from ${senderName}`,
             description: messagePreview,
-            duration: 5000,
+            duration: 15000,
           });
           
           console.log('✅ Toast called successfully!');
