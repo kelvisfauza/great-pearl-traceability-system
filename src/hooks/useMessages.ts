@@ -457,6 +457,15 @@ export const useMessages = () => {
           console.log('Message content:', newMessage.content);
           console.log('Message sender:', newMessage.sender_id);
           
+          // Get current user
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          // Only show popup if message is NOT from current user
+          if (user && newMessage.sender_id === user.id) {
+            console.log('⏭️ Skipping popup - message is from current user');
+            return;
+          }
+          
           // Update messages state
           setMessages(prev => {
             const filtered = prev.filter(m => !m.id.startsWith('temp-'));
@@ -488,7 +497,7 @@ export const useMessages = () => {
           toast({
             title: `💬 New message from ${senderName}`,
             description: messagePreview,
-            duration: 8000,
+            duration: 5000,
           });
           
           console.log('✅ Toast called successfully!');
