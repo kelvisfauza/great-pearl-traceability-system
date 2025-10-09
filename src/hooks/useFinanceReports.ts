@@ -148,11 +148,19 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
       }
 
       // Fetch payment records from Supabase (filter by payment date field)
+      console.log('🔍 Looking for payment records with date:', dateStr);
+      
       const { data: paymentRecords, error: paymentError } = await supabase
         .from('payment_records')
         .select('*')
         .eq('date', dateStr)
         .eq('status', 'Paid');
+
+      console.log('📊 Payment records response:', { 
+        count: paymentRecords?.length || 0, 
+        error: paymentError,
+        sample: paymentRecords?.[0] 
+      });
 
       if (paymentError) {
         console.error('Error fetching payment records:', paymentError);
