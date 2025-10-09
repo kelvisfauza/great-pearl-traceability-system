@@ -438,12 +438,12 @@ export const useMessages = () => {
     };
   }, [fetchConversations]);
 
-  // Set up real-time subscription
+  // Set up real-time subscription - CRITICAL: This must work!
   useEffect(() => {
-    console.log('📡 Setting up real-time subscription for messages');
+    console.log('🔥🔥🔥 SETTING UP REALTIME SUBSCRIPTION NOW!');
     
-    const channel = supabase
-      .channel('messages-realtime-channel')
+    const messageChannel = supabase
+      .channel('messages-changes-' + Date.now()) // Unique channel name
       .on(
         'postgres_changes',
         {
@@ -452,12 +452,10 @@ export const useMessages = () => {
           table: 'messages'
         },
         async (payload) => {
-          console.log('🔔🔔🔔 NEW MESSAGE RECEIVED! Payload:', payload);
+          console.log('🎉🎉🎉 NEW MESSAGE INSERT DETECTED!', payload);
           const newMessage = payload.new as Message;
-          console.log('📩 Message details:', newMessage);
-          
-          const { data: { user } } = await supabase.auth.getUser();
-          console.log('👤 Current user:', user?.id);
+          console.log('Message content:', newMessage.content);
+          console.log('Message sender:', newMessage.sender_id);
           
           // Update messages state
           setMessages(prev => {
@@ -468,8 +466,7 @@ export const useMessages = () => {
             return filtered;
           });
           
-          // ALWAYS show popup for testing (remove read_at check)
-          console.log('✅ Attempting to show popup notification!');
+          console.log('🔔 Preparing to show toast notification...');
           
           // Fetch sender info
           const { data: senderEmployee } = await supabase
@@ -478,32 +475,35 @@ export const useMessages = () => {
             .eq('auth_user_id', newMessage.sender_id)
             .single();
           
-          console.log('👥 Sender employee data:', senderEmployee);
+          console.log('👤 Sender data fetched:', senderEmployee);
           
           const senderName = senderEmployee?.name || 'Someone';
           const messagePreview = newMessage.content?.length > 50 
             ? newMessage.content.substring(0, 50) + '...'
             : newMessage.content || '📎 Attachment';
           
-          console.log('🎯 About to call toast with:', { senderName, messagePreview });
+          console.log('📢 Calling toast NOW with:', { senderName, messagePreview });
           
-          // SHOW TOAST DIRECTLY HERE
-          try {
-            toast({
-              title: `💬 ${senderName}`,
-              description: messagePreview,
-              duration: 8000,
-            });
-            console.log('🎉 Toast called successfully!');
-          } catch (error) {
-            console.error('❌ Error calling toast:', error);
-          }
+          // Call toast directly
+          toast({
+            title: `💬 New message from ${senderName}`,
+            description: messagePreview,
+            duration: 8000,
+          });
+          
+          console.log('✅ Toast called successfully!');
           
           // Update unread count
-          setUnreadCount(prev => prev + 1);
+          setUnreadCount(prev => {
+            console.log('Updating unread count from', prev, 'to', prev + 1);
+            return prev + 1;
+          });
           
           // Refresh conversations
-          setTimeout(() => fetchConversations(), 100);
+          setTimeout(() => {
+            console.log('Refreshing conversations...');
+            fetchConversations();
+          }, 100);
         }
       )
       .on(
@@ -514,6 +514,7 @@ export const useMessages = () => {
           table: 'messages'
         },
         (payload) => {
+          console.log('📝 Message updated:', payload);
           const updatedMessage = payload.new as Message;
           setMessages(prev => prev.map(m => 
             m.id === updatedMessage.id ? updatedMessage : m
@@ -521,17 +522,23 @@ export const useMessages = () => {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Subscription status:', status);
+        console.log('🌟 SUBSCRIPTION STATUS CHANGED:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to messages!');
+          console.log('✅✅✅ SUCCESSFULLY SUBSCRIBED TO REALTIME MESSAGES!');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ SUBSCRIPTION ERROR!');
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏰ SUBSCRIPTION TIMED OUT!');
         }
       });
 
+    console.log('📡 Subscription setup complete, channel created:', messageChannel);
+
     return () => {
       console.log('🧹 Cleaning up messages subscription');
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messageChannel);
     };
-  }, [toast, fetchConversations]);
+  }, []); // Empty deps - only run once!
 
   return {
     conversations,
