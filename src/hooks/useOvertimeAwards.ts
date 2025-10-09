@@ -84,6 +84,10 @@ export const useOvertimeAwards = () => {
   };
 
   useEffect(() => {
+    console.log('useOvertimeAwards useEffect triggered');
+    console.log('Employee email:', employee?.email);
+    console.log('Employee authUserId:', employee?.authUserId);
+    
     fetchAllAwards();
     fetchMyAwards();
 
@@ -98,6 +102,7 @@ export const useOvertimeAwards = () => {
           table: 'overtime_awards'
         },
         () => {
+          console.log('Realtime update detected for overtime_awards');
           fetchAllAwards();
           fetchMyAwards();
         }
