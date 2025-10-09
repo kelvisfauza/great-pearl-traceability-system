@@ -2128,6 +2128,71 @@ export type Database = {
         }
         Relationships: []
       }
+      overtime_awards: {
+        Row: {
+          claimed_at: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          department: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          hours: number
+          id: string
+          minutes: number
+          notes: string | null
+          reference_number: string | null
+          status: string
+          total_amount: number
+        }
+        Insert: {
+          claimed_at?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by: string
+          department: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          hours?: number
+          id?: string
+          minutes?: number
+          notes?: string | null
+          reference_number?: string | null
+          status?: string
+          total_amount: number
+        }
+        Update: {
+          claimed_at?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string
+          department?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          hours?: number
+          id?: string
+          minutes?: number
+          notes?: string | null
+          reference_number?: string | null
+          status?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overtime_awards_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_records: {
         Row: {
           amount: number

@@ -41,6 +41,8 @@ import CompanyEmployeesList from '@/components/hr/CompanyEmployeesList';
 import CompanyEmployeesStats from '@/components/hr/CompanyEmployeesStats';
 import AddCompanyEmployeeModal from '@/components/hr/AddCompanyEmployeeModal';
 import PayslipGenerator from '@/components/hr/PayslipGenerator';
+import { OvertimeAwardModal } from '@/components/admin/OvertimeAwardModal';
+import { OvertimeClaimsManager } from '@/components/admin/OvertimeClaimsManager';
 
 const HumanResources = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,6 +55,7 @@ const HumanResources = () => {
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [showCompanyEmployeeModal, setShowCompanyEmployeeModal] = useState(false);
   const [selectedCompanyEmployee, setSelectedCompanyEmployee] = useState<any>(null);
+  const [showOvertimeModal, setShowOvertimeModal] = useState(false);
 
   const { 
     employees, 
@@ -184,7 +187,7 @@ const HumanResources = () => {
         </div>
 
         <Tabs defaultValue="employees" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-10">
+          <TabsList className="grid w-full grid-cols-11">
             <TabsTrigger value="employees">System Users</TabsTrigger>
             <TabsTrigger value="company-employees">Company Employees</TabsTrigger>
             <TabsTrigger value="payslips">Payslips</TabsTrigger>
@@ -195,6 +198,7 @@ const HumanResources = () => {
             <TabsTrigger value="requests">Registration Requests</TabsTrigger>
             <TabsTrigger value="payments">Salary Payments</TabsTrigger>
             <TabsTrigger value="my-salary">My Salary Requests</TabsTrigger>
+            <TabsTrigger value="overtime">Overtime</TabsTrigger>
           </TabsList>
 
           <TabsContent value="employees" className="space-y-6">
@@ -316,6 +320,25 @@ const HumanResources = () => {
           <TabsContent value="my-salary">
             <MySalaryRequests employees={employees} />
           </TabsContent>
+
+          <TabsContent value="overtime" className="space-y-6">
+            {isAdmin() && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Overtime Management</span>
+                    <Button onClick={() => setShowOvertimeModal(true)}>
+                      Award Overtime
+                    </Button>
+                  </CardTitle>
+                  <CardDescription>
+                    Award overtime to employees and manage claims
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+            <OvertimeClaimsManager />
+          </TabsContent>
         </Tabs>
 
         <AddEmployeeModal
@@ -351,6 +374,11 @@ const HumanResources = () => {
           }}
           onSubmit={handleSaveCompanyEmployee}
           employee={selectedCompanyEmployee}
+        />
+
+        <OvertimeAwardModal
+          open={showOvertimeModal}
+          onOpenChange={setShowOvertimeModal}
         />
       </div>
     </Layout>

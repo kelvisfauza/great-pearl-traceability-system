@@ -32,6 +32,7 @@ import Expenses from "./pages/Expenses";
 import EUDRDocumentationPage from "./pages/EUDRDocumentation";
 import Suppliers from "./pages/Suppliers";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
+import { OvertimeNotification } from "./components/OvertimeNotification";
 
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -65,6 +66,7 @@ const App: React.FC = () => {
         {/* Temporarily disabled console monitor to fix auth issues */}
         {/* <ConsoleMonitorInitializer /> */}
         <GlobalActivityTracker />
+        <OvertimeNotification />
         <PriceProvider>
           <TooltipProvider>
             <Toaster />
