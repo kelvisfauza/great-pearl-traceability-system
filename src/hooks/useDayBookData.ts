@@ -82,16 +82,18 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
         report.openingBalance = transactionsBeforeToday.reduce((sum, t) => sum + Number(t.amount), 0);
       }
 
-      // Fetch all cash transactions for the day
+      // Fetch all cash transactions for the day (by confirmed date)
+      console.log('🔍 Day Book - Looking for transactions on date:', dateStr);
+      
       const { data: cashTransactions } = await supabase
         .from('finance_cash_transactions')
         .select('*')
         .eq('status', 'confirmed')
         .gte('confirmed_at', startOfDay.toISOString())
-        .lt('confirmed_at', endOfDay.toISOString())
+        .lte('confirmed_at', endOfDay.toISOString())
         .order('confirmed_at', { ascending: true });
 
-      console.log('📊 Day Book - Cash Transactions for', dateStr, ':', cashTransactions);
+      console.log('📊 Day Book - Cash Transactions found:', cashTransactions?.length || 0, cashTransactions);
 
       if (cashTransactions) {
         cashTransactions.forEach(transaction => {
@@ -165,6 +167,35 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
           reference: advance.supplier_code || doc.id
         });
       });
+
+      // Fetch payment records from payment_records table for the day
+      const { data: paymentRecords } = await supabase
+        .from('payment_records')
+        .select('*')
+        .eq('date', dateStr)
+        .eq('status', 'Paid');
+
+      console.log('💰 Day Book - Payment Records found:', paymentRecords?.length || 0, paymentRecords);
+
+      if (paymentRecords) {
+        paymentRecords.forEach(payment => {
+          const amount = Number(payment.amount) || 0;
+          
+          report.totalCashOut += amount;
+          report.cashOutTransactions.push({
+            type: 'Coffee Payment',
+            description: `Payment to ${payment.supplier}`,
+            amount: amount,
+            reference: payment.batch_number || ''
+          });
+
+          report.suppliersPaid.push({
+            supplier: payment.supplier,
+            amount: amount,
+            batchNumber: payment.batch_number || '',
+          });
+        });
+      }
 
       // Fetch overtime/money requests (salary advances) for the day
       const { data: moneyRequests } = await supabase
