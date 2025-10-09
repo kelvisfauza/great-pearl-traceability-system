@@ -3,14 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { CardDescription } from '@/components/ui/card';
 import { useOvertimeAwards } from '@/hooks/useOvertimeAwards';
 import { Search, Clock, CheckCircle, XCircle, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 
 export const OvertimeClaimsManager = () => {
   const [searchRef, setSearchRef] = useState('');
+  const [searchEmployee, setSearchEmployee] = useState('');
   const { awards, completeOvertimeClaim, searchByReference, loading } = useOvertimeAwards();
   const [searchResult, setSearchResult] = useState<any>(null);
+  const [employeeHistory, setEmployeeHistory] = useState<any[]>([]);
 
   console.log('🔄 OvertimeClaimsManager rendered');
   console.log('🔄 Total awards:', awards?.length);
@@ -37,6 +40,23 @@ export const OvertimeClaimsManager = () => {
     setSearchRef('');
   };
 
+  const handleEmployeeSearch = () => {
+    if (!searchEmployee.trim()) {
+      setEmployeeHistory([]);
+      return;
+    }
+    
+    const filtered = awards.filter(award => 
+      award.employee_name.toLowerCase().includes(searchEmployee.toLowerCase()) ||
+      award.employee_email.toLowerCase().includes(searchEmployee.toLowerCase())
+    );
+    setEmployeeHistory(filtered);
+  };
+
+  const getTotalAwarded = (employeeAwards: any[]) => {
+    return employeeAwards.reduce((sum, award) => sum + award.total_amount, 0);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -52,6 +72,90 @@ export const OvertimeClaimsManager = () => {
 
   return (
     <div className="space-y-6">
+      {/* Employee Overtime History - Track to Prevent Double Awards */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            Track Employee Overtime History
+          </CardTitle>
+          <CardDescription>
+            Search to see all overtime awarded to an employee and prevent double-awarding
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Search by employee name or email"
+              value={searchEmployee}
+              onChange={(e) => setSearchEmployee(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleEmployeeSearch()}
+              className="flex-1"
+            />
+            <Button onClick={handleEmployeeSearch}>Search</Button>
+          </div>
+
+          {employeeHistory.length > 0 && (
+            <div className="space-y-4">
+              <div className="bg-primary/5 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Employee</p>
+                    <p className="font-semibold">{employeeHistory[0].employee_name}</p>
+                    <p className="text-xs text-muted-foreground">{employeeHistory[0].employee_email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Overtime Awarded</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {getTotalAwarded(employeeHistory).toLocaleString()} UGX
+                    </p>
+                    <p className="text-xs text-muted-foreground">{employeeHistory.length} award(s)</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Award History:</p>
+                {employeeHistory.map((award) => (
+                  <div key={award.id} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(award.status)}
+                        <span className="text-sm">
+                          {award.hours}h {award.minutes}m
+                        </span>
+                      </div>
+                      <span className="font-semibold text-green-600">
+                        {award.total_amount.toLocaleString()} UGX
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>Awarded: {format(new Date(award.created_at), 'PPp')}</p>
+                      {award.claimed_at && (
+                        <p>Claimed: {format(new Date(award.claimed_at), 'PPp')}</p>
+                      )}
+                      {award.completed_at && (
+                        <p>Completed: {format(new Date(award.completed_at), 'PPp')} by {award.completed_by}</p>
+                      )}
+                      {award.reference_number && (
+                        <p>Ref: <span className="font-mono">{award.reference_number}</span></p>
+                      )}
+                      {award.notes && <p className="italic">Note: {award.notes}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {searchEmployee && employeeHistory.length === 0 && (
+            <p className="text-center text-muted-foreground py-4">
+              No overtime awards found for this employee
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Search by Reference */}
       <Card>
         <CardHeader>
