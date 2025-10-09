@@ -17,6 +17,9 @@ export const OvertimeNotification = () => {
     if (newPendingAwards.length > 0) {
       // Show the most recent one
       setPendingAward(newPendingAwards[0]);
+    } else {
+      // Clear pending award if there are none
+      setPendingAward(null);
     }
   }, [myAwards]);
 
@@ -25,8 +28,10 @@ export const OvertimeNotification = () => {
   };
 
   const handleClaim = () => {
-    setShowClaimModal(true);
-    setPendingAward(null);
+    if (pendingAward) {
+      setShowClaimModal(true);
+      handleClose(); // Close the notification immediately
+    }
   };
 
   if (!pendingAward) return null;
