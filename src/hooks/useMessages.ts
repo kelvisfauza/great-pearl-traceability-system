@@ -41,9 +41,6 @@ interface LatestMessageNotification {
 }
 
 export const useMessages = () => {
-  console.log('🎬🎬🎬 useMessages HOOK CALLED! 🎬🎬🎬');
-  console.log('🎬 Timestamp:', new Date().toISOString());
-  
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -443,102 +440,139 @@ export const useMessages = () => {
 
   // Set up real-time subscription
   useEffect(() => {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🚀🚀🚀 REALTIME SUBSCRIPTION EFFECT STARTING! 🚀🚀🚀');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📡 Timestamp:', new Date().toISOString());
-    console.log('📡 Creating Supabase channel...');
+    console.log('📡 Setting up real-time subscription for messages');
+    console.log('📡 Subscription setup at:', new Date().toISOString());
     
-    try {
-      const channel = supabase
-        .channel('messages-realtime-' + Date.now()) // Unique channel name
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages'
-          },
-          async (payload) => {
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('🔔🔔🔔 NEW MESSAGE VIA REALTIME! 🔔🔔🔔');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('🔔 Payload:', JSON.stringify(payload, null, 2));
-            
-            const newMessage = payload.new as Message;
-            const { data: { user } } = await supabase.auth.getUser();
-            
-            console.log('👤 Current user:', user?.id);
-            console.log('📧 Message sender:', newMessage.sender_id);
-            console.log('🔍 Is own message?', user?.id === newMessage.sender_id);
-            
-            // Update messages state
-            setMessages(prev => {
-              const filtered = prev.filter(m => !m.id.startsWith('temp-'));
-              if (!filtered.find(m => m.id === newMessage.id)) {
-                return [...filtered, newMessage];
-              }
-              return filtered;
+    const channel = supabase
+      .channel('messages-realtime-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages'
+        },
+        async (payload) => {
+          console.log('🔔🔔🔔 NEW MESSAGE RECEIVED VIA WEBSOCKET! 🔔🔔🔔');
+          console.log('🔔 Timestamp:', new Date().toISOString());
+          console.log('🔔 Full payload:', JSON.stringify(payload, null, 2));
+          const newMessage = payload.new as Message;
+          console.log('📧 Message details:', {
+            id: newMessage.id,
+            content: newMessage.content,
+            sender_id: newMessage.sender_id,
+            conversation_id: newMessage.conversation_id,
+            created_at: newMessage.created_at,
+            read_at: newMessage.read_at
+          });
+          
+          const { data: { user } } = await supabase.auth.getUser();
+          console.log('👤 Current user ID:', user?.id);
+          console.log('👤 Message sender ID:', newMessage.sender_id);
+          console.log('🔍 Is same user?', user?.id === newMessage.sender_id);
+          
+          // Update messages if viewing this conversation
+          setMessages(prev => {
+            const filtered = prev.filter(m => !m.id.startsWith('temp-'));
+            if (!filtered.find(m => m.id === newMessage.id)) {
+              return [...filtered, newMessage];
+            }
+            return filtered;
+          });
+          
+          // If message is not from current user, show notification and increment unread count
+          // TEST MODE: Show notifications for all messages (including own messages) for testing
+          const TEST_MODE = true; // Set to false in production
+          
+          console.log('🧪 TEST_MODE enabled:', TEST_MODE);
+          console.log('🔍 Should show notification?', !newMessage.read_at && (TEST_MODE || newMessage.sender_id !== user?.id));
+          
+          if (user && !newMessage.read_at && (TEST_MODE || newMessage.sender_id !== user.id)) {
+            console.log('✅ CONDITIONS MET - SHOWING NOTIFICATION!');
+            setUnreadCount(prev => {
+              const newCount = prev + 1;
+              console.log('📊 Updated unread count:', newCount);
+              return newCount;
             });
             
-            // Show notification for messages from other users
-            if (user && newMessage.sender_id !== user.id && !newMessage.read_at) {
-              console.log('✅ Showing notification for message from another user!');
-              
-              // Fetch sender name
-              const { data: senderEmployee } = await supabase
-                .from('employees')
-                .select('name')
-                .eq('auth_user_id', newMessage.sender_id)
-                .single();
-              
-              const notification = {
-                content: newMessage.content || 'Sent an attachment',
-                senderName: senderEmployee?.name || 'Someone',
-                conversationId: newMessage.conversation_id,
-                timestamp: newMessage.created_at
-              };
-              
-              console.log('🔔 Setting notification:', notification);
-              setLatestMessageNotification(notification);
-              
-              // Update unread count
-              setUnreadCount(prev => prev + 1);
-              
-              // Refresh conversations
-              setTimeout(() => fetchConversations(), 100);
-            }
+            // Fetch sender info for notification
+            const { data: senderEmployee } = await supabase
+              .from('employees')
+              .select('name')
+              .eq('auth_user_id', newMessage.sender_id)
+              .single();
             
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('👤 Sender employee:', senderEmployee);
+            
+            const notification = {
+              content: newMessage.content || 'Sent an attachment',
+              senderName: senderEmployee?.name || 'Someone',
+              conversationId: newMessage.conversation_id,
+              timestamp: newMessage.created_at
+            };
+            
+            console.log('🔔 Setting notification:', notification);
+            console.log('🔔 About to call setLatestMessageNotification');
+            setLatestMessageNotification(notification);
+            
+            // Add a small delay to ensure state is set before fetchConversations
+            setTimeout(() => {
+              console.log('🔄 Now fetching conversations after notification set');
+              fetchConversations();
+            }, 100);
+          } else {
+            console.log('⏭️ Skipping notification - message is from current user or already read');
+            // Still refresh conversations for unread counts
+            fetchConversations();
           }
-        )
-        .subscribe((status, err) => {
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log('📡📡📡 SUBSCRIPTION STATUS! 📡📡📡');
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log('📡 Status:', status);
-          console.log('📡 Error:', err);
-          console.log('📡 Timestamp:', new Date().toISOString());
-          
-          if (status === 'SUBSCRIBED') {
-            console.log('✅✅✅ REALTIME SUBSCRIPTION ACTIVE! ✅✅✅');
-          } else if (status === 'CHANNEL_ERROR') {
-            console.error('❌❌❌ SUBSCRIPTION ERROR!', err);
-          } else if (status === 'TIMED_OUT') {
-            console.error('⏱️ SUBSCRIPTION TIMED OUT!');
-          }
-          
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload) => {
+          console.log('📝 Message updated:', payload);
+          const updatedMessage = payload.new as Message;
+          console.log('🔄 Updated message read_at:', updatedMessage.read_at);
+          setMessages(prev => {
+            const updated = prev.map(m => {
+              if (m.id === updatedMessage.id) {
+                console.log('✅ Updating message in state:', m.id, 'read_at:', updatedMessage.read_at);
+                return updatedMessage;
+              }
+              return m;
+            });
+            return updated;
+          });
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('📡 Messages channel subscription status:', status);
+        console.log('📡 Status timestamp:', new Date().toISOString());
+        if (err) {
+          console.error('❌ Subscription error details:', err);
+        }
+        if (status === 'SUBSCRIBED') {
+          console.log('✅✅✅ Successfully subscribed to messages channel! ✅✅✅');
+          console.log('🎧 Now listening for INSERT and UPDATE events on messages table');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌❌❌ Error subscribing to messages channel');
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️⏱️⏱️ Messages channel subscription timed out');
+        } else if (status === 'CLOSED') {
+          console.warn('🔒 Messages channel subscription closed');
+        }
+      });
 
-      return () => {
-        console.log('🧹 Cleaning up realtime subscription');
-        supabase.removeChannel(channel);
-      };
-    } catch (error) {
-      console.error('❌❌❌ ERROR SETTING UP REALTIME:', error);
-    }
-  }, [fetchConversations]);
+    return () => {
+      console.log('🧹 Cleaning up messages subscription');
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return {
     conversations,
