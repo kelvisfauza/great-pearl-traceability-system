@@ -104,10 +104,25 @@ export const OvertimeNotification = () => {
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleClose} className="flex-1">
+            <Button 
+              variant="outline" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClose();
+              }} 
+              className="flex-1"
+            >
               Later
             </Button>
-            <Button onClick={handleClaim} className="flex-1">
+            <Button 
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleClaim();
+              }} 
+              className="flex-1"
+              type="button"
+            >
               Claim Now
             </Button>
           </div>
