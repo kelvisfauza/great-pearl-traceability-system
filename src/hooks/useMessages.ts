@@ -495,11 +495,14 @@ export const useMessages = () => {
           
           // Play notification sound
           try {
+            console.log('🔊 Attempting to play notification sound...');
             const audio = new Audio('/notification-sound.mp3');
-            audio.volume = 0.5; // Set volume to 50%
-            audio.play().catch(err => console.log('Could not play notification sound:', err));
+            audio.volume = 0.8; // Set volume to 80%
+            audio.play()
+              .then(() => console.log('✅ Notification sound played successfully!'))
+              .catch(err => console.error('❌ Could not play notification sound:', err));
           } catch (err) {
-            console.log('Error playing notification sound:', err);
+            console.error('❌ Error creating audio element:', err);
           }
           
           // Call toast directly
