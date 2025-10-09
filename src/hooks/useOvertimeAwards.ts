@@ -31,12 +31,17 @@ export const useOvertimeAwards = () => {
 
   const fetchAllAwards = async () => {
     try {
+      console.log('Fetching all overtime awards...');
       const { data, error } = await supabase
         .from('overtime_awards')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching all awards:', error);
+        throw error;
+      }
+      console.log('All awards fetched:', data);
       setAwards((data || []) as OvertimeAward[]);
     } catch (error) {
       console.error('Error fetching overtime awards:', error);
@@ -44,16 +49,24 @@ export const useOvertimeAwards = () => {
   };
 
   const fetchMyAwards = async () => {
-    if (!employee?.email) return;
+    if (!employee?.email) {
+      console.log('No employee email, skipping my awards fetch');
+      return;
+    }
     
     try {
+      console.log('Fetching my overtime awards for:', employee.email);
       const { data, error } = await supabase
         .from('overtime_awards')
         .select('*')
         .eq('employee_email', employee.email)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching my awards:', error);
+        throw error;
+      }
+      console.log('My awards fetched:', data);
       setMyAwards((data || []) as OvertimeAward[]);
     } catch (error) {
       console.error('Error fetching my overtime awards:', error);

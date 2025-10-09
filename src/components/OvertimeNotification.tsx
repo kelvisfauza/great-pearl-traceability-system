@@ -11,11 +11,14 @@ export const OvertimeNotification = () => {
   const { myAwards } = useOvertimeAwards();
 
   useEffect(() => {
+    console.log('OvertimeNotification - myAwards updated:', myAwards);
     // Check for new pending awards
     const newPendingAwards = myAwards.filter(award => award.status === 'pending');
+    console.log('Pending awards found:', newPendingAwards);
     
     if (newPendingAwards.length > 0) {
       // Show the most recent one
+      console.log('Setting pending award:', newPendingAwards[0]);
       setPendingAward(newPendingAwards[0]);
     } else {
       // Clear pending award if there are none
