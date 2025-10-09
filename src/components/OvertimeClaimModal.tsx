@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useOvertimeAwards, OvertimeAward } from '@/hooks/useOvertimeAwards';
-import { Copy, Check, FileText } from 'lucide-react';
+import { Copy, Check, FileText, Printer } from 'lucide-react';
 
 interface OvertimeClaimModalProps {
   open: boolean;
@@ -37,6 +37,121 @@ export const OvertimeClaimModal = ({ open, onOpenChange, award }: OvertimeClaimM
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handlePrint = () => {
+    if (!referenceNumber || !award) return;
+
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (!printWindow) return;
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Overtime Claim Reference</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 40px;
+              max-width: 600px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #333;
+              padding-bottom: 20px;
+            }
+            .header h1 {
+              margin: 0;
+              color: #333;
+            }
+            .content {
+              margin: 30px 0;
+            }
+            .row {
+              display: flex;
+              justify-content: space-between;
+              padding: 12px 0;
+              border-bottom: 1px solid #eee;
+            }
+            .label {
+              font-weight: bold;
+              color: #666;
+            }
+            .value {
+              color: #333;
+            }
+            .reference {
+              background: #f5f5f5;
+              padding: 20px;
+              margin: 30px 0;
+              text-align: center;
+              border-radius: 8px;
+              border: 2px dashed #999;
+            }
+            .reference-number {
+              font-size: 24px;
+              font-weight: bold;
+              font-family: 'Courier New', monospace;
+              color: #000;
+              letter-spacing: 2px;
+            }
+            .footer {
+              margin-top: 40px;
+              text-align: center;
+              color: #666;
+              font-size: 12px;
+            }
+            @media print {
+              body {
+                padding: 20px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Overtime Claim Receipt</h1>
+          </div>
+          
+          <div class="content">
+            <div class="row">
+              <span class="label">Employee Name:</span>
+              <span class="value">${award.employee_name}</span>
+            </div>
+            <div class="row">
+              <span class="label">Department:</span>
+              <span class="value">${award.department}</span>
+            </div>
+            <div class="row">
+              <span class="label">Overtime Hours:</span>
+              <span class="value">${award.hours}h ${award.minutes}m</span>
+            </div>
+            <div class="row">
+              <span class="label">Amount:</span>
+              <span class="value">${award.total_amount.toLocaleString()} UGX</span>
+            </div>
+          </div>
+
+          <div class="reference">
+            <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">REFERENCE NUMBER</p>
+            <div class="reference-number">${referenceNumber}</div>
+          </div>
+
+          <div class="footer">
+            <p>Please save this reference number for tracking your overtime claim.</p>
+            <p>Generated on: ${new Date().toLocaleString()}</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
   };
 
   const handleClose = () => {
@@ -120,8 +235,18 @@ export const OvertimeClaimModal = ({ open, onOpenChange, award }: OvertimeClaimM
                   size="icon"
                   onClick={handleCopyReference}
                   className="shrink-0"
+                  title="Copy reference number"
                 >
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handlePrint}
+                  className="shrink-0"
+                  title="Print reference"
+                >
+                  <Printer className="h-4 w-4" />
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
