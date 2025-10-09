@@ -440,8 +440,11 @@ export const useMessages = () => {
 
   // Set up real-time subscription
   useEffect(() => {
-    console.log('📡 Setting up real-time subscription for messages');
-    console.log('📡 Subscription setup at:', new Date().toISOString());
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🚀🚀🚀 REALTIME SUBSCRIPTION EFFECT STARTING! 🚀🚀🚀');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📡 Timestamp:', new Date().toISOString());
+    console.log('📡 Creating Supabase channel...');
     
     const channel = supabase
       .channel('messages-realtime-channel', {
@@ -555,10 +558,14 @@ export const useMessages = () => {
         }
       )
       .subscribe((status, err) => {
-        console.log('📡 Messages channel subscription status:', status);
-        console.log('📡 Status timestamp:', new Date().toISOString());
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📡📡📡 SUBSCRIPTION STATUS CALLBACK! 📡📡📡');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📡 Status:', status);
+        console.log('📡 Timestamp:', new Date().toISOString());
         if (err) {
-          console.error('❌ Subscription error details:', err);
+          console.error('❌❌❌ SUBSCRIPTION ERROR! ❌❌❌');
+          console.error('❌ Error details:', JSON.stringify(err, null, 2));
         }
         if (status === 'SUBSCRIBED') {
           console.log('✅✅✅ Successfully subscribed to messages channel! ✅✅✅');
@@ -570,6 +577,7 @@ export const useMessages = () => {
         } else if (status === 'CLOSED') {
           console.warn('🔒 Messages channel subscription closed');
         }
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       });
 
     return () => {
