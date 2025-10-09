@@ -12,14 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  PERMISSIONS,
-  PERMISSION_DETAILS,
-  PERMISSION_CATEGORIES,
-  ROLE_PERMISSION_PRESETS,
-  type PermissionType,
-  type RoleType
-} from '@/types/permissions';
-import { Shield, Save, RotateCcw, User } from 'lucide-react';
+  PERMISSION_MODULES,
+  PERMISSION_ACTIONS,
+  MODULE_ACTIONS,
+  ACTION_DESCRIPTIONS,
+  GRANULAR_ROLE_PRESETS,
+  createPermission,
+  type PermissionModule,
+  type PermissionAction,
+} from '@/types/granularPermissions';
+import { Shield, Save, RotateCcw, User, Check, X } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -68,10 +70,8 @@ const PermissionManagementModal: React.FC<PermissionManagementModalProps> = ({
 
   const handleRoleChange = (role: string) => {
     setSelectedRole(role);
-    // Auto-assign permissions based on role preset
-    if (role in ROLE_PERMISSION_PRESETS) {
-      const rolePermissions = ROLE_PERMISSION_PRESETS[role as RoleType];
-      setSelectedPermissions([...rolePermissions]);
+    if (role in GRANULAR_ROLE_PRESETS) {
+      setSelectedPermissions([...GRANULAR_ROLE_PRESETS[role]]);
     }
   };
 
@@ -111,29 +111,21 @@ const PermissionManagementModal: React.FC<PermissionManagementModalProps> = ({
   };
 
   const handleResetToRoleDefaults = () => {
-    if (selectedRole in ROLE_PERMISSION_PRESETS) {
-      const rolePermissions = ROLE_PERMISSION_PRESETS[selectedRole as RoleType];
-      setSelectedPermissions([...rolePermissions]);
+    if (selectedRole in GRANULAR_ROLE_PRESETS) {
+      setSelectedPermissions([...GRANULAR_ROLE_PRESETS[selectedRole]]);
     }
   };
 
-  const getPermissionsByCategory = () => {
-    const categorized: Record<string, PermissionType[]> = {};
-    
-    Object.values(PERMISSIONS).forEach(permission => {
-      const details = PERMISSION_DETAILS[permission];
-      if (details) {
-        if (!categorized[details.category]) {
-          categorized[details.category] = [];
-        }
-        categorized[details.category].push(permission);
-      }
-    });
-
-    return categorized;
+  const toggleModuleAction = (module: PermissionModule, action: PermissionAction) => {
+    const permission = createPermission(module, action);
+    handlePermissionToggle(permission);
   };
 
-  const permissionsByCategory = getPermissionsByCategory();
+  const isActionSelected = (module: PermissionModule, action: PermissionAction): boolean => {
+    if (selectedPermissions.includes('*')) return true;
+    const permission = createPermission(module, action);
+    return selectedPermissions.includes(permission);
+  };
 
   if (!employee) return null;
 
@@ -169,7 +161,7 @@ const PermissionManagementModal: React.FC<PermissionManagementModalProps> = ({
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(ROLE_PERMISSION_PRESETS).map(role => (
+                  {Object.keys(GRANULAR_ROLE_PRESETS).map(role => (
                     <SelectItem key={role} value={role}>
                       {role}
                     </SelectItem>
@@ -188,48 +180,64 @@ const PermissionManagementModal: React.FC<PermissionManagementModalProps> = ({
             </div>
           </div>
 
-          {/* Permissions by Category */}
+          {/* Granular Permissions Matrix */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Permissions</h3>
+            <h3 className="text-lg font-semibold">Module Permissions</h3>
             
-            {Object.entries(permissionsByCategory).map(([category, permissions]) => (
-              <div key={category} className="border rounded-lg p-4">
-                <h4 className="font-medium mb-3 text-primary">{category}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {permissions.map(permission => {
-                    const details = PERMISSION_DETAILS[permission];
-                    const isSelected = selectedPermissions.includes(permission);
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-muted">
+                    <th className="border p-2 text-left font-medium">Module</th>
+                    {Object.values(PERMISSION_ACTIONS).map(action => (
+                      <th key={action} className="border p-2 text-center text-xs font-medium capitalize">
+                        {action}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(PERMISSION_MODULES).map(([key, module]) => {
+                    const availableActions = MODULE_ACTIONS[module] || [];
                     
                     return (
-                      <div
-                        key={permission}
-                        className={`flex items-start space-x-3 p-3 rounded-md border transition-colors ${
-                          isSelected ? 'bg-primary/5 border-primary/20' : 'hover:bg-muted/30'
-                        }`}
-                      >
-                        <Checkbox
-                          id={permission}
-                          checked={isSelected}
-                          onCheckedChange={() => handlePermissionToggle(permission)}
-                          className="mt-0.5"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <label
-                            htmlFor={permission}
-                            className="text-sm font-medium cursor-pointer block"
-                          >
-                            {details.name}
-                          </label>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {details.description}
-                          </p>
-                        </div>
-                      </div>
+                      <tr key={key} className="hover:bg-muted/30">
+                        <td className="border p-2 font-medium">{module}</td>
+                        {Object.values(PERMISSION_ACTIONS).map(action => {
+                          const isAvailable = availableActions.includes(action);
+                          const isSelected = isActionSelected(module, action);
+                          
+                          return (
+                            <td key={action} className="border p-2 text-center">
+                              {isAvailable ? (
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleModuleAction(module, action)}
+                                  className="mx-auto"
+                                />
+                              ) : (
+                                <X className="h-4 w-4 mx-auto text-muted-foreground/30" />
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
                     );
                   })}
-                </div>
-              </div>
-            ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bg-muted/50 rounded p-3 text-xs">
+              <p className="font-medium mb-2">Action Descriptions:</p>
+              <ul className="grid grid-cols-2 gap-2">
+                {Object.entries(ACTION_DESCRIPTIONS).map(([action, description]) => (
+                  <li key={action}>
+                    <span className="font-medium capitalize">{action}:</span> {description}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           {/* Current Permissions Summary */}
@@ -237,13 +245,17 @@ const PermissionManagementModal: React.FC<PermissionManagementModalProps> = ({
             <label className="text-sm font-medium">
               Selected Permissions ({selectedPermissions.length})
             </label>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
               {selectedPermissions.length > 0 ? (
-                selectedPermissions.map(permission => (
-                  <Badge key={permission} variant="secondary" className="text-xs">
-                    {PERMISSION_DETAILS[permission as PermissionType]?.name || permission}
-                  </Badge>
-                ))
+                selectedPermissions.includes('*') ? (
+                  <Badge variant="default" className="text-xs">All Permissions (Administrator)</Badge>
+                ) : (
+                  selectedPermissions.map(permission => (
+                    <Badge key={permission} variant="secondary" className="text-xs">
+                      {permission}
+                    </Badge>
+                  ))
+                )
               ) : (
                 <span className="text-sm text-muted-foreground">No permissions selected</span>
               )}
