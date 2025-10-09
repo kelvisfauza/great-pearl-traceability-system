@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Navigation from "./Navigation";
 import MessagingPanel from "./messaging/MessagingPanel";
 import ChatButton from "./messaging/ChatButton";
@@ -12,7 +12,6 @@ import { useMessages } from "@/hooks/useMessages";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePresence } from "@/hooks/usePresence";
-import { useToast } from "@/hooks/use-toast";
 import FeatureAnnouncementModal from "./FeatureAnnouncementModal";
 import AnnouncementDialog from "./notifications/AnnouncementDialog";
 import TrainingTour from "./training/TrainingTour";
@@ -28,15 +27,9 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-  const lastShownMessageId = useRef<string | null>(null);
-  const { 
-    unreadCount: messagesUnreadCount, 
-    latestMessageNotification,
-    clearLatestNotification 
-  } = useMessages();
+  const { unreadCount: messagesUnreadCount } = useMessages();
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const { user } = useAuth();
-  const { toast } = useToast();
   usePresence(user?.id);
   
   console.log('Layout - notification unread count:', notificationUnreadCount);
@@ -48,67 +41,6 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   const handleOpenAnnouncement = () => {
     toggleNotifications();
   };
-
-  // Show toast notification for new messages
-  useEffect(() => {
-    console.log('🔍🔍🔍 LAYOUT TOAST EFFECT TRIGGERED! 🔍🔍🔍');
-    console.log('🔍 Timestamp:', new Date().toISOString());
-    console.log('🔍 latestMessageNotification:', JSON.stringify(latestMessageNotification, null, 2));
-    console.log('🔍 isMessagingOpen:', isMessagingOpen);
-    
-    if (!latestMessageNotification) {
-      console.log('⏭️ No notification to show');
-      return;
-    }
-
-    if (isMessagingOpen) {
-      console.log('⏭️ Messaging panel is open, skipping toast');
-      return;
-    }
-
-    // Create a unique ID for this message notification
-    const messageId = `${latestMessageNotification.conversationId}-${latestMessageNotification.timestamp}`;
-    
-    // Only show toast if we haven't shown it for this specific message
-    if (lastShownMessageId.current === messageId) {
-      console.log('⏭️ Already shown toast for this message:', messageId);
-      return;
-    }
-
-    console.log('✅ Showing toast notification for message:', messageId);
-    console.log('📝 Notification details:', latestMessageNotification);
-    
-    // Mark this message as shown
-    lastShownMessageId.current = messageId;
-    
-    // Show toast
-    toast({
-      title: `💬 ${latestMessageNotification.senderName}`,
-      description: latestMessageNotification.content.length > 50 
-        ? latestMessageNotification.content.substring(0, 50) + '...'
-        : latestMessageNotification.content,
-      duration: 10000,
-      className: "cursor-pointer",
-      onClick: () => {
-        console.log('🖱️ Toast clicked, opening messaging panel');
-        setIsMessagingOpen(true);
-        clearLatestNotification();
-      }
-    });
-    
-    console.log('🎉 Toast displayed successfully');
-    
-    // Clear notification state after a delay to ensure toast renders
-    const timeoutId = setTimeout(() => {
-      console.log('🧹 Clearing notification state after delay');
-      clearLatestNotification();
-    }, 500);
-    
-    return () => {
-      console.log('🧹 Cleanup: clearing timeout');
-      clearTimeout(timeoutId);
-    };
-  }, [latestMessageNotification, isMessagingOpen, toast]);
 
   return (
     <div className="min-h-screen bg-background flex relative">
