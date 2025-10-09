@@ -25,15 +25,22 @@ interface LayoutProps {
 }
 
 const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutProps) => {
+  console.log('🏠🏠🏠 LAYOUT COMPONENT RENDER! 🏠🏠🏠');
+  console.log('🏠 Timestamp:', new Date().toISOString());
+  
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const lastShownMessageId = useRef<string | null>(null);
+  
+  console.log('🏠 About to call useMessages hook...');
   const { 
     unreadCount: messagesUnreadCount, 
     latestMessageNotification,
     clearLatestNotification 
   } = useMessages();
+  console.log('🏠 useMessages returned:', { messagesUnreadCount, latestMessageNotification });
+  
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const { user } = useAuth();
   const { toast } = useToast();
