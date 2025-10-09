@@ -9,11 +9,17 @@ import { format } from 'date-fns';
 
 export const OvertimeClaimsManager = () => {
   const [searchRef, setSearchRef] = useState('');
-  const { awards, completeOvertimeClaim, searchByReference } = useOvertimeAwards();
+  const { awards, completeOvertimeClaim, searchByReference, loading } = useOvertimeAwards();
   const [searchResult, setSearchResult] = useState<any>(null);
+
+  console.log('OvertimeClaimsManager - awards:', awards);
+  console.log('OvertimeClaimsManager - loading:', loading);
 
   const claimedAwards = awards.filter(award => award.status === 'claimed');
   const completedAwards = awards.filter(award => award.status === 'completed');
+
+  console.log('Claimed awards:', claimedAwards);
+  console.log('Completed awards:', completedAwards);
 
   const handleSearch = async () => {
     if (!searchRef.trim()) return;
@@ -117,7 +123,9 @@ export const OvertimeClaimsManager = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {claimedAwards.length === 0 ? (
+          {loading ? (
+            <p className="text-center text-muted-foreground py-8">Loading claims...</p>
+          ) : claimedAwards.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No pending claims</p>
           ) : (
             <div className="space-y-3">
@@ -167,7 +175,9 @@ export const OvertimeClaimsManager = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {completedAwards.length === 0 ? (
+          {loading ? (
+            <p className="text-center text-muted-foreground py-8">Loading history...</p>
+          ) : completedAwards.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No completed claims yet</p>
           ) : (
             <div className="space-y-2">
