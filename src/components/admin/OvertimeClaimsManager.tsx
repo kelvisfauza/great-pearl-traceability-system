@@ -12,16 +12,18 @@ export const OvertimeClaimsManager = () => {
   const { awards, completeOvertimeClaim, searchByReference, loading } = useOvertimeAwards();
   const [searchResult, setSearchResult] = useState<any>(null);
 
-  console.log('OvertimeClaimsManager - awards:', awards);
-  console.log('OvertimeClaimsManager - loading:', loading);
+  console.log('🔄 OvertimeClaimsManager rendered');
+  console.log('🔄 Total awards:', awards?.length);
+  console.log('🔄 Awards data:', awards);
+  console.log('🔄 Loading state:', loading);
 
   const pendingAwards = awards.filter(award => award.status === 'pending');
   const claimedAwards = awards.filter(award => award.status === 'claimed');
   const completedAwards = awards.filter(award => award.status === 'completed');
 
-  console.log('Pending awards (unclaimed):', pendingAwards);
-  console.log('Claimed awards (waiting for completion):', claimedAwards);
-  console.log('Completed awards:', completedAwards);
+  console.log('📋 Pending awards (unclaimed):', pendingAwards.length, pendingAwards);
+  console.log('📋 Claimed awards (waiting for completion):', claimedAwards.length, claimedAwards);
+  console.log('📋 Completed awards:', completedAwards.length, completedAwards);
 
   const handleSearch = async () => {
     if (!searchRef.trim()) return;
