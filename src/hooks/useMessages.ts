@@ -497,7 +497,7 @@ export const useMessages = () => {
           try {
             console.log('🔊 Attempting to play notification sound...');
             const audio = new Audio('/notification-sound.mp3');
-            audio.volume = 0.8; // Set volume to 80%
+            audio.volume = 1.0; // Set volume to 100%
             audio.play()
               .then(() => console.log('✅ Notification sound played successfully!'))
               .catch(err => console.error('❌ Could not play notification sound:', err));
