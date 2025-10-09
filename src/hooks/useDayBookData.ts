@@ -51,7 +51,11 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
   const fetchDayBookData = async () => {
     setLoading(true);
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      // Use local timezone date to match database records
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
       const startOfDay = new Date(dateStr);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(dateStr);

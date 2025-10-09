@@ -35,7 +35,11 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
   const fetchReportData = async () => {
     setLoading(true);
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      // Use local timezone date to match database records
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
 
       // Initialize report data
       const report: FinanceReportData = {
