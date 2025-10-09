@@ -13,19 +13,26 @@ export const OvertimeNotification = () => {
 
   useEffect(() => {
     console.log('OvertimeNotification - myAwards updated:', myAwards);
-    // Check for new pending awards
-    const newPendingAwards = myAwards.filter(award => award.status === 'pending');
-    console.log('Pending awards found:', newPendingAwards);
+    // ONLY show awards that are status === 'pending'
+    // Claimed or completed awards should NEVER show
+    const newPendingAwards = myAwards.filter(award => 
+      award.status === 'pending' && 
+      !award.claimed_at && 
+      !award.completed_at
+    );
+    console.log('Truly pending awards (not claimed/completed):', newPendingAwards);
     
-    if (newPendingAwards.length > 0) {
-      // Show the most recent one
+    if (newPendingAwards.length > 0 && !showClaimModal) {
+      // Show the most recent one, but not if claim modal is open
       console.log('Setting pending award:', newPendingAwards[0]);
       setPendingAward(newPendingAwards[0]);
     } else {
-      // Clear pending award if there are none
-      setPendingAward(null);
+      // Clear pending award if there are none or modal is open
+      if (!showClaimModal) {
+        setPendingAward(null);
+      }
     }
-  }, [myAwards]);
+  }, [myAwards, showClaimModal]);
 
   const handleClose = () => {
     setPendingAward(null);
@@ -36,14 +43,11 @@ export const OvertimeNotification = () => {
     console.log('🔔 Pending award:', pendingAward);
     if (pendingAward) {
       console.log('🔔 Setting award to claim:', pendingAward);
-      setAwardToClaim(pendingAward); // Save the award before closing
+      setAwardToClaim(pendingAward);
       console.log('🔔 Opening claim modal...');
       setShowClaimModal(true);
-      // Close notification after a short delay to ensure modal opens first
-      setTimeout(() => {
-        console.log('🔔 Closing notification...');
-        setPendingAward(null);
-      }, 100);
+      // Immediately close notification
+      setPendingAward(null);
     } else {
       console.error('❌ No pending award found!');
     }
