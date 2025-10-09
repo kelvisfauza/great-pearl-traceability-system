@@ -147,13 +147,11 @@ export const useFinanceReports = (selectedDate: Date = new Date()) => {
         });
       }
 
-      // Fetch payment records from Supabase (filter by created_at timestamp, not date field)
-
+      // Fetch payment records from Supabase (filter by payment date field)
       const { data: paymentRecords, error: paymentError } = await supabase
         .from('payment_records')
         .select('*')
-        .gte('created_at', startOfDay.toISOString())
-        .lte('created_at', endOfDay.toISOString())
+        .eq('date', dateStr)
         .eq('status', 'Paid');
 
       if (paymentError) {
