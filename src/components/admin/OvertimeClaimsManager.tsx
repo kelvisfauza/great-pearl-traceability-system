@@ -15,9 +15,11 @@ export const OvertimeClaimsManager = () => {
   console.log('OvertimeClaimsManager - awards:', awards);
   console.log('OvertimeClaimsManager - loading:', loading);
 
+  const pendingAwards = awards.filter(award => award.status === 'pending');
   const claimedAwards = awards.filter(award => award.status === 'claimed');
   const completedAwards = awards.filter(award => award.status === 'completed');
 
+  console.log('Pending awards:', pendingAwards);
   console.log('Claimed awards:', claimedAwards);
   console.log('Completed awards:', completedAwards);
 
@@ -119,17 +121,17 @@ export const OvertimeClaimsManager = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Pending Claims ({claimedAwards.length})
+            Pending Claims ({pendingAwards.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <p className="text-center text-muted-foreground py-8">Loading claims...</p>
-          ) : claimedAwards.length === 0 ? (
+          ) : pendingAwards.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No pending claims</p>
           ) : (
             <div className="space-y-3">
-              {claimedAwards.map((award) => (
+              {pendingAwards.map((award) => (
                 <div key={award.id} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
@@ -147,18 +149,9 @@ export const OvertimeClaimsManager = () => {
                   </div>
 
                   <div className="text-xs text-muted-foreground">
-                    <p>Reference: <span className="font-mono">{award.reference_number}</span></p>
-                    <p>Claimed: {award.claimed_at ? format(new Date(award.claimed_at), 'PPp') : 'N/A'}</p>
+                    <p>Awarded: {format(new Date(award.created_at), 'PPp')}</p>
+                    {award.notes && <p className="mt-1">Notes: {award.notes}</p>}
                   </div>
-
-                  <Button 
-                    onClick={() => handleComplete(award.id)}
-                    size="sm"
-                    className="w-full"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Mark as Completed
-                  </Button>
                 </div>
               ))}
             </div>
