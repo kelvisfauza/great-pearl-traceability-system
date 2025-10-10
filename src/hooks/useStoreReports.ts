@@ -136,7 +136,6 @@ export const useStoreReports = () => {
         console.log('Detected Firebase ID, deleting from Firebase');
         
         // Delete from Firebase
-        const { deleteDoc, doc } = await import('firebase/firestore');
         await deleteDoc(doc(db, 'store_reports', reportId));
         
         console.log('Firebase report deleted successfully');
@@ -314,7 +313,6 @@ export const useStoreReports = () => {
         console.log('Deleting Firebase report:', reportId);
         
         // Delete from Firebase
-        const { deleteDoc, doc } = await import('firebase/firestore');
         await deleteDoc(doc(db, 'store_reports', reportId));
       } else {
         console.log('Deleting Supabase report:', reportId);
