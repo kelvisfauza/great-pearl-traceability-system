@@ -441,8 +441,11 @@ export const useQualityControl = () => {
         throw paymentError;
       }
       
-      // Refresh quality assessments to get the updated data with joins
-      await loadQualityAssessments();
+      // Refresh both quality assessments AND store records to update the pending list
+      await Promise.all([
+        loadQualityAssessments(),
+        loadStoreRecords()
+      ]);
       
       toast({
         title: "Success",
@@ -541,8 +544,11 @@ export const useQualityControl = () => {
         console.warn('Firebase update failed (non-critical):', firebaseError);
       }
 
-      // Refresh quality assessments to get the updated data with joins
-      await loadQualityAssessments();
+      // Refresh both quality assessments AND store records to update the pending list
+      await Promise.all([
+        loadQualityAssessments(),
+        loadStoreRecords()
+      ]);
       
       toast({
         title: "Success",
