@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -183,18 +183,41 @@ export const useSuppliers = () => {
         console.log('✅ Updated purchase_orders');
       }
       
-      // Wait a moment for database to propagate changes
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 6. Update Firebase coffee_records
+      console.log('🔥 Updating Firebase coffee_records...');
+      const coffeeRecordsRef = collection(db, 'coffee_records');
+      const coffeeQuery = query(coffeeRecordsRef, where('supplier_name', '==', oldName));
+      const coffeeSnapshot = await getDocs(coffeeQuery);
       
-      console.log('✅ Supplier updated successfully across all systems');
+      for (const docSnapshot of coffeeSnapshot.docs) {
+        await updateDoc(doc(db, 'coffee_records', docSnapshot.id), {
+          supplier_name: updates.name
+        });
+      }
+      console.log(`✅ Updated ${coffeeSnapshot.size} Firebase coffee_records`);
+
+      // 7. Update Firebase payment_records
+      console.log('🔥 Updating Firebase payment_records...');
+      const paymentRecordsRef = collection(db, 'payment_records');
+      const paymentQuery = query(paymentRecordsRef, where('supplier', '==', oldName));
+      const paymentSnapshot = await getDocs(paymentQuery);
+      
+      for (const docSnapshot of paymentSnapshot.docs) {
+        await updateDoc(doc(db, 'payment_records', docSnapshot.id), {
+          supplier: updates.name
+        });
+      }
+      console.log(`✅ Updated ${paymentSnapshot.size} Firebase payment_records`);
+      
+      console.log('✅ Supplier updated successfully across all systems (Supabase + Firebase)');
       toast({
         title: "Success",
         description: "Supplier information updated across all transactions and records"
       });
       
-      await fetchSuppliers(); // Refresh the list
+      await fetchSuppliers();
       
-      return true; // Indicate success
+      return true;
     } catch (error) {
       console.error('❌ Error updating supplier:', error);
       toast({
