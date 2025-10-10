@@ -57,10 +57,15 @@ const Suppliers = () => {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const handleEditSupplier = async (supplierId: string, updates: { name: string; phone: string; origin: string }) => {
+    console.log('🔧 Editing supplier and reloading transactions...', { supplierId, updates });
     await updateSupplier(supplierId, updates);
-    // Update selected supplier with new data
+    // Update selected supplier with new data AND reload transactions
     if (selectedSupplier?.id === supplierId) {
-      setSelectedSupplier({ ...selectedSupplier, ...updates });
+      const updatedSupplier = { ...selectedSupplier, ...updates };
+      setSelectedSupplier(updatedSupplier);
+      // Reload transactions with the updated supplier info
+      await loadSupplierTransactions(supplierId);
+      console.log('✅ Supplier updated and transactions reloaded');
     }
   };
 
