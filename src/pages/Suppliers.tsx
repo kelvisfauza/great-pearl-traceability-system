@@ -113,10 +113,9 @@ const Suppliers = () => {
         code: selectedSupplier?.code 
       });
       const cutoffDate = '2025-10-01';
-      const currentName = selectedSupplier?.name?.toLowerCase() || '';
       
-      // Strategy: Fetch ALL coffee records from Oct 1st onwards, then filter by supplier
-      // This ensures we catch records regardless of how they're linked
+      // Strategy: Fetch ALL coffee records from Oct 1st onwards, then filter by supplier_id
+      // Transactions keep their original supplier name from when they were created
       
       // Get ALL coffee records from Supabase (from Oct 1, 2025 onwards)
       const { data: allSupabaseCoffee, error: supabaseError } = await supabase
@@ -127,19 +126,10 @@ const Suppliers = () => {
 
       if (supabaseError) console.error('Supabase error:', supabaseError);
       
-      // Filter to match this supplier by ID, name, or code
-      // Also check for similar names (e.g., "Jelema" when viewing "Jeremiah")
-      const supabaseRecords = (allSupabaseCoffee || []).filter(record => {
-        const recordName = record.supplier_name?.toLowerCase() || '';
-        return (
-          record.supplier_id === supplierId ||
-          recordName === currentName ||
-          recordName.includes(currentName) ||
-          currentName.includes(recordName) ||
-          // Check for "Jelema" when viewing "Jeremiah" (edit case)
-          (currentName === 'jeremiah' && recordName === 'jelema')
-        );
-      });
+      // Filter to match this supplier by supplier_id (transactions keep original supplier name)
+      const supabaseRecords = (allSupabaseCoffee || []).filter(record => 
+        record.supplier_id === supplierId
+      );
       
       console.log('📦 Supabase coffee records matching supplier:', supabaseRecords.length);
 
@@ -170,14 +160,7 @@ const Suppliers = () => {
           })
           .filter(record => {
             const matchesDate = record.date >= cutoffDate;
-            const recordName = record.supplier_name?.toLowerCase() || '';
-            const matchesSupplier = 
-              record.supplier_id === supplierId ||
-              recordName === currentName ||
-              recordName.includes(currentName) ||
-              currentName.includes(recordName) ||
-              // Check for "Jelema" when viewing "Jeremiah" (edit case)
-              (currentName === 'jeremiah' && recordName === 'jelema');
+            const matchesSupplier = record.supplier_id === supplierId;
             
             return matchesDate && matchesSupplier;
           });

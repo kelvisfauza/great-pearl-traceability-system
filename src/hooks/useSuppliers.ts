@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { collection, getDocs, query, orderBy, where, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -105,23 +105,9 @@ export const useSuppliers = () => {
     origin: string;
   }) => {
     try {
-      console.log('🔄 Updating supplier across entire system:', supplierId, updates);
+      console.log('🔄 Updating supplier info only (not affecting transactions):', supplierId, updates);
       
-      // Get current supplier data first
-      const { data: currentSupplier } = await supabase
-        .from('suppliers')
-        .select('name')
-        .eq('id', supplierId)
-        .single();
-
-      if (!currentSupplier) {
-        throw new Error('Supplier not found');
-      }
-
-      const oldName = currentSupplier.name;
-      console.log('Old supplier name:', oldName);
-      
-      // 1. Update main supplier record
+      // Only update the main supplier record - transactions stay linked via supplier_id
       const { error: supplierError } = await supabase
         .from('suppliers')
         .update({
@@ -133,105 +119,11 @@ export const useSuppliers = () => {
         .eq('id', supplierId);
 
       if (supplierError) throw supplierError;
-      console.log('✅ Updated supplier record');
       
-      // 2. Update coffee_records supplier_name
-      const { error: coffeeError } = await supabase
-        .from('coffee_records')
-        .update({ supplier_name: updates.name })
-        .eq('supplier_id', supplierId);
-
-      if (coffeeError) {
-        console.error('Error updating coffee records:', coffeeError);
-      } else {
-        console.log('✅ Updated coffee_records');
-      }
-      
-      // 3. Update payment_records supplier name
-      const { error: paymentError } = await supabase
-        .from('payment_records')
-        .update({ supplier: updates.name })
-        .eq('supplier', oldName);
-
-      if (paymentError) {
-        console.error('Error updating payment records:', paymentError);
-      } else {
-        console.log('✅ Updated payment_records');
-      }
-
-      // 4. Update supplier_contracts supplier_name
-      const { error: contractError } = await supabase
-        .from('supplier_contracts')
-        .update({ supplier_name: updates.name })
-        .eq('supplier_id', supplierId);
-
-      if (contractError) {
-        console.error('Error updating supplier contracts:', contractError);
-      } else {
-        console.log('✅ Updated supplier_contracts');
-      }
-
-      // 5. Update purchase_orders supplier_name
-      const { error: poError } = await supabase
-        .from('purchase_orders')
-        .update({ supplier_name: updates.name })
-        .eq('supplier_id', supplierId);
-
-      if (poError) {
-        console.error('Error updating purchase orders:', poError);
-      } else {
-        console.log('✅ Updated purchase_orders');
-      }
-      
-      // 6. Update Firebase coffee_records
-      console.log('🔥 Updating Firebase coffee_records...');
-      const coffeeRecordsRef = collection(db, 'coffee_records');
-      const coffeeQuery = query(coffeeRecordsRef, where('supplier_name', '==', oldName));
-      const coffeeSnapshot = await getDocs(coffeeQuery);
-      
-      for (const docSnapshot of coffeeSnapshot.docs) {
-        await updateDoc(doc(db, 'coffee_records', docSnapshot.id), {
-          supplier_name: updates.name
-        });
-      }
-      console.log(`✅ Updated ${coffeeSnapshot.size} Firebase coffee_records`);
-
-      // 7. Update Firebase payment_records
-      console.log('🔥 Updating Firebase payment_records...');
-      const paymentRecordsRef = collection(db, 'payment_records');
-      const paymentQuery = query(paymentRecordsRef, where('supplier', '==', oldName));
-      const paymentSnapshot = await getDocs(paymentQuery);
-      
-      for (const docSnapshot of paymentSnapshot.docs) {
-        await updateDoc(doc(db, 'payment_records', docSnapshot.id), {
-          supplier: updates.name
-        });
-      }
-      console.log(`✅ Updated ${paymentSnapshot.size} Firebase payment_records`);
-
-      // 8. Update Firebase suppliers collection (if it exists)
-      console.log('🔥 Updating Firebase suppliers collection...');
-      try {
-        const suppliersRef = collection(db, 'suppliers');
-        const suppliersQuery = query(suppliersRef, where('name', '==', oldName));
-        const suppliersSnapshot = await getDocs(suppliersQuery);
-        
-        for (const docSnapshot of suppliersSnapshot.docs) {
-          await updateDoc(doc(db, 'suppliers', docSnapshot.id), {
-            name: updates.name,
-            phone: updates.phone || null,
-            origin: updates.origin
-          });
-        }
-        console.log(`✅ Updated ${suppliersSnapshot.size} Firebase suppliers`);
-      } catch (firebaseSupplierError) {
-        console.log('ℹ️ Firebase suppliers collection may not exist:', firebaseSupplierError);
-      }
-      
-      console.log('✅ Supplier updated successfully across all systems (Supabase + Firebase)');
+      console.log('✅ Supplier record updated (transactions remain unchanged)');
       toast({
         title: "Success",
-        description: "Supplier information updated across all transactions and records"
+        description: "Supplier information updated"
       });
       
       await fetchSuppliers();
