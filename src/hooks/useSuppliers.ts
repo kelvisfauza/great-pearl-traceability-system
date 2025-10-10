@@ -208,6 +208,25 @@ export const useSuppliers = () => {
         });
       }
       console.log(`✅ Updated ${paymentSnapshot.size} Firebase payment_records`);
+
+      // 8. Update Firebase suppliers collection (if it exists)
+      console.log('🔥 Updating Firebase suppliers collection...');
+      try {
+        const suppliersRef = collection(db, 'suppliers');
+        const suppliersQuery = query(suppliersRef, where('name', '==', oldName));
+        const suppliersSnapshot = await getDocs(suppliersQuery);
+        
+        for (const docSnapshot of suppliersSnapshot.docs) {
+          await updateDoc(doc(db, 'suppliers', docSnapshot.id), {
+            name: updates.name,
+            phone: updates.phone || null,
+            origin: updates.origin
+          });
+        }
+        console.log(`✅ Updated ${suppliersSnapshot.size} Firebase suppliers`);
+      } catch (firebaseSupplierError) {
+        console.log('ℹ️ Firebase suppliers collection may not exist:', firebaseSupplierError);
+      }
       
       console.log('✅ Supplier updated successfully across all systems (Supabase + Firebase)');
       toast({
