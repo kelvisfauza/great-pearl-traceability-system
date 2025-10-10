@@ -142,8 +142,16 @@ const StoreReportsList = () => {
   };
 
   const handleConfirmDelete = async () => {
-    if (!selectedReport || !deleteReason.trim()) return;
+    console.log('=== DELETE HANDLER CALLED ===');
+    console.log('Selected report:', selectedReport);
+    console.log('Delete reason:', deleteReason);
+    
+    if (!selectedReport || !deleteReason.trim()) {
+      console.log('❌ Early return - missing report or reason');
+      return;
+    }
 
+    console.log('✅ Proceeding with deletion');
     setSubmitting(true);
     try {
       await directDeleteReport(selectedReport.id, deleteReason);
