@@ -181,7 +181,7 @@ export const useOvertimeAwards = () => {
         })
         .eq('id', awardId)
         .select()
-        .single();
+        .maybeSingle();
 
       console.log('🎯 Update result:', { data, error });
 
@@ -252,7 +252,7 @@ export const useOvertimeAwards = () => {
         .from('overtime_awards')
         .select('*')
         .eq('reference_number', referenceNumber)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
