@@ -7,18 +7,22 @@ export const deleteOct2Report = async () => {
   console.log('Date: 2025-10-02');
   console.log('Coffee Type: Arabica');
   console.log('Kilograms Bought: 6049');
+  console.log('Kilograms Sold: 19425');
+  console.log('Sold To: KCL');
   
   let deletedFromSupabase = false;
   let deletedFromFirebase = false;
   
   try {
-    // Delete from Supabase
+    // Delete from Supabase - match ALL specific fields
     const { data: supabaseRecords, error: fetchError } = await supabase
       .from('store_reports')
       .select('*')
       .eq('date', '2025-10-02')
       .eq('coffee_type', 'Arabica')
-      .eq('kilograms_bought', 6049);
+      .eq('kilograms_bought', 6049)
+      .eq('kilograms_sold', 19425)
+      .eq('sold_to', 'KCL');
     
     if (fetchError) {
       console.error('Supabase fetch error:', fetchError);
@@ -57,9 +61,13 @@ export const deleteOct2Report = async () => {
       console.log('Found in Firebase:', querySnapshot.size, 'records');
       
       for (const docSnapshot of querySnapshot.docs) {
-        await deleteDoc(doc(db, 'store_reports', docSnapshot.id));
-        console.log('✅ Deleted from Firebase:', docSnapshot.id);
-        deletedFromFirebase = true;
+        const data = docSnapshot.data();
+        // Additional check for kilograms_sold to match exact record
+        if (data.kilograms_sold === 19425 && data.sold_to === 'KCL') {
+          await deleteDoc(doc(db, 'store_reports', docSnapshot.id));
+          console.log('✅ Deleted from Firebase:', docSnapshot.id);
+          deletedFromFirebase = true;
+        }
       }
     } else {
       console.log('❌ Not found in Firebase');
