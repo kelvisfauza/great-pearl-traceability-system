@@ -347,7 +347,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const hasPermission = (permission: string): boolean => {
     if (!employee) return false;
     if (employee.permissions?.includes('*')) return true;
-    return employee.permissions?.includes(permission) || false;
+    
+    // Check for exact permission match
+    if (employee.permissions?.includes(permission)) return true;
+    
+    // Check for granular permissions (e.g., "Human Resources:view" should match "Human Resources")
+    const hasGranularPermission = employee.permissions?.some(p => 
+      p.startsWith(permission + ':')
+    );
+    
+    return hasGranularPermission || false;
   };
 
   const hasRole = (role: string): boolean => {
