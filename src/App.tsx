@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,8 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PriceProvider } from "@/contexts/PriceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
-import ProtectedRoute from "@/components/ProtectedRoute";
+import { useGlobalErrorHandler } from "./hooks/useGlobalErrorHandler";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -29,11 +28,10 @@ import ITDepartment from "./pages/ITDepartment";
 import Milling from "./pages/Milling";
 import PermissionManagement from "./pages/PermissionManagement";
 import Expenses from "./pages/Expenses";
-import EUDRDocumentationPage from "./pages/EUDRDocumentation";
+import EURDocumentationPage from "./pages/EUDRDocumentation";
 import Suppliers from "./pages/Suppliers";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 import { OvertimeNotification } from "./components/OvertimeNotification";
-
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
@@ -55,7 +53,7 @@ const InactivityTimerInitializer = () => {
   return null;
 };
 
-const App: React.FC = () => {
+const App: React.ComponentType = () => {
   const queryClient = new QueryClient();
 
   return (
@@ -63,15 +61,15 @@ const App: React.FC = () => {
       <AuthProvider>
         <ErrorHandlerInitializer />
         <InactivityTimerInitializer />
-        {/* Temporarily disabled console monitor to fix auth issues */}
-        {/* <ConsoleMonitorInitializer /> */}
         <GlobalActivityTracker />
-        <OvertimeNotification />
         <PriceProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              {/* OvertimeNotification moved inside Router context */}
+              <OvertimeNotification />
+              
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/" element={
@@ -155,7 +153,7 @@ const App: React.FC = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/permissions" element={
-                  <ProtectedRoute requiredPermissions={["Permission Management"]}>
+                  <ProtectedRoute requiredPermissions={["Permissions Management"]}>
                     <PermissionManagement />
                   </ProtectedRoute>
                 } />
@@ -164,9 +162,9 @@ const App: React.FC = () => {
                     <Expenses />
                   </ProtectedRoute>
                 } />
-                <Route path="/eudr-documentation" element={
-                  <ProtectedRoute requiredPermissions={["EUDR Documentation", "Store Management"]}>
-                    <EUDRDocumentationPage />
+                <Route path="/eupr-documentation" element={
+                  <ProtectedRoute requiredPermissions={["EUPR Documentation", "Store Management"]}>
+                    <EURDocumentationPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/suppliers" element={
