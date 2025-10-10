@@ -7,15 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useStoreReports } from '@/hooks/useStoreReports';
-import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit, Database, Upload, FileDown, Files, CalendarCheck, TrendingUp, TrendingDown } from 'lucide-react';
+import { Eye, FileText, Printer, Search, Calendar, Trash2, Edit, Database, Upload, FileDown, CalendarCheck, TrendingUp, TrendingDown } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import StoreReportViewer from './StoreReportViewer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { generateStoreReportPDF, generateMultipleReportsPDF } from '@/utils/pdfGenerator';
-import { deleteOct2Report } from '@/utils/deleteSpecificReport';
+import { generateStoreReportPDF } from '@/utils/pdfGenerator';
 
 const StoreReportsList = () => {
   const { reports, loading, directDeleteReport, directEditReport, migrateFirebaseToSupabase } = useStoreReports();
@@ -237,41 +236,6 @@ const StoreReportsList = () => {
     }
   };
 
-  const handleBulkPDF = () => {
-    if (filteredReports.length === 0) {
-      toast.error("No reports to generate PDF for");
-      return;
-    }
-    
-    try {
-      const title = searchTerm ? `Store Reports - Search: ${searchTerm}` : 'Store Reports';
-      generateMultipleReportsPDF(filteredReports, title);
-      toast.success(`PDF with ${filteredReports.length} reports generated successfully!`);
-    } catch (error) {
-      console.error('Error generating bulk PDF:', error);
-      toast.error("Failed to generate PDF");
-    }
-  };
-
-  const handleDeleteOct2Report = async () => {
-    try {
-      setSubmitting(true);
-      const result = await deleteOct2Report();
-      
-      if (result.success) {
-        toast.success('Oct 2, 2025 report deleted successfully from both databases!');
-        // Refresh the reports list
-        window.location.reload();
-      } else {
-        toast.error('Report not found in either database');
-      }
-    } catch (error) {
-      console.error('Error deleting specific report:', error);
-      toast.error('Failed to delete report');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handlePrint = (report: any) => {
     try {
@@ -302,37 +266,15 @@ const StoreReportsList = () => {
           </CardTitle>
           <CardDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <span>View and export historical store reports as PDF</span>
-            <div className="flex gap-2">
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteOct2Report}
-                disabled={submitting}
-                className="flex items-center gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete Oct 2 Report
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleBulkPDF}
-                disabled={filteredReports.length === 0}
-                className="flex items-center gap-2"
-              >
-                <Files className="h-4 w-4" />
-                Export All PDF ({filteredReports.length})
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={migrateFirebaseToSupabase}
-                className="flex items-center gap-2"
-              >
-                <Database className="h-4 w-4" />
-                Migrate Data
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={migrateFirebaseToSupabase}
+              className="flex items-center gap-2"
+            >
+              <Database className="h-4 w-4" />
+              Migrate Data
+            </Button>
           </CardDescription>
       </CardHeader>
       <CardContent>
@@ -365,7 +307,7 @@ const StoreReportsList = () => {
                 onClick={() => handleQuickFilter('all')}
                 className="flex items-center gap-2"
               >
-                <Files className="h-4 w-4" />
+                <FileText className="h-4 w-4" />
                 All Reports
               </Button>
             </div>
