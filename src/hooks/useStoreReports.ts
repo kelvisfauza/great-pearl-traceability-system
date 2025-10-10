@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { collection, query, orderBy, getDocs, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -127,34 +127,51 @@ export const useStoreReports = () => {
 
   const directDeleteReport = async (reportId: string, reason: string) => {
     try {
-      console.log('Deleting store report from Supabase:', reportId);
+      console.log('Deleting store report:', reportId);
       
-      // Get the report data before deletion for audit log
-      const { data: reportData } = await supabase
-        .from('store_reports')
-        .select('*')
-        .eq('id', reportId)
-        .single();
+      // Check if this is a Firebase ID or Supabase UUID
+      const isFirebaseId = !reportId.includes('-') || reportId.length !== 36;
       
-      const { error } = await supabase
-        .from('store_reports')
-        .delete()
-        .eq('id', reportId);
+      if (isFirebaseId) {
+        console.log('Detected Firebase ID, deleting from Firebase');
+        
+        // Delete from Firebase
+        const { deleteDoc, doc } = await import('firebase/firestore');
+        await deleteDoc(doc(db, 'store_reports', reportId));
+        
+        console.log('Firebase report deleted successfully');
+      } else {
+        console.log('Detected Supabase UUID, deleting from Supabase');
+        
+        // Get the report data before deletion for audit log
+        const { data: reportData } = await supabase
+          .from('store_reports')
+          .select('*')
+          .eq('id', reportId)
+          .single();
+        
+        const { error } = await supabase
+          .from('store_reports')
+          .delete()
+          .eq('id', reportId);
 
-      if (error) throw error;
-      
-      // Log the deletion
-      const auditData = {
-        action: 'delete',
-        table_name: 'store_reports',
-        record_id: reportId,
-        reason: reason,
-        performed_by: reportData?.input_by || 'Unknown',
-        department: 'Store',
-        record_data: reportData
-      };
+        if (error) throw error;
+        
+        // Log the deletion
+        const auditData = {
+          action: 'delete',
+          table_name: 'store_reports',
+          record_id: reportId,
+          reason: reason,
+          performed_by: reportData?.input_by || 'Unknown',
+          department: 'Store',
+          record_data: reportData
+        };
 
-      await supabase.from('audit_logs').insert([auditData]);
+        await supabase.from('audit_logs').insert([auditData]);
+        
+        console.log('Supabase report deleted successfully');
+      }
       
       toast({
         title: "Success",
@@ -290,12 +307,25 @@ export const useStoreReports = () => {
 
   const deleteStoreReport = async (reportId: string) => {
     try {
-      const { error } = await supabase
-        .from('store_reports')
-        .delete()
-        .eq('id', reportId);
+      // Check if this is a Firebase ID or Supabase UUID
+      const isFirebaseId = !reportId.includes('-') || reportId.length !== 36;
+      
+      if (isFirebaseId) {
+        console.log('Deleting Firebase report:', reportId);
+        
+        // Delete from Firebase
+        const { deleteDoc, doc } = await import('firebase/firestore');
+        await deleteDoc(doc(db, 'store_reports', reportId));
+      } else {
+        console.log('Deleting Supabase report:', reportId);
+        
+        const { error } = await supabase
+          .from('store_reports')
+          .delete()
+          .eq('id', reportId);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
       
       console.log('Store report deleted:', reportId);
       
