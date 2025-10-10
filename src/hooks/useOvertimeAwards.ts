@@ -218,28 +218,47 @@ export const useOvertimeAwards = () => {
 
   const completeOvertimeClaim = async (awardId: string) => {
     try {
-      const { error } = await supabase
+      console.log('✅ Completing overtime claim:', awardId);
+      console.log('✅ Current employee:', employee);
+      
+      const { data, error } = await supabase
         .from('overtime_awards')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
           completed_by: employee?.name || 'Admin'
         })
-        .eq('id', awardId);
+        .eq('id', awardId)
+        .select()
+        .maybeSingle();
 
-      if (error) throw error;
+      console.log('✅ Update result:', { data, error });
+
+      if (error) {
+        console.error('✅ Database error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.error('✅ No data returned - RLS policy blocking update');
+        throw new Error('Update failed - you may not have permission to complete this claim');
+      }
 
       toast({
         title: "Claim Completed",
         description: "Overtime claim has been marked as completed"
       });
 
+      // Refresh data
+      fetchAllAwards();
+      fetchMyAwards();
+
       return true;
-    } catch (error) {
-      console.error('Error completing overtime claim:', error);
+    } catch (error: any) {
+      console.error('✅ Error completing overtime claim:', error);
       toast({
         title: "Error",
-        description: "Failed to complete claim",
+        description: error.message || "Failed to complete claim",
         variant: "destructive"
       });
       return false;
