@@ -128,9 +128,12 @@ export const useStoreReports = () => {
   const directDeleteReport = async (reportId: string, reason: string) => {
     try {
       console.log('Deleting store report:', reportId);
+      console.log('Report ID length:', reportId.length);
+      console.log('Contains dashes:', reportId.includes('-'));
       
       // Check if this is a Firebase ID or Supabase UUID
-      const isFirebaseId = !reportId.includes('-') || reportId.length !== 36;
+      // UUID format: 8-4-4-4-12 characters (36 total with dashes)
+      const isFirebaseId = !reportId.includes('-') && reportId.length !== 36;
       
       if (isFirebaseId) {
         console.log('Detected Firebase ID, deleting from Firebase');
@@ -196,7 +199,8 @@ export const useStoreReports = () => {
       console.log('Raw updatedData:', updatedData);
       
       // Check if this is a Firebase ID or Supabase UUID
-      const isFirebaseId = !reportId.includes('-') || reportId.length !== 36;
+      // UUID format: 8-4-4-4-12 characters (36 total with dashes)
+      const isFirebaseId = !reportId.includes('-') && reportId.length !== 36;
       
       if (isFirebaseId) {
         console.log('Detected Firebase ID, updating in Firebase instead');
@@ -307,7 +311,8 @@ export const useStoreReports = () => {
   const deleteStoreReport = async (reportId: string) => {
     try {
       // Check if this is a Firebase ID or Supabase UUID
-      const isFirebaseId = !reportId.includes('-') || reportId.length !== 36;
+      // UUID format: 8-4-4-4-12 characters (36 total with dashes)
+      const isFirebaseId = !reportId.includes('-') && reportId.length !== 36;
       
       if (isFirebaseId) {
         console.log('Deleting Firebase report:', reportId);
