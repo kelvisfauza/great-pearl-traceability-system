@@ -43,7 +43,14 @@ export const OvertimeNotification = () => {
   }, [myAwards, employee, location.pathname, pendingAward, showClaimModal]);
 
   const handleClaim = () => {
-    if (pendingAward) {
+    if (pendingAward && employee) {
+      // Verify award belongs to current user
+      if (pendingAward.employee_email !== employee.email) {
+        console.error('Award does not belong to current user');
+        setPendingAward(null);
+        return;
+      }
+      
       setAwardToClaim(pendingAward);
       setShowClaimModal(true);
       setPendingAward(null);
