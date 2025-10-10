@@ -105,9 +105,24 @@ export const useSuppliers = () => {
     origin: string;
   }) => {
     try {
-      console.log('Updating supplier in Supabase:', supplierId, updates);
+      console.log('🔄 Updating supplier across entire system:', supplierId, updates);
       
-      const { error } = await supabase
+      // Get current supplier data first
+      const { data: currentSupplier } = await supabase
+        .from('suppliers')
+        .select('name')
+        .eq('id', supplierId)
+        .single();
+
+      if (!currentSupplier) {
+        throw new Error('Supplier not found');
+      }
+
+      const oldName = currentSupplier.name;
+      console.log('Old supplier name:', oldName);
+      
+      // 1. Update main supplier record
+      const { error: supplierError } = await supabase
         .from('suppliers')
         .update({
           name: updates.name,
@@ -117,17 +132,66 @@ export const useSuppliers = () => {
         })
         .eq('id', supplierId);
 
-      if (error) throw error;
+      if (supplierError) throw supplierError;
+      console.log('✅ Updated supplier record');
       
-      console.log('Supplier updated successfully');
+      // 2. Update coffee_records supplier_name
+      const { error: coffeeError } = await supabase
+        .from('coffee_records')
+        .update({ supplier_name: updates.name })
+        .eq('supplier_id', supplierId);
+
+      if (coffeeError) {
+        console.error('Error updating coffee records:', coffeeError);
+      } else {
+        console.log('✅ Updated coffee_records');
+      }
+      
+      // 3. Update payment_records supplier name
+      const { error: paymentError } = await supabase
+        .from('payment_records')
+        .update({ supplier: updates.name })
+        .eq('supplier', oldName);
+
+      if (paymentError) {
+        console.error('Error updating payment records:', paymentError);
+      } else {
+        console.log('✅ Updated payment_records');
+      }
+
+      // 4. Update supplier_contracts supplier_name
+      const { error: contractError } = await supabase
+        .from('supplier_contracts')
+        .update({ supplier_name: updates.name })
+        .eq('supplier_id', supplierId);
+
+      if (contractError) {
+        console.error('Error updating supplier contracts:', contractError);
+      } else {
+        console.log('✅ Updated supplier_contracts');
+      }
+
+      // 5. Update purchase_orders supplier_name
+      const { error: poError } = await supabase
+        .from('purchase_orders')
+        .update({ supplier_name: updates.name })
+        .eq('supplier_id', supplierId);
+
+      if (poError) {
+        console.error('Error updating purchase orders:', poError);
+      } else {
+        console.log('✅ Updated purchase_orders');
+      }
+      
+      console.log('✅ Supplier updated successfully across all systems');
       toast({
         title: "Success",
-        description: "Supplier information updated successfully"
+        description: "Supplier information updated across all transactions and records"
       });
       
       await fetchSuppliers(); // Refresh the list
     } catch (error) {
-      console.error('Error updating supplier:', error);
+      console.error('❌ Error updating supplier:', error);
       toast({
         title: "Error",
         description: "Failed to update supplier information",
