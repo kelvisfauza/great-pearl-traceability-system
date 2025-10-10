@@ -40,7 +40,7 @@ export const useStoreReports = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      console.log('Fetching store reports from both Supabase and Firebase...');
+      console.log('=== FETCHING STORE REPORTS ===');
       
       // Fetch from Supabase first
       const { data: supabaseData, error } = await supabase
@@ -52,7 +52,8 @@ export const useStoreReports = () => {
         console.error('Supabase error:', error);
       }
       
-      console.log('Supabase store reports:', supabaseData);
+      console.log('📊 Supabase reports count:', supabaseData?.length || 0);
+      console.log('Supabase IDs:', supabaseData?.map(r => r.id) || []);
       
       // Also fetch from Firebase to get existing data
       let firebaseData: StoreReport[] = [];
@@ -65,23 +66,27 @@ export const useStoreReports = () => {
           ...doc.data()
         })) as StoreReport[];
         
-        console.log('Firebase store reports:', firebaseData);
+        console.log('🔥 Firebase reports count:', firebaseData.length);
+        console.log('Firebase IDs:', firebaseData.map(r => r.id));
       } catch (firebaseError) {
         console.error('Firebase error:', firebaseError);
       }
       
-      // Combine both sources, prioritizing Supabase but including Firebase data
+      // Combine both sources
       const combinedReports = [...(supabaseData || []), ...firebaseData];
+      console.log('🔀 Combined (before dedup):', combinedReports.length);
       
-      // Remove duplicates based on ID (in case same report exists in both)
+      // Remove duplicates based on ID
       const uniqueReports = combinedReports.filter((report, index, self) => 
         index === self.findIndex(r => r.id === report.id)
       );
       
+      console.log('✅ Unique reports (after dedup):', uniqueReports.length);
+      console.log('Final IDs:', uniqueReports.map(r => r.id));
+      
       // Sort by date
       uniqueReports.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       
-      console.log('Combined store reports:', uniqueReports);
       setReports(uniqueReports);
     } catch (error) {
       console.error('Error fetching store reports:', error);
