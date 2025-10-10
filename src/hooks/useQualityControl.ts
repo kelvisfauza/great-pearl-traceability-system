@@ -629,9 +629,22 @@ export const useQualityControl = () => {
     }
   };
 
-  const pendingRecords = storeRecords.filter(record => 
-    record.status === 'pending' || record.status === 'quality_review'
-  );
+  // Filter pending records to exclude those that already have assessments
+  const pendingRecords = storeRecords.filter(record => {
+    // Only include records with pending or quality_review status
+    if (record.status !== 'pending' && record.status !== 'quality_review') {
+      return false;
+    }
+    
+    // Check if this record already has a quality assessment
+    const hasAssessment = qualityAssessments.some(assessment => 
+      assessment.store_record_id === record.id || 
+      assessment.batch_number === record.batch_number
+    );
+    
+    // Only include if no assessment exists yet
+    return !hasAssessment;
+  });
 
   const refreshData = useCallback(async () => {
     await loadData();
