@@ -57,15 +57,36 @@ const Suppliers = () => {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const handleEditSupplier = async (supplierId: string, updates: { name: string; phone: string; origin: string }) => {
-    console.log('🔧 Editing supplier and reloading transactions...', { supplierId, updates });
-    await updateSupplier(supplierId, updates);
-    // Update selected supplier with new data AND reload transactions
-    if (selectedSupplier?.id === supplierId) {
-      const updatedSupplier = { ...selectedSupplier, ...updates };
-      setSelectedSupplier(updatedSupplier);
-      // Reload transactions with the updated supplier info
-      await loadSupplierTransactions(supplierId);
-      console.log('✅ Supplier updated and transactions reloaded');
+    console.log('🔧 Editing supplier and reloading transactions...', { 
+      supplierId, 
+      oldName: selectedSupplier?.name,
+      updates 
+    });
+    
+    try {
+      await updateSupplier(supplierId, updates);
+      
+      // Update selected supplier with new data
+      if (selectedSupplier?.id === supplierId) {
+        const updatedSupplier = { ...selectedSupplier, ...updates };
+        console.log('📝 Updated supplier object:', updatedSupplier);
+        setSelectedSupplier(updatedSupplier);
+        
+        // Wait a moment then reload transactions with the updated supplier info
+        console.log('⏳ Waiting for database to propagate changes...');
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        console.log('🔄 Reloading transactions for updated supplier...');
+        await loadSupplierTransactions(supplierId);
+        console.log('✅ Supplier updated and transactions reloaded');
+      }
+    } catch (error) {
+      console.error('❌ Error in handleEditSupplier:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update supplier and reload transactions",
+        variant: "destructive"
+      });
     }
   };
 

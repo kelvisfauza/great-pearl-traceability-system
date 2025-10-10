@@ -183,6 +183,9 @@ export const useSuppliers = () => {
         console.log('✅ Updated purchase_orders');
       }
       
+      // Wait a moment for database to propagate changes
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       console.log('✅ Supplier updated successfully across all systems');
       toast({
         title: "Success",
@@ -190,6 +193,8 @@ export const useSuppliers = () => {
       });
       
       await fetchSuppliers(); // Refresh the list
+      
+      return true; // Indicate success
     } catch (error) {
       console.error('❌ Error updating supplier:', error);
       toast({
@@ -206,6 +211,7 @@ export const useSuppliers = () => {
     loading,
     fetchSuppliers,
     addSupplier,
-    updateSupplier
+    updateSupplier,
+    refetchSuppliers: fetchSuppliers
   };
 };
