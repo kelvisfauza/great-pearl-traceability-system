@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Supplier } from "@/hooks/useSuppliers";
 
 interface EditSupplierModalProps {
@@ -19,21 +19,35 @@ export const EditSupplierModal = ({ supplier, open, onOpenChange, onSave }: Edit
   const [saving, setSaving] = useState(false);
 
   // Update form when supplier changes
-  useState(() => {
+  useEffect(() => {
     if (supplier) {
+      console.log('📝 Loading supplier into edit form:', supplier);
       setName(supplier.name);
       setPhone(supplier.phone || "");
       setOrigin(supplier.origin);
     }
-  });
+  }, [supplier]);
 
   const handleSave = async () => {
-    if (!supplier) return;
+    if (!supplier) {
+      console.error('❌ No supplier selected for editing');
+      return;
+    }
+    
+    console.log('💾 Saving supplier changes:', { 
+      id: supplier.id, 
+      oldName: supplier.name,
+      newName: name, 
+      phone, 
+      origin 
+    });
     
     setSaving(true);
     try {
       await onSave(supplier.id, { name, phone, origin });
       onOpenChange(false);
+    } catch (error) {
+      console.error('❌ Failed to save supplier:', error);
     } finally {
       setSaving(false);
     }
