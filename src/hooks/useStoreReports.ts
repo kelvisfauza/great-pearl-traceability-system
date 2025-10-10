@@ -127,23 +127,33 @@ export const useStoreReports = () => {
 
   const directDeleteReport = async (reportId: string, reason: string) => {
     try {
-      console.log('Deleting store report:', reportId);
+      console.log('=== STORE REPORT DELETION DEBUG ===');
+      console.log('Report ID to delete:', reportId);
       console.log('Report ID length:', reportId.length);
       console.log('Contains dashes:', reportId.includes('-'));
       
       // Check if this is a Firebase ID or Supabase UUID
       // UUID format: 8-4-4-4-12 characters (36 total with dashes)
       const isFirebaseId = !reportId.includes('-') && reportId.length !== 36;
+      console.log('Identified as Firebase ID:', isFirebaseId);
       
-      if (isFirebaseId) {
-        console.log('Detected Firebase ID, deleting from Firebase');
-        
-        // Delete from Firebase
+      // Try to delete from BOTH databases to ensure complete removal
+      let deletedFromFirebase = false;
+      let deletedFromSupabase = false;
+      
+      // Always try Firebase deletion first
+      try {
+        console.log('Attempting Firebase deletion...');
         await deleteDoc(doc(db, 'store_reports', reportId));
-        
-        console.log('Firebase report deleted successfully');
-      } else {
-        console.log('Detected Supabase UUID, deleting from Supabase');
+        deletedFromFirebase = true;
+        console.log('✅ Deleted from Firebase');
+      } catch (firebaseError: any) {
+        console.log('Firebase deletion failed (might not exist there):', firebaseError.message);
+      }
+      
+      // Always try Supabase deletion
+      try {
+        console.log('Attempting Supabase deletion...');
         
         // Get the report data before deletion for audit log
         const { data: reportData } = await supabase
@@ -159,6 +169,9 @@ export const useStoreReports = () => {
 
         if (error) throw error;
         
+        deletedFromSupabase = true;
+        console.log('✅ Deleted from Supabase');
+        
         // Log the deletion
         const auditData = {
           action: 'delete',
@@ -171,8 +184,14 @@ export const useStoreReports = () => {
         };
 
         await supabase.from('audit_logs').insert([auditData]);
-        
-        console.log('Supabase report deleted successfully');
+      } catch (supabaseError: any) {
+        console.log('Supabase deletion failed (might not exist there):', supabaseError.message);
+      }
+      
+      console.log('Deletion summary:', { deletedFromFirebase, deletedFromSupabase });
+      
+      if (!deletedFromFirebase && !deletedFromSupabase) {
+        throw new Error('Report not found in either database');
       }
       
       toast({
