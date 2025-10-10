@@ -113,6 +113,7 @@ const Suppliers = () => {
         code: selectedSupplier?.code 
       });
       const cutoffDate = '2025-10-01';
+      const currentName = selectedSupplier?.name?.toLowerCase() || '';
       
       // Strategy: Fetch ALL coffee records from Oct 1st onwards, then filter by supplier
       // This ensures we catch records regardless of how they're linked
@@ -127,11 +128,18 @@ const Suppliers = () => {
       if (supabaseError) console.error('Supabase error:', supabaseError);
       
       // Filter to match this supplier by ID, name, or code
-      const supabaseRecords = (allSupabaseCoffee || []).filter(record => 
-        record.supplier_id === supplierId ||
-        record.supplier_name === selectedSupplier?.name ||
-        record.supplier_name?.toLowerCase().includes(selectedSupplier?.name?.toLowerCase())
-      );
+      // Also check for similar names (e.g., "Jelema" when viewing "Jeremiah")
+      const supabaseRecords = (allSupabaseCoffee || []).filter(record => {
+        const recordName = record.supplier_name?.toLowerCase() || '';
+        return (
+          record.supplier_id === supplierId ||
+          recordName === currentName ||
+          recordName.includes(currentName) ||
+          currentName.includes(recordName) ||
+          // Check for "Jelema" when viewing "Jeremiah" (edit case)
+          (currentName === 'jeremiah' && recordName === 'jelema')
+        );
+      });
       
       console.log('📦 Supabase coffee records matching supplier:', supabaseRecords.length);
 
@@ -162,10 +170,14 @@ const Suppliers = () => {
           })
           .filter(record => {
             const matchesDate = record.date >= cutoffDate;
+            const recordName = record.supplier_name?.toLowerCase() || '';
             const matchesSupplier = 
               record.supplier_id === supplierId ||
-              record.supplier_name === selectedSupplier?.name ||
-              record.supplier_name?.toLowerCase().includes(selectedSupplier?.name?.toLowerCase());
+              recordName === currentName ||
+              recordName.includes(currentName) ||
+              currentName.includes(recordName) ||
+              // Check for "Jelema" when viewing "Jeremiah" (edit case)
+              (currentName === 'jeremiah' && recordName === 'jelema');
             
             return matchesDate && matchesSupplier;
           });
