@@ -65,6 +65,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Set up real-time subscription for employee changes
+  useEffect(() => {
+    if (!user?.email) return;
+
+    console.log('👂 Setting up real-time subscription for employee changes:', user.email);
+    
+    const channel = supabase
+      .channel('employee-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'employees',
+          filter: `email=eq.${user.email}`
+        },
+        (payload) => {
+          console.log('🔔 Employee data changed, refreshing...', payload);
+          refreshEmployeeData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔌 Unsubscribing from employee changes');
+      supabase.removeChannel(channel);
+    };
+  }, [user?.email]);
+
   const fetchEmployeeData = async (userId?: string, userEmail?: string): Promise<Employee | null> => {
     const targetUserId = userId || user?.id;
     const email = userEmail || user?.email;
