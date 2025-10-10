@@ -99,10 +99,49 @@ export const useSuppliers = () => {
     fetchSuppliers();
   }, []);
 
+  const updateSupplier = async (supplierId: string, updates: {
+    name: string;
+    phone: string;
+    origin: string;
+  }) => {
+    try {
+      console.log('Updating supplier in Supabase:', supplierId, updates);
+      
+      const { error } = await supabase
+        .from('suppliers')
+        .update({
+          name: updates.name,
+          phone: updates.phone || null,
+          origin: updates.origin,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', supplierId);
+
+      if (error) throw error;
+      
+      console.log('Supplier updated successfully');
+      toast({
+        title: "Success",
+        description: "Supplier information updated successfully"
+      });
+      
+      await fetchSuppliers(); // Refresh the list
+    } catch (error) {
+      console.error('Error updating supplier:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update supplier information",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   return {
     suppliers,
     loading,
     fetchSuppliers,
-    addSupplier
+    addSupplier,
+    updateSupplier
   };
 };

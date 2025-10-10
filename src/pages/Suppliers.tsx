@@ -17,7 +17,8 @@ import {
   FileText,
   ArrowLeft,
   Phone,
-  MapPin
+  MapPin,
+  Edit
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useSuppliers } from "@/hooks/useSuppliers";
@@ -25,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { EditSupplierModal } from "@/components/suppliers/EditSupplierModal";
 
 interface SupplierTransaction {
   id: string;
@@ -39,19 +41,28 @@ interface SupplierTransaction {
 }
 
 const Suppliers = () => {
-  const { suppliers, loading: suppliersLoading } = useSuppliers();
+  const { suppliers, loading: suppliersLoading, updateSupplier } = useSuppliers();
   const { toast } = useToast();
   
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [transactions, setTransactions] = useState<SupplierTransaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   
   // Filters
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [coffeeTypeFilter, setCoffeeTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  const handleEditSupplier = async (supplierId: string, updates: { name: string; phone: string; origin: string }) => {
+    await updateSupplier(supplierId, updates);
+    // Update selected supplier with new data
+    if (selectedSupplier?.id === supplierId) {
+      setSelectedSupplier({ ...selectedSupplier, ...updates });
+    }
+  };
 
   // Debug log
   useEffect(() => {
@@ -435,9 +446,15 @@ const Suppliers = () => {
                       <span className="font-mono">{selectedSupplier.code}</span>
                     </CardDescription>
                   </div>
-                  <Badge variant="outline" className="text-lg px-3 py-1">
-                    Supplier
-                  </Badge>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setEditModalOpen(true)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Info
+                    </Button>
+                    <Badge variant="outline" className="text-lg px-3 py-1">
+                      Supplier
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -682,6 +699,14 @@ const Suppliers = () => {
           </div>
         )}
       </div>
+
+      {/* Edit Supplier Modal */}
+      <EditSupplierModal
+        supplier={selectedSupplier}
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        onSave={handleEditSupplier}
+      />
     </Layout>
   );
 };
