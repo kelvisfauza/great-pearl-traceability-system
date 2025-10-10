@@ -5,35 +5,42 @@ import { Clock, DollarSign, Gift } from 'lucide-react';
 import { useOvertimeAwards } from '@/hooks/useOvertimeAwards';
 import { OvertimeClaimModal } from './OvertimeClaimModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 export const OvertimeNotification = () => {
   const { myAwards } = useOvertimeAwards();
   const { employee } = useAuth();
+  const location = useLocation();
   const [pendingAward, setPendingAward] = useState<any>(null);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [awardToClaim, setAwardToClaim] = useState<any>(null);
   const shownAwards = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    // Only show notification if user is authenticated
-    if (!employee) {
+    // Only show notification if user is authenticated and not on auth page
+    if (!employee || location.pathname === '/auth') {
       return;
     }
 
-    // Find the first pending award that hasn't been shown yet
-    const pendingAwards = myAwards.filter((award: any) => 
-      award.status === 'pending' && 
-      !award.claimed_at && 
-      !award.completed_at &&
-      !shownAwards.current.has(award.id)
-    );
+    // Wait a moment after login to ensure user has fully loaded
+    const timeoutId = setTimeout(() => {
+      // Find the first pending award that hasn't been shown yet
+      const pendingAwards = myAwards.filter((award: any) => 
+        award.status === 'pending' && 
+        !award.claimed_at && 
+        !award.completed_at &&
+        !shownAwards.current.has(award.id)
+      );
 
-    if (pendingAwards.length > 0 && !pendingAward && !showClaimModal) {
-      const award = pendingAwards[0];
-      setPendingAward(award);
-      shownAwards.current.add(award.id);
-    }
-  }, [myAwards, employee, pendingAward, showClaimModal]);
+      if (pendingAwards.length > 0 && !pendingAward && !showClaimModal) {
+        const award = pendingAwards[0];
+        setPendingAward(award);
+        shownAwards.current.add(award.id);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [myAwards, employee, location.pathname, pendingAward, showClaimModal]);
 
   const handleClaim = () => {
     if (pendingAward) {
@@ -89,7 +96,7 @@ export const OvertimeNotification = () => {
                   </span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <DollarSign className="h-6 w-6 text-green-600" />
+                  <DollarSign className="h-6 w-8 text-green-600" />
                   <span className="text-3xl font-bold text-green-600">
                     {pendingAward.total_amount.toLocaleString()}
                   </span>
