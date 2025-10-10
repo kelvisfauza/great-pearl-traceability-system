@@ -29,8 +29,11 @@ export const OvertimeNotification = () => {
         award.status === 'pending' && 
         !award.claimed_at && 
         !award.completed_at &&
-        !shownAwards.current.has(award.id)
+        !shownAwards.current.has(award.id) &&
+        award.employee_email === employee.email // Double-check email matches
       );
+
+      console.log('🎁 Pending overtime awards for', employee.email, ':', pendingAwards);
 
       if (pendingAwards.length > 0 && !pendingAward && !showClaimModal) {
         const award = pendingAwards[0];
@@ -87,9 +90,9 @@ export const OvertimeNotification = () => {
           <div className="space-y-4 py-4">
             <div className="text-center">
               <p className="text-lg">
-                Dear <span className="font-semibold">{pendingAward.employee_name}</span>
+                Dear <span className="font-semibold">{employee?.name || pendingAward.employee_name}</span>
               </p>
-              <p className="text-sm text-muted-foreground">{pendingAward.department}</p>
+              <p className="text-sm text-muted-foreground">{employee?.department || pendingAward.department}</p>
             </div>
 
             <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-6 space-y-4">
