@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, FileText, User, Package, DollarSign, ClipboardCheck, TrendingUp, History, Trash2 } from 'lucide-react';
+import { Search, X, FileText, User, Package, DollarSign, ClipboardCheck, TrendingUp, History, Trash2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -135,6 +135,8 @@ const GlobalSearch = () => {
         return <Search className="h-4 w-4" />;
       case 'eudr':
         return <FileText className="h-4 w-4" />;
+      case 'overtime':
+        return <Clock className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
@@ -159,6 +161,8 @@ const GlobalSearch = () => {
         return 'text-primary';
       case 'eudr':
         return 'text-yellow-500';
+      case 'overtime':
+        return 'text-indigo-500';
       default:
         return 'text-gray-500';
     }
@@ -197,7 +201,7 @@ const GlobalSearch = () => {
                 <Input
                   ref={inputRef}
                   type="text"
-                  placeholder="Search suppliers, batches, employees, transactions... (Ctrl+K)"
+                  placeholder="Search suppliers, batches, employees, overtime, transactions... (Ctrl+K)"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"

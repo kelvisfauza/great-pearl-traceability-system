@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 
 export interface SearchResult {
   id: string;
-  type: 'supplier' | 'batch' | 'employee' | 'transaction' | 'quality' | 'payment' | 'expense' | 'department' | 'eudr';
+  type: 'supplier' | 'batch' | 'employee' | 'transaction' | 'quality' | 'payment' | 'expense' | 'department' | 'eudr' | 'overtime';
   title: string;
   subtitle: string;
   navigateTo: string;
@@ -282,6 +282,30 @@ export const useGlobalSearch = (searchTerm: string) => {
                 department: 'Sales',
                 module: 'Sales Transactions',
                 metadata: sale
+              });
+            });
+          }
+        }
+
+        // Search Overtime Awards
+        if (canAccessHR) {
+          const { data: overtimeAwards } = await supabase
+            .from('overtime_awards')
+            .select('*')
+            .or(`reference_number.ilike.%${searchTerm}%,employee_name.ilike.%${searchTerm}%,employee_email.ilike.%${searchTerm}%`)
+            .limit(10);
+
+          if (overtimeAwards) {
+            overtimeAwards.forEach(award => {
+              searchResults.push({
+                id: award.id,
+                type: 'overtime',
+                title: `Overtime: ${award.reference_number || 'Pending Reference'}`,
+                subtitle: `${award.employee_name} | ${award.hours}h ${award.minutes || 0}m | ${award.total_amount} UGX | Status: ${award.status}`,
+                navigateTo: `/human-resources?overtime=${award.id}`,
+                department: 'HR',
+                module: 'Overtime Management',
+                metadata: award
               });
             });
           }
