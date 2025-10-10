@@ -1,28 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Clock, DollarSign, Gift } from 'lucide-react';
 import { useOvertimeAwards } from '@/hooks/useOvertimeAwards';
 import { OvertimeClaimModal } from './OvertimeClaimModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const OvertimeNotification = () => {
   const { myAwards } = useOvertimeAwards();
+  const { employee } = useAuth();
   const [pendingAward, setPendingAward] = useState<any>(null);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [awardToClaim, setAwardToClaim] = useState<any>(null);
+  const shownAwards = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    // Only show awards that are pending and not claimed/completed
-    const pendingAwards = myAwards.filter(award => 
+    // Only show notification if user is authenticated
+    if (!employee) {
+      return;
+    }
+
+    // Find the first pending award that hasn't been shown yet
+    const pendingAwards = myAwards.filter((award: any) => 
       award.status === 'pending' && 
       !award.claimed_at && 
-      !award.completed_at
+      !award.completed_at &&
+      !shownAwards.current.has(award.id)
     );
 
     if (pendingAwards.length > 0 && !pendingAward && !showClaimModal) {
-      setPendingAward(pendingAwards[0]);
+      const award = pendingAwards[0];
+      setPendingAward(award);
+      shownAwards.current.add(award.id);
     }
-  }, [myAwards, pendingAward, showClaimModal]);
+  }, [myAwards, employee, pendingAward, showClaimModal]);
 
   const handleClaim = () => {
     if (pendingAward) {
@@ -123,4 +134,4 @@ export const OvertimeNotification = () => {
       />
     </>
   );
-};
+}
