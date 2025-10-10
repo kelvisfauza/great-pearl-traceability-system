@@ -15,6 +15,7 @@ import StoreReportViewer from './StoreReportViewer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateStoreReportPDF, generateMultipleReportsPDF } from '@/utils/pdfGenerator';
+import { deleteOct2Report } from '@/utils/deleteSpecificReport';
 
 const StoreReportsList = () => {
   const { reports, loading, directDeleteReport, directEditReport, migrateFirebaseToSupabase } = useStoreReports();
@@ -252,6 +253,26 @@ const StoreReportsList = () => {
     }
   };
 
+  const handleDeleteOct2Report = async () => {
+    try {
+      setSubmitting(true);
+      const result = await deleteOct2Report();
+      
+      if (result.success) {
+        toast.success('Oct 2, 2025 report deleted successfully from both databases!');
+        // Refresh the reports list
+        window.location.reload();
+      } else {
+        toast.error('Report not found in either database');
+      }
+    } catch (error) {
+      console.error('Error deleting specific report:', error);
+      toast.error('Failed to delete report');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handlePrint = (report: any) => {
     try {
       generateStoreReportPDF(report);
@@ -282,6 +303,16 @@ const StoreReportsList = () => {
           <CardDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <span>View and export historical store reports as PDF</span>
             <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteOct2Report}
+                disabled={submitting}
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Oct 2 Report
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
