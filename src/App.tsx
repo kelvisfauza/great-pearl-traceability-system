@@ -162,8 +162,8 @@ const App: React.ComponentType = () => {
                     <Expenses />
                   </ProtectedRoute>
                 } />
-                <Route path="/eupr-documentation" element={
-                  <ProtectedRoute requiredPermissions={["EUPR Documentation", "Store Management"]}>
+                <Route path="/eudr-documentation" element={
+                  <ProtectedRoute requiredPermissions={["EUDR Documentation", "Store Management"]}>
                     <EURDocumentationPage />
                   </ProtectedRoute>
                 } />
