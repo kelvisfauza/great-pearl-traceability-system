@@ -133,20 +133,15 @@ const Suppliers = () => {
         }
       }
       
-      // Filter ONLY by supplier_id (ignore name completely)
+      // Filter by supplier_name (supplier_id is null in all records)
       const supabaseRecords = (allSupabaseCoffee || []).filter(record => {
-        const matches = record.supplier_id === supplierId;
-        if (!matches && record.supplier_id) {
-          console.log('⚠️ Record not matching:', {
-            record_supplier_id: record.supplier_id,
-            looking_for: supplierId,
-            batch: record.batch_number
-          });
-        }
+        // Match by current name or "Jelema" (old name for Jeremiah)
+        const matches = record.supplier_name === selectedSupplier?.name || 
+                       (selectedSupplier?.name === 'Jeremiah' && record.supplier_name === 'Jelema');
         return matches;
       });
       
-      console.log('✅ Supabase records for supplier_id=' + supplierId + ':', supabaseRecords.length);
+      console.log('✅ Supabase records for ' + selectedSupplier?.name + ':', supabaseRecords.length);
       if (supabaseRecords.length > 0) {
         console.log('📦 Sample matched record:', supabaseRecords[0]);
       }
@@ -181,23 +176,17 @@ const Suppliers = () => {
         console.log('📋 Firebase supplier_ids found:', [...new Set(allFirebaseRecords.map(r => r.supplier_id))]);
         console.log('📋 Firebase supplier_names found:', [...new Set(allFirebaseRecords.map(r => r.supplier_name))]);
         
-        // Filter ONLY by supplier_id (ignore name) and date
+        // Filter by supplier_name (supplier_id is null in Firebase too)
         firebaseCoffeeRecords = allFirebaseRecords.filter(record => {
           const matchesDate = record.date >= cutoffDate;
-          const matchesSupplier = record.supplier_id === supplierId;
-          
-          if (!matchesSupplier && matchesDate && record.supplier_id) {
-            console.log('⚠️ Firebase record not matching:', {
-              record_supplier_id: record.supplier_id,
-              looking_for: supplierId,
-              batch: record.batch_number
-            });
-          }
+          // Match by current name or "Jelema" (old name for Jeremiah)
+          const matchesSupplier = record.supplier_name === selectedSupplier?.name ||
+                                 (selectedSupplier?.name === 'Jeremiah' && record.supplier_name === 'Jelema');
           
           return matchesDate && matchesSupplier;
         });
         
-        console.log('✅ Firebase records for supplier_id=' + supplierId + ':', firebaseCoffeeRecords.length);
+        console.log('✅ Firebase records for ' + selectedSupplier?.name + ':', firebaseCoffeeRecords.length);
         if (firebaseCoffeeRecords.length > 0) {
           console.log('🔥 Sample matched Firebase record:', firebaseCoffeeRecords[0]);
         }
