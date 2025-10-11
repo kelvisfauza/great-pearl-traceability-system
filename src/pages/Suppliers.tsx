@@ -114,27 +114,44 @@ const Suppliers = () => {
       });
       const cutoffDate = '2025-10-01';
       
-      // Strategy: Fetch ALL coffee records from Oct 1st onwards, then filter by supplier_id
-      // Transactions keep their original supplier name from when they were created
-      
-      // Get ALL coffee records from Supabase (from Oct 1, 2025 onwards)
+      // Get ALL coffee records from Supabase and log them for debugging
       const { data: allSupabaseCoffee, error: supabaseError } = await supabase
         .from('coffee_records')
         .select('*')
         .gte('date', cutoffDate)
         .order('date', { ascending: false });
 
-      if (supabaseError) console.error('Supabase error:', supabaseError);
+      if (supabaseError) {
+        console.error('❌ Supabase error:', supabaseError);
+      } else {
+        console.log('📊 Total Supabase records from Oct 1st:', allSupabaseCoffee?.length || 0);
+        // Log first few records to see structure
+        if (allSupabaseCoffee && allSupabaseCoffee.length > 0) {
+          console.log('📋 Sample record:', allSupabaseCoffee[0]);
+          console.log('📋 All supplier_ids found:', [...new Set(allSupabaseCoffee.map(r => r.supplier_id))]);
+          console.log('📋 All supplier_names found:', [...new Set(allSupabaseCoffee.map(r => r.supplier_name))]);
+        }
+      }
       
-      // Filter to match this supplier by supplier_id OR supplier_name
-      const supabaseRecords = (allSupabaseCoffee || []).filter(record => 
-        record.supplier_id === supplierId || 
-        record.supplier_name === selectedSupplier?.name
-      );
+      // Filter ONLY by supplier_id (ignore name completely)
+      const supabaseRecords = (allSupabaseCoffee || []).filter(record => {
+        const matches = record.supplier_id === supplierId;
+        if (!matches && record.supplier_id) {
+          console.log('⚠️ Record not matching:', {
+            record_supplier_id: record.supplier_id,
+            looking_for: supplierId,
+            batch: record.batch_number
+          });
+        }
+        return matches;
+      });
       
-      console.log('📦 Supabase coffee records matching supplier:', supabaseRecords.length);
+      console.log('✅ Supabase records for supplier_id=' + supplierId + ':', supabaseRecords.length);
+      if (supabaseRecords.length > 0) {
+        console.log('📦 Sample matched record:', supabaseRecords[0]);
+      }
 
-      // Fetch ALL Firebase records from Oct 1st onwards
+      // Fetch ALL Firebase records
       let firebaseCoffeeRecords: any[] = [];
       
       try {
@@ -143,33 +160,49 @@ const Suppliers = () => {
         );
         const allFirebaseSnapshot = await getDocs(allFirebaseQuery);
         
-        // Filter to match this supplier and date
-        firebaseCoffeeRecords = allFirebaseSnapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              date: data.date || '',
-              batch_number: data.batch_number || '',
-              coffee_type: data.coffee_type || '',
-              kilograms: Number(data.kilograms) || 0,
-              bags: Number(data.bags) || 0,
-              status: data.status || 'pending',
-              supplier_id: data.supplier_id,
-              supplier_name: data.supplier_name
-            };
-          })
-          .filter(record => {
-            const matchesDate = record.date >= cutoffDate;
-            const matchesSupplier = record.supplier_id === supplierId || 
-                                   record.supplier_name === selectedSupplier?.name;
-            
-            return matchesDate && matchesSupplier;
-          });
+        console.log('📊 Total Firebase records:', allFirebaseSnapshot.docs.length);
         
-        console.log('🔥 Firebase records matching supplier:', firebaseCoffeeRecords.length);
+        // Map and log all records
+        const allFirebaseRecords = allFirebaseSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            date: data.date || '',
+            batch_number: data.batch_number || '',
+            coffee_type: data.coffee_type || '',
+            kilograms: Number(data.kilograms) || 0,
+            bags: Number(data.bags) || 0,
+            status: data.status || 'pending',
+            supplier_id: data.supplier_id,
+            supplier_name: data.supplier_name
+          };
+        });
+        
+        console.log('📋 Firebase supplier_ids found:', [...new Set(allFirebaseRecords.map(r => r.supplier_id))]);
+        console.log('📋 Firebase supplier_names found:', [...new Set(allFirebaseRecords.map(r => r.supplier_name))]);
+        
+        // Filter ONLY by supplier_id (ignore name) and date
+        firebaseCoffeeRecords = allFirebaseRecords.filter(record => {
+          const matchesDate = record.date >= cutoffDate;
+          const matchesSupplier = record.supplier_id === supplierId;
+          
+          if (!matchesSupplier && matchesDate && record.supplier_id) {
+            console.log('⚠️ Firebase record not matching:', {
+              record_supplier_id: record.supplier_id,
+              looking_for: supplierId,
+              batch: record.batch_number
+            });
+          }
+          
+          return matchesDate && matchesSupplier;
+        });
+        
+        console.log('✅ Firebase records for supplier_id=' + supplierId + ':', firebaseCoffeeRecords.length);
+        if (firebaseCoffeeRecords.length > 0) {
+          console.log('🔥 Sample matched Firebase record:', firebaseCoffeeRecords[0]);
+        }
       } catch (firebaseError) {
-        console.error('Firebase query error:', firebaseError);
+        console.error('❌ Firebase query error:', firebaseError);
       }
 
       // Combine all sources and remove duplicates
