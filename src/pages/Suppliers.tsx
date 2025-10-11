@@ -126,9 +126,10 @@ const Suppliers = () => {
 
       if (supabaseError) console.error('Supabase error:', supabaseError);
       
-      // Filter to match this supplier by supplier_id (transactions keep original supplier name)
+      // Filter to match this supplier by supplier_id OR supplier_name
       const supabaseRecords = (allSupabaseCoffee || []).filter(record => 
-        record.supplier_id === supplierId
+        record.supplier_id === supplierId || 
+        record.supplier_name === selectedSupplier?.name
       );
       
       console.log('📦 Supabase coffee records matching supplier:', supabaseRecords.length);
@@ -160,7 +161,8 @@ const Suppliers = () => {
           })
           .filter(record => {
             const matchesDate = record.date >= cutoffDate;
-            const matchesSupplier = record.supplier_id === supplierId;
+            const matchesSupplier = record.supplier_id === supplierId || 
+                                   record.supplier_name === selectedSupplier?.name;
             
             return matchesDate && matchesSupplier;
           });
