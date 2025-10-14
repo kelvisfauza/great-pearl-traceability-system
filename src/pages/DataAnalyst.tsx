@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw, Plus } from 'lucide-react';
 import MarketMonitor from '@/components/analyst/MarketMonitor';
 import ProcurementAdvisory from '@/components/analyst/ProcurementAdvisory';
 import OutturnSimulator from '@/components/analyst/OutturnSimulator';
@@ -16,7 +16,37 @@ const DataAnalyst = () => {
 
   return (
     <Layout title="Data Analytics" subtitle="Advanced market analysis and pricing intelligence">
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex justify-end gap-2">
+        <Button 
+          variant="outline"
+          onClick={async () => {
+            const testMessage = `Great Pearl Coffee updates, today ${new Date().toLocaleDateString('en-GB')} price, Arabica outturn (70%), moisture (12.5%), FM (5%) at UGX 8,500/kg. Deliver now to get served best.`;
+            try {
+              console.log('📱 Sending test SMS to 0781121639');
+              const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
+                },
+                body: JSON.stringify({
+                  phone: '0781121639',
+                  message: testMessage,
+                  userName: 'Test User',
+                  messageType: 'price_update',
+                  triggeredBy: 'Data Analyst Test',
+                  department: 'Analyst'
+                })
+              });
+              const result = await response.json();
+              console.log('✅ Test SMS result:', result);
+            } catch (error) {
+              console.error('❌ Test SMS error:', error);
+            }
+          }}
+        >
+          Test SMS
+        </Button>
         <Button onClick={() => setPriceUpdateModalOpen(true)}>
           <RefreshCcw className="h-4 w-4 mr-2" />
           Update Market Prices
