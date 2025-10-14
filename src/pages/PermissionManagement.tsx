@@ -41,16 +41,41 @@ const PermissionManagement = () => {
     }
   };
 
+  const handleGrantITAccess = async () => {
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({
+          permissions: ['Finance Management', 'Finance', 'IT Management', 'Admin', 'Human Resources']
+        })
+        .eq('email', 'kelviskusa@gmail.com');
+
+      if (error) throw error;
+
+      toast.success('IT Management permission granted to Kusa');
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+      toast.error('Failed to update permissions');
+    }
+  };
+
   return (
     <Layout title="Permission Management" subtitle="Manage user roles and permissions">
       <div className="space-y-6">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
           <Button 
             onClick={handleCreateKusaAccount}
             disabled={creating}
           >
             <UserPlus className="h-4 w-4 mr-2" />
             {creating ? 'Creating...' : 'Create Kusa Auth Account'}
+          </Button>
+          
+          <Button 
+            onClick={handleGrantITAccess}
+            variant="outline"
+          >
+            Grant IT Access to Kusa
           </Button>
         </div>
         <UserPermissionsList />
