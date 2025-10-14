@@ -64,25 +64,34 @@ export const PriceUpdateModal = ({ open, onOpenChange }: PriceUpdateModalProps) 
         const message = `Great Pearl Coffee updates, today ${date} price, Arabica outturn (${formData.outturn}%), moisture (${formData.moisture}%), FM (${formData.fm}%) at UGX ${parseFloat(formData.price).toLocaleString()}/kg. Deliver now to get served best.`;
 
         // Send SMS to each supplier
+        console.log(`📱 Sending SMS to ${suppliers.length} suppliers`);
         const smsPromises = suppliers.map(async (supplier: any) => {
           try {
-            const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`, {
+            console.log(`Sending to ${supplier.name} at ${supplier.phone}`);
+            const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
               },
               body: JSON.stringify({
                 phone: supplier.phone,
-                message: message
+                message: message,
+                userName: supplier.name,
+                messageType: 'price_update',
+                triggeredBy: 'Data Analyst',
+                department: 'Analyst'
               })
             });
 
+            const result = await response.json();
             if (!response.ok) {
-              console.error(`Failed to send SMS to ${supplier.name}`);
+              console.error(`❌ Failed to send SMS to ${supplier.name}:`, result);
+            } else {
+              console.log(`✅ SMS sent to ${supplier.name}`);
             }
           } catch (error) {
-            console.error(`Error sending SMS to ${supplier.name}:`, error);
+            console.error(`❌ Error sending SMS to ${supplier.name}:`, error);
           }
         });
 
