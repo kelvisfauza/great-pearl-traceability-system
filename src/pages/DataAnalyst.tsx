@@ -16,7 +16,7 @@ const DataAnalyst = () => {
 
   return (
     <Layout title="Data Analytics" subtitle="Advanced market analysis and pricing intelligence">
-      <div className="mb-4 flex justify-end gap-2">
+      <div className="mb-4 flex justify-start gap-2">
         <Button 
           variant="outline"
           onClick={async () => {
