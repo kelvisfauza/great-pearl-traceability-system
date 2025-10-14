@@ -18,7 +18,8 @@ import {
   ArrowLeft,
   Phone,
   MapPin,
-  Edit
+  Edit,
+  Download
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useSuppliers } from "@/hooks/useSuppliers";
@@ -27,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { EditSupplierModal } from "@/components/suppliers/EditSupplierModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SupplierTransaction {
   id: string;
@@ -43,6 +45,7 @@ interface SupplierTransaction {
 const Suppliers = () => {
   const { suppliers, loading: suppliersLoading, updateSupplier } = useSuppliers();
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
   
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -356,6 +359,37 @@ const Suppliers = () => {
     return <Badge variant={variants[status] || 'secondary'}>{status}</Badge>;
   };
 
+  const downloadSuppliersList = () => {
+    // Create CSV content
+    const headers = ['Name', 'Code', 'Phone Number'];
+    const rows = suppliers.map(s => [
+      s.name,
+      s.code,
+      s.phone || 'N/A'
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `suppliers_list_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Success",
+      description: "Suppliers list downloaded successfully"
+    });
+  };
+
   if (suppliersLoading) {
     return (
       <Layout>
@@ -380,12 +414,20 @@ const Suppliers = () => {
               View and manage supplier information and transactions
             </p>
           </div>
-          {selectedSupplier && (
-            <Button variant="outline" onClick={() => setSelectedSupplier(null)}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to List
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {!selectedSupplier && isAdmin() && suppliers.length > 0 && (
+              <Button variant="outline" onClick={downloadSuppliersList}>
+                <Download className="h-4 w-4 mr-2" />
+                Download List
+              </Button>
+            )}
+            {selectedSupplier && (
+              <Button variant="outline" onClick={() => setSelectedSupplier(null)}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to List
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* List View */}
