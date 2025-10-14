@@ -20,7 +20,7 @@ const DataAnalyst = () => {
         <Button 
           variant="outline"
           onClick={async () => {
-            const testMessage = `Great Pearl Coffee updates, today ${new Date().toLocaleDateString('en-GB')} price, Arabica outturn 70%, moisture 12.5%, FM 5%, price UGX 8,500/kg. Deliver now to get served best.`;
+            const testMessage = `Great Pearl Coffee updates\nToday: ${new Date().toLocaleDateString('en-GB')}\n\nArabica Price Update:\nOutturn:        70%\nMoisture:     12.5%\nFM:              5%\nPrice:  UGX 8,500/kg\n\nDeliver now to get served best.`;
             try {
               console.log('📱 Sending test SMS to 0781121639');
               const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
