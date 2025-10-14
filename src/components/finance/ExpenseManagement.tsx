@@ -41,8 +41,8 @@ export const ExpenseManagement = () => {
         shouldShow: isExpenseRequest && !isRejected && !(hasFinanceApproval && hasAdminApproval)
       });
       
-      // Only show if it's an expense request AND not rejected AND not fully approved (both finance and admin)
-      return isExpenseRequest && !isRejected && !(hasFinanceApproval && hasAdminApproval);
+      // Only show if it's an expense request AND not rejected AND finance hasn't approved yet
+      return isExpenseRequest && !isRejected && !hasFinanceApproval;
     }
   );
 
@@ -69,8 +69,8 @@ export const ExpenseManagement = () => {
         shouldShow: isSalaryRequest && !isRejected && !(hasFinanceApproval && hasAdminApproval)
       });
       
-      // Only show if it's a salary request AND not rejected AND not fully approved (both finance and admin)
-      return isSalaryRequest && !isRejected && !(hasFinanceApproval && hasAdminApproval);
+      // Only show if it's a salary request AND not rejected AND finance hasn't approved yet
+      return isSalaryRequest && !isRejected && !hasFinanceApproval;
     }
   );
 

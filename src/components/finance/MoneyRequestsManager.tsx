@@ -39,7 +39,7 @@ const MoneyRequestsManager = () => {
       const { data, error } = await supabase
         .from('money_requests')
         .select('*')
-        .in('approval_stage', ['pending_finance', 'finance_approved'])
+        .eq('approval_stage', 'pending_finance')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
