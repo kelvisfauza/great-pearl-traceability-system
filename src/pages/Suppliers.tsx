@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,9 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { EditSupplierModal } from "@/components/suppliers/EditSupplierModal";
 import { useAuth } from "@/contexts/AuthContext";
+import StandardPrintHeader from "@/components/print/StandardPrintHeader";
+import { useReactToPrint } from "react-to-print";
+import { getStandardPrintStyles } from "@/utils/printStyles";
 
 interface SupplierTransaction {
   id: string;
@@ -46,6 +50,7 @@ const Suppliers = () => {
   const { suppliers, loading: suppliersLoading, updateSupplier } = useSuppliers();
   const { toast } = useToast();
   const { isAdmin } = useAuth();
+  const printRef = useRef<HTMLDivElement>(null);
   
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -359,36 +364,16 @@ const Suppliers = () => {
     return <Badge variant={variants[status] || 'secondary'}>{status}</Badge>;
   };
 
-  const downloadSuppliersList = () => {
-    // Create CSV content
-    const headers = ['Name', 'Code', 'Phone Number'];
-    const rows = suppliers.map(s => [
-      s.name,
-      s.code,
-      s.phone || 'N/A'
-    ]);
-    
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-    
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `suppliers_list_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({
-      title: "Success",
-      description: "Suppliers list downloaded successfully"
-    });
-  };
+  const handlePrintSuppliersList = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Suppliers_List_${new Date().toISOString().split('T')[0]}`,
+    onAfterPrint: () => {
+      toast({
+        title: "Success",
+        description: "Suppliers list downloaded successfully"
+      });
+    }
+  });
 
   if (suppliersLoading) {
     return (
@@ -405,6 +390,43 @@ const Suppliers = () => {
 
   return (
     <Layout>
+      <style>{getStandardPrintStyles()}</style>
+      
+      {/* Hidden print content */}
+      <div className="hidden print:block" ref={printRef}>
+        <StandardPrintHeader
+          title="SUPPLIERS LIST"
+          subtitle="Complete Supplier Directory"
+          includeDate={true}
+        />
+        
+        <div className="mt-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="font-bold">Supplier Name</TableHead>
+                <TableHead className="font-bold">Supplier Code</TableHead>
+                <TableHead className="font-bold">Phone Number</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {suppliers.map((supplier) => (
+                <TableRow key={supplier.id}>
+                  <TableCell>{supplier.name}</TableCell>
+                  <TableCell>{supplier.code}</TableCell>
+                  <TableCell>{supplier.phone || "N/A"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          
+          <div className="mt-6 text-sm text-gray-600">
+            <p>Total Suppliers: {suppliers.length}</p>
+            <p>Generated on: {new Date().toLocaleDateString("en-GB")} at {new Date().toLocaleTimeString("en-GB")}</p>
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -416,7 +438,7 @@ const Suppliers = () => {
           </div>
           <div className="flex gap-2">
             {!selectedSupplier && isAdmin() && suppliers.length > 0 && (
-              <Button variant="outline" onClick={downloadSuppliersList}>
+              <Button variant="outline" onClick={handlePrintSuppliersList}>
                 <Download className="h-4 w-4 mr-2" />
                 Download List
               </Button>
