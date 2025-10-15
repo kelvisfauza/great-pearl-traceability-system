@@ -62,7 +62,7 @@ const KeyMetrics = () => {
                   <div className="flex items-center gap-1">
                     <TrendIcon className={`h-4 w-4 ${metric.trend === 'up' ? 'text-green-600' : 'text-red-600'}`} />
                     <p className={`text-sm font-medium ${metric.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                      {metric.change_percentage ? `${metric.change_percentage > 0 ? '+' : ''}${metric.change_percentage}%` : 'N/A'}
+                      {metric.change_percentage || 'N/A'}
                     </p>
                     <span className="text-sm text-muted-foreground">vs last period</span>
                   </div>
