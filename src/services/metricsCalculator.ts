@@ -21,12 +21,10 @@ export const calculateMetricsFromFirebase = async () => {
   console.log('📊 Starting metrics calculation from Firebase...');
 
   try {
-    // Fetch data from Firebase
-    const [coffeeSnapshot, supplierSnapshot, salesSnapshot] = await Promise.all([
-      getDocs(query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'))),
-      getDocs(query(collection(db, 'suppliers'))),
-      getDocs(query(collection(db, 'sales_transactions'))),
-    ]);
+    // Fetch coffee records from Firebase
+    const coffeeSnapshot = await getDocs(
+      query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'))
+    );
 
     // Calculate totals from coffee records
     let totalBags = 0;
@@ -38,8 +36,17 @@ export const calculateMetricsFromFirebase = async () => {
       totalKg += data.kilograms || 0;
     });
 
-    // Count active suppliers
-    const activeSuppliers = supplierSnapshot.size;
+    // Count active COFFEE suppliers from Supabase (not milling customers)
+    const { count: activeSuppliers, error: supplierError } = await supabase
+      .from('suppliers')
+      .select('*', { count: 'exact', head: true });
+    
+    if (supplierError) {
+      console.error('Error fetching suppliers:', supplierError);
+    }
+
+    // Fetch sales from Firebase
+    const salesSnapshot = await getDocs(query(collection(db, 'sales_transactions')));
 
     // Calculate revenue from sales
     let totalRevenue = 0;
@@ -61,7 +68,7 @@ export const calculateMetricsFromFirebase = async () => {
     console.log('📊 Calculated metrics:', {
       totalBags,
       totalKg,
-      activeSuppliers,
+      activeSuppliers: activeSuppliers || 0,
       revenue: totalRevenue,
       qualityScore
     });
@@ -88,7 +95,7 @@ export const calculateMetricsFromFirebase = async () => {
 
     const productionTrend = calculateTrend(totalBags, getPreviousValue('production'));
     const revenueTrend = calculateTrend(totalRevenue, getPreviousValue('finance'));
-    const supplierTrend = calculateTrend(activeSuppliers, getPreviousValue('suppliers'));
+    const supplierTrend = calculateTrend(activeSuppliers || 0, getPreviousValue('suppliers'));
     const qualityTrend = calculateTrend(parseFloat(qualityScore), getPreviousValue('quality'));
 
     // Prepare key metrics
@@ -127,7 +134,7 @@ export const calculateMetricsFromFirebase = async () => {
         metric_type: 'key_metric',
         category: 'suppliers',
         label: 'Active Suppliers',
-        value_text: `${activeSuppliers}`,
+        value_text: `${activeSuppliers || 0}`,
         change_percentage: supplierTrend.change,
         trend: supplierTrend.trend,
         icon: 'Users',
@@ -217,7 +224,7 @@ export const calculateMetricsFromFirebase = async () => {
         totalKg,
         revenue: totalRevenue,
         qualityScore,
-        activeSuppliers
+        activeSuppliers: activeSuppliers || 0
       }
     };
   } catch (error) {
