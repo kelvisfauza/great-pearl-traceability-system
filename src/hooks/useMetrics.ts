@@ -1,18 +1,51 @@
 
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock metrics data since we're using Firebase only
 export const useMetrics = () => {
-  const [data, setData] = useState([
-    { id: '1', label: 'Total Production', value: '2,847 bags', change_percentage: 12.5, trend: 'up', icon: 'Package', color: 'text-blue-600', category: 'production' },
-    { id: '2', label: 'Quality Score', value: '94.2%', change_percentage: 2.1, trend: 'up', icon: 'Award', color: 'text-green-600', category: 'quality' },
-    { id: '3', label: 'Revenue', value: 'UGX 847M', change_percentage: 8.7, trend: 'up', icon: 'DollarSign', color: 'text-yellow-600', category: 'finance' },
-    { id: '4', label: 'Active Suppliers', value: '156', change_percentage: 3.2, trend: 'up', icon: 'Users', color: 'text-purple-600', category: 'suppliers' }
-  ]);
+  const [data, setData] = useState<any[]>([]);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        setIsLoading(true);
+        const { data: metricsData, error: fetchError } = await supabase
+          .from('metrics')
+          .select('*')
+          .eq('metric_type', 'key_metric')
+          .order('category');
+
+        if (fetchError) throw fetchError;
+
+        const formattedData = metricsData?.map(metric => ({
+          id: metric.id,
+          label: metric.label,
+          value: metric.value_text,
+          change_percentage: metric.change_percentage,
+          trend: metric.trend,
+          icon: metric.icon,
+          color: metric.color,
+          category: metric.category
+        })) || [];
+
+        setData(formattedData);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching metrics:', err);
+        setError(err as Error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMetrics();
+  }, []);
 
   return {
     data,
-    error: null,
-    isLoading: false
+    error,
+    isLoading
   };
 };

@@ -1721,40 +1721,58 @@ export type Database = {
       }
       metrics: {
         Row: {
-          category: string | null
+          category: string
           change_percentage: number | null
           color: string | null
-          created_at: string
-          date_recorded: string
+          created_at: string | null
+          date_recorded: string | null
           icon: string | null
           id: string
-          label: string
-          trend: string
-          value: string
+          label: string | null
+          metric_type: string
+          month: string | null
+          percentage: number | null
+          target: number | null
+          trend: string | null
+          updated_at: string | null
+          value_numeric: number | null
+          value_text: string | null
         }
         Insert: {
-          category?: string | null
+          category: string
           change_percentage?: number | null
           color?: string | null
-          created_at?: string
-          date_recorded?: string
+          created_at?: string | null
+          date_recorded?: string | null
           icon?: string | null
           id?: string
-          label: string
-          trend: string
-          value: string
+          label?: string | null
+          metric_type: string
+          month?: string | null
+          percentage?: number | null
+          target?: number | null
+          trend?: string | null
+          updated_at?: string | null
+          value_numeric?: number | null
+          value_text?: string | null
         }
         Update: {
-          category?: string | null
+          category?: string
           change_percentage?: number | null
           color?: string | null
-          created_at?: string
-          date_recorded?: string
+          created_at?: string | null
+          date_recorded?: string | null
           icon?: string | null
           id?: string
-          label?: string
-          trend?: string
-          value?: string
+          label?: string | null
+          metric_type?: string
+          month?: string | null
+          percentage?: number | null
+          target?: number | null
+          trend?: string | null
+          updated_at?: string | null
+          value_numeric?: number | null
+          value_text?: string | null
         }
         Relationships: []
       }

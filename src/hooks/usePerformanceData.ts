@@ -1,18 +1,52 @@
 
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock performance data since we're using Firebase only
 export const usePerformanceData = () => {
-  const [data, setData] = useState([
-    { id: '1', category: 'Production', value: 2847, target: 3000, percentage: 94.9, trend: 'up', change_percentage: '+5.2%', month: 'current' },
-    { id: '2', category: 'Quality', value: 94.2, target: 95, percentage: 99.2, trend: 'up', change_percentage: '+1.8%', month: 'current' },
-    { id: '3', category: 'Sales', value: 847, target: 900, percentage: 94.1, trend: 'up', change_percentage: '+8.3%', month: 'current' },
-    { id: '4', category: 'Efficiency', value: 87.3, target: 90, percentage: 97.0, trend: 'down', change_percentage: '-2.1%', month: 'current' }
-  ]);
+  const [data, setData] = useState<any[]>([]);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPerformanceData = async () => {
+      try {
+        setIsLoading(true);
+        const { data: metricsData, error: fetchError } = await supabase
+          .from('metrics')
+          .select('*')
+          .eq('metric_type', 'performance')
+          .eq('month', 'current')
+          .order('category');
+
+        if (fetchError) throw fetchError;
+
+        const formattedData = metricsData?.map(metric => ({
+          id: metric.id,
+          category: metric.category,
+          value: metric.value_numeric,
+          target: metric.target,
+          percentage: metric.percentage,
+          trend: metric.trend,
+          change_percentage: `${metric.change_percentage > 0 ? '+' : ''}${metric.change_percentage}%`,
+          month: metric.month
+        })) || [];
+
+        setData(formattedData);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching performance data:', err);
+        setError(err as Error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPerformanceData();
+  }, []);
 
   return {
     data,
-    error: null,
-    isLoading: false
+    error,
+    isLoading
   };
 };
