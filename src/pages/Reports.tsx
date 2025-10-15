@@ -12,6 +12,7 @@ import StoreReportsList from "@/components/reports/StoreReportsList";
 import SalesReportsList from "@/components/reports/SalesReportsList";
 import DayBook from "@/components/reports/DayBook";
 import MonthlyReconciliation from "@/components/reports/MonthlyReconciliation";
+import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
 import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart, BookOpen, Calculator } from "lucide-react";
 
 const Reports = () => {
@@ -22,7 +23,12 @@ const Reports = () => {
     >
       <div className="space-y-6">
         {/* Key Metrics Overview */}
-        <KeyMetrics />
+        <div className="flex justify-between items-center">
+          <div className="flex-1">
+            <KeyMetrics />
+          </div>
+          <RefreshMetricsButton />
+        </div>
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="dashboard" className="space-y-6">

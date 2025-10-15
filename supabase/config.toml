@@ -1,4 +1,3 @@
-
 project_id = "pudfybkyfedeggmokhco"
 
 [api]
@@ -62,3 +61,6 @@ verify_jwt = false
 
 [functions.check-network-access]
 verify_jwt = false
+
+[functions.calculate-metrics]
+verify_jwt = true
