@@ -412,13 +412,20 @@ export const useStoreManagement = () => {
       }
 
       console.log('🔄 Refreshing data...');
-      await fetchStoreData();
+      // Force a clean refresh by clearing state first
+      setStoreRecords([]);
+      await fetchStoreData(false);
       
       toast({
         title: "✅ Deleted Successfully",
         description: `Coffee record deleted: ${coffeeRecord.supplierName} - ${coffeeRecord.kilograms}kg (${coffeeRecord.batchNumber})`,
         duration: 3000
       });
+      
+      // Additional refresh after a short delay to ensure Firebase sync
+      setTimeout(() => {
+        fetchStoreData(true);
+      }, 500);
     } catch (error: any) {
       console.error('❌ Error deleting coffee record:', error);
       toast({
