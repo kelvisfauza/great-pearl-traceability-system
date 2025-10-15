@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const PerformanceDashboard = () => {
   const { data: performanceData = [], isLoading, error } = usePerformanceData();
+  const [monthlyTrends, setMonthlyTrends] = useState<any[]>([]);
 
   const chartConfig = {
     production: { label: "Production", color: "hsl(var(--chart-1))" },
@@ -19,12 +20,20 @@ const PerformanceDashboard = () => {
     efficiency: { label: "Efficiency", color: "hsl(var(--chart-4))" },
   };
 
-  // Mock monthly trends data (you can extend this to be database-driven)
-  const monthlyTrends = [
-    { month: 'Jan', production: 2650, quality: 92.1, sales: 780, efficiency: 89.5 },
-    { month: 'Feb', production: 2720, quality: 93.2, sales: 820, efficiency: 88.7 },
-    { month: 'Mar', production: 2800, quality: 94.2, sales: 847, efficiency: 87.3 },
-  ];
+  useEffect(() => {
+    // Calculate real monthly trends from current performance data
+    const currentMonth = new Date().toLocaleString('default', { month: 'short' });
+    const trends = [
+      {
+        month: currentMonth,
+        production: performanceData.find(d => d.category === 'Production')?.value || 0,
+        quality: performanceData.find(d => d.category === 'Quality')?.value || 0,
+        sales: performanceData.find(d => d.category === 'Sales')?.value || 0,
+        efficiency: performanceData.find(d => d.category === 'Efficiency')?.value || 0,
+      }
+    ];
+    setMonthlyTrends(trends);
+  }, [performanceData]);
 
   if (isLoading) {
     return (
@@ -125,21 +134,27 @@ const PerformanceDashboard = () => {
         {/* Trend Analysis */}
         <Card>
           <CardHeader>
-            <CardTitle>3-Month Trends</CardTitle>
+            <CardTitle>Current Period Snapshot</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig}>
-              <LineChart data={monthlyTrends} height={300}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line type="monotone" dataKey="production" stroke="var(--color-production)" strokeWidth={2} />
-                <Line type="monotone" dataKey="quality" stroke="var(--color-quality)" strokeWidth={2} />
-                <Line type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} />
-                <Line type="monotone" dataKey="efficiency" stroke="var(--color-efficiency)" strokeWidth={2} />
-              </LineChart>
-            </ChartContainer>
+            {monthlyTrends.length > 0 ? (
+              <ChartContainer config={chartConfig}>
+                <LineChart data={monthlyTrends} height={300}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line type="monotone" dataKey="production" stroke="var(--color-production)" strokeWidth={2} />
+                  <Line type="monotone" dataKey="quality" stroke="var(--color-quality)" strokeWidth={2} />
+                  <Line type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} />
+                  <Line type="monotone" dataKey="efficiency" stroke="var(--color-efficiency)" strokeWidth={2} />
+                </LineChart>
+              </ChartContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                No trend data available. Click "Refresh Metrics" to calculate.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
