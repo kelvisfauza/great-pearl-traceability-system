@@ -261,17 +261,29 @@ export const useStoreManagement = () => {
 
   const deleteCoffeeRecord = async (recordId: string) => {
     try {
-      console.log('Checking if coffee record can be deleted:', recordId);
+      console.log('🗑️ Starting deletion process for record:', recordId);
       
       // Get the coffee record to check its batch number
       const coffeeRecord = storeRecords.find(record => record.id === recordId);
       if (!coffeeRecord) {
-        throw new Error('Coffee record not found');
+        toast({
+          title: "Error",
+          description: "Coffee record not found in current list",
+          variant: "destructive"
+        });
+        return;
       }
+
+      console.log('📋 Found record:', {
+        batch: coffeeRecord.batchNumber,
+        supplier: coffeeRecord.supplierName,
+        kg: coffeeRecord.kilograms
+      });
 
       const { supabase } = await import('@/integrations/supabase/client');
 
-      // Check payment status in both Firebase AND Supabase
+      // Check payment status in Firebase
+      console.log('🔍 Checking Firebase payment records...');
       const paymentQuery = query(
         collection(db, 'payment_records'), 
         where('batch_number', '==', coffeeRecord.batchNumber)
@@ -283,23 +295,30 @@ export const useStoreManagement = () => {
         return ['Paid', 'paid', 'Processing', 'Approved', 'completed', 'Completed'].includes(data.status);
       });
 
-      // Also check Supabase payment_records
+      console.log(`Found ${paidPayments.length} paid payments in Firebase`);
+
+      // Check Supabase payment_records
+      console.log('🔍 Checking Supabase payment records...');
       const { data: supabasePayments } = await supabase
         .from('payment_records')
         .select('*')
         .eq('batch_number', coffeeRecord.batchNumber)
         .in('status', ['Paid', 'paid', 'Processing', 'Approved', 'completed', 'Completed']);
 
+      console.log(`Found ${supabasePayments?.length || 0} paid payments in Supabase`);
+
       if (paidPayments.length > 0 || (supabasePayments && supabasePayments.length > 0)) {
         toast({
-          title: "Cannot Delete",
-          description: `Cannot delete coffee record: Payment has been processed or approved for batch ${coffeeRecord.batchNumber}`,
-          variant: "destructive"
+          title: "❌ Cannot Delete",
+          description: `Payment has been processed for this batch (${coffeeRecord.batchNumber}). Contact Finance to reverse the payment first.`,
+          variant: "destructive",
+          duration: 5000
         });
         return;
       }
 
-      // Check if there are quality assessments that have been submitted to finance
+      // Check quality assessments in Firebase
+      console.log('🔍 Checking Firebase quality assessments...');
       const qualityQuery = query(
         collection(db, 'quality_assessments'), 
         where('store_record_id', '==', recordId)
@@ -311,41 +330,54 @@ export const useStoreManagement = () => {
         return ['submitted_to_finance', 'paid'].includes(data.status);
       });
 
+      console.log(`Found ${submittedQuality.length} submitted quality assessments`);
+
       if (submittedQuality.length > 0) {
         toast({
-          title: "Cannot Delete",
-          description: `Cannot delete coffee record: Quality assessment has been submitted to finance for batch ${coffeeRecord.batchNumber}`,
-          variant: "destructive"
+          title: "❌ Cannot Delete",
+          description: `Quality assessment has been submitted to Finance for batch ${coffeeRecord.batchNumber}. Please contact Quality department.`,
+          variant: "destructive",
+          duration: 5000
         });
         return;
       }
 
-      console.log('Coffee record can be deleted, proceeding with cascading deletions...');
+      console.log('✅ All checks passed, proceeding with deletion...');
       
       // DELETE FROM FIREBASE
+      console.log('🔥 Deleting from Firebase...');
       const docRef = doc(db, 'coffee_records', recordId);
       await deleteDoc(docRef);
+      console.log('✅ Deleted from Firebase');
       
       // DELETE FROM SUPABASE - Cascade through all related tables
-      console.log('Deleting from Supabase...');
+      console.log('🗄️ Deleting from Supabase...');
       
-      // 1. Delete quality assessments by store_record_id (Firebase ID)
+      // 1. Delete quality assessments
       const { error: qaDeleteError } = await supabase
         .from('quality_assessments')
         .delete()
         .eq('store_record_id', recordId);
         
-      if (qaDeleteError) console.error('Error deleting quality assessments:', qaDeleteError);
+      if (qaDeleteError) {
+        console.error('⚠️ Error deleting quality assessments:', qaDeleteError);
+      } else {
+        console.log('✅ Deleted quality assessments');
+      }
       
-      // 2. Delete payment records by batch number
+      // 2. Delete payment records
       const { error: paymentDeleteError } = await supabase
         .from('payment_records')
         .delete()
         .eq('batch_number', coffeeRecord.batchNumber);
         
-      if (paymentDeleteError) console.error('Error deleting payment records:', paymentDeleteError);
+      if (paymentDeleteError) {
+        console.error('⚠️ Error deleting payment records:', paymentDeleteError);
+      } else {
+        console.log('✅ Deleted payment records');
+      }
       
-      // 3. Get Supabase coffee_record by batch_number to delete finance_coffee_lots
+      // 3. Get Supabase coffee_records to delete finance_coffee_lots
       const { data: supabaseCoffeeRecords } = await supabase
         .from('coffee_records')
         .select('id')
@@ -360,30 +392,40 @@ export const useStoreManagement = () => {
           .delete()
           .in('coffee_record_id', supabaseRecordIds);
           
-        if (financeDeleteError) console.error('Error deleting finance lots:', financeDeleteError);
+        if (financeDeleteError) {
+          console.error('⚠️ Error deleting finance lots:', financeDeleteError);
+        } else {
+          console.log('✅ Deleted finance lots');
+        }
         
-        // 5. Finally delete the coffee_records from Supabase
+        // 5. Delete coffee_records from Supabase
         const { error: coffeeDeleteError } = await supabase
           .from('coffee_records')
           .delete()
           .in('id', supabaseRecordIds);
           
-        if (coffeeDeleteError) console.error('Error deleting coffee records from Supabase:', coffeeDeleteError);
+        if (coffeeDeleteError) {
+          console.error('⚠️ Error deleting coffee records from Supabase:', coffeeDeleteError);
+        } else {
+          console.log('✅ Deleted coffee records from Supabase');
+        }
       }
 
-      console.log('✅ Successfully deleted record from both Firebase and Supabase');
+      console.log('🔄 Refreshing data...');
       await fetchStoreData();
       
       toast({
-        title: "Success",
-        description: `Coffee record deleted successfully from all systems (Batch: ${coffeeRecord.batchNumber})`
+        title: "✅ Deleted Successfully",
+        description: `Coffee record deleted: ${coffeeRecord.supplierName} - ${coffeeRecord.kilograms}kg (${coffeeRecord.batchNumber})`,
+        duration: 3000
       });
-    } catch (error) {
-      console.error('Error deleting coffee record:', error);
+    } catch (error: any) {
+      console.error('❌ Error deleting coffee record:', error);
       toast({
-        title: "Error",
-        description: "Failed to delete coffee record",
-        variant: "destructive"
+        title: "❌ Deletion Failed",
+        description: error.message || "An unexpected error occurred while deleting the record",
+        variant: "destructive",
+        duration: 5000
       });
       throw error;
     }
