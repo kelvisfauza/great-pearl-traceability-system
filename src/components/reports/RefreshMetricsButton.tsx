@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { calculateMetricsFromFirebase } from "@/services/metricsCalculator";
 
 export const RefreshMetricsButton = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -11,17 +11,15 @@ export const RefreshMetricsButton = () => {
   const handleRefresh = async () => {
     try {
       setIsLoading(true);
-      console.log("🔄 Triggering metrics calculation...");
+      console.log("🔄 Calculating metrics from Firebase data...");
 
-      const { data, error } = await supabase.functions.invoke('calculate-metrics');
+      const result = await calculateMetricsFromFirebase();
 
-      if (error) throw error;
-
-      console.log("✅ Metrics updated:", data);
+      console.log("✅ Metrics updated:", result);
       
       toast({
         title: "Metrics Updated",
-        description: "Real-time metrics have been calculated from your operational data.",
+        description: `Calculated from ${result.metrics.totalBags} bags, ${result.metrics.activeSuppliers} suppliers, and UGX ${(result.metrics.revenue / 1_000_000).toFixed(1)}M in revenue`,
       });
 
       // Refresh the page to show new data
