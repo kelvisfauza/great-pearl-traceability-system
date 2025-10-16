@@ -9,13 +9,25 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDeletionRequest } from '@/hooks/useDeletionRequest';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const SalesHistory = () => {
   const { transactions, loading, getGRNFileUrl } = useSalesTransactions();
   const { isAdmin } = useAuth();
-  const { submitDeletionRequest } = useDeletionRequest();
+  const { submitDeletionRequest, isSubmitting } = useDeletionRequest();
   const { toast } = useToast();
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<any>(null);
 
   const handleDownloadGRN = async (filePath: string, fileName: string) => {
     setDownloadingFile(filePath);
@@ -29,20 +41,29 @@ const SalesHistory = () => {
     }
   };
 
-  const handleDelete = async (transaction: any) => {
+  const openDeleteDialog = (transaction: any) => {
+    setTransactionToDelete(transaction);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!transactionToDelete) return;
+    
     const success = await submitDeletionRequest(
       'sales_transactions',
-      transaction.id,
-      transaction,
-      'Admin requested deletion',
-      `Sale to ${transaction.customer} - ${transaction.weight}kg ${transaction.coffee_type}`
+      transactionToDelete.id,
+      transactionToDelete,
+      'Admin requested deletion of sales transaction',
+      `Sale to ${transactionToDelete.customer} - ${transactionToDelete.weight}kg ${transactionToDelete.coffee_type} (${format(new Date(transactionToDelete.date), 'MMM dd, yyyy')})`
     );
     
     if (success) {
       toast({
         title: "Deletion Request Submitted",
-        description: "The sales record will be reviewed for deletion.",
+        description: "The sales record deletion request has been sent for review.",
       });
+      setDeleteDialogOpen(false);
+      setTransactionToDelete(null);
     }
   };
 
@@ -130,8 +151,10 @@ const SalesHistory = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(transaction)}
-                          className="text-destructive hover:text-destructive"
+                          onClick={() => openDeleteDialog(transaction)}
+                          disabled={isSubmitting}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          title="Delete sales record"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -144,6 +167,41 @@ const SalesHistory = () => {
           </div>
         )}
       </CardContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              {transactionToDelete && (
+                <>
+                  Are you sure you want to request deletion of this sales transaction?
+                  <div className="mt-4 space-y-2 text-sm">
+                    <p><strong>Customer:</strong> {transactionToDelete.customer}</p>
+                    <p><strong>Date:</strong> {format(new Date(transactionToDelete.date), 'MMM dd, yyyy')}</p>
+                    <p><strong>Coffee Type:</strong> {transactionToDelete.coffee_type}</p>
+                    <p><strong>Weight:</strong> {transactionToDelete.weight.toLocaleString()} kg</p>
+                    <p><strong>Amount:</strong> UGX {transactionToDelete.total_amount.toLocaleString()}</p>
+                  </div>
+                  <p className="mt-4 text-destructive">
+                    This will submit a deletion request for admin review. The record will not be deleted immediately.
+                  </p>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isSubmitting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSubmitting ? "Submitting..." : "Submit Deletion Request"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
