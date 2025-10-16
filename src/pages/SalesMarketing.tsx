@@ -34,12 +34,22 @@ const SalesMarketing = () => {
 
   const stats = getStats();
 
-  const salesData = [
-    { month: "Jan", domestic: 120, export: 280, target: 350 },
-    { month: "Feb", domestic: 135, export: 310, target: 400 },
-    { month: "Mar", domestic: 150, export: 285, target: 420 },
-    { month: "Apr", domestic: 142, export: 325, target: 450 },
-  ];
+  // Get real monthly sales data from sales_transactions
+  const monthlySalesData = stats.monthlySalesData || [];
+  
+  // Get top markets from real customer data
+  const countryDistribution = customers.reduce((acc: Record<string, number>, customer) => {
+    acc[customer.country] = (acc[customer.country] || 0) + 1;
+    return acc;
+  }, {});
+  
+  const topMarkets = Object.entries(countryDistribution)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 4)
+    .map(([country, count]) => ({
+      country,
+      percentage: Math.round((count / customers.length) * 100)
+    }));
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -454,42 +464,34 @@ const SalesMarketing = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Sales Performance</CardTitle>
-                <CardDescription>Monthly sales breakdown - domestic vs export</CardDescription>
+                <CardDescription>Monthly sales breakdown from actual transactions</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {salesData.map((data, index) => (
-                    <div key={index} className="flex items-center space-x-4">
-                      <div className="w-12 text-sm font-medium">{data.month}</div>
-                      <div className="flex-1">
-                        <div className="flex space-x-2 mb-1">
-                          <div className="bg-green-500 h-6 rounded" style={{ width: `${(data.domestic / 200) * 100}%` }}></div>
-                          <div className="bg-blue-500 h-6 rounded" style={{ width: `${(data.export / 200) * 100}%` }}></div>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>Domestic: {data.domestic}K</span>
-                          <span>Export: {data.export}K</span>
-                          <span>Target: {data.target}K</span>
+                {monthlySalesData.length > 0 ? (
+                  <div className="space-y-4">
+                    {monthlySalesData.map((data, index) => (
+                      <div key={index} className="flex items-center space-x-4">
+                        <div className="w-16 text-sm font-medium">{data.month}</div>
+                        <div className="flex-1">
+                          <div className="flex space-x-2 mb-1">
+                            <div 
+                              className="bg-primary h-6 rounded flex items-center justify-center text-xs text-white px-2" 
+                              style={{ width: `${Math.max((data.total / stats.totalContractValue) * 100, 5)}%` }}
+                            >
+                              {data.count} sales
+                            </div>
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Total: UGX {(data.total / 1000000).toFixed(1)}M</span>
+                            <span>Weight: {(data.weight / 1000).toFixed(1)} tonnes</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-sm">
-                        <Badge variant={data.domestic + data.export >= data.target ? "default" : "secondary"}>
-                          {Math.round(((data.domestic + data.export) / data.target) * 100)}%
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex space-x-6 mt-4 text-sm">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-green-500 rounded mr-2"></div>
-                    <span>Domestic Sales</span>
+                    ))}
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-blue-500 rounded mr-2"></div>
-                    <span>Export Sales</span>
-                  </div>
-                </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No sales data available yet</p>
+                )}
               </CardContent>
             </Card>
 
@@ -503,12 +505,16 @@ const SalesMarketing = () => {
                   <div>
                     <h4 className="font-medium mb-3">Top Markets</h4>
                     <div className="space-y-2">
-                      {["Germany", "USA", "UK", "Japan"].map((country, index) => (
-                        <div key={country} className="flex justify-between text-sm">
-                          <span>{country}</span>
-                          <span className="text-green-600">{25 - index * 3}%</span>
-                        </div>
-                      ))}
+                      {topMarkets.length > 0 ? (
+                        topMarkets.map((market) => (
+                          <div key={market.country} className="flex justify-between text-sm">
+                            <span>{market.country}</span>
+                            <span className="text-green-600">{market.percentage}%</span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No customer data yet</p>
+                      )}
                     </div>
                   </div>
                   <div>

@@ -231,15 +231,39 @@ export const useSalesMarketing = () => {
       )
       .reduce((sum, transaction) => sum + Number(transaction.weight || 0), 0);
 
+    // Calculate monthly sales data from sales_transactions for last 4 months
+    const monthlySalesData = [];
+    for (let i = 3; i >= 0; i--) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthName = monthDate.toLocaleDateString('en-US', { month: 'short' });
+      
+      const monthSales = salesTransactions.filter(sale => {
+        const saleDate = new Date(sale.date);
+        return saleDate.getFullYear() === monthDate.getFullYear() && 
+               saleDate.getMonth() === monthDate.getMonth();
+      });
+      
+      monthlySalesData.push({
+        month: monthName,
+        total: monthSales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0),
+        weight: monthSales.reduce((sum, sale) => sum + (sale.weight || 0), 0),
+        count: monthSales.length
+      });
+    }
+
+    const totalContractValue = contracts.reduce((sum, c) => sum + c.price, 0);
+
     return {
       totalCustomers: customers.length,
       activeCustomers: customers.filter(c => c.status === 'Active').length,
       totalCampaigns: campaigns.length,
       activeCampaigns: campaigns.filter(c => c.status === 'Active').length,
       totalContracts: contracts.length,
-      totalValue: contracts.reduce((sum, c) => sum + c.price, 0),
+      totalValue: totalContractValue,
+      totalContractValue,
       monthlySales: `${Math.round(monthlySalesKg).toLocaleString()} kg`,
-      exportRevenue: `${Math.round(exportRevenueKg).toLocaleString()} kg`
+      exportRevenue: `${Math.round(exportRevenueKg).toLocaleString()} kg`,
+      monthlySalesData
     };
   };
 
