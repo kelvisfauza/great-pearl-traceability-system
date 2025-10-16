@@ -348,10 +348,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!employee) return false;
     if (employee.permissions?.includes('*')) return true;
     
-    // Check for exact permission match
+    // If checking for a specific action (e.g., "Finance:create")
+    // require exact match
+    if (permission.includes(':')) {
+      return employee.permissions?.includes(permission) || false;
+    }
+    
+    // For module-level checks (e.g., "Finance")
+    // Allow if user has ANY granular permission for that module OR the module itself
     if (employee.permissions?.includes(permission)) return true;
     
-    // Check for granular permissions (e.g., "Human Resources:view" should match "Human Resources")
+    // Check for granular permissions (e.g., "Finance:view" should grant "Finance" access)
     const hasGranularPermission = employee.permissions?.some(p => 
       p.startsWith(permission + ':')
     );
