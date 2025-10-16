@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUnifiedEmployees } from '@/hooks/useUnifiedEmployees';
 import UserManagement from '@/components/settings/UserManagement';
 import UserProfile from '@/components/settings/UserProfile';
-import QuickEmployeeUpdate from '@/components/admin/QuickEmployeeUpdate';
 import PaymentSlipGenerator from '@/components/settings/PaymentSlipGenerator';
 import ContractGenerator from '@/components/settings/ContractGenerator';
 import { useState } from 'react';
@@ -117,14 +116,6 @@ const Settings = () => {
                 </CardHeader>
                 <CardContent>
                   <UserPresencePanel />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Employee Role Update</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <QuickEmployeeUpdate />
                 </CardContent>
               </Card>
             </TabsContent>
