@@ -183,7 +183,26 @@ const ITDepartment = () => {
           </TabsContent>
 
           <TabsContent value="users">
-            <UserManagement />
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>User Account Fixes</CardTitle>
+                  <CardDescription>Quick fixes for user authentication issues</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    onClick={async () => {
+                      const { createShafikAccount } = await import('@/utils/createShafikAccount');
+                      await createShafikAccount();
+                    }}
+                    variant="outline"
+                  >
+                    Create Shafik's Firebase Account
+                  </Button>
+                </CardContent>
+              </Card>
+              <UserManagement />
+            </div>
           </TabsContent>
 
           <TabsContent value="backup">
