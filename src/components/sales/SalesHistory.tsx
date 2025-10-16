@@ -3,12 +3,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useSalesTransactions } from '@/hooks/useSalesTransactions';
 import { format } from 'date-fns';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDeletionRequest } from '@/hooks/useDeletionRequest';
+import { useToast } from '@/hooks/use-toast';
 
 const SalesHistory = () => {
   const { transactions, loading, getGRNFileUrl } = useSalesTransactions();
+  const { isAdmin } = useAuth();
+  const { submitDeletionRequest } = useDeletionRequest();
+  const { toast } = useToast();
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
 
   const handleDownloadGRN = async (filePath: string, fileName: string) => {
@@ -20,6 +26,23 @@ const SalesHistory = () => {
       }
     } finally {
       setDownloadingFile(null);
+    }
+  };
+
+  const handleDelete = async (transaction: any) => {
+    const success = await submitDeletionRequest(
+      'sales_transactions',
+      transaction.id,
+      transaction,
+      'Admin requested deletion',
+      `Sale to ${transaction.customer} - ${transaction.weight}kg ${transaction.coffee_type}`
+    );
+    
+    if (success) {
+      toast({
+        title: "Deletion Request Submitted",
+        description: "The sales record will be reviewed for deletion.",
+      });
     }
   };
 
@@ -59,6 +82,7 @@ const SalesHistory = () => {
                   <TableHead>Driver</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>GRN</TableHead>
+                  {isAdmin() && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -101,6 +125,18 @@ const SalesHistory = () => {
                         <span className="text-muted-foreground text-xs">No file</span>
                       )}
                     </TableCell>
+                    {isAdmin() && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(transaction)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
