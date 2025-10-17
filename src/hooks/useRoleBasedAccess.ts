@@ -37,7 +37,7 @@ interface RoleBasedAccess {
 }
 
 export const useRoleBasedAccess = (): RoleBasedAccess => {
-  const { employee, hasPermission, hasRole, isSuperAdmin, isAdministrator } = useAuth();
+  const { employee, hasPermission, hasRole, isSuperAdmin, isAdministrator, isManager, isSupervisor, canPerformAction } = useAuth();
 
   return useMemo(() => {
     if (!employee) {
@@ -72,9 +72,9 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
     }
 
     const isSuperAdminUser = isSuperAdmin();
+    const isManagerUser = isManager();
+    const isSupervisorUser = isSupervisor();
     const isAdminUser = isAdministrator();
-    const isManagerUser = hasRole('Manager') || hasRole('Operations Manager') || hasRole('Finance Manager') || hasRole('HR Manager');
-    const isSupervisorUser = hasRole('Supervisor');
     
     // Determine role level
     let roleLevel: 'admin' | 'manager' | 'supervisor' | 'user' = 'user';
@@ -83,37 +83,37 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
     else if (isSupervisorUser) roleLevel = 'supervisor';
 
     return {
-      // Page access - Super Admin gets all, Administrator gets limited access
+      // Page access - Based on permissions and role
       canViewDashboard: true, // Everyone can see dashboard
-      canViewEmployees: isSuperAdminUser || hasPermission('Human Resources') || isManagerUser,
-      canViewFinance: isSuperAdminUser || hasPermission('Finance'),
-      canViewHR: isSuperAdminUser || hasPermission('Human Resources'),
-      canViewReports: isSuperAdminUser || hasPermission('Reports') || isAdminUser,
+      canViewEmployees: isSuperAdminUser || isManagerUser || hasPermission('Human Resources'),
+      canViewFinance: isSuperAdminUser || isManagerUser || hasPermission('Finance'),
+      canViewHR: isSuperAdminUser || isManagerUser || hasPermission('Human Resources'),
+      canViewReports: canPerformAction('view') && (hasPermission('Reports') || isSuperAdminUser || isManagerUser || isAdminUser),
       canViewSettings: true, // Everyone can access settings (but with different tabs)
-      canViewQuality: isSuperAdminUser || hasPermission('Quality Control'),
-      canViewProcurement: isSuperAdminUser || hasPermission('Procurement'),
-      canViewInventory: isSuperAdminUser || hasPermission('Inventory') || hasPermission('Store Management'),
-      canViewProcessing: isSuperAdminUser || hasPermission('Processing'),
-      canViewSales: isSuperAdminUser || hasPermission('Sales Marketing'),
-      canViewFieldOps: isSuperAdminUser || hasPermission('Field Operations'),
-      canViewLogistics: isSuperAdminUser || hasPermission('Logistics'),
-      canViewAnalytics: isSuperAdminUser || hasPermission('Data Analysis'),
+      canViewQuality: isSuperAdminUser || isManagerUser || hasPermission('Quality Control'),
+      canViewProcurement: isSuperAdminUser || isManagerUser || hasPermission('Procurement'),
+      canViewInventory: isSuperAdminUser || isManagerUser || hasPermission('Inventory') || hasPermission('Store Management'),
+      canViewProcessing: isSuperAdminUser || isManagerUser || hasPermission('Processing'),
+      canViewSales: isSuperAdminUser || isManagerUser || hasPermission('Sales Marketing'),
+      canViewFieldOps: isSuperAdminUser || isManagerUser || hasPermission('Field Operations'),
+      canViewLogistics: isSuperAdminUser || isManagerUser || hasPermission('Logistics'),
+      canViewAnalytics: isSuperAdminUser || isManagerUser || hasPermission('Data Analysis'),
       
-      // Action permissions - Administrators can approve but NOT modify/delete
-      canCreateEmployees: isSuperAdminUser || hasPermission('Human Resources'),
-      canEditEmployees: isSuperAdminUser || hasPermission('Human Resources'),
-      canDeleteEmployees: isSuperAdminUser, // Only Super Admin can delete
-      canProcessPayments: isSuperAdminUser || hasPermission('Finance'),
-      canApproveRequests: isSuperAdminUser || isAdminUser || isManagerUser || isSupervisorUser, // Admins can approve
-      canManageInventory: isSuperAdminUser || hasPermission('Inventory') || hasPermission('Store Management'),
-      canViewSalaries: isSuperAdminUser || hasPermission('Finance') || hasPermission('Human Resources'),
-      canGenerateReports: isSuperAdminUser || hasPermission('Reports'),
-      canManageQuality: isSuperAdminUser || hasPermission('Quality Control'),
-      canCreatePurchaseOrders: isSuperAdminUser || hasPermission('Procurement'),
+      // Action permissions - Based on role hierarchy
+      canCreateEmployees: canPerformAction('create') && (isSuperAdminUser || isManagerUser || hasPermission('Human Resources')),
+      canEditEmployees: canPerformAction('edit') && (isSuperAdminUser || isManagerUser || hasPermission('Human Resources')),
+      canDeleteEmployees: canPerformAction('delete') && isSuperAdminUser, // Only Super Admin can delete
+      canProcessPayments: canPerformAction('edit') && (isSuperAdminUser || isManagerUser || hasPermission('Finance')),
+      canApproveRequests: canPerformAction('approve'), // Managers, Administrators, Super Admin
+      canManageInventory: canPerformAction('edit') && (isSuperAdminUser || isManagerUser || hasPermission('Inventory') || hasPermission('Store Management')),
+      canViewSalaries: isSuperAdminUser || isManagerUser || hasPermission('Finance') || hasPermission('Human Resources'),
+      canGenerateReports: canPerformAction('print') || canPerformAction('export'), // Managers and above can generate
+      canManageQuality: canPerformAction('edit') && (isSuperAdminUser || isManagerUser || hasPermission('Quality Control')),
+      canCreatePurchaseOrders: canPerformAction('create') && (isSuperAdminUser || isManagerUser || hasPermission('Procurement')),
       
-      // Data filtering - Only Super Admin sees all data
-      departmentFilter: isSuperAdminUser ? null : employee.department,
+      // Data filtering - Supervisors and Users see only their department
+      departmentFilter: (isSuperAdminUser || isManagerUser || isAdminUser) ? null : employee.department,
       roleLevel
     };
-  }, [employee, hasPermission, hasRole, isSuperAdmin, isAdministrator]);
+  }, [employee, hasPermission, hasRole, isSuperAdmin, isAdministrator, isManager, isSupervisor, canPerformAction]);
 };

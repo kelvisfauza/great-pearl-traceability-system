@@ -1,76 +1,162 @@
-# Role & Permission System
+# Role & Permission System - Granular Hierarchy
 
-## Role Hierarchy
+## Role Hierarchy (5 Levels)
 
 ### 1. Super Admin (System Administrator)
 **Who**: System owner (nicholusscottlangz@gmail.com)
 **Access Level**: FULL SYSTEM ACCESS
+**UI Elements**: All buttons visible (Edit, Delete, Print, Approve, Export)
+
 **Capabilities**:
-- ✅ Manage all permissions
-- ✅ Create, edit, and DELETE any records
+- ✅ View, Create, Edit, Delete, Approve, Print, Export
+- ✅ Manage all permissions and roles
 - ✅ Access ALL departments and modules
-- ✅ Assign and revoke roles
 - ✅ System-wide configurations
-- ✅ View all data across departments
-- ✅ Approve and reject requests
 - ✅ Override any restrictions
+- ✅ Delete any records
+- ✅ Modify system data
 
-### 2. Administrator
-**Who**: Delegated approvers with limited access
-**Access Level**: APPROVAL RIGHTS ONLY
+**Use Case**: Complete system control - assign only to fully trusted personnel.
+
+---
+
+### 2. Manager
+**Who**: Department managers and senior decision-makers
+**Access Level**: FULL OPERATIONAL ACCESS
+**UI Elements**: Edit, Delete, Print, Approve, Export buttons visible
+
 **Capabilities**:
-- ✅ View reports and dashboards
-- ✅ Approve/reject requests (payments, quality assessments, etc.)
-- ❌ Cannot change records or settings
+- ✅ View, Create, Edit, Delete, Approve, Print, Export
+- ✅ Approve requests and payments
+- ✅ Print and export reports
+- ✅ Delete records in their domain
+- ✅ View all departments' data
+- ✅ Make critical decisions
+- ❌ Cannot manage system permissions/roles
+- ❌ Cannot modify system settings
+
+**Use Case**: Department heads who need full operational control but not system administration.
+
+---
+
+### 3. Administrator
+**Who**: Delegated approvers (Finance, HR heads)
+**Access Level**: APPROVAL + LIMITED OPERATIONS
+**UI Elements**: Edit, Print, Approve, Export buttons visible (NO Delete)
+
+**Capabilities**:
+- ✅ View, Create, Edit, Approve, Print, Export
+- ✅ Approve/reject requests (payments, quality assessments)
+- ✅ Print reports and documents
+- ✅ Export data
+- ✅ Edit existing records
+- ❌ Cannot DELETE any records
 - ❌ Cannot access permission management
-- ❌ Cannot delete records
 - ❌ Cannot assign roles
-- ❌ Limited to read-only access except for approvals
-- ❌ Cannot view/edit employee salaries
-- ❌ Cannot create new records
+- ❌ Cannot modify system settings
 
-**Use Case**: When you need someone to help with approvals but don't want them changing system data.
+**Use Case**: Senior staff who approve workflows but shouldn't delete data or access system admin features.
 
-### 3. Manager
-**Who**: Department managers
-**Access Level**: Department-specific management
+---
+
+### 4. Supervisor
+**Who**: Team leads and shift supervisors
+**Access Level**: OPERATIONAL TASKS ONLY
+**UI Elements**: Edit, Export buttons visible (NO Print, Delete, Approve)
+
 **Capabilities**:
-- ✅ Manage their department's operations
-- ✅ View department-specific data
-- ✅ Create and edit records in their domain
-- ✅ Approve requests for their department
-- ❌ Cannot access other departments' data
-- ❌ Cannot manage system-wide settings
-- ❌ Cannot delete records without approval
+- ✅ View, Create, Edit, Export
+- ✅ Manage daily operations
+- ✅ Edit records in their domain
+- ✅ Export data for reporting
+- ❌ Cannot PRINT reports (must request from Manager)
+- ❌ Cannot APPROVE requests
+- ❌ Cannot DELETE records
+- ❌ Cannot view other departments
+- ❌ Limited to own department only
 
-### 4. User
-**Who**: Regular employees
-**Access Level**: Assigned permissions only
+**Use Case**: Team leads who handle day-to-day operations but don't approve or print official documents.
+
+---
+
+### 5. User
+**Who**: Regular employees, data entry staff
+**Access Level**: DATA ENTRY ONLY
+**UI Elements**: NO Edit, Delete, Print, Approve, or Export buttons visible
+
 **Capabilities**:
-- ✅ Access assigned modules only
-- ✅ Perform tasks based on granted permissions
-- ❌ No approval rights
-- ❌ Limited to own department
+- ✅ View records (own department only)
+- ✅ Create new records (data entry)
+- ✅ File reports (but cannot print them)
+- ❌ Cannot EDIT existing records
+- ❌ Cannot DELETE anything
+- ❌ Cannot PRINT reports
+- ❌ Cannot APPROVE requests
+- ❌ Cannot EXPORT data
+- ❌ No access to sensitive information
+- ❌ Limited to assigned modules only
+
+**Use Case**: Data entry staff and regular employees who only input data.
+
+---
+
+## Action Permission Matrix
+
+| Action | User | Supervisor | Administrator | Manager | Super Admin |
+|--------|------|------------|---------------|---------|-------------|
+| **View** | ✅ (Own dept) | ✅ (Own dept) | ✅ (All depts) | ✅ (All depts) | ✅ (Everything) |
+| **Create** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Edit** | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **Delete** | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Approve** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **Print** | ❌ | ❌ | ✅ | ✅ | ✅ |
+| **Export** | ❌ | ✅ | ✅ | ✅ | ✅ |
+
+---
+
+## UI Element Visibility
+
+### Edit Buttons
+- **Visible for**: Supervisor, Administrator, Manager, Super Admin
+- **Hidden for**: User
+
+### Delete Buttons
+- **Visible for**: Manager, Super Admin
+- **Hidden for**: User, Supervisor, Administrator
+
+### Print Buttons
+- **Visible for**: Administrator, Manager, Super Admin
+- **Hidden for**: User, Supervisor
+
+### Approve Buttons
+- **Visible for**: Administrator, Manager, Super Admin
+- **Hidden for**: User, Supervisor
+
+### Export Buttons
+- **Visible for**: Supervisor, Administrator, Manager, Super Admin
+- **Hidden for**: User
+
+---
 
 ## Permission System
 
-In addition to roles, users can be assigned **granular permissions**:
+In addition to roles, users can be assigned **module-level permissions**:
 
 ### Permission Format
 - **Module Level**: `Finance`, `Quality Control`, `Procurement`
 - **Granular Level**: `Finance:view`, `Finance:create`, `Finance:approve`
 
 ### Permission Examples
-- `Quality Control` - Can access quality control features
-- `Finance:view` - Can view finance data but not modify
-- `Finance:approve` - Can approve financial requests
-- `Store Management:create` - Can create store records
+- `Quality Control` - Can access quality control module
+- `Finance` - Can access finance module
+- `Store Management` - Can access store management module
 
-## How It Works Together
+### How Permissions Work with Roles
+1. **Role determines actions** (view, create, edit, delete, approve, print, export)
+2. **Permissions determine module access** (which departments/features user can see)
+3. **Combined check**: User must have BOTH the role level AND the module permission
 
-1. **Super Admin** bypasses all permission checks - has access to everything
-2. **Administrator** can approve requests but permissions still control what they can view
-3. **Manager/User** require specific permissions for each action
+**Example**: A Supervisor with `Finance` permission can view, create, edit, and export finance data, but cannot approve payments or print reports.
 
 ## Assigning Roles
 
@@ -108,21 +194,60 @@ WHERE email = 'trusted-admin@example.com';
 
 ## Frontend Access Control
 
+### Using the new hooks
+
 ```typescript
-const { isSuperAdmin, isAdministrator, hasPermission } = useAuth();
+import { useAuth } from '@/contexts/AuthContext';
+import { useRolePermissions } from '@/hooks/useRolePermissions';
 
-// For full system access features
-if (isSuperAdmin()) {
-  // Show permission management, delete buttons, etc.
+const MyComponent = () => {
+  const { canPerformAction, isSuperAdmin, isManager } = useAuth();
+  const { 
+    canSeeEditButton, 
+    canSeeDeleteButton, 
+    canSeePrintButton,
+    canSeeApproveButton 
+  } = useRolePermissions();
+
+  return (
+    <div>
+      {/* Edit button - visible for Supervisor and above */}
+      {canSeeEditButton && (
+        <Button onClick={handleEdit}>Edit</Button>
+      )}
+
+      {/* Delete button - visible for Manager and Super Admin only */}
+      {canSeeDeleteButton && (
+        <Button onClick={handleDelete}>Delete</Button>
+      )}
+
+      {/* Print button - visible for Administrator, Manager, and Super Admin */}
+      {canSeePrintButton && (
+        <Button onClick={handlePrint}>Print</Button>
+      )}
+
+      {/* Approve button - visible for Administrator, Manager, and Super Admin */}
+      {canSeeApproveButton && (
+        <Button onClick={handleApprove}>Approve</Button>
+      )}
+    </div>
+  );
+};
+```
+
+### Action-based checks
+
+```typescript
+// Check if user can perform specific action
+if (canPerformAction('delete')) {
+  // Show delete functionality
 }
 
-// For approval features
-if (isAdministrator() || isSuperAdmin()) {
-  // Show approve/reject buttons
+if (canPerformAction('approve')) {
+  // Show approve button
 }
 
-// For specific features
-if (hasPermission('Finance:create')) {
-  // Show create payment button
+if (canPerformAction('print')) {
+  // Show print options
 }
 ```

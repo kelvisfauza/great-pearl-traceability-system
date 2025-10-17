@@ -42,6 +42,10 @@ interface AuthContextType {
   isAdmin: () => boolean;
   isSuperAdmin: () => boolean;
   isAdministrator: () => boolean;
+  isManager: () => boolean;
+  isSupervisor: () => boolean;
+  isUser: () => boolean;
+  canPerformAction: (action: 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'print' | 'export') => boolean;
   fetchEmployeeData: (userId?: string) => Promise<Employee | null>;
   changePassword: (newPassword: string) => Promise<void>;
 }
@@ -386,9 +390,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return hasRole('Administrator');
   };
 
+  // Manager = Can approve, print, delete but not system admin
+  const isManager = (): boolean => {
+    return hasRole('Manager');
+  };
+
+  // Supervisor = More tasks but limited permissions
+  const isSupervisor = (): boolean => {
+    return hasRole('Supervisor');
+  };
+
+  // User = Basic data entry only
+  const isUser = (): boolean => {
+    return hasRole('User');
+  };
+
   // Legacy isAdmin for backwards compatibility - checks if Super Admin
   const isAdmin = (): boolean => {
     return isSuperAdmin();
+  };
+
+  // Check if user can perform specific action based on role hierarchy
+  const canPerformAction = (action: 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'print' | 'export'): boolean => {
+    if (!employee) return false;
+    
+    const role = employee.role;
+    
+    // Super Admin can do everything
+    if (role === 'Super Admin') return true;
+    
+    // Manager and Administrator permissions
+    if (role === 'Manager' || role === 'Administrator') {
+      return ['view', 'create', 'edit', 'approve', 'print', 'export', 'delete'].includes(action);
+    }
+    
+    // Supervisor permissions (no print, approve, delete)
+    if (role === 'Supervisor') {
+      return ['view', 'create', 'edit', 'export'].includes(action);
+    }
+    
+    // User permissions (basic only)
+    if (role === 'User') {
+      return ['view', 'create'].includes(action);
+    }
+    
+    return false;
   };
 
   const changePassword = async (newPassword: string): Promise<void> => {
@@ -433,6 +479,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     isAdmin,
     isSuperAdmin,
     isAdministrator,
+    isManager,
+    isSupervisor,
+    isUser,
+    canPerformAction,
     fetchEmployeeData,
     changePassword
   };

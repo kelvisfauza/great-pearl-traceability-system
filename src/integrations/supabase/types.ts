@@ -3632,6 +3632,10 @@ export type Database = {
         Args: { user_email: string }
         Returns: boolean
       }
+      can_perform_action: {
+        Args: { action_type: string }
+        Returns: boolean
+      }
       check_auth_user_exists: {
         Args: { user_uuid: string }
         Returns: Json
@@ -3694,6 +3698,10 @@ export type Database = {
           wallet_balance: number
         }[]
       }
+      get_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_wallet_balance_safe: {
         Args: { user_uuid: string }
         Returns: number
@@ -3722,6 +3730,18 @@ export type Database = {
         Args: { check_ip: string }
         Returns: boolean
       }
+      is_manager_or_above: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_supervisor_or_above: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       migrate_approved_assessments_to_finance: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -3748,7 +3768,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "Super Admin" | "Administrator" | "Manager" | "User"
+      app_role:
+        | "Super Admin"
+        | "Administrator"
+        | "Manager"
+        | "User"
+        | "Supervisor"
       expense_status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "POSTED"
       lot_finance_status: "READY_FOR_FINANCE" | "APPROVED_FOR_PAYMENT" | "PAID"
       payment_method: "CASH" | "CHEQUE" | "BANK_TRANSFER"
@@ -3880,7 +3905,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["Super Admin", "Administrator", "Manager", "User"],
+      app_role: [
+        "Super Admin",
+        "Administrator",
+        "Manager",
+        "User",
+        "Supervisor",
+      ],
       expense_status: ["PENDING_APPROVAL", "APPROVED", "REJECTED", "POSTED"],
       lot_finance_status: ["READY_FOR_FINANCE", "APPROVED_FOR_PAYMENT", "PAID"],
       payment_method: ["CASH", "CHEQUE", "BANK_TRANSFER"],
