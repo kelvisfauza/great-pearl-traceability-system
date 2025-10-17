@@ -180,35 +180,38 @@ export const useErrorReporting = () => {
         affectedUsers: 1
       };
 
-      console.log('Reporting error to IT department:', errorData);
+      // Error reporting to IT department is disabled
+      console.log('Error logged (IT reporting disabled):', errorData);
 
-      const docRef = await addDoc(collection(db, 'system_errors'), errorData);
-      console.log('Error reported with ID:', docRef.id);
+      // Commented out: Database logging
+      // const docRef = await addDoc(collection(db, 'system_errors'), errorData);
+      // console.log('Error reported with ID:', docRef.id);
 
-      // Notify IT department immediately for high/critical errors
-      if (severity === 'high' || severity === 'critical') {
-        if (createAnnouncement) {
-          await createAnnouncement(
-            `${severity.toUpperCase()} System Error Reported`,
-            `${title}: ${description}`,
-            'System',
-            ['IT Management'],
-            severity === 'critical' ? 'High' : 'Medium'
-          );
-        }
-      }
+      // Commented out: IT department notifications
+      // if (severity === 'high' || severity === 'critical') {
+      //   if (createAnnouncement) {
+      //     await createAnnouncement(
+      //       `${severity.toUpperCase()} System Error Reported`,
+      //       `${title}: ${description}`,
+      //       'System',
+      //       ['IT Management'],
+      //       severity === 'critical' ? 'High' : 'Medium'
+      //     );
+      //   }
+      // }
 
-      // Show toast to user (but don't overwhelm them)
-      if (severity === 'high' || severity === 'critical') {
-        toast({
-          title: "System Error Reported",
-          description: "IT department has been notified and will investigate.",
-          variant: "destructive"
-        });
-      }
+      // Commented out: User notifications for errors
+      // if (severity === 'high' || severity === 'critical') {
+      //   toast({
+      //     title: "System Error Reported",
+      //     description: "IT department has been notified and will investigate.",
+      //     variant: "destructive"
+      //   });
+      // }
 
-      await fetchErrors();
-      return docRef.id;
+      // Skip fetching errors since we're not logging them
+      // await fetchErrors();
+      return 'error-logging-disabled';
     } catch (error) {
       console.error('Failed to report error:', error);
       // Fallback notification
