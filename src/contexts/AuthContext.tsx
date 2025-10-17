@@ -379,7 +379,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const canManageEmployees = (): boolean => {
-    return hasRole('Super Admin') || hasRole('Manager') || hasPermission('Human Resources');
+    return hasRole('Super Admin') || hasRole('Manager') || hasRole('Administrator') || hasPermission('Human Resources') || hasPermission('HR');
   };
 
   // Super Admin = Full system access (only you)
