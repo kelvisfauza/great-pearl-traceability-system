@@ -81,6 +81,8 @@ serve(async (req) => {
     const smsMessage = `Your temporary password is: ${tempPassword}\n\nPlease delete this message for security.\n\n- Great Pearl Coffee IT Department`;
     
     const yedaSmsKey = Deno.env.get('YEDA_SMS_API_KEY');
+    let smsSent = false;
+    let smsError = null;
     
     if (yedaSmsKey) {
       try {
@@ -97,16 +99,21 @@ serve(async (req) => {
         });
         
         const smsResult = await smsResponse.json();
-        console.log('📱 SMS sent:', smsResult);
         
-        if (!smsResponse.ok) {
+        if (smsResponse.ok) {
+          console.log('📱 SMS sent successfully:', smsResult);
+          smsSent = true;
+        } else {
           console.error('❌ SMS sending failed:', smsResult);
+          smsError = 'SMS API returned an error';
         }
-      } catch (smsError) {
-        console.error('❌ SMS error:', smsError);
+      } catch (error) {
+        console.error('❌ SMS error:', error);
+        smsError = error.message || 'Failed to send SMS';
       }
     } else {
       console.warn('⚠️ No SMS API key configured');
+      smsError = 'SMS API key not configured';
     }
     
     // Log the action
@@ -131,7 +138,11 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Temporary password sent via SMS',
+        sms_sent: smsSent,
+        sms_error: smsError,
+        message: smsSent 
+          ? 'Temporary password sent via SMS' 
+          : 'Password reset but SMS failed to send',
         email: employee.email,
         phone: employee.phone,
         temp_password: tempPassword // Only for IT admin to see

@@ -16,6 +16,8 @@ export const PasswordResetSMS = () => {
     message: string;
     phone?: string;
     temp_password?: string;
+    sms_sent?: boolean;
+    sms_error?: string;
   } | null>(null);
 
   const handleSendReset = async () => {
@@ -47,7 +49,11 @@ export const PasswordResetSMS = () => {
       console.log('✅ Response:', data);
       
       if (data.success) {
-        toast.success('Password reset SMS sent successfully');
+        if (data.sms_sent) {
+          toast.success('Password reset SMS sent successfully');
+        } else {
+          toast.error('Password reset but SMS failed - show password to employee');
+        }
         setResult(data);
       } else {
         toast.error(data.error || 'Failed to send password reset');
@@ -111,25 +117,41 @@ export const PasswordResetSMS = () => {
         </Button>
 
         {result && (
-          <Alert variant={result.success ? "default" : "destructive"}>
+          <Alert variant={result.success ? (result.sms_sent ? "default" : "destructive") : "destructive"}>
             {result.success ? (
-              <CheckCircle className="h-4 w-4" />
+              result.sms_sent ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />
             ) : (
               <AlertCircle className="h-4 w-4" />
             )}
             <AlertDescription>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p className="font-medium">{result.message}</p>
                 {result.success && result.phone && (
-                  <div className="text-sm space-y-1">
-                    <p>📱 SMS sent to: {result.phone}</p>
-                    {result.temp_password && (
-                      <p className="font-mono bg-muted p-2 rounded">
-                        Temporary Password: {result.temp_password}
-                      </p>
+                  <div className="text-sm space-y-2">
+                    <p>📱 Phone: {result.phone}</p>
+                    
+                    {!result.sms_sent && result.sms_error && (
+                      <div className="bg-destructive/10 p-2 rounded border border-destructive/20">
+                        <p className="text-destructive font-semibold">⚠️ SMS Failed to Send</p>
+                        <p className="text-xs text-muted-foreground">Error: {result.sms_error}</p>
+                      </div>
                     )}
-                    <p className="text-muted-foreground mt-2">
-                      The employee will receive: "Your temporary password is: [password]. Please delete this message for security. - Great Pearl Coffee IT Department"
+                    
+                    {result.temp_password && (
+                      <div className={`p-3 rounded border-2 ${result.sms_sent ? 'bg-muted border-primary' : 'bg-destructive/5 border-destructive'}`}>
+                        <p className="font-semibold mb-1">
+                          {result.sms_sent ? '✅ Temporary Password (Sent via SMS):' : '⚠️ Temporary Password (GIVE TO EMPLOYEE):'}
+                        </p>
+                        <p className="text-2xl font-mono font-bold text-primary">
+                          {result.temp_password}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <p className="text-muted-foreground">
+                      {result.sms_sent 
+                        ? 'The employee will receive: "Your temporary password is: [password]. Please delete this message for security. - Great Pearl Coffee IT Department"'
+                        : '🚨 You MUST provide this password to the employee manually since SMS failed to send!'}
                     </p>
                   </div>
                 )}
