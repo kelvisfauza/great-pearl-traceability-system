@@ -36,16 +36,16 @@ import RoleNotificationHandler from "./components/RoleNotificationHandler";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
-// Error Handler Component
-const ErrorHandlerInitializer = () => {
-  const { initializeErrorHandlers } = useGlobalErrorHandler();
-  
-  useEffect(() => {
-    initializeErrorHandlers();
-  }, []);
-  
-  return null;
-};
+// Disabled: Error Handler was causing infinite loops and performance issues
+// const ErrorHandlerInitializer = () => {
+//   const { initializeErrorHandlers } = useGlobalErrorHandler();
+//   
+//   useEffect(() => {
+//     initializeErrorHandlers();
+//   }, []);
+//   
+//   return null;
+// };
 
 // Inactivity Timer Component
 const InactivityTimerInitializer = () => {
@@ -60,7 +60,7 @@ const App: React.ComponentType = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ErrorHandlerInitializer />
+        {/* <ErrorHandlerInitializer /> */}
         <InactivityTimerInitializer />
         <GlobalActivityTracker />
         <PriceProvider>
