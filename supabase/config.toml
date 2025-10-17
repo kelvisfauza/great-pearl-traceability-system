@@ -64,3 +64,6 @@ verify_jwt = false
 
 [functions.calculate-metrics]
 verify_jwt = true
+
+[functions.send-password-reset-sms]
+verify_jwt = true
