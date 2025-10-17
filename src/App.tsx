@@ -70,7 +70,7 @@ const App: React.ComponentType = () => {
             <BrowserRouter>
               {/* OvertimeNotification moved inside Router context */}
               <OvertimeNotification />
-              <RoleNotificationHandler />
+              {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
               <Routes>
                 <Route path="/auth" element={<Auth />} />
