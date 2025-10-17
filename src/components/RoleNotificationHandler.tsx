@@ -69,9 +69,6 @@ const RoleNotificationHandler = () => {
     }
 
     setShowPromotion(false);
-    
-    // Refresh the page to apply new role permissions
-    window.location.reload();
   };
 
   if (!employee || !showPromotion) return null;
