@@ -27,6 +27,8 @@ interface Employee {
   created_at?: string;
   updated_at?: string;
   disabled?: boolean;
+  last_notified_role?: string;
+  role_notification_shown_at?: string;
 }
 
 interface AuthContextType {

@@ -805,11 +805,13 @@ export type Database = {
           id: string
           is_training_account: boolean | null
           join_date: string
+          last_notified_role: string | null
           name: string
           permissions: string[]
           phone: string | null
           position: string
           role: string
+          role_notification_shown_at: string | null
           salary: number
           status: string
           training_progress: number | null
@@ -829,11 +831,13 @@ export type Database = {
           id?: string
           is_training_account?: boolean | null
           join_date?: string
+          last_notified_role?: string | null
           name: string
           permissions?: string[]
           phone?: string | null
           position: string
           role?: string
+          role_notification_shown_at?: string | null
           salary?: number
           status?: string
           training_progress?: number | null
@@ -853,11 +857,13 @@ export type Database = {
           id?: string
           is_training_account?: boolean | null
           join_date?: string
+          last_notified_role?: string | null
           name?: string
           permissions?: string[]
           phone?: string | null
           position?: string
           role?: string
+          role_notification_shown_at?: string | null
           salary?: number
           status?: string
           training_progress?: number | null

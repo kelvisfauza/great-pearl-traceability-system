@@ -180,9 +180,26 @@ All colors MUST be HSL.
       border: 1px solid #000 !important;
     }
 
-    /* Avoid page breaks inside elements */
+  /* Avoid page breaks inside elements */
     tr, img, blockquote {
       page-break-inside: avoid;
     }
+  }
+
+  /* Role promotion modal animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.5s ease-in-out forwards;
+    opacity: 0;
   }
 }

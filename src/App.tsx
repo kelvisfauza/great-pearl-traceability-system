@@ -32,6 +32,7 @@ import EURDocumentationPage from "./pages/EUDRDocumentation";
 import Suppliers from "./pages/Suppliers";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 import { OvertimeNotification } from "./components/OvertimeNotification";
+import RoleNotificationHandler from "./components/RoleNotificationHandler";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
@@ -69,6 +70,7 @@ const App: React.ComponentType = () => {
             <BrowserRouter>
               {/* OvertimeNotification moved inside Router context */}
               <OvertimeNotification />
+              <RoleNotificationHandler />
               
               <Routes>
                 <Route path="/auth" element={<Auth />} />
