@@ -410,9 +410,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return hasRole('User');
   };
 
-  // Legacy isAdmin for backwards compatibility - checks if Super Admin
+  // Legacy isAdmin for backwards compatibility - checks if Super Admin or Administrator
   const isAdmin = (): boolean => {
-    return isSuperAdmin();
+    return isSuperAdmin() || isAdministrator();
   };
 
   // Check if user can perform specific action based on role hierarchy
