@@ -105,7 +105,13 @@ const Auth = () => {
       // Proceed with authentication
       const result = await signIn(email, password);
       
-      if (result.requiresPasswordChange) {
+      // Check if user has temporary password or requires password change
+      const { data: { user } } = await supabase.auth.getUser();
+      const requiresPasswordChange = result.requiresPasswordChange || 
+                                    user?.user_metadata?.requires_password_change === true;
+      
+      if (requiresPasswordChange) {
+        console.log('🔐 User requires password change');
         setShowPasswordChange(true);
         setLoading(false);
         return;

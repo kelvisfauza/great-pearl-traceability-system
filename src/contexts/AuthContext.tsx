@@ -380,13 +380,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const changePassword = async (newPassword: string): Promise<void> => {
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      // Update password in Supabase Auth and clear temp password flag
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword,
+        data: {
+          requires_password_change: false,
+          temp_password_set_at: null
+        }
+      });
+      
       if (error) throw error;
       
       toast({
         title: "Password Updated",
         description: "Your password has been successfully updated"
       });
+      
+      console.log('✅ Password changed successfully, temp flag cleared');
     } catch (error: any) {
       toast({
         title: "Password Update Failed", 

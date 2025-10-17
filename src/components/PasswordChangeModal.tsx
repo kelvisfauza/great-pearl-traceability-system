@@ -19,7 +19,7 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ open, onPassw
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChanging, setIsChanging] = useState(false);
-  const { changePassword } = useAuth();
+  const { changePassword, user } = useAuth();
   const { toast } = useToast();
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -65,7 +65,10 @@ const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({ open, onPassw
             Change Password Required
           </DialogTitle>
           <DialogDescription>
-            You must change your password before continuing. Please enter a new secure password.
+            {user?.user_metadata?.requires_password_change 
+              ? "You are using a temporary password. Please create a new secure password to continue."
+              : "You must change your password before continuing. Please enter a new secure password."
+            }
           </DialogDescription>
         </DialogHeader>
 

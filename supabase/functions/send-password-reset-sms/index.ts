@@ -56,12 +56,16 @@ serve(async (req) => {
     
     console.log('🔑 Generated temporary password for:', email);
     
-    // Update user password in Supabase Auth
+    // Update user password in Supabase Auth and mark as temporary
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       employee.auth_user_id,
       {
         password: tempPassword,
-        email_confirm: true
+        email_confirm: true,
+        user_metadata: {
+          requires_password_change: true,
+          temp_password_set_at: new Date().toISOString()
+        }
       }
     );
     
