@@ -42,6 +42,7 @@ import SystemConsoleMonitor from '@/components/it/SystemConsoleMonitor';
 import DeletionRequestsManager from '@/components/admin/DeletionRequestsManager';
 import { SMSFailureManager } from '@/components/it/SMSFailureManager';
 import { ComprehensiveSMSManager } from '@/components/it/ComprehensiveSMSManager';
+import PasswordResetHelper from '@/components/admin/PasswordResetHelper';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
@@ -184,6 +185,7 @@ const ITDepartment = () => {
 
           <TabsContent value="users">
             <div className="space-y-6">
+              <PasswordResetHelper />
               <Card>
                 <CardHeader>
                   <CardTitle>User Account Fixes</CardTitle>
