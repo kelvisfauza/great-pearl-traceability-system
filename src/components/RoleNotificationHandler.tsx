@@ -49,13 +49,13 @@ const RoleNotificationHandler = () => {
   const handleClosePromotion = async () => {
     if (!employee || !employee.id) return;
 
-    // Close modal immediately to prevent re-triggering
+    // Close modal and mark as checked immediately to prevent re-triggering
     setShowPromotion(false);
     setCheckedForPromotion(true);
 
     try {
-      // Mark this role as notified
-      const { error } = await supabase
+      // Mark this role as notified in the background
+      await supabase
         .from('employees')
         .update({
           last_notified_role: employee.role,
@@ -63,13 +63,7 @@ const RoleNotificationHandler = () => {
         })
         .eq('id', employee.id);
 
-      if (error) {
-        console.error('Error updating role notification status:', error);
-      } else {
-        console.log('✅ Role notification marked as shown');
-        // Reload page to refresh employee data and apply new permissions
-        window.location.reload();
-      }
+      console.log('✅ Role notification marked as shown');
     } catch (error) {
       console.error('Error updating notification:', error);
     }
