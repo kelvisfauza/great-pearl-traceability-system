@@ -349,7 +349,7 @@ export const useQualityControl = () => {
         husks: Number(assessment.husks) || 0,
         stones: Number(assessment.stones) || 0,
         suggested_price: finalPrice, // This is the price that finance will see
-        status: 'assessed',
+        status: 'submitted_to_finance', // Automatically send to Finance
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed || new Date().toISOString().split('T')[0],
         assessed_by: assessment.assessed_by // This should now contain the actual user's name from the form
@@ -384,12 +384,12 @@ export const useQualityControl = () => {
 
       console.log('Quality assessment saved successfully:', newAssessment);
       
-      // Update coffee_records status to 'quality_review' in Supabase (valid status)
-      console.log('Updating coffee record status to quality_review in Supabase...');
+      // Update coffee_records status to 'submitted_to_finance' in Supabase
+      console.log('Updating coffee record status to submitted_to_finance in Supabase...');
       const { error: supabaseStatusError } = await supabase
         .from('coffee_records')
         .update({ 
-          status: 'quality_review',
+          status: 'submitted_to_finance',
           updated_at: new Date().toISOString()
         })
         .eq('id', coffeeRecordId);
@@ -397,17 +397,17 @@ export const useQualityControl = () => {
       if (supabaseStatusError) {
         console.error('Error updating coffee record status in Supabase:', supabaseStatusError);
       } else {
-        console.log('✅ Coffee record status updated to "quality_review" in Supabase');
+        console.log('✅ Coffee record status updated to "submitted_to_finance" in Supabase');
       }
 
-      // Update coffee_records status to 'quality_review' in Firebase as well
+      // Update coffee_records status to 'submitted_to_finance' in Firebase as well
       try {
         const coffeeDocRef = doc(db, 'coffee_records', assessment.store_record_id);
         await updateDoc(coffeeDocRef, {
-          status: 'quality_review',
+          status: 'submitted_to_finance',
           updated_at: new Date().toISOString()
         });
-        console.log('✅ Coffee record status updated to "quality_review" in Firebase');
+        console.log('✅ Coffee record status updated to "submitted_to_finance" in Firebase');
       } catch (firebaseError) {
         console.error('Error updating coffee record status in Firebase:', firebaseError);
         // Don't throw - this is a sync issue but not critical
@@ -416,6 +416,26 @@ export const useQualityControl = () => {
       // Calculate total payment amount: kilograms × price per kg
       const kilograms = coffeeRecord?.kilograms || 0;
       const totalPaymentAmount = kilograms * finalPrice;
+      
+      // Send notification to Finance department
+      try {
+        await supabase.from('notifications').insert({
+          title: 'New Quality Assessment',
+          message: `Coffee quality assessed for batch ${batchNumber}. Total payment: ${totalPaymentAmount.toLocaleString()} UGX`,
+          type: 'payment',
+          recipient_role: 'Finance',
+          metadata: {
+            batch_number: batchNumber,
+            supplier: coffeeRecord.supplier_name,
+            amount: totalPaymentAmount,
+            assessment_id: newAssessment.id
+          }
+        });
+        console.log('✅ Finance notification sent successfully');
+      } catch (notifError) {
+        console.error('Error sending Finance notification:', notifError);
+        // Don't fail the whole process for notification errors
+      }
       
       console.log('Payment calculation:', {
         kilograms,
