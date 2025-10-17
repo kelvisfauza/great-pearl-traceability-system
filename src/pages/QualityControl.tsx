@@ -579,19 +579,19 @@ const QualityControl = () => {
       setActiveTab("assessments");
       
       toast({
-        title: editingAssessmentId ? "Assessment Updated" : "Assessment Complete",
+        title: editingAssessmentId ? "Assessment Updated ✓" : "Assessment Saved ✓",
         description: editingAssessmentId 
-          ? "Quality assessment updated successfully and changes reflected in finance"
+          ? "Quality assessment updated successfully. Finance department notified."
           : (selectedRecord.isModification 
-            ? "Quality reassessment completed and sent back to finance"
-            : "Quality assessment saved and sent to finance for payment processing")
+            ? "Quality reassessment completed and sent to Finance department for payment."
+            : "Quality assessment saved successfully and sent to Finance department for payment processing.")
       });
       
     } catch (error) {
       console.error('Error submitting assessment:', error);
       toast({
-        title: "Error",
-        description: "Failed to submit quality assessment. Please try again.",
+        title: "Failed to Save Assessment",
+        description: error instanceof Error ? error.message : "Failed to submit quality assessment to Finance department. Please try again.",
         variant: "destructive"
       });
     } finally {
