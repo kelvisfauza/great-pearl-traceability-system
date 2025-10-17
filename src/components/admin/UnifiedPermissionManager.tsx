@@ -33,11 +33,11 @@ const ALL_PERMISSIONS = [
 ];
 
 const USER_ROLES = [
-  'Administrator',
-  'Manager', 
-  'Data Analyst',
-  'Supervisor',
-  'User'
+  { value: 'Super Admin', label: 'Super Admin', description: 'Full system access' },
+  { value: 'Manager', label: 'Manager', description: 'Can approve, print, delete' },
+  { value: 'Administrator', label: 'Administrator', description: 'Can approve & print (no delete)' },
+  { value: 'Supervisor', label: 'Supervisor', description: 'Can edit & export (no approve/print)' },
+  { value: 'User', label: 'User', description: 'Data entry only' }
 ];
 
 const UnifiedPermissionManager = () => {
@@ -69,28 +69,24 @@ const UnifiedPermissionManager = () => {
     }
   };
 
-  const handleQuickRoleAssign = async (roleType: keyof typeof PERMISSION_SETS) => {
+  const handleQuickRoleAssign = async (roleName: string) => {
     if (!selectedUser) return;
     
     setUpdating(true);
     try {
-      await setEmployeeRole(selectedUser.email, roleType);
+      // Update role directly in Supabase
+      await updateEmployeePermissions(selectedUser.email, {
+        role: roleName,
+        permissions: selectedPermissions // Keep current permissions
+      });
       
       toast({
         title: "Role Updated",
-        description: `${selectedUser.name} has been assigned ${roleType.replace('_', ' ')} role successfully.`,
+        description: `${selectedUser.name} is now ${roleName}`,
       });
       
       await refetch();
-      // Update local state
-      const updatedPermissions = PERMISSION_SETS[roleType];
-      const updatedRole = roleType === 'ADMIN' ? 'Administrator' : 
-                         roleType.includes('MANAGER') ? 'Manager' :
-                         roleType === 'SUPERVISOR' ? 'Supervisor' :
-                         roleType === 'DATA_ANALYST' ? 'Data Analyst' : 'User';
-      
-      setSelectedPermissions(updatedPermissions);
-      setSelectedRole(updatedRole);
+      setSelectedRole(roleName);
       
     } catch (error) {
       console.error('Role update error:', error);
@@ -255,48 +251,33 @@ const UnifiedPermissionManager = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleQuickRoleAssign('ADMIN')}
-                          disabled={updating}
-                          className="h-auto p-3 flex flex-col gap-1"
-                        >
-                          <Crown className="h-4 w-4" />
-                          <span className="text-xs">Admin</span>
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleQuickRoleAssign('MANAGER')}
-                          disabled={updating}
-                          className="h-auto p-3 flex flex-col gap-1"
-                        >
-                          <Shield className="h-4 w-4" />
-                          <span className="text-xs">Manager</span>
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleQuickRoleAssign('DATA_ANALYST')}
-                          disabled={updating}
-                          className="h-auto p-3 flex flex-col gap-1"
-                        >
-                          <Settings className="h-4 w-4" />
-                          <span className="text-xs">Data Analyst</span>
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleQuickRoleAssign('USER')}
-                          disabled={updating}
-                          className="h-auto p-3 flex flex-col gap-1"
-                        >
-                          <Users className="h-4 w-4" />
-                          <span className="text-xs">Basic User</span>
-                        </Button>
+                      <div className="grid grid-cols-1 gap-2">
+                        {USER_ROLES.map((role) => (
+                          <Button 
+                            key={role.value}
+                            size="sm" 
+                            variant={selectedRole === role.value ? "default" : "outline"}
+                            onClick={() => handleQuickRoleAssign(role.value)}
+                            disabled={updating || (role.value === 'Super Admin' && selectedUser.email !== 'nicholusscottlangz@gmail.com')}
+                            className="h-auto p-3 justify-start"
+                          >
+                            <div className="flex items-start gap-3 w-full">
+                              <Shield className="h-4 w-4 mt-0.5" />
+                              <div className="flex-1 text-left">
+                                <div className="font-medium">{role.label}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {role.description}
+                                </div>
+                              </div>
+                            </div>
+                          </Button>
+                        ))}
                       </div>
+                      {selectedUser?.email !== 'nicholusscottlangz@gmail.com' && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Note: Only the system owner can be Super Admin
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -314,8 +295,12 @@ const UnifiedPermissionManager = () => {
                           </SelectTrigger>
                           <SelectContent>
                             {USER_ROLES.map((role) => (
-                              <SelectItem key={role} value={role}>
-                                {role}
+                              <SelectItem 
+                                key={role.value} 
+                                value={role.value}
+                                disabled={role.value === 'Super Admin' && selectedUser?.email !== 'nicholusscottlangz@gmail.com'}
+                              >
+                                {role.label} - {role.description}
                               </SelectItem>
                             ))}
                           </SelectContent>
