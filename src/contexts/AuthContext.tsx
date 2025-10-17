@@ -356,6 +356,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!employee) return false;
     if (employee.permissions?.includes('*')) return true;
     
+    // Check for wildcard permission first
+    if (employee.permissions?.includes('*')) return true;
+    
     // If checking for a specific action (e.g., "Finance:create")
     // require exact match
     if (permission.includes(':')) {
