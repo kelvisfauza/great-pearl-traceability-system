@@ -40,6 +40,8 @@ interface AuthContextType {
   hasRole: (role: string) => boolean;
   canManageEmployees: () => boolean;
   isAdmin: () => boolean;
+  isSuperAdmin: () => boolean;
+  isAdministrator: () => boolean;
   fetchEmployeeData: (userId?: string) => Promise<Employee | null>;
   changePassword: (newPassword: string) => Promise<void>;
 }
@@ -371,11 +373,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const canManageEmployees = (): boolean => {
-    return hasRole('Administrator') || hasRole('Manager') || hasPermission('Human Resources');
+    return hasRole('Super Admin') || hasRole('Manager') || hasPermission('Human Resources');
   };
 
-  const isAdmin = (): boolean => {
+  // Super Admin = Full system access (only you)
+  const isSuperAdmin = (): boolean => {
+    return hasRole('Super Admin');
+  };
+
+  // Administrator = Can approve but has limited access
+  const isAdministrator = (): boolean => {
     return hasRole('Administrator');
+  };
+
+  // Legacy isAdmin for backwards compatibility - checks if Super Admin
+  const isAdmin = (): boolean => {
+    return isSuperAdmin();
   };
 
   const changePassword = async (newPassword: string): Promise<void> => {
@@ -418,6 +431,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     hasRole,
     canManageEmployees,
     isAdmin,
+    isSuperAdmin,
+    isAdministrator,
     fetchEmployeeData,
     changePassword
   };

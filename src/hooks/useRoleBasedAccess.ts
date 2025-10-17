@@ -37,7 +37,7 @@ interface RoleBasedAccess {
 }
 
 export const useRoleBasedAccess = (): RoleBasedAccess => {
-  const { employee, hasPermission, hasRole, isAdmin } = useAuth();
+  const { employee, hasPermission, hasRole, isSuperAdmin, isAdministrator } = useAuth();
 
   return useMemo(() => {
     if (!employee) {
@@ -71,48 +71,49 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       };
     }
 
-    const isAdminUser = isAdmin();
+    const isSuperAdminUser = isSuperAdmin();
+    const isAdminUser = isAdministrator();
     const isManagerUser = hasRole('Manager') || hasRole('Operations Manager') || hasRole('Finance Manager') || hasRole('HR Manager');
     const isSupervisorUser = hasRole('Supervisor');
     
     // Determine role level
     let roleLevel: 'admin' | 'manager' | 'supervisor' | 'user' = 'user';
-    if (isAdminUser) roleLevel = 'admin';
+    if (isSuperAdminUser) roleLevel = 'admin';
     else if (isManagerUser) roleLevel = 'manager';
     else if (isSupervisorUser) roleLevel = 'supervisor';
 
     return {
-      // Page access
+      // Page access - Super Admin gets all, Administrator gets limited access
       canViewDashboard: true, // Everyone can see dashboard
-      canViewEmployees: isAdminUser || hasPermission('Human Resources') || isManagerUser,
-      canViewFinance: isAdminUser || hasPermission('Finance'),
-      canViewHR: isAdminUser || hasPermission('Human Resources'),
-      canViewReports: isAdminUser || hasPermission('Reports'),
+      canViewEmployees: isSuperAdminUser || hasPermission('Human Resources') || isManagerUser,
+      canViewFinance: isSuperAdminUser || hasPermission('Finance'),
+      canViewHR: isSuperAdminUser || hasPermission('Human Resources'),
+      canViewReports: isSuperAdminUser || hasPermission('Reports') || isAdminUser,
       canViewSettings: true, // Everyone can access settings (but with different tabs)
-      canViewQuality: isAdminUser || hasPermission('Quality Control'),
-      canViewProcurement: isAdminUser || hasPermission('Procurement'),
-      canViewInventory: isAdminUser || hasPermission('Inventory') || hasPermission('Store Management'),
-      canViewProcessing: isAdminUser || hasPermission('Processing'),
-      canViewSales: isAdminUser || hasPermission('Sales Marketing'),
-      canViewFieldOps: isAdminUser || hasPermission('Field Operations'),
-      canViewLogistics: isAdminUser || hasPermission('Logistics'),
-      canViewAnalytics: isAdminUser || hasPermission('Data Analysis'),
+      canViewQuality: isSuperAdminUser || hasPermission('Quality Control'),
+      canViewProcurement: isSuperAdminUser || hasPermission('Procurement'),
+      canViewInventory: isSuperAdminUser || hasPermission('Inventory') || hasPermission('Store Management'),
+      canViewProcessing: isSuperAdminUser || hasPermission('Processing'),
+      canViewSales: isSuperAdminUser || hasPermission('Sales Marketing'),
+      canViewFieldOps: isSuperAdminUser || hasPermission('Field Operations'),
+      canViewLogistics: isSuperAdminUser || hasPermission('Logistics'),
+      canViewAnalytics: isSuperAdminUser || hasPermission('Data Analysis'),
       
-      // Action permissions
-      canCreateEmployees: isAdminUser || hasPermission('Human Resources'),
-      canEditEmployees: isAdminUser || hasPermission('Human Resources'),
-      canDeleteEmployees: isAdminUser,
-      canProcessPayments: isAdminUser || hasPermission('Finance'),
-      canApproveRequests: isAdminUser || isManagerUser || isSupervisorUser,
-      canManageInventory: isAdminUser || hasPermission('Inventory') || hasPermission('Store Management'),
-      canViewSalaries: isAdminUser || hasPermission('Finance') || hasPermission('Human Resources'),
-      canGenerateReports: isAdminUser || hasPermission('Reports'),
-      canManageQuality: isAdminUser || hasPermission('Quality Control'),
-      canCreatePurchaseOrders: isAdminUser || hasPermission('Procurement'),
+      // Action permissions - Administrators can approve but NOT modify/delete
+      canCreateEmployees: isSuperAdminUser || hasPermission('Human Resources'),
+      canEditEmployees: isSuperAdminUser || hasPermission('Human Resources'),
+      canDeleteEmployees: isSuperAdminUser, // Only Super Admin can delete
+      canProcessPayments: isSuperAdminUser || hasPermission('Finance'),
+      canApproveRequests: isSuperAdminUser || isAdminUser || isManagerUser || isSupervisorUser, // Admins can approve
+      canManageInventory: isSuperAdminUser || hasPermission('Inventory') || hasPermission('Store Management'),
+      canViewSalaries: isSuperAdminUser || hasPermission('Finance') || hasPermission('Human Resources'),
+      canGenerateReports: isSuperAdminUser || hasPermission('Reports'),
+      canManageQuality: isSuperAdminUser || hasPermission('Quality Control'),
+      canCreatePurchaseOrders: isSuperAdminUser || hasPermission('Procurement'),
       
-      // Data filtering
-      departmentFilter: isAdminUser ? null : employee.department,
+      // Data filtering - Only Super Admin sees all data
+      departmentFilter: isSuperAdminUser ? null : employee.department,
       roleLevel
     };
-  }, [employee, hasPermission, hasRole, isAdmin]);
+  }, [employee, hasPermission, hasRole, isSuperAdmin, isAdministrator]);
 };

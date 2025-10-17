@@ -3714,6 +3714,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_current_user_administrator: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_ip_whitelisted: {
         Args: { check_ip: string }
         Returns: boolean
@@ -3734,12 +3738,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      user_has_permission: {
+        Args: { permission_name: string }
+        Returns: boolean
+      }
       user_is_conversation_participant: {
         Args: { conversation_uuid: string }
         Returns: boolean
       }
     }
     Enums: {
+      app_role: "Super Admin" | "Administrator" | "Manager" | "User"
       expense_status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "POSTED"
       lot_finance_status: "READY_FOR_FINANCE" | "APPROVED_FOR_PAYMENT" | "PAID"
       payment_method: "CASH" | "CHEQUE" | "BANK_TRANSFER"
@@ -3871,6 +3880,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["Super Admin", "Administrator", "Manager", "User"],
       expense_status: ["PENDING_APPROVAL", "APPROVED", "REJECTED", "POSTED"],
       lot_finance_status: ["READY_FOR_FINANCE", "APPROVED_FOR_PAYMENT", "PAID"],
       payment_method: ["CASH", "CHEQUE", "BANK_TRANSFER"],
