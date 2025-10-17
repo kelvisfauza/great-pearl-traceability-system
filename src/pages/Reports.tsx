@@ -22,15 +22,7 @@ const Reports = () => {
       subtitle="Generate comprehensive reports and analyze business performance"
     >
       <div className="space-y-6">
-        {/* Key Metrics Overview */}
-        <div className="flex justify-between items-center">
-          <div className="flex-1">
-            <KeyMetrics />
-          </div>
-          <RefreshMetricsButton />
-        </div>
-
-        {/* Main Content Tabs */}
+        {/* Main Content Tabs - Lazy Load Components for Performance */}
         <Tabs defaultValue="dashboard" className="space-y-6">
           <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
@@ -72,6 +64,12 @@ const Reports = () => {
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex-1">
+                <KeyMetrics />
+              </div>
+              <RefreshMetricsButton />
+            </div>
             <PerformanceDashboard />
           </TabsContent>
 

@@ -45,7 +45,12 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDayBookData();
+    // Debounce to prevent excessive fetching when date changes rapidly
+    const timeoutId = setTimeout(() => {
+      fetchDayBookData();
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
   }, [selectedDate]);
 
   const fetchDayBookData = async () => {
@@ -86,18 +91,14 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
         report.openingBalance = transactionsBeforeToday.reduce((sum, t) => sum + Number(t.amount), 0);
       }
 
-      // Fetch all cash transactions for the day (by confirmed date)
-      console.log('🔍 Day Book - Looking for transactions on date:', dateStr);
-      
+      // Fetch all cash transactions for the day (by confirmed date) - optimized with limited columns
       const { data: cashTransactions } = await supabase
         .from('finance_cash_transactions')
-        .select('*')
+        .select('transaction_type, amount, notes, reference, confirmed_at')
         .eq('status', 'confirmed')
         .gte('confirmed_at', startOfDay.toISOString())
         .lte('confirmed_at', endOfDay.toISOString())
         .order('confirmed_at', { ascending: true });
-
-      console.log('📊 Day Book - Cash Transactions found:', cashTransactions?.length || 0, cashTransactions);
 
       if (cashTransactions) {
         cashTransactions.forEach(transaction => {
@@ -125,7 +126,6 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
           if (transaction.transaction_type === 'DEPOSIT' || transaction.transaction_type === 'ADVANCE_RECOVERY') {
             report.totalCashIn += amount;
             report.cashInTransactions.push(txData);
-            console.log('✅ Adding Cash In:', typeLabel, amount, transaction);
           } else if (transaction.transaction_type === 'PAYMENT' || transaction.transaction_type === 'EXPENSE') {
             report.totalCashOut += amount;
             report.cashOutTransactions.push(txData);
@@ -172,14 +172,12 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
         });
       });
 
-      // Fetch payment records from payment_records table for the day
+      // Fetch payment records from payment_records table for the day - optimized
       const { data: paymentRecords } = await supabase
         .from('payment_records')
-        .select('*')
+        .select('supplier, amount, batch_number')
         .eq('date', dateStr)
         .eq('status', 'Paid');
-
-      console.log('💰 Day Book - Payment Records found:', paymentRecords?.length || 0, paymentRecords);
 
       if (paymentRecords) {
         paymentRecords.forEach(payment => {

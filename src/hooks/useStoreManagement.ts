@@ -581,7 +581,7 @@ export const useStoreManagement = () => {
             'High'
           );
         }
-        if (status === 'assessed') {
+        if (status === 'quality_review') {
           await createAnnouncement(
             'Assessment Completed',
             `Batch ${record.batchNumber} has been assessed. Pending finance processing.`,
@@ -629,7 +629,7 @@ export const useStoreManagement = () => {
     return {
       ...pendingRecords,
       qualityReview: pendingRecords.filter(r => r.status === 'pending').length,
-      awaitingPricing: storeRecords.filter(r => r.status === 'assessed').length,
+      awaitingPricing: storeRecords.filter(r => r.status === 'quality_review').length,
       readyForDispatch: storeRecords.filter(r => r.status === 'approved').length
     };
   };

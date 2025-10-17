@@ -1034,7 +1034,7 @@ const QualityControl = () => {
                                 <Edit className="h-4 w-4 mr-1" />
                                 Edit
                               </Button>
-                              {(assessment.status === 'paid' || assessment.status === 'submitted_to_finance') && (
+                              {(assessment.status === 'inventory' || assessment.status === 'submitted_to_finance') && (
                                 <Button 
                                   size="sm" 
                                   variant="outline"

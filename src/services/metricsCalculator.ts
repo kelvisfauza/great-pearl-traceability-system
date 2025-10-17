@@ -59,7 +59,7 @@ export const calculateMetricsFromFirebase = async () => {
     // Calculate quality score (records with status "assessed" or "completed")
     const assessedRecords = Array.from(coffeeSnapshot.docs).filter(doc => {
       const status = doc.data().status;
-      return status === 'assessed' || status === 'completed';
+      return status === 'quality_review' || status === 'pricing' || status === 'batched';
     }).length;
     const qualityScore = coffeeSnapshot.size > 0 
       ? ((assessedRecords / coffeeSnapshot.size) * 100).toFixed(1)

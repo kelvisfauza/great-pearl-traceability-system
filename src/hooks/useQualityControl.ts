@@ -65,7 +65,7 @@ export const useQualityControl = () => {
           id: doc.id,
           ...doc.data()
         } as StoreRecord))
-        .filter(record => record.status !== 'paid'); // Filter out paid records
+        .filter(record => record.status !== 'sales' && record.status !== 'inventory'); // Filter out sold/inventoried records
 
       console.log('Loaded coffee records (excluding paid):', coffeeData.length, 'records');
       setStoreRecords(coffeeData || []);
@@ -384,12 +384,12 @@ export const useQualityControl = () => {
 
       console.log('Quality assessment saved successfully:', newAssessment);
       
-      // Update coffee_records status to 'assessed' in Supabase
-      console.log('Updating coffee record status to assessed in Supabase...');
+      // Update coffee_records status to 'quality_review' in Supabase (valid status)
+      console.log('Updating coffee record status to quality_review in Supabase...');
       const { error: supabaseStatusError } = await supabase
         .from('coffee_records')
         .update({ 
-          status: 'assessed',
+          status: 'quality_review',
           updated_at: new Date().toISOString()
         })
         .eq('id', coffeeRecordId);
@@ -397,17 +397,17 @@ export const useQualityControl = () => {
       if (supabaseStatusError) {
         console.error('Error updating coffee record status in Supabase:', supabaseStatusError);
       } else {
-        console.log('✅ Coffee record status updated to "assessed" in Supabase');
+        console.log('✅ Coffee record status updated to "quality_review" in Supabase');
       }
 
-      // Update coffee_records status to 'assessed' in Firebase as well
+      // Update coffee_records status to 'quality_review' in Firebase as well
       try {
         const coffeeDocRef = doc(db, 'coffee_records', assessment.store_record_id);
         await updateDoc(coffeeDocRef, {
-          status: 'assessed',
+          status: 'quality_review',
           updated_at: new Date().toISOString()
         });
-        console.log('✅ Coffee record status updated to "assessed" in Firebase');
+        console.log('✅ Coffee record status updated to "quality_review" in Firebase');
       } catch (firebaseError) {
         console.error('Error updating coffee record status in Firebase:', firebaseError);
         // Don't throw - this is a sync issue but not critical

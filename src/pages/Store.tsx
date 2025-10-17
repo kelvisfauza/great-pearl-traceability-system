@@ -234,7 +234,7 @@ const Store = () => {
   };
 
   const canEditOrDelete = (record) => {
-    return record.status !== 'sales' && record.status !== 'paid';
+    return record.status !== 'sales' && record.status !== 'inventory';
   };
 
   const handlePrintGRN = (record) => {
