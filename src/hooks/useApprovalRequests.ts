@@ -23,6 +23,13 @@ export interface ApprovalRequest {
   admin_approved_at?: string | null;
   finance_approved_by?: string | null;
   admin_approved_by?: string | null;
+  requiresThreeApprovals?: boolean;
+  admin_approved_1?: boolean;
+  admin_approved_1_at?: string | null;
+  admin_approved_1_by?: string | null;
+  admin_approved_2?: boolean;
+  admin_approved_2_at?: string | null;
+  admin_approved_2_by?: string | null;
   approval_stage?: string;
   details?: {
     paymentId?: string;
@@ -170,7 +177,7 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
     status: 'Approved' | 'Rejected',
     rejectionReason?: string,
     rejectionComments?: string,
-    approvalType?: 'finance' | 'admin',
+    approvalType?: 'finance' | 'admin' | 'admin1' | 'admin2',
     approverName?: string
   ) => {
     try {
@@ -193,7 +200,7 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
           updateData.rejection_comments = rejectionComments || '';
         }
       } else if (status === 'Approved' && approvalType) {
-        // Handle two-stage approval
+        // Handle multi-stage approval
         if (approvalType === 'finance') {
           updateData.finance_approved_at = new Date().toISOString();
           updateData.finance_approved_by = approverName || 'Finance Team';
@@ -206,6 +213,18 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
             updateData.status = 'Finance Approved';
             updateData.approval_stage = 'finance_approved';
           }
+        } else if (approvalType === 'admin1') {
+          updateData.admin_approved_1 = true;
+          updateData.admin_approved_1_at = new Date().toISOString();
+          updateData.admin_approved_1_by = approverName || 'Admin Team';
+          updateData.status = 'Admin 1 Approved';
+          updateData.approval_stage = 'admin1_approved';
+        } else if (approvalType === 'admin2') {
+          updateData.admin_approved_2 = true;
+          updateData.admin_approved_2_at = new Date().toISOString();
+          updateData.admin_approved_2_by = approverName || 'Admin Team';
+          // Status will be set to 'Approved' by the database trigger
+          updateData.approval_stage = 'admin2_approved';
         } else if (approvalType === 'admin') {
           updateData.admin_approved_at = new Date().toISOString();
           updateData.admin_approved_by = approverName || 'Admin Team';
