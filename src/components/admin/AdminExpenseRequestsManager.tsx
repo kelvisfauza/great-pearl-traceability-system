@@ -154,6 +154,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   };
 
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
+    alert('CONFIRM APPROVAL CALLED! Payment: ' + paymentMethod);
     console.log('🚀 confirmApproval STARTED');
     console.log('🚀 paymentMethod:', paymentMethod);
     console.log('🚀 selectedRequestId:', selectedRequestId);
