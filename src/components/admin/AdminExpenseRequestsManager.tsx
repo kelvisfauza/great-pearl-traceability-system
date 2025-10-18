@@ -24,7 +24,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   onApprove, 
   onReject 
 }) => {
-  const { requests, loading, updateRequestStatus } = useApprovalRequests();
+  const { requests, loading, updateRequestStatus, fetchRequests } = useApprovalRequests();
   const { assessExpenseRisk } = useRiskAssessment();
   const { employee } = useAuth();
   const [rejectionModalOpen, setRejectionModalOpen] = React.useState(false);
@@ -144,109 +144,129 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   };
 
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
-    alert('🚀 CONFIRM APPROVAL CALLED! Payment: ' + paymentMethod);
-    console.log('🚀 confirmApproval STARTED');
-    console.log('🚀 paymentMethod:', paymentMethod);
-    console.log('🚀 selectedRequest:', selectedRequest);
-    
-    if (!selectedRequest || !selectedRequest.id) {
-      alert('ERROR: No request selected!');
-      console.error('No request selected for approval');
-      return;
-    }
-    
-    const requestId = selectedRequest.id;
-    const approverName = employee?.name || 'Admin Team';
-    
-    alert('🎯 About to update status for: ' + requestId);
-    console.log('🎯 Starting approval for ID:', requestId);
-    console.log('🎯 Payment method:', paymentMethod);
-    
-    // Determine which admin approval slot to use
-    let approvalType: 'admin' | 'admin1' | 'admin2' = 'admin';
-    
-    if (selectedRequest.requiresThreeApprovals) {
-      if (!selectedRequest.admin_approved_1_at) {
-        approvalType = 'admin1';
-      } else if (!selectedRequest.admin_approved_2_at) {
-        approvalType = 'admin2';
+    try {
+      alert('🚀 CONFIRM APPROVAL CALLED! Payment: ' + paymentMethod);
+      console.log('🚀 confirmApproval STARTED');
+      console.log('🚀 selectedRequest:', selectedRequest);
+      
+      if (!selectedRequest || !selectedRequest.id) {
+        alert('ERROR: No request selected!');
+        console.error('No request selected for approval');
+        return;
       }
-    } else {
-      approvalType = 'admin';
-    }
-    
-    console.log('🎯 Approval type:', approvalType);
-    
-    // Don't pass 'Approved' status - let updateRequestStatus determine the correct status
-    const success = await updateRequestStatus(
-      requestId, 
-      'Pending', // Will be updated based on approval flow
-      undefined, 
-      comments, 
-      approvalType, 
-      approverName
-    );
-    
-    console.log('🎯 Update success:', success);
-    
-    if (success) {
-      // Update the request with payment method (will work once types are updated)
-      try {
-        await supabase
-          .from('approval_requests')
-          .update({ 
-            admin_comments: comments 
-          })
-          .eq('id', selectedRequestId);
-      } catch (error) {
-        console.log('Admin comments update:', error);
-      }
-
-      const isFullyApproved = approvalType === 'admin2' || (approvalType === 'admin' && !selectedRequest?.requiresThreeApprovals);
       
-      console.log('🎯 Is fully approved:', isFullyApproved);
-      console.log('🎯 Should show payment slip:', paymentMethod === 'transfer' && isFullyApproved);
+      const requestId = selectedRequest.id;
+      const approverName = employee?.name || 'Admin Team';
       
-      toast({
-        title: "Admin Approval Recorded",
-        description: isFullyApproved ? 
-          `Expense request fully approved for ${paymentMethod} payment` :
-          `Admin ${approvalType === 'admin1' ? '1' : ''} approval recorded - awaiting second admin approval`
-      });
+      alert('🎯 About to update status for: ' + requestId);
+      console.log('🎯 Starting approval for ID:', requestId);
       
-      onApprove?.(requestId);
+      // Determine which admin approval slot to use
+      let approvalType: 'admin' | 'admin1' | 'admin2' = 'admin';
       
-      // Show payment slip for both cash and transfer if fully approved
-      if (isFullyApproved) {
-        const updatedRequest = {
-          ...selectedRequest,
-          id: requestId,
-          title: selectedRequest.title,
-          amount: parseFloat(selectedRequest.amount || '0'),
-          requestedby: selectedRequest.requestedby,
-          paymentMethod: paymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash Payment',
-          financeApprovedBy: selectedRequest.finance_approved_by,
-          adminApprovedBy: approverName,
-          financeApprovedAt: selectedRequest.finance_approved_at,
-          adminApprovedAt: new Date().toISOString(),
-          phoneNumber: selectedRequest.details?.phoneNumber || userProfiles[selectedRequest.requestedby]?.phone,
-          reason: selectedRequest.details?.reason
-        };
-        
-        console.log('🎯 Opening payment slip with data:', updatedRequest);
-        setSelectedRequest(updatedRequest);
-        
-        // Delay opening payment slip modal slightly to avoid conflicts
-        setTimeout(() => {
-          setPaymentSlipModalOpen(true);
-        }, 100);
+      if (selectedRequest.requiresThreeApprovals) {
+        if (!selectedRequest.admin_approved_1_at) {
+          approvalType = 'admin1';
+        } else if (!selectedRequest.admin_approved_2_at) {
+          approvalType = 'admin2';
+        }
       } else {
-        setSelectedRequest(null);
+        approvalType = 'admin';
       }
+      
+      console.log('🎯 Approval type:', approvalType);
+      alert('📝 Calling updateRequestStatus with type: ' + approvalType);
+      
+      const success = await updateRequestStatus(
+        requestId, 
+        'Pending',
+        undefined, 
+        comments, 
+        approvalType, 
+        approverName
+      );
+      
+      alert('✅ Update result: ' + (success ? 'SUCCESS' : 'FAILED'));
+      console.log('🎯 Update success:', success);
+      
+      if (success) {
+        // Update the request with payment method and comments
+        try {
+          const { error: commentError } = await supabase
+            .from('approval_requests')
+            .update({ 
+              admin_comments: comments 
+            })
+            .eq('id', requestId);
+            
+          if (commentError) {
+            console.error('Error updating comments:', commentError);
+          }
+        } catch (error) {
+          console.log('Admin comments update error:', error);
+        }
+
+        const isFullyApproved = approvalType === 'admin2' || (approvalType === 'admin' && !selectedRequest?.requiresThreeApprovals);
+        
+        console.log('🎯 Is fully approved:', isFullyApproved);
+        
+        toast({
+          title: "Admin Approval Recorded",
+          description: isFullyApproved ? 
+            `Expense request fully approved for ${paymentMethod} payment` :
+            `Admin ${approvalType === 'admin1' ? '1' : ''} approval recorded - awaiting second admin approval`
+        });
+        
+        onApprove?.(requestId);
+        
+        // Refresh the requests list
+        await fetchRequests();
+        
+        // Show payment slip for both cash and transfer if fully approved
+        if (isFullyApproved) {
+          const updatedRequest = {
+            ...selectedRequest,
+            id: requestId,
+            title: selectedRequest.title,
+            amount: parseFloat(selectedRequest.amount || '0'),
+            requestedby: selectedRequest.requestedby,
+            paymentMethod: paymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash Payment',
+            financeApprovedBy: selectedRequest.finance_approved_by,
+            adminApprovedBy: approverName,
+            financeApprovedAt: selectedRequest.finance_approved_at,
+            adminApprovedAt: new Date().toISOString(),
+            phoneNumber: selectedRequest.details?.phoneNumber || userProfiles[selectedRequest.requestedby]?.phone,
+            reason: selectedRequest.details?.reason
+          };
+          
+          console.log('🎯 Opening payment slip with data:', updatedRequest);
+          setSelectedRequest(updatedRequest);
+          
+          setTimeout(() => {
+            setPaymentSlipModalOpen(true);
+          }, 100);
+        } else {
+          setSelectedRequest(null);
+        }
+      } else {
+        alert('❌ FAILED to update request status!');
+        toast({
+          title: "Approval Failed",
+          description: "Failed to update request status. Please try again.",
+          variant: "destructive"
+        });
+      }
+      
+      setApprovalModalOpen(false);
+    } catch (error) {
+      console.error('❌ Approval error:', error);
+      alert('❌ ERROR: ' + (error as Error).message);
+      toast({
+        title: "Approval Error",
+        description: "An error occurred during approval: " + (error as Error).message,
+        variant: "destructive"
+      });
     }
-    
-    // Close approval modal first
-    setApprovalModalOpen(false);
   };
 
   const handleReject = (requestId: string, requestTitle: string) => {

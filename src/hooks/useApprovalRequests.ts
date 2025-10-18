@@ -172,6 +172,31 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
     }
   };
 
+  useEffect(() => {
+    fetchRequests();
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('approval-requests-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'approval_requests'
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload);
+          fetchRequests(); // Refresh on any change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const updateRequestStatus = async (
     id: string, 
     status: 'Approved' | 'Rejected' | 'Pending',
