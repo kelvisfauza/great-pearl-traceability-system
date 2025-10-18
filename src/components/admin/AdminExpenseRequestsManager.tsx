@@ -175,9 +175,10 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     
     console.log('🎯 Approval type:', approvalType);
     
+    // Don't pass 'Approved' status - let updateRequestStatus determine the correct status
     const success = await updateRequestStatus(
       requestId, 
-      'Approved', 
+      'Pending', // Will be updated based on approval flow
       undefined, 
       comments, 
       approvalType, 

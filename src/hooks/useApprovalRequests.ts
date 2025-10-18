@@ -174,20 +174,28 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
 
   const updateRequestStatus = async (
     id: string, 
-    status: 'Approved' | 'Rejected',
+    status: 'Approved' | 'Rejected' | 'Pending',
     rejectionReason?: string,
     rejectionComments?: string,
     approvalType?: 'finance' | 'admin' | 'admin1' | 'admin2',
     approverName?: string
   ) => {
     try {
-      console.log('Updating approval request status:', id, status);
+      console.log('🔄 Updating approval request status:', { id, status, approvalType, approverName });
       
       const request = requests.find(req => req.id === id);
       if (!request) {
-        console.error('Request not found:', id);
+        console.error('❌ Request not found:', id);
         return false;
       }
+
+      console.log('📋 Current request state:', {
+        requiresThreeApprovals: request.requiresThreeApprovals,
+        finance_approved_at: request.finance_approved_at,
+        admin_approved_at: request.admin_approved_at,
+        admin_approved_1_at: request.admin_approved_1_at,
+        admin_approved_2_at: request.admin_approved_2_at
+      });
 
       const updateData: any = {
         updated_at: new Date().toISOString()
@@ -199,26 +207,37 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
           updateData.rejection_reason = rejectionReason;
           updateData.rejection_comments = rejectionComments || '';
         }
-      } else if (status === 'Approved' && approvalType) {
+      } else if (approvalType) {
         // Handle multi-stage approval
         if (approvalType === 'finance') {
           updateData.finance_approved_at = new Date().toISOString();
           updateData.finance_approved_by = approverName || 'Finance Team';
           
           // Check if admin has already approved
-          if (request.admin_approved_at) {
+          if (request.admin_approved_at || (request.requiresThreeApprovals && request.admin_approved_1_at && request.admin_approved_2_at)) {
             updateData.status = 'Approved';
             updateData.approval_stage = 'fully_approved';
+            console.log('✅ Setting status to APPROVED (Finance approved + Admin already approved)');
           } else {
             updateData.status = 'Finance Approved';
             updateData.approval_stage = 'finance_approved';
+            console.log('⏳ Setting status to Finance Approved (awaiting admin)');
           }
         } else if (approvalType === 'admin1') {
           updateData.admin_approved_1 = true;
           updateData.admin_approved_1_at = new Date().toISOString();
           updateData.admin_approved_1_by = approverName || 'Admin Team';
-          updateData.status = 'Admin 1 Approved';
-          updateData.approval_stage = 'admin1_approved';
+          
+          // Check if finance is approved and we're waiting for admin2
+          if (request.finance_approved_at && request.admin_approved_2_at) {
+            updateData.status = 'Approved';
+            updateData.approval_stage = 'fully_approved';
+            console.log('✅ Setting status to APPROVED (All three approvals complete)');
+          } else {
+            updateData.status = 'Admin 1 Approved';
+            updateData.approval_stage = 'admin1_approved';
+            console.log('⏳ Setting status to Admin 1 Approved (awaiting admin 2)');
+          }
         } else if (approvalType === 'admin2') {
           updateData.admin_approved_2 = true;
           updateData.admin_approved_2_at = new Date().toISOString();
@@ -228,24 +247,30 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
           if (request.finance_approved_at && request.admin_approved_1_at) {
             updateData.status = 'Approved';
             updateData.approval_stage = 'fully_approved';
+            console.log('✅ Setting status to APPROVED (All three approvals complete)');
           } else {
             updateData.status = 'Admin 2 Approved';
             updateData.approval_stage = 'admin2_approved';
+            console.log('⏳ Setting status to Admin 2 Approved (awaiting finance or admin 1)');
           }
         } else if (approvalType === 'admin') {
           updateData.admin_approved_at = new Date().toISOString();
           updateData.admin_approved_by = approverName || 'Admin Team';
           
-          // Check if finance has already approved
+          // Check if finance has already approved (2-tier approval)
           if (request.finance_approved_at) {
             updateData.status = 'Approved';
             updateData.approval_stage = 'fully_approved';
+            console.log('✅ Setting status to APPROVED (Finance + Admin approved)');
           } else {
             updateData.status = 'Admin Approved';
             updateData.approval_stage = 'admin_approved';
+            console.log('⏳ Setting status to Admin Approved (awaiting finance)');
           }
         }
       }
+
+      console.log('💾 Update data to be saved:', updateData);
 
       console.log('Updating Supabase approval request...');
       const { error } = await supabase
