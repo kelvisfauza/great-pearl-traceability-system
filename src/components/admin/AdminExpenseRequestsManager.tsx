@@ -148,6 +148,11 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   };
 
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
+    console.log('🚀 confirmApproval STARTED');
+    console.log('🚀 paymentMethod:', paymentMethod);
+    console.log('🚀 selectedRequestId:', selectedRequestId);
+    console.log('🚀 selectedRequest:', selectedRequest);
+    
     const approverName = employee?.name || 'Admin Team';
     
     console.log('🎯 Starting approval process for request:', selectedRequestId);
