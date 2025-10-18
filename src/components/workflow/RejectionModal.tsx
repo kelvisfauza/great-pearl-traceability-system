@@ -45,10 +45,10 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-background z-50">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-500" />
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
             {title}
           </DialogTitle>
         </DialogHeader>
@@ -61,10 +61,10 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
           <div className="space-y-2">
             <Label htmlFor="rejection-reason">Rejection Reason *</Label>
             <Select value={reason} onValueChange={setReason}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-background">
                 <SelectValue placeholder="Select a reason" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover z-50">
                 {REJECTION_REASONS.map(reasonOption => (
                   <SelectItem key={reasonOption.value} value={reasonOption.value}>
                     {reasonOption.label}
@@ -82,11 +82,12 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
               value={comments}
               onChange={(e) => setComments(e.target.value)}
               rows={3}
+              className="resize-none"
             />
           </div>
         </div>
         
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>

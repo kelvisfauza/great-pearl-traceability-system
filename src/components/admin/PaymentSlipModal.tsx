@@ -29,12 +29,7 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
   request,
   recipientName 
 }) => {
-  console.log('🎯 PaymentSlipModal render - open:', open, 'request:', !!request);
-  
-  if (!request) {
-    console.log('🎯 PaymentSlipModal - no request provided, returning null');
-    return null;
-  }
+  if (!request) return null;
 
   const generatePaymentSlipNumber = () => {
     return `PS-${new Date().getFullYear()}-${new Date().getMonth() + 1}-${request.id.slice(0, 8).toUpperCase()}`;
@@ -164,15 +159,15 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background z-50">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5" />
+            <Download className="h-5 w-5 text-primary" />
             Payment Slip - {request.title}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6 p-4 border rounded-lg bg-gray-50">
+        <div className="space-y-6 p-4 border rounded-lg bg-muted">
           <StandardPrintHeader 
             title="PAYMENT SLIP"
             subtitle="Finance Department"
@@ -180,8 +175,8 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
             includeDate={true}
           />
           
-          <div className="bg-white p-4 rounded border">
-            <h3 className="font-semibold text-gray-900 mb-3">Recipient Information</h3>
+          <div className="bg-card p-4 rounded border shadow-sm">
+            <h3 className="font-semibold text-foreground mb-3">Recipient Information</h3>
             <div className="space-y-2 text-sm">
               <div><span className="font-medium">Name:</span> {recipientName || request.requestedby.split('@')[0]}</div>
               <div><span className="font-medium">Email:</span> {request.requestedby}</div>
@@ -191,17 +186,17 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
             </div>
           </div>
           
-          <div className="bg-white p-4 rounded border">
-            <h3 className="font-semibold text-gray-900 mb-3">Payment Information</h3>
+          <div className="bg-card p-4 rounded border shadow-sm">
+            <h3 className="font-semibold text-foreground mb-3">Payment Information</h3>
             <div className="space-y-2 text-sm">
-              <div><span className="font-medium">Amount:</span> <span className="font-bold text-green-600 text-lg">UGX {request.amount.toLocaleString()}</span></div>
+              <div><span className="font-medium">Amount:</span> <span className="font-bold text-green-600 dark:text-green-400 text-lg">UGX {request.amount.toLocaleString()}</span></div>
               <div><span className="font-medium">Payment Method:</span> {request.paymentMethod}</div>
-              <div><span className="font-medium">Status:</span> <span className="text-green-600 font-medium">Approved & Ready for Payment</span></div>
+              <div><span className="font-medium">Status:</span> <span className="text-green-600 dark:text-green-400 font-medium">Approved & Ready for Payment</span></div>
             </div>
           </div>
           
-          <div className="bg-white p-4 rounded border">
-            <h3 className="font-semibold text-gray-900 mb-3">Approval Chain</h3>
+          <div className="bg-card p-4 rounded border shadow-sm">
+            <h3 className="font-semibold text-foreground mb-3">Approval Chain</h3>
             <div className="space-y-2 text-sm">
               <div><span className="font-medium">Finance Approved By:</span> {request.financeApprovedBy || 'Finance Team'}</div>
               <div><span className="font-medium">Finance Approval Date:</span> {request.financeApprovedAt ? new Date(request.financeApprovedAt).toLocaleString() : 'N/A'}</div>
@@ -210,15 +205,15 @@ export const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({
             </div>
           </div>
           
-          <div className="border-2 border-dashed border-gray-400 p-4 bg-yellow-50">
-            <h3 className="font-semibold text-gray-900 mb-3">Recipient Acknowledgment</h3>
-            <p className="text-sm text-gray-700 mb-4">Please sign below to acknowledge receipt of payment:</p>
+          <div className="border-2 border-dashed border-border p-4 bg-amber-50 dark:bg-amber-950/20">
+            <h3 className="font-semibold text-foreground mb-3">Recipient Acknowledgment</h3>
+            <p className="text-sm text-muted-foreground mb-4">Please sign below to acknowledge receipt of payment:</p>
             <div className="grid grid-cols-2 gap-4">
-              <div className="border-b border-gray-400 pb-1">
-                <p className="text-xs text-gray-500 mt-8">Recipient Signature & Date</p>
+              <div className="border-b border-border pb-1">
+                <p className="text-xs text-muted-foreground mt-8">Recipient Signature & Date</p>
               </div>
-              <div className="border-b border-gray-400 pb-1">
-                <p className="text-xs text-gray-500 mt-8">Paymaster Signature & Date</p>
+              <div className="border-b border-border pb-1">
+                <p className="text-xs text-muted-foreground mt-8">Paymaster Signature & Date</p>
               </div>
             </div>
           </div>

@@ -23,57 +23,54 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
 }) => {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('transfer');
   const [comments, setComments] = useState('');
-
-  console.log('💰 AdminApprovalModal rendered - open:', open, 'amount:', amount, 'title:', requestTitle);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleApprove = async () => {
-    alert('💰 Approve button clicked in AdminApprovalModal!');
-    console.log('💰 AdminApprovalModal - handleApprove called');
-    console.log('💰 Payment method:', paymentMethod);
-    console.log('💰 Comments:', comments);
-    console.log('💰 Calling onApprove with:', paymentMethod, comments);
-    
+    setIsSubmitting(true);
     try {
       await onApprove(paymentMethod, comments);
       setComments('');
+      setPaymentMethod('transfer');
       onOpenChange(false);
     } catch (error) {
-      console.error('💰 Approval error:', error);
-      alert('ERROR in approval: ' + error);
+      console.error('Approval error:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md bg-background z-50">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-foreground">
             <CheckCircle className="h-5 w-5 text-green-600" />
             Approve Expense Request
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
-          <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-            <p className="font-medium text-green-800">{requestTitle}</p>
-            <p className="text-2xl font-bold text-green-900">UGX {amount.toLocaleString()}</p>
+        <div className="space-y-5">
+          <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+            <p className="font-medium text-green-800 dark:text-green-300 mb-1">{requestTitle}</p>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-400">UGX {amount.toLocaleString()}</p>
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base font-medium">Payment Method</Label>
+            <Label className="text-base font-semibold">Payment Method</Label>
             <RadioGroup value={paymentMethod} onValueChange={(value: 'cash' | 'transfer') => setPaymentMethod(value)}>
-              <div className="flex items-center space-x-2 p-3 border rounded-lg">
+              <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
                 <RadioGroupItem value="cash" id="cash" />
-                <Label htmlFor="cash" className="flex items-center gap-2 cursor-pointer">
-                  <Banknote className="h-4 w-4" />
-                  Cash Payment
+                <Label htmlFor="cash" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <Banknote className="h-4 w-4 text-primary" />
+                  <span>Cash Payment</span>
                 </Label>
               </div>
-              <div className="flex items-center space-x-2 p-3 border rounded-lg">
+              <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
                 <RadioGroupItem value="transfer" id="transfer" />
-                <Label htmlFor="transfer" className="flex items-center gap-2 cursor-pointer">
-                  <CreditCard className="h-4 w-4" />
-                  Bank Transfer (Payment Slip Required)
+                <Label htmlFor="transfer" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <CreditCard className="h-4 w-4 text-primary" />
+                  <span>Bank Transfer</span>
+                  <span className="text-xs text-muted-foreground ml-auto">(Payment Slip Required)</span>
                 </Label>
               </div>
             </RadioGroup>
@@ -83,31 +80,31 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
             <Label htmlFor="comments">Additional Comments (Optional)</Label>
             <Textarea
               id="comments"
-              placeholder="Add any additional notes..."
+              placeholder="Add any additional notes about this approval..."
               value={comments}
               onChange={(e) => setComments(e.target.value)}
               rows={3}
+              className="resize-none"
             />
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button 
             type="button"
             variant="outline" 
-            onClick={() => {
-              console.log('💰 Cancel clicked');
-              onOpenChange(false);
-            }}
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
           <Button 
             type="button"
             onClick={handleApprove}
-            className="bg-green-600 hover:bg-green-700"
+            disabled={isSubmitting}
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
-            Approve Request
+            {isSubmitting ? "Approving..." : "Approve Request"}
           </Button>
         </DialogFooter>
       </DialogContent>
