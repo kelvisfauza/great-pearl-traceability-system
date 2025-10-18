@@ -39,13 +39,26 @@ export const FinanceReviewModal: React.FC<FinanceReviewModalProps> = ({
   if (!request) return null;
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const date = new Date(dateString);
+    // Check if the date string includes time info (ISO format with T)
+    const hasTime = dateString.includes('T') || dateString.includes(':');
+    
+    if (hasTime) {
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } else {
+      // Date only, no time
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
   };
 
   const phoneNumber = details.phoneNumber || 'Not provided';

@@ -43,11 +43,6 @@ const Expenses = () => {
     (req.type && req.type.includes('Expense') && !req.type.includes('Salary'))
   );
 
-  // Debug logging
-  console.log('All myRequests:', myRequests);
-  console.log('Filtered myExpenseRequests:', myExpenseRequests);
-  console.log('Requisitions only:', myExpenseRequests.filter(r => r.type === 'Requisition'));
-
   // Filter to show user's salary requests
   const mySalaryRequests = myRequests.filter(req => 
     req.type === 'Employee Salary Request' || req.type === 'Salary Request'
