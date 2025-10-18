@@ -32,6 +32,16 @@ export interface QualityAssessment {
   pods: number;
   husks: number;
   stones: number;
+  // Calculator results
+  fm?: number;
+  actual_ott?: number;
+  clean_d14?: number;
+  outturn?: number;
+  outturn_price?: number;
+  final_price?: number;
+  quality_note?: string | null;
+  reject_outturn_price?: boolean;
+  reject_final?: boolean;
   suggested_price: number;
   status: string;
   comments: string | null;
@@ -348,6 +358,16 @@ export const useQualityControl = () => {
         pods: Number(assessment.pods) || 0,
         husks: Number(assessment.husks) || 0,
         stones: Number(assessment.stones) || 0,
+        // Calculator results
+        fm: Number(assessment.fm) || 0,
+        actual_ott: Number(assessment.actual_ott) || 0,
+        clean_d14: Number(assessment.clean_d14) || 0,
+        outturn: Number(assessment.outturn) || 0,
+        outturn_price: Number(assessment.outturn_price) || 0,
+        final_price: Number(assessment.final_price) || finalPrice,
+        quality_note: assessment.quality_note || null,
+        reject_outturn_price: Boolean(assessment.reject_outturn_price),
+        reject_final: Boolean(assessment.reject_final),
         suggested_price: finalPrice, // This is the price that finance will see
         status: 'submitted_to_finance', // Automatically send to Finance
         comments: assessment.comments || null,
@@ -501,6 +521,16 @@ export const useQualityControl = () => {
           pods: updates.pods,
           husks: updates.husks,
           stones: updates.stones,
+          // Calculator results
+          fm: updates.fm,
+          actual_ott: updates.actual_ott,
+          clean_d14: updates.clean_d14,
+          outturn: updates.outturn,
+          outturn_price: updates.outturn_price,
+          final_price: updates.final_price,
+          quality_note: updates.quality_note,
+          reject_outturn_price: updates.reject_outturn_price,
+          reject_final: updates.reject_final,
           suggested_price: updates.suggested_price,
           comments: updates.comments,
           status: updates.status || 'assessed',
