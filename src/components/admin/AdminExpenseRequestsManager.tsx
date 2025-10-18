@@ -154,11 +154,16 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   };
 
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
-    alert('CONFIRM APPROVAL CALLED! Payment: ' + paymentMethod);
     console.log('🚀 confirmApproval STARTED');
     console.log('🚀 paymentMethod:', paymentMethod);
     console.log('🚀 selectedRequestId:', selectedRequestId);
     console.log('🚀 selectedRequest:', selectedRequest);
+    
+    if (!selectedRequestId || !selectedRequest) {
+      alert('ERROR: No request selected! selectedRequestId=' + selectedRequestId);
+      console.error('No request selected for approval');
+      return;
+    }
     
     const approverName = employee?.name || 'Admin Team';
     
