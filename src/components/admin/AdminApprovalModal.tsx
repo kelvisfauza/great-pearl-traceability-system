@@ -101,14 +101,22 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              alert('Approve button clicked!');
-              console.log('💰 AdminApprovalModal - handleApprove called');
+              console.log('💰 Button clicked START');
               console.log('💰 Payment method:', paymentMethod);
               console.log('💰 Comments:', comments);
-              console.log('💰 Calling onApprove with:', paymentMethod, comments);
-              onApprove(paymentMethod, comments);
-              onOpenChange(false);
-              setComments('');
+              console.log('💰 onApprove function:', onApprove);
+              console.log('💰 onApprove type:', typeof onApprove);
+              
+              try {
+                console.log('💰 About to call onApprove...');
+                onApprove(paymentMethod, comments);
+                console.log('💰 onApprove called successfully');
+                onOpenChange(false);
+                setComments('');
+              } catch (error) {
+                console.error('💰 ERROR calling onApprove:', error);
+                alert('Error: ' + error);
+              }
             }}
             className="bg-green-600 hover:bg-green-700"
           >
