@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
 import { useRiskAssessment } from '@/hooks/useRiskAssessment';
+import { useAuth } from '@/contexts/AuthContext';
 import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield, Phone, AlertTriangle, Printer } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
@@ -23,6 +24,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
 }) => {
   const { requests, loading, updateRequestStatus } = useApprovalRequests();
   const { assessExpenseRisk } = useRiskAssessment();
+  const { employee } = useAuth();
   const [rejectionModalOpen, setRejectionModalOpen] = React.useState(false);
   const [selectedRequestId, setSelectedRequestId] = React.useState<string>('');
   const [selectedRequestTitle, setSelectedRequestTitle] = React.useState<string>('');
@@ -109,13 +111,14 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   };
 
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
+    const approverName = employee?.name || 'Admin Team';
     const success = await updateRequestStatus(
       selectedRequestId, 
       'Approved', 
       undefined, 
       comments, 
       'admin', 
-      'Admin Team'
+      approverName
     );
     
     if (success) {
@@ -143,7 +146,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         const updatedRequest = {
           ...selectedRequest,
           paymentMethod: 'Bank Transfer',
-          adminApprovedBy: 'Admin Team',
+          adminApprovedBy: approverName,
           adminApprovedAt: new Date().toISOString(),
           phoneNumber: selectedRequest.details?.phoneNumber || userProfiles[selectedRequest.requestedby]?.phone,
           reason: selectedRequest.details?.reason
@@ -173,13 +176,14 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   };
 
   const confirmRejection = async (reason: string, comments?: string) => {
+    const approverName = employee?.name || 'Admin Team';
     const success = await updateRequestStatus(
       selectedRequestId, 
       'Rejected', 
       reason, 
       comments, 
       'admin', 
-      'Admin Team'
+      approverName
     );
     
     if (success) {
