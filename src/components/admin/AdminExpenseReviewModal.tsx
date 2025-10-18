@@ -39,7 +39,14 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
   onApprove,
   onReject,
 }) => {
-  if (!request) return null;
+  console.log('🟢 AdminExpenseReviewModal rendered - open:', open, 'request:', !!request);
+  console.log('🟢 onApprove function:', typeof onApprove, onApprove);
+  console.log('🟢 onReject function:', typeof onReject, onReject);
+  
+  if (!request) {
+    console.log('🟢 No request provided, returning null');
+    return null;
+  }
 
   const getRiskBadgeColor = (riskLevel: string) => {
     switch (riskLevel) {
