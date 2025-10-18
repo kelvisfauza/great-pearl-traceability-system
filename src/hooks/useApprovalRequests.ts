@@ -297,38 +297,54 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
 
       console.log('💾 Update data to be saved:', updateData);
 
-      console.log('Updating Supabase approval request...');
+      console.log('🔄 Step 1: Updating Supabase approval request...');
       const { error } = await supabase
         .from('approval_requests')
         .update(updateData)
         .eq('id', id);
       
       if (error) {
-        console.error('Supabase update error:', error);
+        console.error('❌ Supabase update error:', error);
+        alert('❌ DATABASE ERROR: ' + JSON.stringify(error));
         return false;
       }
       
-      console.log('Supabase approval request updated');
+      console.log('✅ Step 1 Complete: Supabase approval request updated');
+      alert('✅ Database updated successfully!');
 
       // Track workflow step
-      await trackWorkflowStep({
-        paymentId: request.details?.paymentId || id,
-        qualityAssessmentId: request.details?.qualityAssessmentId,
-        fromDepartment: 'Admin',
-        toDepartment: status === 'Approved' ? 'Operations' : 'Finance',
-        action: status === 'Approved' ? 'approved' : 'rejected',
-        reason: rejectionReason,
-        comments: rejectionComments,
-        processedBy: 'Operations Manager',
-        status: 'completed'
-      });
+      try {
+        console.log('🔄 Step 2: Tracking workflow step...');
+        await trackWorkflowStep({
+          paymentId: request.details?.paymentId || id,
+          qualityAssessmentId: request.details?.qualityAssessmentId,
+          fromDepartment: 'Admin',
+          toDepartment: status === 'Approved' ? 'Operations' : 'Finance',
+          action: status === 'Approved' ? 'approved' : 'rejected',
+          reason: rejectionReason,
+          comments: rejectionComments,
+          processedBy: 'Operations Manager',
+          status: 'completed'
+        });
+        console.log('✅ Step 2 Complete: Workflow step tracked');
+      } catch (workflowError) {
+        console.error('⚠️ Warning: Workflow tracking failed (non-critical):', workflowError);
+        // Don't fail the entire operation if workflow tracking fails
+      }
 
         // Handle different types of approved requests - only if fully approved
         if (updateData.status === 'Approved' && updateData.approval_stage === 'fully_approved') {
           
           // Send approval notification for Expense Requests and Employee Salary Requests
           if (request.type === 'Expense Request' || request.type === 'Employee Salary Request') {
-            await sendExpenseApprovalNotification(request);
+            try {
+              console.log('🔄 Step 3: Sending approval notification...');
+              await sendExpenseApprovalNotification(request);
+              console.log('✅ Step 3 Complete: Notification sent');
+            } catch (notifError) {
+              console.error('⚠️ Warning: Notification failed (non-critical):', notifError);
+              // Don't fail the entire operation if notification fails
+            }
           }
           
            // Handle Modification Request Approval
@@ -569,7 +585,8 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
       
       return true;
     } catch (error) {
-      console.error('Error updating approval request:', error);
+      console.error('❌ CRITICAL ERROR updating approval request:', error);
+      alert('❌ CRITICAL ERROR: ' + (error as Error).message + '\n\nStack: ' + (error as Error).stack);
       return false;
     }
   };
