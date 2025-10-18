@@ -31,6 +31,22 @@ export const ExpensesReport = () => {
     (req.type === 'Employee Salary Request' || req.type === 'Salary Payment')
   );
 
+  console.log('Approved Expenses:', approvedExpenses.map(e => ({
+    id: e.id,
+    title: e.title,
+    daterequested: e.daterequested,
+    requestedby: e.requestedby,
+    amount: e.amount
+  })));
+
+  console.log('Approved Salary Requests:', approvedSalaryRequests.map(s => ({
+    id: s.id,
+    title: s.title,
+    daterequested: s.daterequested,
+    requestedby: s.requestedby,
+    amount: s.amount
+  })));
+
   // Apply filters
   const filterByPeriod = (requests: any[]) => {
     if (filterPeriod === 'all') return requests;
@@ -55,7 +71,7 @@ export const ExpensesReport = () => {
         return requests;
     }
     
-    return requests.filter(req => new Date(req.dateRequested) >= startDate);
+    return requests.filter(req => new Date(req.daterequested) >= startDate);
   };
 
   const filteredExpenses = filterByPeriod(approvedExpenses);
@@ -179,9 +195,9 @@ export const ExpensesReport = () => {
                   <TableBody>
                     {filteredExpenses.map((expense) => (
                       <TableRow key={expense.id}>
-                        <TableCell>{formatDate(expense.dateRequested)}</TableCell>
+                        <TableCell>{formatDate(expense.daterequested)}</TableCell>
                         <TableCell className="font-medium">{expense.title}</TableCell>
-                        <TableCell>{expense.requestedBy}</TableCell>
+                        <TableCell>{expense.requestedby}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">{expense.type}</Badge>
                         </TableCell>
@@ -233,9 +249,9 @@ export const ExpensesReport = () => {
                   <TableBody>
                     {filteredSalaryRequests.map((salary) => (
                       <TableRow key={salary.id}>
-                        <TableCell>{formatDate(salary.dateRequested)}</TableCell>
+                        <TableCell>{formatDate(salary.daterequested)}</TableCell>
                         <TableCell className="font-medium">{salary.title}</TableCell>
-                        <TableCell>{salary.requestedBy}</TableCell>
+                        <TableCell>{salary.requestedby}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">{salary.type}</Badge>
                         </TableCell>
@@ -316,9 +332,9 @@ export const ExpensesReport = () => {
               <tbody>
                 {filteredExpenses.map((expense) => (
                   <tr key={expense.id}>
-                    <td className="border border-gray-300 px-2 py-2 text-sm">{formatDate(expense.dateRequested)}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{formatDate(expense.daterequested)}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{expense.title}</td>
-                    <td className="border border-gray-300 px-2 py-2 text-sm">{expense.requestedBy}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{expense.requestedby}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{expense.type}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(expense.amount)}</td>
                   </tr>
@@ -347,9 +363,9 @@ export const ExpensesReport = () => {
               <tbody>
                 {filteredSalaryRequests.map((salary) => (
                   <tr key={salary.id}>
-                    <td className="border border-gray-300 px-2 py-2 text-sm">{formatDate(salary.dateRequested)}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{formatDate(salary.daterequested)}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{salary.title}</td>
-                    <td className="border border-gray-300 px-2 py-2 text-sm">{salary.requestedBy}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{salary.requestedby}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{salary.type}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(salary.amount)}</td>
                   </tr>
