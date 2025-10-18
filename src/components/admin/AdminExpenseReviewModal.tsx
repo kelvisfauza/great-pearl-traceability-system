@@ -126,7 +126,7 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
                 <DollarSign className="h-4 w-4" />
                 <span>Amount</span>
               </div>
-              <p className="font-medium text-green-600">UGX {request.amount.toLocaleString()}</p>
+              <p className="font-medium text-green-600">UGX {parseFloat(request.amount).toLocaleString()}</p>
             </div>
 
             <div className="space-y-1">
