@@ -218,20 +218,30 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                console.log('🔴 Cancel button clicked');
+                onOpenChange(false);
+              }}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={onReject}
+              onClick={() => {
+                console.log('🔴 Reject button clicked');
+                onReject();
+              }}
               className="gap-2"
             >
               <XCircle className="h-4 w-4" />
               Reject
             </Button>
             <Button
-              onClick={onApprove}
+              onClick={() => {
+                console.log('🔴 Approve button clicked in review modal');
+                console.log('🔴 onApprove function:', onApprove);
+                onApprove();
+              }}
               className="gap-2 bg-green-600 hover:bg-green-700"
             >
               <CheckCircle className="h-4 w-4" />
