@@ -120,20 +120,10 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   };
 
   const handleApproveFromReview = () => {
-    console.log('🎯 ========== APPROVE FROM REVIEW CLICKED ==========');
+    console.log('🎯 handleApproveFromReview called');
     console.log('🎯 selectedRequest:', selectedRequest);
-    console.log('🎯 selectedRequest.id:', selectedRequest?.id);
-    console.log('🎯 selectedRequest.title:', selectedRequest?.title);
-    console.log('🎯 About to set selectedRequestId to:', selectedRequest.id);
-    console.log('🎯 About to set selectedRequestTitle to:', selectedRequest.title);
-    setSelectedRequestId(selectedRequest.id);
-    setSelectedRequestTitle(selectedRequest.title);
-    console.log('🎯 State updates requested');
-    console.log('🎯 Closing review modal...');
     setReviewModalOpen(false);
-    console.log('🎯 Opening approval modal...');
     setApprovalModalOpen(true);
-    console.log('🎯 ========== APPROVE FROM REVIEW COMPLETE ==========');
   };
 
   const handleRejectFromReview = () => {
@@ -156,44 +146,37 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
     console.log('🚀 confirmApproval STARTED');
     console.log('🚀 paymentMethod:', paymentMethod);
-    console.log('🚀 selectedRequestId:', selectedRequestId);
     console.log('🚀 selectedRequest:', selectedRequest);
     
-    if (!selectedRequestId || !selectedRequest) {
-      alert('ERROR: No request selected! selectedRequestId=' + selectedRequestId);
+    if (!selectedRequest || !selectedRequest.id) {
+      alert('ERROR: No request selected!');
       console.error('No request selected for approval');
       return;
     }
     
+    const requestId = selectedRequest.id;
     const approverName = employee?.name || 'Admin Team';
     
-    console.log('🎯 Starting approval process for request:', selectedRequestId);
+    console.log('🎯 Starting approval for ID:', requestId);
     console.log('🎯 Payment method:', paymentMethod);
-    console.log('🎯 Selected request data:', selectedRequest);
     
     // Determine which admin approval slot to use
-    const request = expenseRequests.find(r => r.id === selectedRequestId);
-    console.log('🎯 Found request:', request);
-    
     let approvalType: 'admin' | 'admin1' | 'admin2' = 'admin';
     
-    if (request?.requiresThreeApprovals) {
-      // Three-tier approval: need to determine if this is admin1 or admin2
-      if (!request.admin_approved_1_at) {
+    if (selectedRequest.requiresThreeApprovals) {
+      if (!selectedRequest.admin_approved_1_at) {
         approvalType = 'admin1';
-      } else if (!request.admin_approved_2_at) {
+      } else if (!selectedRequest.admin_approved_2_at) {
         approvalType = 'admin2';
       }
     } else {
-      // Standard two-tier approval
       approvalType = 'admin';
     }
     
-    console.log('🎯 Approval type determined:', approvalType);
-    console.log('🎯 Requires three approvals:', request?.requiresThreeApprovals);
+    console.log('🎯 Approval type:', approvalType);
     
     const success = await updateRequestStatus(
-      selectedRequestId, 
+      requestId, 
       'Approved', 
       undefined, 
       comments, 
@@ -201,7 +184,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       approverName
     );
     
-    console.log('🎯 Update request status success:', success);
+    console.log('🎯 Update success:', success);
     
     if (success) {
       // Update the request with payment method (will work once types are updated)
@@ -216,7 +199,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         console.log('Admin comments update:', error);
       }
 
-      const isFullyApproved = approvalType === 'admin2' || (approvalType === 'admin' && !request?.requiresThreeApprovals);
+      const isFullyApproved = approvalType === 'admin2' || (approvalType === 'admin' && !selectedRequest?.requiresThreeApprovals);
       
       console.log('🎯 Is fully approved:', isFullyApproved);
       console.log('🎯 Should show payment slip:', paymentMethod === 'transfer' && isFullyApproved);
@@ -228,21 +211,20 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
           `Admin ${approvalType === 'admin1' ? '1' : ''} approval recorded - awaiting second admin approval`
       });
       
-      onApprove?.(selectedRequestId);
+      onApprove?.(requestId);
       
       // Show payment slip for both cash and transfer if fully approved
       if (isFullyApproved) {
-        const request = expenseRequests.find(r => r.id === selectedRequestId);
         const updatedRequest = {
           ...selectedRequest,
-          id: selectedRequestId,
+          id: requestId,
           title: selectedRequest.title,
-          amount: parseFloat(request?.amount || selectedRequest.amount || '0'),
+          amount: parseFloat(selectedRequest.amount || '0'),
           requestedby: selectedRequest.requestedby,
           paymentMethod: paymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash Payment',
-          financeApprovedBy: request?.finance_approved_by,
+          financeApprovedBy: selectedRequest.finance_approved_by,
           adminApprovedBy: approverName,
-          financeApprovedAt: request?.finance_approved_at,
+          financeApprovedAt: selectedRequest.finance_approved_at,
           adminApprovedAt: new Date().toISOString(),
           phoneNumber: selectedRequest.details?.phoneNumber || userProfiles[selectedRequest.requestedby]?.phone,
           reason: selectedRequest.details?.reason
@@ -262,8 +244,6 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     
     // Close approval modal first
     setApprovalModalOpen(false);
-    setSelectedRequestId('');
-    setSelectedRequestTitle('');
   };
 
   const handleReject = (requestId: string, requestTitle: string) => {
