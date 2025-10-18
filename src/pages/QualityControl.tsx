@@ -20,7 +20,6 @@ import {
   TrendingUp,
   Eye,
   Send,
-  Factory,
   FileDown,
   Edit,
   RefreshCw,
@@ -615,35 +614,6 @@ const QualityControl = () => {
     }
   };
 
-  const handleSendToDrier = async (assessmentId: string) => {
-    if (readOnly) {
-      toast({
-        title: 'View-only mode',
-        description: "You can't perform Quality tasks. You may view and approve only.",
-        variant: 'destructive'
-      });
-      return;
-    }
-    try {
-      const assessment = qualityAssessments.find(a => a.id === assessmentId);
-      if (!assessment) return;
-
-      await updateStoreRecord(assessment.store_record_id, { status: 'in_drying' });
-      
-      toast({
-        title: "Sent to Drier",
-        description: `Coffee batch ${assessment.batch_number} has been sent to the drying facility`,
-      });
-      
-    } catch (error) {
-      console.error('Error sending to drier:', error);
-      toast({
-        title: "Error",
-        description: "Failed to send coffee to drier",
-        variant: "destructive"
-      });
-    }
-  };
 
   const handlePrintGRN = (assessment: any) => {
     const storeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
@@ -695,7 +665,7 @@ const QualityControl = () => {
       case 'paid':
         return <Badge variant="default" className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Paid</Badge>;
       case 'in_drying':
-        return <Badge variant="outline" className="border-orange-500 text-orange-600"><Factory className="h-3 w-3 mr-1" />In Drying</Badge>;
+        return <Badge variant="outline" className="border-orange-500 text-orange-600"><Droplets className="h-3 w-3 mr-1" />In Drying</Badge>;
       case 'rejected':
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
       default:
@@ -1034,17 +1004,6 @@ const QualityControl = () => {
                                 <Edit className="h-4 w-4 mr-1" />
                                 Edit
                               </Button>
-                              {(assessment.status === 'inventory' || assessment.status === 'submitted_to_finance') && (
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => handleSendToDrier(assessment.id)}
-                                  disabled={readOnly}
-                                >
-                                  <Factory className="h-4 w-4 mr-1" />
-                                  Send to Drier
-                                </Button>
-                              )}
                               <Button 
                                 size="sm" 
                                 variant="outline"
