@@ -534,6 +534,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                             size="sm"
                             variant="outline"
                             onClick={(e) => {
+                              alert('REVIEW BUTTON CLICKED!');
                               e.preventDefault();
                               e.stopPropagation();
                               console.log('🟣 Review button clicked for request:', request.id);
