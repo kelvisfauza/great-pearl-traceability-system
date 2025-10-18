@@ -77,8 +77,18 @@ export const ExpenseManagement = () => {
   const handleApprove = async (requestId: string) => {
     try {
       await updateRequestApproval(requestId, 'finance', true, employee?.name || 'Finance Team');
+      toast({
+        title: "Finance Approval Recorded",
+        description: "Request approved and sent to Admin for final approval",
+      });
+      refetch();
     } catch (error) {
       console.error('Error approving request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve the request",
+        variant: "destructive"
+      });
     }
   };
 

@@ -100,6 +100,32 @@ export const useEnhancedExpenseManagement = () => {
     try {
       console.log(`Updating ${approvalType} approval for request ${requestId}:`, approved);
 
+      // First, get the current request to check approval state
+      const { data: currentRequest } = await supabase
+        .from('approval_requests')
+        .select('*')
+        .eq('id', requestId)
+        .single();
+
+      if (!currentRequest) {
+        toast({
+          title: "Error",
+          description: "Request not found",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      // Enforce two-step approval: Admin can only approve if Finance has approved first
+      if (approvalType === 'admin' && approved && !currentRequest.finance_approved_at) {
+        toast({
+          title: "Approval Not Allowed",
+          description: "Request must be approved by Finance before Admin can approve",
+          variant: "destructive"
+        });
+        return false;
+      }
+
       const updateData: any = {};
       
       if (approved) {
@@ -108,11 +134,12 @@ export const useEnhancedExpenseManagement = () => {
           updateData.finance_approved = true;
           updateData.finance_approved_at = new Date().toISOString();
           updateData.finance_approved_by = approvedBy;
-          updateData.status = 'Finance Approved';
+          updateData.status = 'Finance Approved'; // Explicitly set to Finance Approved, not final Approved
         } else {
           updateData.admin_approved = true;
           updateData.admin_approved_at = new Date().toISOString();
           updateData.admin_approved_by = approvedBy;
+          updateData.status = 'Approved'; // Only set to final Approved when Admin approves
         }
       } else {
         // Rejection logic - mark as rejected with reason
