@@ -39,14 +39,7 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
   onApprove,
   onReject,
 }) => {
-  console.log('🟢 AdminExpenseReviewModal rendered - open:', open, 'request:', !!request);
-  console.log('🟢 onApprove function:', typeof onApprove, onApprove);
-  console.log('🟢 onReject function:', typeof onReject, onReject);
-  
-  if (!request) {
-    console.log('🟢 No request provided, returning null');
-    return null;
-  }
+  if (!request) return null;
 
   const getRiskBadgeColor = (riskLevel: string) => {
     switch (riskLevel) {
@@ -91,7 +84,7 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -133,7 +126,7 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
                 <DollarSign className="h-4 w-4" />
                 <span>Amount</span>
               </div>
-              <p className="font-medium text-green-600">UGX {parseFloat(request.amount).toLocaleString()}</p>
+              <p className="font-medium text-green-600">UGX {request.amount.toLocaleString()}</p>
             </div>
 
             <div className="space-y-1">
@@ -225,31 +218,20 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button
               variant="outline"
-              onClick={() => {
-                console.log('🔴 Cancel button clicked');
-                onOpenChange(false);
-              }}
+              onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                console.log('🔴 Reject button clicked');
-                onReject();
-              }}
+              onClick={onReject}
               className="gap-2"
             >
               <XCircle className="h-4 w-4" />
               Reject
             </Button>
             <Button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onApprove();
-              }}
+              onClick={onApprove}
               className="gap-2 bg-green-600 hover:bg-green-700"
             >
               <CheckCircle className="h-4 w-4" />

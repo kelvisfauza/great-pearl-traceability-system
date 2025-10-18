@@ -107,21 +107,11 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   }, [expenseRequests]);
 
   const handleReview = (request: any) => {
-    console.log('🔵 handleReview called with request:', request?.id, request?.title);
-    console.log('🔵 Current reviewModalOpen state:', reviewModalOpen);
     setSelectedRequest(request);
-    console.log('🔵 Setting reviewModalOpen to TRUE');
-    // Force close first then open
-    setReviewModalOpen(false);
-    setTimeout(() => {
-      setReviewModalOpen(true);
-      console.log('🔵 reviewModalOpen should now be TRUE');
-    }, 50);
+    setReviewModalOpen(true);
   };
 
   const handleApproveFromReview = () => {
-    console.log('🎯 handleApproveFromReview called');
-    console.log('🎯 selectedRequest:', selectedRequest);
     setReviewModalOpen(false);
     setApprovalModalOpen(true);
   };
@@ -144,47 +134,15 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   };
 
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
-    console.log('🚀 confirmApproval STARTED');
-    console.log('🚀 paymentMethod:', paymentMethod);
-    console.log('🚀 selectedRequest:', selectedRequest);
-    
-    if (!selectedRequest || !selectedRequest.id) {
-      alert('ERROR: No request selected!');
-      console.error('No request selected for approval');
-      return;
-    }
-    
-    const requestId = selectedRequest.id;
     const approverName = employee?.name || 'Admin Team';
-    
-    console.log('🎯 Starting approval for ID:', requestId);
-    console.log('🎯 Payment method:', paymentMethod);
-    
-    // Determine which admin approval slot to use
-    let approvalType: 'admin' | 'admin1' | 'admin2' = 'admin';
-    
-    if (selectedRequest.requiresThreeApprovals) {
-      if (!selectedRequest.admin_approved_1_at) {
-        approvalType = 'admin1';
-      } else if (!selectedRequest.admin_approved_2_at) {
-        approvalType = 'admin2';
-      }
-    } else {
-      approvalType = 'admin';
-    }
-    
-    console.log('🎯 Approval type:', approvalType);
-    
     const success = await updateRequestStatus(
-      requestId, 
+      selectedRequestId, 
       'Approved', 
       undefined, 
       comments, 
-      approvalType, 
+      'admin', 
       approverName
     );
-    
-    console.log('🎯 Update success:', success);
     
     if (success) {
       // Update the request with payment method (will work once types are updated)
@@ -199,41 +157,27 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         console.log('Admin comments update:', error);
       }
 
-      const isFullyApproved = approvalType === 'admin2' || (approvalType === 'admin' && !selectedRequest?.requiresThreeApprovals);
-      
-      console.log('🎯 Is fully approved:', isFullyApproved);
-      console.log('🎯 Should show payment slip:', paymentMethod === 'transfer' && isFullyApproved);
-      
       toast({
         title: "Admin Approval Recorded",
-        description: isFullyApproved ? 
-          `Expense request fully approved for ${paymentMethod} payment` :
-          `Admin ${approvalType === 'admin1' ? '1' : ''} approval recorded - awaiting second admin approval`
+        description: `Expense request approved for ${paymentMethod} payment`
       });
       
-      onApprove?.(requestId);
+      onApprove?.(selectedRequestId);
       
-      // Show payment slip for both cash and transfer if fully approved
-      if (isFullyApproved) {
+      // Show payment slip for transfers
+      if (paymentMethod === 'transfer') {
         const updatedRequest = {
           ...selectedRequest,
-          id: requestId,
-          title: selectedRequest.title,
-          amount: parseFloat(selectedRequest.amount || '0'),
-          requestedby: selectedRequest.requestedby,
-          paymentMethod: paymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash Payment',
-          financeApprovedBy: selectedRequest.finance_approved_by,
+          paymentMethod: 'Bank Transfer',
           adminApprovedBy: approverName,
-          financeApprovedAt: selectedRequest.finance_approved_at,
           adminApprovedAt: new Date().toISOString(),
           phoneNumber: selectedRequest.details?.phoneNumber || userProfiles[selectedRequest.requestedby]?.phone,
           reason: selectedRequest.details?.reason
         };
         
-        console.log('🎯 Opening payment slip with data:', updatedRequest);
         setSelectedRequest(updatedRequest);
         
-        // Delay opening payment slip modal slightly to avoid conflicts
+        // For transfers, delay opening payment slip modal slightly to avoid conflicts
         setTimeout(() => {
           setPaymentSlipModalOpen(true);
         }, 100);
@@ -244,6 +188,8 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     
     // Close approval modal first
     setApprovalModalOpen(false);
+    setSelectedRequestId('');
+    setSelectedRequestTitle('');
   };
 
   const handleReject = (requestId: string, requestTitle: string) => {
@@ -368,19 +314,11 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   }
 
   // Filter requests that need admin review (must have Finance approval first)
-  const needsAdminReview = expenseRequests.filter(r => {
-    if (!r.finance_approved_at) return false;
-    
-    if (r.requiresThreeApprovals) {
-      // For three-tier: needs review if either admin1 or admin2 not approved
-      return !r.admin_approved_1_at || !r.admin_approved_2_at;
-    } else {
-      // For two-tier: needs review if admin not approved
-      return !r.admin_approved_at;
-    }
-  });
-  
-  const needsReviewCount = needsAdminReview.length;
+  const needsReviewCount = expenseRequests.filter(r => {
+    const needsReview = r.finance_approved_at && !r.admin_approved_at;
+    console.log(`📋 Request ${r.title}: finance_approved_at=${r.finance_approved_at}, admin_approved_at=${r.admin_approved_at}, needsReview=${needsReview}`);
+    return needsReview;
+  }).length;
   
   const totalAmount = expenseRequests.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
   const fullyApprovedCount = expenseRequests.filter(r => r.status === 'Approved').length;
@@ -426,7 +364,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
           </div>
 
           {/* Compact Table View */}
-          {needsAdminReview.length === 0 ? (
+          {expenseRequests.filter(request => request.finance_approved_at && !request.admin_approved_at).length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <p>No requests pending admin approval</p>
@@ -441,14 +379,16 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                   <TableHead>Request</TableHead>
                   <TableHead>Requested By</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead>Approval Status</TableHead>
+                  <TableHead>Submission Time</TableHead>
                   <TableHead>Finance Approval</TableHead>
                   <TableHead>Risk</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {needsAdminReview.map((request) => {
+                {expenseRequests
+                  .filter(request => request.finance_approved_at && !request.admin_approved_at)
+                  .map((request) => {
                     const riskAssessment = assessExpenseRisk(request);
                     const getRiskColor = (level: string) => {
                       switch (level) {
@@ -460,27 +400,12 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                       }
                     };
                     
-                    const getApprovalStatus = () => {
-                      if (request.requiresThreeApprovals) {
-                        if (request.admin_approved_1_at && !request.admin_approved_2_at) {
-                          return { text: 'Needs 2nd Admin', color: 'text-blue-600 bg-blue-50' };
-                        }
-                        return { text: 'Needs 1st Admin', color: 'text-yellow-600 bg-yellow-50' };
-                      }
-                      return { text: 'Needs Admin', color: 'text-yellow-600 bg-yellow-50' };
-                    };
-                    
-                    const approvalStatus = getApprovalStatus();
-                    
                     return (
                       <TableRow key={request.id}>
                         <TableCell>
                           <div>
                             <p className="font-medium">{request.title}</p>
                             <p className="text-sm text-muted-foreground">{request.type}</p>
-                            {request.requiresThreeApprovals && (
-                              <Badge variant="outline" className="mt-1 text-xs">3-Tier Approval</Badge>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -495,14 +420,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Badge className={approvalStatus.color}>
-                            {approvalStatus.text}
-                          </Badge>
-                          {request.admin_approved_1_at && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Admin 1: {request.admin_approved_1_by}
-                            </p>
-                          )}
+                          <span className="text-sm">{formatDateTime(request.daterequested)}</span>
                         </TableCell>
                         <TableCell>
                           <div className="text-xs">
@@ -519,11 +437,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleReview(request);
-                            }}
+                            onClick={() => handleReview(request)}
                             className="gap-2"
                           >
                             <Eye className="h-4 w-4" />
@@ -558,7 +472,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         open={approvalModalOpen}
         onOpenChange={setApprovalModalOpen}
         onApprove={confirmApproval}
-        requestTitle={selectedRequest?.title || selectedRequestTitle}
+        requestTitle={selectedRequestTitle}
         amount={selectedRequest ? parseFloat(selectedRequest.amount) : 0}
       />
       

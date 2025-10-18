@@ -112,27 +112,17 @@ export const ExpenseManagement = () => {
 
   const getStatusBadgeColor = (request: any) => {
     if (request.status === 'Rejected') return 'bg-red-100 text-red-800';
-    if (request.status === 'Approved') return 'bg-green-100 text-green-800';
-    if (request.financeApproved && request.requiresThreeApprovals) {
-      if (request.adminApproved1 && request.adminApproved2) return 'bg-green-100 text-green-800';
-      if (request.adminApproved1) return 'bg-blue-100 text-blue-800';
-      return 'bg-blue-100 text-blue-800';
-    }
-    if (request.financeApproved && !request.requiresThreeApprovals) return 'bg-blue-100 text-blue-800';
+    if (request.financeApproved && request.adminApproved) return 'bg-green-100 text-green-800';
+    if (request.financeApproved && !request.adminApproved) return 'bg-blue-100 text-blue-800';
+    if (!request.financeApproved && request.adminApproved) return 'bg-purple-100 text-purple-800';
     return 'bg-yellow-100 text-yellow-800';
   };
 
   const getStatusText = (request: any) => {
     if (request.status === 'Rejected') return 'Rejected';
-    if (request.status === 'Approved') return 'Fully Approved';
-    if (request.requiresThreeApprovals) {
-      if (request.financeApproved && request.adminApproved1 && request.adminApproved2) return 'Fully Approved';
-      if (request.financeApproved && request.adminApproved1) return 'Needs 2nd Admin';
-      if (request.financeApproved) return 'Needs Admin Approval';
-    } else {
-      if (request.financeApproved) return 'Needs Admin Approval';
-    }
-    return 'Pending Finance';
+    if (request.financeApproved && request.adminApproved) return 'Fully Approved';
+    if (request.financeApproved && !request.adminApproved) return 'Finance Approved';
+    return 'Pending Review';
   };
 
   const getPriorityBadgeColor = (priority: string) => {
