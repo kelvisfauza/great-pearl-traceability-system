@@ -107,7 +107,9 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   }, [expenseRequests]);
 
   const handleReview = (request: any) => {
+    console.log('🔵 handleReview called with request:', request?.id, request?.title);
     setSelectedRequest(request);
+    console.log('🔵 Setting reviewModalOpen to TRUE');
     setReviewModalOpen(true);
   };
 
