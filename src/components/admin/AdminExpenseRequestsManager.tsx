@@ -120,14 +120,20 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   };
 
   const handleApproveFromReview = () => {
-    console.log('🎯 handleApproveFromReview called');
+    console.log('🎯 ========== APPROVE FROM REVIEW CLICKED ==========');
     console.log('🎯 selectedRequest:', selectedRequest);
+    console.log('🎯 selectedRequest.id:', selectedRequest?.id);
+    console.log('🎯 selectedRequest.title:', selectedRequest?.title);
+    console.log('🎯 About to set selectedRequestId to:', selectedRequest.id);
+    console.log('🎯 About to set selectedRequestTitle to:', selectedRequest.title);
     setSelectedRequestId(selectedRequest.id);
     setSelectedRequestTitle(selectedRequest.title);
-    console.log('🎯 Setting selectedRequestId to:', selectedRequest.id);
-    console.log('🎯 Setting selectedRequestTitle to:', selectedRequest.title);
+    console.log('🎯 State updates requested');
+    console.log('🎯 Closing review modal...');
     setReviewModalOpen(false);
+    console.log('🎯 Opening approval modal...');
     setApprovalModalOpen(true);
+    console.log('🎯 ========== APPROVE FROM REVIEW COMPLETE ==========');
   };
 
   const handleRejectFromReview = () => {
@@ -531,7 +537,10 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                               e.preventDefault();
                               e.stopPropagation();
                               console.log('🟣 Review button clicked for request:', request.id);
+                              console.log('🟣 Request data:', request);
+                              console.log('🟣 About to call handleReview...');
                               handleReview(request);
+                              console.log('🟣 handleReview called');
                             }}
                             className="gap-2"
                           >
