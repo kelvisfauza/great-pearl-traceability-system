@@ -25,6 +25,9 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
   const [comments, setComments] = useState('');
 
   const handleApprove = () => {
+    console.log('🎯 AdminApprovalModal - handleApprove called');
+    console.log('🎯 Payment method:', paymentMethod);
+    console.log('🎯 Comments:', comments);
     onApprove(paymentMethod, comments);
     onOpenChange(false);
     setComments('');
