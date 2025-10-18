@@ -27,6 +27,7 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
   console.log('💰 AdminApprovalModal rendered - open:', open, 'amount:', amount, 'title:', requestTitle);
 
   const handleApprove = () => {
+    alert('Approve button clicked!'); // This will show immediately
     console.log('💰 AdminApprovalModal - handleApprove called');
     console.log('💰 Payment method:', paymentMethod);
     console.log('💰 Comments:', comments);
