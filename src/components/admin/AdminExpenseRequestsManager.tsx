@@ -187,15 +187,23 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       
       // Show payment slip for transfers only if fully approved
       if (paymentMethod === 'transfer' && isFullyApproved) {
+        const request = expenseRequests.find(r => r.id === selectedRequestId);
         const updatedRequest = {
           ...selectedRequest,
+          id: selectedRequestId,
+          title: selectedRequest.title,
+          amount: parseFloat(request?.amount || selectedRequest.amount || '0'),
+          requestedby: selectedRequest.requestedby,
           paymentMethod: 'Bank Transfer',
+          financeApprovedBy: request?.finance_approved_by,
           adminApprovedBy: approverName,
+          financeApprovedAt: request?.finance_approved_at,
           adminApprovedAt: new Date().toISOString(),
           phoneNumber: selectedRequest.details?.phoneNumber || userProfiles[selectedRequest.requestedby]?.phone,
           reason: selectedRequest.details?.reason
         };
         
+        console.log('🎯 Opening payment slip with data:', updatedRequest);
         setSelectedRequest(updatedRequest);
         
         // For transfers, delay opening payment slip modal slightly to avoid conflicts
