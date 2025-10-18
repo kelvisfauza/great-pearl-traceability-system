@@ -91,7 +91,7 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -244,7 +244,10 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
               Reject
             </Button>
             <Button
-              onClick={() => {
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('🔴 Approve button clicked in review modal');
                 console.log('🔴 onApprove function:', onApprove);
                 onApprove();
