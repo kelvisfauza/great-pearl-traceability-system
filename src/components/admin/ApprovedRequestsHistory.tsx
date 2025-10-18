@@ -67,7 +67,7 @@ const ApprovedRequestsHistory = () => {
           approvedAt: new Date(req.updated_at),
           approvedBy: req.admin_approved_by || req.finance_approved_by,
           department: req.department,
-          amount: parseFloat(req.amount) || 0,
+          amount: req.amount || 0,
           source: 'supabase' as const
         })),
         ...(deletionRequests.data || []).map(req => ({

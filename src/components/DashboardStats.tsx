@@ -158,8 +158,7 @@ const DashboardStats = () => {
       const pendingApprovals = requests.filter(req => req.status === 'Pending').length;
       const salaryRequests = requests.filter(req => req.type === 'Salary Payment');
       const totalSalaryRequests = salaryRequests.reduce((sum, req) => {
-        const amount = typeof req.amount === 'string' ? parseFloat(req.amount.replace(/[^\d.]/g, '')) : 0;
-        return sum + amount;
+        return sum + (req.amount || 0);
       }, 0);
       
       return [

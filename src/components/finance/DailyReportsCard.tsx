@@ -35,7 +35,7 @@ const DailyReportsCard = ({
   );
   
   const totalApprovedExpensesToday = todaysApprovedExpenses.reduce(
-    (sum, request) => sum + parseFloat(request.amount || '0'), 
+    (sum, request) => sum + (request.amount || 0), 
     0
   );
 
@@ -176,7 +176,7 @@ const DailyReportsCard = ({
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-sm text-green-700">{formatCurrency(parseFloat(expense.amount || '0'))}</p>
+                      <p className="font-bold text-sm text-green-700">{formatCurrency(expense.amount || 0)}</p>
                       <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
                         Approved
                       </Badge>

@@ -86,7 +86,7 @@ const fetchStats = async (): Promise<FinanceStats> => {
 
   const pendingExpenseRequests = expenseRequests?.length || 0;
   const pendingExpenseAmount = expenseRequests?.reduce((sum, req) => 
-    sum + parseFloat(req.amount || '0'), 0) || 0;
+    sum + (req.amount || 0), 0) || 0;
 
   // Get today's completed payments and confirmed cash deposits
   const today = new Date().toISOString().split('T')[0];

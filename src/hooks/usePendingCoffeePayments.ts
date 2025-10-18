@@ -419,7 +419,7 @@ export const usePendingCoffeePayments = () => {
             type: 'Bank Transfer',
             title: `Coffee Payment - ${paymentData.supplier}`,
             description: `Bank transfer payment for coffee batch ${paymentData.batchNumber}`,
-            amount: paymentData.amount.toString(),
+            amount: paymentData.amount,
             requestedby: employee?.name || 'Finance Department',
             department: 'Finance',
             daterequested: new Date().toISOString(),

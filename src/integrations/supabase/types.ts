@@ -113,7 +113,7 @@ export type Database = {
           admin_approved_at: string | null
           admin_approved_by: string | null
           admin_comments: string | null
-          amount: string
+          amount: number
           approval_stage: string | null
           created_at: string
           daterequested: string
@@ -146,7 +146,7 @@ export type Database = {
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           admin_comments?: string | null
-          amount: string
+          amount: number
           approval_stage?: string | null
           created_at?: string
           daterequested: string
@@ -179,7 +179,7 @@ export type Database = {
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           admin_comments?: string | null
-          amount?: string
+          amount?: number
           approval_stage?: string | null
           created_at?: string
           daterequested?: string

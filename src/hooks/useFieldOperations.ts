@@ -209,7 +209,7 @@ export const useFieldOperations = () => {
           type: 'Field Expense',
           title: `Expense Request - ${expenseData.description}`,
           description: `${expenseData.category}: ${expenseData.description}`,
-          amount: expenseData.amount.toString(),
+          amount: expenseData.amount,
           department: 'Field Operations',
           requestedby: `Agent ${agentId}`,
           daterequested: expenseData.date,
@@ -242,7 +242,7 @@ export const useFieldOperations = () => {
           type: 'Overtime Request',
           title: `Overtime Request - ${overtimeData.hours} hours`,
           description: `Reason: ${overtimeData.reason}`,
-          amount: (overtimeData.hours * 5000).toString(), // Assuming hourly rate
+          amount: overtimeData.hours * 5000, // Assuming hourly rate
           department: 'Field Operations',
           requestedby: `Agent ${agentId}`,
           daterequested: overtimeData.date,
@@ -296,7 +296,7 @@ export const useFieldOperations = () => {
           type: 'Coffee Payment',
           title: `Payment to ${purchaseData.farmerName} - ${purchaseData.bags} bags`,
           description: `Coffee purchase: ${purchaseData.bags} bags at UGX ${purchaseData.pricePerBag}/bag from ${purchaseData.farmerName}`,
-          amount: purchaseData.totalAmount.toString(),
+          amount: purchaseData.totalAmount,
           department: 'Field Operations',
           requestedby: purchaseData.agentName,
           daterequested: new Date().toLocaleDateString(),

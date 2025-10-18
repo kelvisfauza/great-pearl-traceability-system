@@ -370,7 +370,7 @@ const Expenses = () => {
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3 text-xs">
                                   <div className="flex items-center gap-1">
                                     <DollarSign className="h-3 w-3" />
-                                    <span>UGX {parseFloat(request.amount).toLocaleString()}</span>
+                                    <span>UGX {request.amount.toLocaleString()}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />
@@ -580,7 +580,7 @@ const Expenses = () => {
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3 text-xs">
                                   <div className="flex items-center gap-1">
                                     <DollarSign className="h-3 w-3" />
-                                    <span>UGX {parseFloat(request.amount).toLocaleString()}</span>
+                                    <span>UGX {request.amount.toLocaleString()}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />

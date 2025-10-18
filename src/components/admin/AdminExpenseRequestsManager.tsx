@@ -409,7 +409,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   
   const needsReviewCount = needsAdminReview.length;
   
-  const totalAmount = expenseRequests.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+  const totalAmount = expenseRequests.reduce((sum, r) => sum + (r.amount || 0), 0);
   const fullyApprovedCount = expenseRequests.filter(r => r.status === 'Approved').length;
 
   return (
@@ -518,7 +518,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                         </TableCell>
                         <TableCell>
                           <span className="font-medium text-green-600">
-                            UGX {parseFloat(request.amount).toLocaleString()}
+                            UGX {request.amount.toLocaleString()}
                           </span>
                         </TableCell>
                         <TableCell>

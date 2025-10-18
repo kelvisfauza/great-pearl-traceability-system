@@ -13,7 +13,7 @@ export interface ApprovalRequest {
   type: string;
   title: string;
   description: string;
-  amount: string;
+  amount: number;
   requestedby: string;
   daterequested: string;
   priority: string;
@@ -90,7 +90,7 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
     const userName = employee?.name || request.requestedby.split('@')[0];
     const userPhone = employee?.phone;
     
-    const message = `Dear ${userName}, your expense ${request.title} of UGX ${parseFloat(request.amount).toLocaleString()} has been approved and dispersed successfully. Great Pearl Coffee.`;
+    const message = `Dear ${userName}, your expense ${request.title} of UGX ${request.amount.toLocaleString()} has been approved and dispersed successfully. Great Pearl Coffee.`;
     
     // Log the message (could be enhanced to use SMS service)
     console.log('Sending approval notification:', {

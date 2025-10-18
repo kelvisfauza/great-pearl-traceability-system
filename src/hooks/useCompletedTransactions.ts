@@ -111,7 +111,7 @@ const fetchCompletedTransactions = async (): Promise<CompletedTransaction[]> => 
           batchNumber: req.id.slice(-8),
           supplier: req.requestedby,
           method: 'Bank Transfer',
-          amountPaid: parseFloat(req.amount || '0'),
+          amountPaid: req.amount || 0,
           balance: 0,
           dateCompleted: new Date(req.updated_at).toLocaleDateString(),
           processedBy: req.admin_approved_by || req.finance_approved_by || 'Admin',

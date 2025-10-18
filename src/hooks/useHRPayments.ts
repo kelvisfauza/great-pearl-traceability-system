@@ -56,7 +56,7 @@ export const useHRPayments = () => {
         employeeName: (req.details as any)?.employee_name || req.requestedby || 'Unknown',
         employeeId: (req.details as any)?.employee_id || 'N/A',
         position: (req.details as any)?.position || 'Unknown',
-        salaryAmount: parseFloat(req.amount || '0'),
+        salaryAmount: req.amount || 0,
         period: (req.details as any)?.period || 'Current Month',
         requestedDate: new Date(req.daterequested).toLocaleDateString(),
         status: req.status === 'Approved' ? 'Completed' : 
@@ -165,12 +165,12 @@ export const useHRPayments = () => {
         if (advance) {
           await supabase
             .from('approval_requests')
-            .insert({
-              type: 'Employee Advance',
-              title: `Advance Payment - ${advance.employeeName}`,
-              description: advance.reason,
-              amount: advance.amount.toString(),
-              requestedby: employee?.name || 'Finance Department',
+          .insert({
+            type: 'Employee Advance',
+            title: `Advance Payment - ${advance.employeeName}`,
+            description: advance.reason,
+            amount: advance.amount,
+            requestedby: employee?.name || 'Finance Department',
               department: 'Finance',
               daterequested: new Date().toISOString(),
               status: 'Pending',

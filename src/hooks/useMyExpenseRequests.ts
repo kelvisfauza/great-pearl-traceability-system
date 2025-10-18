@@ -7,7 +7,7 @@ export interface MyExpenseRequest {
   type: string;
   title: string;
   description: string;
-  amount: string;
+  amount: number;
   requestedby: string;
   daterequested: string;
   priority: string;

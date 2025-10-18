@@ -15,7 +15,7 @@ interface RecentPaymentSlipsModalProps {
 interface ApprovedRequest {
   id: string;
   title: string;
-  amount: string;
+  amount: number;
   requestedby: string;
   created_at: string;
   finance_approved_at?: string;
@@ -89,7 +89,7 @@ export const RecentPaymentSlipsModal: React.FC<RecentPaymentSlipsModalProps> = (
   const handlePrintSlip = (request: ApprovedRequest) => {
     const requestForSlip = {
       ...request,
-      amount: parseFloat(request.amount),
+      amount: request.amount,
       paymentMethod: 'Bank Transfer',
       financeApprovedBy: request.finance_approved_by || 'Finance Team',
       adminApprovedBy: request.admin_approved_by || 'Admin Team',
@@ -147,7 +147,7 @@ export const RecentPaymentSlipsModal: React.FC<RecentPaymentSlipsModalProps> = (
                             <div className="flex items-center gap-2">
                               <DollarSign className="h-4 w-4 text-green-600" />
                               <span className="font-medium text-green-700">
-                                UGX {parseFloat(request.amount).toLocaleString()}
+                                UGX {request.amount.toLocaleString()}
                               </span>
                             </div>
                             
