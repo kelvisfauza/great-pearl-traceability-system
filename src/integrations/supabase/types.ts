@@ -769,6 +769,42 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_routes: {
+        Row: {
+          active_vehicles: number | null
+          created_at: string | null
+          distance_km: number
+          estimated_hours: number | null
+          frequency: string
+          id: string
+          locations: string[]
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          active_vehicles?: number | null
+          created_at?: string | null
+          distance_km: number
+          estimated_hours?: number | null
+          frequency: string
+          id?: string
+          locations: string[]
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          active_vehicles?: number | null
+          created_at?: string | null
+          distance_km?: number
+          estimated_hours?: number | null
+          frequency?: string
+          id?: string
+          locations?: string[]
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       edit_requests: {
         Row: {
           created_at: string
@@ -2891,6 +2927,45 @@ export type Database = {
         }
         Relationships: []
       }
+      shipments: {
+        Row: {
+          bags: number
+          created_at: string | null
+          customer_name: string
+          departure_date: string | null
+          destination: string
+          eta: string | null
+          id: string
+          status: string
+          updated_at: string | null
+          vessel_name: string | null
+        }
+        Insert: {
+          bags: number
+          created_at?: string | null
+          customer_name: string
+          departure_date?: string | null
+          destination: string
+          eta?: string | null
+          id?: string
+          status?: string
+          updated_at?: string | null
+          vessel_name?: string | null
+        }
+        Update: {
+          bags?: number
+          created_at?: string | null
+          customer_name?: string
+          departure_date?: string | null
+          destination?: string
+          eta?: string | null
+          id?: string
+          status?: string
+          updated_at?: string | null
+          vessel_name?: string | null
+        }
+        Relationships: []
+      }
       sms_failures: {
         Row: {
           created_at: string
@@ -3498,6 +3573,54 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicles: {
+        Row: {
+          created_at: string | null
+          current_load: string | null
+          driver_name: string
+          driver_phone: string | null
+          eta: string | null
+          id: string
+          last_location: string | null
+          load_capacity_bags: number | null
+          name: string
+          route: string
+          status: string
+          updated_at: string | null
+          vehicle_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_load?: string | null
+          driver_name: string
+          driver_phone?: string | null
+          eta?: string | null
+          id?: string
+          last_location?: string | null
+          load_capacity_bags?: number | null
+          name: string
+          route: string
+          status?: string
+          updated_at?: string | null
+          vehicle_type: string
+        }
+        Update: {
+          created_at?: string | null
+          current_load?: string | null
+          driver_name?: string
+          driver_phone?: string | null
+          eta?: string | null
+          id?: string
+          last_location?: string | null
+          load_capacity_bags?: number | null
+          name?: string
+          route?: string
+          status?: string
+          updated_at?: string | null
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
       verification_codes: {
         Row: {
           attempts: number | null
@@ -3525,6 +3648,39 @@ export type Database = {
           expires_at?: string
           id?: string
           phone?: string
+        }
+        Relationships: []
+      }
+      warehouses: {
+        Row: {
+          capacity_bags: number
+          created_at: string | null
+          current_bags: number | null
+          id: string
+          location: string
+          status: string
+          updated_at: string | null
+          utilization_percentage: number | null
+        }
+        Insert: {
+          capacity_bags: number
+          created_at?: string | null
+          current_bags?: number | null
+          id?: string
+          location: string
+          status?: string
+          updated_at?: string | null
+          utilization_percentage?: number | null
+        }
+        Update: {
+          capacity_bags?: number
+          created_at?: string | null
+          current_bags?: number | null
+          id?: string
+          location?: string
+          status?: string
+          updated_at?: string | null
+          utilization_percentage?: number | null
         }
         Relationships: []
       }
