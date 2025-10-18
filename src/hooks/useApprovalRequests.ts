@@ -223,8 +223,15 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
           updateData.admin_approved_2 = true;
           updateData.admin_approved_2_at = new Date().toISOString();
           updateData.admin_approved_2_by = approverName || 'Admin Team';
-          // Status will be set to 'Approved' by the database trigger
-          updateData.approval_stage = 'admin2_approved';
+          
+          // For admin2, check if finance and admin1 are also approved
+          if (request.finance_approved_at && request.admin_approved_1_at) {
+            updateData.status = 'Approved';
+            updateData.approval_stage = 'fully_approved';
+          } else {
+            updateData.status = 'Admin 2 Approved';
+            updateData.approval_stage = 'admin2_approved';
+          }
         } else if (approvalType === 'admin') {
           updateData.admin_approved_at = new Date().toISOString();
           updateData.admin_approved_by = approverName || 'Admin Team';
