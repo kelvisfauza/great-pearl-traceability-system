@@ -12,8 +12,9 @@ import StoreReportsList from "@/components/reports/StoreReportsList";
 import SalesReportsList from "@/components/reports/SalesReportsList";
 import DayBook from "@/components/reports/DayBook";
 import MonthlyReconciliation from "@/components/reports/MonthlyReconciliation";
+import { ExpensesReport } from "@/components/reports/ExpensesReport";
 import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
-import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart, BookOpen, Calculator } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart, BookOpen, Calculator, Receipt } from "lucide-react";
 
 const Reports = () => {
   return (
@@ -24,7 +25,7 @@ const Reports = () => {
       <div className="space-y-6">
         {/* Main Content Tabs - Lazy Load Components for Performance */}
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-10">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
@@ -32,6 +33,10 @@ const Reports = () => {
             <TabsTrigger value="daybook" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
               Day Book
+            </TabsTrigger>
+            <TabsTrigger value="expenses" className="flex items-center gap-2">
+              <Receipt className="h-4 w-4" />
+              Expenses
             </TabsTrigger>
             <TabsTrigger value="generator" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
@@ -75,6 +80,10 @@ const Reports = () => {
 
           <TabsContent value="daybook" className="space-y-6">
             <DayBook />
+          </TabsContent>
+
+          <TabsContent value="expenses" className="space-y-6">
+            <ExpensesReport />
           </TabsContent>
 
           <TabsContent value="generator" className="space-y-6">
