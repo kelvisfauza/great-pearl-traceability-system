@@ -108,9 +108,15 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
 
   const handleReview = (request: any) => {
     console.log('🔵 handleReview called with request:', request?.id, request?.title);
+    console.log('🔵 Current reviewModalOpen state:', reviewModalOpen);
     setSelectedRequest(request);
     console.log('🔵 Setting reviewModalOpen to TRUE');
-    setReviewModalOpen(true);
+    // Force close first then open
+    setReviewModalOpen(false);
+    setTimeout(() => {
+      setReviewModalOpen(true);
+      console.log('🔵 reviewModalOpen should now be TRUE');
+    }, 50);
   };
 
   const handleApproveFromReview = () => {
