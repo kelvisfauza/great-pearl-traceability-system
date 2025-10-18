@@ -4,17 +4,20 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Receipt, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, Plus } from 'lucide-react';
+import { Receipt, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, Plus, Eye, FileText } from 'lucide-react';
 import { useEnhancedExpenseManagement } from '@/hooks/useEnhancedExpenseManagement';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AddExpenseModal } from './AddExpenseModal';
+import { FinanceReviewModal } from './FinanceReviewModal';
 
 export const ExpenseManagement = () => {
   const { expenseRequests, loading, updateRequestApproval, refetch } = useEnhancedExpenseManagement();
   const { toast } = useToast();
   const { employee } = useAuth();
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
   // Filter different types of expense requests that need finance action
   const userExpenseRequests = expenseRequests.filter(
@@ -22,24 +25,8 @@ export const ExpenseManagement = () => {
       const isExpenseRequest = req.type === 'Employee Expense Request' || 
                               (req.type.includes('Expense') && req.type !== 'Employee Salary Request');
       
-      // Use the same logic as admin section - check for actual approval timestamps
-      const hasFinanceApproval = req.financeApprovedAt; // finance_approved_at timestamp
-      const hasAdminApproval = req.adminApprovedAt; // admin_approved_at timestamp
+      const hasFinanceApproval = req.financeApprovedAt;
       const isRejected = req.status === 'Rejected' || req.status === 'rejected';
-      
-      console.log('Filtering expense request:', {
-        id: req.id,
-        title: req.title,
-        type: req.type,
-        status: req.status,
-        financeApprovedAt: req.financeApprovedAt,
-        adminApprovedAt: req.adminApprovedAt,
-        hasFinanceApproval,
-        hasAdminApproval,
-        isExpenseRequest,
-        isRejected,
-        shouldShow: isExpenseRequest && !isRejected && !(hasFinanceApproval && hasAdminApproval)
-      });
       
       // Only show if it's an expense request AND not rejected AND finance hasn't approved yet
       return isExpenseRequest && !isRejected && !hasFinanceApproval;
@@ -50,37 +37,27 @@ export const ExpenseManagement = () => {
     req => {
       const isSalaryRequest = req.type === 'Employee Salary Request' || req.type === 'Salary Payment';
       
-      // Use the same logic as admin section - check for actual approval timestamps
-      const hasFinanceApproval = req.financeApprovedAt; // finance_approved_at timestamp
-      const hasAdminApproval = req.adminApprovedAt; // admin_approved_at timestamp
+      const hasFinanceApproval = req.financeApprovedAt;
       const isRejected = req.status === 'Rejected' || req.status === 'rejected';
-      
-      console.log('Filtering salary request:', {
-        id: req.id,
-        title: req.title,
-        type: req.type,
-        status: req.status,
-        financeApprovedAt: req.financeApprovedAt,
-        adminApprovedAt: req.adminApprovedAt,
-        hasFinanceApproval,
-        hasAdminApproval,
-        isSalaryRequest,
-        isRejected,
-        shouldShow: isSalaryRequest && !isRejected && !(hasFinanceApproval && hasAdminApproval)
-      });
       
       // Only show if it's a salary request AND not rejected AND finance hasn't approved yet
       return isSalaryRequest && !isRejected && !hasFinanceApproval;
     }
   );
 
-  const handleApprove = async (requestId: string) => {
+  const handleReview = (request: any) => {
+    setSelectedRequest(request);
+    setReviewModalOpen(true);
+  };
+
+  const handleApproveFromReview = async () => {
     try {
-      await updateRequestApproval(requestId, 'finance', true, employee?.name || 'Finance Team');
+      await updateRequestApproval(selectedRequest.id, 'finance', true, employee?.name || 'Finance Team');
       toast({
         title: "Finance Approval Recorded",
         description: "Request approved and sent to Admin for final approval",
       });
+      setReviewModalOpen(false);
       refetch();
     } catch (error) {
       console.error('Error approving request:', error);
@@ -92,7 +69,7 @@ export const ExpenseManagement = () => {
     }
   };
 
-  const handleReject = async (requestId: string) => {
+  const handleRejectFromReview = async () => {
     const reason = prompt('Please provide a reason for rejection:');
     if (!reason) {
       toast({
@@ -104,11 +81,13 @@ export const ExpenseManagement = () => {
     }
     
     try {
-      await updateRequestApproval(requestId, 'finance', false, employee?.name || 'Finance Team', reason);
+      await updateRequestApproval(selectedRequest.id, 'finance', false, employee?.name || 'Finance Team', reason);
       toast({
         title: "Request Rejected",
         description: "The expense request has been rejected successfully",
       });
+      setReviewModalOpen(false);
+      refetch();
     } catch (error) {
       console.error('Error rejecting request:', error);
       toast({
@@ -117,6 +96,16 @@ export const ExpenseManagement = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
@@ -132,8 +121,7 @@ export const ExpenseManagement = () => {
   const getStatusText = (request: any) => {
     if (request.status === 'Rejected') return 'Rejected';
     if (request.financeApproved && request.adminApproved) return 'Fully Approved';
-    if (request.financeApproved && !request.adminApproved) return 'Finance Approved - Awaiting Admin';
-    if (!request.financeApproved && request.adminApproved) return 'Admin Approved - Awaiting Finance';
+    if (request.financeApproved && !request.adminApproved) return 'Finance Approved';
     return 'Pending Review';
   };
 
@@ -191,270 +179,158 @@ export const ExpenseManagement = () => {
             </TabsList>
 
             <TabsContent value="expense-requests" className="space-y-4">
-              <div className="space-y-4">
-                {userExpenseRequests.map((request) => {
-                  const details = typeof request.details === 'string' ? JSON.parse(request.details) : request.details || {};
-                  const phoneNumber = details.phoneNumber || 'Not provided';
-                  const reason = details.reason || request.description || 'No reason provided';
-                  const expenseCategory = details.expenseCategory || details.expenseType || 'Not specified';
-                  
-                  return (
-                    <Card key={request.id} className="border-l-4 border-l-blue-400">
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg">{request.title}</h3>
-                            <p className="text-muted-foreground">{request.description}</p>
-                            
-                            {/* Expense Details */}
-                            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                              <div className="space-y-2">
-                                <div>
-                                  <span className="text-sm font-medium text-blue-800">Reason for Expense:</span>
-                                  <p className="text-sm text-blue-700 mt-1">{reason}</p>
-                                </div>
-                                <div>
-                                  <span className="text-sm font-medium text-blue-800">Payment Phone Number:</span>
-                                  <p className="text-sm text-blue-700 font-mono">{phoneNumber}</p>
-                                </div>
-                                <div>
-                                  <span className="text-sm font-medium text-blue-800">Expense Category:</span>
-                                  <p className="text-sm text-blue-700">{expenseCategory}</p>
-                                </div>
-                                {details.urgency && (
-                                  <div>
-                                    <span className="text-sm font-medium text-blue-800">Urgency:</span>
-                                    <p className="text-sm text-blue-700">{details.urgency}</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-2 ml-4">
-                            <Badge className={getStatusBadgeColor(request)}>
-                              {getStatusText(request)}
-                            </Badge>
-                            <Badge className={getPriorityBadgeColor(request.priority)}>
-                              {request.priority}
-                            </Badge>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium text-green-600">UGX {request.amount.toLocaleString()}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{request.requestedby}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Receipt className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{phoneNumber}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{new Date(request.daterequested).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-
-                        {/* Approval Status */}
-                        <div className="mb-4 p-3 bg-slate-50 rounded-lg">
-                          <div className="text-sm font-medium mb-2">Approval Status:</div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="flex items-center gap-2">
-                              {request.financeApproved ? (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <Clock className="h-4 w-4 text-yellow-500" />
-                              )}
-                              <span className={`text-sm ${request.financeApproved ? 'text-green-700' : 'text-yellow-700'}`}>
-                                Finance: {request.financeApproved ? 'Approved' : 'Pending Review'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {request.adminApproved ? (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <Clock className="h-4 w-4 text-yellow-500" />
-                              )}
-                              <span className={`text-sm ${request.adminApproved ? 'text-green-700' : 'text-yellow-700'}`}>
-                                Admin: {request.adminApproved ? 'Approved' : 'Pending'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex justify-end gap-2">
-                          {!request.financeApproved && request.status !== 'Rejected' && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleApprove(request.id)}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleReject(request.id)}
-                              >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                          {request.financeApproved && !request.adminApproved && (
-                            <Badge className="bg-blue-100 text-blue-800">
-                              <Clock className="h-4 w-4 mr-1" />
-                              Awaiting Admin Approval
-                            </Badge>
-                          )}
-                          {request.financeApproved && request.adminApproved && (
-                            <Badge className="bg-green-100 text-green-800">
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Fully Approved
-                            </Badge>
-                          )}
-                          {request.status === 'Rejected' && (
-                            <Badge className="bg-red-100 text-red-800">
-                              <XCircle className="h-4 w-4 mr-1" />
-                              Rejected
-                            </Badge>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              {userExpenseRequests.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Receipt className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p>No expense requests pending review</p>
-                  <p className="text-sm mt-2">Use "Add Expense" button above to record direct expenses</p>
+              {userExpenseRequests.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No pending expense requests</p>
                 </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Request</TableHead>
+                      <TableHead>Requested By</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Submission Time</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {userExpenseRequests.map((request) => (
+                      <TableRow key={request.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{request.title}</p>
+                            <p className="text-sm text-muted-foreground">{request.type}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm">{request.requestedby}</p>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-green-600">
+                            UGX {request.amount.toLocaleString()}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{formatDateTime(request.daterequested)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getPriorityBadgeColor(request.priority)}>
+                            {request.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusBadgeColor(request)}>
+                            {getStatusText(request)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleReview(request)}
+                            className="gap-2"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Review
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </TabsContent>
 
             <TabsContent value="salary-requests" className="space-y-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Approval Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {salaryRequests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell className="font-medium">{request.title}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          {request.details?.employee_name || request.requestedby}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-bold text-green-600">
-                        {formatCurrency(request.amount)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {request.details?.payment_type === 'mid-month' ? 'Mid-Month' : 'Full Salary'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {new Date(request.daterequested).toLocaleDateString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Badge 
-                            variant="outline" 
-                            className={request.financeApproved ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
-                          >
-                            Finance: {request.financeApproved ? 'Approved' : 'Pending'}
-                          </Badge>
-                          <Badge 
-                            variant="outline"
-                            className={request.adminApproved ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
-                          >
-                            Admin: {request.adminApproved ? 'Approved' : 'Pending'}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {!request.financeApproved && request.status !== 'Rejected' && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleApprove(request.id)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleReject(request.id)}
-                            >
-                              <XCircle className="h-4 w-4 mr-1" />
-                              Reject
-                            </Button>
-                          </div>
-                        )}
-                        {request.financeApproved && request.adminApproved && (
-                          <Badge className="bg-green-100 text-green-800">
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Ready for Payment
-                          </Badge>
-                        )}
-                        {request.financeApproved && !request.adminApproved && (
-                          <Badge className="bg-blue-100 text-blue-800">
-                            <Clock className="h-4 w-4 mr-1" />
-                            Awaiting Admin
-                          </Badge>
-                        )}
-                        {request.status === 'Rejected' && (
-                          <Badge className="bg-red-100 text-red-800">
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Rejected
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {salaryRequests.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p>No salary requests pending review</p>
+              {salaryRequests.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No pending salary requests</p>
                 </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Request</TableHead>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Submission Time</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {salaryRequests.map((request) => (
+                      <TableRow key={request.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{request.title}</p>
+                            <p className="text-sm text-muted-foreground">{request.type}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm">{request.requestedby}</p>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-green-600">
+                            UGX {request.amount.toLocaleString()}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{formatDateTime(request.daterequested)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getPriorityBadgeColor(request.priority)}>
+                            {request.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusBadgeColor(request)}>
+                            {getStatusText(request)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleReview(request)}
+                            className="gap-2"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Review
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
-      
-      <AddExpenseModal 
+
+      <AddExpenseModal
         open={showAddExpenseModal}
         onClose={() => setShowAddExpenseModal(false)}
-        onSuccess={refetch}
+        onSuccess={() => {
+          setShowAddExpenseModal(false);
+          refetch();
+        }}
+      />
+      
+      <FinanceReviewModal
+        open={reviewModalOpen}
+        onOpenChange={setReviewModalOpen}
+        request={selectedRequest}
+        details={selectedRequest ? (typeof selectedRequest.details === 'string' ? JSON.parse(selectedRequest.details) : selectedRequest.details || {}) : {}}
+        onApprove={handleApproveFromReview}
+        onReject={handleRejectFromReview}
       />
     </div>
   );
