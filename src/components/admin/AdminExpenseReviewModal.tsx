@@ -246,6 +246,7 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
             <Button
               type="button"
               onClick={(e) => {
+                alert('APPROVE IN REVIEW MODAL CLICKED!');
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('🔴 Approve button clicked in review modal');
