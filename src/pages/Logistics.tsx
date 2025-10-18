@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Truck, MapPin, Package, Clock, Plus, Search, Eye, Navigation, Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useLogistics } from "@/hooks/useLogistics";
+import { AddVehicleModal } from "@/components/logistics/AddVehicleModal";
 
 const Logistics = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [addVehicleOpen, setAddVehicleOpen] = useState(false);
   const { vehicles, shipments, routes, warehouses, loading } = useLogistics();
 
   const filteredVehicles = useMemo(() => 
@@ -106,7 +108,7 @@ const Logistics = () => {
                   <CardTitle>Fleet Management</CardTitle>
                   <CardDescription>Track vehicles and delivery status</CardDescription>
                 </div>
-                <Button>
+                <Button onClick={() => setAddVehicleOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Vehicle
                 </Button>
@@ -264,6 +266,8 @@ const Logistics = () => {
           </Card>
         </div>
       </div>
+
+      <AddVehicleModal open={addVehicleOpen} onOpenChange={setAddVehicleOpen} />
     </Layout>
   );
 };
