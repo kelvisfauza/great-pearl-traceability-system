@@ -112,6 +112,8 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   };
 
   const handleApproveFromReview = () => {
+    setSelectedRequestId(selectedRequest.id);
+    setSelectedRequestTitle(selectedRequest.title);
     setReviewModalOpen(false);
     setApprovalModalOpen(true);
   };
