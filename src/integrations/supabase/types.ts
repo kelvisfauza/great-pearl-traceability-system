@@ -104,6 +104,12 @@ export type Database = {
       approval_requests: {
         Row: {
           admin_approved: boolean | null
+          admin_approved_1: boolean | null
+          admin_approved_1_at: string | null
+          admin_approved_1_by: string | null
+          admin_approved_2: boolean | null
+          admin_approved_2_at: string | null
+          admin_approved_2_by: string | null
           admin_approved_at: string | null
           admin_approved_by: string | null
           admin_comments: string | null
@@ -123,6 +129,7 @@ export type Database = {
           rejection_comments: string | null
           rejection_reason: string | null
           requestedby: string
+          requires_three_approvals: boolean | null
           status: string
           title: string
           type: string
@@ -130,6 +137,12 @@ export type Database = {
         }
         Insert: {
           admin_approved?: boolean | null
+          admin_approved_1?: boolean | null
+          admin_approved_1_at?: string | null
+          admin_approved_1_by?: string | null
+          admin_approved_2?: boolean | null
+          admin_approved_2_at?: string | null
+          admin_approved_2_by?: string | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           admin_comments?: string | null
@@ -149,6 +162,7 @@ export type Database = {
           rejection_comments?: string | null
           rejection_reason?: string | null
           requestedby: string
+          requires_three_approvals?: boolean | null
           status?: string
           title: string
           type: string
@@ -156,6 +170,12 @@ export type Database = {
         }
         Update: {
           admin_approved?: boolean | null
+          admin_approved_1?: boolean | null
+          admin_approved_1_at?: string | null
+          admin_approved_1_by?: string | null
+          admin_approved_2?: boolean | null
+          admin_approved_2_at?: string | null
+          admin_approved_2_by?: string | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           admin_comments?: string | null
@@ -175,6 +195,7 @@ export type Database = {
           rejection_comments?: string | null
           rejection_reason?: string | null
           requestedby?: string
+          requires_three_approvals?: boolean | null
           status?: string
           title?: string
           type?: string

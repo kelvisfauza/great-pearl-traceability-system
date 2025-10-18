@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
 import { useRiskAssessment } from '@/hooks/useRiskAssessment';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield, Phone, AlertTriangle, Printer } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield, Phone, AlertTriangle, Printer, Eye } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
 import { AdminApprovalModal } from './AdminApprovalModal';
 import { PaymentSlipModal } from './PaymentSlipModal';
 import { RecentPaymentSlipsModal } from './RecentPaymentSlipsModal';
+import { AdminExpenseReviewModal } from './AdminExpenseReviewModal';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AdminExpenseRequestsManagerProps {
@@ -33,6 +35,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const [paymentSlipModalOpen, setPaymentSlipModalOpen] = useState(false);
   const [recentSlipsModalOpen, setRecentSlipsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   // Include all expense-related requests (Expense Request, Employee Salary Request, category-specific requests)
   const expenseRequests = requests.filter(request => 
@@ -103,23 +106,85 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     }
   }, [expenseRequests]);
 
-  const handleApprove = (request: any) => {
+  const handleReview = (request: any) => {
+    console.log('🔵 handleReview called with request:', request?.id, request?.title);
+    console.log('🔵 Current reviewModalOpen state:', reviewModalOpen);
     setSelectedRequest(request);
-    setSelectedRequestId(request.id);
-    setSelectedRequestTitle(request.title);
+    console.log('🔵 Setting reviewModalOpen to TRUE');
+    // Force close first then open
+    setReviewModalOpen(false);
+    setTimeout(() => {
+      setReviewModalOpen(true);
+      console.log('🔵 reviewModalOpen should now be TRUE');
+    }, 50);
+  };
+
+  const handleApproveFromReview = () => {
+    console.log('🎯 handleApproveFromReview called');
+    console.log('🎯 selectedRequest:', selectedRequest);
+    setReviewModalOpen(false);
     setApprovalModalOpen(true);
   };
 
+  const handleRejectFromReview = () => {
+    setReviewModalOpen(false);
+    setSelectedRequestId(selectedRequest.id);
+    setSelectedRequestTitle(selectedRequest.title);
+    setRejectionModalOpen(true);
+  };
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
+    console.log('🚀 confirmApproval STARTED');
+    console.log('🚀 paymentMethod:', paymentMethod);
+    console.log('🚀 selectedRequest:', selectedRequest);
+    
+    if (!selectedRequest || !selectedRequest.id) {
+      alert('ERROR: No request selected!');
+      console.error('No request selected for approval');
+      return;
+    }
+    
+    const requestId = selectedRequest.id;
     const approverName = employee?.name || 'Admin Team';
+    
+    console.log('🎯 Starting approval for ID:', requestId);
+    console.log('🎯 Payment method:', paymentMethod);
+    
+    // Determine which admin approval slot to use
+    let approvalType: 'admin' | 'admin1' | 'admin2' = 'admin';
+    
+    if (selectedRequest.requiresThreeApprovals) {
+      if (!selectedRequest.admin_approved_1_at) {
+        approvalType = 'admin1';
+      } else if (!selectedRequest.admin_approved_2_at) {
+        approvalType = 'admin2';
+      }
+    } else {
+      approvalType = 'admin';
+    }
+    
+    console.log('🎯 Approval type:', approvalType);
+    
     const success = await updateRequestStatus(
-      selectedRequestId, 
+      requestId, 
       'Approved', 
       undefined, 
       comments, 
-      'admin', 
+      approvalType, 
       approverName
     );
+    
+    console.log('🎯 Update success:', success);
     
     if (success) {
       // Update the request with payment method (will work once types are updated)
@@ -134,27 +199,41 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         console.log('Admin comments update:', error);
       }
 
+      const isFullyApproved = approvalType === 'admin2' || (approvalType === 'admin' && !selectedRequest?.requiresThreeApprovals);
+      
+      console.log('🎯 Is fully approved:', isFullyApproved);
+      console.log('🎯 Should show payment slip:', paymentMethod === 'transfer' && isFullyApproved);
+      
       toast({
         title: "Admin Approval Recorded",
-        description: `Expense request approved for ${paymentMethod} payment`
+        description: isFullyApproved ? 
+          `Expense request fully approved for ${paymentMethod} payment` :
+          `Admin ${approvalType === 'admin1' ? '1' : ''} approval recorded - awaiting second admin approval`
       });
       
-      onApprove?.(selectedRequestId);
+      onApprove?.(requestId);
       
-      // Show payment slip for transfers
-      if (paymentMethod === 'transfer') {
+      // Show payment slip for both cash and transfer if fully approved
+      if (isFullyApproved) {
         const updatedRequest = {
           ...selectedRequest,
-          paymentMethod: 'Bank Transfer',
+          id: requestId,
+          title: selectedRequest.title,
+          amount: parseFloat(selectedRequest.amount || '0'),
+          requestedby: selectedRequest.requestedby,
+          paymentMethod: paymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash Payment',
+          financeApprovedBy: selectedRequest.finance_approved_by,
           adminApprovedBy: approverName,
+          financeApprovedAt: selectedRequest.finance_approved_at,
           adminApprovedAt: new Date().toISOString(),
           phoneNumber: selectedRequest.details?.phoneNumber || userProfiles[selectedRequest.requestedby]?.phone,
           reason: selectedRequest.details?.reason
         };
         
+        console.log('🎯 Opening payment slip with data:', updatedRequest);
         setSelectedRequest(updatedRequest);
         
-        // For transfers, delay opening payment slip modal slightly to avoid conflicts
+        // Delay opening payment slip modal slightly to avoid conflicts
         setTimeout(() => {
           setPaymentSlipModalOpen(true);
         }, 100);
@@ -165,8 +244,6 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     
     // Close approval modal first
     setApprovalModalOpen(false);
-    setSelectedRequestId('');
-    setSelectedRequestTitle('');
   };
 
   const handleReject = (requestId: string, requestTitle: string) => {
@@ -291,11 +368,19 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   }
 
   // Filter requests that need admin review (must have Finance approval first)
-  const needsReviewCount = expenseRequests.filter(r => {
-    const needsReview = r.finance_approved_at && !r.admin_approved_at;
-    console.log(`📋 Request ${r.title}: finance_approved_at=${r.finance_approved_at}, admin_approved_at=${r.admin_approved_at}, needsReview=${needsReview}`);
-    return needsReview;
-  }).length;
+  const needsAdminReview = expenseRequests.filter(r => {
+    if (!r.finance_approved_at) return false;
+    
+    if (r.requiresThreeApprovals) {
+      // For three-tier: needs review if either admin1 or admin2 not approved
+      return !r.admin_approved_1_at || !r.admin_approved_2_at;
+    } else {
+      // For two-tier: needs review if admin not approved
+      return !r.admin_approved_at;
+    }
+  });
+  
+  const needsReviewCount = needsAdminReview.length;
   
   const totalAmount = expenseRequests.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
   const fullyApprovedCount = expenseRequests.filter(r => r.status === 'Approved').length;
@@ -340,239 +425,117 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
             </Button>
           </div>
 
-          <div className="space-y-4">
-            {/* Filter to only show requests that have been approved by Finance first */}
-            {expenseRequests.filter(request => {
-              const hasFinanceApproval = request.finance_approved_at && !request.admin_approved_at;
-              console.log(`📋 Filtering request ${request.title}: hasFinanceApproval=${hasFinanceApproval}`);
-              return hasFinanceApproval;
-            }).length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p>No requests pending admin approval</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Requests must be approved by Finance before Admin review
-                </p>
-              </div>
-            ) : (
-              expenseRequests
-                .filter(request => request.finance_approved_at && !request.admin_approved_at)
-                .map((request) => {
-                const riskAssessment = assessExpenseRisk(request);
-                const paymentPhone = request.details?.phoneNumber || userProfiles[request.requestedby]?.phone || 'Not provided';
-                const expenseReason = request.details?.reason || 'No reason provided';
-                
-                return (
-                <Card key={request.id} className="border-l-4 border-l-purple-400">
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{request.title}</h3>
-                        <p className="text-muted-foreground">{request.description}</p>
-                        
-                        {/* Expense Details */}
-                        <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                          <div className="space-y-2">
-                            <div>
-                              <span className="text-sm font-medium text-blue-800">Reason for Expense:</span>
-                              <p className="text-sm text-blue-700 mt-1">{expenseReason}</p>
-                            </div>
-                            <div>
-                              <span className="text-sm font-medium text-blue-800">Payment Phone Number:</span>
-                              <p className="text-sm text-blue-700 font-mono">{paymentPhone}</p>
-                            </div>
-                            {request.details?.expenseCategory && (
-                              <div>
-                                <span className="text-sm font-medium text-blue-800">Expense Category:</span>
-                                <p className="text-sm text-blue-700">{request.details.expenseCategory}</p>
-                              </div>
+          {/* Compact Table View */}
+          {needsAdminReview.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p>No requests pending admin approval</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Requests must be approved by Finance before Admin review
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Request</TableHead>
+                  <TableHead>Requested By</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Approval Status</TableHead>
+                  <TableHead>Finance Approval</TableHead>
+                  <TableHead>Risk</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {needsAdminReview.map((request) => {
+                    const riskAssessment = assessExpenseRisk(request);
+                    const getRiskColor = (level: string) => {
+                      switch (level) {
+                        case 'CRITICAL': return 'text-red-700 bg-red-50';
+                        case 'HIGH': return 'text-red-600 bg-red-50';
+                        case 'MEDIUM': return 'text-yellow-600 bg-yellow-50';
+                        case 'LOW': return 'text-green-600 bg-green-50';
+                        default: return 'text-gray-600 bg-gray-50';
+                      }
+                    };
+                    
+                    const getApprovalStatus = () => {
+                      if (request.requiresThreeApprovals) {
+                        if (request.admin_approved_1_at && !request.admin_approved_2_at) {
+                          return { text: 'Needs 2nd Admin', color: 'text-blue-600 bg-blue-50' };
+                        }
+                        return { text: 'Needs 1st Admin', color: 'text-yellow-600 bg-yellow-50' };
+                      }
+                      return { text: 'Needs Admin', color: 'text-yellow-600 bg-yellow-50' };
+                    };
+                    
+                    const approvalStatus = getApprovalStatus();
+                    
+                    return (
+                      <TableRow key={request.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{request.title}</p>
+                            <p className="text-sm text-muted-foreground">{request.type}</p>
+                            {request.requiresThreeApprovals && (
+                              <Badge variant="outline" className="mt-1 text-xs">3-Tier Approval</Badge>
                             )}
                           </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        {getStatusIcon(request.status)}
-                        <Badge variant={getStatusBadgeVariant(request.status)}>
-                          {request.status}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Risk Assessment Panel */}
-                    <div className="mb-4 p-4 bg-slate-50 rounded-lg border">
-                      <div className="flex items-center gap-2 mb-3">
-                        {getRiskIcon(riskAssessment.riskLevel)}
-                        <span className="font-medium">Risk Assessment</span>
-                        <Badge variant={getRiskBadgeColor(riskAssessment.riskLevel)}>
-                          {riskAssessment.riskLevel} RISK
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          (Score: {riskAssessment.riskScore}/100)
-                        </span>
-                      </div>
-                      
-                      {riskAssessment.flaggedReasons.length > 0 && (
-                        <div className="mb-3">
-                          <p className="text-sm font-medium text-orange-700 mb-1">Risk Factors:</p>
-                          <ul className="text-sm text-orange-600 space-y-1">
-                            {riskAssessment.flaggedReasons.map((reason, index) => (
-                              <li key={index} className="flex items-start gap-1">
-                                <span className="text-orange-500">•</span>
-                                {reason}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      
-                      <div>
-                        <p className="text-sm font-medium text-green-700 mb-1">Recommendations:</p>
-                        <ul className="text-sm text-green-600 space-y-1">
-                          {riskAssessment.recommendations.map((rec, index) => (
-                            <li key={index} className="flex items-start gap-1">
-                              <span className="text-green-500">•</span>
-                              {rec}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      <div className="mt-3 p-2 bg-white rounded border">
-                        <p className="text-sm">
-                          <span className="font-medium">Approval Required:</span>
-                          <span className={`ml-2 ${riskAssessment.requiresApproval ? 'text-red-600' : 'text-green-600'}`}>
-                            {riskAssessment.requiresApproval ? 'YES - Manual review needed' : 'NO - Can be fast-tracked'}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="text-sm">{userProfiles[request.requestedby]?.name || request.requestedby.split('@')[0]}</p>
+                            <p className="text-xs text-muted-foreground">{request.requestedby}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-green-600">
+                            UGX {parseFloat(request.amount).toLocaleString()}
                           </span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">UGX {parseFloat(request.amount).toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">
-                          {userProfiles[request.requestedby]?.name || request.requestedby.split('@')[0]}
-                        </span>
-                        <span className="text-xs text-muted-foreground">({request.requestedby})</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {userProfiles[request.requestedby]?.phone || 
-                           request.phone || 
-                           request.details?.phoneNumber || 
-                           'Not provided'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{formatDate(request.created_at)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm capitalize">{request.priority}</span>
-                      </div>
-                    </div>
-
-                    {/* Approval Status Tracking */}
-                    <div className="mb-4 p-3 bg-slate-50 rounded-lg">
-                      <div className="text-sm font-medium mb-2">Approval Progress:</div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center gap-2">
-                          {request.finance_approved_at ? (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Clock className="h-4 w-4 text-yellow-500" />
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={approvalStatus.color}>
+                            {approvalStatus.text}
+                          </Badge>
+                          {request.admin_approved_1_at && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Admin 1: {request.admin_approved_1_by}
+                            </p>
                           )}
-                          <span className={`text-sm ${request.finance_approved_at ? 'text-green-700' : 'text-yellow-700'}`}>
-                            Finance: {request.finance_approved_at ? 
-                              `Approved by ${request.finance_approved_by || 'Finance Team'}` : 
-                              'Pending'
-                            }
-                          </span>
-                          {request.finance_approved_at && (
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(request.finance_approved_at)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {request.admin_approved_at ? (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Clock className="h-4 w-4 text-yellow-500" />
-                          )}
-                          <span className={`text-sm ${request.admin_approved_at ? 'text-green-700' : 'text-yellow-700'}`}>
-                            Admin: {request.admin_approved_at ? 
-                              `Approved by ${request.admin_approved_by || 'Admin Team'}` : 
-                              'Pending'
-                            }
-                          </span>
-                          {request.admin_approved_at && (
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(request.admin_approved_at)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons - Only show for requests that need admin approval */}
-                    {(request.status === 'Pending' || request.status === 'Finance Approved') && !request.admin_approved_at && (
-                      <div className="flex gap-2 pt-4 border-t">
-                        <Button
-                          onClick={() => handleApprove(request)}
-                          className="flex-1"
-                          size="sm"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Admin Approve
-                        </Button>
-                        <Button
-                          onClick={() => handleReject(request.id, request.title)}
-                          variant="destructive"
-                          className="flex-1" 
-                          size="sm"
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reject
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Status messages */}
-                    {request.admin_approved_at && !request.finance_approved_at && (
-                      <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                        <p className="text-purple-700 font-medium">
-                          ✓ Admin Approved - Awaiting Finance Approval
-                        </p>
-                      </div>
-                    )}
-
-                    {request.status === 'Approved' && (
-                      <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-green-700 font-medium">
-                          ✓ Fully Approved by Both Finance and Admin
-                        </p>
-                      </div>
-                    )}
-
-                    {request.rejection_reason && (
-                      <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <strong className="text-red-700">Rejection Reason:</strong>
-                        <p className="text-red-600">{request.rejection_reason}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                );
-              })
-            )}
-          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs">
+                            <p className="font-medium text-green-700">{request.finance_approved_by}</p>
+                            <p className="text-muted-foreground">{formatDateTime(request.finance_approved_at)}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getRiskColor(riskAssessment.riskLevel)}>
+                            {riskAssessment.riskLevel}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleReview(request);
+                            }}
+                            className="gap-2"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Review
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -595,7 +558,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         open={approvalModalOpen}
         onOpenChange={setApprovalModalOpen}
         onApprove={confirmApproval}
-        requestTitle={selectedRequestTitle}
+        requestTitle={selectedRequest?.title || selectedRequestTitle}
         amount={selectedRequest ? parseFloat(selectedRequest.amount) : 0}
       />
       
@@ -617,6 +580,16 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         }}
         request={selectedRequest}
         recipientName={selectedRequest ? userProfiles[selectedRequest.requestedby]?.name : undefined}
+      />
+      
+      <AdminExpenseReviewModal
+        open={reviewModalOpen}
+        onOpenChange={setReviewModalOpen}
+        request={selectedRequest}
+        riskAssessment={selectedRequest ? assessExpenseRisk(selectedRequest) : null}
+        userProfile={selectedRequest ? userProfiles[selectedRequest.requestedby] : undefined}
+        onApprove={handleApproveFromReview}
+        onReject={handleRejectFromReview}
       />
     </div>
   );

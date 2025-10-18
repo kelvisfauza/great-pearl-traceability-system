@@ -5,13 +5,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Receipt, Printer, DollarSign, Calendar, User, FileText, Download } from 'lucide-react';
+import { Receipt, Printer, DollarSign, Calendar, User, FileText, Download, Clock } from 'lucide-react';
 import { useEnhancedExpenseManagement } from '@/hooks/useEnhancedExpenseManagement';
+import { useOvertimeAwards } from '@/hooks/useOvertimeAwards';
 import StandardPrintHeader from '@/components/print/StandardPrintHeader';
 import { useReactToPrint } from 'react-to-print';
 
 export const ExpensesReport = () => {
   const { expenseRequests, loading } = useEnhancedExpenseManagement();
+  const { awards: overtimeAwards, loading: overtimeLoading } = useOvertimeAwards();
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const printRef = useRef<HTMLDivElement>(null);
@@ -30,6 +32,9 @@ export const ExpensesReport = () => {
     req.adminApprovedAt &&
     (req.type === 'Employee Salary Request' || req.type === 'Salary Payment')
   );
+
+  // Filter completed overtime awards
+  const completedOvertimeAwards = overtimeAwards.filter(award => award.status === 'completed');
 
   console.log('Approved Expenses:', approvedExpenses.map(e => ({
     id: e.id,
@@ -76,11 +81,41 @@ export const ExpensesReport = () => {
 
   const filteredExpenses = filterByPeriod(approvedExpenses);
   const filteredSalaryRequests = filterByPeriod(approvedSalaryRequests);
+  
+  // Filter overtime by period (using completed_at)
+  const filterOvertimeByPeriod = (awards: any[]) => {
+    if (filterPeriod === 'all') return awards;
+    
+    const now = new Date();
+    const startDate = new Date();
+    
+    switch (filterPeriod) {
+      case 'today':
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'week':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case 'quarter':
+        startDate.setMonth(now.getMonth() - 3);
+        break;
+      default:
+        return awards;
+    }
+    
+    return awards.filter(award => award.completed_at && new Date(award.completed_at) >= startDate);
+  };
+
+  const filteredOvertimeAwards = filterOvertimeByPeriod(completedOvertimeAwards);
 
   // Calculate totals
   const totalExpenses = filteredExpenses.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
   const totalSalaryRequests = filteredSalaryRequests.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
-  const grandTotal = totalExpenses + totalSalaryRequests;
+  const totalOvertime = filteredOvertimeAwards.reduce((sum, award) => sum + (award.total_amount || 0), 0);
+  const grandTotal = totalExpenses + totalSalaryRequests + totalOvertime;
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -100,7 +135,7 @@ export const ExpensesReport = () => {
     });
   };
 
-  if (loading) {
+  if (loading || overtimeLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center h-64">
@@ -144,7 +179,7 @@ export const ExpensesReport = () => {
         </CardHeader>
         <CardContent>
           {/* Summary Cards */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-4 gap-4 mb-6">
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-600 font-medium">Total Expenses</p>
               <p className="text-2xl font-bold text-blue-800">{formatCurrency(totalExpenses)}</p>
@@ -155,21 +190,29 @@ export const ExpensesReport = () => {
               <p className="text-2xl font-bold text-green-800">{formatCurrency(totalSalaryRequests)}</p>
               <p className="text-xs text-green-600 mt-1">{filteredSalaryRequests.length} transactions</p>
             </div>
+            <div className="text-center p-4 bg-orange-50 rounded-lg">
+              <p className="text-sm text-orange-600 font-medium">Total Overtime</p>
+              <p className="text-2xl font-bold text-orange-800">{formatCurrency(totalOvertime)}</p>
+              <p className="text-xs text-orange-600 mt-1">{filteredOvertimeAwards.length} awards</p>
+            </div>
             <div className="text-center p-4 bg-purple-50 rounded-lg">
               <p className="text-sm text-purple-600 font-medium">Grand Total</p>
               <p className="text-2xl font-bold text-purple-800">{formatCurrency(grandTotal)}</p>
-              <p className="text-xs text-purple-600 mt-1">{filteredExpenses.length + filteredSalaryRequests.length} total</p>
+              <p className="text-xs text-purple-600 mt-1">{filteredExpenses.length + filteredSalaryRequests.length + filteredOvertimeAwards.length} total</p>
             </div>
           </div>
 
-          {/* Tabs for Expenses and Salary Requests */}
+          {/* Tabs for Expenses, Salary Requests, and Overtime */}
           <Tabs defaultValue="expenses" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="expenses">
                 Expense Requests ({filteredExpenses.length})
               </TabsTrigger>
               <TabsTrigger value="salary">
                 Salary Requests ({filteredSalaryRequests.length})
+              </TabsTrigger>
+              <TabsTrigger value="overtime">
+                Overtime Awards ({filteredOvertimeAwards.length})
               </TabsTrigger>
             </TabsList>
 
@@ -280,6 +323,52 @@ export const ExpensesReport = () => {
                 </Table>
               )}
             </TabsContent>
+
+            <TabsContent value="overtime">
+              {filteredOvertimeAwards.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p>No completed overtime awards found</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Completed Date</TableHead>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Reference</TableHead>
+                      <TableHead>Hours</TableHead>
+                      <TableHead>Completed By</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOvertimeAwards.map((award) => (
+                      <TableRow key={award.id}>
+                        <TableCell>{formatDate(award.completed_at!)}</TableCell>
+                        <TableCell className="font-medium">{award.employee_name}</TableCell>
+                        <TableCell>{award.department}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{award.reference_number}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {award.hours}h {award.minutes}m
+                        </TableCell>
+                        <TableCell className="text-xs">{award.completed_by}</TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatCurrency(award.total_amount)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-orange-50 font-bold">
+                      <TableCell colSpan={6} className="text-right">Subtotal:</TableCell>
+                      <TableCell className="text-right">{formatCurrency(totalOvertime)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              )}
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
@@ -297,7 +386,7 @@ export const ExpensesReport = () => {
           {/* Summary Section */}
           <div className="mb-8">
             <h3 className="font-bold text-lg mb-4 text-gray-900">Summary</h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div className="border p-3 rounded">
                 <p className="text-sm text-gray-600">Total Expenses</p>
                 <p className="text-xl font-bold">{formatCurrency(totalExpenses)}</p>
@@ -308,10 +397,15 @@ export const ExpensesReport = () => {
                 <p className="text-xl font-bold">{formatCurrency(totalSalaryRequests)}</p>
                 <p className="text-xs text-gray-500">{filteredSalaryRequests.length} transactions</p>
               </div>
+              <div className="border p-3 rounded">
+                <p className="text-sm text-gray-600">Total Overtime</p>
+                <p className="text-xl font-bold">{formatCurrency(totalOvertime)}</p>
+                <p className="text-xs text-gray-500">{filteredOvertimeAwards.length} awards</p>
+              </div>
               <div className="border p-3 rounded bg-gray-50">
                 <p className="text-sm text-gray-600">Grand Total</p>
                 <p className="text-xl font-bold">{formatCurrency(grandTotal)}</p>
-                <p className="text-xs text-gray-500">{filteredExpenses.length + filteredSalaryRequests.length} total</p>
+                <p className="text-xs text-gray-500">{filteredExpenses.length + filteredSalaryRequests.length + filteredOvertimeAwards.length} total</p>
               </div>
             </div>
           </div>
@@ -373,6 +467,39 @@ export const ExpensesReport = () => {
                 <tr className="bg-gray-100 font-bold">
                   <td colSpan={4} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
                   <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(totalSalaryRequests)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Overtime Awards Table */}
+          <div className="mb-8">
+            <h3 className="font-bold text-lg mb-4 text-gray-900">Overtime Awards</h3>
+            <table className="w-full border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Completed Date</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Employee</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Department</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Reference</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Hours</th>
+                  <th className="border border-gray-300 px-2 py-2 text-right text-sm">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOvertimeAwards.map((award) => (
+                  <tr key={award.id}>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{formatDate(award.completed_at!)}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{award.employee_name}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{award.department}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{award.reference_number}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{award.hours}h {award.minutes}m</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(award.total_amount)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-gray-100 font-bold">
+                  <td colSpan={5} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
+                  <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(totalOvertime)}</td>
                 </tr>
               </tbody>
             </table>

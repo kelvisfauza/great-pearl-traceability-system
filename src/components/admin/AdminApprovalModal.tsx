@@ -24,7 +24,14 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('transfer');
   const [comments, setComments] = useState('');
 
+  console.log('💰 AdminApprovalModal rendered - open:', open, 'amount:', amount, 'title:', requestTitle);
+
   const handleApprove = () => {
+    alert('Approve button clicked!'); // This will show immediately
+    console.log('💰 AdminApprovalModal - handleApprove called');
+    console.log('💰 Payment method:', paymentMethod);
+    console.log('💰 Comments:', comments);
+    console.log('💰 Calling onApprove with:', paymentMethod, comments);
     onApprove(paymentMethod, comments);
     onOpenChange(false);
     setComments('');
@@ -79,10 +86,32 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            type="button"
+            variant="outline" 
+            onClick={() => {
+              console.log('💰 Cancel clicked');
+              onOpenChange(false);
+            }}
+          >
             Cancel
           </Button>
-          <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700">
+          <Button 
+            type="button"
+            onClick={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              try {
+                await onApprove(paymentMethod, comments);
+                setComments('');
+                onOpenChange(false);
+              } catch (error) {
+                console.error('Approval error:', error);
+              }
+            }}
+            className="bg-green-600 hover:bg-green-700"
+          >
             Approve Request
           </Button>
         </DialogFooter>

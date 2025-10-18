@@ -20,6 +20,13 @@ interface ExpenseRequest {
   adminApprovedAt?: string;
   financeApprovedBy?: string;
   adminApprovedBy?: string;
+  requiresThreeApprovals?: boolean;
+  adminApproved1?: boolean;
+  adminApproved1At?: string;
+  adminApproved1By?: string;
+  adminApproved2?: boolean;
+  adminApproved2At?: string;
+  adminApproved2By?: string;
   created_at: string;
   updated_at: string;
 }
@@ -63,6 +70,13 @@ export const useEnhancedExpenseManagement = () => {
         adminApprovedAt: request.admin_approved_at,
         financeApprovedBy: request.finance_approved_by,
         adminApprovedBy: request.admin_approved_by,
+        requiresThreeApprovals: request.requires_three_approvals || false,
+        adminApproved1: request.admin_approved_1 || false,
+        adminApproved1At: request.admin_approved_1_at,
+        adminApproved1By: request.admin_approved_1_by,
+        adminApproved2: request.admin_approved_2 || false,
+        adminApproved2At: request.admin_approved_2_at,
+        adminApproved2By: request.admin_approved_2_by,
         created_at: request.created_at,
         updated_at: request.updated_at
       }));
@@ -92,7 +106,7 @@ export const useEnhancedExpenseManagement = () => {
 
   const updateRequestApproval = async (
     requestId: string, 
-    approvalType: 'finance' | 'admin', 
+    approvalType: 'finance' | 'admin' | 'admin1' | 'admin2', 
     approved: boolean,
     approvedBy: string,
     rejectionReason?: string
@@ -116,11 +130,33 @@ export const useEnhancedExpenseManagement = () => {
         return false;
       }
 
-      // Enforce two-step approval: Admin can only approve if Finance has approved first
+      // Check if request requires three approvals
+      const requiresThree = currentRequest.requires_three_approvals;
+      
+      // Enforce approval order
+      if (approvalType === 'admin1' && approved && !currentRequest.finance_approved_at) {
+        toast({
+          title: "Approval Not Allowed",
+          description: "Request must be approved by Finance first",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      if (approvalType === 'admin2' && approved && (!currentRequest.finance_approved_at || !currentRequest.admin_approved_1_at)) {
+        toast({
+          title: "Approval Not Allowed",
+          description: "Request must be approved by Finance and first Admin",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      // Legacy admin approval
       if (approvalType === 'admin' && approved && !currentRequest.finance_approved_at) {
         toast({
           title: "Approval Not Allowed",
-          description: "Request must be approved by Finance before Admin can approve",
+          description: "Request must be approved by Finance first",
           variant: "destructive"
         });
         return false;
@@ -134,12 +170,23 @@ export const useEnhancedExpenseManagement = () => {
           updateData.finance_approved = true;
           updateData.finance_approved_at = new Date().toISOString();
           updateData.finance_approved_by = approvedBy;
-          updateData.status = 'Finance Approved'; // Explicitly set to Finance Approved, not final Approved
+          updateData.status = 'Finance Approved';
+        } else if (approvalType === 'admin1') {
+          updateData.admin_approved_1 = true;
+          updateData.admin_approved_1_at = new Date().toISOString();
+          updateData.admin_approved_1_by = approvedBy;
+          updateData.status = 'Admin 1 Approved';
+        } else if (approvalType === 'admin2') {
+          updateData.admin_approved_2 = true;
+          updateData.admin_approved_2_at = new Date().toISOString();
+          updateData.admin_approved_2_by = approvedBy;
+          // Status will be set to Approved by trigger if all approvals are complete
         } else {
+          // Legacy admin approval
           updateData.admin_approved = true;
           updateData.admin_approved_at = new Date().toISOString();
           updateData.admin_approved_by = approvedBy;
-          updateData.status = 'Approved'; // Only set to final Approved when Admin approves
+          // Status will be set to Approved by trigger if all approvals are complete
         }
       } else {
         // Rejection logic - mark as rejected with reason
@@ -152,6 +199,14 @@ export const useEnhancedExpenseManagement = () => {
           updateData.finance_approved = false;
           updateData.finance_approved_at = null;
           updateData.finance_approved_by = null;
+        } else if (approvalType === 'admin1') {
+          updateData.admin_approved_1 = false;
+          updateData.admin_approved_1_at = null;
+          updateData.admin_approved_1_by = null;
+        } else if (approvalType === 'admin2') {
+          updateData.admin_approved_2 = false;
+          updateData.admin_approved_2_at = null;
+          updateData.admin_approved_2_by = null;
         } else {
           updateData.admin_approved = false;
           updateData.admin_approved_at = null;
@@ -178,26 +233,18 @@ export const useEnhancedExpenseManagement = () => {
             updatedReq.financeApproved = approved;
             updatedReq.financeApprovedAt = approved ? new Date().toISOString() : undefined;
             updatedReq.financeApprovedBy = approved ? approvedBy : undefined;
+          } else if (approvalType === 'admin1') {
+            updatedReq.adminApproved1 = approved;
+            updatedReq.adminApproved1At = approved ? new Date().toISOString() : undefined;
+            updatedReq.adminApproved1By = approved ? approvedBy : undefined;
+          } else if (approvalType === 'admin2') {
+            updatedReq.adminApproved2 = approved;
+            updatedReq.adminApproved2At = approved ? new Date().toISOString() : undefined;
+            updatedReq.adminApproved2By = approved ? approvedBy : undefined;
           } else {
             updatedReq.adminApproved = approved;
             updatedReq.adminApprovedAt = approved ? new Date().toISOString() : undefined;
             updatedReq.adminApprovedBy = approved ? approvedBy : undefined;
-          }
-
-          // Check if both approvals are complete for salary requests
-          if (updatedReq.type === 'Employee Salary Request' && 
-              updatedReq.financeApproved && updatedReq.adminApproved) {
-            updatedReq.status = 'Approved';
-            
-            // Send SMS notification for salary approval
-            const details = updatedReq.details;
-            if (details.employee_name && details.employee_phone) {
-              sendSalaryApprovalSMS(
-                details.employee_name,
-                details.employee_phone,
-                updatedReq.amount
-              );
-            }
           }
 
           return updatedReq;
@@ -205,14 +252,7 @@ export const useEnhancedExpenseManagement = () => {
         return req;
       }));
 
-      // Update overall status if both approvals are complete
-      const updatedData = data as any;
-      if (updatedData.finance_approved && updatedData.admin_approved) {
-        await supabase
-          .from('approval_requests')
-          .update({ status: 'Approved' })
-          .eq('id', requestId);
-      }
+      // Trigger will handle final status update and wallet credit
 
       toast({
         title: "Success",
