@@ -246,20 +246,9 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
             <Button
               type="button"
               onClick={(e) => {
-                alert('APPROVE IN REVIEW MODAL CLICKED!');
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('🔴 Approve button clicked in review modal');
-                console.log('🔴 onApprove function:', onApprove);
-                console.log('🔴 onApprove type:', typeof onApprove);
-                try {
-                  console.log('🔴 About to call onApprove...');
-                  onApprove();
-                  console.log('🔴 onApprove called successfully');
-                } catch (error) {
-                  console.error('🔴 ERROR calling onApprove:', error);
-                  alert('Error: ' + error);
-                }
+                onApprove();
               }}
               className="gap-2 bg-green-600 hover:bg-green-700"
             >

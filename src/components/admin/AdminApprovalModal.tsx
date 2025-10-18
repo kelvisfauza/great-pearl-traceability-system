@@ -102,15 +102,12 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
               e.preventDefault();
               e.stopPropagation();
               
-              alert('STARTING APPROVAL');
-              
               try {
                 await onApprove(paymentMethod, comments);
-                alert('SUCCESS: Approval complete!');
                 setComments('');
                 onOpenChange(false);
               } catch (error) {
-                alert('ERROR: ' + error);
+                console.error('Approval error:', error);
               }
             }}
             className="bg-green-600 hover:bg-green-700"

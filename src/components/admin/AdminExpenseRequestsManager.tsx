@@ -534,14 +534,9 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                             size="sm"
                             variant="outline"
                             onClick={(e) => {
-                              alert('REVIEW BUTTON CLICKED!');
                               e.preventDefault();
                               e.stopPropagation();
-                              console.log('🟣 Review button clicked for request:', request.id);
-                              console.log('🟣 Request data:', request);
-                              console.log('🟣 About to call handleReview...');
                               handleReview(request);
-                              console.log('🟣 handleReview called');
                             }}
                             className="gap-2"
                           >
