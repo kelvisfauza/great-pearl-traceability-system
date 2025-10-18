@@ -26,15 +26,21 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
 
   console.log('💰 AdminApprovalModal rendered - open:', open, 'amount:', amount, 'title:', requestTitle);
 
-  const handleApprove = () => {
-    alert('Approve button clicked!'); // This will show immediately
+  const handleApprove = async () => {
+    alert('💰 Approve button clicked in AdminApprovalModal!');
     console.log('💰 AdminApprovalModal - handleApprove called');
     console.log('💰 Payment method:', paymentMethod);
     console.log('💰 Comments:', comments);
     console.log('💰 Calling onApprove with:', paymentMethod, comments);
-    onApprove(paymentMethod, comments);
-    onOpenChange(false);
-    setComments('');
+    
+    try {
+      await onApprove(paymentMethod, comments);
+      setComments('');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('💰 Approval error:', error);
+      alert('ERROR in approval: ' + error);
+    }
   };
 
   return (
@@ -98,18 +104,7 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
           </Button>
           <Button 
             type="button"
-            onClick={async (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              
-              try {
-                await onApprove(paymentMethod, comments);
-                setComments('');
-                onOpenChange(false);
-              } catch (error) {
-                console.error('Approval error:', error);
-              }
-            }}
+            onClick={handleApprove}
             className="bg-green-600 hover:bg-green-700"
           >
             Approve Request

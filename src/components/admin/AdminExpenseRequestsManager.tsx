@@ -123,7 +123,11 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     console.log('🎯 handleApproveFromReview called');
     console.log('🎯 selectedRequest:', selectedRequest);
     setReviewModalOpen(false);
-    setApprovalModalOpen(true);
+    // Add delay to ensure review modal closes before opening approval modal
+    setTimeout(() => {
+      setApprovalModalOpen(true);
+      console.log('🎯 Approval modal should now be opening');
+    }, 100);
   };
 
   const handleRejectFromReview = () => {
