@@ -98,24 +98,17 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
           </Button>
           <Button 
             type="button"
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
               
-              const debugInfo = `
-Payment Method: ${paymentMethod}
-Comments: ${comments}
-onApprove type: ${typeof onApprove}
-onApprove exists: ${!!onApprove}
-              `;
-              
-              alert('STARTING APPROVAL\n' + debugInfo);
+              alert('STARTING APPROVAL');
               
               try {
-                onApprove(paymentMethod, comments);
-                alert('SUCCESS: onApprove called!');
-                onOpenChange(false);
+                await onApprove(paymentMethod, comments);
+                alert('SUCCESS: Approval complete!');
                 setComments('');
+                onOpenChange(false);
               } catch (error) {
                 alert('ERROR: ' + error);
               }
