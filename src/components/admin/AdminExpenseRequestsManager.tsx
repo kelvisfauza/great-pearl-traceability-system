@@ -136,8 +136,14 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
     const approverName = employee?.name || 'Admin Team';
     
+    console.log('🎯 Starting approval process for request:', selectedRequestId);
+    console.log('🎯 Payment method:', paymentMethod);
+    console.log('🎯 Selected request data:', selectedRequest);
+    
     // Determine which admin approval slot to use
     const request = expenseRequests.find(r => r.id === selectedRequestId);
+    console.log('🎯 Found request:', request);
+    
     let approvalType: 'admin' | 'admin1' | 'admin2' = 'admin';
     
     if (request?.requiresThreeApprovals) {
@@ -152,6 +158,9 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       approvalType = 'admin';
     }
     
+    console.log('🎯 Approval type determined:', approvalType);
+    console.log('🎯 Requires three approvals:', request?.requiresThreeApprovals);
+    
     const success = await updateRequestStatus(
       selectedRequestId, 
       'Approved', 
@@ -160,6 +169,8 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       approvalType, 
       approverName
     );
+    
+    console.log('🎯 Update request status success:', success);
     
     if (success) {
       // Update the request with payment method (will work once types are updated)
@@ -176,6 +187,9 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
 
       const isFullyApproved = approvalType === 'admin2' || (approvalType === 'admin' && !request?.requiresThreeApprovals);
       
+      console.log('🎯 Is fully approved:', isFullyApproved);
+      console.log('🎯 Should show payment slip:', paymentMethod === 'transfer' && isFullyApproved);
+      
       toast({
         title: "Admin Approval Recorded",
         description: isFullyApproved ? 
@@ -185,8 +199,8 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       
       onApprove?.(selectedRequestId);
       
-      // Show payment slip for transfers only if fully approved
-      if (paymentMethod === 'transfer' && isFullyApproved) {
+      // Show payment slip for both cash and transfer if fully approved
+      if (isFullyApproved) {
         const request = expenseRequests.find(r => r.id === selectedRequestId);
         const updatedRequest = {
           ...selectedRequest,
@@ -194,7 +208,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
           title: selectedRequest.title,
           amount: parseFloat(request?.amount || selectedRequest.amount || '0'),
           requestedby: selectedRequest.requestedby,
-          paymentMethod: 'Bank Transfer',
+          paymentMethod: paymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash Payment',
           financeApprovedBy: request?.finance_approved_by,
           adminApprovedBy: approverName,
           financeApprovedAt: request?.finance_approved_at,
@@ -206,7 +220,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         console.log('🎯 Opening payment slip with data:', updatedRequest);
         setSelectedRequest(updatedRequest);
         
-        // For transfers, delay opening payment slip modal slightly to avoid conflicts
+        // Delay opening payment slip modal slightly to avoid conflicts
         setTimeout(() => {
           setPaymentSlipModalOpen(true);
         }, 100);
