@@ -24,10 +24,13 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('transfer');
   const [comments, setComments] = useState('');
 
+  console.log('💰 AdminApprovalModal rendered - open:', open, 'amount:', amount, 'title:', requestTitle);
+
   const handleApprove = () => {
-    console.log('🎯 AdminApprovalModal - handleApprove called');
-    console.log('🎯 Payment method:', paymentMethod);
-    console.log('🎯 Comments:', comments);
+    console.log('💰 AdminApprovalModal - handleApprove called');
+    console.log('💰 Payment method:', paymentMethod);
+    console.log('💰 Comments:', comments);
+    console.log('💰 Calling onApprove with:', paymentMethod, comments);
     onApprove(paymentMethod, comments);
     onOpenChange(false);
     setComments('');
