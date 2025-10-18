@@ -14,6 +14,7 @@ import { DollarSign, Send, FileText, Clock, CheckCircle, XCircle, AlertTriangle,
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
+import { RequisitionForm } from '@/components/finance/RequisitionForm';
 
 const Expenses = () => {
   const { employee } = useAuth();
@@ -35,9 +36,10 @@ const Expenses = () => {
     paymentType: 'mid-month' // default to mid-month
   });
 
-  // Filter to only show user's own expense requests
+  // Filter to only show user's own expense requests and requisitions
   const myExpenseRequests = myRequests.filter(req => 
     req.type === 'Expense Request' || 
+    req.type === 'Requisition' ||
     (req.type && req.type.includes('Expense') && !req.type.includes('Salary'))
   );
 
@@ -214,11 +216,98 @@ const Expenses = () => {
     <Layout title="Expense & Salary Requests" subtitle="Submit and track your expense and salary requests with dual approval system">
       <div className="space-y-6">
 
-      <Tabs defaultValue="expenses" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="requisition" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="requisition">Requisitions</TabsTrigger>
           <TabsTrigger value="expenses">Expense Requests</TabsTrigger>
           <TabsTrigger value="salary">Salary Requests</TabsTrigger>
         </TabsList>
+
+        {/* Requisition Tab */}
+        <TabsContent value="requisition" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <RequisitionForm />
+            
+            {/* My Requisitions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  My Requisitions
+                </CardTitle>
+                <CardDescription>
+                  Track the approval status of your submitted requisitions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {fetchingRequests ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                      <p className="text-sm text-muted-foreground mt-2">Loading your requests...</p>
+                    </div>
+                  ) : myExpenseRequests.filter(r => r.type === 'Requisition').length === 0 ? (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No requisitions yet</p>
+                      <p className="text-xs text-muted-foreground">Submit your first requisition</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {myExpenseRequests.filter(r => r.type === 'Requisition').map((request) => (
+                        <Card key={request.id} className="border-l-4 border-l-purple-500">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <h4 className="font-semibold">{request.title}</h4>
+                                <p className="text-sm text-muted-foreground">{request.description}</p>
+                                
+                                <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
+                                  <div className="flex items-center gap-1">
+                                    <DollarSign className="h-3 w-3" />
+                                    <span>UGX {request.amount.toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    <span>{new Date(request.created_at).toLocaleDateString()}</span>
+                                  </div>
+                                </div>
+
+                                {/* Approval tracking */}
+                                <div className="mt-3 p-2 bg-slate-50 rounded text-xs">
+                                  <div className="font-medium mb-1">Approval Progress:</div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="flex items-center gap-1">
+                                      <div className={`h-1.5 w-1.5 rounded-full ${request.finance_approved_at ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                      <span className={request.finance_approved_at ? 'text-green-700' : 'text-gray-500'}>
+                                        Finance: {request.finance_approved_at ? '✓ Approved' : 'Pending'}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <div className={`h-1.5 w-1.5 rounded-full ${request.admin_approved_at ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                      <span className={request.admin_approved_at ? 'text-green-700' : 'text-gray-500'}>
+                                        Admin: {request.admin_approved_at ? '✓ Approved' : 'Pending'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <Badge className={`text-xs ${getStatusColor(request)}`}>
+                                  {getApprovalStatus(request)}
+                                </Badge>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         {/* Expense Requests Tab */}
         <TabsContent value="expenses" className="space-y-6">

@@ -49,11 +49,11 @@ export const useExpenseManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch user expense requests
+      // Fetch user expense requests and requisitions
       const { data: requests } = await supabase
         .from('approval_requests')
         .select('*')
-        .eq('type', 'Expense Request')
+        .in('type', ['Expense Request', 'Requisition'])
         .order('created_at', { ascending: false });
 
       const formattedRequests: ExpenseRequest[] = requests?.map(req => ({

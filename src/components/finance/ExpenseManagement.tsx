@@ -23,6 +23,7 @@ export const ExpenseManagement = () => {
   const userExpenseRequests = expenseRequests.filter(
     req => {
       const isExpenseRequest = req.type === 'Employee Expense Request' || 
+                              req.type === 'Requisition' ||
                               (req.type.includes('Expense') && req.type !== 'Employee Salary Request');
       
       const hasFinanceApproval = req.financeApprovedAt;

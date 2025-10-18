@@ -37,7 +37,7 @@ export const useMyExpenseRequests = () => {
       const { data: myRequests, error } = await supabase
         .from('approval_requests')
         .select('*')
-        .eq('type', 'Expense Request')
+        .in('type', ['Expense Request', 'Requisition'])
         .eq('requestedby', employee.email)
         .order('created_at', { ascending: false });
       
