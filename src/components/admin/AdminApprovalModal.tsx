@@ -99,6 +99,7 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
           <Button 
             type="button"
             onClick={(e) => {
+              alert('PAYMENT METHOD BUTTON CLICKED!');
               e.preventDefault();
               e.stopPropagation();
               console.log('💰 Button clicked START');
