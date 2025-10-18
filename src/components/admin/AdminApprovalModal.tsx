@@ -86,10 +86,32 @@ export const AdminApprovalModal: React.FC<AdminApprovalModalProps> = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            type="button"
+            variant="outline" 
+            onClick={() => {
+              console.log('💰 Cancel clicked');
+              onOpenChange(false);
+            }}
+          >
             Cancel
           </Button>
-          <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700">
+          <Button 
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              alert('Approve button clicked!');
+              console.log('💰 AdminApprovalModal - handleApprove called');
+              console.log('💰 Payment method:', paymentMethod);
+              console.log('💰 Comments:', comments);
+              console.log('💰 Calling onApprove with:', paymentMethod, comments);
+              onApprove(paymentMethod, comments);
+              onOpenChange(false);
+              setComments('');
+            }}
+            className="bg-green-600 hover:bg-green-700"
+          >
             Approve Request
           </Button>
         </DialogFooter>
