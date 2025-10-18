@@ -4,15 +4,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Truck, MapPin, Package, Clock, Plus, Search, Eye, Navigation, Loader2 } from "lucide-react";
+import { Truck, MapPin, Package, Clock, Plus, Search, Eye, Navigation, Loader2, Edit } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useLogistics } from "@/hooks/useLogistics";
 import { AddVehicleModal } from "@/components/logistics/AddVehicleModal";
+import { EditWarehouseModal } from "@/components/logistics/EditWarehouseModal";
+import { AddRouteModal } from "@/components/logistics/AddRouteModal";
+import { Warehouse } from "@/hooks/useLogistics";
 
 const Logistics = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
-  const { vehicles, shipments, routes, warehouses, loading } = useLogistics();
+  const [addRouteOpen, setAddRouteOpen] = useState(false);
+  const [editWarehouseOpen, setEditWarehouseOpen] = useState(false);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
+  const { vehicles, shipments, routes, warehouses, loading, refetch } = useLogistics();
+
+  const handleEditWarehouse = (warehouse: Warehouse) => {
+    setSelectedWarehouse(warehouse);
+    setEditWarehouseOpen(true);
+  };
 
   const filteredVehicles = useMemo(() => 
     vehicles.filter(vehicle =>
@@ -200,8 +211,16 @@ const Logistics = () => {
           {/* Route Management */}
           <Card>
             <CardHeader>
-              <CardTitle>Route Management</CardTitle>
-              <CardDescription>Optimize delivery routes and scheduling</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Route Management</CardTitle>
+                  <CardDescription>Optimize delivery routes and scheduling</CardDescription>
+                </div>
+                <Button onClick={() => setAddRouteOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Route
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -243,7 +262,16 @@ const Logistics = () => {
                     <div key={warehouse.id} className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-medium">{warehouse.location}</h4>
-                        <Badge variant="default">{warehouse.status}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="default">{warehouse.status}</Badge>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEditWarehouse(warehouse)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex justify-between text-sm text-gray-600 mb-2">
                         <span>{warehouse.current_bags.toLocaleString()} / {warehouse.capacity_bags.toLocaleString()} bags</span>
@@ -268,6 +296,13 @@ const Logistics = () => {
       </div>
 
       <AddVehicleModal open={addVehicleOpen} onOpenChange={setAddVehicleOpen} />
+      <AddRouteModal open={addRouteOpen} onOpenChange={setAddRouteOpen} />
+      <EditWarehouseModal 
+        open={editWarehouseOpen} 
+        onOpenChange={setEditWarehouseOpen}
+        warehouse={selectedWarehouse}
+        onSuccess={refetch}
+      />
     </Layout>
   );
 };
