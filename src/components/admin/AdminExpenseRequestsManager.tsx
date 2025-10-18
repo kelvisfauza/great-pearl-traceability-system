@@ -516,7 +516,12 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleReview(request)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('🟣 Review button clicked for request:', request.id);
+                              handleReview(request);
+                            }}
                             className="gap-2"
                           >
                             <Eye className="h-4 w-4" />
