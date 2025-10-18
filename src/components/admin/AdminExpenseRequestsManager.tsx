@@ -567,7 +567,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         open={approvalModalOpen}
         onOpenChange={setApprovalModalOpen}
         onApprove={confirmApproval}
-        requestTitle={selectedRequestTitle}
+        requestTitle={selectedRequest?.title || selectedRequestTitle}
         amount={selectedRequest ? parseFloat(selectedRequest.amount) : 0}
       />
       
