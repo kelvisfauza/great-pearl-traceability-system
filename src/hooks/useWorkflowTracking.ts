@@ -124,12 +124,9 @@ export const useWorkflowTracking = () => {
       
       await fetchWorkflowData();
     } catch (error) {
-      console.error('Error tracking workflow step:', error);
-      toast({
-        title: "Error",
-        description: "Failed to track workflow step",
-        variant: "destructive"
-      });
+      // Log error silently - workflow tracking is non-critical and shouldn't show error toast
+      // The main approval operation has already succeeded at this point
+      console.warn('⚠️ Workflow step tracking failed (non-critical):', error);
     }
   };
 
