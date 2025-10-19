@@ -65,14 +65,21 @@ export const useApprovalSystem = () => {
       try {
         console.log('Fetching approvers for SMS notification...');
         
-        const { data: approvers, error: approversError } = await supabase
+        // Fetch all active employees with phones, then filter in JavaScript for better reliability
+        const { data: allEmployees, error: approversError } = await supabase
           .from('employees')
           .select('name, phone, role, department')
-          .or('role.in.(Administrator,Super Admin),department.in.(Finance,Admin)')
           .eq('status', 'Active')
           .not('phone', 'is', null);
 
-        console.log('Approvers found:', approvers?.length || 0, approvers);
+        // Filter for admins or finance/admin department users
+        const approvers = allEmployees?.filter(emp => 
+          ['Administrator', 'Super Admin'].includes(emp.role) || 
+          ['Finance', 'Admin'].includes(emp.department)
+        );
+
+        console.log('All active employees with phones:', allEmployees?.length || 0);
+        console.log('Filtered approvers:', approvers?.length || 0, approvers);
 
         if (approversError) {
           console.error('Error fetching approvers:', approversError);
