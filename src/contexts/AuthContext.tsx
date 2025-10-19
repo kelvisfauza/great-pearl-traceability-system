@@ -274,6 +274,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Initialize auth state
   useEffect(() => {
     let mounted = true;
+    let loadingTimeout: NodeJS.Timeout;
+
+    // Safety timeout - ensure loading is set to false after 5 seconds max
+    loadingTimeout = setTimeout(() => {
+      if (mounted) {
+        console.log('⏰ Loading timeout reached, forcing loading to false');
+        setLoading(false);
+      }
+    }, 5000);
 
     // Set up auth state listener FIRST - CRITICAL: No async operations here
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -297,6 +306,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                   if (mounted) {
                     setEmployee(employeeData);
                     setLoading(false);
+                    clearTimeout(loadingTimeout);
                   }
                 })
                 .catch(error => {
@@ -304,6 +314,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                   if (mounted) {
                     setEmployee(null);
                     setLoading(false);
+                    clearTimeout(loadingTimeout);
                   }
                 });
             }
@@ -313,6 +324,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // No user - clear everything immediately
           setEmployee(null);
           setLoading(false);
+          clearTimeout(loadingTimeout);
         }
       }
     );
@@ -330,6 +342,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (mounted) {
               setEmployee(employeeData);
               setLoading(false);
+              clearTimeout(loadingTimeout);
             }
           })
           .catch(error => {
@@ -337,17 +350,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (mounted) {
               setEmployee(null);
               setLoading(false);
+              clearTimeout(loadingTimeout);
             }
           });
       } else {
         if (mounted) {
           setLoading(false);
+          clearTimeout(loadingTimeout);
         }
       }
     });
 
     return () => {
       mounted = false;
+      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);
