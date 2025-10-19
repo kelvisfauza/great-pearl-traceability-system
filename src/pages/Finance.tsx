@@ -1,22 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Wallet, Receipt, Users, TrendingUp, Coffee, CheckCircle, HandCoins } from 'lucide-react';
+import { DollarSign, Wallet, Receipt, Users, TrendingUp, Coffee, CheckCircle, HandCoins, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-
-import { PendingCoffeePayments } from '@/components/finance/PendingCoffeePayments';
-import { ExpenseManagement } from '@/components/finance/ExpenseManagement';
-import { HRPayments } from '@/components/finance/HRPayments';
 import { FinanceStats } from '@/components/finance/FinanceStats';
-import { PaymentHistory } from '@/components/finance/PaymentHistory';
-import { FinanceReports } from '@/components/finance/FinanceReports';
 import { PendingCashDeposits } from '@/components/finance/PendingCashDeposits';
-import { CompletedTransactions } from '@/components/finance/CompletedTransactions';
-import SupplierAdvanceModal from '@/components/finance/SupplierAdvanceModal';
-import { SupplierAdvancesPage } from '@/components/finance/SupplierAdvancesPage';
-import DayBook from '@/components/reports/DayBook';
+
+// Lazy load heavy components
+const PendingCoffeePayments = lazy(() => import('@/components/finance/PendingCoffeePayments').then(m => ({ default: m.PendingCoffeePayments })));
+const CompletedTransactions = lazy(() => import('@/components/finance/CompletedTransactions').then(m => ({ default: m.CompletedTransactions })));
+const SupplierAdvancesPage = lazy(() => import('@/components/finance/SupplierAdvancesPage').then(m => ({ default: m.SupplierAdvancesPage })));
+const PaymentHistory = lazy(() => import('@/components/finance/PaymentHistory').then(m => ({ default: m.PaymentHistory })));
+const ExpenseManagement = lazy(() => import('@/components/finance/ExpenseManagement').then(m => ({ default: m.ExpenseManagement })));
+const HRPayments = lazy(() => import('@/components/finance/HRPayments').then(m => ({ default: m.HRPayments })));
+const DayBook = lazy(() => import('@/components/reports/DayBook'));
+const FinanceReports = lazy(() => import('@/components/finance/FinanceReports').then(m => ({ default: m.FinanceReports })));
+const SupplierAdvanceModal = lazy(() => import('@/components/finance/SupplierAdvanceModal'));
+
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center py-12">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 const Finance = () => {
   const { hasPermission } = useAuth();
@@ -120,35 +127,51 @@ const Finance = () => {
                 </TabsList>
 
                 <TabsContent value="pending-coffee" className="mt-6">
-                  <PendingCoffeePayments />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PendingCoffeePayments />
+                  </Suspense>
                 </TabsContent>
 
                 <TabsContent value="completed" className="mt-6">
-                  <CompletedTransactions />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <CompletedTransactions />
+                  </Suspense>
                 </TabsContent>
 
                 <TabsContent value="advances" className="mt-6">
-                  <SupplierAdvancesPage />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SupplierAdvancesPage />
+                  </Suspense>
                 </TabsContent>
 
                 <TabsContent value="payments" className="mt-6">
-                  <PaymentHistory />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PaymentHistory />
+                  </Suspense>
                 </TabsContent>
 
                 <TabsContent value="expenses" className="mt-6">
-                  <ExpenseManagement />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ExpenseManagement />
+                  </Suspense>
                 </TabsContent>
 
                 <TabsContent value="hr-payments" className="mt-6">
-                  <HRPayments />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <HRPayments />
+                  </Suspense>
                 </TabsContent>
 
                 <TabsContent value="daybook" className="mt-6">
-                  <DayBook />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <DayBook />
+                  </Suspense>
                 </TabsContent>
 
                 <TabsContent value="reports" className="mt-6">
-                  <FinanceReports />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <FinanceReports />
+                  </Suspense>
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -156,10 +179,12 @@ const Finance = () => {
         </div>
       </div>
       
-      <SupplierAdvanceModal 
-        open={showAdvanceModal}
-        onClose={() => setShowAdvanceModal(false)}
-      />
+      <Suspense fallback={null}>
+        <SupplierAdvanceModal 
+          open={showAdvanceModal}
+          onClose={() => setShowAdvanceModal(false)}
+        />
+      </Suspense>
     </Layout>
   );
 };
