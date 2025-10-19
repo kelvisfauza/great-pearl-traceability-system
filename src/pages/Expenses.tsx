@@ -93,6 +93,31 @@ const Expenses = () => {
       return;
     }
 
+    // Check if user has already requested meals in the last 7 days
+    if (formData.expenseType === 'meals') {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const recentMealsRequest = myExpenseRequests.find(req => {
+        const requestDate = new Date(req.created_at);
+        const isMealsRequest = req.details?.expenseType === 'meals' || 
+                               req.details?.expenseCategory?.toLowerCase().includes('meals');
+        return isMealsRequest && requestDate >= sevenDaysAgo;
+      });
+
+      if (recentMealsRequest) {
+        const nextAvailableDate = new Date(recentMealsRequest.created_at);
+        nextAvailableDate.setDate(nextAvailableDate.getDate() + 7);
+        
+        toast({
+          title: "Error",
+          description: `You already requested Meals/Refreshments on ${new Date(recentMealsRequest.created_at).toLocaleDateString()}. You can request again on ${nextAvailableDate.toLocaleDateString()}.`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     // Basic phone number validation
     const phoneRegex = /^[0-9+\-\s()]{10,15}$/;
     if (!phoneRegex.test(formData.phoneNumber)) {
@@ -352,6 +377,36 @@ const Expenses = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                    {formData.expenseType === 'meals' && (() => {
+                      const sevenDaysAgo = new Date();
+                      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                      
+                      const recentMealsRequest = myExpenseRequests.find(req => {
+                        const requestDate = new Date(req.created_at);
+                        const isMealsRequest = req.details?.expenseType === 'meals' || 
+                                               req.details?.expenseCategory?.toLowerCase().includes('meals');
+                        return isMealsRequest && requestDate >= sevenDaysAgo;
+                      });
+
+                      if (recentMealsRequest) {
+                        const nextAvailableDate = new Date(recentMealsRequest.created_at);
+                        nextAvailableDate.setDate(nextAvailableDate.getDate() + 7);
+                        
+                        return (
+                          <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                            <AlertTriangle className="h-3 w-3 inline mr-1" />
+                            You requested Meals/Refreshments on {new Date(recentMealsRequest.created_at).toLocaleDateString()}. 
+                            Next eligible: {nextAvailableDate.toLocaleDateString()}
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Limited to once every 7 days, max UGX 15,000
+                        </p>
+                      );
+                    })()}
                   </div>
 
                   <div>
