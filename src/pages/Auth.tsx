@@ -103,10 +103,13 @@ const Auth = () => {
       console.log('✅ Network access granted:', networkCheck.reason);
 
       // Proceed with authentication
+      console.log('🔐 Attempting login for:', email);
       const result = await signIn(email, password);
+      console.log('✅ Login successful:', result);
       
       // Check if user has temporary password or requires password change
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('👤 User data retrieved:', user?.email);
       const requiresPasswordChange = result.requiresPasswordChange || 
                                     user?.user_metadata?.requires_password_change === true;
       
@@ -118,22 +121,30 @@ const Auth = () => {
       }
 
       // Check if user is admin - only admins need biometric verification
-      const { data: employee } = await supabase
+      console.log('🔍 Checking employee role...');
+      const { data: employee, error: employeeError } = await supabase
         .from('employees')
-        .select('role')
+        .select('role, email')
         .eq('email', email)
-        .single();
+        .maybeSingle();
+
+      if (employeeError) {
+        console.error('❌ Error fetching employee data:', employeeError);
+      }
+      console.log('👔 Employee data:', employee);
 
       // Bypass biometric in preview/development environments
-      const isPreviewOrDev = window.location.hostname.includes('lovable.app') || 
+      const isPreviewOrDev = window.location.hostname.includes('lovable') || 
                               window.location.hostname === 'localhost';
 
       if (employee?.role === 'Administrator' && !isPreviewOrDev) {
         // Admin user in production - require biometric verification
+        console.log('🔒 Admin detected, requiring biometric verification');
         setShowBiometric(true);
         setLoading(false);
       } else {
         // Regular user or preview environment - no biometric verification
+        console.log('✅ Login complete, redirecting to home...');
         navigate('/');
         setLoading(false);
       }
