@@ -29,19 +29,8 @@ const ApprovalCenter = () => {
     setProcessingId(request.id);
     try {
       const success = await updateRequestStatus(request, 'Approved');
-      if (success) {
-        toast({
-          title: "Request Approved",
-          description: `${request.title} has been approved successfully.`,
-        });
-      }
     } catch (error) {
       console.error('Error processing approval:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to process the approval request.',
-        variant: 'destructive'
-      });
     } finally {
       setProcessingId(null);
     }
@@ -58,20 +47,8 @@ const ApprovalCenter = () => {
     setProcessingId(selectedRequest.id);
     try {
       const success = await updateRequestStatus(selectedRequest, 'Rejected', reason, comments);
-      if (success) {
-        toast({
-          title: "Request Rejected",
-          description: `${selectedRequest.title} has been rejected and sent back for modification.`,
-          variant: 'destructive'
-        });
-      }
     } catch (error) {
       console.error('Error processing rejection:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to process the rejection.',
-        variant: 'destructive'
-      });
     } finally {
       setProcessingId(null);
       setSelectedRequest(null);

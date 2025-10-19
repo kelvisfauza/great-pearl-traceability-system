@@ -78,13 +78,6 @@ const MoneyRequestsManager = () => {
 
       if (error) throw error;
 
-      toast({
-        title: approve ? "Request Approved" : "Request Rejected",
-        description: approve 
-          ? "Request forwarded to admin for final approval" 
-          : "Money request has been rejected"
-      });
-
       fetchRequests();
     } catch (error: any) {
       console.error('Error processing request:', error);

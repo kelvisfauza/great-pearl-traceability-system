@@ -80,13 +80,6 @@ const MoneyRequestsFinalApproval = () => {
 
       if (error) throw error;
 
-      toast({
-        title: approve ? "Request Approved" : "Request Rejected",
-        description: approve 
-          ? "Funds have been allocated to user account and payment slip generated" 
-          : "Money request has been rejected"
-      });
-
       fetchRequests();
     } catch (error: any) {
       console.error('Error processing final approval:', error);

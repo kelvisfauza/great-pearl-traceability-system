@@ -253,23 +253,12 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
           setSelectedRequest(null);
         }
       } else {
-        alert('❌ FAILED to update request status!');
-        toast({
-          title: "Approval Failed",
-          description: "Failed to update request status. Please try again.",
-          variant: "destructive"
-        });
+        console.error('❌ FAILED to update request status!');
       }
       
       setApprovalModalOpen(false);
     } catch (error) {
       console.error('❌ Approval error:', error);
-      alert('❌ ERROR: ' + (error as Error).message);
-      toast({
-        title: "Approval Error",
-        description: "An error occurred during approval: " + (error as Error).message,
-        variant: "destructive"
-      });
     }
   };
 
@@ -291,10 +280,6 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     );
     
     if (success) {
-      toast({
-        title: "Expense Rejected", 
-        description: "Expense request has been rejected by Admin"
-      });
       onReject?.(selectedRequestId, reason);
     }
     
