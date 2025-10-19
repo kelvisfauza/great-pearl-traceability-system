@@ -4,12 +4,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useSMSNotifications } from '@/hooks/useSMSNotifications';
 
 export const useApprovalSystem = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { employee } = useAuth();
   const { createApprovalNotification } = useNotifications();
+  const { sendApprovalRequestSMS } = useSMSNotifications();
 
   const createApprovalRequest = async (
     type: string,
@@ -57,6 +59,39 @@ export const useApprovalSystem = () => {
       } catch (notificationError) {
         console.error('Error creating notification (non-blocking):', notificationError);
         // Don't fail the entire request if notification fails
+      }
+
+      // Send SMS to finance and admin users
+      try {
+        const { data: approvers, error: approversError } = await supabase
+          .from('employees')
+          .select('name, phone, role, department')
+          .in('role', ['Administrator', 'Super Admin'])
+          .or('department.eq.Finance,department.eq.Admin')
+          .eq('status', 'Active')
+          .not('phone', 'is', null);
+
+        if (approversError) {
+          console.error('Error fetching approvers:', approversError);
+        } else if (approvers && approvers.length > 0) {
+          const senderName = employee?.name || 'Unknown User';
+          
+          // Send SMS to all relevant approvers
+          for (const approver of approvers) {
+            if (approver.phone) {
+              await sendApprovalRequestSMS(
+                approver.name,
+                approver.phone,
+                amount,
+                senderName,
+                type
+              );
+            }
+          }
+        }
+      } catch (smsError) {
+        console.error('Error sending SMS notifications (non-blocking):', smsError);
+        // Don't fail the whole request if SMS fails
       }
 
       toast({

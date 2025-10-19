@@ -71,8 +71,46 @@ export const useSMSNotifications = () => {
     }
   };
 
+  const sendApprovalRequestSMS = async (
+    recipientName: string,
+    phoneNumber: string,
+    amount: number,
+    senderName: string,
+    requestType: string
+  ) => {
+    try {
+      console.log('Sending approval request SMS notification...');
+      
+      const { data, error } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: phoneNumber,
+          message: `Dear ${recipientName}, you have a pending ${requestType} approval of UGX ${amount.toLocaleString()} from ${senderName}. Please log into the system to approve.`,
+          userName: recipientName,
+          messageType: 'approval_request'
+        }
+      });
+
+      if (error) {
+        console.error('Error sending SMS:', error);
+        throw error;
+      }
+
+      console.log('SMS sent successfully:', data);
+      return true;
+    } catch (error) {
+      console.error('Failed to send SMS notification:', error);
+      toast({
+        title: "SMS Notification Failed",
+        description: "Could not send SMS notification to approver",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   return {
     sendSalaryApprovalSMS,
-    sendSalaryInitializedSMS
+    sendSalaryInitializedSMS,
+    sendApprovalRequestSMS
   };
 };
