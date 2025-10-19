@@ -83,6 +83,16 @@ const Expenses = () => {
       return;
     }
 
+    // Check meals/refreshments limit
+    if (formData.expenseType === 'meals' && numericAmount > 15000) {
+      toast({
+        title: "Error",
+        description: "Meals and Refreshments requests cannot exceed UGX 15,000",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Basic phone number validation
     const phoneRegex = /^[0-9+\-\s()]{10,15}$/;
     if (!phoneRegex.test(formData.phoneNumber)) {
@@ -345,16 +355,26 @@ const Expenses = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="amount">Amount (UGX) * (Minimum: 2,000)</Label>
+                    <Label htmlFor="amount">
+                      Amount (UGX) * (Minimum: 2,000
+                      {formData.expenseType === 'meals' && ', Maximum: 15,000'}
+                      )
+                    </Label>
                     <Input
                       id="amount"
                       type="number"
-                      placeholder="Enter amount (min. 2,000)"
+                      placeholder={formData.expenseType === 'meals' ? "Max: 15,000" : "Enter amount (min. 2,000)"}
                       value={formData.amount}
                       onChange={(e) => setFormData({...formData, amount: e.target.value})}
                       min="2000"
+                      max={formData.expenseType === 'meals' ? "15000" : undefined}
                       step="1000"
                     />
+                    {formData.expenseType === 'meals' && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Meals and Refreshments are capped at UGX 15,000
+                      </p>
+                    )}
                   </div>
 
                   <div>
