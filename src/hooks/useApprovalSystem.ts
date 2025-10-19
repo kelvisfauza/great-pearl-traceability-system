@@ -63,22 +63,27 @@ export const useApprovalSystem = () => {
 
       // Send SMS to finance and admin users
       try {
+        console.log('Fetching approvers for SMS notification...');
+        
         const { data: approvers, error: approversError } = await supabase
           .from('employees')
           .select('name, phone, role, department')
-          .in('role', ['Administrator', 'Super Admin'])
-          .or('department.eq.Finance,department.eq.Admin')
+          .or('role.in.(Administrator,Super Admin),department.in.(Finance,Admin)')
           .eq('status', 'Active')
           .not('phone', 'is', null);
+
+        console.log('Approvers found:', approvers?.length || 0, approvers);
 
         if (approversError) {
           console.error('Error fetching approvers:', approversError);
         } else if (approvers && approvers.length > 0) {
           const senderName = employee?.name || 'Unknown User';
+          console.log('Sending SMS to approvers from:', senderName);
           
           // Send SMS to all relevant approvers
           for (const approver of approvers) {
             if (approver.phone) {
+              console.log(`Sending SMS to ${approver.name} at ${approver.phone}`);
               await sendApprovalRequestSMS(
                 approver.name,
                 approver.phone,
@@ -88,6 +93,8 @@ export const useApprovalSystem = () => {
               );
             }
           }
+        } else {
+          console.log('No approvers found with phone numbers');
         }
       } catch (smsError) {
         console.error('Error sending SMS notifications (non-blocking):', smsError);
