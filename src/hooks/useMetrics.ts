@@ -11,10 +11,28 @@ export const useMetrics = () => {
     const fetchMetrics = async () => {
       try {
         setIsLoading(true);
+        
+        // First, get the most recent date
+        const { data: latestMetric } = await supabase
+          .from('metrics')
+          .select('date_recorded')
+          .eq('metric_type', 'key_metric')
+          .order('date_recorded', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (!latestMetric?.date_recorded) {
+          setData([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Fetch only metrics from the most recent date
         const { data: metricsData, error: fetchError } = await supabase
           .from('metrics')
           .select('*')
           .eq('metric_type', 'key_metric')
+          .eq('date_recorded', latestMetric.date_recorded)
           .order('category');
 
         if (fetchError) throw fetchError;
