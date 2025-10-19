@@ -34,7 +34,5 @@ if (!rootElement) {
 
 const root = createRoot(rootElement);
 root.render(
-  <React.StrictMode>
-    <AppWithErrorHandling />
-  </React.StrictMode>
+  <AppWithErrorHandling />
 );
