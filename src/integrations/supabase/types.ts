@@ -2605,6 +2605,45 @@ export type Database = {
         }
         Relationships: []
       }
+      report_templates: {
+        Row: {
+          category: string
+          created_at: string
+          data_sources: Json
+          description: string
+          frequency: string
+          id: string
+          is_active: boolean
+          name: string
+          supported_formats: string[]
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          data_sources?: Json
+          description: string
+          frequency: string
+          id?: string
+          is_active?: boolean
+          name: string
+          supported_formats?: string[]
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          data_sources?: Json
+          description?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          supported_formats?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           category: string
