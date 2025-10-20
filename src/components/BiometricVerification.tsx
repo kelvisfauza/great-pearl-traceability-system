@@ -10,14 +10,12 @@ interface BiometricVerificationProps {
   email: string;
   onVerificationComplete: () => void;
   onCancel: () => void;
-  onSkip?: () => void;
 }
 
 const BiometricVerification: React.FC<BiometricVerificationProps> = ({
   email,
   onVerificationComplete,
-  onCancel,
-  onSkip
+  onCancel
 }) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState('');
@@ -70,8 +68,10 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
 
       if (!credential) {
         // No credential registered, prompt to register
+        console.log('⚠️ No biometric credential found for user, switching to registration');
         setIsRegistering(true);
         setIsVerifying(false);
+        toast.info('No fingerprint registered yet. Please register now.');
         return;
       }
 
@@ -126,18 +126,35 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       setIsVerifying(true);
       setError('');
 
+      console.log('🔐 Starting biometric registration for:', email);
+      console.log('🌐 Current hostname:', window.location.hostname);
+
       const challenge = new Uint8Array(32);
       crypto.getRandomValues(challenge);
+
+      // Generate a proper user ID from email
+      const userId = new TextEncoder().encode(email.substring(0, 16).padEnd(16, '0'));
+
+      // For WebAuthn, localhost and lovable domains need special handling
+      const hostname = window.location.hostname;
+      let rpId = hostname;
+      
+      // For localhost, use 'localhost'. For lovable previews, use the full hostname
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        rpId = 'localhost';
+      }
+
+      console.log('🔑 Using RP ID:', rpId);
 
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge: challenge,
           rp: {
             name: 'Great Pearl Coffee Factory',
-            id: window.location.hostname
+            id: rpId
           },
           user: {
-            id: new Uint8Array(16),
+            id: userId,
             name: email,
             displayName: email
           },
@@ -214,25 +231,19 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
             </ul>
           </div>
 
-          <div className="space-y-2">
-            <Button 
-              onClick={onCancel} 
-              variant="outline"
-              className="w-full"
-            >
-              Go Back to Login
-            </Button>
-            
-            {onSkip && (
-              <Button 
-                onClick={onSkip} 
-                variant="secondary"
-                className="w-full"
-              >
-                Continue Without Biometric
-              </Button>
-            )}
-          </div>
+          <Alert>
+            <AlertDescription className="text-xs">
+              <strong>Note:</strong> Biometric authentication is required for all administrator accounts for security purposes.
+            </AlertDescription>
+          </Alert>
+
+          <Button 
+            onClick={onCancel} 
+            variant="outline"
+            className="w-full"
+          >
+            Go Back to Login
+          </Button>
         </CardContent>
       </Card>
     );
@@ -265,7 +276,13 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
             </AlertDescription>
           </Alert>
 
-          <div className="space-y-4">
+          <Alert>
+            <AlertDescription className="text-sm">
+              <strong>First time setup:</strong> Place your finger on the sensor when prompted to register your fingerprint for secure access.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-2">
             <Button 
               onClick={registerBiometric} 
               disabled={isVerifying || !isBiometricAvailable}
@@ -284,16 +301,6 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
                 </>
               )}
             </Button>
-
-            {onSkip && (
-              <Button 
-                onClick={onSkip} 
-                variant="secondary"
-                className="w-full"
-              >
-                Skip for Now
-              </Button>
-            )}
 
             <Button 
               onClick={onCancel} 
@@ -343,7 +350,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
           </Alert>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-2">
           <Button 
             onClick={startBiometricAuth} 
             disabled={isVerifying || !isBiometricAvailable || isBiometricAvailable === null}
@@ -362,16 +369,6 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
               </>
             )}
           </Button>
-
-          {onSkip && (
-            <Button 
-              onClick={onSkip} 
-              variant="secondary"
-              className="w-full"
-            >
-              Skip for Now
-            </Button>
-          )}
 
           <Button 
             onClick={onCancel} 
