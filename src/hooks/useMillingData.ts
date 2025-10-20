@@ -526,6 +526,63 @@ export const useMillingData = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Set up real-time subscriptions
+    const channel = supabase
+      .channel('milling-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'milling_transactions'
+        },
+        () => {
+          console.log('Milling transaction changed, refreshing...');
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'milling_customers'
+        },
+        () => {
+          console.log('Milling customer changed, refreshing...');
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'milling_cash_transactions'
+        },
+        () => {
+          console.log('Milling cash transaction changed, refreshing...');
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'milling_expenses'
+        },
+        () => {
+          console.log('Milling expense changed, refreshing...');
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return {
