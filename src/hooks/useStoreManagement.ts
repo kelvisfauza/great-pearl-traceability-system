@@ -4,6 +4,7 @@ import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
 import { useNotifications } from '@/hooks/useNotifications';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface StoreRecord {
   id: string;
@@ -61,8 +62,21 @@ export const useStoreManagement = () => {
         };
       });
 
-      console.log('✅ Loaded records with statuses:', transformedRecords.map(r => ({ batch: r.batchNumber, status: r.status })));
-      setStoreRecords(transformedRecords);
+      // Get latest status from Supabase (source of truth for rejections)
+      const { data: supabaseRecords } = await supabase
+        .from('coffee_records')
+        .select('id, status')
+        .in('id', transformedRecords.map(r => r.id));
+      
+      // Merge Supabase status into Firebase records
+      const supabaseStatusMap = new Map(supabaseRecords?.map(r => [r.id, r.status]));
+      const finalRecords = transformedRecords.map(record => ({
+        ...record,
+        status: supabaseStatusMap.get(record.id) || record.status
+      }));
+
+      console.log('✅ Loaded records with statuses:', finalRecords.map(r => ({ batch: r.batchNumber, status: r.status })));
+      setStoreRecords(finalRecords);
     } catch (error) {
       console.error('Error fetching store data:', error);
       if (!silent) {
