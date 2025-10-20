@@ -239,8 +239,10 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       // Send SMS
       const { error: smsError } = await supabase.functions.invoke('send-sms', {
         body: {
-          to: employee.phone,
-          message: `Your Great Pearl verification code is: ${code}. Valid for 10 minutes.`
+          phone: employee.phone,
+          message: `Your Great Pearl verification code is: ${code}. Valid for 10 minutes.`,
+          userName: employee.name,
+          messageType: 'verification_code'
         }
       });
 
