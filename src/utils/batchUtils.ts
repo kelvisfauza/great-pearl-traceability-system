@@ -41,12 +41,12 @@ export const generateBatchNumber = async (): Promise<string> => {
     
     // Generate next batch number
     const nextNumber = maxNumber + 1;
-    return `B${nextNumber.toString().padStart(5, '0')}`;
+    return `B${nextNumber.toString().padStart(4, '0')}`;
   } catch (error) {
     console.error('Error generating batch number:', error);
     // Fallback to timestamp-based batch number
     const timestamp = Date.now();
-    return `B${timestamp.toString().slice(-5)}`;
+    return `B${timestamp.toString().slice(-4)}`;
   }
 };
 
