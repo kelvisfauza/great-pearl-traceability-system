@@ -30,23 +30,25 @@ export const RecentPaymentSlipsModal: React.FC<RecentPaymentSlipsModalProps> = (
   onOpenChange
 }) => {
   const [approvedRequests, setApprovedRequests] = useState<ApprovedRequest[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [paymentSlipModalOpen, setPaymentSlipModalOpen] = useState(false);
   const [userProfiles, setUserProfiles] = useState<Record<string, { name?: string; phone?: string }>>({});
 
   useEffect(() => {
     if (open) {
-      fetchApprovedRequests();
+      fetchApprovedRequests(true);
       
-      // Poll every 10 seconds while modal is open
-      const interval = setInterval(fetchApprovedRequests, 10000);
+      // Poll every 10 seconds while modal is open (background refresh)
+      const interval = setInterval(() => fetchApprovedRequests(false), 10000);
       return () => clearInterval(interval);
     }
   }, [open]);
 
-  const fetchApprovedRequests = async () => {
-    setLoading(true);
+  const fetchApprovedRequests = async (showLoading = false) => {
+    if (showLoading) {
+      setInitialLoading(true);
+    }
     try {
       const { data, error } = await supabase
         .from('approval_requests')
@@ -86,7 +88,9 @@ export const RecentPaymentSlipsModal: React.FC<RecentPaymentSlipsModalProps> = (
     } catch (error) {
       console.error('Error fetching approved requests:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setInitialLoading(false);
+      }
     }
   };
 
@@ -129,7 +133,7 @@ export const RecentPaymentSlipsModal: React.FC<RecentPaymentSlipsModalProps> = (
           </DialogHeader>
 
           <div className="space-y-4">
-            {loading ? (
+            {initialLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
