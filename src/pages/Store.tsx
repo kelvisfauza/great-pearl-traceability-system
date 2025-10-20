@@ -191,7 +191,9 @@ const Store = () => {
       batched: { label: 'Batched', variant: 'default' as const },
       drying: { label: 'Drying', variant: 'default' as const },
       sales: { label: 'Sales Ready', variant: 'default' as const },
-      inventory: { label: 'In Inventory', variant: 'default' as const }
+      inventory: { label: 'In Inventory', variant: 'default' as const },
+      rejected: { label: 'Rejected', variant: 'destructive' as const },
+      submitted_to_finance: { label: 'Submitted to Finance', variant: 'default' as const }
     };
     return statusConfig[status] || statusConfig.pending;
   };

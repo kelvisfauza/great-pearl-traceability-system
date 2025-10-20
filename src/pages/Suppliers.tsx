@@ -336,13 +336,17 @@ const Suppliers = () => {
     const variants: Record<string, any> = {
       'pending': 'secondary',
       'assessed': 'default',
-      'paid': 'default'
+      'paid': 'default',
+      'rejected': 'destructive',
+      'submitted_to_finance': 'default'
     };
     
     const labels: Record<string, string> = {
       'pending': 'Pending',
       'assessed': 'Assessed',
-      'paid': 'Paid'
+      'paid': 'Paid',
+      'rejected': 'Rejected',
+      'submitted_to_finance': 'Submitted to Finance'
     };
 
     return (

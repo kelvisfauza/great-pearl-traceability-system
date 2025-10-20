@@ -348,6 +348,9 @@ export const useQualityControl = () => {
         batchNumber = await generateBatchNumber();
       }
         
+      // Determine if this batch is rejected
+      const isRejected = Boolean(assessment.reject_final);
+      
       const assessmentData = {
         store_record_id: coffeeRecordId,
         batch_number: batchNumber,
@@ -366,9 +369,9 @@ export const useQualityControl = () => {
         final_price: Number(assessment.final_price) || finalPrice,
         quality_note: assessment.quality_note || null,
         reject_outturn_price: Boolean(assessment.reject_outturn_price),
-        reject_final: Boolean(assessment.reject_final),
+        reject_final: isRejected,
         suggested_price: finalPrice, // This is the price that finance will see
-        status: 'submitted_to_finance', // Automatically send to Finance
+        status: isRejected ? 'rejected' : 'submitted_to_finance', // Rejected batches go to rejected status
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed || new Date().toISOString().split('T')[0],
         assessed_by: assessment.assessed_by // This should now contain the actual user's name from the form
@@ -405,12 +408,15 @@ export const useQualityControl = () => {
 
       console.log('Quality assessment saved successfully:', newAssessment);
       
-      // Update coffee_records status to 'submitted_to_finance' in Supabase
-      console.log('Updating coffee record status to submitted_to_finance in Supabase...');
+      // Determine the new status based on rejection
+      const newStatus = isRejected ? 'rejected' : 'submitted_to_finance';
+      
+      // Update coffee_records status in Supabase
+      console.log(`Updating coffee record status to "${newStatus}" in Supabase...`);
       const { error: supabaseStatusError } = await supabase
         .from('coffee_records')
         .update({ 
-          status: 'submitted_to_finance',
+          status: newStatus,
           updated_at: new Date().toISOString()
         })
         .eq('id', coffeeRecordId);
@@ -418,68 +424,87 @@ export const useQualityControl = () => {
       if (supabaseStatusError) {
         console.error('Error updating coffee record status in Supabase:', supabaseStatusError);
       } else {
-        console.log('✅ Coffee record status updated to "submitted_to_finance" in Supabase');
+        console.log(`✅ Coffee record status updated to "${newStatus}" in Supabase`);
       }
 
-      // Update coffee_records status to 'submitted_to_finance' in Firebase as well
+      // Update coffee_records status in Firebase as well
       try {
         const coffeeDocRef = doc(db, 'coffee_records', assessment.store_record_id);
         await updateDoc(coffeeDocRef, {
-          status: 'submitted_to_finance',
+          status: newStatus,
           updated_at: new Date().toISOString()
         });
-        console.log('✅ Coffee record status updated to "submitted_to_finance" in Firebase');
+        console.log(`✅ Coffee record status updated to "${newStatus}" in Firebase`);
       } catch (firebaseError) {
         console.error('Error updating coffee record status in Firebase:', firebaseError);
         // Don't throw - this is a sync issue but not critical
       }
       
-      // Calculate total payment amount: kilograms × price per kg
-      const kilograms = coffeeRecord?.kilograms || 0;
-      const totalPaymentAmount = kilograms * finalPrice;
-      
-      // Send notification to Finance department
-      try {
-        await supabase.from('notifications').insert({
-          title: 'New Quality Assessment',
-          message: `Coffee quality assessed for batch ${batchNumber}. Total payment: ${totalPaymentAmount.toLocaleString()} UGX`,
-          type: 'payment',
-          recipient_role: 'Finance',
-          metadata: {
-            batch_number: batchNumber,
+      // Only create payment record and send notifications if NOT rejected
+      if (!isRejected) {
+        // Calculate total payment amount: kilograms × price per kg
+        const kilograms = coffeeRecord?.kilograms || 0;
+        const totalPaymentAmount = kilograms * finalPrice;
+        
+        // Send notification to Finance department
+        try {
+          await supabase.from('notifications').insert({
+            title: 'New Quality Assessment',
+            message: `Coffee quality assessed for batch ${batchNumber}. Total payment: ${totalPaymentAmount.toLocaleString()} UGX`,
+            type: 'payment',
+            recipient_role: 'Finance',
+            metadata: {
+              batch_number: batchNumber,
+              supplier: coffeeRecord.supplier_name,
+              amount: totalPaymentAmount,
+              assessment_id: newAssessment.id
+            }
+          });
+          console.log('✅ Finance notification sent successfully');
+        } catch (notifError) {
+          console.error('Error sending Finance notification:', notifError);
+          // Don't fail the whole process for notification errors
+        }
+        
+        console.log('Payment calculation:', {
+          kilograms,
+          pricePerKg: finalPrice,
+          totalAmount: totalPaymentAmount
+        });
+        
+        // Create payment record in Supabase
+        const { error: paymentError } = await supabase
+          .from('payment_records')
+          .insert([{
             supplier: coffeeRecord.supplier_name,
             amount: totalPaymentAmount,
-            assessment_id: newAssessment.id
-          }
-        });
-        console.log('✅ Finance notification sent successfully');
-      } catch (notifError) {
-        console.error('Error sending Finance notification:', notifError);
-        // Don't fail the whole process for notification errors
-      }
-      
-      console.log('Payment calculation:', {
-        kilograms,
-        pricePerKg: finalPrice,
-        totalAmount: totalPaymentAmount
-      });
-      
-      // Create payment record in Supabase
-      const { error: paymentError } = await supabase
-        .from('payment_records')
-        .insert([{
-          supplier: coffeeRecord.supplier_name,
-          amount: totalPaymentAmount,
-          status: 'Pending',
-          method: 'Bank Transfer',
-          date: new Date().toISOString().split('T')[0],
-          batch_number: batchNumber,
-          quality_assessment_id: newAssessment.id
-        }]);
+            status: 'Pending',
+            method: 'Bank Transfer',
+            date: new Date().toISOString().split('T')[0],
+            batch_number: batchNumber,
+            quality_assessment_id: newAssessment.id
+          }]);
 
-      if (paymentError) {
-        console.error('Error creating payment record:', paymentError);
-        throw paymentError;
+        if (paymentError) {
+          console.error('Error creating payment record:', paymentError);
+          throw paymentError;
+        }
+        
+        console.log('Payment record created successfully');
+        
+        toast({
+          title: "Success",
+          description: `Quality assessment saved and payment record created for UGX ${totalPaymentAmount.toLocaleString()}`
+        });
+      } else {
+        // Batch is rejected - no payment record created
+        console.log('⚠️ Batch rejected - no payment record created');
+        
+        toast({
+          title: "Batch Rejected",
+          description: `Batch ${batchNumber} has been marked as rejected and removed from inventory.`,
+          variant: "destructive"
+        });
       }
       
       // Refresh both quality assessments AND store records to update the pending list
@@ -487,11 +512,6 @@ export const useQualityControl = () => {
         loadQualityAssessments(),
         loadStoreRecords()
       ]);
-      
-      toast({
-        title: "Success",
-        description: `Quality assessment saved and payment record created for UGX ${totalPaymentAmount.toLocaleString()}`
-      });
       
       return newAssessment;
     } catch (error) {
