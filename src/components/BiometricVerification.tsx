@@ -226,7 +226,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       }
 
       // Generate verification code
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
       
       // Store in database
       await supabase.from('verification_codes').insert({
@@ -263,8 +263,8 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       setIsVerifying(true);
       setError('');
 
-      if (!verificationCode || verificationCode.length !== 6) {
-        setError('Please enter a valid 6-digit code');
+      if (!verificationCode || verificationCode.length !== 4) {
+        setError('Please enter a valid 4-digit code');
         setIsVerifying(false);
         return;
       }
@@ -448,7 +448,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
             <div className="space-y-4">
               <Alert>
                 <AlertDescription className="text-sm">
-                  A 6-digit verification code will be sent to your phone via SMS
+                  A 4-digit verification code will be sent to your phone via SMS
                 </AlertDescription>
               </Alert>
 
@@ -491,14 +491,14 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
               </Alert>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Enter 6-digit code</label>
+                <label className="text-sm font-medium">Enter 4-digit code</label>
                 <Input
                   type="text"
                   inputMode="numeric"
-                  maxLength={6}
+                  maxLength={4}
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="000000"
+                  placeholder="0000"
                   className="text-center text-2xl tracking-widest"
                 />
               </div>
@@ -506,7 +506,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
               <div className="space-y-2">
                 <Button 
                   onClick={verifyCode} 
-                  disabled={isVerifying || verificationCode.length !== 6}
+                  disabled={isVerifying || verificationCode.length !== 4}
                   className="w-full"
                   size="lg"
                 >
