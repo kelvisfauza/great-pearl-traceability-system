@@ -38,6 +38,10 @@ export const RecentPaymentSlipsModal: React.FC<RecentPaymentSlipsModalProps> = (
   useEffect(() => {
     if (open) {
       fetchApprovedRequests();
+      
+      // Poll every 10 seconds while modal is open
+      const interval = setInterval(fetchApprovedRequests, 10000);
+      return () => clearInterval(interval);
     }
   }, [open]);
 
@@ -48,7 +52,7 @@ export const RecentPaymentSlipsModal: React.FC<RecentPaymentSlipsModalProps> = (
         .from('approval_requests')
         .select('*')
         .eq('status', 'Approved')
-        .in('type', ['Expense Request', 'Employee Salary Request'])
+        .in('type', ['Expense Request', 'Employee Salary Request', 'Requisition'])
         .not('admin_approved_at', 'is', null)
         .order('admin_approved_at', { ascending: false })
         .limit(15);

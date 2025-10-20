@@ -24,13 +24,6 @@ const ApprovedRequestsHistory = () => {
 
   useEffect(() => {
     fetchApprovedRequests();
-    
-    // Poll every 10 seconds for updates
-    const interval = setInterval(() => {
-      fetchApprovedRequests();
-    }, 10000);
-    
-    return () => clearInterval(interval);
   }, []);
 
   const fetchApprovedRequests = async () => {
