@@ -138,7 +138,7 @@ export const useGlobalSearch = (searchTerm: string) => {
         console.log('🔍 Can access store:', canAccessStore, 'Employee permissions:', employee?.permissions);
         
         if (canAccessStore) {
-          // Search in store_records table
+          // Search in store_records table (Supabase)
           const { data: storeRecords, error: storeError } = await supabase
             .from('store_records')
             .select('*')
@@ -164,7 +164,7 @@ export const useGlobalSearch = (searchTerm: string) => {
             });
           }
 
-          // Also search coffee_records for backward compatibility
+          // Search coffee_records in Supabase
           const { data: coffeeRecords, error: coffeeError } = await supabase
             .from('coffee_records')
             .select('*')
@@ -178,12 +178,40 @@ export const useGlobalSearch = (searchTerm: string) => {
                 type: 'batch',
                 title: `Batch: ${record.batch_number}`,
                 subtitle: `${record.supplier_name} | ${record.kilograms}kg | ${record.date}`,
-                navigateTo: `/store`,
-                department: 'Store',
-                module: 'Coffee Records',
+                navigateTo: `/quality-control`,
+                department: 'Quality',
+                module: 'Coffee Records (Supabase)',
                 metadata: record
               });
             });
+          }
+
+          // Search coffee_records in Firebase
+          try {
+            const coffeeQuery = query(
+              collection(db, 'coffee_records'),
+              where('batch_number', '>=', searchTerm.toUpperCase()),
+              where('batch_number', '<=', searchTerm.toUpperCase() + '\uf8ff')
+            );
+            
+            const snapshot = await getDocs(coffeeQuery);
+            console.log('🔍 Firebase coffee records found:', snapshot.size);
+            
+            snapshot.docs.slice(0, 10).forEach(doc => {
+              const record = doc.data();
+              searchResults.push({
+                id: doc.id,
+                type: 'batch',
+                title: `Batch: ${record.batch_number}`,
+                subtitle: `${record.supplier_name} | ${record.kilograms}kg | ${record.date}`,
+                navigateTo: `/quality-control`,
+                department: 'Quality',
+                module: 'Coffee Records (Firebase)',
+                metadata: { ...record, id: doc.id }
+              });
+            });
+          } catch (firebaseError) {
+            console.error('Firebase search error:', firebaseError);
           }
         }
 
