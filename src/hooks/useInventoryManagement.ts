@@ -60,13 +60,15 @@ export const useInventoryManagement = () => {
         });
         
         // Transform coffee_records into inventory items with AVAILABLE quantities
+        // Filter out rejected batches from inventory
         const transformedInventory: InventoryItem[] = coffeeRecords
+          .filter((record: any) => record.status !== 'rejected') // Exclude rejected batches
           .map((record: any) => {
             const originalKg = Number(record.kilograms || record.weight || 0);
             const soldKg = soldByRecord[record.id] || 0;
             const availableKg = originalKg - soldKg;
             
-            console.log(`📊 Batch ${record.batch_number}: Original=${originalKg}kg, Sold=${soldKg}kg, Available=${availableKg}kg`);
+            console.log(`📊 Batch ${record.batch_number}: Status=${record.status}, Original=${originalKg}kg, Sold=${soldKg}kg, Available=${availableKg}kg`);
             
             return {
               id: record.id,
