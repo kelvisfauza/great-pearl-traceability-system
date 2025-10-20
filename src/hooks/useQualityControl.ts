@@ -358,15 +358,6 @@ export const useQualityControl = () => {
         pods: Number(assessment.pods) || 0,
         husks: Number(assessment.husks) || 0,
         stones: Number(assessment.stones) || 0,
-        // Calculator results
-        fm: Number(assessment.fm) || 0,
-        clean_d14: Number(assessment.clean_d14) || 0,
-        outturn: Number(assessment.outturn) || 0,
-        outturn_price: Number(assessment.outturn_price) || 0,
-        final_price: Number(assessment.final_price) || finalPrice,
-        quality_note: assessment.quality_note || null,
-        reject_outturn_price: Boolean(assessment.reject_outturn_price),
-        reject_final: Boolean(assessment.reject_final),
         suggested_price: finalPrice, // This is the price that finance will see
         status: 'submitted_to_finance', // Automatically send to Finance
         comments: assessment.comments || null,
