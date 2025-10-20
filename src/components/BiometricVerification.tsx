@@ -10,12 +10,14 @@ interface BiometricVerificationProps {
   email: string;
   onVerificationComplete: () => void;
   onCancel: () => void;
+  onSkip?: () => void;
 }
 
 const BiometricVerification: React.FC<BiometricVerificationProps> = ({
   email,
   onVerificationComplete,
-  onCancel
+  onCancel,
+  onSkip
 }) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState('');
@@ -212,13 +214,25 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
             </ul>
           </div>
 
-          <Button 
-            onClick={onCancel} 
-            variant="outline"
-            className="w-full"
-          >
-            Go Back to Login
-          </Button>
+          <div className="space-y-2">
+            <Button 
+              onClick={onCancel} 
+              variant="outline"
+              className="w-full"
+            >
+              Go Back to Login
+            </Button>
+            
+            {onSkip && (
+              <Button 
+                onClick={onSkip} 
+                variant="secondary"
+                className="w-full"
+              >
+                Continue Without Biometric
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
@@ -270,6 +284,16 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
                 </>
               )}
             </Button>
+
+            {onSkip && (
+              <Button 
+                onClick={onSkip} 
+                variant="secondary"
+                className="w-full"
+              >
+                Skip for Now
+              </Button>
+            )}
 
             <Button 
               onClick={onCancel} 
@@ -338,6 +362,16 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
               </>
             )}
           </Button>
+
+          {onSkip && (
+            <Button 
+              onClick={onSkip} 
+              variant="secondary"
+              className="w-full"
+            >
+              Skip for Now
+            </Button>
+          )}
 
           <Button 
             onClick={onCancel} 

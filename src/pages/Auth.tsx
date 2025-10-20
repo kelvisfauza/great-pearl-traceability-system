@@ -183,6 +183,12 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const handleBiometricSkip = () => {
+    console.log('⏭️ User chose to skip biometric verification');
+    setShowBiometric(false);
+    navigate('/');
+  };
+
   // Show biometric verification screen for admins
   if (showBiometric) {
     return (
@@ -191,6 +197,7 @@ const Auth = () => {
           email={email}
           onVerificationComplete={handleBiometricComplete}
           onCancel={handleBiometricCancel}
+          onSkip={handleBiometricSkip}
         />
       </div>
     );
