@@ -62,20 +62,57 @@ export const useStoreManagement = () => {
         };
       });
 
-      // Get latest status from Supabase (source of truth for rejections)
+      // Get latest status from Supabase (source of truth)
       const { data: supabaseRecords } = await supabase
         .from('coffee_records')
-        .select('id, status')
+        .select('id, batch_number, status')
         .in('id', transformedRecords.map(r => r.id));
       
-      // Merge Supabase status into Firebase records
+      // Get quality assessments status
+      const { data: qualityAssessments } = await supabase
+        .from('quality_assessments')
+        .select('batch_number, status')
+        .in('batch_number', transformedRecords.map(r => r.batchNumber).filter(Boolean));
+      
+      // Get payment records status
+      const { data: paymentRecords } = await supabase
+        .from('payment_records')
+        .select('batch_number, status')
+        .in('batch_number', transformedRecords.map(r => r.batchNumber).filter(Boolean));
+      
+      // Create lookup maps
       const supabaseStatusMap = new Map(supabaseRecords?.map(r => [r.id, r.status]));
-      const finalRecords = transformedRecords.map(record => ({
-        ...record,
-        status: supabaseStatusMap.get(record.id) || record.status
-      }));
+      const qualityStatusMap = new Map(qualityAssessments?.map(qa => [qa.batch_number, qa.status]));
+      const paymentStatusMap = new Map(paymentRecords?.map(pr => [pr.batch_number, pr.status]));
+      
+      // Determine the most accurate status for each record
+      const finalRecords = transformedRecords.map(record => {
+        let finalStatus = record.status;
+        
+        // Priority order: rejected > paid > submitted_to_finance > assessed > current
+        const supabaseStatus = supabaseStatusMap.get(record.id);
+        const qualityStatus = qualityStatusMap.get(record.batchNumber);
+        const paymentStatus = paymentStatusMap.get(record.batchNumber);
+        
+        if (supabaseStatus === 'rejected' || qualityStatus === 'rejected') {
+          finalStatus = 'rejected';
+        } else if (paymentStatus === 'Paid' || paymentStatus === 'paid' || paymentStatus === 'completed') {
+          finalStatus = 'paid';
+        } else if (qualityStatus === 'submitted_to_finance') {
+          finalStatus = 'submitted_to_finance';
+        } else if (qualityStatus === 'assessed') {
+          finalStatus = 'assessed';
+        } else if (supabaseStatus) {
+          finalStatus = supabaseStatus;
+        }
+        
+        return {
+          ...record,
+          status: finalStatus
+        };
+      });
 
-      console.log('✅ Loaded records with statuses:', finalRecords.map(r => ({ batch: r.batchNumber, status: r.status })));
+      console.log('✅ Loaded records with updated statuses:', finalRecords.map(r => ({ batch: r.batchNumber, status: r.status })));
       setStoreRecords(finalRecords);
     } catch (error) {
       console.error('Error fetching store data:', error);
