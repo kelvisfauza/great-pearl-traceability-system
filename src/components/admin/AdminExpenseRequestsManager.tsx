@@ -49,7 +49,9 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       request.type.includes('Meals') ||
       request.type.includes('Refreshments') ||
       request.type.includes('Transport') ||
-      request.type.includes('Salary')
+      request.type.includes('Salary') ||
+      request.type.includes('Water') ||
+      request.type.includes('Keyboard')
     )
   );
 
