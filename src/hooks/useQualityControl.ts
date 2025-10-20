@@ -360,7 +360,6 @@ export const useQualityControl = () => {
         stones: Number(assessment.stones) || 0,
         // Calculator results
         fm: Number(assessment.fm) || 0,
-        actual_ott: Number(assessment.actual_ott) || 0,
         clean_d14: Number(assessment.clean_d14) || 0,
         outturn: Number(assessment.outturn) || 0,
         outturn_price: Number(assessment.outturn_price) || 0,
