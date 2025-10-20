@@ -1179,6 +1179,9 @@ const EUDRDocumentation = () => {
                 toast.success('Sale updated successfully');
                 setShowEditSaleModal(false);
                 setEditingSale(null);
+                
+                // Refresh the page to show updated data
+                window.location.reload();
               } catch (error) {
                 console.error('Error updating sale:', error);
                 toast.error('Failed to update sale');

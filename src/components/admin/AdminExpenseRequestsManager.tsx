@@ -37,11 +37,12 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
-  // Include all expense-related requests (Expense Request, Employee Salary Request, category-specific requests)
+  // Include all expense-related requests (Expense Request, Employee Salary Request, Requisition, category-specific requests)
   const expenseRequests = requests.filter(request => 
     request.type === 'Expense Request' || 
     request.type === 'Employee Salary Request' ||
     request.type === 'Employee Expense Request' ||
+    request.type === 'Requisition' ||
     request.type.includes('Request') && (
       request.type.includes('Expense') || 
       request.type.includes('Airtime') ||
