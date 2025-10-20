@@ -62,15 +62,22 @@ export const useApprovalSystem = () => {
       }
 
       // Send SMS to finance and admin users
+      let smsSent = 0;
+      let smsFailed = 0;
       try {
-        console.log('Fetching approvers for SMS notification...');
+        console.log('📧 Fetching approvers for SMS notification...');
         
         // Fetch all active employees with phones, then filter in JavaScript for better reliability
         const { data: allEmployees, error: approversError } = await supabase
           .from('employees')
-          .select('name, phone, role, department')
+          .select('name, email, phone, role, department')
           .eq('status', 'Active')
           .not('phone', 'is', null);
+
+        if (approversError) {
+          console.error('❌ Error fetching approvers:', approversError);
+          throw new Error(`Failed to fetch approvers: ${approversError.message}`);
+        }
 
         // Filter for admins or finance/admin department users
         const approvers = allEmployees?.filter(emp => 
@@ -78,34 +85,68 @@ export const useApprovalSystem = () => {
           ['Finance', 'Admin'].includes(emp.department)
         );
 
-        console.log('All active employees with phones:', allEmployees?.length || 0);
-        console.log('Filtered approvers:', approvers?.length || 0, approvers);
+        console.log('👥 All active employees with phones:', allEmployees?.length || 0);
+        console.log('✅ Filtered approvers:', approvers?.length || 0);
+        console.log('📋 Approver list:', approvers?.map(a => ({ name: a.name, role: a.role, dept: a.department, phone: a.phone })));
 
-        if (approversError) {
-          console.error('Error fetching approvers:', approversError);
-        } else if (approvers && approvers.length > 0) {
+        if (!approvers || approvers.length === 0) {
+          const errorMsg = 'No approvers found with phone numbers';
+          console.error('❌', errorMsg);
+          toast({
+            title: "Warning",
+            description: "Request created but no approvers were notified (no phone numbers found)",
+            variant: "destructive"
+          });
+        } else {
           const senderName = employee?.name || 'Unknown User';
-          console.log('Sending SMS to approvers from:', senderName);
+          console.log('📤 Sending SMS to approvers from:', senderName);
           
           // Send SMS to all relevant approvers
           for (const approver of approvers) {
             if (approver.phone) {
-              console.log(`Sending SMS to ${approver.name} at ${approver.phone}`);
-              await sendApprovalRequestSMS(
-                approver.name,
-                approver.phone,
-                amount,
-                senderName,
-                type
-              );
+              try {
+                console.log(`📱 Sending SMS to ${approver.name} (${approver.email}) at ${approver.phone}`);
+                const smsSuccess = await sendApprovalRequestSMS(
+                  approver.name,
+                  approver.phone,
+                  amount,
+                  senderName,
+                  type
+                );
+                if (smsSuccess) {
+                  smsSent++;
+                  console.log(`✅ SMS sent successfully to ${approver.name}`);
+                } else {
+                  smsFailed++;
+                  console.log(`⚠️ SMS failed to ${approver.name}`);
+                }
+              } catch (individualSmsError) {
+                smsFailed++;
+                console.error(`❌ Error sending SMS to ${approver.name}:`, individualSmsError);
+              }
             }
           }
-        } else {
-          console.log('No approvers found with phone numbers');
+
+          // Show summary toast
+          if (smsSent > 0) {
+            console.log(`✅ Successfully sent ${smsSent} SMS notification(s)`);
+          }
+          if (smsFailed > 0) {
+            console.log(`⚠️ Failed to send ${smsFailed} SMS notification(s)`);
+            toast({
+              title: "Partial SMS Failure",
+              description: `Request created but ${smsFailed} SMS notification(s) failed to send`,
+              variant: "destructive"
+            });
+          }
         }
       } catch (smsError) {
-        console.error('Error sending SMS notifications (non-blocking):', smsError);
-        // Don't fail the whole request if SMS fails
+        console.error('❌ Critical error sending SMS notifications:', smsError);
+        toast({
+          title: "SMS Notification Failed",
+          description: `Request created but approvers were not notified via SMS: ${smsError.message}`,
+          variant: "destructive"
+        });
       }
 
       toast({
