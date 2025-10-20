@@ -9,11 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2 } from 'lucide-react';
+import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2, Pencil } from 'lucide-react';
 import { useEUDRDocumentation } from '@/hooks/useEUDRDocumentation';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import EUDRReportPrint from './EUDRReportPrint';
+import { supabase } from '@/integrations/supabase/client';
 
 const EUDRDocumentation = () => {
   const { hasPermission } = useAuth();
@@ -41,6 +42,8 @@ const EUDRDocumentation = () => {
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [submittingDocument, setSubmittingDocument] = useState(false);
   const [submittingSale, setSubmittingSale] = useState(false);
+  const [editingSale, setEditingSale] = useState(null);
+  const [showEditSaleModal, setShowEditSaleModal] = useState(false);
   const [reportType, setReportType] = useState('daily');
   const [reportStartDate, setReportStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
@@ -1001,7 +1004,7 @@ const EUDRDocumentation = () => {
                   </CardHeader>
                   <CardContent>
                     <Table>
-                      <TableHeader>
+                       <TableHeader>
                         <TableRow>
                           <TableHead>Sale Date</TableHead>
                           <TableHead>Customer</TableHead>
@@ -1010,6 +1013,7 @@ const EUDRDocumentation = () => {
                           <TableHead>Kilograms</TableHead>
                           <TableHead>Price (UGX)</TableHead>
                           <TableHead>Total Value</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1022,6 +1026,18 @@ const EUDRDocumentation = () => {
                             <TableCell>{sale.kilograms.toLocaleString()}kg</TableCell>
                             <TableCell>{sale.sale_price.toLocaleString()}</TableCell>
                             <TableCell>{(sale.kilograms * sale.sale_price).toLocaleString()}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingSale(sale);
+                                  setShowEditSaleModal(true);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1080,6 +1096,99 @@ const EUDRDocumentation = () => {
         documents={eudrDocuments}
         sales={eudrSales}
       />
+
+      {/* Edit Sale Modal */}
+      <Dialog open={showEditSaleModal} onOpenChange={setShowEditSaleModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit EUDR Sale</DialogTitle>
+            <DialogDescription>
+              Update the sale information
+            </DialogDescription>
+          </DialogHeader>
+          {editingSale && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-sale-kg">Kilograms *</Label>
+                  <Input
+                    id="edit-sale-kg"
+                    type="number"
+                    value={editingSale.kilograms}
+                    onChange={(e) => setEditingSale({...editingSale, kilograms: Number(e.target.value)})}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-sale-price">Sale Price (UGX) *</Label>
+                  <Input
+                    id="edit-sale-price"
+                    type="number"
+                    value={editingSale.sale_price}
+                    onChange={(e) => setEditingSale({...editingSale, sale_price: Number(e.target.value)})}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-customer">Customer *</Label>
+                  <Input
+                    id="edit-customer"
+                    value={editingSale.sold_to}
+                    onChange={(e) => setEditingSale({...editingSale, sold_to: e.target.value})}
+                    placeholder="Customer name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-sale-date">Sale Date *</Label>
+                  <Input
+                    id="edit-sale-date"
+                    type="date"
+                    value={editingSale.sale_date}
+                    onChange={(e) => setEditingSale({...editingSale, sale_date: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowEditSaleModal(false);
+              setEditingSale(null);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={async () => {
+              if (!editingSale) return;
+              
+              try {
+                const { error } = await supabase
+                  .from('eudr_sales')
+                  .update({
+                    kilograms: editingSale.kilograms,
+                    sale_price: editingSale.sale_price,
+                    sold_to: editingSale.sold_to,
+                    sale_date: editingSale.sale_date
+                  })
+                  .eq('id', editingSale.id);
+
+                if (error) throw error;
+
+                toast.success('Sale updated successfully');
+                setShowEditSaleModal(false);
+                setEditingSale(null);
+              } catch (error) {
+                console.error('Error updating sale:', error);
+                toast.error('Failed to update sale');
+              }
+            }}>
+              Update Sale
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Sale Modal */}
       <Dialog open={showSaleModal} onOpenChange={setShowSaleModal}>
