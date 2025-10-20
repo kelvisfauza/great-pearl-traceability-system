@@ -2520,15 +2520,23 @@ export type Database = {
           assessed_by: string
           batch_number: string
           below12: number | null
+          clean_d14: number | null
           comments: string | null
           created_at: string
           date_assessed: string
+          final_price: number | null
+          fm: number | null
           group1_defects: number | null
           group2_defects: number | null
           husks: number | null
           id: string
           moisture: number
+          outturn: number | null
+          outturn_price: number | null
           pods: number | null
+          quality_note: string | null
+          reject_final: boolean | null
+          reject_outturn_price: boolean | null
           status: string
           stones: number | null
           store_record_id: string | null
@@ -2539,15 +2547,23 @@ export type Database = {
           assessed_by: string
           batch_number: string
           below12?: number | null
+          clean_d14?: number | null
           comments?: string | null
           created_at?: string
           date_assessed?: string
+          final_price?: number | null
+          fm?: number | null
           group1_defects?: number | null
           group2_defects?: number | null
           husks?: number | null
           id?: string
           moisture: number
+          outturn?: number | null
+          outturn_price?: number | null
           pods?: number | null
+          quality_note?: string | null
+          reject_final?: boolean | null
+          reject_outturn_price?: boolean | null
           status?: string
           stones?: number | null
           store_record_id?: string | null
@@ -2558,15 +2574,23 @@ export type Database = {
           assessed_by?: string
           batch_number?: string
           below12?: number | null
+          clean_d14?: number | null
           comments?: string | null
           created_at?: string
           date_assessed?: string
+          final_price?: number | null
+          fm?: number | null
           group1_defects?: number | null
           group2_defects?: number | null
           husks?: number | null
           id?: string
           moisture?: number
+          outturn?: number | null
+          outturn_price?: number | null
           pods?: number | null
+          quality_note?: string | null
+          reject_final?: boolean | null
+          reject_outturn_price?: boolean | null
           status?: string
           stones?: number | null
           store_record_id?: string | null
