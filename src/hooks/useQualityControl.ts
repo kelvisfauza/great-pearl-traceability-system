@@ -375,6 +375,8 @@ export const useQualityControl = () => {
       };
       
       console.log('Prepared assessment data:', JSON.stringify(assessmentData, null, 2));
+      console.log('🔍 About to insert - suggested_price:', assessmentData.suggested_price);
+      console.log('🔍 About to insert - final_price:', assessmentData.final_price);
 
       // Create assessment record in Supabase
       console.log('Inserting quality assessment into Supabase...');

@@ -487,6 +487,9 @@ const QualityControl = () => {
       console.log(editingAssessmentId ? 'Updating quality assessment...' : 'Submitting quality assessment...');
       console.log('Selected record:', selectedRecord);
       console.log('Assessment form data:', assessmentForm);
+      console.log('Manual price value:', manualPriceValue);
+      console.log('Calculator price:', calculatorPrice);
+      console.log('Final price chosen:', finalPrice);
       
       const assessment = {
         store_record_id: selectedRecord.id,
