@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Fingerprint, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Fingerprint, Loader2, AlertCircle, CheckCircle, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -21,6 +22,10 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
   const [error, setError] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState<boolean | null>(null);
+  const [useVerificationCode, setUseVerificationCode] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
 
   useEffect(() => {
     // Check if biometric is available on this device
@@ -203,6 +208,96 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
     }
   };
 
+  const sendVerificationCode = async () => {
+    try {
+      setIsSendingCode(true);
+      setError('');
+
+      // Get employee info
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('name, phone')
+        .eq('email', email)
+        .single();
+
+      if (!employee?.phone) {
+        setError('No phone number found for this account. Please contact IT support.');
+        return;
+      }
+
+      // Generate verification code
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Store in database
+      await supabase.from('verification_codes').insert({
+        email: email,
+        phone: employee.phone,
+        code: code,
+        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
+      });
+
+      // Send SMS
+      const { error: smsError } = await supabase.functions.invoke('send-sms', {
+        body: {
+          to: employee.phone,
+          message: `Your Great Pearl verification code is: ${code}. Valid for 10 minutes.`
+        }
+      });
+
+      if (smsError) throw smsError;
+
+      setCodeSent(true);
+      toast.success('Verification code sent to your phone');
+    } catch (err: any) {
+      console.error('Error sending verification code:', err);
+      setError(`Failed to send code: ${err.message || 'Please try again'}`);
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const verifyCode = async () => {
+    try {
+      setIsVerifying(true);
+      setError('');
+
+      if (!verificationCode || verificationCode.length !== 6) {
+        setError('Please enter a valid 6-digit code');
+        setIsVerifying(false);
+        return;
+      }
+
+      // Verify code from database
+      const { data: storedCode, error: codeError } = await supabase
+        .from('verification_codes')
+        .select('*')
+        .eq('email', email)
+        .eq('code', verificationCode)
+        .gte('expires_at', new Date().toISOString())
+        .single();
+
+      if (codeError || !storedCode) {
+        setError('Invalid or expired verification code');
+        setIsVerifying(false);
+        return;
+      }
+
+      // Delete used code
+      await supabase
+        .from('verification_codes')
+        .delete()
+        .eq('id', storedCode.id);
+
+      toast.success('Verification successful!');
+      onVerificationComplete();
+    } catch (err: any) {
+      console.error('Verification error:', err);
+      setError('Verification failed. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   // Show device not supported message
   if (isBiometricAvailable === false) {
     return (
@@ -237,13 +332,24 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
             </AlertDescription>
           </Alert>
 
-          <Button 
-            onClick={onCancel} 
-            variant="outline"
-            className="w-full"
-          >
-            Go Back to Login
-          </Button>
+          <div className="space-y-2">
+            <Button 
+              onClick={() => setUseVerificationCode(true)} 
+              variant="default"
+              className="w-full"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Use Verification Code Instead
+            </Button>
+            
+            <Button 
+              onClick={onCancel} 
+              variant="outline"
+              className="w-full"
+            >
+              Go Back to Login
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -315,6 +421,138 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
     );
   }
 
+  // Verification code view
+  if (useVerificationCode) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 p-4 bg-blue-100 rounded-full w-fit">
+            <MessageSquare className="h-12 w-12 text-blue-600" />
+          </div>
+          <CardTitle>SMS Verification</CardTitle>
+          <CardDescription>
+            We'll send a verification code to your registered phone number
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {!codeSent ? (
+            <div className="space-y-4">
+              <Alert>
+                <AlertDescription className="text-sm">
+                  A 6-digit verification code will be sent to your phone via SMS
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                <Button 
+                  onClick={sendVerificationCode} 
+                  disabled={isSendingCode}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isSendingCode ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Sending Code...
+                    </>
+                  ) : (
+                    <>
+                      <MessageSquare className="h-5 w-5 mr-2" />
+                      Send Verification Code
+                    </>
+                  )}
+                </Button>
+
+                <Button 
+                  onClick={() => setUseVerificationCode(false)} 
+                  variant="outline"
+                  className="w-full"
+                >
+                  Back to Biometric
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  Verification code sent! Check your phone.
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Enter 6-digit code</label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="000000"
+                  className="text-center text-2xl tracking-widest"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Button 
+                  onClick={verifyCode} 
+                  disabled={isVerifying || verificationCode.length !== 6}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isVerifying ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    'Verify Code'
+                  )}
+                </Button>
+
+                <Button 
+                  onClick={sendVerificationCode} 
+                  disabled={isSendingCode}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {isSendingCode ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Resending...
+                    </>
+                  ) : (
+                    'Resend Code'
+                  )}
+                </Button>
+
+                <Button 
+                  onClick={() => {
+                    setUseVerificationCode(false);
+                    setCodeSent(false);
+                    setVerificationCode('');
+                  }} 
+                  variant="ghost"
+                  className="w-full"
+                >
+                  Back to Biometric
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
@@ -371,8 +609,17 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
           </Button>
 
           <Button 
-            onClick={onCancel} 
+            onClick={() => setUseVerificationCode(true)} 
             variant="outline"
+            className="w-full"
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Use Verification Code Instead
+          </Button>
+
+          <Button 
+            onClick={onCancel} 
+            variant="ghost"
             className="w-full"
           >
             Cancel
