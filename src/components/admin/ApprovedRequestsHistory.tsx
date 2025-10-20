@@ -24,6 +24,13 @@ const ApprovedRequestsHistory = () => {
 
   useEffect(() => {
     fetchApprovedRequests();
+    
+    // Poll every 10 seconds for updates
+    const interval = setInterval(() => {
+      fetchApprovedRequests();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchApprovedRequests = async () => {
@@ -164,13 +171,13 @@ const ApprovedRequestsHistory = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center mb-4">
                 <p className="text-sm text-muted-foreground">
-                  Showing {Math.min(5, approvedRequests.length)} most recent approvals
+                  Showing {Math.min(10, approvedRequests.length)} most recent approvals
                 </p>
                 <Badge variant="outline">
                   {approvedRequests.length} total found
                 </Badge>
               </div>
-              {approvedRequests.slice(0, 5).map((request) => (
+              {approvedRequests.slice(0, 10).map((request) => (
                 <div 
                   key={request.id}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
