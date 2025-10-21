@@ -2,19 +2,22 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Receipt, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, Plus, Eye, FileText } from 'lucide-react';
+import { Receipt, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, Plus, Eye, FileText, ShieldAlert } from 'lucide-react';
 import { useEnhancedExpenseManagement } from '@/hooks/useEnhancedExpenseManagement';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AddExpenseModal } from './AddExpenseModal';
 import { FinanceReviewModal } from './FinanceReviewModal';
+import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
 
 export const ExpenseManagement = () => {
   const { expenseRequests, loading, updateRequestApproval, refetch } = useEnhancedExpenseManagement();
   const { toast } = useToast();
   const { employee } = useAuth();
+  const { showSoDViolationWarning } = useSeparationOfDuties();
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -53,9 +56,21 @@ export const ExpenseManagement = () => {
 
   const handleApproveFromReview = async () => {
     try {
+      // ⚠️ CRITICAL: Check if user is trying to approve their own expense request
+      const currentUserEmail = employee?.email;
+      const requestorEmail = selectedRequest.requestedby;
+      
+      if (currentUserEmail === requestorEmail) {
+        showSoDViolationWarning(
+          'You cannot approve your own expense request. Separation of Duties requires a different person to approve each request.'
+        );
+        setReviewModalOpen(false);
+        return;
+      }
+
       await updateRequestApproval(selectedRequest.id, 'finance', true, employee?.name || 'Finance Team');
       toast({
-        title: "Finance Approval Recorded",
+        title: "✓ Finance Approval Recorded",
         description: "Request approved and sent to Admin for final approval",
       });
       setReviewModalOpen(false);
@@ -170,6 +185,13 @@ export const ExpenseManagement = () => {
 
   return (
     <div className="space-y-6">
+      <Alert className="border-amber-200 bg-amber-50">
+        <ShieldAlert className="h-4 w-4 text-amber-600" />
+        <AlertDescription className="text-amber-800">
+          <strong>Separation of Duties Policy:</strong> You cannot approve expense requests that you submitted yourself, or approve the same request at multiple stages. This security measure ensures proper accountability and prevents fraud.
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

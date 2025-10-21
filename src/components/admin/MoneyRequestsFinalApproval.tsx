@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DollarSign, Calendar, User, CheckCircle, XCircle, FileText, Eye, Download, Clock } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { DollarSign, Calendar, User, CheckCircle, XCircle, FileText, Eye, Download, Clock, ShieldAlert } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
 
 interface MoneyRequest {
   id: string;
@@ -34,6 +36,7 @@ const MoneyRequestsFinalApproval = () => {
   const [showPaymentSlip, setShowPaymentSlip] = useState(false);
   const { employee } = useAuth();
   const { toast } = useToast();
+  const { checkMoneyRequestEligibility, showSoDViolationWarning } = useSeparationOfDuties();
 
   const fetchRequests = async () => {
     try {
@@ -59,6 +62,16 @@ const MoneyRequestsFinalApproval = () => {
 
   const handleFinalApproval = async (requestId: string, approve: boolean) => {
     try {
+      // ⚠️ CRITICAL: Check Separation of Duties before approving
+      if (approve) {
+        const sodCheck = await checkMoneyRequestEligibility(requestId);
+        
+        if (!sodCheck.canApprove) {
+          showSoDViolationWarning(sodCheck.reason || 'Approval blocked by Separation of Duties policy');
+          return;
+        }
+      }
+
       const updateData: any = {
         admin_approved_by: employee?.name || 'Administrator',
         updated_at: new Date().toISOString()
@@ -80,6 +93,15 @@ const MoneyRequestsFinalApproval = () => {
 
       if (error) throw error;
 
+      toast({
+        title: approve ? "✓ Request Approved" : "Request Rejected",
+        description: approve 
+          ? "Final approval granted. Payment can now be processed."
+          : "Request has been rejected.",
+        variant: approve ? "default" : "destructive"
+      });
+
+      setShowDetails(false);
       fetchRequests();
     } catch (error: any) {
       console.error('Error processing final approval:', error);
@@ -156,6 +178,13 @@ const MoneyRequestsFinalApproval = () => {
 
   return (
     <div className="space-y-6">
+      <Alert className="mb-6 border-amber-200 bg-amber-50">
+        <ShieldAlert className="h-4 w-4 text-amber-600" />
+        <AlertDescription className="text-amber-800">
+          <strong>Separation of Duties Policy:</strong> You cannot approve requests that you have already approved at the Finance stage. The system will automatically prevent duplicate approvals to maintain security and accountability.
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
