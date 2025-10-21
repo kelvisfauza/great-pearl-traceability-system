@@ -13,6 +13,7 @@ import { AdminApprovalModal } from './AdminApprovalModal';
 import { PaymentSlipModal } from './PaymentSlipModal';
 import { RecentPaymentSlipsModal } from './RecentPaymentSlipsModal';
 import { AdminExpenseReviewModal } from './AdminExpenseReviewModal';
+import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AdminExpenseRequestsManagerProps {
@@ -27,6 +28,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const { requests, loading, updateRequestStatus, fetchRequests } = useApprovalRequests();
   const { assessExpenseRisk } = useRiskAssessment();
   const { employee } = useAuth();
+  const { checkExpenseRequestEligibility, showSoDViolationWarning } = useSeparationOfDuties();
   const [rejectionModalOpen, setRejectionModalOpen] = React.useState(false);
   const [selectedRequestId, setSelectedRequestId] = React.useState<string>('');
   const [selectedRequestTitle, setSelectedRequestTitle] = React.useState<string>('');
@@ -122,9 +124,19 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     }, 50);
   };
 
-  const handleApproveFromReview = () => {
+  const handleApproveFromReview = async () => {
     console.log('🎯 handleApproveFromReview called');
     console.log('🎯 selectedRequest:', selectedRequest);
+    
+    // ⚠️ CRITICAL: Check Separation of Duties
+    const sodCheck = await checkExpenseRequestEligibility(selectedRequest.id);
+    
+    if (!sodCheck.canApprove) {
+      showSoDViolationWarning(sodCheck.reason || 'Approval blocked by Separation of Duties policy');
+      setReviewModalOpen(false);
+      return;
+    }
+    
     setReviewModalOpen(false);
     // Add delay to ensure review modal closes before opening approval modal
     setTimeout(() => {

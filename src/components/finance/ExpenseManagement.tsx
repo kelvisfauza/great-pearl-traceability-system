@@ -17,7 +17,7 @@ export const ExpenseManagement = () => {
   const { expenseRequests, loading, updateRequestApproval, refetch } = useEnhancedExpenseManagement();
   const { toast } = useToast();
   const { employee } = useAuth();
-  const { showSoDViolationWarning } = useSeparationOfDuties();
+  const { checkExpenseRequestEligibility, showSoDViolationWarning } = useSeparationOfDuties();
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -56,7 +56,16 @@ export const ExpenseManagement = () => {
 
   const handleApproveFromReview = async () => {
     try {
-      // ⚠️ CRITICAL: Check if user is trying to approve their own expense request
+      // ⚠️ CRITICAL: Check Separation of Duties
+      const sodCheck = await checkExpenseRequestEligibility(selectedRequest.id);
+      
+      if (!sodCheck.canApprove) {
+        showSoDViolationWarning(sodCheck.reason || 'Approval blocked by Separation of Duties policy');
+        setReviewModalOpen(false);
+        return;
+      }
+
+      // Additional check: user cannot approve their own expense request
       const currentUserEmail = employee?.email;
       const requestorEmail = selectedRequest.requestedby;
       

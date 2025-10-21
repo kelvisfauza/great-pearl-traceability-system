@@ -66,12 +66,34 @@ export const useSeparationOfDuties = () => {
     }
 
     try {
-      // For expense requests stored in Firebase, we check the requestedby field
-      // and approver fields to ensure they are different people
-      const currentUserEmail = employee.email;
-      
-      // We'll rely on the component passing the request data
-      // This is a simplified check - full validation happens in the component
+      const { data, error } = await supabase
+        .from('approval_requests')
+        .select('finance_approved_by, admin_approved_by, admin_approved_1_by, admin_approved_2_by')
+        .eq('id', requestId)
+        .single();
+
+      if (error) throw error;
+
+      const currentUserName = employee.name || employee.email;
+      const approvers = [
+        data?.finance_approved_by,
+        data?.admin_approved_by,
+        data?.admin_approved_1_by,
+        data?.admin_approved_2_by
+      ].filter(Boolean);
+
+      // Check if current user already approved at any stage
+      const hasAlreadyApproved = approvers.some(
+        approver => approver === currentUserName || approver === employee.email
+      );
+
+      if (hasAlreadyApproved) {
+        return {
+          canApprove: false,
+          reason: 'You have already approved this expense request at a previous stage. Separation of Duties requires different approvers at each stage.'
+        };
+      }
+
       return { canApprove: true };
     } catch (error) {
       console.error('Error checking expense approval eligibility:', error);
