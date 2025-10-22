@@ -13,6 +13,9 @@ interface AttendanceRecord {
   marked_by: string;
   marked_at: string;
   notes?: string;
+  is_locked?: boolean;
+  locked_by?: string;
+  locked_at?: string;
 }
 
 interface WeeklyAllowance {

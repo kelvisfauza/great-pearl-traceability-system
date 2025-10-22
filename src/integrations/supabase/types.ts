@@ -211,6 +211,9 @@ export type Database = {
           employee_id: string
           employee_name: string
           id: string
+          is_locked: boolean | null
+          locked_at: string | null
+          locked_by: string | null
           marked_at: string | null
           marked_by: string
           notes: string | null
@@ -224,6 +227,9 @@ export type Database = {
           employee_id: string
           employee_name: string
           id?: string
+          is_locked?: boolean | null
+          locked_at?: string | null
+          locked_by?: string | null
           marked_at?: string | null
           marked_by: string
           notes?: string | null
@@ -237,6 +243,9 @@ export type Database = {
           employee_id?: string
           employee_name?: string
           id?: string
+          is_locked?: boolean | null
+          locked_at?: string | null
+          locked_by?: string | null
           marked_at?: string | null
           marked_by?: string
           notes?: string | null

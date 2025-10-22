@@ -80,6 +80,8 @@ export const AttendanceManager = () => {
         <AlertDescription>
           <strong>Daily Allowance System:</strong> Each employee gets 2,500 UGX per day attended (15,000 UGX per 6-day week). 
           Mark attendance daily to calculate their eligible lunch/refreshment allowances automatically.
+          <br />
+          <strong>🔒 Lock Protection:</strong> Once marked, attendance is locked and cannot be changed by other admins to prevent manipulation.
         </AlertDescription>
       </Alert>
 
@@ -189,12 +191,13 @@ export const AttendanceManager = () => {
                     const attendanceStatus = getEmployeeAttendanceStatus(emp.id);
                     return (
                       <TableRow key={emp.id}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedEmployees.includes(emp.id)}
-                            onCheckedChange={(checked) => handleSelectEmployee(emp.id, checked as boolean)}
-                          />
-                        </TableCell>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedEmployees.includes(emp.id)}
+                          onCheckedChange={(checked) => handleSelectEmployee(emp.id, checked as boolean)}
+                          disabled={attendanceStatus?.is_locked}
+                        />
+                      </TableCell>
                         <TableCell>
                           <div className="font-medium">{emp.name}</div>
                           <div className="text-xs text-muted-foreground">{emp.email}</div>
@@ -202,12 +205,19 @@ export const AttendanceManager = () => {
                         <TableCell>{emp.department}</TableCell>
                         <TableCell>
                           {attendanceStatus ? (
-                            <Badge variant={
-                              attendanceStatus.status === 'present' ? 'default' :
-                              attendanceStatus.status === 'absent' ? 'destructive' : 'secondary'
-                            }>
-                              {attendanceStatus.status}
-                            </Badge>
+                            <div className="space-y-1">
+                              <Badge variant={
+                                attendanceStatus.status === 'present' ? 'default' :
+                                attendanceStatus.status === 'absent' ? 'destructive' : 'secondary'
+                              }>
+                                {attendanceStatus.status}
+                              </Badge>
+                              {attendanceStatus.is_locked && (
+                                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                  🔒 Locked by {attendanceStatus.locked_by}
+                                </div>
+                              )}
+                            </div>
                           ) : (
                             <Badge variant="outline">Not Marked</Badge>
                           )}
@@ -220,22 +230,28 @@ export const AttendanceManager = () => {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant={attendanceStatus?.status === 'present' ? 'default' : 'outline'}
-                              onClick={() => handleMarkPresent(emp.id, emp.name, emp.email)}
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={attendanceStatus?.status === 'absent' ? 'destructive' : 'outline'}
-                              onClick={() => handleMarkAbsent(emp.id, emp.name, emp.email)}
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          {attendanceStatus?.is_locked ? (
+                            <Badge variant="secondary" className="text-xs">
+                              🔒 Locked
+                            </Badge>
+                          ) : (
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant={attendanceStatus?.status === 'present' ? 'default' : 'outline'}
+                                onClick={() => handleMarkPresent(emp.id, emp.name, emp.email)}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={attendanceStatus?.status === 'absent' ? 'destructive' : 'outline'}
+                                onClick={() => handleMarkAbsent(emp.id, emp.name, emp.email)}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
