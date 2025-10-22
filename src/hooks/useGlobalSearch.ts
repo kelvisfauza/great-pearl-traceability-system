@@ -84,37 +84,74 @@ export const useGlobalSearch = (searchTerm: string) => {
 
         // Search Money/Expense Requests & Payment Slips
         if (hasPermission('Finance Management') || employee?.permissions?.includes('*')) {
+          // Check if search term looks like a payment slip number (PS-YYYY-MM-XXXXXXXX)
+          const paymentSlipPattern = /^PS-\d{4}-\d{1,2}-([A-F0-9]{8})/i;
+          const paymentSlipMatch = searchTerm.match(paymentSlipPattern);
+          
+          if (paymentSlipMatch) {
+            // Extract the ID portion from the payment slip number
+            const idPrefix = paymentSlipMatch[1].toLowerCase();
+            console.log('🔍 Searching for payment slip with ID prefix:', idPrefix);
+            
+            const { data: paymentSlipRequests } = await supabase
+              .from('approval_requests')
+              .select('*')
+              .ilike('id', `${idPrefix}%`)
+              .limit(5);
+
+            if (paymentSlipRequests && paymentSlipRequests.length > 0) {
+              paymentSlipRequests.forEach((request: any) => {
+                const paymentSlipNumber = `PS-${new Date().getFullYear()}-${new Date().getMonth() + 1}-${request.id.slice(0, 8).toUpperCase()}`;
+                searchResults.push({
+                  id: request.id,
+                  type: 'expense',
+                  title: `Payment Slip: ${paymentSlipNumber}`,
+                  subtitle: `${request.requestedby} | ${request.amount} UGX | ${request.title}`,
+                  navigateTo: `/expenses`,
+                  department: 'Finance',
+                  module: 'Payment Slips',
+                  metadata: { ...request, payment_slip_number: paymentSlipNumber }
+                });
+              });
+            }
+          }
+
           // Search approval_requests for payment slips and expense requests
-          // Note: payment_slip_number might not be in TypeScript types but exists in DB
           const { data: approvalRequests } = await supabase
             .from('approval_requests')
             .select('*')
             .limit(50); // Get more results to filter locally
 
           if (approvalRequests) {
-            // Filter to find matches in title, requestedby, or payment_slip_number
+            // Filter to find matches in title, requestedby
             const matchingRequests = approvalRequests.filter((request: any) => {
               const lowerSearch = searchTerm.toLowerCase();
               const titleMatch = request.title?.toLowerCase().includes(lowerSearch);
               const requesterMatch = request.requestedby?.toLowerCase().includes(lowerSearch);
-              const paymentSlipMatch = request.payment_slip_number?.toLowerCase().includes(lowerSearch);
+              // Also match on generated payment slip number
+              const generatedPaymentSlip = `PS-${new Date().getFullYear()}-${new Date().getMonth() + 1}-${request.id.slice(0, 8).toUpperCase()}`;
+              const paymentSlipMatch = generatedPaymentSlip.toLowerCase().includes(lowerSearch);
               return titleMatch || requesterMatch || paymentSlipMatch;
             }).slice(0, 10);
 
             matchingRequests.forEach((request: any) => {
-              const paymentSlipNumber = request.payment_slip_number;
-              const isPaymentSlip = paymentSlipNumber;
+              // Generate payment slip number for approved requests
+              const isApproved = request.status === 'Approved' || request.status === 'Admin Approved';
+              const paymentSlipNumber = isApproved 
+                ? `PS-${new Date().getFullYear()}-${new Date().getMonth() + 1}-${request.id.slice(0, 8).toUpperCase()}`
+                : null;
+              
               searchResults.push({
                 id: request.id,
                 type: 'expense',
-                title: isPaymentSlip 
+                title: paymentSlipNumber 
                   ? `Payment Slip: ${paymentSlipNumber}` 
                   : `${request.type}: ${request.title}`,
                 subtitle: `${request.requestedby} | ${request.amount} UGX | Status: ${request.status}`,
                 navigateTo: `/expenses`,
                 department: 'Finance',
-                module: isPaymentSlip ? 'Payment Slips' : 'Expense Requests',
-                metadata: request
+                module: paymentSlipNumber ? 'Payment Slips' : 'Expense Requests',
+                metadata: { ...request, payment_slip_number: paymentSlipNumber }
               });
             });
           }
