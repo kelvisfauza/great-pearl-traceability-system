@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useAttendance } from '@/hooks/useAttendance';
 import { useUnifiedEmployees } from '@/hooks/useUnifiedEmployees';
+import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, XCircle, Calendar, Users, DollarSign, Search } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AttendanceReport } from './AttendanceReport';
@@ -14,6 +15,7 @@ import { AttendanceReport } from './AttendanceReport';
 export const AttendanceManager = () => {
   const { attendance, loading: attendanceLoading, markAttendance, bulkMarkAttendance } = useAttendance();
   const { employees, loading: employeesLoading } = useUnifiedEmployees();
+  const { toast } = useToast();
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -51,13 +53,29 @@ export const AttendanceManager = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedEmployees(filteredEmployees.map(emp => emp.id));
+      // Only select employees who don't have locked attendance
+      const selectableEmployees = filteredEmployees.filter(emp => {
+        const attendanceStatus = getEmployeeAttendanceStatus(emp.id);
+        return !attendanceStatus || !attendanceStatus.is_locked;
+      });
+      setSelectedEmployees(selectableEmployees.map(emp => emp.id));
     } else {
       setSelectedEmployees([]);
     }
   };
 
   const handleSelectEmployee = (employeeId: string, checked: boolean) => {
+    const attendanceStatus = getEmployeeAttendanceStatus(employeeId);
+    // Prevent selecting locked records
+    if (attendanceStatus?.is_locked) {
+      toast({
+        title: "Cannot Select",
+        description: "This attendance record is already locked",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (checked) {
       setSelectedEmployees([...selectedEmployees, employeeId]);
     } else {

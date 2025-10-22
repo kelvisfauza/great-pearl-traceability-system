@@ -137,7 +137,23 @@ export const useAttendance = () => {
   const bulkMarkAttendance = async (employeeIds: string[], employees: any[], status: 'present' | 'absent') => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const records = employees.map(emp => ({
+      
+      // Filter out employees who already have locked attendance
+      const eligibleEmployees = employees.filter(emp => {
+        const existingAttendance = attendance.find(a => a.employee_id === emp.id);
+        return !existingAttendance || !existingAttendance.is_locked;
+      });
+
+      if (eligibleEmployees.length === 0) {
+        toast({
+          title: "No Eligible Employees",
+          description: "All selected employees already have locked attendance records",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const records = eligibleEmployees.map(emp => ({
         employee_id: emp.id,
         employee_name: emp.name,
         employee_email: emp.email,
@@ -154,9 +170,14 @@ export const useAttendance = () => {
 
       if (error) throw error;
 
+      const skippedCount = employees.length - eligibleEmployees.length;
+      const successMessage = skippedCount > 0
+        ? `${records.length} employees marked as ${status}. ${skippedCount} skipped (already locked)`
+        : `${records.length} employees marked as ${status}`;
+
       toast({
         title: "Bulk Attendance Marked",
-        description: `${records.length} employees marked as ${status}`,
+        description: successMessage,
       });
 
       await fetchTodayAttendance();
