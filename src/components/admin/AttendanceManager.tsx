@@ -9,6 +9,7 @@ import { useAttendance } from '@/hooks/useAttendance';
 import { useUnifiedEmployees } from '@/hooks/useUnifiedEmployees';
 import { CheckCircle, XCircle, Calendar, Users, DollarSign, Search } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AttendanceReport } from './AttendanceReport';
 
 export const AttendanceManager = () => {
   const { attendance, loading: attendanceLoading, markAttendance, bulkMarkAttendance } = useAttendance();
@@ -81,6 +82,8 @@ export const AttendanceManager = () => {
           Mark attendance daily to calculate their eligible lunch/refreshment allowances automatically.
         </AlertDescription>
       </Alert>
+
+      <AttendanceReport />
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
