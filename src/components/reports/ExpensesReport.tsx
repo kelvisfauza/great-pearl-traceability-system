@@ -33,6 +33,13 @@ export const ExpensesReport = () => {
     (req.type === 'Employee Salary Request' || req.type === 'Salary Payment')
   );
 
+  const approvedRequisitions = expenseRequests.filter(req =>
+    req.status === 'Approved' &&
+    req.financeApprovedAt &&
+    req.adminApprovedAt &&
+    req.type === 'Requisition'
+  );
+
   // Filter completed overtime awards
   const completedOvertimeAwards = overtimeAwards.filter(award => award.status === 'completed');
 
@@ -81,6 +88,7 @@ export const ExpensesReport = () => {
 
   const filteredExpenses = filterByPeriod(approvedExpenses);
   const filteredSalaryRequests = filterByPeriod(approvedSalaryRequests);
+  const filteredRequisitions = filterByPeriod(approvedRequisitions);
   
   // Filter overtime by period (using completed_at)
   const filterOvertimeByPeriod = (awards: any[]) => {
@@ -114,8 +122,9 @@ export const ExpensesReport = () => {
   // Calculate totals
   const totalExpenses = filteredExpenses.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
   const totalSalaryRequests = filteredSalaryRequests.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
+  const totalRequisitions = filteredRequisitions.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
   const totalOvertime = filteredOvertimeAwards.reduce((sum, award) => sum + (award.total_amount || 0), 0);
-  const grandTotal = totalExpenses + totalSalaryRequests + totalOvertime;
+  const grandTotal = totalExpenses + totalSalaryRequests + totalRequisitions + totalOvertime;
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -179,7 +188,7 @@ export const ExpensesReport = () => {
         </CardHeader>
         <CardContent>
           {/* Summary Cards */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-5 gap-4 mb-6">
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-600 font-medium">Total Expenses</p>
               <p className="text-2xl font-bold text-blue-800">{formatCurrency(totalExpenses)}</p>
@@ -190,6 +199,11 @@ export const ExpensesReport = () => {
               <p className="text-2xl font-bold text-green-800">{formatCurrency(totalSalaryRequests)}</p>
               <p className="text-xs text-green-600 mt-1">{filteredSalaryRequests.length} transactions</p>
             </div>
+            <div className="text-center p-4 bg-cyan-50 rounded-lg">
+              <p className="text-sm text-cyan-600 font-medium">Total Requisitions</p>
+              <p className="text-2xl font-bold text-cyan-800">{formatCurrency(totalRequisitions)}</p>
+              <p className="text-xs text-cyan-600 mt-1">{filteredRequisitions.length} transactions</p>
+            </div>
             <div className="text-center p-4 bg-orange-50 rounded-lg">
               <p className="text-sm text-orange-600 font-medium">Total Overtime</p>
               <p className="text-2xl font-bold text-orange-800">{formatCurrency(totalOvertime)}</p>
@@ -198,18 +212,21 @@ export const ExpensesReport = () => {
             <div className="text-center p-4 bg-purple-50 rounded-lg">
               <p className="text-sm text-purple-600 font-medium">Grand Total</p>
               <p className="text-2xl font-bold text-purple-800">{formatCurrency(grandTotal)}</p>
-              <p className="text-xs text-purple-600 mt-1">{filteredExpenses.length + filteredSalaryRequests.length + filteredOvertimeAwards.length} total</p>
+              <p className="text-xs text-purple-600 mt-1">{filteredExpenses.length + filteredSalaryRequests.length + filteredRequisitions.length + filteredOvertimeAwards.length} total</p>
             </div>
           </div>
 
-          {/* Tabs for Expenses, Salary Requests, and Overtime */}
+          {/* Tabs for Expenses, Salary Requests, Requisitions, and Overtime */}
           <Tabs defaultValue="expenses" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="expenses">
                 Expense Requests ({filteredExpenses.length})
               </TabsTrigger>
               <TabsTrigger value="salary">
                 Salary Requests ({filteredSalaryRequests.length})
+              </TabsTrigger>
+              <TabsTrigger value="requisitions">
+                Requisitions ({filteredRequisitions.length})
               </TabsTrigger>
               <TabsTrigger value="overtime">
                 Overtime Awards ({filteredOvertimeAwards.length})
@@ -324,6 +341,60 @@ export const ExpensesReport = () => {
               )}
             </TabsContent>
 
+            <TabsContent value="requisitions">
+              {filteredRequisitions.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p>No approved requisitions found</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Requested By</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Finance Approved</TableHead>
+                      <TableHead>Admin Approved</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRequisitions.map((requisition) => (
+                      <TableRow key={requisition.id}>
+                        <TableCell>{formatDate(requisition.daterequested)}</TableCell>
+                        <TableCell className="font-medium">{requisition.title}</TableCell>
+                        <TableCell>{requisition.requestedby}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{requisition.type}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs">
+                            <div>{requisition.financeApprovedBy}</div>
+                            <div className="text-muted-foreground">{formatDate(requisition.financeApprovedAt)}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs">
+                            <div>{requisition.adminApprovedBy}</div>
+                            <div className="text-muted-foreground">{formatDate(requisition.adminApprovedAt)}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatCurrency(requisition.amount)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-cyan-50 font-bold">
+                      <TableCell colSpan={6} className="text-right">Subtotal:</TableCell>
+                      <TableCell className="text-right">{formatCurrency(totalRequisitions)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              )}
+            </TabsContent>
+
             <TabsContent value="overtime">
               {filteredOvertimeAwards.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
@@ -386,7 +457,7 @@ export const ExpensesReport = () => {
           {/* Summary Section */}
           <div className="mb-8">
             <h3 className="font-bold text-lg mb-4 text-gray-900">Summary</h3>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-5 gap-4">
               <div className="border p-3 rounded">
                 <p className="text-sm text-gray-600">Total Expenses</p>
                 <p className="text-xl font-bold">{formatCurrency(totalExpenses)}</p>
@@ -398,6 +469,11 @@ export const ExpensesReport = () => {
                 <p className="text-xs text-gray-500">{filteredSalaryRequests.length} transactions</p>
               </div>
               <div className="border p-3 rounded">
+                <p className="text-sm text-gray-600">Total Requisitions</p>
+                <p className="text-xl font-bold">{formatCurrency(totalRequisitions)}</p>
+                <p className="text-xs text-gray-500">{filteredRequisitions.length} transactions</p>
+              </div>
+              <div className="border p-3 rounded">
                 <p className="text-sm text-gray-600">Total Overtime</p>
                 <p className="text-xl font-bold">{formatCurrency(totalOvertime)}</p>
                 <p className="text-xs text-gray-500">{filteredOvertimeAwards.length} awards</p>
@@ -405,7 +481,7 @@ export const ExpensesReport = () => {
               <div className="border p-3 rounded bg-gray-50">
                 <p className="text-sm text-gray-600">Grand Total</p>
                 <p className="text-xl font-bold">{formatCurrency(grandTotal)}</p>
-                <p className="text-xs text-gray-500">{filteredExpenses.length + filteredSalaryRequests.length + filteredOvertimeAwards.length} total</p>
+                <p className="text-xs text-gray-500">{filteredExpenses.length + filteredSalaryRequests.length + filteredRequisitions.length + filteredOvertimeAwards.length} total</p>
               </div>
             </div>
           </div>
@@ -467,6 +543,37 @@ export const ExpensesReport = () => {
                 <tr className="bg-gray-100 font-bold">
                   <td colSpan={4} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
                   <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(totalSalaryRequests)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Requisitions Table */}
+          <div className="mb-8">
+            <h3 className="font-bold text-lg mb-4 text-gray-900">Requisitions</h3>
+            <table className="w-full border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Date</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Title</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Requested By</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Type</th>
+                  <th className="border border-gray-300 px-2 py-2 text-right text-sm">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRequisitions.map((requisition) => (
+                  <tr key={requisition.id}>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{formatDate(requisition.daterequested)}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{requisition.title}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{requisition.requestedby}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{requisition.type}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(requisition.amount)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-gray-100 font-bold">
+                  <td colSpan={4} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
+                  <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(totalRequisitions)}</td>
                 </tr>
               </tbody>
             </table>
