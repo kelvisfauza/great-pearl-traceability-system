@@ -82,8 +82,44 @@ export const useGlobalSearch = (searchTerm: string) => {
           });
         }
 
-        // Search Money/Expense Requests
+        // Search Money/Expense Requests & Payment Slips
         if (hasPermission('Finance Management') || employee?.permissions?.includes('*')) {
+          // Search approval_requests for payment slips and expense requests
+          // Note: payment_slip_number might not be in TypeScript types but exists in DB
+          const { data: approvalRequests } = await supabase
+            .from('approval_requests')
+            .select('*')
+            .limit(50); // Get more results to filter locally
+
+          if (approvalRequests) {
+            // Filter to find matches in title, requestedby, or payment_slip_number
+            const matchingRequests = approvalRequests.filter((request: any) => {
+              const lowerSearch = searchTerm.toLowerCase();
+              const titleMatch = request.title?.toLowerCase().includes(lowerSearch);
+              const requesterMatch = request.requestedby?.toLowerCase().includes(lowerSearch);
+              const paymentSlipMatch = request.payment_slip_number?.toLowerCase().includes(lowerSearch);
+              return titleMatch || requesterMatch || paymentSlipMatch;
+            }).slice(0, 10);
+
+            matchingRequests.forEach((request: any) => {
+              const paymentSlipNumber = request.payment_slip_number;
+              const isPaymentSlip = paymentSlipNumber;
+              searchResults.push({
+                id: request.id,
+                type: 'expense',
+                title: isPaymentSlip 
+                  ? `Payment Slip: ${paymentSlipNumber}` 
+                  : `${request.type}: ${request.title}`,
+                subtitle: `${request.requestedby} | ${request.amount} UGX | Status: ${request.status}`,
+                navigateTo: `/expenses`,
+                department: 'Finance',
+                module: isPaymentSlip ? 'Payment Slips' : 'Expense Requests',
+                metadata: request
+              });
+            });
+          }
+
+          // Also search money_requests table
           const { data: expenseRequests } = await supabase
             .from('money_requests')
             .select('*')

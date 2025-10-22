@@ -201,7 +201,7 @@ const GlobalSearch = () => {
                 <Input
                   ref={inputRef}
                   type="text"
-                  placeholder="Search suppliers, batches, employees, overtime, transactions... (Ctrl+K)"
+                  placeholder="Search suppliers, batches, employees, payment slips, overtime... (Ctrl+K)"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
