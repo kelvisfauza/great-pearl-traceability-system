@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, BarChart3, Settings } from 'lucide-react';
+import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, BarChart3, Settings, Calendar } from 'lucide-react';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import MoneyRequestsFinalApproval from './MoneyRequestsFinalApproval';
 import RoleAssignmentManager from './RoleAssignmentManager';
@@ -15,6 +15,7 @@ import ApprovedRequestsHistory from './ApprovedRequestsHistory';
 import CashManagementModal from './CashManagementModal';
 import TopSuppliersChart from './TopSuppliersChart';
 import InventoryOverviewChart from './InventoryOverviewChart';
+import { AttendanceManager } from './AttendanceManager';
 import { useUnifiedApprovalRequests } from '@/hooks/useUnifiedApprovalRequests';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import ActiveUsers from '@/components/it/ActiveUsers';
@@ -56,10 +57,14 @@ const AdminDashboard = () => {
       <CashManagementModal open={cashModalOpen} onOpenChange={setCashModalOpen} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-4 lg:w-auto bg-muted/50 p-1 rounded-xl">
+        <TabsList className="grid grid-cols-5 lg:w-auto bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
             <TrendingUp className="h-4 w-4" />
             Overview
+          </TabsTrigger>
+          <TabsTrigger value="attendance" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
+            <Calendar className="h-4 w-4" />
+            Attendance
           </TabsTrigger>
           <TabsTrigger value="analytics" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
             <BarChart3 className="h-4 w-4" />
@@ -222,6 +227,10 @@ const AdminDashboard = () => {
             <PermissionOverview />
             <ActiveUsers />
           </div>
+        </TabsContent>
+
+        <TabsContent value="attendance" className="space-y-6">
+          <AttendanceManager />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">

@@ -203,6 +203,48 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance: {
+        Row: {
+          created_at: string | null
+          date: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          marked_at: string | null
+          marked_by: string
+          notes: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          marked_at?: string | null
+          marked_by: string
+          notes?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          marked_at?: string | null
+          marked_by?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -3747,6 +3789,51 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_allowances: {
+        Row: {
+          amount_requested: number | null
+          balance_available: number | null
+          created_at: string | null
+          days_attended: number | null
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          total_eligible_amount: number | null
+          updated_at: string | null
+          week_end_date: string
+          week_start_date: string
+        }
+        Insert: {
+          amount_requested?: number | null
+          balance_available?: number | null
+          created_at?: string | null
+          days_attended?: number | null
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          total_eligible_amount?: number | null
+          updated_at?: string | null
+          week_end_date: string
+          week_start_date: string
+        }
+        Update: {
+          amount_requested?: number | null
+          balance_available?: number | null
+          created_at?: string | null
+          days_attended?: number | null
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          total_eligible_amount?: number | null
+          updated_at?: string | null
+          week_end_date?: string
+          week_start_date?: string
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           amount: number
@@ -3866,10 +3953,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_delete_all_system_data: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      admin_delete_all_system_data: { Args: never; Returns: Json }
       calculate_daily_salary_credit: {
         Args: { employee_salary: number }
         Returns: number
@@ -3878,30 +3962,12 @@ export type Database = {
         Args: { user_email: string }
         Returns: boolean
       }
-      can_perform_action: {
-        Args: { action_type: string }
-        Returns: boolean
-      }
-      check_auth_user_exists: {
-        Args: { user_uuid: string }
-        Returns: Json
-      }
-      cleanup_expired_verification_codes: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_inactive_sessions: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      create_timothy_auth_account: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      fix_denis_auth_final: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      can_perform_action: { Args: { action_type: string }; Returns: boolean }
+      check_auth_user_exists: { Args: { user_uuid: string }; Returns: Json }
+      cleanup_expired_verification_codes: { Args: never; Returns: undefined }
+      cleanup_inactive_sessions: { Args: never; Returns: undefined }
+      create_timothy_auth_account: { Args: never; Returns: Json }
+      fix_denis_auth_final: { Args: never; Returns: Json }
       get_available_to_request_safe: {
         Args: { user_uuid: string }
         Returns: number
@@ -3918,10 +3984,7 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: number
       }
-      get_unified_user_id: {
-        Args: { input_email: string }
-        Returns: string
-      }
+      get_unified_user_id: { Args: { input_email: string }; Returns: string }
       get_user_balance_data: {
         Args: { user_email: string }
         Returns: {
@@ -3944,66 +4007,27 @@ export type Database = {
           wallet_balance: number
         }[]
       }
-      get_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_wallet_balance_safe: {
-        Args: { user_uuid: string }
-        Returns: number
-      }
-      get_wallet_balance_text: {
-        Args: { user_uuid: string }
-        Returns: number
-      }
-      "great pearl": {
-        Args: { conversation_id: string }
-        Returns: boolean
-      }
+      get_user_role: { Args: never; Returns: string }
+      get_wallet_balance_safe: { Args: { user_uuid: string }; Returns: number }
+      get_wallet_balance_text: { Args: { user_uuid: string }; Returns: number }
+      "great pearl": { Args: { conversation_id: string }; Returns: boolean }
       invalidate_other_sessions: {
         Args: { p_current_session_token: string; p_user_id: string }
         Returns: undefined
       }
-      is_current_user_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_current_user_administrator: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_ip_whitelisted: {
-        Args: { check_ip: string }
-        Returns: boolean
-      }
-      is_manager_or_above: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_supervisor_or_above: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      migrate_approved_assessments_to_finance: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      process_daily_salary_credits: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      is_current_user_admin: { Args: never; Returns: boolean }
+      is_current_user_administrator: { Args: never; Returns: boolean }
+      is_ip_whitelisted: { Args: { check_ip: string }; Returns: boolean }
+      is_manager_or_above: { Args: never; Returns: boolean }
+      is_supervisor_or_above: { Args: never; Returns: boolean }
+      is_user_role: { Args: never; Returns: boolean }
+      migrate_approved_assessments_to_finance: { Args: never; Returns: number }
+      process_daily_salary_credits: { Args: never; Returns: Json }
       process_salary_credits_for_date: {
         Args: { target_date: string }
         Returns: Json
       }
-      trigger_daily_salary_processing: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      trigger_daily_salary_processing: { Args: never; Returns: Json }
       user_has_permission: {
         Args: { permission_name: string }
         Returns: boolean

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,8 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserAccount } from '@/hooks/useUserAccount';
-import { DollarSign } from 'lucide-react';
+import { useAttendance } from '@/hooks/useAttendance';
+import { useAuth } from '@/contexts/AuthContext';
+import { DollarSign, Calendar, AlertCircle } from 'lucide-react';
 
 interface MoneyRequestModalProps {
   open: boolean;
@@ -32,23 +35,54 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
   const [reason, setReason] = useState('');
   const [requestType, setRequestType] = useState('advance');
   const [loading, setLoading] = useState(false);
+  const [weeklyAllowance, setWeeklyAllowance] = useState<any>(null);
   const { createMoneyRequest } = useUserAccount();
+  const { getCurrentWeekAllowance, deductFromAllowance } = useAttendance();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchAllowance = async () => {
+      if (open && user?.id) {
+        const allowance = await getCurrentWeekAllowance(user.id);
+        setWeeklyAllowance(allowance);
+      }
+    };
+    fetchAllowance();
+  }, [open, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!amount || !reason) return;
 
+    const requestAmount = parseFloat(amount);
+
     setLoading(true);
     try {
-      await createMoneyRequest(parseFloat(amount), reason, requestType);
+      // For lunch/refreshment requests, check and deduct from weekly allowance
+      if (requestType === 'lunch_refreshment' && user?.id) {
+        if (!weeklyAllowance) {
+          throw new Error('No attendance record found for this week. Please contact admin.');
+        }
+
+        if (weeklyAllowance.balance_available < requestAmount) {
+          throw new Error(`Insufficient balance. You have ${weeklyAllowance.balance_available} UGX available based on ${weeklyAllowance.days_attended} days attended.`);
+        }
+
+        // Deduct from allowance
+        await deductFromAllowance(user.id, requestAmount);
+      }
+
+      await createMoneyRequest(requestAmount, reason, requestType);
+      
       // Reset form
       setAmount('');
       setReason('');
       setRequestType('advance');
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting request:', error);
+      alert(error.message || 'Failed to submit request');
     } finally {
       setLoading(false);
     }
@@ -65,6 +99,32 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {weeklyAllowance && (
+            <Alert>
+              <Calendar className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-1">
+                  <div className="font-medium">Your Weekly Allowance (Based on Attendance)</div>
+                  <div className="text-sm">
+                    <div>Days Attended: <strong>{weeklyAllowance.days_attended}</strong> days</div>
+                    <div>Total Eligible: <strong>UGX {weeklyAllowance.total_eligible_amount?.toLocaleString()}</strong></div>
+                    <div>Already Requested: <strong>UGX {weeklyAllowance.amount_requested?.toLocaleString()}</strong></div>
+                    <div className="text-green-600 font-medium">Available: UGX {weeklyAllowance.balance_available?.toLocaleString()}</div>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!weeklyAllowance && requestType === 'lunch_refreshment' && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No attendance record found for this week. Please contact admin to mark your attendance first.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="requestType">Request Type</Label>
             <Select value={requestType} onValueChange={setRequestType}>
@@ -72,6 +132,7 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
                 <SelectValue placeholder="Select request type" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="lunch_refreshment">Lunch & Refreshments (Attendance-Based)</SelectItem>
                 <SelectItem value="advance">Salary Advance</SelectItem>
                 <SelectItem value="bonus">Bonus Request</SelectItem>
                 <SelectItem value="expense">Expense Reimbursement</SelectItem>
