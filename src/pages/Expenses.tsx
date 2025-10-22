@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,9 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useApprovalSystem } from '@/hooks/useApprovalSystem';
 import { useMyExpenseRequests } from '@/hooks/useMyExpenseRequests';
-import { DollarSign, Send, FileText, Clock, CheckCircle, XCircle, AlertTriangle, Calendar, User, TrendingUp } from 'lucide-react';
+import { useAttendance } from '@/hooks/useAttendance';
+import { DollarSign, Send, FileText, Clock, CheckCircle, XCircle, AlertTriangle, Calendar, User, TrendingUp, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
@@ -20,6 +22,7 @@ const Expenses = () => {
   const { employee } = useAuth();
   const { createApprovalRequest, loading: submitting } = useApprovalSystem();
   const { requests: myRequests, loading: fetchingRequests, refetch, getApprovalStatus, getStatusColor, getRejectionDetails } = useMyExpenseRequests();
+  const { getCurrentWeekAllowance, deductFromAllowance } = useAttendance();
 
   const [formData, setFormData] = useState({
     expenseType: '',
@@ -29,12 +32,28 @@ const Expenses = () => {
     phoneNumber: ''
   });
 
+  const [weeklyAllowance, setWeeklyAllowance] = useState<any>(null);
+  const [loadingAllowance, setLoadingAllowance] = useState(true);
+
   const [salaryFormData, setSalaryFormData] = useState({
     amount: '',
     reason: '',
     phoneNumber: '',
     paymentType: 'mid-month' // default to mid-month
   });
+
+  // Fetch user's weekly allowance
+  useEffect(() => {
+    const fetchAllowance = async () => {
+      if (employee?.id) {
+        setLoadingAllowance(true);
+        const allowance = await getCurrentWeekAllowance(employee.id);
+        setWeeklyAllowance(allowance);
+        setLoadingAllowance(false);
+      }
+    };
+    fetchAllowance();
+  }, [employee?.id]);
 
   // Filter to only show user's own expense requests and requisitions
   const myExpenseRequests = myRequests.filter(req => 
@@ -83,14 +102,34 @@ const Expenses = () => {
       return;
     }
 
-    // Check meals/refreshments limit
-    if (formData.expenseType === 'meals' && numericAmount > 15000) {
-      toast({
-        title: "Error",
-        description: "Meals and Refreshments requests cannot exceed UGX 15,000",
-        variant: "destructive"
-      });
-      return;
+    // Check meals/refreshments against weekly allowance
+    if (formData.expenseType === 'meals') {
+      if (!weeklyAllowance) {
+        toast({
+          title: "No Allowance Available",
+          description: "You need to be marked present for at least one day this week to request meals/refreshments. Each day present earns you UGX 2,500.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (numericAmount > weeklyAllowance.balance_available) {
+        toast({
+          title: "Insufficient Allowance Balance",
+          description: `You only have UGX ${weeklyAllowance.balance_available.toLocaleString()} available from ${weeklyAllowance.days_attended} days attended this week. You've already requested UGX ${weeklyAllowance.amount_requested.toLocaleString()}.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (numericAmount > 15000) {
+        toast({
+          title: "Error",
+          description: "Meals and Refreshments requests cannot exceed UGX 15,000",
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     // Check if user has already requested meals in the last 7 days
@@ -149,6 +188,22 @@ const Expenses = () => {
     );
 
     if (success) {
+      // Deduct from weekly allowance for meals/refreshments
+      if (formData.expenseType === 'meals' && employee?.id) {
+        try {
+          await deductFromAllowance(employee.id, numericAmount);
+          toast({
+            title: "Allowance Deducted",
+            description: `UGX ${numericAmount.toLocaleString()} deducted from your weekly allowance. Remaining: UGX ${(weeklyAllowance.balance_available - numericAmount).toLocaleString()}`,
+          });
+          // Refresh allowance
+          const updatedAllowance = await getCurrentWeekAllowance(employee.id);
+          setWeeklyAllowance(updatedAllowance);
+        } catch (error) {
+          console.error('Failed to deduct from allowance:', error);
+        }
+      }
+
       // Reset form
       setFormData({
         expenseType: '',
@@ -346,6 +401,39 @@ const Expenses = () => {
 
         {/* Expense Requests Tab */}
         <TabsContent value="expenses" className="space-y-6">
+          {/* Weekly Allowance Alert */}
+          {!loadingAllowance && weeklyAllowance && (
+            <Alert className="border-green-200 bg-green-50">
+              <Wallet className="h-4 w-4 text-green-600" />
+              <AlertDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <strong className="text-green-800">Weekly Allowance (Meals/Refreshments):</strong>
+                    <div className="text-sm text-green-700 mt-1">
+                      {weeklyAllowance.days_attended} days attended × UGX 2,500 = UGX {weeklyAllowance.total_eligible_amount.toLocaleString()} total
+                      <br />
+                      Requested: UGX {weeklyAllowance.amount_requested.toLocaleString()} | 
+                      <span className="font-semibold text-green-800"> Available: UGX {weeklyAllowance.balance_available.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-white">
+                    {new Date(weeklyAllowance.week_start_date).toLocaleDateString()} - {new Date(weeklyAllowance.week_end_date).toLocaleDateString()}
+                  </Badge>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!loadingAllowance && !weeklyAllowance && (
+            <Alert className="border-orange-200 bg-orange-50">
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-800">
+                <strong>No Allowance Available:</strong> You need to be marked present for at least one day this week to request meals/refreshments. 
+                Each day present earns you UGX 2,500 (max UGX 15,000 per week).
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Submit New Expense Request */}
             <Card>
@@ -401,9 +489,14 @@ const Expenses = () => {
                         );
                       }
                       
-                      return (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Limited to once every 7 days, max UGX 15,000
+                      return weeklyAllowance ? (
+                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-800">
+                          ✅ Available allowance: UGX {weeklyAllowance.balance_available.toLocaleString()} 
+                          (from {weeklyAllowance.days_attended} days attended)
+                        </div>
+                      ) : (
+                        <p className="text-xs text-orange-600 mt-1">
+                          ⚠️ No allowance available. Attend work to earn daily allowance (UGX 2,500/day).
                         </p>
                       );
                     })()}
@@ -412,17 +505,25 @@ const Expenses = () => {
                   <div>
                     <Label htmlFor="amount">
                       Amount (UGX) * (Minimum: 2,000
-                      {formData.expenseType === 'meals' && ', Maximum: 15,000'}
+                      {formData.expenseType === 'meals' && weeklyAllowance && `, Maximum: ${Math.min(15000, weeklyAllowance.balance_available).toLocaleString()}`}
+                      {formData.expenseType === 'meals' && !weeklyAllowance && ', No allowance available'}
                       )
                     </Label>
                     <Input
                       id="amount"
                       type="number"
-                      placeholder={formData.expenseType === 'meals' ? "Max: 15,000" : "Enter amount (min. 2,000)"}
+                      placeholder={
+                        formData.expenseType === 'meals' && weeklyAllowance 
+                          ? `Max: ${Math.min(15000, weeklyAllowance.balance_available).toLocaleString()}` 
+                          : formData.expenseType === 'meals' 
+                            ? "No allowance" 
+                            : "Enter amount (min. 2,000)"
+                      }
                       value={formData.amount}
                       onChange={(e) => setFormData({...formData, amount: e.target.value})}
                       min="2000"
-                      max={formData.expenseType === 'meals' ? "15000" : undefined}
+                      max={formData.expenseType === 'meals' && weeklyAllowance ? Math.min(15000, weeklyAllowance.balance_available) : undefined}
+                      disabled={formData.expenseType === 'meals' && !weeklyAllowance}
                       step="1000"
                     />
                     {formData.expenseType === 'meals' && (
