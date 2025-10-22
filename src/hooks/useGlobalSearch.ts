@@ -93,21 +93,27 @@ export const useGlobalSearch = (searchTerm: string) => {
             const idPrefix = paymentSlipMatch[1].toLowerCase();
             console.log('🔍 Searching for payment slip with ID prefix:', idPrefix);
             
-            const { data: paymentSlipRequests } = await supabase
+            // Fetch all requests and filter by ID prefix (since UUID comparison is tricky)
+            const { data: allApprovalRequests } = await supabase
               .from('approval_requests')
               .select('*')
-              .ilike('id', `${idPrefix}%`)
-              .limit(5);
+              .limit(1000);
 
-            if (paymentSlipRequests && paymentSlipRequests.length > 0) {
-              paymentSlipRequests.forEach((request: any) => {
-                const paymentSlipNumber = `PS-${new Date().getFullYear()}-${new Date().getMonth() + 1}-${request.id.slice(0, 8).toUpperCase()}`;
+            if (allApprovalRequests) {
+              const matchingRequests = allApprovalRequests.filter((request: any) => 
+                request.id.toLowerCase().startsWith(idPrefix)
+              );
+
+              matchingRequests.slice(0, 10).forEach((request: any) => {
+                // Generate payment slip number using the record's creation date
+                const createdDate = new Date(request.created_at);
+                const paymentSlipNumber = `PS-${createdDate.getFullYear()}-${createdDate.getMonth() + 1}-${request.id.slice(0, 8).toUpperCase()}`;
                 searchResults.push({
                   id: request.id,
                   type: 'expense',
                   title: `Payment Slip: ${paymentSlipNumber}`,
                   subtitle: `${request.requestedby} | ${request.amount} UGX | ${request.title}`,
-                  navigateTo: `/expenses`,
+                  navigateTo: `/reports`,
                   department: 'Finance',
                   module: 'Payment Slips',
                   metadata: { ...request, payment_slip_number: paymentSlipNumber }
@@ -135,10 +141,11 @@ export const useGlobalSearch = (searchTerm: string) => {
             }).slice(0, 10);
 
             matchingRequests.forEach((request: any) => {
-              // Generate payment slip number for approved requests
+              // Generate payment slip number for approved requests using creation date
               const isApproved = request.status === 'Approved' || request.status === 'Admin Approved';
+              const createdDate = new Date(request.created_at);
               const paymentSlipNumber = isApproved 
-                ? `PS-${new Date().getFullYear()}-${new Date().getMonth() + 1}-${request.id.slice(0, 8).toUpperCase()}`
+                ? `PS-${createdDate.getFullYear()}-${createdDate.getMonth() + 1}-${request.id.slice(0, 8).toUpperCase()}`
                 : null;
               
               searchResults.push({
@@ -148,7 +155,7 @@ export const useGlobalSearch = (searchTerm: string) => {
                   ? `Payment Slip: ${paymentSlipNumber}` 
                   : `${request.type}: ${request.title}`,
                 subtitle: `${request.requestedby} | ${request.amount} UGX | Status: ${request.status}`,
-                navigateTo: `/expenses`,
+                navigateTo: `/reports`,
                 department: 'Finance',
                 module: paymentSlipNumber ? 'Payment Slips' : 'Expense Requests',
                 metadata: { ...request, payment_slip_number: paymentSlipNumber }
