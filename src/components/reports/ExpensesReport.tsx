@@ -144,6 +144,11 @@ export const ExpensesReport = () => {
     });
   };
 
+  const generatePaymentSlipNumber = (requestId: string) => {
+    const now = new Date();
+    return `PS-${now.getFullYear()}-${now.getMonth() + 1}-${requestId.slice(0, 8).toUpperCase()}`;
+  };
+
   if (loading || overtimeLoading) {
     return (
       <Card>
@@ -244,6 +249,7 @@ export const ExpensesReport = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
+                      <TableHead>Payment Ref</TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Requested By</TableHead>
                       <TableHead>Type</TableHead>
@@ -256,6 +262,11 @@ export const ExpensesReport = () => {
                     {filteredExpenses.map((expense) => (
                       <TableRow key={expense.id}>
                         <TableCell>{formatDate(expense.daterequested)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {generatePaymentSlipNumber(expense.id)}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="font-medium">{expense.title}</TableCell>
                         <TableCell>{expense.requestedby}</TableCell>
                         <TableCell>
@@ -279,7 +290,7 @@ export const ExpensesReport = () => {
                       </TableRow>
                     ))}
                     <TableRow className="bg-blue-50 font-bold">
-                      <TableCell colSpan={6} className="text-right">Subtotal:</TableCell>
+                      <TableCell colSpan={7} className="text-right">Subtotal:</TableCell>
                       <TableCell className="text-right">{formatCurrency(totalExpenses)}</TableCell>
                     </TableRow>
                   </TableBody>
@@ -298,6 +309,7 @@ export const ExpensesReport = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
+                      <TableHead>Payment Ref</TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Employee</TableHead>
                       <TableHead>Type</TableHead>
@@ -310,6 +322,11 @@ export const ExpensesReport = () => {
                     {filteredSalaryRequests.map((salary) => (
                       <TableRow key={salary.id}>
                         <TableCell>{formatDate(salary.daterequested)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {generatePaymentSlipNumber(salary.id)}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="font-medium">{salary.title}</TableCell>
                         <TableCell>{salary.requestedby}</TableCell>
                         <TableCell>
@@ -333,7 +350,7 @@ export const ExpensesReport = () => {
                       </TableRow>
                     ))}
                     <TableRow className="bg-green-50 font-bold">
-                      <TableCell colSpan={6} className="text-right">Subtotal:</TableCell>
+                      <TableCell colSpan={7} className="text-right">Subtotal:</TableCell>
                       <TableCell className="text-right">{formatCurrency(totalSalaryRequests)}</TableCell>
                     </TableRow>
                   </TableBody>
@@ -352,6 +369,7 @@ export const ExpensesReport = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
+                      <TableHead>Payment Ref</TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Requested By</TableHead>
                       <TableHead>Type</TableHead>
@@ -364,6 +382,11 @@ export const ExpensesReport = () => {
                     {filteredRequisitions.map((requisition) => (
                       <TableRow key={requisition.id}>
                         <TableCell>{formatDate(requisition.daterequested)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {generatePaymentSlipNumber(requisition.id)}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="font-medium">{requisition.title}</TableCell>
                         <TableCell>{requisition.requestedby}</TableCell>
                         <TableCell>
@@ -387,7 +410,7 @@ export const ExpensesReport = () => {
                       </TableRow>
                     ))}
                     <TableRow className="bg-cyan-50 font-bold">
-                      <TableCell colSpan={6} className="text-right">Subtotal:</TableCell>
+                      <TableCell colSpan={7} className="text-right">Subtotal:</TableCell>
                       <TableCell className="text-right">{formatCurrency(totalRequisitions)}</TableCell>
                     </TableRow>
                   </TableBody>
@@ -493,6 +516,7 @@ export const ExpensesReport = () => {
               <thead>
                 <tr className="bg-gray-100">
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Date</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Payment Ref</th>
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Title</th>
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Requested By</th>
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Type</th>
@@ -503,6 +527,7 @@ export const ExpensesReport = () => {
                 {filteredExpenses.map((expense) => (
                   <tr key={expense.id}>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{formatDate(expense.daterequested)}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm font-mono text-xs">{generatePaymentSlipNumber(expense.id)}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{expense.title}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{expense.requestedby}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{expense.type}</td>
@@ -510,7 +535,7 @@ export const ExpensesReport = () => {
                   </tr>
                 ))}
                 <tr className="bg-gray-100 font-bold">
-                  <td colSpan={4} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
+                  <td colSpan={5} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
                   <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(totalExpenses)}</td>
                 </tr>
               </tbody>
@@ -524,6 +549,7 @@ export const ExpensesReport = () => {
               <thead>
                 <tr className="bg-gray-100">
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Date</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Payment Ref</th>
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Title</th>
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Employee</th>
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Type</th>
@@ -534,6 +560,7 @@ export const ExpensesReport = () => {
                 {filteredSalaryRequests.map((salary) => (
                   <tr key={salary.id}>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{formatDate(salary.daterequested)}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm font-mono text-xs">{generatePaymentSlipNumber(salary.id)}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{salary.title}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{salary.requestedby}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{salary.type}</td>
@@ -541,7 +568,7 @@ export const ExpensesReport = () => {
                   </tr>
                 ))}
                 <tr className="bg-gray-100 font-bold">
-                  <td colSpan={4} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
+                  <td colSpan={5} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
                   <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(totalSalaryRequests)}</td>
                 </tr>
               </tbody>
@@ -555,6 +582,7 @@ export const ExpensesReport = () => {
               <thead>
                 <tr className="bg-gray-100">
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Date</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Payment Ref</th>
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Title</th>
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Requested By</th>
                   <th className="border border-gray-300 px-2 py-2 text-left text-sm">Type</th>
@@ -565,6 +593,7 @@ export const ExpensesReport = () => {
                 {filteredRequisitions.map((requisition) => (
                   <tr key={requisition.id}>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{formatDate(requisition.daterequested)}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm font-mono text-xs">{generatePaymentSlipNumber(requisition.id)}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{requisition.title}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{requisition.requestedby}</td>
                     <td className="border border-gray-300 px-2 py-2 text-sm">{requisition.type}</td>
@@ -572,7 +601,7 @@ export const ExpensesReport = () => {
                   </tr>
                 ))}
                 <tr className="bg-gray-100 font-bold">
-                  <td colSpan={4} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
+                  <td colSpan={5} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
                   <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(totalRequisitions)}</td>
                 </tr>
               </tbody>
