@@ -1,15 +1,12 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, User, DollarSign, UserPlus, Shield } from "lucide-react";
-import { useUnifiedEmployees } from "@/hooks/useUnifiedEmployees";
-import { useSalaryPayments } from "@/hooks/useSalaryPayments";
+import { Clock, CheckCircle, DollarSign, UserPlus, Shield, FileText, Truck, FlaskConical } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const RecentActivity = () => {
-  const { employees } = useUnifiedEmployees();
-  const { paymentRequests } = useSalaryPayments();
   const { hasRole, hasPermission } = useAuth();
 
   // Check if user should see sensitive activities
@@ -19,66 +16,159 @@ const RecentActivity = () => {
   const canViewHRActivities = hasRole("Administrator") || hasRole("Manager") || 
     hasPermission("Human Resources");
 
-  // Filter activities based on permissions
-  const getFilteredActivities = () => {
-    const activities = [];
+  // Fetch real system activities
+  const { data: activities = [], isLoading } = useQuery({
+    queryKey: ['recent-activities'],
+    queryFn: async () => {
+      const allActivities: any[] = [];
 
-    // Add HR activities if user has permission
-    if (canViewHRActivities) {
-      const employeeActivities = employees
-        .filter(emp => emp.created_at)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 2)
-        .map(emp => ({
-          id: `emp-${emp.id}`,
-          type: "employee",
-          title: "New Employee Added",
-          description: `${emp.name} joined as ${emp.position}`,
-          time: format(new Date(emp.created_at), "MMM dd, yyyy"),
-          icon: UserPlus,
-          status: "completed"
-        }));
-      
-      activities.push(...employeeActivities);
-    }
+      // Fetch approval requests (approvals made)
+      if (canViewFinancialActivities) {
+        const { data: approvals } = await supabase
+          .from('approval_requests')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
 
-    // Add financial activities if user has permission
-    if (canViewFinancialActivities) {
-      const paymentActivities = paymentRequests
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 2)
-        .map(request => ({
-          id: `payment-${request.id}`,
-          type: "payment",
-          title: "Salary Payment Request",
-          description: `${request.title} - ${request.amount}`,
-          time: format(new Date(request.created_at), "MMM dd, yyyy"),
-          icon: DollarSign,
-          status: request.status.toLowerCase()
-        }));
-      
-      activities.push(...paymentActivities);
-    }
+        if (approvals) {
+          approvals.forEach(approval => {
+            allActivities.push({
+              id: `approval-${approval.id}`,
+              type: "approval",
+              title: `Approval: ${approval.title}`,
+              description: `${approval.requestedby} | ${approval.amount} UGX`,
+              timestamp: approval.created_at,
+              time: format(new Date(approval.created_at), "MMM dd, HH:mm"),
+              icon: CheckCircle,
+              status: approval.status.toLowerCase()
+            });
+          });
+        }
+      }
 
-    // If no specific permissions, show general activities
-    if (!canViewHRActivities && !canViewFinancialActivities) {
-      activities.push({
-        id: 'general-1',
-        type: 'general',
-        title: 'System Access',
-        description: 'You have accessed the dashboard',
-        time: format(new Date(), "MMM dd, yyyy"),
-        icon: User,
-        status: 'completed'
-      });
-    }
+      // Fetch payment records (coffee payments)
+      if (canViewFinancialActivities) {
+        const { data: payments } = await supabase
+          .from('payment_records')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
 
-    return activities
-      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-      .slice(0, 4);
-  };
+        if (payments) {
+          payments.forEach(payment => {
+            allActivities.push({
+              id: `payment-${payment.id}`,
+              type: "payment",
+              title: "Coffee Payment Made",
+              description: `${payment.supplier} | ${payment.amount} UGX`,
+              timestamp: payment.created_at,
+              time: format(new Date(payment.created_at), "MMM dd, HH:mm"),
+              icon: DollarSign,
+              status: payment.status.toLowerCase()
+            });
+          });
+        }
+      }
 
-  const recentActivities = getFilteredActivities();
+      // Fetch daily tasks (completed activities)
+      const { data: tasks } = await supabase
+        .from('daily_tasks')
+        .select('*')
+        .order('completed_at', { ascending: false })
+        .limit(20);
+
+      if (tasks) {
+        tasks.forEach(task => {
+          allActivities.push({
+            id: `task-${task.id}`,
+            type: "task",
+            title: task.task_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            description: `${task.description} | ${task.completed_by}`,
+            timestamp: task.completed_at,
+            time: format(new Date(task.completed_at), "MMM dd, HH:mm"),
+            icon: FileText,
+            status: "completed"
+          });
+        });
+      }
+
+      // Fetch sales transactions
+      const { data: sales } = await supabase
+        .from('sales_transactions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (sales) {
+        sales.forEach(sale => {
+          allActivities.push({
+            id: `sale-${sale.id}`,
+            type: "sale",
+            title: "Coffee Sale",
+            description: `${sale.customer} | ${sale.weight}kg @ ${sale.unit_price} UGX/kg`,
+            timestamp: sale.created_at,
+            time: format(new Date(sale.created_at), "MMM dd, HH:mm"),
+            icon: Truck,
+            status: sale.status.toLowerCase()
+          });
+        });
+      }
+
+      // Fetch new employees
+      if (canViewHRActivities) {
+        const { data: employees } = await supabase
+          .from('employees')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (employees) {
+          employees.forEach(emp => {
+            allActivities.push({
+              id: `emp-${emp.id}`,
+              type: "employee",
+              title: "New Employee Added",
+              description: `${emp.name} joined as ${emp.position}`,
+              timestamp: emp.created_at,
+              time: format(new Date(emp.created_at), "MMM dd, HH:mm"),
+              icon: UserPlus,
+              status: "completed"
+            });
+          });
+        }
+      }
+
+      // Fetch workflow steps (various system actions)
+      const { data: workflows } = await supabase
+        .from('workflow_steps')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(20);
+
+      if (workflows) {
+        workflows.forEach(workflow => {
+          allActivities.push({
+            id: `workflow-${workflow.id}`,
+            type: "workflow",
+            title: `${workflow.action}: ${workflow.from_department} → ${workflow.to_department}`,
+            description: `${workflow.processed_by}`,
+            timestamp: workflow.timestamp,
+            time: format(new Date(workflow.timestamp), "MMM dd, HH:mm"),
+            icon: FlaskConical,
+            status: workflow.status
+          });
+        });
+      }
+
+      // Sort all activities by timestamp and return top 8
+      return allActivities
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 8);
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  const recentActivities = activities;
 
   const getStatusColor = (status: string) => {
     switch (status) {
