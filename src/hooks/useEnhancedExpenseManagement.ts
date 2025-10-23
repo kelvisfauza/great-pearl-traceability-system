@@ -189,29 +189,11 @@ export const useEnhancedExpenseManagement = () => {
           // Status will be set to Approved by trigger if all approvals are complete
         }
       } else {
-        // Rejection logic - mark as rejected with reason
+        // Rejection logic - only set rejection fields, don't modify approval timestamps
         updateData.status = 'Rejected';
         updateData.rejection_reason = rejectionReason || 'No reason provided';
         updateData.rejected_at = new Date().toISOString();
         updateData.rejected_by = approvedBy;
-        
-        if (approvalType === 'finance') {
-          updateData.finance_approved = false;
-          updateData.finance_approved_at = null;
-          updateData.finance_approved_by = null;
-        } else if (approvalType === 'admin1') {
-          updateData.admin_approved_1 = false;
-          updateData.admin_approved_1_at = null;
-          updateData.admin_approved_1_by = null;
-        } else if (approvalType === 'admin2') {
-          updateData.admin_approved_2 = false;
-          updateData.admin_approved_2_at = null;
-          updateData.admin_approved_2_by = null;
-        } else {
-          updateData.admin_approved = false;
-          updateData.admin_approved_at = null;
-          updateData.admin_approved_by = null;
-        }
       }
 
       const { data, error } = await supabase
