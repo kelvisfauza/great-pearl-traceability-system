@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AddExpenseModal } from './AddExpenseModal';
 import { FinanceReviewModal } from './FinanceReviewModal';
+import { RejectionModal } from '@/components/workflow/RejectionModal';
 import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
 
 export const ExpenseManagement = () => {
@@ -20,6 +21,7 @@ export const ExpenseManagement = () => {
   const { checkExpenseRequestEligibility, showSoDViolationWarning } = useSeparationOfDuties();
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
   // Filter different types of expense requests that need finance action
@@ -94,24 +96,21 @@ export const ExpenseManagement = () => {
     }
   };
 
-  const handleRejectFromReview = async () => {
-    const reason = prompt('Please provide a reason for rejection:');
-    if (!reason) {
-      toast({
-        title: "Rejection Cancelled",
-        description: "Rejection reason is required",
-        variant: "destructive"
-      });
-      return;
-    }
-    
+  const handleRejectFromReview = () => {
+    setReviewModalOpen(false);
+    setRejectionModalOpen(true);
+  };
+
+  const handleConfirmRejection = async (reason: string, comments?: string) => {
     try {
-      await updateRequestApproval(selectedRequest.id, 'finance', false, employee?.name || 'Finance Team', reason);
+      const fullReason = comments ? `${reason}\n\nComments: ${comments}` : reason;
+      await updateRequestApproval(selectedRequest.id, 'finance', false, employee?.name || 'Finance Team', fullReason);
       toast({
         title: "Request Rejected",
         description: "The expense request has been rejected successfully",
       });
-      setReviewModalOpen(false);
+      setRejectionModalOpen(false);
+      setSelectedRequest(null);
       refetch();
     } catch (error) {
       console.error('Error rejecting request:', error);
@@ -386,6 +385,14 @@ export const ExpenseManagement = () => {
         details={selectedRequest ? (typeof selectedRequest.details === 'string' ? JSON.parse(selectedRequest.details) : selectedRequest.details || {}) : {}}
         onApprove={handleApproveFromReview}
         onReject={handleRejectFromReview}
+      />
+
+      <RejectionModal
+        open={rejectionModalOpen}
+        onClose={() => setRejectionModalOpen(false)}
+        onConfirm={handleConfirmRejection}
+        title="Reject Expense Request"
+        description="Please select a reason for rejecting this expense request and provide any additional comments."
       />
     </div>
   );
