@@ -248,10 +248,16 @@ export const useEnhancedExpenseManagement = () => {
 
       return true;
     } catch (error) {
-      console.error('Error updating request approval:', error);
+      console.error('❌ Error updating request approval:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as any)?.code,
+        details: (error as any)?.details,
+        hint: (error as any)?.hint
+      });
       toast({
         title: "Error",
-        description: "Failed to update request approval",
+        description: error instanceof Error ? error.message : "Failed to update request approval",
         variant: "destructive"
       });
       return false;

@@ -104,19 +104,33 @@ export const ExpenseManagement = () => {
   const handleConfirmRejection = async (reason: string, comments?: string) => {
     try {
       const fullReason = comments ? `${reason}\n\nComments: ${comments}` : reason;
-      await updateRequestApproval(selectedRequest.id, 'finance', false, employee?.name || 'Finance Team', fullReason);
-      toast({
-        title: "Request Rejected",
-        description: "The expense request has been rejected successfully",
-      });
-      setRejectionModalOpen(false);
-      setSelectedRequest(null);
-      refetch();
+      console.log('🔄 Starting rejection with reason:', fullReason);
+      
+      const success = await updateRequestApproval(
+        selectedRequest.id, 
+        'finance', 
+        false, 
+        employee?.name || 'Finance Team', 
+        fullReason
+      );
+      
+      if (success) {
+        toast({
+          title: "Request Rejected",
+          description: "The expense request has been rejected successfully",
+        });
+        setRejectionModalOpen(false);
+        setSelectedRequest(null);
+        refetch();
+      } else {
+        // updateRequestApproval already showed an error toast
+        console.error('❌ Rejection failed - updateRequestApproval returned false');
+      }
     } catch (error) {
-      console.error('Error rejecting request:', error);
+      console.error('❌ Error in handleConfirmRejection:', error);
       toast({
         title: "Error",
-        description: "Failed to reject the request",
+        description: error instanceof Error ? error.message : "Failed to reject the request",
         variant: "destructive"
       });
     }
