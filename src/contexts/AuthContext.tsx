@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { securityService } from '@/services/securityService';
 
 interface Employee {
   id: string;
@@ -221,6 +222,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) {
+        // Log failed login attempt to security system
+        await securityService.logFailedLogin(
+          normalizedEmail,
+          error.message || 'Invalid credentials'
+        );
+        
         toast({
           title: "Login Failed",
           description: error.message || "Invalid email or password",
@@ -230,12 +237,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (!data.user) {
+        await securityService.logFailedLogin(
+          normalizedEmail,
+          'No user returned from authentication'
+        );
         throw new Error('No user returned from authentication');
       }
+
+      // Successful login - could log this as well for audit trail
+      console.log('✅ Successful login for:', normalizedEmail);
 
       return {};
     } catch (error: any) {
       console.error('Login error:', error);
+      
+      // Only log to security if not already logged
+      if (!error.message?.includes('Invalid login')) {
+        await securityService.logFailedLogin(
+          email.toLowerCase().trim(),
+          error.message || 'Unknown login error'
+        );
+      }
+      
       toast({
         title: "Login Error",
         description: error.message || "An error occurred during login",
