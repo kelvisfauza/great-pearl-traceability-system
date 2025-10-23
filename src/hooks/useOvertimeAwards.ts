@@ -124,25 +124,50 @@ export const useOvertimeAwards = () => {
     notes?: string
   ) => {
     try {
+      console.log('🎯 Creating overtime award with data:', {
+        employeeId,
+        employeeName,
+        employeeEmail,
+        department,
+        hours,
+        minutes,
+        notes
+      });
+
       // Calculate total amount (4000 UGX per hour)
       const totalMinutes = (hours * 60) + minutes;
       const totalAmount = (totalMinutes / 60) * 4000;
 
-      const { error } = await supabase
-        .from('overtime_awards')
-        .insert({
-          employee_id: employeeId,
-          employee_name: employeeName,
-          employee_email: employeeEmail,
-          department,
-          hours,
-          minutes,
-          total_amount: totalAmount,
-          created_by: employee?.name || 'Admin',
-          notes
-        });
+      const insertData = {
+        employee_id: employeeId,
+        employee_name: employeeName,
+        employee_email: employeeEmail,
+        department,
+        hours,
+        minutes,
+        total_amount: totalAmount,
+        created_by: employee?.name || 'Admin',
+        notes
+      };
 
-      if (error) throw error;
+      console.log('🎯 Insert data:', insertData);
+
+      const { data, error } = await supabase
+        .from('overtime_awards')
+        .insert(insertData)
+        .select();
+
+      console.log('🎯 Insert result:', { data, error });
+
+      if (error) {
+        console.error('🎯 Database error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
 
       toast({
         title: "Overtime Awarded",
@@ -150,11 +175,11 @@ export const useOvertimeAwards = () => {
       });
 
       return true;
-    } catch (error) {
-      console.error('Error creating overtime award:', error);
+    } catch (error: any) {
+      console.error('❌ Error creating overtime award:', error);
       toast({
         title: "Error",
-        description: "Failed to award overtime",
+        description: error.message || "Failed to award overtime",
         variant: "destructive"
       });
       return false;
