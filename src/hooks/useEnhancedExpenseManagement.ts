@@ -196,6 +196,8 @@ export const useEnhancedExpenseManagement = () => {
         updateData.rejected_by = approvedBy;
       }
 
+      console.log('📝 Update data to send:', updateData);
+
       const { data, error } = await supabase
         .from('approval_requests')
         .update(updateData)
@@ -204,8 +206,11 @@ export const useEnhancedExpenseManagement = () => {
         .single();
 
       if (error) {
+        console.error('❌ Database error:', error);
         throw error;
       }
+      
+      console.log('✅ Update successful:', data);
 
       // Update local state
       setExpenseRequests(prev => prev.map(req => {
