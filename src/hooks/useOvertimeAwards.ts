@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export interface OvertimeAward {
   id: string;
@@ -169,6 +171,24 @@ export const useOvertimeAwards = () => {
         throw error;
       }
 
+      // Send notification to the employee
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          type: 'system',
+          title: 'Overtime Awarded',
+          message: `You have been awarded overtime of ${hours} hours and ${minutes} minutes (UGX ${totalAmount.toLocaleString()}). Please claim your overtime through the system.`,
+          department: 'Human Resources',
+          senderName: employee?.name || 'HR Department',
+          senderDepartment: 'Human Resources',
+          priority: 'High',
+          isRead: false,
+          targetUser: employeeName,
+          createdAt: new Date().toISOString()
+        });
+      } catch (notifError) {
+        console.error('Error sending notification:', notifError);
+      }
+
       toast({
         title: "Overtime Awarded",
         description: `Successfully awarded overtime to ${employeeName}`
@@ -267,6 +287,25 @@ export const useOvertimeAwards = () => {
       if (!data) {
         console.error('✅ No data returned - RLS policy blocking update');
         throw new Error('Update failed - you may not have permission to complete this claim');
+      }
+
+      // Send notification to the employee
+      const awardData = data as OvertimeAward;
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          type: 'system',
+          title: 'Overtime Completed',
+          message: `Your overtime claim has been completed and paid. Amount: UGX ${awardData.total_amount.toLocaleString()}. Completed by ${employee?.name || 'Finance'}.`,
+          department: 'Finance',
+          senderName: employee?.name || 'Finance Department',
+          senderDepartment: 'Finance',
+          priority: 'High',
+          isRead: false,
+          targetUser: awardData.employee_name,
+          createdAt: new Date().toISOString()
+        });
+      } catch (notifError) {
+        console.error('Error sending notification:', notifError);
       }
 
       toast({
