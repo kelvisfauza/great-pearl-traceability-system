@@ -87,6 +87,7 @@ const Store = () => {
     batchNumber: ''
   });
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [assessmentSelectedDate, setAssessmentSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   // Helper function to normalize date for comparison
   const normalizeDate = (dateStr: string): string => {
@@ -112,6 +113,28 @@ const Store = () => {
     console.log('Comparing dates:', { recordDate, filterDate, match: recordDate === filterDate });
     return recordDate === filterDate;
   });
+
+  // Filter assessments by selected date
+  const filteredAssessments = qualityAssessments.filter(assessment => {
+    const assessmentDate = normalizeDate(assessment.date_assessed);
+    const filterDate = normalizeDate(assessmentSelectedDate);
+    return assessmentDate === filterDate;
+  });
+
+  // Group assessments by date
+  const groupedAssessments = qualityAssessments.reduce((groups, assessment) => {
+    const date = normalizeDate(assessment.date_assessed);
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(assessment);
+    return groups;
+  }, {} as Record<string, typeof qualityAssessments>);
+
+  // Sort dates in descending order
+  const sortedDates = Object.keys(groupedAssessments).sort((a, b) => 
+    new Date(b).getTime() - new Date(a).getTime()
+  );
 
   useEffect(() => {
     console.log('Date filter changed:', selectedDate);
@@ -569,57 +592,145 @@ const Store = () => {
           <TabsContent value="pricing" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Quality Assessments & Pricing</CardTitle>
-                <CardDescription>
-                  {qualityAssessments.length > 0 
-                    ? `${qualityAssessments.length} quality assessments in the system` 
-                    : "No quality assessments yet. Coffee records must be assessed first."
-                  }
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Quality Assessments & Pricing</CardTitle>
+                    <CardDescription>
+                      {qualityAssessments.length > 0 
+                        ? `${qualityAssessments.length} quality assessments in the system` 
+                        : "No quality assessments yet. Coffee records must be assessed first."
+                      }
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="assessment-date-filter">Filter by Date:</Label>
+                    <Input
+                      id="assessment-date-filter"
+                      type="date"
+                      value={assessmentSelectedDate}
+                      onChange={(e) => setAssessmentSelectedDate(e.target.value)}
+                      className="w-auto"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setAssessmentSelectedDate(new Date().toISOString().split('T')[0])}
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Today
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                {qualityAssessments.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Batch Number</TableHead>
-                        <TableHead>Supplier</TableHead>
-                        <TableHead>Coffee Type</TableHead>
-                        <TableHead>Kilograms</TableHead>
-                        <TableHead>Suggested Price</TableHead>
-                        <TableHead>Total Value</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Assessed By</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {qualityAssessments.map((assessment) => (
-                        <TableRow key={assessment.id}>
-                          <TableCell className="font-mono">{assessment.batch_number}</TableCell>
-                          <TableCell>{assessment.supplier_name || 'N/A'}</TableCell>
-                          <TableCell className="capitalize">{assessment.coffee_type || 'N/A'}</TableCell>
-                          <TableCell>{assessment.kilograms?.toLocaleString() || 0}kg</TableCell>
-                          <TableCell>UGX {assessment.suggested_price.toLocaleString()}/kg</TableCell>
-                          <TableCell>
-                            UGX {((assessment.kilograms || 0) * assessment.suggested_price).toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={assessment.status === 'submitted_to_finance' ? 'default' : 'secondary'}>
-                              {assessment.status.replace('_', ' ')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{assessment.assessed_by}</TableCell>
-                          <TableCell>{new Date(assessment.date_assessed).toLocaleDateString()}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                {filteredAssessments.length > 0 ? (
+                  <div className="space-y-6">
+                    <div className="border rounded-lg">
+                      <div className="bg-muted px-4 py-2 font-semibold">
+                        {new Date(assessmentSelectedDate).toLocaleDateString('en-US', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Batch Number</TableHead>
+                            <TableHead>Supplier</TableHead>
+                            <TableHead>Coffee Type</TableHead>
+                            <TableHead>Kilograms</TableHead>
+                            <TableHead>Suggested Price</TableHead>
+                            <TableHead>Total Value</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Assessed By</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredAssessments.map((assessment) => (
+                            <TableRow key={assessment.id}>
+                              <TableCell className="font-mono">{assessment.batch_number}</TableCell>
+                              <TableCell>{assessment.supplier_name || 'N/A'}</TableCell>
+                              <TableCell className="capitalize">{assessment.coffee_type || 'N/A'}</TableCell>
+                              <TableCell>{assessment.kilograms?.toLocaleString() || 0}kg</TableCell>
+                              <TableCell>UGX {assessment.suggested_price.toLocaleString()}/kg</TableCell>
+                              <TableCell>
+                                <span className="font-semibold">
+                                  UGX {((assessment.kilograms || 0) * assessment.suggested_price).toLocaleString()}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={assessment.status === 'submitted_to_finance' ? 'default' : 'secondary'}>
+                                  {assessment.status.replace('_', ' ')}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{assessment.assessed_by}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      <div className="bg-muted/50 px-4 py-3 border-t">
+                        <div className="flex justify-between items-center font-semibold">
+                          <span>Daily Total:</span>
+                          <span className="text-lg">
+                            UGX {filteredAssessments
+                              .reduce((sum, a) => sum + ((a.kilograms || 0) * a.suggested_price), 0)
+                              .toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {filteredAssessments.length} assessments • {' '}
+                          {filteredAssessments.reduce((sum, a) => sum + (a.kilograms || 0), 0).toLocaleString()}kg total
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-muted-foreground">
                     <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No quality assessments available</p>
-                    <p className="text-sm">Coffee records must be assessed in Quality Control first</p>
+                    <p>No quality assessments for {new Date(assessmentSelectedDate).toLocaleDateString()}</p>
+                    <p className="text-sm">Try selecting a different date</p>
+                  </div>
+                )}
+
+                {/* All Assessments Grouped by Date */}
+                {qualityAssessments.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold mb-4">All Assessments by Date</h3>
+                    <div className="space-y-4">
+                      {sortedDates.map((date) => {
+                        const dayAssessments = groupedAssessments[date];
+                        const dayTotal = dayAssessments.reduce(
+                          (sum, a) => sum + ((a.kilograms || 0) * a.suggested_price), 
+                          0
+                        );
+                        const dayKg = dayAssessments.reduce((sum, a) => sum + (a.kilograms || 0), 0);
+                        
+                        return (
+                          <div key={date} className="border rounded-lg">
+                            <div 
+                              className="bg-muted px-4 py-2 flex justify-between items-center cursor-pointer hover:bg-muted/80"
+                              onClick={() => setAssessmentSelectedDate(date)}
+                            >
+                              <span className="font-semibold">
+                                {new Date(date).toLocaleDateString('en-US', { 
+                                  weekday: 'short', 
+                                  year: 'numeric', 
+                                  month: 'short', 
+                                  day: 'numeric' 
+                                })}
+                              </span>
+                              <div className="flex gap-4 text-sm">
+                                <span>{dayAssessments.length} assessments</span>
+                                <span>{dayKg.toLocaleString()}kg</span>
+                                <span className="font-semibold">UGX {dayTotal.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </CardContent>
