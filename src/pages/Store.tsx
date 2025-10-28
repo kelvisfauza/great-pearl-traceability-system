@@ -15,6 +15,7 @@ import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, Dollar
 import { useStoreManagement } from "@/hooks/useStoreManagement";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
+import { useProcessingOperations } from "@/hooks/useProcessingOperations";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import PriceTicker from "@/components/PriceTicker";
@@ -46,6 +47,14 @@ const Store = () => {
     qualityAssessments,
     loading: qualityLoading
   } = useQualityControl();
+  
+  const {
+    processingBatches,
+    machines,
+    loading: processingLoading,
+    todayMetrics
+  } = useProcessingOperations();
+  
   const { hasPermission } = useAuth();
 
   const [newSupplier, setNewSupplier] = useState({
@@ -115,7 +124,7 @@ const Store = () => {
   const [showGRNModal, setShowGRNModal] = useState(false);
   const [selectedGRNData, setSelectedGRNData] = useState(null);
 
-  const loading = storeLoading || suppliersLoading || qualityLoading;
+  const loading = storeLoading || suppliersLoading || qualityLoading || processingLoading;
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -558,22 +567,224 @@ const Store = () => {
 
           {/* Pricing & Assessment Tab */}
           <TabsContent value="pricing" className="space-y-6">
-            <PricingGuidance coffeeType="arabica" suggestedPrice={0} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Quality Assessments & Pricing</CardTitle>
+                <CardDescription>
+                  {qualityAssessments.length > 0 
+                    ? `${qualityAssessments.length} quality assessments in the system` 
+                    : "No quality assessments yet. Coffee records must be assessed first."
+                  }
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {qualityAssessments.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Batch Number</TableHead>
+                        <TableHead>Supplier</TableHead>
+                        <TableHead>Coffee Type</TableHead>
+                        <TableHead>Kilograms</TableHead>
+                        <TableHead>Suggested Price</TableHead>
+                        <TableHead>Total Value</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Assessed By</TableHead>
+                        <TableHead>Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {qualityAssessments.map((assessment) => (
+                        <TableRow key={assessment.id}>
+                          <TableCell className="font-mono">{assessment.batch_number}</TableCell>
+                          <TableCell>{assessment.supplier_name || 'N/A'}</TableCell>
+                          <TableCell className="capitalize">{assessment.coffee_type || 'N/A'}</TableCell>
+                          <TableCell>{assessment.kilograms?.toLocaleString() || 0}kg</TableCell>
+                          <TableCell>UGX {assessment.suggested_price.toLocaleString()}/kg</TableCell>
+                          <TableCell>
+                            UGX {((assessment.kilograms || 0) * assessment.suggested_price).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={assessment.status === 'submitted_to_finance' ? 'default' : 'secondary'}>
+                              {assessment.status.replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{assessment.assessed_by}</TableCell>
+                          <TableCell>{new Date(assessment.date_assessed).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No quality assessments available</p>
+                    <p className="text-sm">Coffee records must be assessed in Quality Control first</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Operations Tab */}
           <TabsContent value="operations" className="space-y-6">
+            {/* Processing Metrics */}
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Processed Today</CardTitle>
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{todayMetrics.processedBags.toLocaleString()} kg</div>
+                  <p className="text-xs text-muted-foreground">Total output</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg Efficiency</CardTitle>
+                  <Factory className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{todayMetrics.averageEfficiency}%</div>
+                  <p className="text-xs text-muted-foreground">Machine performance</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Output Rate</CardTitle>
+                  <Scale className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{todayMetrics.outputRate}%</div>
+                  <p className="text-xs text-muted-foreground">Input to output</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg Time</CardTitle>
+                  <Truck className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{todayMetrics.averageProcessingTime.toFixed(1)}h</div>
+                  <p className="text-xs text-muted-foreground">Per batch</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Processing Batches */}
             <Card>
               <CardHeader>
-                <CardTitle>Operations Management</CardTitle>
-                <CardDescription>Transfer and dispatch operations for coffee processing</CardDescription>
+                <CardTitle>Processing Batches</CardTitle>
+                <CardDescription>
+                  {processingBatches.length > 0 
+                    ? `${processingBatches.length} batches currently in processing` 
+                    : "No processing batches yet. Processing operations will appear here."
+                  }
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <Scale className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Operations features coming soon</p>
-                  <p className="text-sm">Transfer to drying, dispatch for sales, and more</p>
-                </div>
+                {processingBatches.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Batch Number</TableHead>
+                        <TableHead>Coffee Type</TableHead>
+                        <TableHead>Stage</TableHead>
+                        <TableHead>Input Weight</TableHead>
+                        <TableHead>Output Weight</TableHead>
+                        <TableHead>Efficiency</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Operator</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {processingBatches.map((batch) => (
+                        <TableRow key={batch.id}>
+                          <TableCell className="font-mono">{batch.batchNumber}</TableCell>
+                          <TableCell className="capitalize">{batch.coffeeType}</TableCell>
+                          <TableCell>{batch.processingStage}</TableCell>
+                          <TableCell>{batch.inputWeight.toLocaleString()}kg</TableCell>
+                          <TableCell>{batch.outputWeight.toLocaleString()}kg</TableCell>
+                          <TableCell>
+                            <Badge variant={batch.efficiency >= 90 ? 'default' : 'secondary'}>
+                              {batch.efficiency}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={batch.status === 'Completed' ? 'default' : 'secondary'}>
+                              {batch.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{batch.operatorName}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Scale className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No processing batches available</p>
+                    <p className="text-sm">Processing operations will appear here</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Machine Status */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Machine Status</CardTitle>
+                <CardDescription>
+                  {machines.length > 0 
+                    ? `${machines.length} machines in the system` 
+                    : "No machines registered yet."
+                  }
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {machines.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Machine Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Efficiency</TableHead>
+                        <TableHead>Current Batch</TableHead>
+                        <TableHead>Last Maintenance</TableHead>
+                        <TableHead>Next Maintenance</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {machines.map((machine) => (
+                        <TableRow key={machine.id}>
+                          <TableCell className="font-medium">{machine.machineName}</TableCell>
+                          <TableCell>{machine.type}</TableCell>
+                          <TableCell>
+                            <Badge variant={machine.status === 'Operational' ? 'default' : 'destructive'}>
+                              {machine.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={machine.efficiency >= 90 ? 'default' : 'secondary'}>
+                              {machine.efficiency}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{machine.currentBatch || 'N/A'}</TableCell>
+                          <TableCell>{new Date(machine.lastMaintenance).toLocaleDateString()}</TableCell>
+                          <TableCell>{new Date(machine.nextMaintenance).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Factory className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No machines available</p>
+                    <p className="text-sm">Machine status will appear here</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
