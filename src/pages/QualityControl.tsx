@@ -128,6 +128,9 @@ const QualityControl = () => {
   const [selectedDate, setSelectedDate] = useState<string>('today');
   const [customDate, setCustomDate] = useState<string>('');
   
+  // Search state for pending assessments
+  const [pendingSearch, setPendingSearch] = useState<string>('');
+  
   // Filter assessments by date
   const filteredAssessments = useMemo(() => {
     if (selectedDate === 'all') return qualityAssessments;
@@ -144,6 +147,20 @@ const QualityControl = () => {
       return assessmentDate === targetDate;
     });
   }, [qualityAssessments, selectedDate, customDate]);
+
+  // Filter pending records by search
+  const filteredPendingRecords = useMemo(() => {
+    if (!pendingSearch.trim()) return pendingRecords;
+    
+    const searchLower = pendingSearch.toLowerCase().trim();
+    return pendingRecords.filter(record => {
+      const supplierMatch = record.supplier_name?.toLowerCase().includes(searchLower);
+      const batchMatch = record.batch_number?.toLowerCase().includes(searchLower);
+      const kgsMatch = record.kilograms?.toString().includes(searchLower);
+      
+      return supplierMatch || batchMatch || kgsMatch;
+    });
+  }, [pendingRecords, pendingSearch]);
 
   // Get pending modification requests for quality department
   const pendingModificationRequests = getPendingModificationRequests('Quality');
@@ -805,11 +822,25 @@ const QualityControl = () => {
                 <CardDescription>Coffee deliveries awaiting quality assessment</CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="mb-4">
+                  <Input
+                    placeholder="Search by supplier name, batch number, or weight (kgs)..."
+                    value={pendingSearch}
+                    onChange={(e) => setPendingSearch(e.target.value)}
+                    className="max-w-md"
+                  />
+                </div>
                 {pendingRecords.length === 0 ? (
                   <div className="text-center py-12">
                     <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">All Assessments Complete</h3>
                     <p className="text-gray-500">No pending coffee deliveries require assessment</p>
+                  </div>
+                ) : filteredPendingRecords.length === 0 ? (
+                  <div className="text-center py-12">
+                    <AlertTriangle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No results found</h3>
+                    <p className="text-muted-foreground">No pending assessments match your search criteria</p>
                   </div>
                 ) : (
                   <Table>
@@ -826,7 +857,7 @@ const QualityControl = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pendingRecords.map((record) => (
+                      {filteredPendingRecords.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell className="font-medium">{record.batch_number}</TableCell>
                           <TableCell>{record.supplier_name}</TableCell>
