@@ -261,6 +261,11 @@ const Suppliers = () => {
         };
       });
 
+      // Sort by date descending (latest first)
+      transactionsData.sort((a, b) => {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+
       console.log(`✅ Loaded ${transactionsData.length} transactions for supplier ${supplierId}`);
       setTransactions(transactionsData);
     } catch (error) {
