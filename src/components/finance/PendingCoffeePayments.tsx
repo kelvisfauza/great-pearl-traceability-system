@@ -42,29 +42,44 @@ export const PendingCoffeePayments = () => {
   // Ref to prevent duplicate submissions (synchronous check)
   const isProcessingRef = useRef(false);
 
-  // Subscribe to coffee_records deletions to refetch immediately
+  // Poll for changes after deletion requests are approved
   useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+    
     const channel = supabase
-      .channel('coffee_records_changes')
+      .channel('deletion_approvals')
       .on(
         'postgres_changes',
         {
-          event: 'DELETE',
+          event: 'UPDATE',
           schema: 'public',
-          table: 'coffee_records'
+          table: 'deletion_requests',
+          filter: 'status=eq.approved'
         },
         (payload) => {
-          console.log('🗑️ Coffee record deleted, refetching payments...', payload);
-          refetch();
-          toast({
-            title: "Record Deleted",
-            description: "The record has been removed",
-          });
+          console.log('🗑️ Deletion approved, starting polling...', payload);
+          
+          // Poll multiple times to ensure deletion is complete
+          let pollCount = 0;
+          pollInterval = setInterval(() => {
+            console.log('🔄 Polling for updated data...');
+            refetch();
+            pollCount++;
+            
+            if (pollCount >= 3) {
+              clearInterval(pollInterval);
+              toast({
+                title: "Record Deleted",
+                description: "The record has been removed",
+              });
+            }
+          }, 1000);
         }
       )
       .subscribe();
 
     return () => {
+      if (pollInterval) clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [refetch, toast]);
