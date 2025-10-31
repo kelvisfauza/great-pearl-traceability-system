@@ -76,24 +76,7 @@ const DeletionRequestsManager: React.FC = () => {
     setProcessingId(requestId);
     
     try {
-      // Find the request to get table and record info
-      const request = requests.find(r => r.id === requestId);
-      if (!request) throw new Error('Request not found');
-
-      // If approving, first delete the actual record from the source table
-      if (action === 'approved') {
-        const { error: deleteError } = await supabase
-          .from(request.table_name as any)
-          .delete()
-          .eq('id', request.record_id);
-
-        if (deleteError) {
-          console.error('Error deleting record:', deleteError);
-          throw new Error(`Failed to delete record: ${deleteError.message}`);
-        }
-      }
-
-      // Then update the deletion request status
+      // Update the deletion request status - the database trigger will handle actual deletion
       const { error } = await supabase
         .from('deletion_requests')
         .update({
