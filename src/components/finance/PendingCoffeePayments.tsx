@@ -15,9 +15,10 @@ import { usePendingCoffeePayments } from '@/hooks/usePendingCoffeePayments';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierAdvances } from '@/hooks/useSupplierAdvances';
 import { useDeletionRequest } from '@/hooks/useDeletionRequest';
+import { supabase } from '@/integrations/supabase/client';
 
 export const PendingCoffeePayments = () => {
-  const { coffeePayments, loading, processPayment } = usePendingCoffeePayments();
+  const { coffeePayments, loading, processPayment, refetch } = usePendingCoffeePayments();
   const { toast } = useToast();
   const { getTotalOutstanding } = useSupplierAdvances();
   const { submitDeletionRequest, isSubmitting: isDeletionSubmitting } = useDeletionRequest();
@@ -40,6 +41,34 @@ export const PendingCoffeePayments = () => {
   
   // Ref to prevent duplicate submissions (synchronous check)
   const isProcessingRef = useRef(false);
+
+  // Subscribe to deletion_requests changes to refetch when admin approves
+  useEffect(() => {
+    const channel = supabase
+      .channel('deletion_requests_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'deletion_requests',
+          filter: 'status=eq.approved'
+        },
+        (payload) => {
+          console.log('🗑️ Deletion approved, refetching payments...', payload);
+          refetch();
+          toast({
+            title: "Record Deleted",
+            description: "The record has been deleted by admin",
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch, toast]);
 
   useEffect(() => {
     if (selectedPayment && showPaymentDialog) {
@@ -175,12 +204,18 @@ export const PendingCoffeePayments = () => {
       return;
     }
 
+    // Submit deletion request for the coffee_record (which will cascade to quality_assessments)
     const success = await submitDeletionRequest(
-      'quality_assessments',
-      selectedPayment.qualityAssessmentId || selectedPayment.id,
-      selectedPayment,
+      'coffee_records',
+      selectedPayment.id, // Use the coffee record ID
+      {
+        ...selectedPayment,
+        batch_number: selectedPayment.batchNumber,
+        supplier_name: selectedPayment.supplier,
+        quality_assessment_id: selectedPayment.qualityAssessmentId
+      },
       deleteReason,
-      `${selectedPayment.batchNumber} - ${selectedPayment.supplier}`
+      `${selectedPayment.batchNumber} - ${selectedPayment.supplier} (${selectedPayment.quantity}kg)`
     );
 
     if (success) {
