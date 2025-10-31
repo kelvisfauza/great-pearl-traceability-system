@@ -76,6 +76,24 @@ const DeletionRequestsManager: React.FC = () => {
     setProcessingId(requestId);
     
     try {
+      // Find the request to get table and record info
+      const request = requests.find(r => r.id === requestId);
+      if (!request) throw new Error('Request not found');
+
+      // If approving, first delete the actual record from the source table
+      if (action === 'approved') {
+        const { error: deleteError } = await supabase
+          .from(request.table_name as any)
+          .delete()
+          .eq('id', request.record_id);
+
+        if (deleteError) {
+          console.error('Error deleting record:', deleteError);
+          throw new Error(`Failed to delete record: ${deleteError.message}`);
+        }
+      }
+
+      // Then update the deletion request status
       const { error } = await supabase
         .from('deletion_requests')
         .update({
@@ -91,7 +109,7 @@ const DeletionRequestsManager: React.FC = () => {
       toast({
         title: action === 'approved' ? "Request Approved" : "Request Rejected",
         description: action === 'approved' 
-          ? "The deletion has been executed automatically" 
+          ? "The record has been deleted successfully" 
           : "The deletion request has been rejected",
         variant: action === 'approved' ? "default" : "destructive"
       });
@@ -101,7 +119,7 @@ const DeletionRequestsManager: React.FC = () => {
       console.error('Error updating deletion request:', error);
       toast({
         title: "Error",
-        description: "Failed to update deletion request",
+        description: error instanceof Error ? error.message : "Failed to process deletion request",
         variant: "destructive"
       });
     } finally {
