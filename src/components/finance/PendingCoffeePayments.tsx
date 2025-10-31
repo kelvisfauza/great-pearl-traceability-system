@@ -42,24 +42,23 @@ export const PendingCoffeePayments = () => {
   // Ref to prevent duplicate submissions (synchronous check)
   const isProcessingRef = useRef(false);
 
-  // Subscribe to deletion_requests changes to refetch when admin approves
+  // Subscribe to coffee_records deletions to refetch immediately
   useEffect(() => {
     const channel = supabase
-      .channel('deletion_requests_changes')
+      .channel('coffee_records_changes')
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: 'DELETE',
           schema: 'public',
-          table: 'deletion_requests',
-          filter: 'status=eq.approved'
+          table: 'coffee_records'
         },
         (payload) => {
-          console.log('🗑️ Deletion approved, refetching payments...', payload);
+          console.log('🗑️ Coffee record deleted, refetching payments...', payload);
           refetch();
           toast({
             title: "Record Deleted",
-            description: "The record has been deleted by admin",
+            description: "The record has been removed",
           });
         }
       )
