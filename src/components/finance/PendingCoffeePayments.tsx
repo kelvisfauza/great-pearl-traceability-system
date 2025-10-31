@@ -10,15 +10,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Coffee, DollarSign, Banknote, CreditCard, Eye, User, Calendar, AlertCircle, XCircle, Search, X } from 'lucide-react';
+import { Coffee, DollarSign, Banknote, CreditCard, Eye, User, Calendar, AlertCircle, XCircle, Search, X, Trash2 } from 'lucide-react';
 import { usePendingCoffeePayments } from '@/hooks/usePendingCoffeePayments';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierAdvances } from '@/hooks/useSupplierAdvances';
+import { useDeletionRequest } from '@/hooks/useDeletionRequest';
 
 export const PendingCoffeePayments = () => {
   const { coffeePayments, loading, processPayment } = usePendingCoffeePayments();
   const { toast } = useToast();
   const { getTotalOutstanding } = useSupplierAdvances();
+  const { submitDeletionRequest, isSubmitting: isDeletionSubmitting } = useDeletionRequest();
   const [searchTerm, setSearchTerm] = useState('');
   
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
@@ -33,6 +35,8 @@ export const PendingCoffeePayments = () => {
   const [recoverAdvance, setRecoverAdvance] = useState(false);
   const [supplierOutstanding, setSupplierOutstanding] = useState(0);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
   
   // Ref to prevent duplicate submissions (synchronous check)
   const isProcessingRef = useRef(false);
@@ -158,6 +162,31 @@ export const PendingCoffeePayments = () => {
     } finally {
       setProcessing(false);
       isProcessingRef.current = false;
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedPayment || !deleteReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for deletion",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const success = await submitDeletionRequest(
+      'quality_assessments',
+      selectedPayment.qualityAssessmentId || selectedPayment.id,
+      selectedPayment,
+      deleteReason,
+      `${selectedPayment.batchNumber} - ${selectedPayment.supplier}`
+    );
+
+    if (success) {
+      setShowDeleteDialog(false);
+      setSelectedPayment(null);
+      setDeleteReason('');
     }
   };
 
@@ -315,6 +344,18 @@ export const PendingCoffeePayments = () => {
                         >
                           <DollarSign className="h-4 w-4 mr-1" />
                           {payment.isPricedByQuality ? 'Process Payment' : 'Price & Pay'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            setSelectedPayment(payment);
+                            setDeleteReason('');
+                            setShowDeleteDialog(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
                         </Button>
                       </div>
                     </TableCell>
@@ -774,6 +815,69 @@ export const PendingCoffeePayments = () => {
           <DialogFooter>
             <Button onClick={() => setErrorDialogOpen(false)} variant="default">
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete Transaction
+            </DialogTitle>
+            <DialogDescription>
+              This will submit a deletion request for admin approval. Please provide a reason.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPayment && (
+            <div className="space-y-4">
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <p><span className="font-medium">Batch:</span> {selectedPayment.batchNumber}</p>
+                <p><span className="font-medium">Supplier:</span> {selectedPayment.supplier}</p>
+                <p><span className="font-medium">Quantity:</span> {selectedPayment.quantity} kg</p>
+              </div>
+
+              <div>
+                <Label htmlFor="delete-reason">Reason for Deletion *</Label>
+                <Textarea
+                  id="delete-reason"
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  placeholder="e.g., Orphaned record - not found in Quality or Store departments"
+                  rows={3}
+                />
+              </div>
+
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  This transaction will be marked for deletion and requires admin approval before being permanently removed.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setDeleteReason('');
+              }}
+              disabled={isDeletionSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeletionSubmitting || !deleteReason.trim()}
+            >
+              {isDeletionSubmitting ? 'Submitting...' : 'Submit Deletion Request'}
             </Button>
           </DialogFooter>
         </DialogContent>
