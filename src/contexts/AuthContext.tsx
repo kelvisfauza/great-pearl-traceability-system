@@ -473,7 +473,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return isSuperAdmin() || isAdministrator();
   };
 
-  // Check if user can perform specific action based on role hierarchy
+  // Check if user can perform specific action based on role hierarchy and granular permissions
   const canPerformAction = (action: 'view' | 'create' | 'edit' | 'delete' | 'approve' | 'print' | 'export'): boolean => {
     if (!employee) return false;
     
@@ -492,9 +492,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return ['view', 'create', 'edit', 'export'].includes(action);
     }
     
-    // User permissions (basic only)
+    // User permissions (basic only from role)
     if (role === 'User') {
-      return ['view', 'create'].includes(action);
+      const roleBasedActions = ['view', 'create'];
+      
+      // But also check granular permissions for additional capabilities
+      // If user has any granular permission with this action, grant it
+      const hasGranularPermission = employee.permissions?.some(p => 
+        p.endsWith(`:${action}`)
+      );
+      
+      return roleBasedActions.includes(action) || hasGranularPermission;
     }
     
     return false;
