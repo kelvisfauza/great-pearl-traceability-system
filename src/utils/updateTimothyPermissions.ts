@@ -2,14 +2,30 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const updateTimothyPermissions = async () => {
   try {
-    console.log('🔧 Adding Finance permissions to Timothy...');
+    console.log('🔧 Adding Quality Control:edit permission to Timothy...');
+    
+    // First get current permissions
+    const { data: current, error: fetchError } = await supabase
+      .from('employees')
+      .select('permissions')
+      .eq('email', 'tatwanzire@gmail.com')
+      .single();
+    
+    if (fetchError) throw fetchError;
+    
+    const currentPermissions = current?.permissions || [];
+    const updatedPermissions = [...currentPermissions];
+    
+    // Add Quality Control:edit if not already present
+    if (!updatedPermissions.includes('Quality Control:edit')) {
+      updatedPermissions.push('Quality Control:edit');
+    }
     
     // Update Timothy's permissions directly in Supabase
     const { data, error } = await supabase
       .from('employees')
       .update({
-        permissions: ['Human Resources', 'Reports', 'Finance'],
-        department: 'Finance',
+        permissions: updatedPermissions,
         updated_at: new Date().toISOString()
       })
       .eq('email', 'tatwanzire@gmail.com')
@@ -20,7 +36,7 @@ export const updateTimothyPermissions = async () => {
     }
     
     console.log('✅ Timothy permissions updated in Supabase:', data);
-    alert('✅ Finance permissions added to Timothy successfully! Please refresh the page.');
+    alert('✅ Quality Control:edit permission added to Timothy successfully! He can now assess quality records.');
     
     return { success: true, data };
   } catch (error) {
