@@ -92,6 +92,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         },
         (payload) => {
           console.log('🔔 Employee data changed, refreshing...', payload);
+          const newData = payload.new as any;
+          
+          // Show toast notification about permission changes
+          if (newData.permissions && employee?.permissions) {
+            const oldPerms = new Set(employee.permissions);
+            const newPerms = new Set(newData.permissions);
+            
+            // Check if permissions changed
+            const permsChanged = newData.permissions.length !== employee.permissions.length ||
+              newData.permissions.some((p: string) => !oldPerms.has(p));
+            
+            if (permsChanged) {
+              toast({
+                title: "Permissions Updated",
+                description: "Your permissions have been updated. Refreshing your access...",
+              });
+            }
+          }
+          
           refreshEmployeeData();
         }
       )
@@ -101,7 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('🔌 Unsubscribing from employee changes');
       supabase.removeChannel(channel);
     };
-  }, [user?.email]);
+  }, [user?.email, employee?.permissions]);
 
   const fetchEmployeeData = async (userId?: string, userEmail?: string): Promise<Employee | null> => {
     const targetUserId = userId || user?.id;
