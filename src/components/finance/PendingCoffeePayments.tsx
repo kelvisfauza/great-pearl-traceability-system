@@ -15,7 +15,6 @@ import { usePendingCoffeePayments } from '@/hooks/usePendingCoffeePayments';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierAdvances } from '@/hooks/useSupplierAdvances';
 import { useDeletionRequest } from '@/hooks/useDeletionRequest';
-import { supabase } from '@/integrations/supabase/client';
 
 export const PendingCoffeePayments = () => {
   const { coffeePayments, loading, processPayment, refetch } = usePendingCoffeePayments();
@@ -41,48 +40,6 @@ export const PendingCoffeePayments = () => {
   
   // Ref to prevent duplicate submissions (synchronous check)
   const isProcessingRef = useRef(false);
-
-  // Poll for changes after deletion requests are approved
-  useEffect(() => {
-    let pollInterval: NodeJS.Timeout;
-    
-    const channel = supabase
-      .channel('deletion_approvals')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'deletion_requests',
-          filter: 'status=eq.approved'
-        },
-        (payload) => {
-          console.log('🗑️ Deletion approved, starting polling...', payload);
-          
-          // Poll multiple times to ensure deletion is complete
-          let pollCount = 0;
-          pollInterval = setInterval(() => {
-            console.log('🔄 Polling for updated data...');
-            refetch();
-            pollCount++;
-            
-            if (pollCount >= 3) {
-              clearInterval(pollInterval);
-              toast({
-                title: "Record Deleted",
-                description: "The record has been removed",
-              });
-            }
-          }, 1000);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      if (pollInterval) clearInterval(pollInterval);
-      supabase.removeChannel(channel);
-    };
-  }, [refetch, toast]);
 
   useEffect(() => {
     if (selectedPayment && showPaymentDialog) {
@@ -236,6 +193,8 @@ export const PendingCoffeePayments = () => {
       setShowDeleteDialog(false);
       setSelectedPayment(null);
       setDeleteReason('');
+      // Refetch the list after successful deletion
+      refetch();
     }
   };
 

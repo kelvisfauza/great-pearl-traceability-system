@@ -24,33 +24,38 @@ export const useDeletionRequest = () => {
       return false;
     }
 
+    // Only administrators can delete
+    if (employee.role !== 'Administrator') {
+      toast({
+        title: "Permission Denied",
+        description: "Only administrators can delete records",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase
-        .from('deletion_requests')
-        .insert({
-          table_name: tableName,
-          record_id: recordId,
-          record_data: recordData,
-          reason: reason.trim(),
-          requested_by: employee.name,
-          requested_by_department: employee.department
-        });
+      // Delete directly from the table
+      const { error } = await (supabase as any)
+        .from(tableName)
+        .delete()
+        .eq('id', recordId);
 
       if (error) throw error;
 
       toast({
-        title: "Deletion Request Submitted",
-        description: `Request to delete ${recordSummary || 'record'} has been sent to administrators for review`,
+        title: "Record Deleted",
+        description: `Successfully deleted ${recordSummary || 'record'}`,
       });
 
       return true;
     } catch (error) {
-      console.error('Error submitting deletion request:', error);
+      console.error('Error deleting record:', error);
       toast({
         title: "Error",
-        description: "Failed to submit deletion request",
+        description: "Failed to delete record",
         variant: "destructive"
       });
       return false;
