@@ -51,10 +51,21 @@ export const ExpenseManagement = () => {
                              req.type === 'Salary Advance' ||
                              req.type === 'Mid-Month Salary' ||
                              req.type === 'End-Month Salary' ||
-                             req.type === 'Emergency Salary Request';
+                             req.type === 'Emergency Salary Request' ||
+                             req.type === 'advance' ||  // money_requests type
+                             req.type === 'emergency' || // money_requests type
+                             req.type === 'salary'; // money_requests type
       
       const hasFinanceApproval = req.financeApprovedAt;
       const isRejected = req.status === 'Rejected' || req.status === 'rejected';
+      
+      console.log('Salary request filter:', { 
+        type: req.type, 
+        isSalaryRequest, 
+        hasFinanceApproval, 
+        isRejected,
+        willShow: isSalaryRequest && !isRejected && !hasFinanceApproval 
+      });
       
       // Only show if it's a salary request AND not rejected AND finance hasn't approved yet
       return isSalaryRequest && !isRejected && !hasFinanceApproval;
