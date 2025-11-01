@@ -14,7 +14,8 @@ import DayBook from "@/components/reports/DayBook";
 import MonthlyReconciliation from "@/components/reports/MonthlyReconciliation";
 import { ExpensesReport } from "@/components/reports/ExpensesReport";
 import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
-import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart, BookOpen, Calculator, Receipt } from "lucide-react";
+import FinanceMonthlyReport from "@/components/reports/FinanceMonthlyReport";
+import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart, BookOpen, Calculator, Receipt, Wallet } from "lucide-react";
 
 const Reports = () => {
   return (
@@ -25,10 +26,14 @@ const Reports = () => {
       <div className="space-y-6">
         {/* Main Content Tabs - Lazy Load Components for Performance */}
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-10">
+          <TabsList className="grid w-full grid-cols-11 gap-1">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="finance" className="flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              Finance Report
             </TabsTrigger>
             <TabsTrigger value="daybook" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
@@ -76,6 +81,10 @@ const Reports = () => {
               <RefreshMetricsButton />
             </div>
             <PerformanceDashboard />
+          </TabsContent>
+
+          <TabsContent value="finance" className="space-y-6">
+            <FinanceMonthlyReport />
           </TabsContent>
 
           <TabsContent value="daybook" className="space-y-6">

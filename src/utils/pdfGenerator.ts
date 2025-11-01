@@ -662,6 +662,214 @@ export const generateMonthlySalesSummaryPDF = (transactions: SalesTransaction[],
   }
 };
 
+// Finance Monthly Report Interface
+export interface FinanceMonthlyData {
+  period: { start: string; end: string };
+  totalPaid: number;
+  coffeePaid: number;
+  suppliersPaid: number;
+  expensesPaid: number;
+  unpaidTransactions: number;
+  unpaidAmount: number;
+  openingBalance: number;
+  closingBalance: number;
+  cashIn: number;
+  cashOut: number;
+  supplierDetails: Array<{
+    name: string;
+    amount: number;
+    batches: number;
+  }>;
+  expenseDetails: Array<{
+    description: string;
+    amount: number;
+    date: string;
+  }>;
+  unpaidDetails: Array<{
+    type: string;
+    description: string;
+    amount: number;
+    date: string;
+  }>;
+}
+
+// Generate Finance Monthly Report PDF
+export const generateFinanceMonthlyReportPDF = (data: FinanceMonthlyData) => {
+  try {
+    const doc = new jsPDF();
+    doc.setFont('helvetica');
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(44, 62, 80);
+    doc.text('MONTHLY FINANCE REPORT', 105, 20, { align: 'center' });
+    
+    // Period
+    doc.setFontSize(14);
+    doc.setTextColor(52, 73, 94);
+    doc.text(`Period: ${format(new Date(data.period.start), 'MMMM yyyy')}`, 105, 30, { align: 'center' });
+    doc.setFontSize(11);
+    doc.text(`${format(new Date(data.period.start), 'MMM dd')} - ${format(new Date(data.period.end), 'MMM dd, yyyy')}`, 105, 37, { align: 'center' });
+    
+    // Divider
+    doc.setDrawColor(189, 195, 199);
+    doc.line(20, 43, 190, 43);
+    
+    let yPosition = 52;
+    
+    // Executive Summary
+    doc.setFontSize(16);
+    doc.setTextColor(44, 62, 80);
+    doc.text('EXECUTIVE SUMMARY', 20, yPosition);
+    yPosition += 10;
+    
+    // Summary boxes
+    doc.setFillColor(46, 204, 113);
+    doc.roundedRect(20, yPosition - 5, 85, 22, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.text('TOTAL PAID', 62.5, yPosition, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text(`UGX ${data.totalPaid.toLocaleString()}`, 62.5, yPosition + 7, { align: 'center' });
+    doc.setFontSize(9);
+    doc.text(`Coffee: ${data.coffeePaid.toLocaleString()} | Expenses: ${data.expensesPaid.toLocaleString()}`, 62.5, yPosition + 13, { align: 'center' });
+    
+    doc.setFillColor(231, 76, 60);
+    doc.roundedRect(110, yPosition - 5, 80, 22, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.text('UNPAID', 150, yPosition, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text(`UGX ${data.unpaidAmount.toLocaleString()}`, 150, yPosition + 7, { align: 'center' });
+    doc.setFontSize(9);
+    doc.text(`${data.unpaidTransactions} transactions pending`, 150, yPosition + 13, { align: 'center' });
+    
+    yPosition += 30;
+    
+    // Cash Flow Summary
+    doc.setFontSize(16);
+    doc.setTextColor(44, 62, 80);
+    doc.text('CASH FLOW SUMMARY', 20, yPosition);
+    yPosition += 10;
+    
+    doc.setFontSize(11);
+    doc.setTextColor(52, 73, 94);
+    
+    const leftCol = 30;
+    const rightCol = 130;
+    
+    doc.text('Opening Balance:', leftCol, yPosition);
+    doc.text(`UGX ${data.openingBalance.toLocaleString()}`, rightCol, yPosition);
+    yPosition += 7;
+    
+    doc.setTextColor(46, 204, 113);
+    doc.text('Cash In:', leftCol, yPosition);
+    doc.text(`+UGX ${data.cashIn.toLocaleString()}`, rightCol, yPosition);
+    yPosition += 7;
+    
+    doc.setTextColor(231, 76, 60);
+    doc.text('Cash Out:', leftCol, yPosition);
+    doc.text(`-UGX ${data.cashOut.toLocaleString()}`, rightCol, yPosition);
+    yPosition += 7;
+    
+    doc.setDrawColor(189, 195, 199);
+    doc.line(leftCol, yPosition, 180, yPosition);
+    yPosition += 7;
+    
+    doc.setTextColor(44, 62, 80);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Closing Balance:', leftCol, yPosition);
+    doc.text(`UGX ${data.closingBalance.toLocaleString()}`, rightCol, yPosition);
+    doc.setFont('helvetica', 'normal');
+    yPosition += 15;
+    
+    // Suppliers Paid
+    if (data.supplierDetails.length > 0) {
+      doc.setFontSize(16);
+      doc.setTextColor(44, 62, 80);
+      doc.text('TOP SUPPLIERS PAID', 20, yPosition);
+      yPosition += 10;
+      
+      doc.setFontSize(10);
+      doc.setTextColor(52, 73, 94);
+      doc.text('Supplier', 25, yPosition);
+      doc.text('Batches', 120, yPosition);
+      doc.text('Amount (UGX)', 160, yPosition);
+      
+      doc.line(20, yPosition + 2, 190, yPosition + 2);
+      yPosition += 8;
+      
+      doc.setFontSize(9);
+      data.supplierDetails.slice(0, 10).forEach((supplier) => {
+        if (yPosition > 260) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        doc.text(supplier.name.substring(0, 35), 25, yPosition);
+        doc.text(supplier.batches.toString(), 130, yPosition, { align: 'center' });
+        doc.text(supplier.amount.toLocaleString(), 180, yPosition, { align: 'right' });
+        yPosition += 6;
+      });
+      
+      yPosition += 10;
+    }
+    
+    // Unpaid Transactions
+    if (data.unpaidDetails.length > 0 && yPosition < 250) {
+      if (yPosition > 200) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      doc.setFontSize(16);
+      doc.setTextColor(44, 62, 80);
+      doc.text('UNPAID TRANSACTIONS', 20, yPosition);
+      yPosition += 10;
+      
+      doc.setFontSize(9);
+      doc.setTextColor(52, 73, 94);
+      doc.text('Type', 25, yPosition);
+      doc.text('Description', 55, yPosition);
+      doc.text('Date', 130, yPosition);
+      doc.text('Amount', 170, yPosition);
+      
+      doc.line(20, yPosition + 2, 190, yPosition + 2);
+      yPosition += 8;
+      
+      data.unpaidDetails.forEach((item) => {
+        if (yPosition > 270) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        doc.text(item.type.substring(0, 15), 25, yPosition);
+        doc.text(item.description.substring(0, 30), 55, yPosition);
+        doc.text(item.date, 130, yPosition);
+        doc.text(item.amount.toLocaleString(), 185, yPosition, { align: 'right' });
+        yPosition += 6;
+      });
+    }
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(149, 165, 166);
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.text(`Generated on ${format(new Date(), 'MMMM dd, yyyy \'at\' HH:mm')}`, 105, 285, { align: 'center' });
+      doc.text(`Coffee ERP System - Finance Monthly Report - Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+    }
+    
+    // Save
+    const fileName = `finance-monthly-report-${format(new Date(data.period.start), 'yyyy-MM')}.pdf`;
+    doc.save(fileName);
+    
+    return true;
+  } catch (error) {
+    console.error('Error generating finance monthly report PDF:', error);
+    throw error;
+  }
+};
+
 // Generate multiple sales transactions PDF
 export const generateMultipleSalesPDF = (transactions: SalesTransaction[], title: string = 'Sales Transactions Report') => {
   try {
