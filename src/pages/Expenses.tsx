@@ -745,13 +745,25 @@ const Expenses = () => {
                         <span className="text-sm font-medium">Monthly Salary:</span>
                         <span className="text-sm font-bold">UGX {(employee?.salary || 0).toLocaleString()}</span>
                       </div>
+                      {(periodInfo.paidLastMonth || 0) > 0 && (
+                        <>
+                          <div className="flex justify-between items-center text-orange-600">
+                            <span className="text-sm font-medium">Paid Last Month:</span>
+                            <span className="text-sm font-semibold">- UGX {(periodInfo.paidLastMonth || 0).toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between items-center border-t pt-2">
+                            <span className="text-sm font-medium">Base Available (after last month):</span>
+                            <span className="text-sm font-bold text-blue-600">UGX {(periodInfo.baseAvailable || 0).toLocaleString()}</span>
+                          </div>
+                        </>
+                      )}
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">Already Requested:</span>
-                        <span className="text-sm text-muted-foreground">UGX {periodInfo.alreadyRequested.toLocaleString()}</span>
+                        <span className="text-sm font-medium">Requested This Month:</span>
+                        <span className="text-sm text-muted-foreground">- UGX {periodInfo.alreadyRequested.toLocaleString()}</span>
                       </div>
                       <Separator />
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold">Available Balance:</span>
+                        <span className="text-sm font-semibold">Available to Request Now:</span>
                         <span className={`text-sm font-bold ${periodInfo.availableAmount > 0 ? 'text-green-600' : 'text-red-600'}`}>
                           UGX {periodInfo.availableAmount.toLocaleString()}
                         </span>
