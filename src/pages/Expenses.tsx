@@ -40,7 +40,7 @@ const Expenses = () => {
     amount: '',
     reason: '',
     phoneNumber: '',
-    requestType: 'mid-month' as 'mid-month' | 'end-month' | 'emergency'
+    requestType: 'mid-month' as 'mid-month' | 'end-month' | 'emergency' | 'advance'
   });
 
   // Use salary tracking hook
@@ -72,7 +72,7 @@ const Expenses = () => {
 
   // Filter to show user's salary requests
   const mySalaryRequests = myRequests.filter(req => 
-    req.type === 'Employee Salary Request' || req.type === 'Salary Request'
+    req.type === 'Employee Salary Request' || req.type === 'Salary Request' || req.type === 'Salary Advance'
   );
 
   const expenseTypes = [
@@ -264,12 +264,14 @@ const Expenses = () => {
       ? 'Mid-Month' 
       : salaryFormData.requestType === 'end-month'
       ? 'End-Month'
+      : salaryFormData.requestType === 'advance'
+      ? 'Salary Advance'
       : 'Emergency';
       
     const title = `${requestTypeLabel} Salary Request - UGX ${numericAmount.toLocaleString()}`;
 
     const success = await createApprovalRequest(
-      salaryFormData.requestType === 'emergency' ? 'Emergency Salary Request' : 'Employee Salary Request',
+      salaryFormData.requestType === 'advance' ? 'Salary Advance' : salaryFormData.requestType === 'emergency' ? 'Emergency Salary Request' : 'Employee Salary Request',
       title,
       `${requestTypeLabel} salary request`,
       numericAmount,
@@ -283,6 +285,7 @@ const Expenses = () => {
         request_type: salaryFormData.requestType,
         payment_type: salaryFormData.requestType,
         is_emergency: salaryFormData.requestType === 'emergency',
+        is_advance: salaryFormData.requestType === 'advance',
         monthly_salary: employee?.salary || 0,
         requested_amount: numericAmount,
         reason: salaryFormData.reason,
@@ -291,7 +294,7 @@ const Expenses = () => {
         admin_approved: false,
         requestDate: new Date().toISOString(),
         department: 'Finance',
-        priority: 'High'
+        priority: salaryFormData.requestType === 'advance' ? 'Medium' : 'High'
       }
     );
 
@@ -742,11 +745,21 @@ const Expenses = () => {
                             <span className="text-sm font-medium">Paid Last Month:</span>
                             <span className="text-sm font-semibold">- UGX {(periodInfo.paidLastMonth || 0).toLocaleString()}</span>
                           </div>
-                          <div className="flex justify-between items-center border-t pt-2">
-                            <span className="text-sm font-medium">Base Available (after last month):</span>
-                            <span className="text-sm font-bold text-blue-600">UGX {(periodInfo.baseAvailable || 0).toLocaleString()}</span>
-                          </div>
                         </>
+                      )}
+                      {(periodInfo.advancesOwed || 0) > 0 && (
+                        <div className="flex justify-between items-center text-red-600">
+                          <span className="text-sm font-medium">⚠️ Advances Owed:</span>
+                          <span className="text-sm font-semibold">- UGX {(periodInfo.advancesOwed || 0).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {((periodInfo.paidLastMonth || 0) > 0 || (periodInfo.advancesOwed || 0) > 0) && (
+                        <div className="flex justify-between items-center border-t pt-2">
+                          <span className="text-sm font-medium">Base Available:</span>
+                          <span className={`text-sm font-bold ${(periodInfo.baseAvailable || 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                            UGX {(periodInfo.baseAvailable || 0).toLocaleString()}
+                          </span>
+                        </div>
                       )}
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium">Requested This Month:</span>
@@ -755,8 +768,8 @@ const Expenses = () => {
                       <Separator />
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-semibold">Available to Request Now:</span>
-                        <span className={`text-sm font-bold ${periodInfo.availableAmount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          UGX {periodInfo.availableAmount.toLocaleString()}
+                        <span className={`text-sm font-bold ${periodInfo.availableAmount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {periodInfo.availableAmount >= 0 ? 'UGX ' : '-UGX '}{Math.abs(periodInfo.availableAmount).toLocaleString()}
                         </span>
                       </div>
                       {!periodInfo.canRequest && (
@@ -782,7 +795,7 @@ const Expenses = () => {
                     <Label htmlFor="requestType">Request Type *</Label>
                     <Select 
                       value={salaryFormData.requestType} 
-                      onValueChange={(value: 'mid-month' | 'end-month' | 'emergency') => 
+                      onValueChange={(value: 'mid-month' | 'end-month' | 'emergency' | 'advance') => 
                         setSalaryFormData({...salaryFormData, requestType: value})
                       }
                     >
@@ -793,10 +806,13 @@ const Expenses = () => {
                         <SelectItem value="mid-month">Mid-Month (13th-15th only)</SelectItem>
                         <SelectItem value="end-month">End-Month (31st-2nd only)</SelectItem>
                         <SelectItem value="emergency">Emergency (Anytime)</SelectItem>
+                        <SelectItem value="advance">💳 Salary Advance (Anytime)</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {salaryFormData.requestType === 'emergency' 
+                      {salaryFormData.requestType === 'advance'
+                        ? '⚠️ Salary advance creates a negative balance and will be deducted from your next salary payment'
+                        : salaryFormData.requestType === 'emergency' 
                         ? 'Emergency requests can be made anytime but require special approval'
                         : salaryFormData.requestType === 'mid-month'
                         ? 'Available only from 13th-15th each month (up to 50% of salary)'
@@ -809,16 +825,20 @@ const Expenses = () => {
                     <Input
                       id="salaryAmount"
                       type="number"
-                      placeholder={`Enter amount (max: ${periodInfo.availableAmount.toLocaleString()})`}
+                      placeholder={salaryFormData.requestType === 'advance' 
+                        ? 'Enter amount (advances up to monthly salary)' 
+                        : `Enter amount (max: ${periodInfo.availableAmount.toLocaleString()})`}
                       value={salaryFormData.amount}
                       onChange={(e) => setSalaryFormData({...salaryFormData, amount: e.target.value})}
                       min="10000"
-                      max={periodInfo.availableAmount}
+                      max={salaryFormData.requestType === 'advance' ? employee?.salary : periodInfo.availableAmount}
                       step="1000"
                       disabled={!periodInfo.canRequest}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Maximum available: UGX {periodInfo.availableAmount.toLocaleString()}
+                      {salaryFormData.requestType === 'advance' 
+                        ? `Advance limit: UGX ${(employee?.salary || 0).toLocaleString()} (will create negative balance)`
+                        : `Maximum available: UGX ${periodInfo.availableAmount.toLocaleString()}`}
                     </p>
                   </div>
 
