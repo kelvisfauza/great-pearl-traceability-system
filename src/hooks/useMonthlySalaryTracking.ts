@@ -50,11 +50,12 @@ export const useMonthlySalaryTracking = (
       
       // Get all requests for this month (pending + approved)
       const { data: monthlyRequests, error: requestsError } = await supabase
-        .from('money_requests')
-        .select('amount, status, request_type, created_at')
-        .eq('requested_by', employeeEmail)
+        .from('approval_requests')
+        .select('amount, status, created_at')
+        .eq('requestedby', employeeEmail)
+        .eq('type', 'Employee Salary Request')
         .gte('created_at', startOfMonth.toISOString())
-        .in('status', ['pending', 'approved']);
+        .in('status', ['Pending', 'Approved']);
 
       if (requestsError) throw requestsError;
 
