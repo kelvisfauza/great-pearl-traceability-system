@@ -42,30 +42,36 @@ export const useMonthlySalaryTracking = (
       
       const today = new Date();
       const dayOfMonth = today.getDate();
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth();
+      
+      // Calculate start of current month
+      const startOfMonth = new Date(currentYear, currentMonth, 1);
+      
+      // Get all requests for this month (pending + approved)
+      const { data: monthlyRequests, error: requestsError } = await supabase
+        .from('money_requests')
+        .select('amount, status, request_type, created_at')
+        .eq('requested_by', employeeEmail)
+        .gte('created_at', startOfMonth.toISOString())
+        .in('status', ['pending', 'approved']);
+
+      if (requestsError) throw requestsError;
+
+      const totalRequestedThisMonth = monthlyRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0;
       
       // Emergency requests can be made anytime
       if (requestType === 'emergency') {
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const { data: monthlyRequests, error } = await supabase
-          .from('money_requests')
-          .select('amount, status, request_type')
-          .eq('requested_by', employeeEmail)
-          .gte('created_at', startOfMonth.toISOString())
-          .in('status', ['pending', 'approved']);
-
-        if (error) throw error;
-
-        const alreadyRequested = monthlyRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0;
-        const availableAmount = Math.max(0, monthlySalary - alreadyRequested);
+        const availableAmount = Math.max(0, monthlySalary - totalRequestedThisMonth);
 
         setPeriodInfo({
           canRequest: availableAmount > 0,
           periodType: 'emergency',
           maxAmount: monthlySalary,
-          alreadyRequested,
+          alreadyRequested: totalRequestedThisMonth,
           availableAmount,
           message: availableAmount > 0 
-            ? `Emergency request available up to UGX ${availableAmount.toLocaleString()}`
+            ? `Emergency request available. Remaining balance: UGX ${availableAmount.toLocaleString()} of UGX ${monthlySalary.toLocaleString()}`
             : `You have already requested your full monthly salary of UGX ${monthlySalary.toLocaleString()}`,
           isEmergency: true
         });
@@ -88,19 +94,8 @@ export const useMonthlySalaryTracking = (
         maxAmount = monthlySalary;
       }
 
-      // Get requests for current month
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const { data: monthlyRequests, error } = await supabase
-        .from('money_requests')
-        .select('amount, status, request_type')
-        .eq('requested_by', employeeEmail)
-        .gte('created_at', startOfMonth.toISOString())
-        .in('status', ['pending', 'approved']); // Count both pending and approved
-
-      if (error) throw error;
-
-      // Calculate total already requested this month
-      const alreadyRequested = monthlyRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0;
+      // Total already requested is calculated above
+      const alreadyRequested = totalRequestedThisMonth;
       
       // Calculate available amount
       let availableAmount = 0;
@@ -120,9 +115,9 @@ export const useMonthlySalaryTracking = (
         canRequest = availableAmount > 0;
         
         if (canRequest) {
-          message = `You can request up to UGX ${availableAmount.toLocaleString()} (50% of your monthly salary).`;
+          message = `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (50% mid-month allocation). Already requested this month: UGX ${alreadyRequested.toLocaleString()}`;
         } else {
-          message = `You have already requested your mid-month allocation of UGX ${maxAmount.toLocaleString()}.`;
+          message = `You have already requested your mid-month allocation of UGX ${maxAmount.toLocaleString()}. Total requested: UGX ${alreadyRequested.toLocaleString()}`;
         }
       } else if (periodType === 'end-month') {
         // For end-month, max is monthly salary minus what was already paid
@@ -130,9 +125,9 @@ export const useMonthlySalaryTracking = (
         canRequest = availableAmount > 0;
         
         if (canRequest) {
-          message = `You can request up to UGX ${availableAmount.toLocaleString()} to complete your monthly salary.`;
+          message = `Available: UGX ${availableAmount.toLocaleString()} of UGX ${monthlySalary.toLocaleString()} (remaining balance). Already requested this month: UGX ${alreadyRequested.toLocaleString()}`;
         } else {
-          message = `You have already received your full monthly salary of UGX ${monthlySalary.toLocaleString()}.`;
+          message = `You have already requested your full monthly salary of UGX ${monthlySalary.toLocaleString()}. Total requested: UGX ${alreadyRequested.toLocaleString()}`;
         }
       }
 

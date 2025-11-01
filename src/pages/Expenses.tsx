@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useApprovalSystem } from '@/hooks/useApprovalSystem';
 import { useMyExpenseRequests } from '@/hooks/useMyExpenseRequests';
 import { useAttendance } from '@/hooks/useAttendance';
+import { useMonthlySalaryTracking } from '@/hooks/useMonthlySalaryTracking';
 import { DollarSign, Send, FileText, Clock, CheckCircle, XCircle, AlertTriangle, Calendar, User, TrendingUp, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -41,6 +42,13 @@ const Expenses = () => {
     phoneNumber: '',
     requestType: 'mid-month' as 'mid-month' | 'end-month' | 'emergency'
   });
+
+  // Use salary tracking hook
+  const { periodInfo, loading: loadingSalaryInfo, refetch: refetchSalaryInfo } = useMonthlySalaryTracking(
+    employee?.email,
+    employee?.salary || 0,
+    salaryFormData.requestType
+  );
 
   // Fetch user's weekly allowance
   useEffect(() => {
@@ -305,8 +313,9 @@ const Expenses = () => {
         requestType: 'mid-month'
       });
       
-      // Refresh requests
+      // Refresh requests and salary info
       refetch();
+      refetchSalaryInfo();
     }
   };
 
@@ -724,10 +733,47 @@ const Expenses = () => {
                   Submit New Salary Request
                 </CardTitle>
                 <CardDescription>
-                  Request salary advance or mid-month payment. Maximum UGX 150,000 per request. Requires both Finance and Admin approval.
+                  Request salary advance or payment based on your monthly salary. Requires both Finance and Admin approval.
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Salary Balance Card */}
+                <Card className="mb-4 bg-muted/50">
+                  <CardContent className="pt-6">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Monthly Salary:</span>
+                        <span className="text-sm font-bold">UGX {(employee?.salary || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Already Requested:</span>
+                        <span className="text-sm text-muted-foreground">UGX {periodInfo.alreadyRequested.toLocaleString()}</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-semibold">Available Balance:</span>
+                        <span className={`text-sm font-bold ${periodInfo.availableAmount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          UGX {periodInfo.availableAmount.toLocaleString()}
+                        </span>
+                      </div>
+                      {!periodInfo.canRequest && (
+                        <Alert variant="destructive" className="mt-2">
+                          <AlertDescription className="text-xs">
+                            {periodInfo.message}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      {periodInfo.canRequest && (
+                        <Alert className="mt-2">
+                          <AlertDescription className="text-xs">
+                            {periodInfo.message}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <form onSubmit={handleSalarySubmit} className="space-y-4">
                   <div>
                     <Label htmlFor="requestType">Request Type *</Label>
@@ -756,19 +802,20 @@ const Expenses = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="salaryAmount">Amount (UGX) * (Max: 150,000)</Label>
+                    <Label htmlFor="salaryAmount">Amount (UGX) *</Label>
                     <Input
                       id="salaryAmount"
                       type="number"
-                      placeholder="Enter amount (max. 150,000)"
+                      placeholder={`Enter amount (max: ${periodInfo.availableAmount.toLocaleString()})`}
                       value={salaryFormData.amount}
                       onChange={(e) => setSalaryFormData({...salaryFormData, amount: e.target.value})}
                       min="10000"
-                      max="150000"
+                      max={periodInfo.availableAmount}
                       step="1000"
+                      disabled={!periodInfo.canRequest}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Maximum amount is UGX 150,000 per request
+                      Maximum available: UGX {periodInfo.availableAmount.toLocaleString()}
                     </p>
                   </div>
 
@@ -797,8 +844,8 @@ const Expenses = () => {
                     />
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={submitting}>
-                    {submitting ? 'Submitting...' : 'Submit Salary Request'}
+                  <Button type="submit" className="w-full" disabled={submitting || !periodInfo.canRequest || loadingSalaryInfo}>
+                    {submitting ? 'Submitting...' : loadingSalaryInfo ? 'Loading Balance...' : 'Submit Salary Request'}
                   </Button>
                 </form>
               </CardContent>
