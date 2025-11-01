@@ -27,12 +27,17 @@ export const ExpenseManagement = () => {
   // Filter different types of expense requests that need finance action
   const userExpenseRequests = expenseRequests.filter(
     req => {
+      console.log('Checking request:', { id: req.id, type: req.type, title: req.title, financeApprovedAt: req.financeApprovedAt, status: req.status });
+      
       const isExpenseRequest = req.type === 'Employee Expense Request' || 
                               req.type === 'Requisition' ||
+                              req.type === 'Expense Request' ||
                               (req.type.includes('Expense') && req.type !== 'Employee Salary Request');
       
       const hasFinanceApproval = req.financeApprovedAt;
       const isRejected = req.status === 'Rejected' || req.status === 'rejected';
+      
+      console.log('Filter result:', { isExpenseRequest, hasFinanceApproval, isRejected, shouldShow: isExpenseRequest && !isRejected && !hasFinanceApproval });
       
       // Only show if it's an expense request AND not rejected AND finance hasn't approved yet
       return isExpenseRequest && !isRejected && !hasFinanceApproval;
@@ -41,7 +46,12 @@ export const ExpenseManagement = () => {
 
   const salaryRequests = expenseRequests.filter(
     req => {
-      const isSalaryRequest = req.type === 'Employee Salary Request' || req.type === 'Salary Payment';
+      const isSalaryRequest = req.type === 'Employee Salary Request' || 
+                             req.type === 'Salary Payment' ||
+                             req.type === 'Salary Advance' ||
+                             req.type === 'Mid-Month Salary' ||
+                             req.type === 'End-Month Salary' ||
+                             req.type === 'Emergency Salary Request';
       
       const hasFinanceApproval = req.financeApprovedAt;
       const isRejected = req.status === 'Rejected' || req.status === 'rejected';
@@ -50,6 +60,9 @@ export const ExpenseManagement = () => {
       return isSalaryRequest && !isRejected && !hasFinanceApproval;
     }
   );
+
+  console.log('Filtered expense requests:', userExpenseRequests.length);
+  console.log('Filtered salary requests:', salaryRequests.length);
 
   const handleReview = (request: any) => {
     setSelectedRequest(request);
