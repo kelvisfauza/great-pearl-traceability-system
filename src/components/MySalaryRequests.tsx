@@ -3,10 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { useApprovalSystem } from '@/hooks/useApprovalSystem';
 import { useSupabaseSalaryRequests } from '@/hooks/useSupabaseSalaryRequests';
 import IndividualSalaryRequestModal from '@/components/hr/IndividualSalaryRequestModal';
 import { DollarSign, Clock, CheckCircle, XCircle, User, Phone } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface MySalaryRequestsProps {
   employees?: any[];
@@ -14,9 +15,9 @@ interface MySalaryRequestsProps {
 
 const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
   const { employee } = useAuth();
-  const { createApprovalRequest, loading: submitting } = useApprovalSystem();
   const { requests, loading, fetchRequestsByEmail } = useSupabaseSalaryRequests();
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const { toast } = useToast();
 
   // Filter salary requests for current user and fetch them
   useEffect(() => {
@@ -32,19 +33,37 @@ const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
 
   const handleRequestSubmitted = async (requestData: any) => {
     try {
-      const success = await createApprovalRequest(
-        requestData.type,
-        requestData.title,
-        requestData.description,
-        parseFloat(requestData.amount.replace(/[^\d.-]/g, '')),
-        requestData.details
-      );
+      // Use the proper Supabase money_requests table
+      const { data, error } = await supabase
+        .from('money_requests')
+        .insert([{
+          user_id: employee?.authUserId || employee?.id,
+          amount: parseFloat(requestData.amount.replace(/[^\d.-]/g, '')),
+          reason: requestData.details?.reason || requestData.description,
+          request_type: requestData.details?.request_type || 'salary',
+          requested_by: employee?.email || '',
+          status: 'pending',
+          approval_stage: 'pending_finance'
+        }])
+        .select()
+        .single();
 
-      if (success) {
-        setShowRequestModal(false);
-      }
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Salary request submitted successfully and awaiting Finance approval"
+      });
+
+      setShowRequestModal(false);
+      fetchRequestsByEmail(employee.email);
     } catch (error) {
       console.error('Error submitting salary request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit salary request",
+        variant: "destructive"
+      });
     }
   };
 
