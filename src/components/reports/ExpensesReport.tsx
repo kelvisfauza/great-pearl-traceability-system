@@ -184,7 +184,7 @@ export const ExpensesReport = () => {
                   <SelectItem value="quarter">Last Quarter</SelectItem>
                 </SelectContent>
               </Select>
-              <Button onClick={handlePrint} className="gap-2">
+              <Button onClick={() => handlePrint?.()} className="gap-2">
                 <Printer className="h-4 w-4" />
                 Print Report
               </Button>
