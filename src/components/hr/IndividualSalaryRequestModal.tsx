@@ -26,7 +26,7 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted, 
   
   const [requestData, setRequestData] = useState({
     selectedEmployeeId: "",
-    paymentType: "mid-month",
+    requestType: "mid-month" as 'mid-month' | 'end-month' | 'emergency',
     reason: "",
     phoneNumber: "",
     notes: "",
@@ -42,7 +42,8 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted, 
   // Track salary period and availability
   const { periodInfo, loading: periodLoading } = useMonthlySalaryTracking(
     selectedEmployee?.email,
-    selectedEmployee?.salary || 0
+    selectedEmployee?.salary || 0,
+    requestData.requestType
   );
 
   // Update request amount when employee or period changes
@@ -108,15 +109,17 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted, 
     }
 
     const amount = requestData.requestAmount;
-    const requestTitle = periodInfo.periodType === "mid-month" 
+    const requestTitle = requestData.requestType === "mid-month" 
       ? `Mid-Month Salary Request - ${selectedEmployee.name}`
+      : requestData.requestType === "emergency"
+      ? `Emergency Salary Request - ${selectedEmployee.name}`
       : `End-Month Salary Request - ${selectedEmployee.name}`;
 
     const salaryRequest = {
       department: "Human Resources",
-      type: "Employee Salary Request",
+      type: requestData.requestType === "emergency" ? "Emergency Salary Request" : "Employee Salary Request",
       title: requestTitle,
-      description: `${periodInfo.periodType === "mid-month" ? "Mid-month" : "End-of-month"} salary request`,
+      description: `${requestData.requestType === "mid-month" ? "Mid-month" : requestData.requestType === "emergency" ? "Emergency" : "End-of-month"} salary request`,
       amount: `UGX ${amount.toLocaleString()}`,
       requestedby: currentUser?.email || 'HR Manager',
       daterequested: new Date().toISOString().split('T')[0],
@@ -129,13 +132,15 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted, 
         employee_phone: phoneNumber,
         employee_department: selectedEmployee.department,
         employee_position: selectedEmployee.position,
-        payment_type: periodInfo.periodType,
+        request_type: requestData.requestType,
+        payment_type: requestData.requestType,
         monthly_salary: selectedEmployee.salary,
         requested_amount: amount,
         already_paid_this_month: periodInfo.alreadyRequested,
         available_balance: periodInfo.availableAmount,
         reason: requestData.reason,
         notes: requestData.notes,
+        is_emergency: requestData.requestType === 'emergency',
         requires_dual_approval: true,
         finance_approved: false,
         admin_approved: false,
@@ -148,12 +153,14 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted, 
     
     // Send SMS notification about salary initialization
     try {
-      sendSalaryInitializedSMS(
-        selectedEmployee.name,
-        phoneNumber,
-        amount,
-        periodInfo.periodType as 'mid-month' | 'end-month'
-      );
+      if (requestData.requestType !== 'emergency') {
+        sendSalaryInitializedSMS(
+          selectedEmployee.name,
+          phoneNumber,
+          amount,
+          requestData.requestType as 'mid-month' | 'end-month'
+        );
+      }
     } catch (smsError) {
       console.error('SMS notification failed:', smsError);
       // Don't block the request if SMS fails
@@ -162,7 +169,7 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted, 
     // Reset form
     setRequestData({
       selectedEmployeeId: "",
-      paymentType: "mid-month",
+      requestType: "mid-month",
       reason: "",
       phoneNumber: "",
       notes: "",
@@ -170,9 +177,15 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted, 
     });
 
     // Send in-app notification
+    const requestTypeLabel = requestData.requestType === "mid-month" 
+      ? "mid month" 
+      : requestData.requestType === "emergency" 
+      ? "emergency" 
+      : "end of month";
+    
     toast({
       title: "Salary Request Submitted",
-      description: `Dear ${selectedEmployee.name}, your ${periodInfo.periodType === "mid-month" ? "mid month" : "end of month"} salary of UGX ${amount.toLocaleString()} has been initialized. Once approved you will receive it ASAP.`,
+      description: `Dear ${selectedEmployee.name}, your ${requestTypeLabel} salary request of UGX ${amount.toLocaleString()} has been submitted. Once approved you will receive it ASAP.`,
     });
   };
 
@@ -242,6 +255,7 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted, 
                       <div className="font-semibold">
                         {periodInfo.periodType === 'mid-month' && 'Mid-Month Period (13th-15th)'}
                         {periodInfo.periodType === 'end-month' && 'End-Month Period (31st-2nd)'}
+                        {periodInfo.periodType === 'emergency' && 'Emergency Request (Available Anytime)'}
                         {periodInfo.periodType === 'closed' && 'Period Closed'}
                       </div>
                       <div>{periodInfo.message}</div>
@@ -256,6 +270,32 @@ const IndividualSalaryRequestModal = ({ open, onOpenChange, onRequestSubmitted, 
               )}
             </div>
           )}
+
+          <div className="space-y-1">
+            <Label htmlFor="requestType" className="text-sm">Request Type *</Label>
+            <Select 
+              value={requestData.requestType} 
+              onValueChange={(value: 'mid-month' | 'end-month' | 'emergency') => 
+                setRequestData(prev => ({ ...prev, requestType: value }))
+              }
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mid-month">Mid-Month (13th-15th only)</SelectItem>
+                <SelectItem value="end-month">End-Month (31st-2nd only)</SelectItem>
+                <SelectItem value="emergency">Emergency (Anytime)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {requestData.requestType === 'emergency' 
+                ? 'Emergency requests can be made anytime but require special approval'
+                : requestData.requestType === 'mid-month'
+                ? 'Available only from 13th-15th each month'
+                : 'Available only from 31st-2nd each month'}
+            </p>
+          </div>
 
           <div className="space-y-1">
             <Label htmlFor="requestAmount" className="text-sm">Request Amount (UGX) *</Label>
