@@ -126,6 +126,25 @@ const SalesReportsList = () => {
     }
   };
 
+  const handleMonthlySummaryPDF = () => {
+    if (filteredTransactions.length === 0) {
+      toast.error("No sales data available for summary report");
+      return;
+    }
+    
+    try {
+      const { generateMonthlySalesSummaryPDF } = require('@/utils/pdfGenerator');
+      const periodName = quickFilter === 'previous-month' ? 'Previous Month Summary' :
+                         quickFilter === 'current-month' ? 'Current Month Summary' :
+                         'Sales Summary Report';
+      generateMonthlySalesSummaryPDF(filteredTransactions, periodName);
+      toast.success("Monthly sales summary report generated!");
+    } catch (error) {
+      console.error('Error generating monthly summary PDF:', error);
+      toast.error("Failed to generate summary report");
+    }
+  };
+
   const handleEditTransaction = (transaction: any) => {
     setEditingTransaction({ ...transaction });
     setShowEditModal(true);
@@ -184,7 +203,17 @@ const SalesReportsList = () => {
           </CardTitle>
           <CardDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <span>View and export sales transactions with attachments</span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleMonthlySummaryPDF}
+                disabled={filteredTransactions.length === 0}
+                className="flex items-center gap-2"
+              >
+                <TrendingUp className="h-4 w-4" />
+                Monthly Summary Report
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -193,7 +222,7 @@ const SalesReportsList = () => {
                 className="flex items-center gap-2"
               >
                 <Files className="h-4 w-4" />
-                Export All PDF ({filteredTransactions.length})
+                Export All ({filteredTransactions.length})
               </Button>
             </div>
           </CardDescription>

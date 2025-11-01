@@ -470,6 +470,192 @@ export const generateSalesTransactionPDF = (transaction: SalesTransaction) => {
   }
 };
 
+// Generate monthly sales summary report with statistics
+export const generateMonthlySalesSummaryPDF = (transactions: SalesTransaction[], periodName: string = 'Sales Period') => {
+  try {
+    const doc = new jsPDF();
+    doc.setFont('helvetica');
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(44, 62, 80);
+    doc.text('MONTHLY SALES SUMMARY REPORT', 105, 20, { align: 'center' });
+    
+    // Date range
+    const dates = transactions.map(t => new Date(t.date)).sort((a, b) => a.getTime() - b.getTime());
+    const startDate = dates[0];
+    const endDate = dates[dates.length - 1];
+    
+    doc.setFontSize(14);
+    doc.setTextColor(52, 73, 94);
+    doc.text(periodName, 105, 30, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`Period: ${format(startDate, 'MMM dd, yyyy')} - ${format(endDate, 'MMM dd, yyyy')}`, 105, 38, { align: 'center' });
+    
+    // Divider
+    doc.setDrawColor(189, 195, 199);
+    doc.line(20, 45, 190, 45);
+    
+    let yPosition = 55;
+    
+    // Key Metrics Section
+    doc.setFontSize(16);
+    doc.setTextColor(44, 62, 80);
+    doc.text('KEY PERFORMANCE METRICS', 20, yPosition);
+    yPosition += 12;
+    
+    // Calculate statistics
+    const totalTransactions = transactions.length;
+    const totalWeight = transactions.reduce((sum, t) => sum + t.weight, 0);
+    const totalRevenue = transactions.reduce((sum, t) => sum + t.total_amount, 0);
+    const avgPrice = totalWeight > 0 ? totalRevenue / totalWeight : 0;
+    const avgTransactionSize = totalTransactions > 0 ? totalWeight / totalTransactions : 0;
+    const avgTransactionValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+    
+    // Metrics boxes
+    doc.setFillColor(46, 204, 113);
+    doc.roundedRect(20, yPosition - 5, 80, 25, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.setTextColor(255, 255, 255);
+    doc.text('TOTAL REVENUE', 60, yPosition, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text(`UGX ${totalRevenue.toLocaleString()}`, 60, yPosition + 8, { align: 'center' });
+    doc.setFontSize(9);
+    doc.text(`${totalTransactions} transactions`, 60, yPosition + 14, { align: 'center' });
+    
+    doc.setFillColor(52, 152, 219);
+    doc.roundedRect(110, yPosition - 5, 80, 25, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.text('TOTAL WEIGHT SOLD', 150, yPosition, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text(`${totalWeight.toLocaleString()} kg`, 150, yPosition + 8, { align: 'center' });
+    doc.setFontSize(9);
+    doc.text(`Avg: ${avgTransactionSize.toFixed(0)} kg/sale`, 150, yPosition + 14, { align: 'center' });
+    
+    yPosition += 35;
+    
+    // Additional metrics
+    doc.setFillColor(155, 89, 182);
+    doc.roundedRect(20, yPosition - 5, 80, 20, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.text('AVG PRICE PER KG', 60, yPosition, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`UGX ${Math.round(avgPrice).toLocaleString()}`, 60, yPosition + 8, { align: 'center' });
+    
+    doc.setFillColor(230, 126, 34);
+    doc.roundedRect(110, yPosition - 5, 80, 20, 3, 3, 'F');
+    doc.setFontSize(10);
+    doc.text('AVG TRANSACTION VALUE', 150, yPosition, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`UGX ${Math.round(avgTransactionValue).toLocaleString()}`, 150, yPosition + 8, { align: 'center' });
+    
+    yPosition += 30;
+    
+    // Coffee Type Breakdown
+    doc.setFontSize(16);
+    doc.setTextColor(44, 62, 80);
+    doc.text('BREAKDOWN BY COFFEE TYPE', 20, yPosition);
+    yPosition += 10;
+    
+    const coffeeBreakdown = transactions.reduce((acc, t) => {
+      if (!acc[t.coffee_type]) {
+        acc[t.coffee_type] = { weight: 0, revenue: 0, count: 0 };
+      }
+      acc[t.coffee_type].weight += t.weight;
+      acc[t.coffee_type].revenue += t.total_amount;
+      acc[t.coffee_type].count += 1;
+      return acc;
+    }, {} as Record<string, { weight: number; revenue: number; count: number }>);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(52, 73, 94);
+    doc.text('Coffee Type', 25, yPosition);
+    doc.text('Transactions', 75, yPosition);
+    doc.text('Weight (kg)', 115, yPosition);
+    doc.text('Revenue (UGX)', 155, yPosition);
+    
+    doc.setDrawColor(189, 195, 199);
+    doc.line(20, yPosition + 2, 190, yPosition + 2);
+    yPosition += 8;
+    
+    Object.entries(coffeeBreakdown).forEach(([type, data]) => {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      doc.text(type.substring(0, 20), 25, yPosition);
+      doc.text(data.count.toString(), 85, yPosition, { align: 'center' });
+      doc.text(data.weight.toLocaleString(), 125, yPosition, { align: 'center' });
+      doc.text(data.revenue.toLocaleString(), 175, yPosition, { align: 'center' });
+      yPosition += 6;
+    });
+    
+    yPosition += 10;
+    
+    // Top Customers
+    doc.setFontSize(16);
+    doc.setTextColor(44, 62, 80);
+    doc.text('TOP CUSTOMERS', 20, yPosition);
+    yPosition += 10;
+    
+    const customerBreakdown = transactions.reduce((acc, t) => {
+      if (!acc[t.customer]) {
+        acc[t.customer] = { weight: 0, revenue: 0, count: 0 };
+      }
+      acc[t.customer].weight += t.weight;
+      acc[t.customer].revenue += t.total_amount;
+      acc[t.customer].count += 1;
+      return acc;
+    }, {} as Record<string, { weight: number; revenue: number; count: number }>);
+    
+    const topCustomers = Object.entries(customerBreakdown)
+      .sort((a, b) => b[1].revenue - a[1].revenue)
+      .slice(0, 10);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(52, 73, 94);
+    doc.text('Customer', 25, yPosition);
+    doc.text('Purchases', 80, yPosition);
+    doc.text('Weight (kg)', 120, yPosition);
+    doc.text('Revenue (UGX)', 160, yPosition);
+    
+    doc.setDrawColor(189, 195, 199);
+    doc.line(20, yPosition + 2, 190, yPosition + 2);
+    yPosition += 8;
+    
+    topCustomers.forEach(([customer, data], index) => {
+      if (yPosition > 270) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      doc.text(`${index + 1}. ${customer.substring(0, 18)}`, 25, yPosition);
+      doc.text(data.count.toString(), 90, yPosition, { align: 'center' });
+      doc.text(data.weight.toLocaleString(), 130, yPosition, { align: 'center' });
+      doc.text(data.revenue.toLocaleString(), 175, yPosition, { align: 'center' });
+      yPosition += 6;
+    });
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(149, 165, 166);
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.text(`Generated on ${format(new Date(), 'MMMM dd, yyyy \'at\' HH:mm')}`, 105, 285, { align: 'center' });
+      doc.text(`Coffee ERP System - Sales Summary Report - Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+    }
+    
+    // Save
+    const fileName = `sales-summary-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+    doc.save(fileName);
+    
+    return true;
+  } catch (error) {
+    console.error('Error generating monthly sales summary PDF:', error);
+    throw error;
+  }
+};
+
 // Generate multiple sales transactions PDF
 export const generateMultipleSalesPDF = (transactions: SalesTransaction[], title: string = 'Sales Transactions Report') => {
   try {
