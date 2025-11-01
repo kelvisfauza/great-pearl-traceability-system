@@ -39,7 +39,7 @@ const Expenses = () => {
     amount: '',
     reason: '',
     phoneNumber: '',
-    paymentType: 'mid-month' // default to mid-month
+    requestType: 'mid-month' as 'mid-month' | 'end-month' | 'emergency'
   });
 
   // Fetch user's weekly allowance
@@ -261,12 +261,18 @@ const Expenses = () => {
       return;
     }
 
-    const title = `${salaryFormData.paymentType === 'mid-month' ? 'Mid-Month' : 'Emergency'} Salary Request - UGX ${numericAmount.toLocaleString()}`;
+    const requestTypeLabel = salaryFormData.requestType === 'mid-month' 
+      ? 'Mid-Month' 
+      : salaryFormData.requestType === 'end-month'
+      ? 'End-Month'
+      : 'Emergency';
+      
+    const title = `${requestTypeLabel} Salary Request - UGX ${numericAmount.toLocaleString()}`;
 
     const success = await createApprovalRequest(
-      'Employee Salary Request',
+      salaryFormData.requestType === 'emergency' ? 'Emergency Salary Request' : 'Employee Salary Request',
       title,
-      `${salaryFormData.paymentType === 'mid-month' ? 'Mid-month' : 'Emergency'} salary request`,
+      `${requestTypeLabel} salary request`,
       numericAmount,
       {
         employee_id: employee?.id,
@@ -275,7 +281,9 @@ const Expenses = () => {
         employee_phone: salaryFormData.phoneNumber,
         employee_department: employee?.department,
         employee_position: employee?.position,
-        payment_type: salaryFormData.paymentType,
+        request_type: salaryFormData.requestType,
+        payment_type: salaryFormData.requestType,
+        is_emergency: salaryFormData.requestType === 'emergency',
         monthly_salary: employee?.salary || 0,
         requested_amount: numericAmount,
         reason: salaryFormData.reason,
@@ -294,7 +302,7 @@ const Expenses = () => {
         amount: '',
         reason: '',
         phoneNumber: '',
-        paymentType: 'mid-month'
+        requestType: 'mid-month'
       });
       
       // Refresh requests
@@ -722,19 +730,29 @@ const Expenses = () => {
               <CardContent>
                 <form onSubmit={handleSalarySubmit} className="space-y-4">
                   <div>
-                    <Label htmlFor="paymentType">Payment Type *</Label>
+                    <Label htmlFor="requestType">Request Type *</Label>
                     <Select 
-                      value={salaryFormData.paymentType} 
-                      onValueChange={(value) => setSalaryFormData({...salaryFormData, paymentType: value})}
+                      value={salaryFormData.requestType} 
+                      onValueChange={(value: 'mid-month' | 'end-month' | 'emergency') => 
+                        setSalaryFormData({...salaryFormData, requestType: value})
+                      }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select payment type" />
+                        <SelectValue placeholder="Select request type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="mid-month">Mid-Month Salary</SelectItem>
-                        <SelectItem value="emergency">Emergency Advance</SelectItem>
+                        <SelectItem value="mid-month">Mid-Month (13th-15th only)</SelectItem>
+                        <SelectItem value="end-month">End-Month (31st-2nd only)</SelectItem>
+                        <SelectItem value="emergency">Emergency (Anytime)</SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {salaryFormData.requestType === 'emergency' 
+                        ? 'Emergency requests can be made anytime but require special approval'
+                        : salaryFormData.requestType === 'mid-month'
+                        ? 'Available only from 13th-15th each month (up to 50% of salary)'
+                        : 'Available only from 31st-2nd each month (remaining balance)'}
+                    </p>
                   </div>
 
                   <div>
