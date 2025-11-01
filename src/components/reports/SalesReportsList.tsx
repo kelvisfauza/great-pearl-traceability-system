@@ -97,8 +97,14 @@ const SalesReportsList = () => {
   };
 
   const handlePrintReport = (transaction: any) => {
-    // Generate and print PDF report for the transaction
-    toast.info("PDF generation feature coming soon!");
+    try {
+      const { generateSalesTransactionPDF } = require('@/utils/pdfGenerator');
+      generateSalesTransactionPDF(transaction);
+      toast.success("Sales report PDF generated successfully!");
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error("Failed to generate PDF");
+    }
   };
 
   const handleBulkPDF = () => {
@@ -107,7 +113,17 @@ const SalesReportsList = () => {
       return;
     }
     
-    toast.info("Bulk PDF generation feature coming soon!");
+    try {
+      const { generateMultipleSalesPDF } = require('@/utils/pdfGenerator');
+      const title = quickFilter === 'previous-month' ? 'Previous Month Sales Reports' :
+                    quickFilter === 'current-month' ? 'Current Month Sales Reports' :
+                    `Sales Reports (${filteredTransactions.length} transactions)`;
+      generateMultipleSalesPDF(filteredTransactions, title);
+      toast.success(`Generated PDF with ${filteredTransactions.length} sales reports!`);
+    } catch (error) {
+      console.error('Error generating bulk PDF:', error);
+      toast.error("Failed to generate bulk PDF");
+    }
   };
 
   const handleEditTransaction = (transaction: any) => {
@@ -326,14 +342,24 @@ const SalesReportsList = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewDetails(transaction)}
-                            title="View Details"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewDetails(transaction)}
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePrintReport(transaction)}
+                              title="Generate PDF"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))

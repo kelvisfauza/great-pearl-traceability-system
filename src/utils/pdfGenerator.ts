@@ -331,3 +331,237 @@ export const generateMultipleReportsPDF = (reports: StoreReport[], title: string
   const fileName = `store-reports-summary-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
   doc.save(fileName);
 };
+
+// Sales Transaction Interface
+export interface SalesTransaction {
+  id: string;
+  date: string;
+  customer: string;
+  coffee_type: string;
+  moisture: number;
+  weight: number;
+  unit_price: number;
+  total_amount: number;
+  truck_details: string;
+  driver_details: string;
+  status: string;
+  grn_number?: string;
+}
+
+// Generate single sales transaction PDF
+export const generateSalesTransactionPDF = (transaction: SalesTransaction) => {
+  try {
+    const doc = new jsPDF();
+    doc.setFont('helvetica');
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(44, 62, 80);
+    doc.text('SALES TRANSACTION REPORT', 105, 25, { align: 'center' });
+    
+    // Date
+    doc.setFontSize(14);
+    doc.setTextColor(52, 73, 94);
+    doc.text(`Transaction Date: ${format(new Date(transaction.date), 'MMMM dd, yyyy')}`, 105, 35, { align: 'center' });
+    
+    // Divider
+    doc.setDrawColor(189, 195, 199);
+    doc.line(20, 45, 190, 45);
+    
+    let yPosition = 55;
+    
+    // Customer Information
+    doc.setFontSize(16);
+    doc.setTextColor(44, 62, 80);
+    doc.text('Customer Information', 20, yPosition);
+    yPosition += 10;
+    
+    doc.setFontSize(12);
+    doc.setTextColor(52, 73, 94);
+    
+    const leftCol = 20;
+    const rightCol = 110;
+    
+    doc.text('Customer:', leftCol, yPosition);
+    doc.text(transaction.customer, leftCol + 25, yPosition);
+    
+    if (transaction.grn_number) {
+      doc.text('GRN Number:', rightCol, yPosition);
+      doc.text(transaction.grn_number, rightCol + 30, yPosition);
+    }
+    yPosition += 10;
+    
+    // Product Details
+    doc.setFontSize(16);
+    doc.setTextColor(44, 62, 80);
+    doc.text('Product Details', 20, yPosition);
+    yPosition += 10;
+    
+    doc.setFontSize(12);
+    doc.setTextColor(52, 73, 94);
+    
+    doc.text('Coffee Type:', leftCol, yPosition);
+    doc.text(transaction.coffee_type, leftCol + 28, yPosition);
+    
+    doc.text('Moisture:', rightCol, yPosition);
+    doc.text(`${transaction.moisture}%`, rightCol + 22, yPosition);
+    yPosition += 8;
+    
+    doc.text('Weight:', leftCol, yPosition);
+    doc.text(`${transaction.weight.toLocaleString()} kg`, leftCol + 18, yPosition);
+    
+    doc.text('Unit Price:', rightCol, yPosition);
+    doc.text(`UGX ${transaction.unit_price.toLocaleString()}/kg`, rightCol + 25, yPosition);
+    yPosition += 10;
+    
+    // Total Amount - Highlighted
+    doc.setFontSize(14);
+    doc.setFillColor(46, 204, 113);
+    doc.rect(leftCol - 2, yPosition - 6, 170, 10, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.text('Total Amount:', leftCol, yPosition);
+    doc.text(`UGX ${transaction.total_amount.toLocaleString()}`, leftCol + 35, yPosition);
+    yPosition += 15;
+    
+    // Transport Details
+    doc.setFontSize(16);
+    doc.setTextColor(44, 62, 80);
+    doc.text('Transport Details', 20, yPosition);
+    yPosition += 10;
+    
+    doc.setFontSize(12);
+    doc.setTextColor(52, 73, 94);
+    
+    doc.text('Truck Details:', leftCol, yPosition);
+    const truckText = doc.splitTextToSize(transaction.truck_details, 80);
+    doc.text(truckText, leftCol + 30, yPosition);
+    yPosition += truckText.length * 6;
+    
+    doc.text('Driver Details:', leftCol, yPosition);
+    const driverText = doc.splitTextToSize(transaction.driver_details, 80);
+    doc.text(driverText, leftCol + 30, yPosition);
+    yPosition += driverText.length * 6 + 10;
+    
+    // Status
+    doc.setFontSize(14);
+    doc.setTextColor(44, 62, 80);
+    doc.text('Status:', leftCol, yPosition);
+    
+    // Color code status
+    if (transaction.status === 'Completed') {
+      doc.setTextColor(46, 204, 113);
+    } else {
+      doc.setTextColor(241, 196, 15);
+    }
+    doc.text(transaction.status, leftCol + 20, yPosition);
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(149, 165, 166);
+    doc.text(`Generated on ${format(new Date(), 'MMMM dd, yyyy \'at\' HH:mm')}`, 105, 280, { align: 'center' });
+    doc.text('Coffee ERP System - Sales Transaction Report', 105, 290, { align: 'center' });
+    
+    // Save
+    const fileName = `sales-${transaction.customer.replace(/\s+/g, '-')}-${format(new Date(transaction.date), 'yyyy-MM-dd')}.pdf`;
+    doc.save(fileName);
+  } catch (error) {
+    console.error('Error generating sales PDF:', error);
+    throw error;
+  }
+};
+
+// Generate multiple sales transactions PDF
+export const generateMultipleSalesPDF = (transactions: SalesTransaction[], title: string = 'Sales Transactions Report') => {
+  try {
+    const doc = new jsPDF();
+    doc.setFont('helvetica');
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(44, 62, 80);
+    doc.text(title.toUpperCase(), 105, 25, { align: 'center' });
+    
+    // Date range
+    const dates = transactions.map(t => new Date(t.date)).sort((a, b) => a.getTime() - b.getTime());
+    const startDate = dates[0];
+    const endDate = dates[dates.length - 1];
+    
+    doc.setFontSize(12);
+    doc.setTextColor(52, 73, 94);
+    doc.text(`Period: ${format(startDate, 'MMM dd, yyyy')} - ${format(endDate, 'MMM dd, yyyy')}`, 105, 35, { align: 'center' });
+    
+    // Summary Statistics
+    const totalWeight = transactions.reduce((sum, t) => sum + t.weight, 0);
+    const totalAmount = transactions.reduce((sum, t) => sum + t.total_amount, 0);
+    const avgPrice = totalAmount / totalWeight;
+    
+    let yPosition = 50;
+    
+    doc.setFontSize(14);
+    doc.setTextColor(44, 62, 80);
+    doc.text('Summary Statistics', 20, yPosition);
+    yPosition += 10;
+    
+    doc.setFontSize(11);
+    doc.setTextColor(52, 73, 94);
+    
+    doc.text(`Total Transactions: ${transactions.length}`, 20, yPosition);
+    doc.text(`Total Weight: ${totalWeight.toLocaleString()} kg`, 80, yPosition);
+    doc.text(`Avg Price: UGX ${Math.round(avgPrice).toLocaleString()}/kg`, 150, yPosition);
+    yPosition += 6;
+    
+    doc.text(`Total Amount: UGX ${totalAmount.toLocaleString()}`, 20, yPosition);
+    yPosition += 15;
+    
+    // Table Header
+    doc.setFontSize(10);
+    doc.setTextColor(44, 62, 80);
+    doc.text('Date', 20, yPosition);
+    doc.text('Customer', 42, yPosition);
+    doc.text('Coffee Type', 75, yPosition);
+    doc.text('Weight', 108, yPosition);
+    doc.text('Price/kg', 130, yPosition);
+    doc.text('Amount', 160, yPosition);
+    
+    // Table line
+    doc.setDrawColor(189, 195, 199);
+    doc.line(20, yPosition + 2, 190, yPosition + 2);
+    yPosition += 8;
+    
+    // Table content
+    doc.setFontSize(9);
+    doc.setTextColor(52, 73, 94);
+    
+    transactions.forEach(transaction => {
+      if (yPosition > 270) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      doc.text(format(new Date(transaction.date), 'MM/dd'), 20, yPosition);
+      doc.text(transaction.customer.substring(0, 15), 42, yPosition);
+      doc.text(transaction.coffee_type.substring(0, 15), 75, yPosition);
+      doc.text(`${transaction.weight.toLocaleString()}`, 108, yPosition);
+      doc.text(`${transaction.unit_price.toLocaleString()}`, 130, yPosition);
+      doc.text(`${transaction.total_amount.toLocaleString()}`, 160, yPosition);
+      
+      yPosition += 6;
+    });
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(149, 165, 166);
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.text(`Generated on ${format(new Date(), 'MMMM dd, yyyy \'at\' HH:mm')} - Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+    }
+    
+    // Save
+    const fileName = `sales-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+    doc.save(fileName);
+  } catch (error) {
+    console.error('Error generating sales PDF:', error);
+    throw error;
+  }
+};
