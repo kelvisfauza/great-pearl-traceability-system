@@ -29,7 +29,7 @@ export const useMyExpenseRequests = () => {
   const { employee } = useAuth();
 
   const fetchMyRequests = async () => {
-    if (!employee?.email) return;
+    if (!employee?.name) return;
     
     try {
       setLoading(true);
@@ -38,7 +38,7 @@ export const useMyExpenseRequests = () => {
         .from('approval_requests')
         .select('*')
         .in('type', ['Expense Request', 'Requisition', 'Employee Salary Request', 'Salary Request'])
-        .eq('requestedby', employee.email)
+        .eq('requestedby', employee.name)  // Filter by name, not email
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -56,7 +56,7 @@ export const useMyExpenseRequests = () => {
 
   useEffect(() => {
     fetchMyRequests();
-  }, [employee?.email]);
+  }, [employee?.name]);
 
   const getApprovalStatus = (request: MyExpenseRequest) => {
     if (request.status === 'Rejected') return 'Rejected';

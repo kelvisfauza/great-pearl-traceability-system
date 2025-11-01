@@ -199,21 +199,41 @@ const Expenses = () => {
     const selectedType = expenseTypes.find(type => type.value === formData.expenseType);
     const title = `${selectedType?.label || formData.expenseType} Request - UGX ${numericAmount.toLocaleString()}`;
 
-    const success = await createApprovalRequest(
-      'Expense Request',
-      title,
-      formData.description,
-      numericAmount,
-      {
-        expenseType: formData.expenseType,
-        expenseCategory: selectedType?.label || formData.expenseType,
-        reason: formData.reason,
-        phoneNumber: formData.phoneNumber,
-        requestDate: new Date().toISOString(),
+    // Submit directly to Supabase approval_requests for Finance approval
+    const { error } = await supabase
+      .from('approval_requests')
+      .insert({
+        type: 'Expense Request',
+        title,
+        description: formData.description,
+        amount: numericAmount,
+        requestedby: employee?.name || 'Unknown',
+        daterequested: new Date().toISOString(),
+        priority: formData.expenseType === 'overtime' ? 'High' : 'Normal',
+        status: 'Pending',
         department: employee?.department || 'General',
-        priority: 'Normal'
-      }
-    );
+        details: {
+          expenseType: formData.expenseType,
+          expenseCategory: selectedType?.label || formData.expenseType,
+          reason: formData.reason,
+          phoneNumber: formData.phoneNumber,
+          requestDate: new Date().toISOString(),
+          employee_email: employee?.email,
+          employee_name: employee?.name
+        }
+      });
+
+    const success = !error;
+
+    if (error) {
+      console.error('Error submitting expense request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit expense request",
+        variant: "destructive"
+      });
+      return;
+    }
 
     if (success) {
       // Deduct from weekly allowance for meals/refreshments
