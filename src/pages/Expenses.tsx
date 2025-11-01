@@ -13,6 +13,7 @@ import { useApprovalSystem } from '@/hooks/useApprovalSystem';
 import { useMyExpenseRequests } from '@/hooks/useMyExpenseRequests';
 import { useAttendance } from '@/hooks/useAttendance';
 import { useMonthlySalaryTracking } from '@/hooks/useMonthlySalaryTracking';
+import { supabase } from '@/integrations/supabase/client';
 import { DollarSign, Send, FileText, Clock, CheckCircle, XCircle, AlertTriangle, Calendar, User, TrendingUp, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -43,6 +44,8 @@ const Expenses = () => {
     requestType: 'mid-month' as 'mid-month' | 'end-month' | 'emergency' | 'advance'
   });
 
+  const [mySalaryRequests, setMySalaryRequests] = useState<any[]>([]);
+
   // Use salary tracking hook
   const { periodInfo, loading: loadingSalaryInfo, refetch: refetchSalaryInfo } = useMonthlySalaryTracking(
     employee?.email,
@@ -70,10 +73,27 @@ const Expenses = () => {
     (req.type && req.type.includes('Expense') && !req.type.includes('Salary'))
   );
 
-  // Filter to show user's salary requests
-  const mySalaryRequests = myRequests.filter(req => 
-    req.type === 'Employee Salary Request' || req.type === 'Salary Request' || req.type === 'Salary Advance'
-  );
+  // Fetch salary requests from Supabase money_requests
+  useEffect(() => {
+    const fetchSalaryRequests = async () => {
+      if (!employee?.authUserId) return;
+      
+      try {
+        const { data } = await supabase
+          .from('money_requests')
+          .select('*')
+          .eq('user_id', employee.authUserId)
+          .in('request_type', ['Salary Advance', 'Mid-Month Salary', 'End-Month Salary', 'Emergency Salary Request'])
+          .order('created_at', { ascending: false });
+
+        setMySalaryRequests(data || []);
+      } catch (error) {
+        console.error('Error fetching salary requests:', error);
+      }
+    };
+
+    fetchSalaryRequests();
+  }, [employee?.authUserId, submitting]);
 
   const expenseTypes = [
     { value: 'airtime', label: 'Airtime/Data' },
@@ -229,6 +249,15 @@ const Expenses = () => {
   const handleSalarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!employee?.email || !employee?.authUserId) {
+      toast({
+        title: "Error",
+        description: "Employee information not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!salaryFormData.amount || !salaryFormData.reason || !salaryFormData.phoneNumber) {
       toast({
         title: "Error",
@@ -248,7 +277,6 @@ const Expenses = () => {
       return;
     }
 
-
     // Basic phone number validation
     const phoneRegex = /^[0-9+\-\s()]{10,15}$/;
     if (!phoneRegex.test(salaryFormData.phoneNumber)) {
@@ -261,44 +289,47 @@ const Expenses = () => {
     }
 
     const requestTypeLabel = salaryFormData.requestType === 'mid-month' 
-      ? 'Mid-Month' 
+      ? 'Mid-Month Salary' 
       : salaryFormData.requestType === 'end-month'
-      ? 'End-Month'
+      ? 'End-Month Salary'
       : salaryFormData.requestType === 'advance'
       ? 'Salary Advance'
-      : 'Emergency';
+      : 'Emergency Salary Request';
+
+    try {
+      // Submit to Supabase money_requests for proper two-tier approval flow
+      const { error } = await supabase
+        .from('money_requests')
+        .insert({
+          user_id: employee.authUserId,
+          amount: numericAmount,
+          reason: salaryFormData.reason,
+          request_type: requestTypeLabel,
+          requested_by: employee.name,
+          status: 'pending',
+          approval_stage: 'pending_finance',
+          metadata: {
+            employee_email: employee.email,
+            employee_name: employee.name,
+            employee_phone: salaryFormData.phoneNumber,
+            employee_department: employee?.department,
+            request_period: salaryFormData.requestType,
+            month: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+            is_advance: salaryFormData.requestType === 'advance',
+            is_emergency: salaryFormData.requestType === 'emergency',
+            base_salary: employee.salary,
+            available_before_request: periodInfo.availableAmount,
+            overtime_included: periodInfo.overtimeEarned || 0
+          }
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Salary request submitted to Finance for approval"
+      });
       
-    const title = `${requestTypeLabel} Salary Request - UGX ${numericAmount.toLocaleString()}`;
-
-    const success = await createApprovalRequest(
-      salaryFormData.requestType === 'advance' ? 'Salary Advance' : salaryFormData.requestType === 'emergency' ? 'Emergency Salary Request' : 'Employee Salary Request',
-      title,
-      `${requestTypeLabel} salary request`,
-      numericAmount,
-      {
-        employee_id: employee?.id,
-        employee_name: employee?.name,
-        employee_email: employee?.email,
-        employee_phone: salaryFormData.phoneNumber,
-        employee_department: employee?.department,
-        employee_position: employee?.position,
-        request_type: salaryFormData.requestType,
-        payment_type: salaryFormData.requestType,
-        is_emergency: salaryFormData.requestType === 'emergency',
-        is_advance: salaryFormData.requestType === 'advance',
-        monthly_salary: employee?.salary || 0,
-        requested_amount: numericAmount,
-        reason: salaryFormData.reason,
-        requires_dual_approval: true,
-        finance_approved: false,
-        admin_approved: false,
-        requestDate: new Date().toISOString(),
-        department: 'Finance',
-        priority: salaryFormData.requestType === 'advance' ? 'Medium' : 'High'
-      }
-    );
-
-    if (success) {
       // Reset form
       setSalaryFormData({
         amount: '',
@@ -307,9 +338,15 @@ const Expenses = () => {
         requestType: 'mid-month'
       });
       
-      // Refresh requests and salary info
-      refetch();
+      // Refetch salary info
       refetchSalaryInfo();
+    } catch (error) {
+      console.error('Error submitting salary request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit salary request",
+        variant: "destructive"
+      });
     }
   };
 
@@ -927,27 +964,27 @@ const Expenses = () => {
                       <p className="text-xs text-muted-foreground">Submit your first salary request above</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                     <div className="space-y-3">
                       {mySalaryRequests.map((request) => (
                         <Card key={request.id} className="border-l-4 border-l-purple-500">
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex-1">
-                                <h4 className="font-semibold">{request.title}</h4>
-                                <p className="text-sm text-muted-foreground">{request.description}</p>
+                                <h4 className="font-semibold">{request.request_type}</h4>
+                                <p className="text-sm text-muted-foreground">{request.reason}</p>
                                 
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3 text-xs">
                                   <div className="flex items-center gap-1">
                                     <DollarSign className="h-3 w-3" />
-                                    <span>UGX {request.amount.toLocaleString()}</span>
+                                    <span>UGX {request.amount?.toLocaleString()}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />
                                     <span>{new Date(request.created_at).toLocaleDateString()}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
-                                    <User className="h-3 w-3" />
-                                    <span>{request.priority}</span>
+                                    <Clock className="h-3 w-3" />
+                                    <span className="capitalize">{request.approval_stage?.replace('_', ' ')}</span>
                                   </div>
                                 </div>
 
@@ -956,48 +993,48 @@ const Expenses = () => {
                                   <div className="font-medium mb-1">Approval Progress:</div>
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="flex items-center gap-1">
-                                      <div className={`h-1.5 w-1.5 rounded-full ${request.finance_approved_at ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                      {request.finance_approved_at ? <CheckCircle className="h-3 w-3 text-green-600" /> : <Clock className="h-3 w-3 text-gray-400" />}
                                       <span className={request.finance_approved_at ? 'text-green-700' : 'text-gray-500'}>
-                                        Finance: {request.finance_approved_at ? '✓ Approved' : 'Pending'}
+                                        Finance: {request.finance_approved_at ? `✓ ${request.finance_approved_by}` : 'Pending'}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                      <div className={`h-1.5 w-1.5 rounded-full ${request.admin_approved_at ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                      {request.admin_approved_at ? <CheckCircle className="h-3 w-3 text-green-600" /> : <Clock className="h-3 w-3 text-gray-400" />}
                                       <span className={request.admin_approved_at ? 'text-green-700' : 'text-gray-500'}>
-                                        Admin: {request.admin_approved_at ? '✓ Approved' : 'Pending'}
+                                        Admin: {request.admin_approved_at ? `✓ ${request.admin_approved_by}` : request.finance_approved_at ? 'Pending' : 'Awaiting Finance'}
                                       </span>
                                     </div>
                                   </div>
+                                  {request.payment_slip_number && (
+                                    <div className="mt-2 flex items-center gap-1 text-blue-600 font-semibold">
+                                      <FileText className="h-3 w-3" />
+                                      <span>Payment Slip: {request.payment_slip_number}</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                               <div className="ml-4">
-                                <Badge className={`text-xs ${getStatusColor(request)}`}>
-                                  {getApprovalStatus(request)}
+                                <Badge variant={
+                                  request.status === 'approved' ? 'default' :
+                                  request.status === 'rejected' ? 'destructive' :
+                                  'secondary'
+                                }>
+                                  {request.status}
                                 </Badge>
                               </div>
                             </div>
                             {/* Rejection Details */}
-                            {(() => {
-                              const rejectionDetails = getRejectionDetails(request);
-                              return rejectionDetails ? (
-                                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <XCircle className="h-4 w-4 text-red-500" />
-                                    <span className="text-sm font-medium text-red-700">
-                                      Rejected by {rejectionDetails.rejectedBy}
-                                    </span>
-                                  </div>
-                                  <div className="text-sm text-red-600">
-                                    <strong>Reason:</strong> {rejectionDetails.reason}
-                                  </div>
-                                  {rejectionDetails.comments && (
-                                    <div className="text-sm text-red-600 mt-1">
-                                      <strong>Comments:</strong> {rejectionDetails.comments}
-                                    </div>
-                                  )}
+                            {request.status === 'rejected' && request.rejection_reason && (
+                              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <XCircle className="h-4 w-4 text-red-500" />
+                                  <span className="text-sm font-medium text-red-700">Request Rejected</span>
                                 </div>
-                              ) : null;
-                            })()}
+                                <div className="text-sm text-red-600">
+                                  <strong>Reason:</strong> {request.rejection_reason}
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       ))}
