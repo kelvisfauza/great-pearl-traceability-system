@@ -133,15 +133,17 @@ const SalesReportsList = () => {
     }
     
     try {
+      console.log('Generating monthly summary PDF with', filteredTransactions.length, 'transactions');
       const { generateMonthlySalesSummaryPDF } = require('@/utils/pdfGenerator');
       const periodName = quickFilter === 'previous-month' ? 'Previous Month Summary' :
                          quickFilter === 'current-month' ? 'Current Month Summary' :
                          'Sales Summary Report';
+      console.log('Calling generateMonthlySalesSummaryPDF with period:', periodName);
       generateMonthlySalesSummaryPDF(filteredTransactions, periodName);
       toast.success("Monthly sales summary report generated!");
     } catch (error) {
       console.error('Error generating monthly summary PDF:', error);
-      toast.error("Failed to generate summary report");
+      toast.error(`Failed to generate summary report: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

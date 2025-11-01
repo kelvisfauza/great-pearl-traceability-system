@@ -473,6 +473,10 @@ export const generateSalesTransactionPDF = (transaction: SalesTransaction) => {
 // Generate monthly sales summary report with statistics
 export const generateMonthlySalesSummaryPDF = (transactions: SalesTransaction[], periodName: string = 'Sales Period') => {
   try {
+    if (!transactions || transactions.length === 0) {
+      throw new Error('No transactions available for report');
+    }
+
     const doc = new jsPDF();
     doc.setFont('helvetica');
     
