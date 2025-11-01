@@ -54,17 +54,20 @@ export const useMonthlySalaryTracking = (
       const startOfLastMonth = new Date(currentYear, currentMonth - 1, 1);
       const endOfLastMonth = new Date(currentYear, currentMonth, 0, 23, 59, 59);
       
-      // Get approved requests from LAST MONTH (these are considered "already paid")
+      // Get ONLY THE MOST RECENT MID-MONTH approved request from LAST MONTH per person
       const { data: lastMonthRequests } = await supabase
         .from('approval_requests')
-        .select('amount')
+        .select('amount, title, details, created_at')
         .eq('requestedby', employeeEmail)
         .eq('type', 'Employee Salary Request')
         .eq('status', 'Approved')
         .gte('created_at', startOfLastMonth.toISOString())
-        .lte('created_at', endOfLastMonth.toISOString());
+        .lte('created_at', endOfLastMonth.toISOString())
+        .ilike('title', '%Mid-Month%')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      const paidLastMonth = lastMonthRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0;
+      const paidLastMonth = lastMonthRequests?.[0]?.amount || 0;
       
       // Get all requests for THIS month (pending + approved)
       const { data: monthlyRequests, error: requestsError } = await supabase
