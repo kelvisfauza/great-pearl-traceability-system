@@ -180,6 +180,8 @@ export const useEnhancedExpenseManagement = () => {
 
       // Handle money_requests table (salary advances)
       if (isMoneyRequest) {
+        console.log('💰 Processing money_request approval:', { requestId, approvalType, approved, approvedBy });
+        
         const updateData: any = {};
         
         if (approved && approvalType === 'finance') {
@@ -187,17 +189,28 @@ export const useEnhancedExpenseManagement = () => {
           updateData.finance_approved_by = approvedBy;
           updateData.approval_stage = 'finance_approved';
           updateData.status = 'pending';
+          
+          console.log('💰 Update data for finance approval:', updateData);
         } else if (!approved) {
           updateData.status = 'rejected';
           updateData.rejection_reason = rejectionReason || 'No reason provided';
+          
+          console.log('💰 Update data for rejection:', updateData);
         }
 
-        const { error } = await supabase
+        console.log('💰 Executing update on money_requests table...');
+        const { data, error } = await supabase
           .from('money_requests')
           .update(updateData)
-          .eq('id', requestId);
+          .eq('id', requestId)
+          .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error('💰 Error updating money_request:', error);
+          throw error;
+        }
+
+        console.log('💰 Money request updated successfully:', data);
 
         toast({
           title: "Success",
