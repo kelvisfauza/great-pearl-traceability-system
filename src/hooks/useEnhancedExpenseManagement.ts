@@ -42,18 +42,32 @@ export const useEnhancedExpenseManagement = () => {
       setLoading(true);
       console.log('Fetching expense requests from Supabase...');
 
-      const { data, error } = await supabase
+      // Fetch from approval_requests table
+      const { data: approvalData, error: approvalError } = await supabase
         .from('approval_requests')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        throw error;
+      if (approvalError) {
+        throw approvalError;
       }
 
-      console.log('Raw data from Supabase:', data);
+      // Fetch from money_requests table (for salary advances)
+      const { data: moneyData, error: moneyError } = await supabase
+        .from('money_requests')
+        .select('*')
+        .in('approval_stage', ['pending_finance', 'finance_approved'])
+        .order('created_at', { ascending: false });
 
-      const requests: ExpenseRequest[] = data.map((request: any) => ({
+      if (moneyError) {
+        throw moneyError;
+      }
+
+      console.log('Raw data from approval_requests:', approvalData);
+      console.log('Raw data from money_requests:', moneyData);
+
+      // Map approval_requests data
+      const approvalRequests: ExpenseRequest[] = approvalData.map((request: any) => ({
         id: request.id,
         type: request.type,
         title: request.title,
@@ -81,17 +95,41 @@ export const useEnhancedExpenseManagement = () => {
         updated_at: request.updated_at
       }));
 
-      console.log('Processed expense requests with approval status:', requests.map(r => ({
-        id: r.id,
-        title: r.title,
-        status: r.status,
-        financeApproved: r.financeApproved,
-        adminApproved: r.adminApproved,
-        finance_approved_raw: data.find(d => d.id === r.id)?.finance_approved,
-        admin_approved_raw: data.find(d => d.id === r.id)?.admin_approved
-      })));
+      // Map money_requests data (salary advances)
+      const moneyRequests: ExpenseRequest[] = moneyData.map((request: any) => ({
+        id: request.id,
+        type: request.request_type || 'Salary Advance',
+        title: request.request_type || 'Salary Advance',
+        description: request.reason || '',
+        amount: parseFloat(request.amount) || 0,
+        requestedby: request.requested_by || '',
+        daterequested: request.created_at,
+        priority: 'High',
+        status: request.status,
+        details: { source: 'money_requests', approval_stage: request.approval_stage },
+        financeApproved: request.approval_stage === 'finance_approved',
+        adminApproved: !!request.admin_approved_at,
+        financeApprovedAt: request.finance_approved_at,
+        adminApprovedAt: request.admin_approved_at,
+        financeApprovedBy: request.finance_approved_by,
+        adminApprovedBy: request.admin_approved_by,
+        requiresThreeApprovals: false,
+        adminApproved1: false,
+        adminApproved1At: undefined,
+        adminApproved1By: undefined,
+        adminApproved2: false,
+        adminApproved2At: undefined,
+        adminApproved2By: undefined,
+        created_at: request.created_at,
+        updated_at: request.updated_at || request.created_at
+      }));
 
-      setExpenseRequests(requests);
+      // Combine both arrays
+      const allRequests = [...approvalRequests, ...moneyRequests];
+
+      console.log('Combined expense requests:', allRequests.length);
+
+      setExpenseRequests(allRequests);
     } catch (error) {
       console.error('Error fetching expense requests:', error);
       toast({
@@ -114,12 +152,22 @@ export const useEnhancedExpenseManagement = () => {
     try {
       console.log(`Updating ${approvalType} approval for request ${requestId}:`, approved);
 
-      // First, get the current request to check approval state
-      const { data: currentRequest } = await supabase
+      // First check if it's in approval_requests table
+      const { data: approvalRequest } = await supabase
         .from('approval_requests')
         .select('*')
         .eq('id', requestId)
         .single();
+
+      // If not found, check money_requests table
+      const { data: moneyRequest } = await supabase
+        .from('money_requests')
+        .select('*')
+        .eq('id', requestId)
+        .single();
+
+      const currentRequest = approvalRequest || moneyRequest;
+      const isMoneyRequest = !approvalRequest && !!moneyRequest;
 
       if (!currentRequest) {
         toast({
@@ -130,36 +178,68 @@ export const useEnhancedExpenseManagement = () => {
         return false;
       }
 
-      // Check if request requires three approvals
-      const requiresThree = currentRequest.requires_three_approvals;
-      
-      // Enforce approval order
-      if (approvalType === 'admin1' && approved && !currentRequest.finance_approved_at) {
+      // Handle money_requests table (salary advances)
+      if (isMoneyRequest) {
+        const updateData: any = {};
+        
+        if (approved && approvalType === 'finance') {
+          updateData.finance_approved_at = new Date().toISOString();
+          updateData.finance_approved_by = approvedBy;
+          updateData.approval_stage = 'finance_approved';
+          updateData.status = 'pending';
+        } else if (!approved) {
+          updateData.status = 'rejected';
+          updateData.rejection_reason = rejectionReason || 'No reason provided';
+        }
+
+        const { error } = await supabase
+          .from('money_requests')
+          .update(updateData)
+          .eq('id', requestId);
+
+        if (error) throw error;
+
         toast({
-          title: "Approval Not Allowed",
-          description: "Request must be approved by Finance first",
-          variant: "destructive"
+          title: "Success",
+          description: `Request ${approved ? 'approved and sent to Admin' : 'rejected'} successfully`
         });
-        return false;
+
+        await fetchExpenseRequests();
+        return true;
       }
+
+      // Check if request requires three approvals (only for approval_requests)
+      const requiresThree = !isMoneyRequest && approvalRequest ? approvalRequest.requires_three_approvals : false;
       
-      if (approvalType === 'admin2' && approved && (!currentRequest.finance_approved_at || !currentRequest.admin_approved_1_at)) {
-        toast({
-          title: "Approval Not Allowed",
-          description: "Request must be approved by Finance and first Admin",
-          variant: "destructive"
-        });
-        return false;
-      }
-      
-      // Legacy admin approval
-      if (approvalType === 'admin' && approved && !currentRequest.finance_approved_at) {
-        toast({
-          title: "Approval Not Allowed",
-          description: "Request must be approved by Finance first",
-          variant: "destructive"
-        });
-        return false;
+      // Enforce approval order (only for approval_requests)
+      if (!isMoneyRequest && approvalRequest) {
+        if (approvalType === 'admin1' && approved && !approvalRequest.finance_approved_at) {
+          toast({
+            title: "Approval Not Allowed",
+            description: "Request must be approved by Finance first",
+            variant: "destructive"
+          });
+          return false;
+        }
+        
+        if (approvalType === 'admin2' && approved && (!approvalRequest.finance_approved_at || !approvalRequest.admin_approved_1_at)) {
+          toast({
+            title: "Approval Not Allowed",
+            description: "Request must be approved by Finance and first Admin",
+            variant: "destructive"
+          });
+          return false;
+        }
+        
+        // Legacy admin approval
+        if (approvalType === 'admin' && approved && !approvalRequest.finance_approved_at) {
+          toast({
+            title: "Approval Not Allowed",
+            description: "Request must be approved by Finance first",
+            variant: "destructive"
+          });
+          return false;
+        }
       }
 
       const updateData: any = {};
