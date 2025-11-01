@@ -13,6 +13,7 @@ export interface SalaryPeriod {
   paidLastMonth?: number;
   baseAvailable?: number;
   advancesOwed?: number;
+  overtimeEarned?: number;
 }
 
 export const useMonthlySalaryTracking = (
@@ -31,7 +32,8 @@ export const useMonthlySalaryTracking = (
     isAdvance: false,
     paidLastMonth: 0,
     baseAvailable: 0,
-    advancesOwed: 0
+    advancesOwed: 0,
+    overtimeEarned: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -84,6 +86,16 @@ export const useMonthlySalaryTracking = (
 
       const advancesOwed = advanceRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0;
       
+      // Get overtime awards for THIS month that haven't been claimed
+      const { data: overtimeAwards } = await supabase
+        .from('overtime_awards')
+        .select('total_amount, status')
+        .eq('employee_email', employeeEmail)
+        .gte('created_at', startOfMonth.toISOString())
+        .in('status', ['pending', 'claimed']);
+
+      const overtimeEarned = overtimeAwards?.reduce((sum, award) => sum + Number(award.total_amount), 0) || 0;
+      
       // Get all requests for THIS month (pending + approved)
       const { data: monthlyRequests, error: requestsError } = await supabase
         .from('approval_requests')
@@ -97,11 +109,12 @@ export const useMonthlySalaryTracking = (
 
       const totalRequestedThisMonth = monthlyRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0;
       
-      // Calculate base available (monthly salary minus what was paid last month AND minus advances owed)
-      const baseAvailable = monthlySalary - paidLastMonth - advancesOwed;
+      // Calculate base available (monthly salary minus what was paid last month AND minus advances owed PLUS overtime earned)
+      const baseAvailable = monthlySalary - paidLastMonth - advancesOwed + overtimeEarned;
       
       // Salary Advance - can be requested anytime and creates negative balance
       if (requestType === 'advance') {
+        const overtimeInfo = overtimeEarned > 0 ? ` Overtime earned: +UGX ${overtimeEarned.toLocaleString()}.` : '';
         setPeriodInfo({
           canRequest: true,
           periodType: 'advance',
@@ -109,12 +122,13 @@ export const useMonthlySalaryTracking = (
           alreadyRequested: advancesOwed,
           availableAmount: baseAvailable,
           message: advancesOwed > 0
-            ? `⚠️ You owe UGX ${advancesOwed.toLocaleString()} in advances. Current balance: UGX ${baseAvailable.toLocaleString()}`
-            : `Salary Advance available. Monthly salary: UGX ${monthlySalary.toLocaleString()}. This will be deducted from your next salary.`,
+            ? `⚠️ You owe UGX ${advancesOwed.toLocaleString()} in advances.${overtimeInfo} Current balance: UGX ${baseAvailable.toLocaleString()}`
+            : `Salary Advance available.${overtimeInfo} Monthly salary: UGX ${monthlySalary.toLocaleString()}. This will be deducted from your next salary.`,
           isAdvance: true,
           paidLastMonth,
           baseAvailable,
-          advancesOwed
+          advancesOwed,
+          overtimeEarned
         });
         setLoading(false);
         return;
@@ -123,6 +137,7 @@ export const useMonthlySalaryTracking = (
       // Emergency requests can be made anytime (but limited to base available amount)
       if (requestType === 'emergency') {
         const availableAmount = baseAvailable - totalRequestedThisMonth;
+        const overtimeInfo = overtimeEarned > 0 ? ` Overtime: +UGX ${overtimeEarned.toLocaleString()}.` : '';
 
         setPeriodInfo({
           canRequest: availableAmount > 0,
@@ -131,16 +146,17 @@ export const useMonthlySalaryTracking = (
           alreadyRequested: totalRequestedThisMonth,
           availableAmount,
           message: advancesOwed > 0
-            ? `Emergency request available. Advances owed: UGX ${advancesOwed.toLocaleString()}. Remaining: UGX ${availableAmount.toLocaleString()}`
+            ? `Emergency request available. Advances owed: UGX ${advancesOwed.toLocaleString()}.${overtimeInfo} Remaining: UGX ${availableAmount.toLocaleString()}`
             : paidLastMonth > 0
-              ? `Emergency request available. You received UGX ${paidLastMonth.toLocaleString()} last month. Remaining: UGX ${availableAmount.toLocaleString()}`
+              ? `Emergency request available. Last month: UGX ${paidLastMonth.toLocaleString()}.${overtimeInfo} Remaining: UGX ${availableAmount.toLocaleString()}`
               : availableAmount > 0
-                ? `Emergency request available. Remaining balance: UGX ${availableAmount.toLocaleString()}`
+                ? `Emergency request available.${overtimeInfo} Remaining: UGX ${availableAmount.toLocaleString()}`
                 : `You have already requested your full available balance`,
           isEmergency: true,
           paidLastMonth,
           baseAvailable,
-          advancesOwed
+          advancesOwed,
+          overtimeEarned
         });
         setLoading(false);
         return;
@@ -171,28 +187,30 @@ export const useMonthlySalaryTracking = (
 
       if (periodType === 'closed') {
         const debtWarning = advancesOwed > 0 ? ` ⚠️ Advances owed: UGX ${advancesOwed.toLocaleString()}.` : '';
+        const overtimeInfo = overtimeEarned > 0 ? ` Overtime: +UGX ${overtimeEarned.toLocaleString()}.` : '';
         if (requestType === 'mid-month') {
           message = paidLastMonth > 0
-            ? `Mid-month requests (13th-15th only). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning} Base available: UGX ${baseAvailable.toLocaleString()}`
-            : `Mid-month requests are only available from 13th-15th of each month.${debtWarning}`;
+            ? `Mid-month requests (13th-15th only). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning}${overtimeInfo} Base available: UGX ${baseAvailable.toLocaleString()}`
+            : `Mid-month requests are only available from 13th-15th of each month.${debtWarning}${overtimeInfo}`;
         } else if (requestType === 'end-month') {
           message = paidLastMonth > 0
-            ? `End-month requests (31st-2nd only). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning} Base available: UGX ${baseAvailable.toLocaleString()}`
-            : `End-month requests are only available from 31st-2nd of each month.${debtWarning}`;
+            ? `End-month requests (31st-2nd only). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning}${overtimeInfo} Base available: UGX ${baseAvailable.toLocaleString()}`
+            : `End-month requests are only available from 31st-2nd of each month.${debtWarning}${overtimeInfo}`;
         } else {
-          message = `This request type is not available in the current period.${debtWarning}`;
+          message = `This request type is not available in the current period.${debtWarning}${overtimeInfo}`;
         }
       } else if (periodType === 'mid-month') {
         availableAmount = maxAmount - alreadyRequested;
         canRequest = availableAmount > 0;
         
         const debtInfo = advancesOwed > 0 ? ` Advances owed: UGX ${advancesOwed.toLocaleString()}.` : '';
+        const overtimeInfo = overtimeEarned > 0 ? ` Overtime: +UGX ${overtimeEarned.toLocaleString()}.` : '';
         if (canRequest) {
           message = paidLastMonth > 0
-            ? `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (50%).${debtInfo} Last month: UGX ${paidLastMonth.toLocaleString()}. Requested: UGX ${alreadyRequested.toLocaleString()}`
-            : `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (50%).${debtInfo} Requested: UGX ${alreadyRequested.toLocaleString()}`;
+            ? `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (50%).${debtInfo}${overtimeInfo} Last month: UGX ${paidLastMonth.toLocaleString()}. Requested: UGX ${alreadyRequested.toLocaleString()}`
+            : `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (50%).${debtInfo}${overtimeInfo} Requested: UGX ${alreadyRequested.toLocaleString()}`;
         } else {
-          message = `You have already requested your mid-month allocation.${debtInfo}`;
+          message = `You have already requested your mid-month allocation.${debtInfo}${overtimeInfo}`;
         }
       } else if (periodType === 'end-month') {
         // For end-month, available is base minus what was already requested this month
@@ -200,12 +218,13 @@ export const useMonthlySalaryTracking = (
         canRequest = availableAmount > 0;
         
         const debtInfo = advancesOwed > 0 ? ` Advances owed: UGX ${advancesOwed.toLocaleString()}.` : '';
+        const overtimeInfo = overtimeEarned > 0 ? ` Overtime: +UGX ${overtimeEarned.toLocaleString()}.` : '';
         if (canRequest) {
           message = paidLastMonth > 0
-            ? `Available: UGX ${availableAmount.toLocaleString()} of UGX ${baseAvailable.toLocaleString()}.${debtInfo} Last month: UGX ${paidLastMonth.toLocaleString()}. Requested: UGX ${alreadyRequested.toLocaleString()}`
-            : `Available: UGX ${availableAmount.toLocaleString()}.${debtInfo} Requested: UGX ${alreadyRequested.toLocaleString()}`;
+            ? `Available: UGX ${availableAmount.toLocaleString()} of UGX ${baseAvailable.toLocaleString()}.${debtInfo}${overtimeInfo} Last month: UGX ${paidLastMonth.toLocaleString()}. Requested: UGX ${alreadyRequested.toLocaleString()}`
+            : `Available: UGX ${availableAmount.toLocaleString()}.${debtInfo}${overtimeInfo} Requested: UGX ${alreadyRequested.toLocaleString()}`;
         } else {
-          message = `You have already requested your full available balance.${debtInfo}`;
+          message = `You have already requested your full available balance.${debtInfo}${overtimeInfo}`;
         }
       }
 
@@ -218,7 +237,8 @@ export const useMonthlySalaryTracking = (
         message,
         paidLastMonth,
         baseAvailable,
-        advancesOwed
+        advancesOwed,
+        overtimeEarned
       });
     } catch (error) {
       console.error('Error checking salary period:', error);
@@ -231,7 +251,8 @@ export const useMonthlySalaryTracking = (
         message: 'Error checking salary availability. Please try again.',
         paidLastMonth: 0,
         baseAvailable: 0,
-        advancesOwed: 0
+        advancesOwed: 0,
+        overtimeEarned: 0
       });
     } finally {
       setLoading(false);

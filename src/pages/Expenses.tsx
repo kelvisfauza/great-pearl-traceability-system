@@ -753,7 +753,13 @@ const Expenses = () => {
                           <span className="text-sm font-semibold">- UGX {(periodInfo.advancesOwed || 0).toLocaleString()}</span>
                         </div>
                       )}
-                      {((periodInfo.paidLastMonth || 0) > 0 || (periodInfo.advancesOwed || 0) > 0) && (
+                      {(periodInfo.overtimeEarned || 0) > 0 && (
+                        <div className="flex justify-between items-center text-green-600">
+                          <span className="text-sm font-medium">💰 Overtime Earned:</span>
+                          <span className="text-sm font-semibold">+ UGX {(periodInfo.overtimeEarned || 0).toLocaleString()}</span>
+                        </div>
+                      )}
+                      {((periodInfo.paidLastMonth || 0) > 0 || (periodInfo.advancesOwed || 0) > 0 || (periodInfo.overtimeEarned || 0) > 0) && (
                         <div className="flex justify-between items-center border-t pt-2">
                           <span className="text-sm font-medium">Base Available:</span>
                           <span className={`text-sm font-bold ${(periodInfo.baseAvailable || 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
