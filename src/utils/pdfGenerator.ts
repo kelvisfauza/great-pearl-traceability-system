@@ -717,134 +717,235 @@ export const generateFinanceMonthlyReportPDF = (data: FinanceMonthlyData) => {
     
     let yPosition = 52;
     
-    // Executive Summary
-    doc.setFontSize(16);
+    // Summary Cards - 4 cards matching the on-screen layout
+    doc.setFontSize(14);
     doc.setTextColor(44, 62, 80);
-    doc.text('EXECUTIVE SUMMARY', 20, yPosition);
-    yPosition += 10;
+    doc.text('SUMMARY', 20, yPosition);
+    yPosition += 8;
     
-    // Summary boxes
-    doc.setFillColor(46, 204, 113);
-    doc.roundedRect(20, yPosition - 5, 85, 22, 3, 3, 'F');
-    doc.setFontSize(10);
-    doc.setTextColor(255, 255, 255);
-    doc.text('TOTAL PAID', 62.5, yPosition, { align: 'center' });
-    doc.setFontSize(14);
-    doc.text(`UGX ${data.totalPaid.toLocaleString()}`, 62.5, yPosition + 7, { align: 'center' });
+    // Card 1: Total Paid (top-left)
+    doc.setFillColor(240, 244, 248);
+    doc.roundedRect(20, yPosition, 42, 24, 2, 2, 'F');
+    doc.setDrawColor(200, 210, 220);
+    doc.roundedRect(20, yPosition, 42, 24, 2, 2);
     doc.setFontSize(9);
-    doc.text(`Coffee: ${data.coffeePaid.toLocaleString()} | Expenses: ${data.expensesPaid.toLocaleString()}`, 62.5, yPosition + 13, { align: 'center' });
+    doc.setTextColor(100, 116, 139);
+    doc.text('Total Paid', 22, yPosition + 5);
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text(`${data.totalPaid.toLocaleString()}`, 22, yPosition + 13);
+    doc.setFontSize(8);
+    doc.text('UGX', 22, yPosition + 20);
     
-    doc.setFillColor(231, 76, 60);
-    doc.roundedRect(110, yPosition - 5, 80, 22, 3, 3, 'F');
-    doc.setFontSize(10);
-    doc.text('UNPAID', 150, yPosition, { align: 'center' });
-    doc.setFontSize(14);
-    doc.text(`UGX ${data.unpaidAmount.toLocaleString()}`, 150, yPosition + 7, { align: 'center' });
+    // Card 2: Coffee Paid (top-right)
+    doc.setFillColor(240, 244, 248);
+    doc.roundedRect(65, yPosition, 42, 24, 2, 2, 'F');
+    doc.setDrawColor(200, 210, 220);
+    doc.roundedRect(65, yPosition, 42, 24, 2, 2);
     doc.setFontSize(9);
-    doc.text(`${data.unpaidTransactions} transactions pending`, 150, yPosition + 13, { align: 'center' });
+    doc.setTextColor(100, 116, 139);
+    doc.text('Coffee Paid', 67, yPosition + 5);
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text(`${data.coffeePaid.toLocaleString()}`, 67, yPosition + 13);
+    doc.setFontSize(8);
+    doc.text(`UGX | ${data.suppliersPaid} suppliers`, 67, yPosition + 20);
     
-    yPosition += 30;
+    // Card 3: Unpaid (bottom-left)
+    doc.setFillColor(240, 244, 248);
+    doc.roundedRect(110, yPosition, 42, 24, 2, 2, 'F');
+    doc.setDrawColor(200, 210, 220);
+    doc.roundedRect(110, yPosition, 42, 24, 2, 2);
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Unpaid', 112, yPosition + 5);
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text(`${data.unpaidAmount.toLocaleString()}`, 112, yPosition + 13);
+    doc.setFontSize(8);
+    doc.text(`UGX | ${data.unpaidTransactions} transactions`, 112, yPosition + 20);
     
-    // Cash Flow Summary
-    doc.setFontSize(16);
+    // Card 4: Closing Balance (bottom-right)
+    doc.setFillColor(240, 244, 248);
+    doc.roundedRect(155, yPosition, 42, 24, 2, 2, 'F');
+    doc.setDrawColor(200, 210, 220);
+    doc.roundedRect(155, yPosition, 42, 24, 2, 2);
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Closing Balance', 157, yPosition + 5);
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text(`${data.closingBalance.toLocaleString()}`, 157, yPosition + 13);
+    doc.setFontSize(8);
+    doc.text('UGX', 157, yPosition + 20);
+    
+    yPosition += 32;
+    
+    // Cash Flow Summary Table
+    doc.setFontSize(14);
     doc.setTextColor(44, 62, 80);
     doc.text('CASH FLOW SUMMARY', 20, yPosition);
-    yPosition += 10;
+    yPosition += 8;
     
+    // Table header
+    doc.setFillColor(248, 250, 252);
+    doc.rect(20, yPosition, 170, 8, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(20, yPosition, 170, 8);
+    doc.setFontSize(10);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Description', 25, yPosition + 5);
+    doc.text('Amount (UGX)', 155, yPosition + 5);
+    yPosition += 8;
+    
+    // Table rows
+    doc.setFontSize(10);
+    doc.setTextColor(51, 65, 85);
+    
+    // Opening Balance
+    doc.rect(20, yPosition, 170, 7);
+    doc.text('Opening Balance', 25, yPosition + 5);
+    doc.text(data.openingBalance.toLocaleString(), 185, yPosition + 5, { align: 'right' });
+    yPosition += 7;
+    
+    // Total Cash In
+    doc.rect(20, yPosition, 170, 7);
+    doc.setTextColor(22, 163, 74);
+    doc.text('Total Cash In', 25, yPosition + 5);
+    doc.text(`+${data.cashIn.toLocaleString()}`, 185, yPosition + 5, { align: 'right' });
+    yPosition += 7;
+    
+    // Total Cash Out
+    doc.rect(20, yPosition, 170, 7);
+    doc.setTextColor(220, 38, 38);
+    doc.text('Total Cash Out', 25, yPosition + 5);
+    doc.text(`-${data.cashOut.toLocaleString()}`, 185, yPosition + 5, { align: 'right' });
+    yPosition += 7;
+    
+    // Closing Balance (bold border)
+    doc.setDrawColor(71, 85, 105);
+    doc.setLineWidth(0.5);
+    doc.rect(20, yPosition, 170, 8);
+    doc.setLineWidth(0.2);
+    doc.setFillColor(248, 250, 252);
+    doc.rect(20, yPosition, 170, 8, 'F');
     doc.setFontSize(11);
-    doc.setTextColor(52, 73, 94);
-    
-    const leftCol = 30;
-    const rightCol = 130;
-    
-    doc.text('Opening Balance:', leftCol, yPosition);
-    doc.text(`UGX ${data.openingBalance.toLocaleString()}`, rightCol, yPosition);
-    yPosition += 7;
-    
-    doc.setTextColor(46, 204, 113);
-    doc.text('Cash In:', leftCol, yPosition);
-    doc.text(`+UGX ${data.cashIn.toLocaleString()}`, rightCol, yPosition);
-    yPosition += 7;
-    
-    doc.setTextColor(231, 76, 60);
-    doc.text('Cash Out:', leftCol, yPosition);
-    doc.text(`-UGX ${data.cashOut.toLocaleString()}`, rightCol, yPosition);
-    yPosition += 7;
-    
-    doc.setDrawColor(189, 195, 199);
-    doc.line(leftCol, yPosition, 180, yPosition);
-    yPosition += 7;
-    
-    doc.setTextColor(44, 62, 80);
-    doc.setFontSize(12);
+    doc.setTextColor(15, 23, 42);
     doc.setFont('helvetica', 'bold');
-    doc.text('Closing Balance:', leftCol, yPosition);
-    doc.text(`UGX ${data.closingBalance.toLocaleString()}`, rightCol, yPosition);
+    doc.text('Closing Balance', 25, yPosition + 5.5);
+    doc.text(data.closingBalance.toLocaleString(), 185, yPosition + 5.5, { align: 'right' });
     doc.setFont('helvetica', 'normal');
     yPosition += 15;
     
-    // Suppliers Paid
+    // Top Suppliers Paid Table
     if (data.supplierDetails.length > 0) {
-      doc.setFontSize(16);
+      doc.setFontSize(14);
       doc.setTextColor(44, 62, 80);
       doc.text('TOP SUPPLIERS PAID', 20, yPosition);
-      yPosition += 10;
-      
-      doc.setFontSize(10);
-      doc.setTextColor(52, 73, 94);
-      doc.text('Supplier', 25, yPosition);
-      doc.text('Batches', 120, yPosition);
-      doc.text('Amount (UGX)', 160, yPosition);
-      
-      doc.line(20, yPosition + 2, 190, yPosition + 2);
       yPosition += 8;
       
+      // Table header
+      doc.setFillColor(248, 250, 252);
+      doc.rect(20, yPosition, 170, 8, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(20, yPosition, 170, 8);
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Supplier', 25, yPosition + 5);
+      doc.text('Batches', 125, yPosition + 5, { align: 'center' });
+      doc.text('Amount (UGX)', 185, yPosition + 5, { align: 'right' });
+      yPosition += 8;
+      
+      // Table rows
       doc.setFontSize(9);
-      data.supplierDetails.slice(0, 10).forEach((supplier) => {
+      doc.setTextColor(51, 65, 85);
+      data.supplierDetails.slice(0, 10).forEach((supplier, idx) => {
         if (yPosition > 260) {
           doc.addPage();
           yPosition = 20;
         }
-        doc.text(supplier.name.substring(0, 35), 25, yPosition);
-        doc.text(supplier.batches.toString(), 130, yPosition, { align: 'center' });
-        doc.text(supplier.amount.toLocaleString(), 180, yPosition, { align: 'right' });
+        
+        // Alternate row background
+        if (idx % 2 === 0) {
+          doc.setFillColor(249, 250, 251);
+          doc.rect(20, yPosition, 170, 6, 'F');
+        }
+        doc.setDrawColor(226, 232, 240);
+        doc.rect(20, yPosition, 170, 6);
+        
+        doc.text(supplier.name.substring(0, 40), 25, yPosition + 4);
+        doc.text(supplier.batches.toString(), 125, yPosition + 4, { align: 'center' });
+        doc.text(supplier.amount.toLocaleString(), 185, yPosition + 4, { align: 'right' });
         yPosition += 6;
       });
       
       yPosition += 10;
+    } else {
+      doc.setFontSize(14);
+      doc.setTextColor(44, 62, 80);
+      doc.text('TOP SUPPLIERS PAID', 20, yPosition);
+      yPosition += 8;
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text('No supplier payments this month', 25, yPosition);
+      yPosition += 15;
     }
     
-    // Unpaid Transactions
-    if (data.unpaidDetails.length > 0 && yPosition < 250) {
+    // Unpaid Transactions Table
+    if (data.unpaidDetails.length > 0) {
       if (yPosition > 200) {
         doc.addPage();
         yPosition = 20;
       }
       
-      doc.setFontSize(16);
+      doc.setFontSize(14);
       doc.setTextColor(44, 62, 80);
       doc.text('UNPAID TRANSACTIONS', 20, yPosition);
-      yPosition += 10;
-      
-      doc.setFontSize(9);
-      doc.setTextColor(52, 73, 94);
-      doc.text('Type', 25, yPosition);
-      doc.text('Description', 55, yPosition);
-      doc.text('Date', 130, yPosition);
-      doc.text('Amount', 170, yPosition);
-      
-      doc.line(20, yPosition + 2, 190, yPosition + 2);
       yPosition += 8;
       
-      data.unpaidDetails.forEach((item) => {
+      // Table header
+      doc.setFillColor(254, 242, 242);
+      doc.rect(20, yPosition, 170, 8, 'F');
+      doc.setDrawColor(254, 202, 202);
+      doc.rect(20, yPosition, 170, 8);
+      doc.setFontSize(9);
+      doc.setTextColor(153, 27, 27);
+      doc.text('Type', 25, yPosition + 5);
+      doc.text('Description', 60, yPosition + 5);
+      doc.text('Date', 130, yPosition + 5);
+      doc.text('Amount (UGX)', 185, yPosition + 5, { align: 'right' });
+      yPosition += 8;
+      
+      // Table rows
+      doc.setFontSize(8);
+      doc.setTextColor(51, 65, 85);
+      data.unpaidDetails.forEach((item, idx) => {
         if (yPosition > 270) {
           doc.addPage();
           yPosition = 20;
         }
-        doc.text(item.type.substring(0, 15), 25, yPosition);
-        doc.text(item.description.substring(0, 30), 55, yPosition);
-        doc.text(item.date, 130, yPosition);
-        doc.text(item.amount.toLocaleString(), 185, yPosition, { align: 'right' });
+        
+        // Alternate row background
+        if (idx % 2 === 0) {
+          doc.setFillColor(254, 252, 252);
+          doc.rect(20, yPosition, 170, 6, 'F');
+        }
+        doc.setDrawColor(254, 226, 226);
+        doc.rect(20, yPosition, 170, 6);
+        
+        // Type badge
+        doc.setFillColor(254, 242, 242);
+        doc.setDrawColor(254, 202, 202);
+        doc.roundedRect(22, yPosition + 1, 30, 4, 1, 1, 'FD');
+        doc.setFontSize(7);
+        doc.setTextColor(153, 27, 27);
+        doc.text(item.type.substring(0, 15), 37, yPosition + 3.5, { align: 'center' });
+        
+        doc.setFontSize(8);
+        doc.setTextColor(51, 65, 85);
+        doc.text(item.description.substring(0, 35), 60, yPosition + 4);
+        doc.text(item.date, 130, yPosition + 4);
+        doc.text(item.amount.toLocaleString(), 185, yPosition + 4, { align: 'right' });
         yPosition += 6;
       });
     }
