@@ -338,7 +338,7 @@ export interface SalesTransaction {
   date: string;
   customer: string;
   coffee_type: string;
-  moisture: number;
+  moisture?: string | number;
   weight: number;
   unit_price: number;
   total_amount: number;
@@ -403,8 +403,10 @@ export const generateSalesTransactionPDF = (transaction: SalesTransaction) => {
     doc.text('Coffee Type:', leftCol, yPosition);
     doc.text(transaction.coffee_type, leftCol + 28, yPosition);
     
-    doc.text('Moisture:', rightCol, yPosition);
-    doc.text(`${transaction.moisture}%`, rightCol + 22, yPosition);
+    if (transaction.moisture !== undefined && transaction.moisture !== null) {
+      doc.text('Moisture:', rightCol, yPosition);
+      doc.text(`${typeof transaction.moisture === 'number' ? transaction.moisture : parseFloat(transaction.moisture) || 0}%`, rightCol + 22, yPosition);
+    }
     yPosition += 8;
     
     doc.text('Weight:', leftCol, yPosition);

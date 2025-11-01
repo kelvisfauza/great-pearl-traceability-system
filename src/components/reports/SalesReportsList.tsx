@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { generateSalesTransactionPDF, generateMultipleSalesPDF, generateMonthlySalesSummaryPDF } from '@/utils/pdfGenerator';
 
 const SalesReportsList = () => {
   const { transactions, loading, getGRNFileUrl, updateTransaction, deleteTransaction } = useSalesTransactions();
@@ -98,7 +99,6 @@ const SalesReportsList = () => {
 
   const handlePrintReport = (transaction: any) => {
     try {
-      const { generateSalesTransactionPDF } = require('@/utils/pdfGenerator');
       generateSalesTransactionPDF(transaction);
       toast.success("Sales report PDF generated successfully!");
     } catch (error) {
@@ -114,7 +114,6 @@ const SalesReportsList = () => {
     }
     
     try {
-      const { generateMultipleSalesPDF } = require('@/utils/pdfGenerator');
       const title = quickFilter === 'previous-month' ? 'Previous Month Sales Reports' :
                     quickFilter === 'current-month' ? 'Current Month Sales Reports' :
                     `Sales Reports (${filteredTransactions.length} transactions)`;
@@ -133,12 +132,9 @@ const SalesReportsList = () => {
     }
     
     try {
-      console.log('Generating monthly summary PDF with', filteredTransactions.length, 'transactions');
-      const { generateMonthlySalesSummaryPDF } = require('@/utils/pdfGenerator');
       const periodName = quickFilter === 'previous-month' ? 'Previous Month Summary' :
                          quickFilter === 'current-month' ? 'Current Month Summary' :
                          'Sales Summary Report';
-      console.log('Calling generateMonthlySalesSummaryPDF with period:', periodName);
       generateMonthlySalesSummaryPDF(filteredTransactions, periodName);
       toast.success("Monthly sales summary report generated!");
     } catch (error) {
