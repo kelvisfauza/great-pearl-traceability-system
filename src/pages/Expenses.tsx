@@ -248,15 +248,6 @@ const Expenses = () => {
       return;
     }
 
-    // Check 150k limit
-    if (numericAmount > 150000) {
-      toast({
-        title: "Error",
-        description: "Salary request cannot exceed UGX 150,000",
-        variant: "destructive"
-      });
-      return;
-    }
 
     // Basic phone number validation
     const phoneRegex = /^[0-9+\-\s()]{10,15}$/;
