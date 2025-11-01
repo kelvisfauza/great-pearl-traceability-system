@@ -109,6 +109,30 @@ const FinanceMonthlyReport = () => {
         }
       });
 
+      // Fetch sales transactions (cash in from sales)
+      const { data: salesTransactions } = await supabase
+        .from('sales_transactions')
+        .select('total_amount, customer, date')
+        .gte('date', startStr)
+        .lte('date', endStr);
+
+      salesTransactions?.forEach(sale => {
+        const amount = Number(sale.total_amount) || 0;
+        data.cashIn += amount;
+      });
+
+      // Fetch milling transactions (cash in from milling)
+      const { data: millingTransactions } = await supabase
+        .from('milling_transactions')
+        .select('amount_paid, date')
+        .gte('date', startStr)
+        .lte('date', endStr);
+
+      millingTransactions?.forEach(milling => {
+        const amount = Number(milling.amount_paid) || 0;
+        data.cashIn += amount;
+      });
+
       // Fetch coffee payments
       const { data: coffeePayments } = await supabase
         .from('payment_records')
