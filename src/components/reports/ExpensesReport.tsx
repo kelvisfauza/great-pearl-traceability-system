@@ -5,35 +5,46 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Receipt, Printer, DollarSign, Calendar, User, FileText, Download, Clock } from 'lucide-react';
+import { Receipt, Printer, DollarSign, Calendar, User, FileText, Download, Clock, Archive } from 'lucide-react';
 import { useEnhancedExpenseManagement } from '@/hooks/useEnhancedExpenseManagement';
 import { useOvertimeAwards } from '@/hooks/useOvertimeAwards';
+import { useArchivedExpenses } from '@/hooks/useArchivedExpenses';
 import StandardPrintHeader from '@/components/print/StandardPrintHeader';
 import { useReactToPrint } from 'react-to-print';
 
 export const ExpensesReport = () => {
   const { expenseRequests, loading } = useEnhancedExpenseManagement();
   const { awards: overtimeAwards, loading: overtimeLoading } = useOvertimeAwards();
+  const { archivedExpenses, loading: archivedLoading } = useArchivedExpenses();
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  const [includeArchived, setIncludeArchived] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
+  // Combine current and archived data
+  const allExpenses = includeArchived 
+    ? [...expenseRequests, ...archivedExpenses.map(a => ({
+        ...a,
+        isArchived: true
+      }))]
+    : expenseRequests;
+
   // Filter approved expenses and salary requests
-  const approvedExpenses = expenseRequests.filter(req => 
+  const approvedExpenses = allExpenses.filter(req => 
     req.status === 'Approved' && 
     req.financeApprovedAt && 
     req.adminApprovedAt &&
     (req.type === 'Employee Expense Request' || req.type.includes('Expense'))
   );
 
-  const approvedSalaryRequests = expenseRequests.filter(req =>
+  const approvedSalaryRequests = allExpenses.filter(req =>
     req.status === 'Approved' &&
     req.financeApprovedAt &&
     req.adminApprovedAt &&
     (req.type === 'Employee Salary Request' || req.type === 'Salary Payment')
   );
 
-  const approvedRequisitions = expenseRequests.filter(req =>
+  const approvedRequisitions = allExpenses.filter(req =>
     req.status === 'Approved' &&
     req.financeApprovedAt &&
     req.adminApprovedAt &&
@@ -149,7 +160,7 @@ export const ExpensesReport = () => {
     return `PS-${now.getFullYear()}-${now.getMonth() + 1}-${requestId.slice(0, 8).toUpperCase()}`;
   };
 
-  if (loading || overtimeLoading) {
+  if (loading || overtimeLoading || archivedLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center h-64">
@@ -172,6 +183,15 @@ export const ExpensesReport = () => {
               <CardDescription>View and print approved expenses and salary payments</CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant={includeArchived ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIncludeArchived(!includeArchived)}
+                className="gap-2"
+              >
+                <Archive className="h-4 w-4" />
+                {includeArchived ? 'Showing Archived' : 'Show Archived'}
+              </Button>
               <Select value={filterPeriod} onValueChange={setFilterPeriod}>
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Filter Period" />

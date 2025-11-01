@@ -203,6 +203,255 @@ export type Database = {
         }
         Relationships: []
       }
+      archive_history: {
+        Row: {
+          archive_date: string | null
+          archive_period: string
+          archived_by: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          records_archived: Json | null
+        }
+        Insert: {
+          archive_date?: string | null
+          archive_period: string
+          archived_by: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          records_archived?: Json | null
+        }
+        Update: {
+          archive_date?: string | null
+          archive_period?: string
+          archived_by?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          records_archived?: Json | null
+        }
+        Relationships: []
+      }
+      archived_approval_requests: {
+        Row: {
+          admin_approved: boolean | null
+          admin_approved_at: string | null
+          admin_approved_by: string | null
+          amount: number
+          archive_period: string
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string | null
+          daterequested: string
+          description: string | null
+          details: Json | null
+          finance_approved: boolean | null
+          finance_approved_at: string | null
+          finance_approved_by: string | null
+          id: string
+          original_id: string
+          priority: string | null
+          requestedby: string
+          status: string
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_approved?: boolean | null
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
+          amount: number
+          archive_period: string
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string | null
+          daterequested: string
+          description?: string | null
+          details?: Json | null
+          finance_approved?: boolean | null
+          finance_approved_at?: string | null
+          finance_approved_by?: string | null
+          id?: string
+          original_id: string
+          priority?: string | null
+          requestedby: string
+          status: string
+          title: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_approved?: boolean | null
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
+          amount?: number
+          archive_period?: string
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string | null
+          daterequested?: string
+          description?: string | null
+          details?: Json | null
+          finance_approved?: boolean | null
+          finance_approved_at?: string | null
+          finance_approved_by?: string | null
+          id?: string
+          original_id?: string
+          priority?: string | null
+          requestedby?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      archived_finance_cash_transactions: {
+        Row: {
+          amount: number
+          archive_period: string
+          archived_at: string | null
+          archived_by: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          original_id: string
+          reference: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          archive_period: string
+          archived_at?: string | null
+          archived_by?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          original_id: string
+          reference?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          archive_period?: string
+          archived_at?: string | null
+          archived_by?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          original_id?: string
+          reference?: string | null
+          transaction_type?: string
+        }
+        Relationships: []
+      }
+      archived_money_requests: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          archive_period: string
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string | null
+          employee_id: string | null
+          employee_name: string | null
+          id: string
+          original_id: string
+          reason: string | null
+          request_type: string | null
+          status: string | null
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          archive_period: string
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          id?: string
+          original_id: string
+          reason?: string | null
+          request_type?: string | null
+          status?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          archive_period?: string
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          id?: string
+          original_id?: string
+          reason?: string | null
+          request_type?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      archived_payment_records: {
+        Row: {
+          amount: number
+          archive_period: string
+          archived_at: string | null
+          archived_by: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          original_id: string
+          payment_date: string | null
+          payment_method: string | null
+          recorded_by: string | null
+          reference: string | null
+          supplier_name: string | null
+        }
+        Insert: {
+          amount: number
+          archive_period: string
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          original_id: string
+          payment_date?: string | null
+          payment_method?: string | null
+          recorded_by?: string | null
+          reference?: string | null
+          supplier_name?: string | null
+        }
+        Update: {
+          amount?: number
+          archive_period?: string
+          archived_at?: string | null
+          archived_by?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          original_id?: string
+          payment_date?: string | null
+          payment_method?: string | null
+          recorded_by?: string | null
+          reference?: string | null
+          supplier_name?: string | null
+        }
+        Relationships: []
+      }
       attendance: {
         Row: {
           created_at: string | null

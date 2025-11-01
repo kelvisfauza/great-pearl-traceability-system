@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, BarChart3, Settings, Calendar } from 'lucide-react';
+import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, BarChart3, Settings, Calendar, Archive } from 'lucide-react';
 import DeletionRequestsManager from './DeletionRequestsManager';
 import MoneyRequestsFinalApproval from './MoneyRequestsFinalApproval';
 import RoleAssignmentManager from './RoleAssignmentManager';
@@ -16,6 +16,7 @@ import CashManagementModal from './CashManagementModal';
 import TopSuppliersChart from './TopSuppliersChart';
 import InventoryOverviewChart from './InventoryOverviewChart';
 import { AttendanceManager } from './AttendanceManager';
+import { DataArchiveManager } from './DataArchiveManager';
 import { useUnifiedApprovalRequests } from '@/hooks/useUnifiedApprovalRequests';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import ActiveUsers from '@/components/it/ActiveUsers';
@@ -57,7 +58,7 @@ const AdminDashboard = () => {
       <CashManagementModal open={cashModalOpen} onOpenChange={setCashModalOpen} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-5 lg:w-auto bg-muted/50 p-1 rounded-xl">
+        <TabsList className="grid grid-cols-6 lg:w-auto bg-muted/50 p-1 rounded-xl">
           <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
             <TrendingUp className="h-4 w-4" />
             Overview
@@ -82,6 +83,10 @@ const AdminDashboard = () => {
           <TabsTrigger value="permissions" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
             <Settings className="h-4 w-4" />
             Permissions
+          </TabsTrigger>
+          <TabsTrigger value="archive" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
+            <Archive className="h-4 w-4" />
+            Archive
           </TabsTrigger>
         </TabsList>
 
@@ -309,6 +314,10 @@ const AdminDashboard = () => {
 
           {/* Approved History */}
           <ApprovedRequestsHistory />
+        </TabsContent>
+
+        <TabsContent value="archive" className="space-y-6">
+          <DataArchiveManager />
         </TabsContent>
 
       </Tabs>
