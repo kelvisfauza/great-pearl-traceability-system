@@ -3,11 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useApprovalSystem } from '@/hooks/useApprovalSystem';
 import { useSupabaseSalaryRequests } from '@/hooks/useSupabaseSalaryRequests';
 import IndividualSalaryRequestModal from '@/components/hr/IndividualSalaryRequestModal';
 import { DollarSign, Clock, CheckCircle, XCircle, User, Phone } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
 interface MySalaryRequestsProps {
   employees?: any[];
@@ -15,9 +14,9 @@ interface MySalaryRequestsProps {
 
 const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
   const { employee } = useAuth();
+  const { createApprovalRequest, loading: submitting } = useApprovalSystem();
   const { requests, loading, fetchRequestsByEmail } = useSupabaseSalaryRequests();
   const [showRequestModal, setShowRequestModal] = useState(false);
-  const { toast } = useToast();
 
   // Filter salary requests for current user and fetch them
   useEffect(() => {
@@ -33,64 +32,19 @@ const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
 
   const handleRequestSubmitted = async (requestData: any) => {
     try {
-      if (!employee?.authUserId) {
-        console.error('Missing auth_user_id for employee:', employee);
-        toast({
-          title: "Error",
-          description: "User authentication ID not found. Please log out and log in again.",
-          variant: "destructive"
-        });
-        return;
+      const success = await createApprovalRequest(
+        requestData.type,
+        requestData.title,
+        requestData.description,
+        parseFloat(requestData.amount.replace(/[^\d.-]/g, '')),
+        requestData.details
+      );
+
+      if (success) {
+        setShowRequestModal(false);
       }
-
-      console.log('Submitting salary request:', {
-        user_id: employee.authUserId,
-        amount: parseFloat(requestData.amount.replace(/[^\d.-]/g, '')),
-        request_type: requestData.details?.request_type || 'salary',
-        requested_by: employee.email
-      });
-
-      // Use the proper Supabase money_requests table
-      const { data, error } = await supabase
-        .from('money_requests')
-        .insert([{
-          user_id: employee.authUserId,
-          amount: parseFloat(requestData.amount.replace(/[^\d.-]/g, '')),
-          reason: requestData.details?.reason || requestData.description,
-          request_type: requestData.details?.request_type || 'salary',
-          requested_by: employee.email,
-          status: 'pending',
-          approval_stage: 'pending_finance'
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Supabase error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
-        throw error;
-      }
-
-      console.log('Salary request submitted successfully:', data);
-
-      toast({
-        title: "Success",
-        description: "Salary request submitted successfully and awaiting Finance approval"
-      });
-
-      setShowRequestModal(false);
-      fetchRequestsByEmail(employee.email);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error submitting salary request:', error);
-      toast({
-        title: "Submission Failed",
-        description: error.message || "Failed to submit salary request. Please try again or contact support.",
-        variant: "destructive"
-      });
     }
   };
 
