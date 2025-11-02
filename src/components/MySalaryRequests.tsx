@@ -33,22 +33,34 @@ const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
 
   const handleRequestSubmitted = async (requestData: any) => {
     try {
+      if (!employee?.authUserId) {
+        toast({
+          title: "Error",
+          description: "User authentication ID not found. Please contact support.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Use the proper Supabase money_requests table
       const { data, error } = await supabase
         .from('money_requests')
         .insert([{
-          user_id: employee?.authUserId || employee?.id,
+          user_id: employee.authUserId,
           amount: parseFloat(requestData.amount.replace(/[^\d.-]/g, '')),
           reason: requestData.details?.reason || requestData.description,
           request_type: requestData.details?.request_type || 'salary',
-          requested_by: employee?.email || '',
+          requested_by: employee.email,
           status: 'pending',
           approval_stage: 'pending_finance'
         }])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       toast({
         title: "Success",
@@ -57,11 +69,11 @@ const MySalaryRequests = ({ employees = [] }: MySalaryRequestsProps) => {
 
       setShowRequestModal(false);
       fetchRequestsByEmail(employee.email);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting salary request:', error);
       toast({
         title: "Error",
-        description: "Failed to submit salary request",
+        description: error.message || "Failed to submit salary request",
         variant: "destructive"
       });
     }
