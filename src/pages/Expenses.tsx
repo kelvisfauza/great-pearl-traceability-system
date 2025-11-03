@@ -572,7 +572,7 @@ const Expenses = () => {
                       min="2000"
                       max={formData.expenseType === 'meals' && weeklyAllowance ? Math.min(15000, weeklyAllowance.balance_available) : undefined}
                       disabled={formData.expenseType === 'meals' && !weeklyAllowance}
-                      step="1000"
+                      step="500"
                     />
                     {formData.expenseType === 'meals' && (
                       <p className="text-xs text-muted-foreground mt-1">
