@@ -145,17 +145,6 @@ export const useMillingData = () => {
   const calculateStats = (customers: MillingCustomer[], transactions: MillingTransaction[], cashTransactions: MillingCashTransaction[], expenses: MillingExpense[]) => {
     const totalCustomers = customers.length;
     const activeCustomers = customers.filter(c => c.status === 'Active').length;
-    const totalDebts = customers.reduce((sum, c) => sum + (c.current_balance || 0), 0);
-    
-    // Debug logging
-    console.log('📊 Stats Calculation Debug:', {
-      totalCustomers,
-      activeCustomers,
-      totalDebts,
-      customerBalances: customers.map(c => ({ name: c.full_name, balance: c.current_balance })),
-      transactionsCount: transactions.length,
-      cashTransactionsCount: cashTransactions.length
-    });
     
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
@@ -163,6 +152,19 @@ export const useMillingData = () => {
     const monthlyTransactions = transactions.filter(t => {
       const transDate = new Date(t.date);
       return transDate.getMonth() === currentMonth && transDate.getFullYear() === currentYear;
+    });
+    
+    // Calculate debts only from current month's transactions
+    const totalDebts = monthlyTransactions.reduce((sum, t) => sum + (t.balance || 0), 0);
+    
+    // Debug logging
+    console.log('📊 Stats Calculation Debug:', {
+      totalCustomers,
+      activeCustomers,
+      totalDebts,
+      monthlyTransactionsCount: monthlyTransactions.length,
+      transactionsCount: transactions.length,
+      cashTransactionsCount: cashTransactions.length
     });
     
     const monthlyCashTransactions = cashTransactions.filter(t => {
