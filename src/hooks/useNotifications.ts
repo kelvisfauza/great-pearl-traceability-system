@@ -306,9 +306,8 @@ export const useNotifications = () => {
     }
 
     const notificationsQuery = query(
-      collection(db, 'notifications')
-      // Temporarily removed orderBy to debug potential indexing issues
-      // orderBy('createdAt', 'desc')
+      collection(db, 'notifications'),
+      orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
@@ -443,8 +442,15 @@ export const useNotifications = () => {
 
       if (!mounted) return;
       
-      setNotifications(userNotifications);
-      const unreadCount = userNotifications.filter(n => !n.isRead).length;
+      // Sort notifications by createdAt descending (most recent first)
+      const sortedNotifications = userNotifications.sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateB - dateA;
+      });
+      
+      setNotifications(sortedNotifications);
+      const unreadCount = sortedNotifications.filter(n => !n.isRead).length;
       setUnreadCount(unreadCount);
       setLoading(false);
     });
