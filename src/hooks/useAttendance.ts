@@ -71,16 +71,28 @@ export const useAttendance = () => {
   const getCurrentWeekAllowance = async (employeeId: string): Promise<WeeklyAllowance | null> => {
     try {
       // Get current week start (Monday)
+      // If today is Sunday, we look at last week's allowance since no work on Sunday
       const now = new Date();
       const dayOfWeek = now.getDay();
-      const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-      const weekStart = new Date(now.setDate(diff)).toISOString().split('T')[0];
+      let weekStart: Date;
+      
+      if (dayOfWeek === 0) {
+        // Sunday - get last week's allowance (previous Monday)
+        weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - 6); // Go back to last Monday
+      } else {
+        // Monday-Saturday - get current week's allowance (this Monday)
+        const diff = now.getDate() - dayOfWeek + 1;
+        weekStart = new Date(now.setDate(diff));
+      }
+      
+      const weekStartStr = weekStart.toISOString().split('T')[0];
 
       const { data, error } = await supabase
         .from('weekly_allowances')
         .select('*')
         .eq('employee_id', employeeId)
-        .eq('week_start_date', weekStart)
+        .eq('week_start_date', weekStartStr)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
