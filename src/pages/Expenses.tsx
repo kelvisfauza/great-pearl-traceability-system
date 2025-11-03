@@ -13,18 +13,21 @@ import { useApprovalSystem } from '@/hooks/useApprovalSystem';
 import { useMyExpenseRequests } from '@/hooks/useMyExpenseRequests';
 import { useAttendance } from '@/hooks/useAttendance';
 import { useMonthlySalaryTracking } from '@/hooks/useMonthlySalaryTracking';
+import { useDuplicateExpenseCheck } from '@/hooks/useDuplicateExpenseCheck';
 import { supabase } from '@/integrations/supabase/client';
 import { DollarSign, Send, FileText, Clock, CheckCircle, XCircle, AlertTriangle, Calendar, User, TrendingUp, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
 import { RequisitionForm } from '@/components/finance/RequisitionForm';
+import { DuplicateExpenseAlert } from '@/components/DuplicateExpenseAlert';
 
 const Expenses = () => {
   const { employee } = useAuth();
   const { createApprovalRequest, loading: submitting } = useApprovalSystem();
   const { requests: myRequests, loading: fetchingRequests, refetch, getApprovalStatus, getStatusColor, getRejectionDetails } = useMyExpenseRequests();
   const { getCurrentWeekAllowance, deductFromAllowance } = useAttendance();
+  const { checkForDuplicate, checking: checkingDuplicate } = useDuplicateExpenseCheck();
 
   const [formData, setFormData] = useState({
     expenseType: '',
@@ -36,6 +39,20 @@ const Expenses = () => {
 
   const [weeklyAllowance, setWeeklyAllowance] = useState<any>(null);
   const [loadingAllowance, setLoadingAllowance] = useState(true);
+  
+  const [duplicateAlert, setDuplicateAlert] = useState<{
+    open: boolean;
+    confidence: number;
+    reason: string;
+    matchedRequest?: string;
+    pendingSubmission?: () => Promise<void>;
+  }>({
+    open: false,
+    confidence: 0,
+    reason: '',
+    matchedRequest: undefined,
+    pendingSubmission: undefined
+  });
 
   const [salaryFormData, setSalaryFormData] = useState({
     amount: '',
@@ -199,6 +216,33 @@ const Expenses = () => {
     const selectedType = expenseTypes.find(type => type.value === formData.expenseType);
     const title = `${selectedType?.label || formData.expenseType} Request - UGX ${numericAmount.toLocaleString()}`;
 
+    // Check for duplicates using AI
+    const duplicateCheck = await checkForDuplicate(
+      'Expense Request',
+      title,
+      formData.description,
+      numericAmount
+    );
+
+    // If duplicate detected with high confidence, show warning
+    if (duplicateCheck.isDuplicate && duplicateCheck.confidence >= 60) {
+      setDuplicateAlert({
+        open: true,
+        confidence: duplicateCheck.confidence,
+        reason: duplicateCheck.reason || 'This request appears similar to a recent submission.',
+        matchedRequest: duplicateCheck.matchedRequest,
+        pendingSubmission: async () => {
+          await submitExpenseRequest(title, numericAmount, selectedType);
+        }
+      });
+      return;
+    }
+
+    // If no duplicate or low confidence, proceed directly
+    await submitExpenseRequest(title, numericAmount, selectedType);
+  };
+
+  const submitExpenseRequest = async (title: string, numericAmount: number, selectedType: any) => {
     const success = await createApprovalRequest(
       'Expense Request',
       title,
@@ -617,8 +661,8 @@ const Expenses = () => {
                     />
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={submitting}>
-                    {submitting ? 'Submitting...' : 'Submit Request'}
+                  <Button type="submit" className="w-full" disabled={submitting || checkingDuplicate}>
+                    {checkingDuplicate ? 'Checking for duplicates...' : submitting ? 'Submitting...' : 'Submit Request'}
                   </Button>
                 </form>
               </CardContent>
@@ -1047,6 +1091,20 @@ const Expenses = () => {
         </TabsContent>
       </Tabs>
       </div>
+      
+      <DuplicateExpenseAlert
+        open={duplicateAlert.open}
+        onOpenChange={(open) => setDuplicateAlert({ ...duplicateAlert, open })}
+        onConfirm={async () => {
+          setDuplicateAlert({ ...duplicateAlert, open: false });
+          if (duplicateAlert.pendingSubmission) {
+            await duplicateAlert.pendingSubmission();
+          }
+        }}
+        confidence={duplicateAlert.confidence}
+        reason={duplicateAlert.reason}
+        matchedRequest={duplicateAlert.matchedRequest}
+      />
     </Layout>
   );
 };
