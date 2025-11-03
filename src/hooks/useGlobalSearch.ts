@@ -32,7 +32,7 @@ export const useGlobalSearch = (searchTerm: string) => {
 
       try {
         const lowerSearch = searchTerm.toLowerCase();
-        console.log('🔍 Global search - term:', searchTerm, 'hasPermission check:', hasPermission('Store Management'));
+        console.log('🔍 Global search - term:', searchTerm, 'employee:', employee?.name, 'permissions:', employee?.permissions);
 
         // Department/Module suggestions based on keywords
         const departmentKeywords: Record<string, { name: string; path: string; keywords: string[] }> = {
@@ -59,31 +59,37 @@ export const useGlobalSearch = (searchTerm: string) => {
           }
         });
 
-        // Search Suppliers (visible to all)
-        const { data: suppliers, error: suppliersError } = await supabase
-          .from('suppliers')
-          .select('*')
-          .or(`name.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
-          .limit(10);
+        // Search Suppliers (visible to all - no permission required)
+        try {
+          const { data: suppliers, error: suppliersError } = await supabase
+            .from('suppliers')
+            .select('*')
+            .or(`name.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+            .limit(10);
 
-        if (suppliersError) console.error('Suppliers search error:', suppliersError);
-
-        if (suppliers) {
-          suppliers.forEach(supplier => {
-            searchResults.push({
-              id: supplier.id,
-              type: 'supplier',
-              title: supplier.name,
-              subtitle: `Code: ${supplier.code} | Origin: ${supplier.origin}`,
-              navigateTo: `/suppliers?id=${supplier.id}`,
-              department: 'Procurement',
-              metadata: supplier
+          if (suppliersError) {
+            console.error('Suppliers search error:', suppliersError);
+          } else if (suppliers && suppliers.length > 0) {
+            console.log('🔍 Found suppliers:', suppliers.length);
+            suppliers.forEach(supplier => {
+              searchResults.push({
+                id: supplier.id,
+                type: 'supplier',
+                title: supplier.name,
+                subtitle: `Code: ${supplier.code} | Origin: ${supplier.origin}`,
+                navigateTo: `/suppliers?id=${supplier.id}`,
+                department: 'Procurement',
+                metadata: supplier
+              });
             });
-          });
+          }
+        } catch (err) {
+          console.error('Suppliers search exception:', err);
         }
 
         // Search Money/Expense Requests & Payment Slips
-        if (hasPermission('Finance Management') || employee?.permissions?.includes('*')) {
+        const canAccessFinanceSearch = hasPermission && (hasPermission('Finance Management') || employee?.permissions?.includes('*'));
+        if (canAccessFinanceSearch) {
           // Check if search term looks like a payment slip number (PS-YYYY-MM-XXXXXXXX)
           const paymentSlipPattern = /^PS-\d{4}-\d{1,2}-([A-F0-9]{8})/i;
           const paymentSlipMatch = searchTerm.match(paymentSlipPattern);
@@ -187,7 +193,8 @@ export const useGlobalSearch = (searchTerm: string) => {
         }
 
         // Search EUDR Documentation
-        if (hasPermission('Store Management') || employee?.permissions?.includes('*')) {
+        const canAccessEUDR = hasPermission && (hasPermission('Store Management') || employee?.permissions?.includes('*'));
+        if (canAccessEUDR) {
           // Fuzzy match for EUDR
           if ('eudr'.includes(lowerSearch) || lowerSearch.includes('eud') || lowerSearch.includes('documentation')) {
             const { data: eudrDocs } = await supabase
@@ -214,7 +221,7 @@ export const useGlobalSearch = (searchTerm: string) => {
         }
 
         // Search Coffee Records by Batch Number - Check both Store Management permission and wildcard
-        const canAccessStore = hasPermission('Store Management') || employee?.permissions?.includes('*');
+        const canAccessStore = hasPermission && (hasPermission('Store Management') || employee?.permissions?.includes('*'));
         console.log('🔍 Can access store:', canAccessStore, 'Employee permissions:', employee?.permissions);
         
         if (canAccessStore) {
@@ -296,7 +303,7 @@ export const useGlobalSearch = (searchTerm: string) => {
         }
 
         // Search Quality Assessments
-        const canAccessQuality = hasPermission('Quality Control') || employee?.permissions?.includes('*');
+        const canAccessQuality = hasPermission && (hasPermission('Quality Control') || employee?.permissions?.includes('*'));
         if (canAccessQuality) {
           const { data: qualityAssessments } = await supabase
             .from('quality_assessments')
@@ -321,7 +328,7 @@ export const useGlobalSearch = (searchTerm: string) => {
         }
 
         // Search Employees (HR permission)
-        const canAccessHR = hasPermission('User Management') || hasPermission('HR Management') || employee?.permissions?.includes('*');
+        const canAccessHR = hasPermission && (hasPermission('User Management') || hasPermission('HR Management') || employee?.permissions?.includes('*'));
         if (canAccessHR) {
           const { data: employees } = await supabase
             .from('employees')
@@ -346,8 +353,8 @@ export const useGlobalSearch = (searchTerm: string) => {
         }
 
         // Search Payment Records (Finance permission)
-        const canAccessFinance = hasPermission('Finance Management') || employee?.permissions?.includes('*');
-        if (canAccessFinance) {
+        const canAccessFinancePayments = hasPermission && (hasPermission('Finance Management') || employee?.permissions?.includes('*'));
+        if (canAccessFinancePayments) {
           const { data: payments } = await supabase
             .from('payment_records')
             .select('*')
@@ -371,7 +378,7 @@ export const useGlobalSearch = (searchTerm: string) => {
         }
 
         // Search Sales Transactions
-        const canAccessSales = hasPermission('Sales Management') || employee?.permissions?.includes('*');
+        const canAccessSales = hasPermission && (hasPermission('Sales Management') || employee?.permissions?.includes('*'));
         if (canAccessSales) {
           const { data: sales } = await supabase
             .from('sales_transactions')
@@ -434,7 +441,7 @@ export const useGlobalSearch = (searchTerm: string) => {
     }, 300);
 
     return () => clearTimeout(debounce);
-  }, [searchTerm, hasPermission]);
+  }, [searchTerm, employee?.permissions]);
 
   return { results, loading };
 };
