@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Edit, Trash2, Calendar } from 'lucide-react';
+import { format, isToday, isThisWeek, isThisMonth, isThisYear, startOfDay, endOfDay } from 'date-fns';
 import { useMillingData } from '@/hooks/useMillingData';
 import { useRoleBasedAccess } from '@/hooks/useRoleBasedAccess';
 import MillingTransactionEditModal from './MillingTransactionEditModal';
@@ -14,6 +15,29 @@ const MillingTransactionsList = () => {
   const { canDeleteEmployees } = useRoleBasedAccess();
   const [editTransaction, setEditTransaction] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [periodFilter, setPeriodFilter] = useState('today');
+
+  const filteredTransactions = useMemo(() => {
+    if (!transactions) return [];
+    
+    return transactions.filter(transaction => {
+      const transactionDate = new Date(transaction.date);
+      
+      switch (periodFilter) {
+        case 'today':
+          return isToday(transactionDate);
+        case 'week':
+          return isThisWeek(transactionDate, { weekStartsOn: 1 });
+        case 'month':
+          return isThisMonth(transactionDate);
+        case 'year':
+          return isThisYear(transactionDate);
+        case 'all':
+        default:
+          return true;
+      }
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, periodFilter]);
 
   const handleDelete = async (transaction: any) => {
     if (window.confirm(`Are you sure you want to delete this transaction for ${transaction.customer_name}?`)) {
@@ -39,12 +63,29 @@ const MillingTransactionsList = () => {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle>Recent Transactions</CardTitle>
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <Select value={periodFilter} onValueChange={setPeriodFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Filter by period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+              <SelectItem value="year">This Year</SelectItem>
+              <SelectItem value="all">All Time</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
-        {transactions.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">No transactions recorded yet</p>
+        {filteredTransactions.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            No transactions found for {periodFilter === 'today' ? 'today' : `this ${periodFilter}`}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -62,7 +103,7 @@ const MillingTransactionsList = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((transaction) => (
+                {filteredTransactions.map((transaction) => (
                   <TableRow key={transaction.id}>
                     <TableCell>
                       {format(new Date(transaction.date), 'MMM dd, yyyy')}
