@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import PriceTicker from "@/components/PriceTicker";
 import PricingGuidance from "@/components/PricingGuidance";
+import { Autocomplete } from "@/components/ui/autocomplete";
 
 import { StoreRecordsManager } from "@/components/store/StoreRecordsManager";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
@@ -148,6 +149,15 @@ const Store = () => {
   const [selectedGRNData, setSelectedGRNData] = useState(null);
 
   const loading = storeLoading || suppliersLoading || qualityLoading || processingLoading;
+
+  // Convert suppliers to autocomplete options
+  const supplierOptions = useMemo(() => {
+    return suppliers.map(supplier => ({
+      value: supplier.name,
+      label: supplier.name,
+      subtitle: supplier.phone
+    }));
+  }, [suppliers]);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -1128,18 +1138,14 @@ const Store = () => {
                 </div>
                 <div>
                   <Label htmlFor="supplier-name">Supplier Name *</Label>
-                  <Select value={newRecord.supplierName} onValueChange={(value) => setNewRecord({...newRecord, supplierName: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select supplier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.name}>
-                          {supplier.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Autocomplete
+                    options={supplierOptions}
+                    value={newRecord.supplierName}
+                    onValueChange={(value) => setNewRecord({...newRecord, supplierName: value})}
+                    placeholder="Search supplier..."
+                    searchPlaceholder="Type to search..."
+                    emptyText="No suppliers found"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="delivery-date">Delivery Date *</Label>
