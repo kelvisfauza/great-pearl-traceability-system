@@ -80,14 +80,6 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Check for business email domain - only private emails allowed
-      const emailDomain = email.split('@')[1]?.toLowerCase();
-      if (emailDomain === 'greatpearlcoffee.com') {
-        setError('Business emails are not allowed. Please use your private email address to log in.');
-        setLoading(false);
-        return;
-      }
-
       // First, check network access
       console.log('🌐 Checking network access for:', email);
       const { data: networkCheck, error: networkError } = await supabase.functions.invoke('check-network-access', {
