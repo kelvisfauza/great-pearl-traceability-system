@@ -436,22 +436,22 @@ const Store = () => {
         <PriceTicker />
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="records">
-              <Package className="h-4 w-4 mr-2" />
-              Coffee Records
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1">
+            <TabsTrigger value="records" className="text-xs sm:text-sm">
+              <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Coffee </span>Records
             </TabsTrigger>
-            <TabsTrigger value="pricing">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Pricing & Assessment
+            <TabsTrigger value="pricing" className="text-xs sm:text-sm">
+              <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Pricing</span><span className="xs:hidden">Price</span>
             </TabsTrigger>
-            <TabsTrigger value="operations">
-              <Scale className="h-4 w-4 mr-2" />
+            <TabsTrigger value="operations" className="text-xs sm:text-sm">
+              <Scale className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Operations
             </TabsTrigger>
-            <TabsTrigger value="suppliers">
-              <Users className="h-4 w-4 mr-2" />
-              Supplier Management
+            <TabsTrigger value="suppliers" className="text-xs sm:text-sm">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Supplier </span>Suppliers
             </TabsTrigger>
           </TabsList>
 
@@ -459,139 +459,148 @@ const Store = () => {
           <TabsContent value="records" className="space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <CardTitle>Coffee Records</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">Coffee Records</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
                       {coffeeRecords.length > 0 
                         ? `${coffeeRecords.length} coffee delivery records in the system` 
                         : "No coffee records yet. Add your first delivery record below."
                       }
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col xs:flex-row gap-2">
                     <Button 
                       onClick={() => setShowAddRecordModal(true)}
+                      className="text-xs sm:text-sm"
+                      size="sm"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Coffee Delivery Record
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Add Coffee Delivery Record</span>
+                      <span className="sm:hidden">Add Record</span>
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={handlePrintAllRecords}
                       disabled={coffeeRecords.length === 0}
+                      className="text-xs sm:text-sm"
                     >
-                      <Printer className="h-4 w-4 mr-2" />
+                      <Printer className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       Print All Records
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-6">
                 {/* Date Filter */}
-                <div className="mb-4 flex items-center gap-2">
-                  <Label htmlFor="date-filter">View Records for:</Label>
+                <div className="mb-4 flex flex-col xs:flex-row items-start xs:items-center gap-2">
+                  <Label htmlFor="date-filter" className="text-xs sm:text-sm whitespace-nowrap">View Records for:</Label>
                   <Input
                     id="date-filter"
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-auto"
+                    className="w-full xs:w-auto text-xs sm:text-sm"
                   />
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+                    className="w-full xs:w-auto text-xs sm:text-sm"
                   >
-                    <Calendar className="h-4 w-4 mr-2" />
+                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     Today
                   </Button>
                 </div>
 
                 {filteredRecords.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No coffee records found for {new Date(selectedDate).toLocaleDateString()}</p>
-                    <p className="text-sm mt-2">Select a different date to view other records</p>
+                    <Package className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-sm sm:text-base">No coffee records found for {new Date(selectedDate).toLocaleDateString()}</p>
+                    <p className="text-xs sm:text-sm mt-2">Select a different date to view other records</p>
                     <p className="text-xs mt-1 text-muted-foreground">Total records in system: {coffeeRecords.length}</p>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Batch Number</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Coffee Type</TableHead>
-                        <TableHead>Supplier</TableHead>
-                        <TableHead>Kilograms</TableHead>
-                        <TableHead>Bags</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredRecords.map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-mono">{record.batchNumber}</TableCell>
-                          <TableCell>{record.date}</TableCell>
-                          <TableCell className="capitalize">{record.coffeeType}</TableCell>
-                          <TableCell>{record.supplierName}</TableCell>
-                          <TableCell>{Number(record.kilograms).toLocaleString()}kg</TableCell>
-                          <TableCell>{record.bags}</TableCell>
-                          <TableCell>
-                            <Badge {...getStatusBadge(record.status)}>
-                              {getStatusBadge(record.status).label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handlePrintGRN(record)}
-                              >
-                                <Printer className="h-3 w-3 mr-1" />
-                                GRN
-                              </Button>
-                              {canEditOrDelete(record) && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleEditRecord(record)}
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </Button>
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button size="sm" variant="outline">
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete Coffee Record</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Are you sure you want to delete this coffee record? This action cannot be undone.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteRecord(record.id)}>
-                                          Delete
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
+                  <div className="overflow-x-auto -mx-3 sm:mx-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Batch Number</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Date</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Coffee Type</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Supplier</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Kilograms</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Bags</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Status</TableHead>
+                          <TableHead className="text-xs sm:text-sm whitespace-nowrap">Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredRecords.map((record) => (
+                          <TableRow key={record.id}>
+                            <TableCell className="font-mono text-xs sm:text-sm whitespace-nowrap">{record.batchNumber}</TableCell>
+                            <TableCell className="text-xs sm:text-sm whitespace-nowrap">{record.date}</TableCell>
+                            <TableCell className="capitalize text-xs sm:text-sm whitespace-nowrap">{record.coffeeType}</TableCell>
+                            <TableCell className="text-xs sm:text-sm whitespace-nowrap">{record.supplierName}</TableCell>
+                            <TableCell className="text-xs sm:text-sm whitespace-nowrap">{Number(record.kilograms).toLocaleString()}kg</TableCell>
+                            <TableCell className="text-xs sm:text-sm">{record.bags}</TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <Badge {...getStatusBadge(record.status)} className="text-xs">
+                                {getStatusBadge(record.status).label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <div className="flex gap-1 sm:gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handlePrintGRN(record)}
+                                  className="text-xs px-2"
+                                >
+                                  <Printer className="h-3 w-3 sm:mr-1" />
+                                  <span className="hidden sm:inline">GRN</span>
+                                </Button>
+                                {canEditOrDelete(record) && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleEditRecord(record)}
+                                      className="px-2"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button size="sm" variant="outline" className="px-2">
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent className="max-w-[90vw] sm:max-w-lg">
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle className="text-base sm:text-lg">Delete Coffee Record</AlertDialogTitle>
+                                          <AlertDialogDescription className="text-xs sm:text-sm">
+                                            Are you sure you want to delete this coffee record? This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter className="flex-col xs:flex-row gap-2">
+                                          <AlertDialogCancel className="text-xs sm:text-sm">Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteRecord(record.id)} className="text-xs sm:text-sm">
+                                            Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -1114,15 +1123,15 @@ const Store = () => {
 
         {/* Add Coffee Delivery Record Modal */}
         <Dialog open={showAddRecordModal} onOpenChange={setShowAddRecordModal}>
-          <DialogContent>
+          <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add Coffee Delivery Record</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-base sm:text-lg">Add Coffee Delivery Record</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">
                 Record new coffee delivery from suppliers
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="coffee-type">Coffee Type *</Label>
                   <Select value={newRecord.coffeeType} onValueChange={(value) => setNewRecord({...newRecord, coffeeType: value})}>
@@ -1178,8 +1187,8 @@ const Store = () => {
                 </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAddRecordModal(false)}>
+            <DialogFooter className="flex-col xs:flex-row gap-2">
+              <Button variant="outline" onClick={() => setShowAddRecordModal(false)} className="text-xs sm:text-sm w-full xs:w-auto">
                 Cancel
               </Button>
               <Button 
@@ -1190,8 +1199,9 @@ const Store = () => {
                   }
                 }}
                 disabled={submittingRecord}
+                className="text-xs sm:text-sm w-full xs:w-auto"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 {submittingRecord ? "Saving..." : "Add Coffee Record"}
               </Button>
             </DialogFooter>
