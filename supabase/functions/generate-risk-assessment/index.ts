@@ -95,6 +95,7 @@ serve(async (req) => {
       { data: suppliers },
       { data: supplierContracts },
       { data: supplierAdvances },
+      { data: supplierPayments },
       { data: salesTransactions },
       { data: salesRecent },
       { data: moneyRequests },
@@ -102,6 +103,7 @@ serve(async (req) => {
       { data: inventoryItems },
       { data: inventoryMovements },
       { data: purchaseOrders },
+      { data: purchaseOrdersRecent },
       { data: millingTransactions },
       { data: salaryPayments },
       { data: salaryPayslips },
@@ -115,15 +117,17 @@ serve(async (req) => {
       supabase.from('company_employees').select('*'),
       supabase.from('approval_requests').select('*').order('created_at', { ascending: false }).limit(200),
       supabase.from('suppliers').select('*'),
-      supabase.from('supplier_contracts').select('*').order('date', { ascending: false }).limit(100),
-      supabase.from('supplier_advances').select('*').order('issued_at', { ascending: false }).limit(100),
+      supabase.from('supplier_contracts').select('*').order('date', { ascending: false }),
+      supabase.from('supplier_advances').select('*').order('issued_at', { ascending: false }),
+      supabase.from('supplier_payments').select('*').order('requested_at', { ascending: false }),
       supabase.from('sales_transactions').select('*').order('date', { ascending: false }).limit(200),
       supabase.from('sales_transactions').select('*').gte('date', last30Days.toISOString().split('T')[0]),
       supabase.from('money_requests').select('*').order('created_at', { ascending: false }).limit(200),
-      supabase.from('payment_records').select('*').order('date', { ascending: false }).limit(200),
+      supabase.from('payment_records').select('*').order('date', { ascending: false }),
       supabase.from('inventory_items').select('*'),
       supabase.from('inventory_movements').select('*').order('created_at', { ascending: false }).limit(200),
-      supabase.from('purchase_orders').select('*').order('order_date', { ascending: false }).limit(100),
+      supabase.from('purchase_orders').select('*').order('order_date', { ascending: false }),
+      supabase.from('purchase_orders').select('*').gte('order_date', last30Days.toISOString().split('T')[0]),
       supabase.from('milling_transactions').select('*').order('date', { ascending: false }).limit(200),
       supabase.from('salary_payments').select('*').order('processed_date', { ascending: false }).limit(50),
       supabase.from('salary_payslips').select('*').order('generated_date', { ascending: false }).limit(200),
@@ -206,7 +210,8 @@ serve(async (req) => {
           active: supplierContracts?.filter(c => c.status === 'Active').length || 0,
           voided: supplierContracts?.filter(c => c.status === 'Voided').length || 0,
           totalExpected: supplierContracts?.filter(c => c.status === 'Active').reduce((sum, c) => sum + (Number(c.kilograms_expected) || 0), 0) || 0,
-          totalAdvancesGiven: supplierContracts?.reduce((sum, c) => sum + (Number(c.advance_given) || 0), 0) || 0
+          totalAdvancesGiven: supplierContracts?.reduce((sum, c) => sum + (Number(c.advance_given) || 0), 0) || 0,
+          totalContractValue: supplierContracts?.filter(c => c.status === 'Active').reduce((sum, c) => sum + (Number(c.kilograms_expected) * Number(c.price_per_kg) || 0), 0) || 0
         },
         advances: {
           total: supplierAdvances?.length || 0,
@@ -217,12 +222,38 @@ serve(async (req) => {
         },
         purchaseOrders: {
           total: purchaseOrders?.length || 0,
+          last30Days: purchaseOrdersRecent?.length || 0,
           byStatus: purchaseOrders?.reduce((acc: any, po) => {
             acc[po.status] = (acc[po.status] || 0) + 1;
             return acc;
           }, {}),
+          byCoffeeType: purchaseOrders?.reduce((acc: any, po) => {
+            acc[po.coffee_type] = (acc[po.coffee_type] || 0) + Number(po.quantity || 0);
+            return acc;
+          }, {}),
           totalAmount: purchaseOrders?.reduce((sum, po) => sum + (Number(po.total_amount) || 0), 0) || 0,
-          totalQuantity: purchaseOrders?.reduce((sum, po) => sum + (Number(po.quantity) || 0), 0) || 0
+          totalAmountL30D: purchaseOrdersRecent?.reduce((sum, po) => sum + (Number(po.total_amount) || 0), 0) || 0,
+          totalQuantityKg: purchaseOrders?.reduce((sum, po) => sum + (Number(po.quantity) || 0), 0) || 0,
+          totalQuantityKgL30D: purchaseOrdersRecent?.reduce((sum, po) => sum + (Number(po.quantity) || 0), 0) || 0,
+          avgUnitPrice: purchaseOrders?.length ? (purchaseOrders.reduce((sum, po) => sum + (Number(po.unit_price) || 0), 0) / purchaseOrders.length) : 0,
+          bySupplier: purchaseOrders?.reduce((acc: any, po) => {
+            const key = po.supplier_name || 'Unknown';
+            if (!acc[key]) acc[key] = { count: 0, totalAmount: 0, totalKg: 0 };
+            acc[key].count++;
+            acc[key].totalAmount += Number(po.total_amount || 0);
+            acc[key].totalKg += Number(po.quantity || 0);
+            return acc;
+          }, {})
+        },
+        supplierPayments: {
+          total: supplierPayments?.length || 0,
+          byStatus: supplierPayments?.reduce((acc: any, sp) => {
+            acc[sp.status] = (acc[sp.status] || 0) + 1;
+            return acc;
+          }, {}),
+          totalPaid: supplierPayments?.filter(sp => sp.status === 'PAID').reduce((sum, sp) => sum + (Number(sp.amount_paid_ugx) || 0), 0) || 0,
+          totalPending: supplierPayments?.filter(sp => sp.status !== 'PAID').reduce((sum, sp) => sum + (Number(sp.gross_payable_ugx) || 0), 0) || 0,
+          totalAdvanceRecovered: supplierPayments?.reduce((sum, sp) => sum + (Number(sp.advance_recovered_ugx) || 0), 0) || 0
         }
       },
 
@@ -397,13 +428,24 @@ Conduct a thorough investigation of EVERY department and operational area:
 - Review role distribution and permission management
 
 ## 2. PROCUREMENT & SUPPLIER RISKS
-- Evaluate supplier concentration and origin diversification
-- Analyze contract fulfillment and advance recovery rates
-- Assess outstanding supplier advances and recovery risks
-- Review purchase order completion rates and delays
-- Identify supplier payment patterns and credit exposure
-- Evaluate advance-to-delivery ratios
-- Check for contract voidance patterns
+- **CRITICAL**: Analyze ALL purchase orders (total count: ${dataSummary.procurement.purchaseOrders.total})
+- Calculate total purchase value across ALL orders: UGX ${dataSummary.procurement.purchaseOrders.totalAmount.toLocaleString()}
+- Analyze purchase trends: Last 30 days (${dataSummary.procurement.purchaseOrders.last30Days} orders, UGX ${dataSummary.procurement.purchaseOrders.totalAmountL30D.toLocaleString()})
+- Total kilograms purchased: ${dataSummary.procurement.purchaseOrders.totalQuantityKg.toLocaleString()} kg
+- Break down purchases by supplier (top suppliers by volume and value)
+- Break down purchases by coffee type and analyze pricing variations
+- Review purchase order status distribution (Draft/Approved/Completed/Cancelled)
+- Evaluate supplier concentration and origin diversification risks
+- Analyze contract fulfillment rates vs purchase order execution
+- Assess outstanding supplier advances (UGX ${dataSummary.procurement.advances.totalOutstanding.toLocaleString()}) vs purchases
+- Review supplier payment patterns: ${dataSummary.procurement.supplierPayments.total} payments totaling UGX ${dataSummary.procurement.supplierPayments.totalPaid.toLocaleString()}
+- Identify payment delays and pending supplier payments
+- Calculate advance recovery effectiveness (UGX ${dataSummary.procurement.supplierPayments.totalAdvanceRecovered.toLocaleString()} recovered)
+- Evaluate purchase price trends and market rate alignment
+- Assess supplier dependency risks (concentration by supplier)
+- Check for contract voidance patterns and reasons
+- Analyze purchase order to delivery cycle times
+- Review total contract value vs actual purchase execution
 
 ## 3. INVENTORY & STOCK MANAGEMENT RISKS
 - Compare Firebase vs Supabase inventory discrepancies
