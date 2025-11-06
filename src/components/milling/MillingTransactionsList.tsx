@@ -4,7 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Edit, Trash2, Calendar } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Edit, Trash2, Calendar, Search } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth, isThisYear, startOfDay, endOfDay } from 'date-fns';
 import { useMillingData } from '@/hooks/useMillingData';
 import { useRoleBasedAccess } from '@/hooks/useRoleBasedAccess';
@@ -16,6 +17,7 @@ const MillingTransactionsList = () => {
   const [editTransaction, setEditTransaction] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [periodFilter, setPeriodFilter] = useState('today');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredTransactions = useMemo(() => {
     if (!transactions) return [];
@@ -23,21 +25,33 @@ const MillingTransactionsList = () => {
     return transactions.filter(transaction => {
       const transactionDate = new Date(transaction.date);
       
+      // Period filter
+      let matchesPeriod = true;
       switch (periodFilter) {
         case 'today':
-          return isToday(transactionDate);
+          matchesPeriod = isToday(transactionDate);
+          break;
         case 'week':
-          return isThisWeek(transactionDate, { weekStartsOn: 1 });
+          matchesPeriod = isThisWeek(transactionDate, { weekStartsOn: 1 });
+          break;
         case 'month':
-          return isThisMonth(transactionDate);
+          matchesPeriod = isThisMonth(transactionDate);
+          break;
         case 'year':
-          return isThisYear(transactionDate);
+          matchesPeriod = isThisYear(transactionDate);
+          break;
         case 'all':
         default:
-          return true;
+          matchesPeriod = true;
       }
+      
+      // Search filter
+      const matchesSearch = searchQuery.trim() === '' || 
+        transaction.customer_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      return matchesPeriod && matchesSearch;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, periodFilter]);
+  }, [transactions, periodFilter, searchQuery]);
 
   const handleDelete = async (transaction: any) => {
     if (window.confirm(`Are you sure you want to delete this transaction for ${transaction.customer_name}?`)) {
@@ -63,22 +77,33 @@ const MillingTransactionsList = () => {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle>Recent Transactions</CardTitle>
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <Select value={periodFilter} onValueChange={setPeriodFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Filter by period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="year">This Year</SelectItem>
-              <SelectItem value="all">All Time</SelectItem>
-            </SelectContent>
-          </Select>
+      <CardHeader className="space-y-4">
+        <div className="flex flex-row items-center justify-between">
+          <CardTitle>Recent Transactions</CardTitle>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Select value={periodFilter} onValueChange={setPeriodFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Filter by period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="year">This Year</SelectItem>
+                <SelectItem value="all">All Time</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by customer name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
       </CardHeader>
       <CardContent>
