@@ -3013,6 +3013,42 @@ export type Database = {
         }
         Relationships: []
       }
+      risk_assessments: {
+        Row: {
+          assessment_content: string
+          created_at: string
+          data_summary: Json | null
+          generated_at: string
+          generated_by_name: string
+          generated_by_role: string | null
+          generated_by_user_id: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_content: string
+          created_at?: string
+          data_summary?: Json | null
+          generated_at?: string
+          generated_by_name: string
+          generated_by_role?: string | null
+          generated_by_user_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_content?: string
+          created_at?: string
+          data_summary?: Json | null
+          generated_at?: string
+          generated_by_name?: string
+          generated_by_role?: string | null
+          generated_by_user_id?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       salary_payments: {
         Row: {
           bonuses: number

@@ -24,18 +24,23 @@ serve(async (req) => {
     // Get user info from auth header
     const authHeader = req.headers.get('authorization');
     let userName = 'Risk Analyst';
+    let user = null;
+    let employee = null;
     
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
-      const { data: { user } } = await supabase.auth.getUser(token);
+      const { data: { user: authUser } } = await supabase.auth.getUser(token);
+      user = authUser;
       
       if (user) {
         // Fetch user details from employees table
-        const { data: employee } = await supabase
+        const { data: employeeData } = await supabase
           .from('employees')
           .select('full_name, role')
           .eq('user_id', user.id)
           .single();
+        
+        employee = employeeData;
         
         if (employee) {
           userName = `${employee.full_name}${employee.role ? ` - ${employee.role}` : ''}`;
@@ -44,6 +49,15 @@ serve(async (req) => {
     }
 
     console.log('Fetching data for risk assessment...');
+
+    // Fetch previous risk assessments (last 3)
+    const { data: previousAssessments } = await supabase
+      .from('risk_assessments')
+      .select('generated_at, assessment_content')
+      .order('generated_at', { ascending: false })
+      .limit(3);
+
+    console.log(`Found ${previousAssessments?.length || 0} previous assessments`);
 
     // Fetch data from Firebase Firestore using REST API
     const firebaseProjectId = 'great-new';
@@ -163,6 +177,19 @@ IMPORTANT: Start the report with this exact header structure:
 
 Then continue with: "This report provides a detailed risk assessment..."
 
+${previousAssessments && previousAssessments.length > 0 ? `
+PREVIOUS ASSESSMENTS CONTEXT:
+You have access to ${previousAssessments.length} previous risk assessment(s). Use these to:
+1. Identify new risks that weren't present before
+2. Track progress on previously identified risks
+3. Avoid repeating the same analysis
+4. Highlight trends and changes
+
+Previous assessment dates: ${previousAssessments.map((a: any) => new Date(a.generated_at).toLocaleDateString()).join(', ')}
+
+Focus on what's NEW, CHANGED, or WORSENED since the last assessment. Don't repeat risks that were already thoroughly covered unless their status has changed significantly.
+` : ''}
+
 Format the rest of the response as structured markdown with clear sections and bullet points.`
           }
         ]
@@ -179,6 +206,24 @@ Format the rest of the response as structured markdown with clear sections and b
     const riskAssessment = aiData.choices[0].message.content;
 
     console.log('Risk assessment generated successfully');
+
+    // Save the assessment to the database
+    const { error: saveError } = await supabase
+      .from('risk_assessments')
+      .insert({
+        generated_by_user_id: user?.id,
+        generated_by_name: userName,
+        generated_by_role: employee?.role || null,
+        assessment_content: riskAssessment,
+        data_summary: dataSummary
+      });
+
+    if (saveError) {
+      console.error('Error saving assessment:', saveError);
+      // Don't fail the request, just log the error
+    } else {
+      console.log('Assessment saved to database successfully');
+    }
 
     return new Response(
       JSON.stringify({ 
