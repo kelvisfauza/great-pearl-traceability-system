@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -13,6 +12,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useMillingData } from '@/hooks/useMillingData';
 import { useAuth } from '@/contexts/AuthContext';
+import { Autocomplete, AutocompleteOption } from '@/components/ui/autocomplete';
 import ArabicaPriceCalculator from './ArabicaPriceCalculator';
 
 interface MillingTransactionFormProps {
@@ -37,6 +37,14 @@ const MillingTransactionForm = ({ open, onClose }: MillingTransactionFormProps) 
     notes: '',
     transaction_type: 'hulling'
   });
+
+  const customerOptions = useMemo((): AutocompleteOption[] => {
+    return customers.map(customer => ({
+      value: customer.id,
+      label: customer.full_name,
+      subtitle: `Balance: UGX ${customer.current_balance.toLocaleString()}`
+    }));
+  }, [customers]);
 
   const handleSubmit = async (e: React.FormEvent, saveAndNew = false) => {
     e.preventDefault();
@@ -200,18 +208,14 @@ const MillingTransactionForm = ({ open, onClose }: MillingTransactionFormProps) 
 
                 <div className="space-y-2">
                   <Label htmlFor="customer">Customer *</Label>
-                  <Select value={formData.customer_id} onValueChange={handleCustomerSelect}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select customer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.full_name} (Balance: UGX {customer.current_balance.toLocaleString()})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Autocomplete
+                    options={customerOptions}
+                    value={formData.customer_id}
+                    onValueChange={handleCustomerSelect}
+                    placeholder="Search for a customer..."
+                    searchPlaceholder="Type to search..."
+                    emptyText="No customers found."
+                  />
                 </div>
               </div>
 

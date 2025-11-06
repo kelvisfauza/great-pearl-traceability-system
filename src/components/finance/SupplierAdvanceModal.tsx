@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, DollarSign } from 'lucide-react';
@@ -12,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHRPayments } from '@/hooks/useHRPayments';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSuppliers } from '@/hooks/useSuppliers';
+import { Autocomplete, AutocompleteOption } from '@/components/ui/autocomplete';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { collection, addDoc } from 'firebase/firestore';
@@ -33,6 +33,14 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
   const { processAdvancePayment } = useHRPayments();
   const { employee } = useAuth();
   const { toast } = useToast();
+
+  const supplierOptions = useMemo((): AutocompleteOption[] => {
+    return suppliers.map(supplier => ({
+      value: supplier.id,
+      label: supplier.name,
+      subtitle: `Code: ${supplier.code}`
+    }));
+  }, [suppliers]);
 
   const handleSubmit = async () => {
     if (!selectedSupplier || !amount || !purpose) {
@@ -181,24 +189,14 @@ const SupplierAdvanceModal: React.FC<SupplierAdvanceModalProps> = ({ open, onClo
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="supplier">Supplier</Label>
-            <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select supplier" />
-              </SelectTrigger>
-              <SelectContent>
-                {suppliers.length === 0 ? (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    No suppliers available. Add suppliers in Procurement.
-                  </div>
-                ) : (
-                  suppliers.map((supplier) => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name} - {supplier.code}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <Autocomplete
+              options={supplierOptions}
+              value={selectedSupplier}
+              onValueChange={setSelectedSupplier}
+              placeholder="Search for a supplier..."
+              searchPlaceholder="Type to search..."
+              emptyText="No suppliers found. Add suppliers in Procurement."
+            />
           </div>
 
           <div className="space-y-2">

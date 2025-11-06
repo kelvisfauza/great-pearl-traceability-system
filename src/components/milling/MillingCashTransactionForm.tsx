@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useMillingData } from '@/hooks/useMillingData';
 import { useAuth } from '@/contexts/AuthContext';
+import { Autocomplete, AutocompleteOption } from '@/components/ui/autocomplete';
 
 interface MillingCashTransactionFormProps {
   open: boolean;
@@ -33,6 +34,14 @@ const MillingCashTransactionForm = ({ open, onClose }: MillingCashTransactionFor
 
   // Filter customers with positive balances (debts)
   const customersWithDebts = customers.filter(c => c.current_balance > 0);
+
+  const customerOptions = useMemo((): AutocompleteOption[] => {
+    return customersWithDebts.map(customer => ({
+      value: customer.id,
+      label: customer.full_name,
+      subtitle: `Balance: UGX ${customer.current_balance.toLocaleString()}`
+    }));
+  }, [customersWithDebts]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,18 +141,14 @@ const MillingCashTransactionForm = ({ open, onClose }: MillingCashTransactionFor
 
           <div className="space-y-2">
             <Label htmlFor="customer">Customer with Balance *</Label>
-            <Select value={formData.customer_id} onValueChange={handleCustomerSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select customer" />
-              </SelectTrigger>
-              <SelectContent>
-                {customersWithDebts.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.full_name} - Balance: UGX {customer.current_balance.toLocaleString()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Autocomplete
+              options={customerOptions}
+              value={formData.customer_id}
+              onValueChange={handleCustomerSelect}
+              placeholder="Search for a customer..."
+              searchPlaceholder="Type to search..."
+              emptyText="No customers with outstanding balance found."
+            />
           </div>
 
           {selectedCustomer && (
