@@ -91,38 +91,42 @@ const Finance = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="pending-coffee" className="w-full">
-                <TabsList className="grid w-full grid-cols-8">
-                  <TabsTrigger value="pending-coffee" className="flex items-center gap-2">
-                    <Coffee className="h-4 w-4" />
-                    Pending Coffee
+                <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-8 justify-start md:justify-center">
+                  <TabsTrigger value="pending-coffee" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
+                    <Coffee className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">Pending Coffee</span>
+                    <span className="sm:hidden">Coffee</span>
                   </TabsTrigger>
-                  <TabsTrigger value="completed" className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4" />
-                    Completed
+                  <TabsTrigger value="completed" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
+                    <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">Completed</span>
+                    <span className="sm:hidden">Done</span>
                   </TabsTrigger>
-                  <TabsTrigger value="advances" className="flex items-center gap-2">
-                    <HandCoins className="h-4 w-4" />
-                    Advances
+                  <TabsTrigger value="advances" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
+                    <HandCoins className="h-3 w-3 md:h-4 md:w-4" />
+                    <span>Advances</span>
                   </TabsTrigger>
-                  <TabsTrigger value="payments" className="flex items-center gap-2">
-                    <Receipt className="h-4 w-4" />
-                    Payments
+                  <TabsTrigger value="payments" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
+                    <Receipt className="h-3 w-3 md:h-4 md:w-4" />
+                    <span>Payments</span>
                   </TabsTrigger>
-                  <TabsTrigger value="expenses" className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Expenses
+                  <TabsTrigger value="expenses" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
+                    <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
+                    <span>Expenses</span>
                   </TabsTrigger>
-                  <TabsTrigger value="hr-payments" className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    HR Payments
+                  <TabsTrigger value="hr-payments" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
+                    <Users className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">HR Payments</span>
+                    <span className="sm:hidden">HR</span>
                   </TabsTrigger>
-                  <TabsTrigger value="daybook" className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4" />
-                    Day Book
+                  <TabsTrigger value="daybook" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
+                    <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">Day Book</span>
+                    <span className="sm:hidden">Book</span>
                   </TabsTrigger>
-                  <TabsTrigger value="reports" className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4" />
-                    Reports
+                  <TabsTrigger value="reports" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
+                    <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
+                    <span>Reports</span>
                   </TabsTrigger>
                 </TabsList>
 
