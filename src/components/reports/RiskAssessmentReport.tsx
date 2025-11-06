@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, RefreshCw, Download, TrendingUp } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import StandardPrintHeader from "@/components/print/StandardPrintHeader";
 
 const RiskAssessmentReport = () => {
   const [assessment, setAssessment] = useState<string>("");
@@ -88,6 +89,17 @@ const RiskAssessmentReport = () => {
             </div>
           </div>
         </CardHeader>
+        
+        {assessment && (
+          <div className="px-6 pb-4 print:block hidden">
+            <StandardPrintHeader 
+              title="Risk Assessment Report"
+              subtitle="AI-Powered Comprehensive Risk Analysis"
+              includeDate={true}
+            />
+          </div>
+        )}
+        
         <CardContent>
           {!assessment && !loading && (
             <div className="text-center py-12">

@@ -23,11 +23,33 @@ serve(async (req) => {
 
     console.log('Fetching data for risk assessment...');
 
-    // Fetch relevant data from different tables
+    // Fetch data from Firebase Firestore using REST API
+    const firebaseProjectId = 'great-new';
+    const firebaseResponse = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/coffee_records`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+    
+    let coffeeRecords = [];
+    if (firebaseResponse.ok) {
+      const firebaseData = await firebaseResponse.json();
+      coffeeRecords = firebaseData.documents?.map((doc: any) => {
+        const fields = doc.fields || {};
+        return {
+          kilograms: parseFloat(fields.kilograms?.doubleValue || fields.kilograms?.integerValue || '0'),
+          coffee_type: fields.coffee_type?.stringValue || ''
+        };
+      }) || [];
+    }
+
+    // Fetch relevant data from Supabase
     const [
       { data: employees },
       { data: expenses },
-      { data: inventory },
       { data: suppliers },
       { data: salesTransactions },
       { data: moneyRequests },
@@ -35,7 +57,6 @@ serve(async (req) => {
     ] = await Promise.all([
       supabase.from('employees').select('department, status').eq('status', 'Active'),
       supabase.from('approval_requests').select('department, status, amount').limit(100),
-      supabase.from('inventory_items').select('coffee_type, total_kilograms, status'),
       supabase.from('suppliers').select('name, origin'),
       supabase.from('sales_transactions').select('total_amount, status').limit(100),
       supabase.from('money_requests').select('amount, status').limit(100),
@@ -57,8 +78,9 @@ serve(async (req) => {
         totalAmount: expenses?.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) || 0
       },
       inventory: {
-        totalKilograms: inventory?.reduce((sum, i) => sum + (Number(i.total_kilograms) || 0), 0) || 0,
-        coffeeTypes: inventory?.length || 0
+        totalKilograms: coffeeRecords?.reduce((sum, record) => sum + (Number(record.kilograms) || 0), 0) || 0,
+        totalRecords: coffeeRecords?.length || 0,
+        coffeeTypes: [...new Set(coffeeRecords?.map(r => r.coffee_type))].length || 0
       },
       suppliers: {
         total: suppliers?.length || 0
