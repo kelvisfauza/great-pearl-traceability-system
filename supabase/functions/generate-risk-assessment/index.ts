@@ -21,6 +21,28 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get user info from auth header
+    const authHeader = req.headers.get('authorization');
+    let userName = 'Risk Analyst';
+    
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      
+      if (user) {
+        // Fetch user details from employees table
+        const { data: employee } = await supabase
+          .from('employees')
+          .select('full_name, role')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (employee) {
+          userName = `${employee.full_name}${employee.role ? ` - ${employee.role}` : ''}`;
+        }
+      }
+    }
+
     console.log('Fetching data for risk assessment...');
 
     // Fetch data from Firebase Firestore using REST API
@@ -134,7 +156,14 @@ For each department, provide:
 - Recommended Mitigation Strategies (3-5 actionable steps)
 - Priority Level (1-5)
 
-Format the response as structured markdown with clear sections and bullet points.`
+IMPORTANT: Start the report with this exact header structure:
+**Date:** [Current date in format: Month Day, Year]
+**Prepared for:** Management Board
+**Prepared by:** ${userName}
+
+Then continue with: "This report provides a detailed risk assessment..."
+
+Format the rest of the response as structured markdown with clear sections and bullet points.`
           }
         ]
       })
