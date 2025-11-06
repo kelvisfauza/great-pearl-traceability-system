@@ -70,3 +70,6 @@ verify_jwt = true
 
 [functions.send-password-reset-sms]
 verify_jwt = true
+
+[functions.generate-risk-assessment]
+verify_jwt = false
