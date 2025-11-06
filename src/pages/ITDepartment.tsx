@@ -43,6 +43,8 @@ import DeletionRequestsManager from '@/components/admin/DeletionRequestsManager'
 import { SMSFailureManager } from '@/components/it/SMSFailureManager';
 import { ComprehensiveSMSManager } from '@/components/it/ComprehensiveSMSManager';
 import PasswordResetHelper from '@/components/admin/PasswordResetHelper';
+import { ITUserManagement } from '@/components/it/ITUserManagement';
+import { AuditLogViewer } from '@/components/it/AuditLogViewer';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
@@ -148,20 +150,30 @@ const ITDepartment = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="errors" className="space-y-6">
+        <Tabs defaultValue="user-management" className="space-y-6">
 
-          <TabsList className="grid w-full grid-cols-9">
-            <TabsTrigger value="errors">Error Dashboard</TabsTrigger>
-            <TabsTrigger value="sms">SMS Support</TabsTrigger>
-            <TabsTrigger value="console">Console Monitor</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-11">
+            <TabsTrigger value="user-management">User Mgmt</TabsTrigger>
+            <TabsTrigger value="audit-logs">Audit Logs</TabsTrigger>
+            <TabsTrigger value="errors">Errors</TabsTrigger>
+            <TabsTrigger value="sms">SMS</TabsTrigger>
+            <TabsTrigger value="console">Console</TabsTrigger>
             <TabsTrigger value="deletions">Deletions</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="users">Active Users</TabsTrigger>
             <TabsTrigger value="backup">Backup</TabsTrigger>
             <TabsTrigger value="network">Network</TabsTrigger>
             <TabsTrigger value="tickets">Tickets</TabsTrigger>
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="user-management" className="space-y-4">
+            <ITUserManagement />
+          </TabsContent>
+
+          <TabsContent value="audit-logs" className="space-y-4">
+            <AuditLogViewer />
+          </TabsContent>
 
           <TabsContent value="errors" className="space-y-4">
             <ErrorDashboard />
