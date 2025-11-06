@@ -9,28 +9,49 @@ export interface DayBookData {
   closingBalance: number;
   totalCashIn: number;
   totalCashOut: number;
+  totalPurchases: number;
+  totalSales: number;
   cashInTransactions: {
     type: string;
     description: string;
     amount: number;
     reference: string;
+    inputBy?: string;
   }[];
   cashOutTransactions: {
     type: string;
     description: string;
     amount: number;
     reference: string;
+    inputBy?: string;
+  }[];
+  purchases: {
+    supplier: string;
+    batchNumber: string;
+    kilograms: number;
+    amount: number;
+    coffeeType: string;
+    inputBy: string;
+  }[];
+  sales: {
+    customer: string;
+    coffeeType: string;
+    weight: number;
+    amount: number;
+    inputBy: string;
   }[];
   suppliersPaid: {
     supplier: string;
     amount: number;
     batchNumber: string;
     advanceRecovered?: number;
+    inputBy?: string;
   }[];
   advancesGiven: {
     supplier: string;
     amount: number;
     reference: string;
+    inputBy?: string;
   }[];
   overtimeAdvances: {
     employee: string;
@@ -72,8 +93,12 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
         closingBalance: 0,
         totalCashIn: 0,
         totalCashOut: 0,
+        totalPurchases: 0,
+        totalSales: 0,
         cashInTransactions: [],
         cashOutTransactions: [],
+        purchases: [],
+        sales: [],
         suppliersPaid: [],
         advancesGiven: [],
         overtimeAdvances: [],
@@ -94,7 +119,7 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
       // Fetch all cash transactions for the day (by confirmed date) - optimized with limited columns
       const { data: cashTransactions } = await supabase
         .from('finance_cash_transactions')
-        .select('transaction_type, amount, notes, reference, confirmed_at')
+        .select('transaction_type, amount, notes, reference, confirmed_at, created_by')
         .eq('status', 'confirmed')
         .gte('confirmed_at', startOfDay.toISOString())
         .lte('confirmed_at', endOfDay.toISOString())
@@ -120,7 +145,8 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
             type: typeLabel,
             description: transaction.notes || transaction.transaction_type,
             amount: amount,
-            reference: transaction.reference || ''
+            reference: transaction.reference || '',
+            inputBy: transaction.created_by || 'System'
           };
 
           if (transaction.transaction_type === 'DEPOSIT' || transaction.transaction_type === 'ADVANCE_RECOVERY') {
@@ -138,6 +164,7 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
                   supplier: supplierMatch[1],
                   amount: amount,
                   batchNumber: transaction.reference || '',
+                  inputBy: transaction.created_by || 'System'
                 });
               }
             }
@@ -168,7 +195,8 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
           type: 'Advance Given',
           description: `Advance to ${advance.supplier_name || 'Unknown'}`,
           amount: advanceAmount,
-          reference: advance.supplier_code || doc.id
+          reference: advance.supplier_code || doc.id,
+          inputBy: advance.issued_by || 'Unknown'
         });
       });
 
@@ -188,13 +216,62 @@ export const useDayBookData = (selectedDate: Date = new Date()) => {
             type: 'Coffee Payment',
             description: `Payment to ${payment.supplier}`,
             amount: amount,
-            reference: payment.batch_number || ''
+            reference: payment.batch_number || '',
+            inputBy: 'Finance'
           });
 
           report.suppliersPaid.push({
             supplier: payment.supplier,
             amount: amount,
             batchNumber: payment.batch_number || '',
+            inputBy: 'Finance'
+          });
+        });
+      }
+
+      // Fetch purchases (coffee deliveries) from Firebase for the day
+      const purchasesQuery = query(
+        collection(db, 'coffee_records'),
+        where('date', '>=', startOfDay.toISOString()),
+        where('date', '<=', endOfDay.toISOString())
+      );
+
+      const purchasesSnapshot = await getDocs(purchasesQuery);
+      purchasesSnapshot.forEach(doc => {
+        const purchase = doc.data();
+        const purchaseAmount = Number(purchase.total_payable) || 0;
+        const kilograms = Number(purchase.net_weight) || 0;
+        
+        report.totalPurchases += purchaseAmount;
+        report.purchases.push({
+          supplier: purchase.supplier_name || 'Unknown',
+          batchNumber: purchase.batch_number || doc.id,
+          kilograms: kilograms,
+          amount: purchaseAmount,
+          coffeeType: purchase.coffee_type || 'Unknown',
+          inputBy: purchase.created_by || 'Store'
+        });
+      });
+
+      // Fetch sales from Supabase for the day
+      const { data: salesData } = await supabase
+        .from('sales_transactions')
+        .select('customer, coffee_type, weight, total_amount, created_at')
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString());
+
+      if (salesData) {
+        salesData.forEach(sale => {
+          const saleAmount = Number(sale.total_amount) || 0;
+          const weight = Number(sale.weight) || 0;
+          
+          report.totalSales += saleAmount;
+          report.sales.push({
+            customer: sale.customer,
+            coffeeType: sale.coffee_type,
+            weight: weight,
+            amount: saleAmount,
+            inputBy: 'Sales'
           });
         });
       }

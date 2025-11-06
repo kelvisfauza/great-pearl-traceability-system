@@ -106,13 +106,13 @@ const DayBook = () => {
         />
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Opening Balance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(dayBookData.openingBalance)}</div>
+            <div className="text-xl lg:text-2xl font-bold">{formatCurrency(dayBookData.openingBalance)}</div>
           </CardContent>
         </Card>
 
@@ -121,7 +121,7 @@ const DayBook = () => {
             <CardTitle className="text-sm font-medium text-green-600">Total Cash In</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(dayBookData.totalCashIn)}</div>
+            <div className="text-xl lg:text-2xl font-bold text-green-600">{formatCurrency(dayBookData.totalCashIn)}</div>
           </CardContent>
         </Card>
 
@@ -130,7 +130,7 @@ const DayBook = () => {
             <CardTitle className="text-sm font-medium text-red-600">Total Cash Out</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(dayBookData.totalCashOut)}</div>
+            <div className="text-xl lg:text-2xl font-bold text-red-600">{formatCurrency(dayBookData.totalCashOut)}</div>
           </CardContent>
         </Card>
 
@@ -139,10 +139,122 @@ const DayBook = () => {
             <CardTitle className="text-sm font-medium">Closing Balance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(dayBookData.closingBalance)}</div>
+            <div className="text-xl lg:text-2xl font-bold">{formatCurrency(dayBookData.closingBalance)}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-blue-600">Total Purchases</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl lg:text-2xl font-bold text-blue-600">{formatCurrency(dayBookData.totalPurchases)}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-purple-600">Total Sales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl lg:text-2xl font-bold text-purple-600">{formatCurrency(dayBookData.totalSales)}</div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Purchases (Coffee Deliveries) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-blue-600">Coffee Purchases</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {dayBookData.purchases.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Batch Number</TableHead>
+                    <TableHead>Coffee Type</TableHead>
+                    <TableHead className="text-right">Kilograms</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Input By</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dayBookData.purchases.map((purchase, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{purchase.supplier}</TableCell>
+                      <TableCell>{purchase.batchNumber}</TableCell>
+                      <TableCell>{purchase.coffeeType}</TableCell>
+                      <TableCell className="text-right">{purchase.kilograms.toFixed(2)} kg</TableCell>
+                      <TableCell className="text-right font-semibold text-blue-600">
+                        {formatCurrency(purchase.amount)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{purchase.inputBy}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50">
+                    <TableCell colSpan={4} className="font-bold">Total Purchases</TableCell>
+                    <TableCell className="text-right font-bold text-blue-600">
+                      {formatCurrency(dayBookData.totalPurchases)}
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">No purchases today</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sales */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-purple-600">Sales Transactions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {dayBookData.sales.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Coffee Type</TableHead>
+                    <TableHead className="text-right">Weight (kg)</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Input By</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dayBookData.sales.map((sale, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{sale.customer}</TableCell>
+                      <TableCell>{sale.coffeeType}</TableCell>
+                      <TableCell className="text-right">{sale.weight.toFixed(2)} kg</TableCell>
+                      <TableCell className="text-right font-semibold text-purple-600">
+                        {formatCurrency(sale.amount)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{sale.inputBy}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50">
+                    <TableCell colSpan={3} className="font-bold">Total Sales</TableCell>
+                    <TableCell className="text-right font-bold text-purple-600">
+                      {formatCurrency(dayBookData.totalSales)}
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">No sales today</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Cash In Transactions */}
       <Card>
@@ -151,34 +263,39 @@ const DayBook = () => {
         </CardHeader>
         <CardContent>
           {dayBookData.cashInTransactions.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Reference</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dayBookData.cashInTransactions.map((tx, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="font-medium">{tx.type}</TableCell>
-                    <TableCell>{tx.description}</TableCell>
-                    <TableCell>{tx.reference}</TableCell>
-                    <TableCell className="text-right font-semibold text-green-600">
-                      {formatCurrency(tx.amount)}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Input By</TableHead>
                   </TableRow>
-                ))}
-                <TableRow className="bg-muted/50">
-                  <TableCell colSpan={3} className="font-bold">Total Cash In</TableCell>
-                  <TableCell className="text-right font-bold text-green-600">
-                    {formatCurrency(dayBookData.totalCashIn)}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {dayBookData.cashInTransactions.map((tx, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{tx.type}</TableCell>
+                      <TableCell>{tx.description}</TableCell>
+                      <TableCell>{tx.reference}</TableCell>
+                      <TableCell className="text-right font-semibold text-green-600">
+                        {formatCurrency(tx.amount)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{tx.inputBy}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50">
+                    <TableCell colSpan={3} className="font-bold">Total Cash In</TableCell>
+                    <TableCell className="text-right font-bold text-green-600">
+                      {formatCurrency(dayBookData.totalCashIn)}
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <p className="text-muted-foreground text-center py-4">No cash in transactions</p>
           )}
@@ -192,34 +309,39 @@ const DayBook = () => {
         </CardHeader>
         <CardContent>
           {dayBookData.cashOutTransactions.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Reference</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dayBookData.cashOutTransactions.map((tx, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="font-medium">{tx.type}</TableCell>
-                    <TableCell>{tx.description}</TableCell>
-                    <TableCell>{tx.reference}</TableCell>
-                    <TableCell className="text-right font-semibold text-red-600">
-                      {formatCurrency(tx.amount)}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Input By</TableHead>
                   </TableRow>
-                ))}
-                <TableRow className="bg-muted/50">
-                  <TableCell colSpan={3} className="font-bold">Total Cash Out</TableCell>
-                  <TableCell className="text-right font-bold text-red-600">
-                    {formatCurrency(dayBookData.totalCashOut)}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {dayBookData.cashOutTransactions.map((tx, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{tx.type}</TableCell>
+                      <TableCell>{tx.description}</TableCell>
+                      <TableCell>{tx.reference}</TableCell>
+                      <TableCell className="text-right font-semibold text-red-600">
+                        {formatCurrency(tx.amount)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{tx.inputBy}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50">
+                    <TableCell colSpan={3} className="font-bold">Total Cash Out</TableCell>
+                    <TableCell className="text-right font-bold text-red-600">
+                      {formatCurrency(dayBookData.totalCashOut)}
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <p className="text-muted-foreground text-center py-4">No cash out transactions</p>
           )}
@@ -233,24 +355,28 @@ const DayBook = () => {
         </CardHeader>
         <CardContent>
           {dayBookData.suppliersPaid.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Batch Number</TableHead>
-                  <TableHead className="text-right">Amount Paid</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dayBookData.suppliersPaid.map((supplier, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="font-medium">{supplier.supplier}</TableCell>
-                    <TableCell>{supplier.batchNumber}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(supplier.amount)}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Batch Number</TableHead>
+                    <TableHead className="text-right">Amount Paid</TableHead>
+                    <TableHead>Input By</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {dayBookData.suppliersPaid.map((supplier, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{supplier.supplier}</TableCell>
+                      <TableCell>{supplier.batchNumber}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(supplier.amount)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{supplier.inputBy}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <p className="text-muted-foreground text-center py-4">No suppliers paid today</p>
           )}
@@ -264,24 +390,28 @@ const DayBook = () => {
         </CardHeader>
         <CardContent>
           {dayBookData.advancesGiven.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Reference</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dayBookData.advancesGiven.map((advance, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="font-medium">{advance.supplier}</TableCell>
-                    <TableCell>{advance.reference}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(advance.amount)}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Input By</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {dayBookData.advancesGiven.map((advance, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{advance.supplier}</TableCell>
+                      <TableCell>{advance.reference}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(advance.amount)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{advance.inputBy}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <p className="text-muted-foreground text-center py-4">No advances given today</p>
           )}
