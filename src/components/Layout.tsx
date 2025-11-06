@@ -46,7 +46,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
     <div className="min-h-screen bg-background flex relative">
       {/* Mobile menu button */}
       <button
-        className="fixed top-4 left-4 z-50 md:hidden bg-background border border-border rounded-md p-2 shadow-sm"
+        className="fixed top-4 left-4 z-50 md:hidden bg-background border border-border rounded-md p-2 shadow-sm print:hidden"
         onClick={() => setIsSidebarVisible(!isSidebarVisible)}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,13 +56,13 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
 
       {/* Desktop hover trigger area */}
       <div 
-        className="fixed left-0 top-0 w-4 h-full z-50 hidden md:block"
+        className="fixed left-0 top-0 w-4 h-full z-50 hidden md:block print:hidden"
         onMouseEnter={() => setIsSidebarVisible(true)}
       />
       
       {/* Sidebar */}
       <aside 
-        className={`fixed left-0 top-0 h-full w-56 xs:w-64 z-40 bg-background border-r border-border overflow-y-auto mobile-scroll transition-transform duration-300 ease-in-out ${
+        className={`fixed left-0 top-0 h-full w-56 xs:w-64 z-40 bg-background border-r border-border overflow-y-auto mobile-scroll transition-transform duration-300 ease-in-out print:hidden ${
           isSidebarVisible ? 'translate-x-0' : '-translate-x-full'
         }`}
         onMouseLeave={() => window.innerWidth >= 768 && setIsSidebarVisible(false)}
@@ -73,15 +73,15 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
       {/* Overlay when sidebar is visible */}
       {isSidebarVisible && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-20 z-30 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-20 z-30 md:hidden print:hidden"
           onClick={() => setIsSidebarVisible(false)}
         />
       )}
       
       <main className="flex-1 min-w-0 w-full">
-        <div className="p-2 xs:p-3 md:p-4 lg:p-6 max-w-full">
+        <div className="p-2 xs:p-3 md:p-4 lg:p-6 max-w-full print:p-0">
           {title && (
-            <div className="mb-3 xs:mb-4 md:mb-6">
+            <div className="mb-3 xs:mb-4 md:mb-6 print:hidden">
               <div className="flex flex-col xs:flex-row xs:justify-between xs:items-start gap-2 xs:gap-4">
                 <div className="min-w-0 flex-1">
                   <h1 className="text-lg xs:text-xl md:text-2xl font-bold text-foreground truncate">{title}</h1>
