@@ -14,6 +14,7 @@ import { useSalesMarketing } from "@/hooks/useSalesMarketing";
 import SalesForm from "@/components/sales/SalesForm";
 import SalesHistory from "@/components/sales/SalesHistory";
 import { ContractFileUpload } from "@/components/sales/ContractFileUpload";
+import { supabase } from "@/integrations/supabase/client";
 
 const SalesMarketing = () => {
   const {
@@ -79,15 +80,42 @@ const SalesMarketing = () => {
     setIsAddCampaignOpen(false);
   };
 
-  const handleCreateContract = (formData: FormData) => {
-    addContract({
-      customerName: customers.find(c => c.id === formData.get('customerId'))?.name || '',
-      quantity: formData.get('quantity') as string,
-      price: parseInt(formData.get('price') as string),
-      deliveryDate: formData.get('deliveryDate') as string,
-      status: 'Draft'
-    });
-    setIsContractOpen(false);
+  const handleCreateContract = async (formData: FormData) => {
+    const ourRef = formData.get('our_ref') as string;
+    const buyer = formData.get('buyer') as string;
+    const file = formData.get('file') as File;
+
+    if (!file || !ourRef || !buyer) return;
+
+    try {
+      // Upload file to storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${ourRef}_${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('contracts')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('contracts')
+        .getPublicUrl(fileName);
+
+      // Save to database
+      await supabase
+        .from('contract_files')
+        .insert({
+          our_ref: ourRef,
+          buyer: buyer,
+          file_url: publicUrl,
+          file_name: file.name
+        });
+
+      setIsContractOpen(false);
+    } catch (error) {
+      console.error('Error creating contract:', error);
+    }
   };
 
   const handleSendContract = (contractId: string) => {
@@ -302,31 +330,16 @@ const SalesMarketing = () => {
                       </DialogHeader>
                       <form onSubmit={(e) => { e.preventDefault(); handleCreateContract(new FormData(e.target as HTMLFormElement)); }} className="space-y-4">
                         <div>
-                          <Label htmlFor="customerId">Customer</Label>
-                          <Select name="customerId" required>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select customer" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {customers.map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id.toString()}>
-                                  {customer.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label htmlFor="our_ref">Our Ref</Label>
+                          <Input id="our_ref" name="our_ref" placeholder="e.g., CONT-2024-001" required />
                         </div>
                         <div>
-                          <Label htmlFor="quantity">Quantity</Label>
-                          <Input id="quantity" name="quantity" placeholder="e.g., 500 bags" required />
+                          <Label htmlFor="buyer">Buyer (Who Issued the Contract)</Label>
+                          <Input id="buyer" name="buyer" placeholder="e.g., ABC Coffee Importers" required />
                         </div>
                         <div>
-                          <Label htmlFor="price">Price per Unit</Label>
-                          <Input id="price" name="price" placeholder="e.g., 180" required />
-                        </div>
-                        <div>
-                          <Label htmlFor="deliveryDate">Delivery Date</Label>
-                          <Input id="deliveryDate" name="deliveryDate" type="date" required />
+                          <Label htmlFor="file">Contract File</Label>
+                          <Input id="file" name="file" type="file" accept=".pdf,.doc,.docx" required />
                         </div>
                         <Button type="submit" className="w-full">Create Contract</Button>
                       </form>
