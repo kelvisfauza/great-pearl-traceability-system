@@ -55,6 +55,8 @@ export function ITPermissionManager() {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('User');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
     fetchEmployees();
@@ -86,6 +88,8 @@ export function ITPermissionManager() {
 
   const handleOpenPasswordDialog = (employee: Employee) => {
     setSelectedEmployee(employee);
+    setNewPassword('');
+    setConfirmPassword('');
     setPasswordDialogOpen(true);
   };
 
@@ -116,40 +120,38 @@ export function ITPermissionManager() {
   const handleResetPassword = async () => {
     if (!selectedEmployee?.email) return;
 
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        selectedEmployee.email,
-        { redirectTo: `${window.location.origin}/auth` }
-      );
-
-      if (error) throw error;
-
-      toast.success(`Password reset email sent to ${selectedEmployee.email}`);
-      setPasswordDialogOpen(false);
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      toast.error('Failed to send password reset email');
+    if (!newPassword || !confirmPassword) {
+      toast.error('Please fill in both password fields');
+      return;
     }
-  };
 
-  const handleSendPasswordSMS = async () => {
-    if (!selectedEmployee) return;
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-password-reset-sms', {
+      const { data, error } = await supabase.functions.invoke('reset-user-password', {
         body: { 
           email: selectedEmployee.email,
-          phone: selectedEmployee.phone 
+          newPassword: newPassword
         }
       });
 
       if (error) throw error;
 
-      toast.success(`Password reset SMS sent to ${selectedEmployee.phone}`);
+      toast.success(`Password updated successfully for ${selectedEmployee.email}`);
       setPasswordDialogOpen(false);
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (error) {
-      console.error('Error sending SMS:', error);
-      toast.error('Failed to send password reset SMS');
+      console.error('Error resetting password:', error);
+      toast.error('Failed to reset password');
     }
   };
 
@@ -342,46 +344,42 @@ export function ITPermissionManager() {
             <DialogHeader>
               <DialogTitle>Reset Password - {selectedEmployee?.name}</DialogTitle>
               <DialogDescription>
-                Choose a method to reset the password for {selectedEmployee?.email}
+                Set a new password for {selectedEmployee?.email}
               </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-2">
-                    <h4 className="font-semibold">Email Reset Link</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Send password reset link to: {selectedEmployee?.email}
-                    </p>
-                    <Button onClick={handleResetPassword} className="w-full">
-                      <KeyRound className="h-4 w-4 mr-2" />
-                      Send Email Reset Link
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <div>
+                <Label htmlFor="newPassword">New Password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                />
+              </div>
 
-              {selectedEmployee?.phone && (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">SMS Reset Code</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Send password reset code via SMS to: {selectedEmployee.phone}
-                      </p>
-                      <Button onClick={handleSendPasswordSMS} variant="secondary" className="w-full">
-                        <KeyRound className="h-4 w-4 mr-2" />
-                        Send SMS Reset Code
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              <div>
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                />
+              </div>
 
-              <Button variant="outline" onClick={() => setPasswordDialogOpen(false)} className="w-full">
-                Cancel
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={handleResetPassword} className="flex-1">
+                  <KeyRound className="h-4 w-4 mr-2" />
+                  Reset Password
+                </Button>
+                <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
