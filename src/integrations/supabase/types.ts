@@ -881,6 +881,36 @@ export type Database = {
           },
         ]
       }
+      contract_files: {
+        Row: {
+          buyer: string
+          created_at: string | null
+          file_name: string
+          file_url: string
+          id: string
+          our_ref: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          buyer: string
+          created_at?: string | null
+          file_name: string
+          file_url: string
+          id?: string
+          our_ref: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          buyer?: string
+          created_at?: string | null
+          file_name?: string
+          file_url?: string
+          id?: string
+          our_ref?: string
+          uploaded_at?: string | null
+        }
+        Relationships: []
+      }
       conversation_participants: {
         Row: {
           conversation_id: string | null
