@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Upload, FileText, Download, Eye } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -112,9 +112,9 @@ export const ContractFileUpload = () => {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     fetchContracts();
-  });
+  }, []);
 
   return (
     <Card>
@@ -204,19 +204,49 @@ export const ContractFileUpload = () => {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => window.open(contract.file_url, '_blank')}
+                        onClick={() => {
+                          const newWindow = window.open(contract.file_url, '_blank');
+                          if (!newWindow) {
+                            toast({
+                              title: "Blocked",
+                              description: "Please disable your ad blocker or browser extension to view files",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                        title="View file"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => {
-                          const a = document.createElement('a');
-                          a.href = contract.file_url;
-                          a.download = contract.file_name;
-                          a.click();
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(contract.file_url);
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = contract.file_name;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                            toast({
+                              title: "Success",
+                              description: "File downloaded successfully"
+                            });
+                          } catch (error) {
+                            console.error('Download error:', error);
+                            toast({
+                              title: "Download Failed",
+                              description: "Please try again or disable your ad blocker",
+                              variant: "destructive"
+                            });
+                          }
                         }}
+                        title="Download file"
                       >
                         <Download className="h-4 w-4" />
                       </Button>
