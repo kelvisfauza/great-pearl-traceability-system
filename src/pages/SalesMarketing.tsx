@@ -14,25 +14,20 @@ import { useSalesMarketing } from "@/hooks/useSalesMarketing";
 import SalesForm from "@/components/sales/SalesForm";
 import SalesHistory from "@/components/sales/SalesHistory";
 import { ContractFileUpload } from "@/components/sales/ContractFileUpload";
-import { supabase } from "@/integrations/supabase/client";
 
 const SalesMarketing = () => {
   const {
     customers,
     campaigns,
-    contracts,
     loading,
     addCustomer,
     addCampaign,
-    addContract,
-    updateContractStatus,
     getStats
   } = useSalesMarketing();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
   const [isAddCampaignOpen, setIsAddCampaignOpen] = useState(false);
-  const [isContractOpen, setIsContractOpen] = useState(false);
 
   const stats = getStats();
 
@@ -78,48 +73,6 @@ const SalesMarketing = () => {
       status: 'Planning'
     });
     setIsAddCampaignOpen(false);
-  };
-
-  const handleCreateContract = async (formData: FormData) => {
-    const buyerRef = formData.get('buyer_ref') as string;
-    const buyer = formData.get('buyer') as string;
-    const file = formData.get('file') as File;
-
-    if (!file || !buyerRef || !buyer) return;
-
-    try {
-      // Upload file to storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${buyerRef}_${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('contracts')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('contracts')
-        .getPublicUrl(fileName);
-
-      // Save to database
-      await supabase
-        .from('contract_files')
-        .insert({
-          buyer_ref: buyerRef,
-          buyer: buyer,
-          file_url: publicUrl,
-          file_name: file.name
-        });
-
-      setIsContractOpen(false);
-    } catch (error) {
-      console.error('Error creating contract:', error);
-    }
-  };
-
-  const handleSendContract = (contractId: string) => {
-    updateContractStatus(contractId, "Pending");
   };
 
   if (loading) {
@@ -189,10 +142,9 @@ const SalesMarketing = () => {
         </div>
 
         <Tabs defaultValue="sales-form" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="sales-form">Sales Form</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
-            <TabsTrigger value="contracts">Contracts</TabsTrigger>
             <TabsTrigger value="contract-files">Contract Files</TabsTrigger>
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -294,95 +246,6 @@ const SalesMarketing = () => {
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm">
                               <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="contracts" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Sales Contracts</CardTitle>
-                    <CardDescription>Manage coffee sales contracts and agreements</CardDescription>
-                  </div>
-                  <Dialog open={isContractOpen} onOpenChange={setIsContractOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Contract
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Create Sales Contract</DialogTitle>
-                        <DialogDescription>Create a new contract for coffee sales.</DialogDescription>
-                      </DialogHeader>
-                      <form onSubmit={(e) => { e.preventDefault(); handleCreateContract(new FormData(e.target as HTMLFormElement)); }} className="space-y-4">
-                        <div>
-                          <Label htmlFor="buyer_ref">Buyer Ref</Label>
-                          <Input id="buyer_ref" name="buyer_ref" placeholder="e.g., CONT-2024-001" required />
-                        </div>
-                        <div>
-                          <Label htmlFor="buyer">Buyer (Who Issued the Contract)</Label>
-                          <Input id="buyer" name="buyer" placeholder="e.g., ABC Coffee Importers" required />
-                        </div>
-                        <div>
-                          <Label htmlFor="file">Contract File</Label>
-                          <Input id="file" name="file" type="file" accept=".pdf,.doc,.docx" required />
-                        </div>
-                        <Button type="submit" className="w-full">Create Contract</Button>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Delivery Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {contracts.map((contract) => (
-                      <TableRow key={contract.id}>
-                        <TableCell className="font-medium">{contract.customerName}</TableCell>
-                        <TableCell>{contract.quantity}</TableCell>
-                        <TableCell>{contract.price}</TableCell>
-                        <TableCell>{contract.deliveryDate}</TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            contract.status === "Signed" ? "default" :
-                            contract.status === "Pending" ? "secondary" : "outline"
-                          }>
-                            {contract.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleSendContract(contract.id)}
-                              disabled={contract.status === "Signed"}
-                            >
-                              <Send className="h-4 w-4" />
                             </Button>
                             <Button variant="outline" size="sm">
                               <Edit className="h-4 w-4" />
