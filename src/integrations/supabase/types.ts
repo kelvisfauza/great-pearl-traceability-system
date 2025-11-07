@@ -884,29 +884,29 @@ export type Database = {
       contract_files: {
         Row: {
           buyer: string
+          buyer_ref: string
           created_at: string | null
           file_name: string
           file_url: string
           id: string
-          our_ref: string
           uploaded_at: string | null
         }
         Insert: {
           buyer: string
+          buyer_ref: string
           created_at?: string | null
           file_name: string
           file_url: string
           id?: string
-          our_ref: string
           uploaded_at?: string | null
         }
         Update: {
           buyer?: string
+          buyer_ref?: string
           created_at?: string | null
           file_name?: string
           file_url?: string
           id?: string
-          our_ref?: string
           uploaded_at?: string | null
         }
         Relationships: []

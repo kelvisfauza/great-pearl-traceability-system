@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ContractFile {
   id: string;
-  our_ref: string;
+  buyer_ref: string;
   buyer: string;
   file_url: string;
   file_name: string;
@@ -50,11 +50,11 @@ export const ContractFileUpload = () => {
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const ourRef = formData.get('our_ref') as string;
+    const buyerRef = formData.get('buyer_ref') as string;
     const buyer = formData.get('buyer') as string;
     const file = formData.get('file') as File;
 
-    if (!file || !ourRef || !buyer) {
+    if (!file || !buyerRef || !buyer) {
       toast({
         title: "Error",
         description: "Please fill all fields",
@@ -68,7 +68,7 @@ export const ContractFileUpload = () => {
 
       // Upload file to storage
       const fileExt = file.name.split('.').pop();
-      const fileName = `${ourRef}_${Date.now()}.${fileExt}`;
+      const fileName = `${buyerRef}_${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
         .from('contracts')
         .upload(fileName, file);
@@ -84,7 +84,7 @@ export const ContractFileUpload = () => {
       const { error: dbError } = await supabase
         .from('contract_files')
         .insert({
-          our_ref: ourRef,
+          buyer_ref: buyerRef,
           buyer: buyer,
           file_url: publicUrl,
           file_name: file.name
@@ -138,10 +138,10 @@ export const ContractFileUpload = () => {
               </DialogHeader>
               <form onSubmit={handleUpload} className="space-y-4">
                 <div>
-                  <Label htmlFor="our_ref">Our Ref</Label>
+                  <Label htmlFor="buyer_ref">Buyer Ref</Label>
                   <Input 
-                    id="our_ref" 
-                    name="our_ref" 
+                    id="buyer_ref" 
+                    name="buyer_ref" 
                     placeholder="e.g., CONT-2024-001" 
                     required 
                   />
@@ -185,7 +185,7 @@ export const ContractFileUpload = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Our Ref</TableHead>
+                <TableHead>Buyer Ref</TableHead>
                 <TableHead>Buyer</TableHead>
                 <TableHead>File Name</TableHead>
                 <TableHead>Uploaded</TableHead>
@@ -195,7 +195,7 @@ export const ContractFileUpload = () => {
             <TableBody>
               {contracts.map((contract) => (
                 <TableRow key={contract.id}>
-                  <TableCell className="font-medium">{contract.our_ref}</TableCell>
+                  <TableCell className="font-medium">{contract.buyer_ref}</TableCell>
                   <TableCell>{contract.buyer}</TableCell>
                   <TableCell>{contract.file_name}</TableCell>
                   <TableCell>{new Date(contract.uploaded_at).toLocaleDateString()}</TableCell>

@@ -81,16 +81,16 @@ const SalesMarketing = () => {
   };
 
   const handleCreateContract = async (formData: FormData) => {
-    const ourRef = formData.get('our_ref') as string;
+    const buyerRef = formData.get('buyer_ref') as string;
     const buyer = formData.get('buyer') as string;
     const file = formData.get('file') as File;
 
-    if (!file || !ourRef || !buyer) return;
+    if (!file || !buyerRef || !buyer) return;
 
     try {
       // Upload file to storage
       const fileExt = file.name.split('.').pop();
-      const fileName = `${ourRef}_${Date.now()}.${fileExt}`;
+      const fileName = `${buyerRef}_${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
         .from('contracts')
         .upload(fileName, file);
@@ -106,7 +106,7 @@ const SalesMarketing = () => {
       await supabase
         .from('contract_files')
         .insert({
-          our_ref: ourRef,
+          buyer_ref: buyerRef,
           buyer: buyer,
           file_url: publicUrl,
           file_name: file.name
@@ -330,8 +330,8 @@ const SalesMarketing = () => {
                       </DialogHeader>
                       <form onSubmit={(e) => { e.preventDefault(); handleCreateContract(new FormData(e.target as HTMLFormElement)); }} className="space-y-4">
                         <div>
-                          <Label htmlFor="our_ref">Our Ref</Label>
-                          <Input id="our_ref" name="our_ref" placeholder="e.g., CONT-2024-001" required />
+                          <Label htmlFor="buyer_ref">Buyer Ref</Label>
+                          <Input id="buyer_ref" name="buyer_ref" placeholder="e.g., CONT-2024-001" required />
                         </div>
                         <div>
                           <Label htmlFor="buyer">Buyer (Who Issued the Contract)</Label>
