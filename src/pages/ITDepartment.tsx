@@ -45,6 +45,7 @@ import { ComprehensiveSMSManager } from '@/components/it/ComprehensiveSMSManager
 import PasswordResetHelper from '@/components/admin/PasswordResetHelper';
 import { ITUserManagement } from '@/components/it/ITUserManagement';
 import { AuditLogViewer } from '@/components/it/AuditLogViewer';
+import { ITPermissionManager } from '@/components/it/ITPermissionManager';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
@@ -150,22 +151,26 @@ const ITDepartment = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="user-management" className="space-y-6">
+        <Tabs defaultValue="permissions" className="space-y-6">
 
-          <TabsList className="grid w-full grid-cols-11">
-            <TabsTrigger value="user-management">User Mgmt</TabsTrigger>
-            <TabsTrigger value="audit-logs">Audit Logs</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-12">
+            <TabsTrigger value="permissions">Permissions</TabsTrigger>
+            <TabsTrigger value="user-management">Users</TabsTrigger>
+            <TabsTrigger value="audit-logs">Audit</TabsTrigger>
             <TabsTrigger value="errors">Errors</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
             <TabsTrigger value="console">Console</TabsTrigger>
             <TabsTrigger value="deletions">Deletions</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="users">Active Users</TabsTrigger>
             <TabsTrigger value="backup">Backup</TabsTrigger>
             <TabsTrigger value="network">Network</TabsTrigger>
             <TabsTrigger value="tickets">Tickets</TabsTrigger>
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="permissions" className="space-y-4">
+            <ITPermissionManager />
+          </TabsContent>
 
           <TabsContent value="user-management" className="space-y-4">
             <ITUserManagement />
@@ -195,29 +200,6 @@ const ITDepartment = () => {
             <SecurityMonitoring />
           </TabsContent>
 
-          <TabsContent value="users">
-            <div className="space-y-6">
-              <PasswordResetHelper />
-              <Card>
-                <CardHeader>
-                  <CardTitle>User Account Fixes</CardTitle>
-                  <CardDescription>Quick fixes for user authentication issues</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button 
-                    onClick={async () => {
-                      const { createShafikAccount } = await import('@/utils/createShafikAccount');
-                      await createShafikAccount();
-                    }}
-                    variant="outline"
-                  >
-                    Create Shafik's Firebase Account
-                  </Button>
-                </CardContent>
-              </Card>
-              <UserManagement />
-            </div>
-          </TabsContent>
 
           <TabsContent value="backup">
             <BackupManagement />
