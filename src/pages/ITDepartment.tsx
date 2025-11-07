@@ -6,60 +6,33 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Monitor, 
-  Database, 
   Shield, 
-  Settings, 
   Users, 
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Server,
-  Wifi,
-  HardDrive,
-  Bug,
-  Wrench,
-  Globe,
-  Lock
+  Server
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
-import { useFirebaseTickets } from '@/hooks/useFirebaseTickets';
 import { useFirebaseSystemMetrics } from '@/hooks/useFirebaseSystemMetrics';
 import { usePresenceList } from '@/hooks/usePresenceList';
-
 
 // IT Components
 import ErrorDashboard from '@/components/it/ErrorDashboard';
 import SecurityMonitoring from '@/components/it/SecurityMonitoring';
-import UserManagement from '@/components/it/UserManagement';
 import BackupManagement from '@/components/it/BackupManagement';
-import NetworkMonitoring from '@/components/it/NetworkMonitoring';
-import { NetworkWhitelistManager } from '@/components/it/NetworkWhitelistManager';
-import TicketSystem from '@/components/it/TicketSystem';
-import SystemMaintenance from '@/components/it/SystemMaintenance';
-import SystemConsoleMonitor from '@/components/it/SystemConsoleMonitor';
 import DeletionRequestsManager from '@/components/admin/DeletionRequestsManager';
-import { SMSFailureManager } from '@/components/it/SMSFailureManager';
 import { ComprehensiveSMSManager } from '@/components/it/ComprehensiveSMSManager';
-import PasswordResetHelper from '@/components/admin/PasswordResetHelper';
 import { ITUserManagement } from '@/components/it/ITUserManagement';
-import { AuditLogViewer } from '@/components/it/AuditLogViewer';
 import { ITPermissionManager } from '@/components/it/ITPermissionManager';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
   const { employees } = useFirebaseEmployees();
-  const { tickets } = useFirebaseTickets();
   const { services } = useFirebaseSystemMetrics();
   const { onlineCount } = usePresenceList();
 
   // Calculate system uptime based on running services
   const runningServices = services.filter(s => s.status === 'running');
   const systemUptime = services.length > 0 ? ((runningServices.length / services.length) * 100).toFixed(1) : '0.0';
-  
-  // Count open tickets
-  const openTickets = tickets.filter(t => t.status === 'open' || t.status === 'in-progress').length;
   
   // Count active users
   const activeUsers = employees.filter(e => e.status === 'Active').length;
@@ -125,20 +98,6 @@ const ITDepartment = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <Bug className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Open Tickets</p>
-                  <p className="text-xl font-bold">{openTickets}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
                 <div className="p-2 bg-purple-100 rounded-lg">
                   <Users className="h-5 w-5 text-purple-600" />
                 </div>
@@ -149,23 +108,31 @@ const ITDepartment = () => {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Users className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Active Users</p>
+                  <p className="text-xl font-bold">{activeUsers}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Tabs defaultValue="permissions" className="space-y-6">
-
-          <TabsList className="grid w-full grid-cols-12">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="user-management">Users</TabsTrigger>
-            <TabsTrigger value="audit-logs">Audit</TabsTrigger>
             <TabsTrigger value="errors">Errors</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
-            <TabsTrigger value="console">Console</TabsTrigger>
             <TabsTrigger value="deletions">Deletions</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="backup">Backup</TabsTrigger>
-            <TabsTrigger value="network">Network</TabsTrigger>
-            <TabsTrigger value="tickets">Tickets</TabsTrigger>
-            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
           </TabsList>
 
           <TabsContent value="permissions" className="space-y-4">
@@ -176,20 +143,12 @@ const ITDepartment = () => {
             <ITUserManagement />
           </TabsContent>
 
-          <TabsContent value="audit-logs" className="space-y-4">
-            <AuditLogViewer />
-          </TabsContent>
-
           <TabsContent value="errors" className="space-y-4">
             <ErrorDashboard />
           </TabsContent>
 
           <TabsContent value="sms" className="space-y-4">
             <ComprehensiveSMSManager />
-          </TabsContent>
-
-          <TabsContent value="console" className="space-y-4">
-            <SystemConsoleMonitor />
           </TabsContent>
 
           <TabsContent value="deletions" className="space-y-4">
@@ -200,24 +159,8 @@ const ITDepartment = () => {
             <SecurityMonitoring />
           </TabsContent>
 
-
           <TabsContent value="backup">
             <BackupManagement />
-          </TabsContent>
-
-          <TabsContent value="network">
-            <div className="space-y-6">
-              <NetworkWhitelistManager />
-              <NetworkMonitoring />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="tickets">
-            <TicketSystem />
-          </TabsContent>
-
-          <TabsContent value="maintenance">
-            <SystemMaintenance />
           </TabsContent>
         </Tabs>
       </div>
