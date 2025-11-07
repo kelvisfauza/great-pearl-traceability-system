@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AddUserForm from "@/components/settings/AddUserForm";
 
 interface Employee {
   id: string;
@@ -31,6 +32,7 @@ export function ITUserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -92,6 +94,35 @@ export function ITUserManagement() {
     }
   };
 
+  const handleCreateUser = async (userData: any) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          ...userData,
+          linkExisting: false
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(`User created successfully! Temp password: ${data.tempPassword}`, {
+          duration: 10000
+        });
+        setCreateDialogOpen(false);
+        fetchEmployees();
+      }
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      if (error.message?.includes('duplicate') || error.message?.includes('already exists')) {
+        toast.error("User with this email already exists");
+      } else {
+        toast.error("Failed to create user");
+      }
+      throw error;
+    }
+  };
+
   const filteredEmployees = employees.filter(emp =>
     emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -137,6 +168,20 @@ export function ITUserManagement() {
                 className="pl-8 w-64"
               />
             </div>
+            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Create User
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New User</DialogTitle>
+                </DialogHeader>
+                <AddUserForm onSubmit={handleCreateUser} />
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </CardHeader>
