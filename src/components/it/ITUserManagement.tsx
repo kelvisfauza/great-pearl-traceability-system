@@ -98,7 +98,7 @@ export function ITUserManagement() {
     try {
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
-          ...userData,
+          employeeData: userData,
           linkExisting: false
         }
       });
