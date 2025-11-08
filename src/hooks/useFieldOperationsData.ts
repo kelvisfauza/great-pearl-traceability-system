@@ -168,13 +168,13 @@ export const useFieldOperationsData = () => {
       
       if (fieldError) throw fieldError;
 
-      // Also create store record to track in inventory
+      // Create store record
       const storeRecord = {
         batch_number: batchNumber,
         supplier_name: purchaseData.farmer_name || 'Field Purchase',
         coffee_type: purchaseData.coffee_type,
         kilograms: purchaseData.kgs_purchased,
-        bags: Math.ceil(purchaseData.kgs_purchased / 60), // Estimate bags
+        bags: Math.ceil(purchaseData.kgs_purchased / 60),
         date: purchaseData.purchase_date || new Date().toISOString().split('T')[0],
         status: 'pending',
         created_by: `Field Operations - ${purchaseData.created_by}`
@@ -186,12 +186,58 @@ export const useFieldOperationsData = () => {
       
       if (storeError) {
         console.error('Store record creation failed:', storeError);
-        // Don't throw - field purchase was successful
+      }
+
+      // Update inventory
+      const bags = Math.ceil(purchaseData.kgs_purchased / 60);
+      
+      // Check if inventory item exists for this coffee type and location
+      const { data: existingItem } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('coffee_type', purchaseData.coffee_type)
+        .eq('location', 'Field Collection')
+        .single();
+
+      if (existingItem) {
+        // Update existing inventory
+        const updatedBatchNumbers = [...(existingItem.batch_numbers || []), batchNumber];
+        
+        const { error: invError } = await supabase
+          .from('inventory_items')
+          .update({
+            total_kilograms: existingItem.total_kilograms + purchaseData.kgs_purchased,
+            total_bags: existingItem.total_bags + bags,
+            batch_numbers: updatedBatchNumbers,
+            last_updated: new Date().toISOString(),
+            status: 'In Stock'
+          })
+          .eq('id', existingItem.id);
+        
+        if (invError) {
+          console.error('Inventory update failed:', invError);
+        }
+      } else {
+        // Create new inventory item
+        const { error: invError } = await supabase
+          .from('inventory_items')
+          .insert([{
+            coffee_type: purchaseData.coffee_type,
+            total_kilograms: purchaseData.kgs_purchased,
+            total_bags: bags,
+            batch_numbers: [batchNumber],
+            location: 'Field Collection',
+            status: 'In Stock'
+          }]);
+        
+        if (invError) {
+          console.error('Inventory creation failed:', invError);
+        }
       }
       
       toast({ 
         title: 'Success', 
-        description: 'Purchase recorded in field and store inventory',
+        description: 'Purchase recorded - field, store & inventory updated',
         duration: 4000
       });
       fetchData();
