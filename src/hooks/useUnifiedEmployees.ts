@@ -21,6 +21,7 @@ export interface UnifiedEmployee {
   emergency_contact?: string;
   auth_user_id?: string;
   disabled?: boolean;
+  is_training_account?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -63,6 +64,7 @@ export const useUnifiedEmployees = () => {
         emergency_contact: emp.emergency_contact,
         auth_user_id: emp.auth_user_id,
         disabled: emp.disabled || false,
+        is_training_account: emp.is_training_account || false,
         created_at: emp.created_at,
         updated_at: emp.updated_at
       }));

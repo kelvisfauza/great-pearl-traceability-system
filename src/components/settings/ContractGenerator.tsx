@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useFirebaseEmployees } from "@/hooks/useFirebaseEmployees";
+import { useUnifiedEmployees } from "@/hooks/useUnifiedEmployees";
 import { useToast } from "@/hooks/use-toast";
 import { Printer, FileText } from "lucide-react";
 
@@ -15,8 +15,13 @@ interface ContractGeneratorProps {
 }
 
 const ContractGenerator = ({ isOpen, onClose }: ContractGeneratorProps) => {
-  const { employees } = useFirebaseEmployees();
+  const { employees, loading: employeesLoading } = useUnifiedEmployees();
   const { toast } = useToast();
+  
+  // Filter out training accounts and inactive employees
+  const activeEmployees = employees.filter(emp => 
+    emp.status === 'Active' && !emp.is_training_account
+  );
   
   const [formData, setFormData] = useState({
     employeeId: "",
@@ -40,7 +45,7 @@ const ContractGenerator = ({ isOpen, onClose }: ContractGeneratorProps) => {
     additionalTerms: ""
   });
 
-  const selectedEmployee = employees.find(emp => emp.id === formData.employeeId);
+  const selectedEmployee = activeEmployees.find(emp => emp.id === formData.employeeId);
 
   const generateContract = () => {
     if (!selectedEmployee) {
@@ -328,26 +333,37 @@ const ContractGenerator = ({ isOpen, onClose }: ContractGeneratorProps) => {
             
             <div>
               <Label htmlFor="employee">Select Employee</Label>
-              <Select value={formData.employeeId} onValueChange={(value) => {
-                const employee = employees.find(emp => emp.id === value);
-                setFormData(prev => ({ 
-                  ...prev, 
-                  employeeId: value,
-                  basicSalary: employee?.salary?.toString() || "",
-                  reportingTo: employee?.department === 'HR' ? 'Managing Director' : 'Department Manager'
-                }));
-              }}>
+              <Select 
+                value={formData.employeeId} 
+                onValueChange={(value) => {
+                  const employee = activeEmployees.find(emp => emp.id === value);
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    employeeId: value,
+                    basicSalary: employee?.salary?.toString() || "",
+                    reportingTo: employee?.department === 'HR' ? 'Managing Director' : 'Department Manager'
+                  }));
+                }}
+                disabled={employeesLoading}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose an employee" />
+                  <SelectValue placeholder={employeesLoading ? "Loading employees..." : "Choose an employee"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {employees.map(employee => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.name} - {employee.position}
-                    </SelectItem>
-                  ))}
+                  {activeEmployees.length === 0 ? (
+                    <SelectItem value="none" disabled>No active employees found</SelectItem>
+                  ) : (
+                    activeEmployees.map(employee => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.name} - {employee.position} ({employee.department})
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Showing {activeEmployees.length} active employee{activeEmployees.length !== 1 ? 's' : ''}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
