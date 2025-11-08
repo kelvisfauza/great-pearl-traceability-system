@@ -13,6 +13,7 @@ interface ExpenseRequest {
   daterequested: string;
   priority: string;
   status: string;
+  department?: string;
   details: any;
   financeApproved: boolean;
   adminApproved: boolean;

@@ -29,6 +29,8 @@ export const ExpenseManagement = () => {
     req => {
       const isExpenseRequest = req.type === 'Employee Expense Request' || 
                               req.type === 'Requisition' ||
+                              req.type === 'Field Financing Request' ||
+                              req.department === 'Field Operations' ||
                               (req.type.includes('Expense') && req.type !== 'Employee Salary Request');
       
       const hasFinanceApproval = req.financeApprovedAt;
@@ -272,6 +274,11 @@ export const ExpenseManagement = () => {
                           <div>
                             <p className="font-medium">{request.title}</p>
                             <p className="text-sm text-muted-foreground">{request.type}</p>
+                            {request.department === 'Field Operations' && (
+                              <Badge variant="outline" className="mt-1 text-xs">
+                                Field Operations
+                              </Badge>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
