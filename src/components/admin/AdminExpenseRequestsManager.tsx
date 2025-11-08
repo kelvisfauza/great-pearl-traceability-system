@@ -196,11 +196,18 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       }
       
       console.log('🎯 Approval type:', approvalType);
-      alert('📝 Calling updateRequestStatus with type: ' + approvalType);
+      
+      // Determine if this will be the final approval
+      const isFullyApproved = approvalType === 'admin2' || (approvalType === 'admin' && !selectedRequest?.requiresThreeApprovals);
+      
+      // Set status to Approved if this is the final approval, otherwise keep as Pending
+      const newStatus = isFullyApproved ? 'Approved' : 'Pending';
+      
+      alert('📝 Calling updateRequestStatus with type: ' + approvalType + ' and status: ' + newStatus);
       
       const success = await updateRequestStatus(
         requestId, 
-        'Pending',
+        newStatus,
         undefined, 
         comments, 
         approvalType, 
@@ -227,14 +234,12 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
           console.log('Admin comments update error:', error);
         }
 
-        const isFullyApproved = approvalType === 'admin2' || (approvalType === 'admin' && !selectedRequest?.requiresThreeApprovals);
-        
         console.log('🎯 Is fully approved:', isFullyApproved);
         
         toast({
-          title: "Admin Approval Recorded",
+          title: isFullyApproved ? "Request Fully Approved!" : "Admin Approval Recorded",
           description: isFullyApproved ? 
-            `Expense request fully approved for ${paymentMethod} payment` :
+            `Expense request approved for ${paymentMethod} payment. Payment slip will now print.` :
             `Admin ${approvalType === 'admin1' ? '1' : ''} approval recorded - awaiting second admin approval`
         });
         
@@ -243,7 +248,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         // Refresh the requests list
         await fetchRequests();
         
-        // Show payment slip for both cash and transfer if fully approved
+        // Show payment slip automatically if fully approved
         if (isFullyApproved) {
           const updatedRequest = {
             ...selectedRequest,
