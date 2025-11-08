@@ -11,10 +11,12 @@ import { useFieldOperationsData } from '@/hooks/useFieldOperationsData';
 import { DollarSign, Plus, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const FieldFinancing = () => {
   const { facilitationRequests, requestFacilitation, loading } = useFieldOperationsData();
   const { toast } = useToast();
+  const { employee } = useAuth();
   const [showForm, setShowForm] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -40,7 +42,7 @@ export const FieldFinancing = () => {
     await requestFacilitation({
       ...formData,
       amount_requested: parseFloat(formData.amount_requested),
-      requested_by: 'current_user' // This should be replaced with actual user context
+      requested_by: employee?.email || employee?.name || 'unknown_user'
     });
 
     setFormData({

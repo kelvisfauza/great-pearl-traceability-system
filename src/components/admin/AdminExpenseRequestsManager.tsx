@@ -15,6 +15,7 @@ import { RecentPaymentSlipsModal } from './RecentPaymentSlipsModal';
 import { AdminExpenseReviewModal } from './AdminExpenseReviewModal';
 import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
 import { supabase } from '@/integrations/supabase/client';
+import { useSMSNotifications } from '@/hooks/useSMSNotifications';
 
 interface AdminExpenseRequestsManagerProps {
   onApprove?: (requestId: string) => void;
@@ -29,6 +30,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const { assessExpenseRisk } = useRiskAssessment();
   const { employee } = useAuth();
   const { checkExpenseRequestEligibility, showSoDViolationWarning } = useSeparationOfDuties();
+  const { sendFieldFinancingApprovalSMS } = useSMSNotifications();
   const [rejectionModalOpen, setRejectionModalOpen] = React.useState(false);
   const [selectedRequestId, setSelectedRequestId] = React.useState<string>('');
   const [selectedRequestTitle, setSelectedRequestTitle] = React.useState<string>('');
@@ -250,6 +252,33 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         
         // Show payment slip automatically if fully approved
         if (isFullyApproved) {
+          // Get user details from employees table for SMS notification
+          if (selectedRequest.department === 'Field Operations' || selectedRequest.type === 'Field Financing Request') {
+            try {
+              const { data: employeeData } = await supabase
+                .from('employees')
+                .select('name, email, phone')
+                .eq('email', selectedRequest.requestedby)
+                .single();
+              
+              if (employeeData && employeeData.phone) {
+                console.log('📱 Sending field financing approval SMS to:', employeeData.name);
+                await sendFieldFinancingApprovalSMS(
+                  employeeData.name || selectedRequest.requestedby,
+                  employeeData.phone,
+                  employeeData.email,
+                  parseFloat(selectedRequest.amount || '0'),
+                  selectedRequest.details?.request_type || 'Field Financing',
+                  paymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash Payment'
+                );
+              } else {
+                console.warn('No phone number found for employee:', selectedRequest.requestedby);
+              }
+            } catch (error) {
+              console.error('Error sending field financing SMS:', error);
+            }
+          }
+
           const updatedRequest = {
             ...selectedRequest,
             id: requestId,

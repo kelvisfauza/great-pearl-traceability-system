@@ -108,9 +108,50 @@ export const useSMSNotifications = () => {
     }
   };
 
+  const sendFieldFinancingApprovalSMS = async (
+    employeeName: string,
+    phoneNumber: string,
+    email: string,
+    amount: number,
+    requestType: string,
+    paymentMethod: string
+  ) => {
+    try {
+      console.log('Sending field financing approval SMS notification...');
+      
+      const { data, error } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: phoneNumber,
+          message: `Dear ${employeeName}, your ${requestType} request of UGX ${amount.toLocaleString()} has been approved for ${paymentMethod}. The payment will be processed shortly. Contact finance for details.`,
+          userName: employeeName,
+          recipientEmail: email,
+          messageType: 'field_financing_approval',
+          department: 'Field Operations'
+        }
+      });
+
+      if (error) {
+        console.error('Error sending SMS:', error);
+        throw error;
+      }
+
+      console.log('Field financing SMS sent successfully:', data);
+      return true;
+    } catch (error) {
+      console.error('Failed to send field financing SMS notification:', error);
+      toast({
+        title: "SMS Notification Failed",
+        description: "Could not send SMS notification to field officer",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   return {
     sendSalaryApprovalSMS,
     sendSalaryInitializedSMS,
-    sendApprovalRequestSMS
+    sendApprovalRequestSMS,
+    sendFieldFinancingApprovalSMS
   };
 };
