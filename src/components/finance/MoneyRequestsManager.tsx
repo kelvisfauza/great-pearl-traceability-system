@@ -7,6 +7,7 @@ import { DollarSign, Calendar, User, Clock, CheckCircle, XCircle, FileText, Eye 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { RejectionModal } from '@/components/workflow/RejectionModal';
 
 interface MoneyRequest {
   id: string;
@@ -31,6 +32,8 @@ const MoneyRequestsManager = () => {
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<MoneyRequest | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [requestToReject, setRequestToReject] = useState<string | null>(null);
   const { employee } = useAuth();
   const { toast } = useToast();
 
@@ -56,7 +59,7 @@ const MoneyRequestsManager = () => {
     }
   };
 
-  const handleFinanceApproval = async (requestId: string, approve: boolean) => {
+  const handleFinanceApproval = async (requestId: string, approve: boolean, rejectionReason?: string) => {
     try {
       const updateData: any = {
         finance_approved_by: employee?.name || 'Finance Department',
@@ -66,9 +69,19 @@ const MoneyRequestsManager = () => {
       if (approve) {
         updateData.finance_approved_at = new Date().toISOString();
         updateData.approval_stage = 'finance_approved';
+        
+        toast({
+          title: "Request Approved",
+          description: "Money request approved and sent to Admin for final approval",
+        });
       } else {
         updateData.status = 'rejected';
-        updateData.rejection_reason = 'Rejected by Finance Department';
+        updateData.rejection_reason = rejectionReason || 'Rejected by Finance Department';
+        
+        toast({
+          title: "Request Rejected",
+          description: "Money request has been rejected",
+        });
       }
 
       const { error } = await supabase
@@ -87,6 +100,21 @@ const MoneyRequestsManager = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleRejectClick = (requestId: string) => {
+    setRequestToReject(requestId);
+    setRejectionModalOpen(true);
+  };
+
+  const handleConfirmRejection = async (reason: string, comments?: string) => {
+    if (!requestToReject) return;
+    
+    const fullReason = comments ? `${reason}\n\nComments: ${comments}` : reason;
+    await handleFinanceApproval(requestToReject, false, fullReason);
+    
+    setRejectionModalOpen(false);
+    setRequestToReject(null);
   };
 
   const getStatusBadge = (request: MoneyRequest) => {
@@ -170,7 +198,7 @@ const MoneyRequestsManager = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleFinanceApproval(request.id, false)}
+                            onClick={() => handleRejectClick(request.id)}
                             className="border-red-200 text-red-700 hover:bg-red-50"
                           >
                             <XCircle className="h-4 w-4 mr-1" />
@@ -274,6 +302,17 @@ const MoneyRequestsManager = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <RejectionModal
+        open={rejectionModalOpen}
+        onClose={() => {
+          setRejectionModalOpen(false);
+          setRequestToReject(null);
+        }}
+        onConfirm={handleConfirmRejection}
+        title="Reject Money Request"
+        description="Please select a reason for rejecting this money request and provide any additional comments."
+      />
     </div>
   );
 };
