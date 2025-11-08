@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Upload, FileText, Download, Eye } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,7 +18,15 @@ interface ContractFile {
   file_url: string;
   file_name: string;
   uploaded_at: string;
+  status: 'Draft' | 'Sent' | 'Signed' | 'Expired';
 }
+
+const statusColors = {
+  Draft: 'bg-muted text-muted-foreground',
+  Sent: 'bg-primary/10 text-primary',
+  Signed: 'bg-green-500/10 text-green-600 dark:text-green-400',
+  Expired: 'bg-destructive/10 text-destructive'
+};
 
 export const ContractFileUpload = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,7 +44,7 @@ export const ContractFileUpload = () => {
         .order('uploaded_at', { ascending: false });
 
       if (error) throw error;
-      setContracts(data || []);
+      setContracts((data as ContractFile[]) || []);
     } catch (error) {
       console.error('Error fetching contracts:', error);
       toast({
@@ -52,6 +62,7 @@ export const ContractFileUpload = () => {
     const formData = new FormData(e.currentTarget);
     const buyerRef = formData.get('buyer_ref') as string;
     const buyer = formData.get('buyer') as string;
+    const status = formData.get('status') as string;
     const file = formData.get('file') as File;
 
     if (!file || !buyerRef || !buyer) {
@@ -87,7 +98,8 @@ export const ContractFileUpload = () => {
           buyer_ref: buyerRef,
           buyer: buyer,
           file_url: publicUrl,
-          file_name: file.name
+          file_name: file.name,
+          status: status || 'Draft'
         });
 
       if (dbError) throw dbError;
@@ -156,6 +168,20 @@ export const ContractFileUpload = () => {
                   />
                 </div>
                 <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select name="status" defaultValue="Draft">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Draft">Draft</SelectItem>
+                      <SelectItem value="Sent">Sent</SelectItem>
+                      <SelectItem value="Signed">Signed</SelectItem>
+                      <SelectItem value="Expired">Expired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label htmlFor="file">Contract File</Label>
                   <Input 
                     id="file" 
@@ -188,6 +214,7 @@ export const ContractFileUpload = () => {
                 <TableHead>Buyer Ref</TableHead>
                 <TableHead>Buyer</TableHead>
                 <TableHead>File Name</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Uploaded</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -198,6 +225,46 @@ export const ContractFileUpload = () => {
                   <TableCell className="font-medium">{contract.buyer_ref}</TableCell>
                   <TableCell>{contract.buyer}</TableCell>
                   <TableCell>{contract.file_name}</TableCell>
+                  <TableCell>
+                    <Select
+                      value={contract.status}
+                      onValueChange={async (newStatus) => {
+                        try {
+                          const { error } = await supabase
+                            .from('contract_files')
+                            .update({ status: newStatus })
+                            .eq('id', contract.id);
+
+                          if (error) throw error;
+
+                          toast({
+                            title: "Success",
+                            description: "Contract status updated"
+                          });
+                          fetchContracts();
+                        } catch (error) {
+                          console.error('Error updating status:', error);
+                          toast({
+                            title: "Error",
+                            description: "Failed to update status",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[120px] h-8">
+                        <Badge className={statusColors[contract.status]} variant="outline">
+                          <SelectValue />
+                        </Badge>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Draft">Draft</SelectItem>
+                        <SelectItem value="Sent">Sent</SelectItem>
+                        <SelectItem value="Signed">Signed</SelectItem>
+                        <SelectItem value="Expired">Expired</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
                   <TableCell>{new Date(contract.uploaded_at).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">

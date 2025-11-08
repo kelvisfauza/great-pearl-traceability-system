@@ -889,6 +889,7 @@ export type Database = {
           file_name: string
           file_url: string
           id: string
+          status: string
           uploaded_at: string | null
         }
         Insert: {
@@ -898,6 +899,7 @@ export type Database = {
           file_name: string
           file_url: string
           id?: string
+          status?: string
           uploaded_at?: string | null
         }
         Update: {
@@ -907,6 +909,7 @@ export type Database = {
           file_name?: string
           file_url?: string
           id?: string
+          status?: string
           uploaded_at?: string | null
         }
         Relationships: []
