@@ -92,6 +92,7 @@ const Navigation = () => {
         { name: "Finance", icon: DollarSign, path: "/finance", permission: "Finance" },
         { name: "Expenses", icon: Receipt, path: "/expenses", permission: null },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
+        { name: "Field Ops Admin", icon: MapPin, path: "/field-operations-admin", permission: "Administrator" },
         { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },
         { name: "IT Department", icon: Settings, path: "/it-department", permission: "IT Management" },
       ]
