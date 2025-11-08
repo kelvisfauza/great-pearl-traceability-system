@@ -23,7 +23,6 @@ import Settings from "./pages/Settings";
 import Logistics from "./pages/Logistics";
 import DataAnalyst from "./pages/DataAnalyst";
 import FieldOperations from "./pages/FieldOperations";
-import FieldOperationsAdmin from "./pages/FieldOperationsAdmin";
 import Processing from "./pages/Processing";
 import ITDepartment from "./pages/ITDepartment";
 import Milling from "./pages/Milling";
@@ -138,11 +137,6 @@ const App: React.ComponentType = () => {
                 <Route path="/field-operations" element={
                   <ProtectedRoute requiredPermissions={["Field Operations"]}>
                     <FieldOperations />
-                  </ProtectedRoute>
-                } />
-                <Route path="/field-operations-admin" element={
-                  <ProtectedRoute requiredPermissions={["Administrator", "Super Admin"]}>
-                    <FieldOperationsAdmin />
                   </ProtectedRoute>
                 } />
                 <Route path="/processing" element={

@@ -16,9 +16,14 @@ import { ExpensesReport } from "@/components/reports/ExpensesReport";
 import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
 import FinanceMonthlyReport from "@/components/reports/FinanceMonthlyReport";
 import RiskAssessmentReport from "@/components/reports/RiskAssessmentReport";
-import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle } from "lucide-react";
+import { FieldOperationsManagement } from "@/components/admin/FieldOperationsManagement";
+import { useAuth } from "@/contexts/AuthContext";
+import { BarChart3, FileText, TrendingUp, History, Store, Printer, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin } from "lucide-react";
 
 const Reports = () => {
+  const { employee } = useAuth();
+  const isAdmin = employee?.role === 'Administrator' || employee?.role === 'Super Admin';
+
   return (
     <Layout 
       title="Reports & Analytics" 
@@ -76,6 +81,12 @@ const Reports = () => {
               <Calculator className="h-4 w-4" />
               Monthly Reconciliation
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="field-ops" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Field Operations
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
@@ -135,6 +146,12 @@ const Reports = () => {
           <TabsContent value="reconciliation" className="space-y-6">
             <MonthlyReconciliation />
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="field-ops" className="space-y-6">
+              <FieldOperationsManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </Layout>
