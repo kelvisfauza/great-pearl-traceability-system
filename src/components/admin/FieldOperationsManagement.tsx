@@ -15,8 +15,10 @@ import {
   CheckCircle, 
   XCircle,
   TrendingUp,
-  Package
+  Package,
+  BarChart3
 } from 'lucide-react';
+import { FieldOperationsAnalytics } from './FieldOperationsAnalytics';
 
 export const FieldOperationsManagement = () => {
   const { 
@@ -116,8 +118,12 @@ export const FieldOperationsManagement = () => {
       </div>
 
       {/* Detailed Views */}
-      <Tabs defaultValue="purchases" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs defaultValue="analytics" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="analytics">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Analytics
+          </TabsTrigger>
           <TabsTrigger value="purchases">
             <ShoppingCart className="h-4 w-4 mr-2" />
             Purchases
@@ -139,6 +145,11 @@ export const FieldOperationsManagement = () => {
             Attendance
           </TabsTrigger>
         </TabsList>
+
+        {/* Analytics Dashboard */}
+        <TabsContent value="analytics">
+          <FieldOperationsAnalytics />
+        </TabsContent>
 
         {/* Field Purchases */}
         <TabsContent value="purchases">
