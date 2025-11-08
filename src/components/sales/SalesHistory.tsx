@@ -3,8 +3,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useSalesTransactions } from '@/hooks/useSalesTransactions';
 import { format } from 'date-fns';
-import { FileText, Download, Trash2 } from 'lucide-react';
+import { FileText, Download, Trash2, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDeletionRequest } from '@/hooks/useDeletionRequest';
@@ -28,6 +30,26 @@ const SalesHistory = () => {
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<any>(null);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Filter transactions by date range
+  const filteredTransactions = transactions.filter((transaction) => {
+    if (!startDate && !endDate) return true;
+    
+    const transactionDate = new Date(transaction.date);
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+
+    if (start && end) {
+      return transactionDate >= start && transactionDate <= end;
+    } else if (start) {
+      return transactionDate >= start;
+    } else if (end) {
+      return transactionDate <= end;
+    }
+    return true;
+  });
 
   const handleDownloadGRN = async (filePath: string, fileName: string) => {
     setDownloadingFile(filePath);
@@ -86,8 +108,50 @@ const SalesHistory = () => {
         <CardTitle>Recent Sales Transactions</CardTitle>
       </CardHeader>
       <CardContent>
-        {transactions.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">No sales transactions yet</p>
+        <div className="mb-4 flex flex-wrap gap-4 items-end">
+          <div className="flex-1 min-w-[200px]">
+            <Label htmlFor="start-date" className="flex items-center gap-2 mb-2">
+              <Calendar className="h-4 w-4" />
+              Start Date
+            </Label>
+            <Input
+              id="start-date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex-1 min-w-[200px]">
+            <Label htmlFor="end-date" className="flex items-center gap-2 mb-2">
+              <Calendar className="h-4 w-4" />
+              End Date
+            </Label>
+            <Input
+              id="end-date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+              }}
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
+        
+        {filteredTransactions.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">
+            {transactions.length === 0 ? 'No sales transactions yet' : 'No transactions found for selected date range'}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -107,7 +171,7 @@ const SalesHistory = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactions.slice(0, 10).map((transaction) => (
+                {filteredTransactions.slice(0, 10).map((transaction) => (
                   <TableRow key={transaction.id}>
                     <TableCell className="whitespace-nowrap">
                       {format(new Date(transaction.date), 'MMM dd, yyyy')}
