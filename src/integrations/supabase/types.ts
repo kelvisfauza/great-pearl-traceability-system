@@ -1012,6 +1012,48 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_reports: {
+        Row: {
+          actions_needed: string | null
+          challenges: string | null
+          created_at: string | null
+          district: string
+          farmers_visited: string[] | null
+          id: string
+          report_date: string | null
+          submitted_at: string | null
+          submitted_by: string
+          total_kgs_mobilized: number
+          villages_visited: string
+        }
+        Insert: {
+          actions_needed?: string | null
+          challenges?: string | null
+          created_at?: string | null
+          district: string
+          farmers_visited?: string[] | null
+          id?: string
+          report_date?: string | null
+          submitted_at?: string | null
+          submitted_by: string
+          total_kgs_mobilized?: number
+          villages_visited: string
+        }
+        Update: {
+          actions_needed?: string | null
+          challenges?: string | null
+          created_at?: string | null
+          district?: string
+          farmers_visited?: string[] | null
+          id?: string
+          report_date?: string | null
+          submitted_at?: string | null
+          submitted_by?: string
+          total_kgs_mobilized?: number
+          villages_visited?: string
+        }
+        Relationships: []
+      }
       daily_tasks: {
         Row: {
           amount: number | null
@@ -1410,6 +1452,114 @@ export type Database = {
           },
         ]
       }
+      facilitation_requests: {
+        Row: {
+          amount_requested: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          date_needed: string
+          evidence_url: string | null
+          id: string
+          purpose: string
+          rejection_reason: string | null
+          request_type: string
+          requested_by: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount_requested: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          date_needed: string
+          evidence_url?: string | null
+          id?: string
+          purpose: string
+          rejection_reason?: string | null
+          request_type: string
+          requested_by: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount_requested?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          date_needed?: string
+          evidence_url?: string | null
+          id?: string
+          purpose?: string
+          rejection_reason?: string | null
+          request_type?: string
+          requested_by?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      farmer_profiles: {
+        Row: {
+          coffee_type: string
+          created_at: string | null
+          created_by: string
+          full_name: string
+          gps_latitude: number | null
+          gps_longitude: number | null
+          id: string
+          id_photo_url: string | null
+          notes: string | null
+          outstanding_advance: number | null
+          parish: string | null
+          phone: string
+          photo_url: string | null
+          subcounty: string | null
+          total_purchases_kg: number | null
+          updated_at: string | null
+          village: string
+        }
+        Insert: {
+          coffee_type: string
+          created_at?: string | null
+          created_by: string
+          full_name: string
+          gps_latitude?: number | null
+          gps_longitude?: number | null
+          id?: string
+          id_photo_url?: string | null
+          notes?: string | null
+          outstanding_advance?: number | null
+          parish?: string | null
+          phone: string
+          photo_url?: string | null
+          subcounty?: string | null
+          total_purchases_kg?: number | null
+          updated_at?: string | null
+          village: string
+        }
+        Update: {
+          coffee_type?: string
+          created_at?: string | null
+          created_by?: string
+          full_name?: string
+          gps_latitude?: number | null
+          gps_longitude?: number | null
+          id?: string
+          id_photo_url?: string | null
+          notes?: string | null
+          outstanding_advance?: number | null
+          parish?: string | null
+          phone?: string
+          photo_url?: string | null
+          subcounty?: string | null
+          total_purchases_kg?: number | null
+          updated_at?: string | null
+          village?: string
+        }
+        Relationships: []
+      }
       field_agents: {
         Row: {
           collections_count: number | null
@@ -1443,6 +1593,51 @@ export type Database = {
           region?: string
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      field_attendance_logs: {
+        Row: {
+          check_in_gps_latitude: number | null
+          check_in_gps_longitude: number | null
+          check_in_time: string | null
+          check_out_gps_latitude: number | null
+          check_out_gps_longitude: number | null
+          check_out_time: string | null
+          created_at: string | null
+          date: string | null
+          duration_minutes: number | null
+          field_agent: string
+          id: string
+          location_name: string | null
+        }
+        Insert: {
+          check_in_gps_latitude?: number | null
+          check_in_gps_longitude?: number | null
+          check_in_time?: string | null
+          check_out_gps_latitude?: number | null
+          check_out_gps_longitude?: number | null
+          check_out_time?: string | null
+          created_at?: string | null
+          date?: string | null
+          duration_minutes?: number | null
+          field_agent: string
+          id?: string
+          location_name?: string | null
+        }
+        Update: {
+          check_in_gps_latitude?: number | null
+          check_in_gps_longitude?: number | null
+          check_in_time?: string | null
+          check_out_gps_latitude?: number | null
+          check_out_gps_longitude?: number | null
+          check_out_time?: string | null
+          created_at?: string | null
+          date?: string | null
+          duration_minutes?: number | null
+          field_agent?: string
+          id?: string
+          location_name?: string | null
         }
         Relationships: []
       }
@@ -1495,6 +1690,83 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "field_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_purchases: {
+        Row: {
+          advance_deducted: number | null
+          category: string
+          coffee_type: string
+          created_at: string | null
+          created_by: string
+          delivery_slip_generated: boolean | null
+          farmer_id: string | null
+          farmer_name: string
+          gps_latitude: number | null
+          gps_longitude: number | null
+          id: string
+          image_url: string | null
+          kgs_purchased: number
+          moisture_percentage: number | null
+          purchase_date: string | null
+          quality_notes: string | null
+          status: string | null
+          total_value: number
+          unit_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          advance_deducted?: number | null
+          category: string
+          coffee_type: string
+          created_at?: string | null
+          created_by: string
+          delivery_slip_generated?: boolean | null
+          farmer_id?: string | null
+          farmer_name: string
+          gps_latitude?: number | null
+          gps_longitude?: number | null
+          id?: string
+          image_url?: string | null
+          kgs_purchased: number
+          moisture_percentage?: number | null
+          purchase_date?: string | null
+          quality_notes?: string | null
+          status?: string | null
+          total_value: number
+          unit_price: number
+          updated_at?: string | null
+        }
+        Update: {
+          advance_deducted?: number | null
+          category?: string
+          coffee_type?: string
+          created_at?: string | null
+          created_by?: string
+          delivery_slip_generated?: boolean | null
+          farmer_id?: string | null
+          farmer_name?: string
+          gps_latitude?: number | null
+          gps_longitude?: number | null
+          id?: string
+          image_url?: string | null
+          kgs_purchased?: number
+          moisture_percentage?: number | null
+          purchase_date?: string | null
+          quality_notes?: string | null
+          status?: string | null
+          total_value?: number
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_purchases_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2962,6 +3234,56 @@ export type Database = {
         }
         Relationships: []
       }
+      rejected_coffee: {
+        Row: {
+          action_taken: string
+          created_at: string | null
+          farmer_id: string | null
+          farmer_name: string
+          id: string
+          kgs_rejected: number
+          notes: string | null
+          photo_url: string | null
+          reason: string
+          rejected_date: string | null
+          reported_by: string
+        }
+        Insert: {
+          action_taken: string
+          created_at?: string | null
+          farmer_id?: string | null
+          farmer_name: string
+          id?: string
+          kgs_rejected: number
+          notes?: string | null
+          photo_url?: string | null
+          reason: string
+          rejected_date?: string | null
+          reported_by: string
+        }
+        Update: {
+          action_taken?: string
+          created_at?: string | null
+          farmer_id?: string | null
+          farmer_name?: string
+          id?: string
+          kgs_rejected?: number
+          notes?: string | null
+          photo_url?: string | null
+          reason?: string
+          rejected_date?: string | null
+          reported_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rejected_coffee_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_templates: {
         Row: {
           category: string
@@ -4156,6 +4478,48 @@ export type Database = {
           id?: string
           total_eligible_amount?: number | null
           updated_at?: string | null
+          week_end_date?: string
+          week_start_date?: string
+        }
+        Relationships: []
+      }
+      weekly_reports: {
+        Row: {
+          created_at: string | null
+          facilitation_used: number | null
+          id: string
+          management_issues: string | null
+          submitted_at: string | null
+          submitted_by: string
+          total_farmers_visited: number
+          total_kgs_sourced: number
+          total_rejected_coffee: number | null
+          week_end_date: string
+          week_start_date: string
+        }
+        Insert: {
+          created_at?: string | null
+          facilitation_used?: number | null
+          id?: string
+          management_issues?: string | null
+          submitted_at?: string | null
+          submitted_by: string
+          total_farmers_visited?: number
+          total_kgs_sourced?: number
+          total_rejected_coffee?: number | null
+          week_end_date: string
+          week_start_date: string
+        }
+        Update: {
+          created_at?: string | null
+          facilitation_used?: number | null
+          id?: string
+          management_issues?: string | null
+          submitted_at?: string | null
+          submitted_by?: string
+          total_farmers_visited?: number
+          total_kgs_sourced?: number
+          total_rejected_coffee?: number | null
           week_end_date?: string
           week_start_date?: string
         }
