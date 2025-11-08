@@ -58,17 +58,22 @@ export interface DailyReport {
 
 export interface FacilitationRequest {
   id: string;
-  request_type: string;
-  amount_requested: number;
-  purpose: string;
-  date_needed: string;
-  evidence_url?: string;
+  type: string;
+  title: string;
+  description: string;
+  amount: number;
   status: string;
-  approved_by?: string;
-  approved_at?: string;
+  finance_approved?: boolean;
+  finance_approved_by?: string;
+  finance_approved_at?: string;
+  admin_approved?: boolean;
+  admin_approved_by?: string;
+  admin_approved_at?: string;
   rejection_reason?: string;
-  requested_by: string;
+  requestedby: string;
+  daterequested: string;
   created_at: string;
+  details?: any;
 }
 
 export interface AttendanceLog {
@@ -102,7 +107,9 @@ export const useFieldOperationsData = () => {
         supabase.from('farmer_profiles').select('*').order('created_at', { ascending: false }),
         supabase.from('field_purchases').select('*').order('purchase_date', { ascending: false }),
         supabase.from('daily_reports').select('*').order('report_date', { ascending: false }),
-        supabase.from('facilitation_requests').select('*').order('created_at', { ascending: false }),
+        supabase.from('approval_requests').select('*')
+          .eq('department', 'Field Operations')
+          .order('created_at', { ascending: false }),
         supabase.from('field_attendance_logs').select('*').order('date', { ascending: false })
       ]);
 
@@ -177,10 +184,30 @@ export const useFieldOperationsData = () => {
 
   const requestFacilitation = async (requestData: any) => {
     try {
-      const { error } = await supabase.from('facilitation_requests').insert([requestData]);
+      const approvalRequest = {
+        type: 'Field Financing Request',
+        title: `${requestData.request_type} - Field Financing`,
+        description: requestData.purpose,
+        amount: requestData.amount_requested,
+        department: 'Field Operations',
+        requestedby: requestData.requested_by,
+        daterequested: new Date().toISOString().split('T')[0],
+        status: 'Pending',
+        priority: 'Medium',
+        details: {
+          request_type: requestData.request_type,
+          date_needed: requestData.date_needed,
+          evidence_url: requestData.evidence_url || null
+        }
+      };
+
+      const { error } = await supabase.from('approval_requests').insert([approvalRequest]);
       if (error) throw error;
       
-      toast({ title: 'Success', description: 'Facilitation request submitted' });
+      toast({ 
+        title: 'Success', 
+        description: 'Financing request submitted for approval' 
+      });
       fetchData();
     } catch (error: any) {
       toast({

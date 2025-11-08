@@ -53,19 +53,38 @@ export const FieldFinancing = () => {
     setShowForm(false);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'approved':
-        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
-      default:
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+  const getStatusBadge = (request: any) => {
+    if (request.status === 'Approved') {
+      return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
     }
+    if (request.status === 'Rejected') {
+      return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
+    }
+    
+    // Show approval stages for pending requests
+    if (request.finance_approved && !request.admin_approved) {
+      return <Badge className="bg-blue-500"><Clock className="h-3 w-3 mr-1" />Awaiting Admin</Badge>;
+    }
+    if (!request.finance_approved) {
+      return <Badge className="bg-yellow-500"><Clock className="h-3 w-3 mr-1" />Awaiting Finance</Badge>;
+    }
+    
+    return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+  };
+
+  const getApprovalDetails = (request: any) => {
+    const approvals = [];
+    if (request.finance_approved_by) {
+      approvals.push(`Finance: ${request.finance_approved_by}`);
+    }
+    if (request.admin_approved_by) {
+      approvals.push(`Admin: ${request.admin_approved_by}`);
+    }
+    return approvals.length > 0 ? approvals.join(', ') : '-';
   };
 
   const approvedFinancing = facilitationRequests.filter(r => r.status === 'Approved');
-  const totalApproved = approvedFinancing.reduce((sum, r) => sum + r.amount_requested, 0);
+  const totalApproved = approvedFinancing.reduce((sum, r) => sum + r.amount, 0);
   const pendingRequests = facilitationRequests.filter(r => r.status === 'Pending');
 
   return (
@@ -214,7 +233,7 @@ export const FieldFinancing = () => {
                 <TableHead>Purpose</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Approved By</TableHead>
+                <TableHead>Approvals</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -227,12 +246,14 @@ export const FieldFinancing = () => {
               ) : (
                 facilitationRequests.map((request) => (
                   <TableRow key={request.id}>
-                    <TableCell>{format(new Date(request.created_at), 'MMM dd, yyyy')}</TableCell>
-                    <TableCell className="font-medium">{request.request_type}</TableCell>
-                    <TableCell className="max-w-xs truncate">{request.purpose}</TableCell>
-                    <TableCell>UGX {request.amount_requested.toLocaleString()}</TableCell>
-                    <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    <TableCell>{request.approved_by || '-'}</TableCell>
+                    <TableCell>{format(new Date(request.daterequested || request.created_at), 'MMM dd, yyyy')}</TableCell>
+                    <TableCell className="font-medium">
+                      {request.details?.request_type || 'Field Financing'}
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">{request.description}</TableCell>
+                    <TableCell>UGX {request.amount.toLocaleString()}</TableCell>
+                    <TableCell>{getStatusBadge(request)}</TableCell>
+                    <TableCell className="text-xs">{getApprovalDetails(request)}</TableCell>
                   </TableRow>
                 ))
               )}
