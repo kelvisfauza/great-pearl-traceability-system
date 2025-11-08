@@ -6,7 +6,8 @@ import { FarmerManagement } from '@/components/field/FarmerManagement';
 import { FieldPurchaseForm } from '@/components/field/FieldPurchaseForm';
 import { DailyReportForm } from '@/components/field/DailyReportForm';
 import { AttendanceCheckIn } from '@/components/field/AttendanceCheckIn';
-import { LayoutDashboard, Users, ShoppingCart, ClipboardList, MapPin } from 'lucide-react';
+import { LayoutDashboard, Users, ShoppingCart, ClipboardList, MapPin, DollarSign } from 'lucide-react';
+import { FieldFinancing } from '@/components/field/FieldFinancing';
 
 const FieldOperations = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -26,7 +27,7 @@ const FieldOperations = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4" />
               Dashboard
@@ -38,6 +39,10 @@ const FieldOperations = () => {
             <TabsTrigger value="purchase" className="flex items-center gap-2">
               <ShoppingCart className="h-4 w-4" />
               Purchase
+            </TabsTrigger>
+            <TabsTrigger value="financing" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Financing
             </TabsTrigger>
             <TabsTrigger value="report" className="flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
@@ -59,6 +64,10 @@ const FieldOperations = () => {
 
           <TabsContent value="purchase" className="space-y-6">
             <FieldPurchaseForm />
+          </TabsContent>
+
+          <TabsContent value="financing" className="space-y-6">
+            <FieldFinancing />
           </TabsContent>
 
           <TabsContent value="report" className="space-y-6">
