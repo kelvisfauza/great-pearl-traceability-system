@@ -102,6 +102,7 @@ export const useFieldOperationsData = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Fetching field operations data...');
 
       const [farmersRes, purchasesRes, reportsRes, facilitationRes, attendanceRes] = await Promise.all([
         supabase.from('farmer_profiles').select('*').order('created_at', { ascending: false }),
@@ -113,16 +114,48 @@ export const useFieldOperationsData = () => {
         supabase.from('field_attendance_logs').select('*').order('date', { ascending: false })
       ]);
 
-      if (farmersRes.data) setFarmers(farmersRes.data);
-      if (purchasesRes.data) setPurchases(purchasesRes.data);
-      if (reportsRes.data) setDailyReports(reportsRes.data);
-      if (facilitationRes.data) setFacilitationRequests(facilitationRes.data);
-      if (attendanceRes.data) setAttendanceLogs(attendanceRes.data);
+      // Check for errors in any response
+      if (farmersRes.error) {
+        console.error('❌ Farmers fetch error:', farmersRes.error);
+        throw new Error(`Farmers: ${farmersRes.error.message}`);
+      }
+      if (purchasesRes.error) {
+        console.error('❌ Purchases fetch error:', purchasesRes.error);
+        throw new Error(`Purchases: ${purchasesRes.error.message}`);
+      }
+      if (reportsRes.error) {
+        console.error('❌ Reports fetch error:', reportsRes.error);
+        throw new Error(`Reports: ${reportsRes.error.message}`);
+      }
+      if (facilitationRes.error) {
+        console.error('❌ Facilitation fetch error:', facilitationRes.error);
+        throw new Error(`Facilitation: ${facilitationRes.error.message}`);
+      }
+      if (attendanceRes.error) {
+        console.error('❌ Attendance fetch error:', attendanceRes.error);
+        throw new Error(`Attendance: ${attendanceRes.error.message}`);
+      }
+
+      // Set the data
+      setFarmers(farmersRes.data || []);
+      setPurchases(purchasesRes.data || []);
+      setDailyReports(reportsRes.data || []);
+      setFacilitationRequests(facilitationRes.data || []);
+      setAttendanceLogs(attendanceRes.data || []);
+
+      console.log('✅ Field operations data loaded:', {
+        farmers: farmersRes.data?.length || 0,
+        purchases: purchasesRes.data?.length || 0,
+        reports: reportsRes.data?.length || 0,
+        facilitation: facilitationRes.data?.length || 0,
+        attendance: attendanceRes.data?.length || 0
+      });
 
     } catch (error: any) {
+      console.error('❌ Field operations fetch error:', error);
       toast({
-        title: 'Error',
-        description: error.message,
+        title: 'Error Loading Field Operations Data',
+        description: error.message || 'Failed to load field data. Please check your permissions.',
         variant: 'destructive'
       });
     } finally {

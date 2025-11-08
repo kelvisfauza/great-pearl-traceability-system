@@ -36,6 +36,23 @@ export const FieldOperationsManagement = () => {
     log => format(new Date(log.check_in_time), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
   ).length;
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-bold">Field Operations Management</h2>
+          <p className="text-muted-foreground">Monitor and manage all field activities</p>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center space-y-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">Loading field operations data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
