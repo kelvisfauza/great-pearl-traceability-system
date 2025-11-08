@@ -32,7 +32,7 @@ const Reports = () => {
       <div className="space-y-6">
         {/* Main Content Tabs - Lazy Load Components for Performance */}
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-12 gap-1 print:hidden">
+          <TabsList className="w-full flex flex-wrap gap-1 print:hidden">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
