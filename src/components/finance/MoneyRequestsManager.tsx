@@ -61,6 +61,15 @@ const MoneyRequestsManager = () => {
 
   const handleFinanceApproval = async (requestId: string, approve: boolean, rejectionReason?: string) => {
     try {
+      console.log('🔄 Finance Approval Handler:', { 
+        requestId, 
+        approve, 
+        rejectionReason,
+        employee: employee?.name,
+        employeeRole: employee?.role,
+        employeeEmail: employee?.email
+      });
+
       const updateData: any = {
         finance_approved_by: employee?.name || 'Finance Department',
         updated_at: new Date().toISOString()
@@ -69,48 +78,60 @@ const MoneyRequestsManager = () => {
       if (approve) {
         updateData.finance_approved_at = new Date().toISOString();
         updateData.approval_stage = 'finance_approved';
-        
-        toast({
-          title: "Request Approved",
-          description: "Money request approved and sent to Admin for final approval",
-        });
+        console.log('✅ Setting approval data:', updateData);
       } else {
         updateData.status = 'rejected';
         updateData.rejection_reason = rejectionReason || 'Rejected by Finance Department';
-        
-        toast({
-          title: "Request Rejected",
-          description: "Money request has been rejected",
-        });
+        console.log('❌ Setting rejection data:', updateData);
       }
 
-      const { error } = await supabase
+      console.log('📤 Attempting to update money_requests table...');
+      const { data, error } = await supabase
         .from('money_requests')
         .update(updateData)
-        .eq('id', requestId);
+        .eq('id', requestId)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database error:', error);
+        throw error;
+      }
+
+      console.log('✅ Update successful:', data);
+
+      toast({
+        title: approve ? "Request Approved" : "Request Rejected",
+        description: approve 
+          ? "Money request approved and sent to Admin for final approval"
+          : "Money request has been rejected",
+      });
 
       fetchRequests();
     } catch (error: any) {
-      console.error('Error processing request:', error);
+      console.error('❌ Error processing request:', error);
       toast({
         title: "Error",
-        description: "Failed to process request",
+        description: error.message || "Failed to process request",
         variant: "destructive"
       });
     }
   };
 
   const handleRejectClick = (requestId: string) => {
+    console.log('🔴 Reject button clicked for request:', requestId);
     setRequestToReject(requestId);
     setRejectionModalOpen(true);
   };
 
   const handleConfirmRejection = async (reason: string, comments?: string) => {
-    if (!requestToReject) return;
+    console.log('🔴 Confirm rejection called:', { requestToReject, reason, comments });
+    if (!requestToReject) {
+      console.error('❌ No request to reject!');
+      return;
+    }
     
     const fullReason = comments ? `${reason}\n\nComments: ${comments}` : reason;
+    console.log('🔴 Full rejection reason:', fullReason);
     await handleFinanceApproval(requestToReject, false, fullReason);
     
     setRejectionModalOpen(false);
