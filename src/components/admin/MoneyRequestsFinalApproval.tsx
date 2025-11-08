@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
+import { useSMSNotifications } from '@/hooks/useSMSNotifications';
 
 interface MoneyRequest {
   id: string;
@@ -37,6 +38,7 @@ const MoneyRequestsFinalApproval = () => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const { checkMoneyRequestEligibility, showSoDViolationWarning } = useSeparationOfDuties();
+  const { sendApprovalRequestSMS } = useSMSNotifications();
 
   const fetchRequests = async () => {
     try {
@@ -86,12 +88,51 @@ const MoneyRequestsFinalApproval = () => {
         updateData.rejection_reason = 'Rejected by Administrator';
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('money_requests')
         .update(updateData)
-        .eq('id', requestId);
+        .eq('id', requestId)
+        .select();
 
       if (error) throw error;
+
+      // Send SMS notification to requester
+      if (data && data.length > 0) {
+        const request = data[0];
+        
+        // Get requester details from employees table
+        const { data: requesterData } = await supabase
+          .from('employees')
+          .select('name, phone')
+          .eq('auth_user_id', request.user_id)
+          .single();
+        
+        if (requesterData?.phone) {
+          console.log('📱 Sending final approval SMS to requester:', requesterData.name);
+          
+          if (approve) {
+            // Notify final approval
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: requesterData.phone,
+                message: `Dear ${requesterData.name}, your money request of UGX ${request.amount.toLocaleString()} has been APPROVED by Admin. Payment will be processed shortly.`,
+                userName: requesterData.name,
+                messageType: 'money_request_final_approval'
+              }
+            });
+          } else {
+            // Notify rejection
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: requesterData.phone,
+                message: `Dear ${requesterData.name}, your money request of UGX ${request.amount.toLocaleString()} has been rejected by Admin.`,
+                userName: requesterData.name,
+                messageType: 'money_request_rejection'
+              }
+            });
+          }
+        }
+      }
 
       toast({
         title: approve ? "✓ Request Approved" : "Request Rejected",

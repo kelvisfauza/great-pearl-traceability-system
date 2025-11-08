@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
+import { useSMSNotifications } from '@/hooks/useSMSNotifications';
 
 interface MoneyRequest {
   id: string;
@@ -36,6 +37,7 @@ const MoneyRequestsManager = () => {
   const [requestToReject, setRequestToReject] = useState<string | null>(null);
   const { employee } = useAuth();
   const { toast } = useToast();
+  const { sendApprovalRequestSMS } = useSMSNotifications();
 
   const fetchRequests = async () => {
     try {
@@ -98,6 +100,43 @@ const MoneyRequestsManager = () => {
       }
 
       console.log('✅ Update successful:', data);
+
+      // Send SMS notification to requester
+      if (data && data.length > 0) {
+        const request = data[0];
+        
+        // Get requester details from employees table
+        const { data: requesterData } = await supabase
+          .from('employees')
+          .select('name, phone')
+          .eq('auth_user_id', request.user_id)
+          .single();
+        
+        if (requesterData?.phone) {
+          console.log('📱 Sending SMS to requester:', requesterData.name);
+          
+          if (approve) {
+            // Notify that finance approved and it's pending admin approval
+            await sendApprovalRequestSMS(
+              requesterData.name,
+              requesterData.phone,
+              request.amount,
+              'Finance Department',
+              'money request - Finance approved, pending Admin approval'
+            );
+          } else {
+            // Notify rejection
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: requesterData.phone,
+                message: `Dear ${requesterData.name}, your money request of UGX ${request.amount.toLocaleString()} has been rejected by Finance. Reason: ${rejectionReason || 'No reason provided'}`,
+                userName: requesterData.name,
+                messageType: 'money_request_rejection'
+              }
+            });
+          }
+        }
+      }
 
       toast({
         title: approve ? "Request Approved" : "Request Rejected",
