@@ -152,10 +152,48 @@ export const useFieldOperationsData = () => {
 
   const addPurchase = async (purchaseData: any) => {
     try {
-      const { error } = await supabase.from('field_purchases').insert([purchaseData]);
-      if (error) throw error;
+      // Generate batch number for store record
+      const batchNumber = `FLD-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Date.now().toString().slice(-6)}`;
       
-      toast({ title: 'Success', description: 'Purchase recorded successfully' });
+      // Insert field purchase
+      const { data: fieldPurchase, error: fieldError } = await supabase
+        .from('field_purchases')
+        .insert([{
+          ...purchaseData,
+          delivery_slip_generated: false,
+          status: 'pending_delivery'
+        }])
+        .select()
+        .single();
+      
+      if (fieldError) throw fieldError;
+
+      // Also create store record to track in inventory
+      const storeRecord = {
+        batch_number: batchNumber,
+        supplier_name: purchaseData.farmer_name || 'Field Purchase',
+        coffee_type: purchaseData.coffee_type,
+        kilograms: purchaseData.kgs_purchased,
+        bags: Math.ceil(purchaseData.kgs_purchased / 60), // Estimate bags
+        date: purchaseData.purchase_date || new Date().toISOString().split('T')[0],
+        status: 'pending',
+        created_by: `Field Operations - ${purchaseData.created_by}`
+      };
+
+      const { error: storeError } = await supabase
+        .from('coffee_records')
+        .insert([storeRecord]);
+      
+      if (storeError) {
+        console.error('Store record creation failed:', storeError);
+        // Don't throw - field purchase was successful
+      }
+      
+      toast({ 
+        title: 'Success', 
+        description: 'Purchase recorded in field and store inventory',
+        duration: 4000
+      });
       fetchData();
     } catch (error: any) {
       toast({
