@@ -2341,6 +2341,8 @@ export type Database = {
           reply_to_id: string | null
           sender_id: string | null
           sender_name: string | null
+          sms_notification_sent: boolean | null
+          sms_notification_sent_at: string | null
           type: string
           updated_at: string
         }
@@ -2354,6 +2356,8 @@ export type Database = {
           reply_to_id?: string | null
           sender_id?: string | null
           sender_name?: string | null
+          sms_notification_sent?: boolean | null
+          sms_notification_sent_at?: string | null
           type?: string
           updated_at?: string
         }
@@ -2367,6 +2371,8 @@ export type Database = {
           reply_to_id?: string | null
           sender_id?: string | null
           sender_name?: string | null
+          sms_notification_sent?: boolean | null
+          sms_notification_sent_at?: string | null
           type?: string
           updated_at?: string
         }
@@ -4655,6 +4661,7 @@ export type Database = {
       }
       can_perform_action: { Args: { action_type: string }; Returns: boolean }
       check_auth_user_exists: { Args: { user_uuid: string }; Returns: Json }
+      check_unread_messages_for_sms: { Args: never; Returns: undefined }
       cleanup_expired_verification_codes: { Args: never; Returns: undefined }
       cleanup_inactive_sessions: { Args: never; Returns: undefined }
       create_timothy_auth_account: { Args: never; Returns: Json }

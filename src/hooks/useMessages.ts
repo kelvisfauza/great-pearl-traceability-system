@@ -233,6 +233,13 @@ export const useMessages = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Get recipients of this conversation (excluding sender)
+      const { data: participants } = await supabase
+        .from('conversation_participants')
+        .select('user_id, last_read_at')
+        .eq('conversation_id', conversationId)
+        .neq('user_id', user.id);
+
       // Optimistically add message to UI
       const optimisticMessage: Message = {
         id: `temp-${Date.now()}`,
@@ -249,7 +256,7 @@ export const useMessages = () => {
       setMessages(prev => [...prev, optimisticMessage]);
 
       // Send to database
-      const { error } = await supabase
+      const { data: newMessage, error } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
@@ -258,9 +265,61 @@ export const useMessages = () => {
           content,
           type: 'text',
           reply_to_id: replyToId
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Check if this is the first unread message and send SMS notifications
+      if (participants && participants.length > 0) {
+        for (const participant of participants) {
+          // Check if participant has any unread messages before this one
+          const { data: unreadMessages } = await supabase
+            .from('messages')
+            .select('id')
+            .eq('conversation_id', conversationId)
+            .neq('sender_id', participant.user_id)
+            .is('read_at', null)
+            .lt('created_at', newMessage.created_at)
+            .limit(1);
+
+          // If no previous unread messages, this is the first - send SMS
+          const isFirstUnread = !unreadMessages || unreadMessages.length === 0;
+
+          if (isFirstUnread) {
+            // Get recipient's phone number and name
+            const { data: recipientEmployee } = await supabase
+              .from('employees')
+              .select('name, phone')
+              .eq('auth_user_id', participant.user_id)
+              .single();
+
+            if (recipientEmployee?.phone) {
+              console.log('📱 Sending first message SMS to:', recipientEmployee.name);
+              
+              // Send SMS notification
+              await supabase.functions.invoke('send-sms', {
+                body: {
+                  phone: recipientEmployee.phone,
+                  message: `Dear ${recipientEmployee.name}, you have a new chat from ${senderName || 'a colleague'}. Open app to read.`,
+                  userName: recipientEmployee.name,
+                  messageType: 'new_chat_message'
+                }
+              });
+
+              // Mark SMS as sent
+              await supabase
+                .from('messages')
+                .update({ 
+                  sms_notification_sent: true,
+                  sms_notification_sent_at: new Date().toISOString()
+                })
+                .eq('id', newMessage.id);
+            }
+          }
+        }
+      }
 
       // Update conversation's updated_at
       await supabase
@@ -286,6 +345,13 @@ export const useMessages = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
+
+      // Get recipients of this conversation (excluding sender)
+      const { data: participants } = await supabase
+        .from('conversation_participants')
+        .select('user_id, last_read_at')
+        .eq('conversation_id', conversationId)
+        .neq('user_id', user.id);
 
       // Upload file to storage
       const fileExt = file.name.split('.').pop();
@@ -323,7 +389,7 @@ export const useMessages = () => {
       setMessages(prev => [...prev, optimisticMessage]);
 
       // Insert message
-      const { error } = await supabase
+      const { data: newMessage, error } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
@@ -336,9 +402,61 @@ export const useMessages = () => {
             fileSize: file.size,
             mimeType: file.type
           }
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Check if this is the first unread message and send SMS notifications
+      if (participants && participants.length > 0) {
+        for (const participant of participants) {
+          // Check if participant has any unread messages before this one
+          const { data: unreadMessages } = await supabase
+            .from('messages')
+            .select('id')
+            .eq('conversation_id', conversationId)
+            .neq('sender_id', participant.user_id)
+            .is('read_at', null)
+            .lt('created_at', newMessage.created_at)
+            .limit(1);
+
+          // If no previous unread messages, this is the first - send SMS
+          const isFirstUnread = !unreadMessages || unreadMessages.length === 0;
+
+          if (isFirstUnread) {
+            // Get recipient's phone number and name
+            const { data: recipientEmployee } = await supabase
+              .from('employees')
+              .select('name, phone')
+              .eq('auth_user_id', participant.user_id)
+              .single();
+
+            if (recipientEmployee?.phone) {
+              console.log('📱 Sending first message SMS to:', recipientEmployee.name);
+              
+              // Send SMS notification
+              await supabase.functions.invoke('send-sms', {
+                body: {
+                  phone: recipientEmployee.phone,
+                  message: `Dear ${recipientEmployee.name}, you have a new chat from ${senderName || 'a colleague'}. Open app to read.`,
+                  userName: recipientEmployee.name,
+                  messageType: 'new_chat_message'
+                }
+              });
+
+              // Mark SMS as sent
+              await supabase
+                .from('messages')
+                .update({ 
+                  sms_notification_sent: true,
+                  sms_notification_sent_at: new Date().toISOString()
+                })
+                .eq('id', newMessage.id);
+            }
+          }
+        }
+      }
 
       // Update conversation's updated_at
       await supabase

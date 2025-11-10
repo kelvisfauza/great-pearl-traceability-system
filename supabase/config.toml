@@ -3,6 +3,9 @@ project_id = "pudfybkyfedeggmokhco"
 [functions.check-duplicate-expense]
 verify_jwt = false
 
+[functions.check-unread-messages]
+verify_jwt = false
+
 [api]
 enabled = true
 port = 54321
