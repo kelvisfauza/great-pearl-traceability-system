@@ -184,11 +184,11 @@ const Store = () => {
     }
   };
 
-  const handleSubmitRecord = async () => {
+  const handleSubmitRecord = async (keepOpen = false) => {
     if (!newRecord.coffeeType || !newRecord.supplierName || !newRecord.kilograms || !newRecord.bags || 
         Number(newRecord.kilograms) <= 0 || Number(newRecord.bags) <= 0) {
       toast.error("Please fill in all required fields");
-      return;
+      return false;
     }
 
     setSubmittingRecord(true);
@@ -209,8 +209,14 @@ const Store = () => {
         status: 'pending'
       });
       toast.success("Coffee record submitted successfully");
+      
+      if (!keepOpen) {
+        setShowAddRecordModal(false);
+      }
+      return true;
     } catch (error) {
       toast.error("Failed to submit coffee record");
+      return false;
     } finally {
       setSubmittingRecord(false);
     }
@@ -1192,17 +1198,21 @@ const Store = () => {
                 Cancel
               </Button>
               <Button 
-                onClick={async () => {
-                  await handleSubmitRecord();
-                  if (!submittingRecord) {
-                    setShowAddRecordModal(false);
-                  }
-                }}
+                variant="outline"
+                onClick={() => handleSubmitRecord(true)}
                 disabled={submittingRecord}
                 className="text-xs sm:text-sm w-full xs:w-auto"
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                {submittingRecord ? "Saving..." : "Add Coffee Record"}
+                {submittingRecord ? "Saving..." : "Save & Add Another"}
+              </Button>
+              <Button 
+                onClick={() => handleSubmitRecord(false)}
+                disabled={submittingRecord}
+                className="text-xs sm:text-sm w-full xs:w-auto"
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                {submittingRecord ? "Saving..." : "Save & Close"}
               </Button>
             </DialogFooter>
           </DialogContent>
