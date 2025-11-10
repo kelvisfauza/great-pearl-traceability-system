@@ -36,12 +36,18 @@ const ComparisonReport = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [comparisonType, setComparisonType] = useState<ComparisonType>("purchases-vs-sales");
-  const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  // Default to last 3 months for better data visibility
+  const [startDate, setStartDate] = useState<Date>(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 3);
+    return date;
+  });
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
   const [insights, setInsights] = useState<string>("");
   const [loadingInsights, setLoadingInsights] = useState(false);
+  const [dataSource, setDataSource] = useState<"transactions" | "store_reports">("store_reports");
 
   const comparisonOptions = [
     { value: "purchases-vs-sales", label: "Purchases vs Sales" },
@@ -56,7 +62,7 @@ const ComparisonReport = () => {
     if (startDate && endDate) {
       fetchComparisonData();
     }
-  }, [comparisonType, startDate, endDate]);
+  }, [comparisonType, startDate, endDate, dataSource]);
 
   useEffect(() => {
     if (comparisonData) {
@@ -168,31 +174,52 @@ const ComparisonReport = () => {
   };
 
   const fetchPurchasesVsSales = async (): Promise<ComparisonData> => {
-    // Fetch purchases from coffee_records
-    const { data: purchases } = await supabase
-      .from('coffee_records')
-      .select('kilograms')
-      .gte('date', startDate.toISOString())
-      .lte('date', endDate.toISOString());
+    let totalPurchases = 0;
+    let totalSales = 0;
+    let purchaseSource = "";
+    let salesSource = "";
 
-    const totalPurchases = purchases?.reduce((sum, p) => sum + (p.kilograms || 0), 0) || 0;
+    if (dataSource === "store_reports") {
+      // Fetch from store_reports table (more comprehensive)
+      const { data: reports } = await supabase
+        .from('store_reports')
+        .select('kilograms_bought, kilograms_sold')
+        .gte('date', startDate.toISOString().split('T')[0])
+        .lte('date', endDate.toISOString().split('T')[0]);
 
-    // Fetch sales from sales_transactions
-    const { data: sales } = await supabase
-      .from('sales_transactions')
-      .select('weight')
-      .gte('date', startDate.toISOString())
-      .lte('date', endDate.toISOString());
+      totalPurchases = reports?.reduce((sum, r) => sum + (r.kilograms_bought || 0), 0) || 0;
+      totalSales = reports?.reduce((sum, r) => sum + (r.kilograms_sold || 0), 0) || 0;
+      purchaseSource = " (Store Reports)";
+      salesSource = " (Store Reports)";
+    } else {
+      // Fetch purchases from coffee_records
+      const { data: purchases } = await supabase
+        .from('coffee_records')
+        .select('kilograms')
+        .gte('date', startDate.toISOString().split('T')[0])
+        .lte('date', endDate.toISOString().split('T')[0]);
 
-    const totalSales = sales?.reduce((sum, s) => sum + (s.weight || 0), 0) || 0;
+      totalPurchases = purchases?.reduce((sum, p) => sum + (p.kilograms || 0), 0) || 0;
+      purchaseSource = " (Assessed Coffee)";
+
+      // Fetch sales from sales_transactions
+      const { data: sales } = await supabase
+        .from('sales_transactions')
+        .select('weight')
+        .gte('date', startDate.toISOString().split('T')[0])
+        .lte('date', endDate.toISOString().split('T')[0]);
+
+      totalSales = sales?.reduce((sum, s) => sum + (s.weight || 0), 0) || 0;
+      salesSource = " (Sales Transactions)";
+    }
 
     const difference = totalPurchases - totalSales;
     const percentageDiff = totalPurchases > 0 ? (difference / totalPurchases) * 100 : 0;
 
     return {
-      metric1Name: "Total Purchases (kg)",
+      metric1Name: `Total Purchases${purchaseSource} (kg)`,
       metric1Value: totalPurchases,
-      metric2Name: "Total Sales (kg)",
+      metric2Name: `Total Sales${salesSource} (kg)`,
       metric2Value: totalSales,
       difference,
       percentageDiff,
@@ -486,7 +513,7 @@ const ComparisonReport = () => {
             <CardDescription>Select comparison type and date range</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Comparison Type</label>
                 <Select value={comparisonType} onValueChange={(value) => setComparisonType(value as ComparisonType)}>
@@ -499,6 +526,19 @@ const ComparisonReport = () => {
                         {option.label}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Data Source</label>
+                <Select value={dataSource} onValueChange={(value) => setDataSource(value as "transactions" | "store_reports")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="store_reports">Store Reports (Comprehensive)</SelectItem>
+                    <SelectItem value="transactions">Individual Transactions</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -541,6 +581,31 @@ const ComparisonReport = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Data Source Info */}
+        {comparisonType === "purchases-vs-sales" && (
+          <Card className="bg-muted/50">
+            <CardContent className="pt-6">
+              <div className="text-sm space-y-2">
+                <p className="font-medium">📊 Data Source Information:</p>
+                {dataSource === "store_reports" ? (
+                  <p className="text-muted-foreground">
+                    <strong>Store Reports (Comprehensive):</strong> Uses daily store reports which aggregate all purchases and sales. 
+                    This includes all transactions and provides the most complete picture of inventory movement.
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    <strong>Individual Transactions:</strong> Uses individual records from assessed coffee (coffee_records) and sales transactions (sales_transactions). 
+                    This may show fewer numbers if not all transactions have been recorded in these tables.
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  💡 Tip: For the most accurate comparison, use "Store Reports (Comprehensive)" as it includes all documented transactions.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Results Section */}
         {loading ? (
