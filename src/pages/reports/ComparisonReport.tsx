@@ -40,6 +40,8 @@ const ComparisonReport = () => {
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
+  const [insights, setInsights] = useState<string>("");
+  const [loadingInsights, setLoadingInsights] = useState(false);
 
   const comparisonOptions = [
     { value: "purchases-vs-sales", label: "Purchases vs Sales" },
@@ -56,8 +58,15 @@ const ComparisonReport = () => {
     }
   }, [comparisonType, startDate, endDate]);
 
+  useEffect(() => {
+    if (comparisonData) {
+      generateInsights();
+    }
+  }, [comparisonData]);
+
   const fetchComparisonData = async () => {
     setLoading(true);
+    setInsights(""); // Clear previous insights
     try {
       let data: ComparisonData | null = null;
 
@@ -92,6 +101,45 @@ const ComparisonReport = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateInsights = async () => {
+    if (!comparisonData) return;
+    
+    setLoadingInsights(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-comparison-insights', {
+        body: {
+          comparisonType: getComparisonLabel(),
+          metric1Name: comparisonData.metric1Name,
+          metric1Value: comparisonData.metric1Value,
+          metric2Name: comparisonData.metric2Name,
+          metric2Value: comparisonData.metric2Value,
+          difference: comparisonData.difference,
+          percentageDiff: comparisonData.percentageDiff,
+          startDate: format(startDate, "PPP"),
+          endDate: format(endDate, "PPP")
+        }
+      });
+
+      if (error) {
+        console.error("Error generating insights:", error);
+        toast({
+          title: "Notice",
+          description: "Could not generate detailed insights",
+          variant: "default"
+        });
+        return;
+      }
+
+      if (data?.insights) {
+        setInsights(data.insights);
+      }
+    } catch (error) {
+      console.error("Error generating insights:", error);
+    } finally {
+      setLoadingInsights(false);
     }
   };
 
@@ -363,6 +411,15 @@ const ComparisonReport = () => {
               </div>
             </div>
 
+            {insights && (
+              <div className="border-t pt-4 mt-4">
+                <h4 className="font-semibold mb-3">Business Analysis</h4>
+                <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {insights}
+                </div>
+              </div>
+            )}
+
             <div className="mt-8 pt-4 border-t text-center text-sm text-gray-600">
               <p>Generated on {format(new Date(), "PPP 'at' pp")}</p>
               <p className="mt-2">This is a computer-generated report. No signature is required.</p>
@@ -521,6 +578,30 @@ const ComparisonReport = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {loadingInsights && (
+              <Card className="md:col-span-2">
+                <CardContent className="py-8 text-center">
+                  <p className="text-muted-foreground">Analyzing data and generating insights...</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {insights && !loadingInsights && (
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Business Analysis & Breakdown</CardTitle>
+                  <CardDescription>Detailed insights and recommendations</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none">
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+                      {insights}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         ) : null}
         </div>

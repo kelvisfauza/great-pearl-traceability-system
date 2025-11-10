@@ -76,3 +76,6 @@ verify_jwt = true
 
 [functions.generate-risk-assessment]
 verify_jwt = false
+
+[functions.generate-comparison-insights]
+verify_jwt = false
