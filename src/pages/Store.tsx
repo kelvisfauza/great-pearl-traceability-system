@@ -317,7 +317,7 @@ const Store = () => {
   };
 
   const handlePrintAllRecords = () => {
-    const printContent = coffeeRecords.map(record => {
+    const printContent = filteredRecords.map(record => {
       const qualityAssessment = qualityAssessments.find(qa => qa.batch_number === record.batchNumber);
       return {
         ...record,
@@ -330,15 +330,23 @@ const Store = () => {
     const printWindow = window.open('', '', 'width=1200,height=800');
     if (!printWindow) return;
 
+    const filterDateFormatted = new Date(selectedDate).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>All Coffee Records - Great Pearl Coffee Factory</title>
+          <title>Coffee Records - ${filterDateFormatted} - Great Pearl Coffee Factory</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
             .header { text-align: center; margin-bottom: 30px; }
             .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+            .report-date { font-size: 14px; color: #666; margin-bottom: 5px; }
+            .filter-date { font-size: 16px; font-weight: bold; margin-top: 10px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
             th { background-color: #f5f5f5; font-weight: bold; }
@@ -348,7 +356,8 @@ const Store = () => {
         <body>
           <div class="header">
             <div class="company-name">GREAT PEARL COFFEE FACTORY</div>
-            <div>Coffee Records Report - ${new Date().toLocaleDateString()}</div>
+            <div class="report-date">Coffee Records Report - Generated on ${new Date().toLocaleDateString()}</div>
+            <div class="filter-date">Records for: ${filterDateFormatted}</div>
           </div>
           <table>
             <thead>
@@ -489,11 +498,11 @@ const Store = () => {
                       variant="outline" 
                       size="sm"
                       onClick={handlePrintAllRecords}
-                      disabled={coffeeRecords.length === 0}
+                      disabled={filteredRecords.length === 0}
                       className="text-xs sm:text-sm"
                     >
                       <Printer className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      Print All Records
+                      Print Records
                     </Button>
                   </div>
                 </div>
