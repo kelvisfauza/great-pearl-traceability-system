@@ -49,6 +49,13 @@ const Reports = () => {
       color: "text-red-600"
     },
     {
+      title: "Comparison Reports",
+      description: "Compare metrics and identify trends",
+      icon: BarChart3,
+      path: "/reports/comparison",
+      color: "text-teal-600"
+    },
+    {
       title: "Store Reports",
       description: "Inventory and store management",
       icon: Store,

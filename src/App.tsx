@@ -40,6 +40,7 @@ import SalesReports from "./pages/reports/SalesReports";
 import AnalyticsReport from "./pages/reports/AnalyticsReport";
 import GenerateReport from "./pages/reports/GenerateReport";
 import FieldOperationsReport from "./pages/reports/FieldOperationsReport";
+import ComparisonReport from "./pages/reports/ComparisonReport";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 import { OvertimeNotification } from "./components/OvertimeNotification";
 import RoleNotificationHandler from "./components/RoleNotificationHandler";
@@ -232,6 +233,11 @@ const App: React.ComponentType = () => {
                 <Route path="/reports/field-operations" element={
                   <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <FieldOperationsReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/comparison" element={
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
+                    <ComparisonReport />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFound />} />
