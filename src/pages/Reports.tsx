@@ -1,29 +1,92 @@
 
 import Layout from "@/components/Layout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import KeyMetrics from "@/components/reports/KeyMetrics";
-import ReportGenerator from "@/components/reports/ReportGenerator";
-import PrintReportGenerator from "@/components/reports/PrintReportGenerator";
-import StorePrintReportGenerator from "@/components/reports/StorePrintReportGenerator";
-import PerformanceDashboard from "@/components/reports/PerformanceDashboard";
-import RecentReports from "@/components/reports/RecentReports";
-import StoreReportForm from "@/components/reports/StoreReportForm";
-import StoreReportsList from "@/components/reports/StoreReportsList";
-import SalesReportsList from "@/components/reports/SalesReportsList";
-import DayBook from "@/components/reports/DayBook";
-import MonthlyReconciliation from "@/components/reports/MonthlyReconciliation";
-import { ExpensesReport } from "@/components/reports/ExpensesReport";
-import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
-import FinanceMonthlyReport from "@/components/reports/FinanceMonthlyReport";
-import RiskAssessmentReport from "@/components/reports/RiskAssessmentReport";
-import { FieldOperationsManagement } from "@/components/admin/FieldOperationsManagement";
 import { useAuth } from "@/contexts/AuthContext";
-import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight } from "lucide-react";
+import KeyMetrics from "@/components/reports/KeyMetrics";
+import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
 
 const Reports = () => {
   const { employee } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = employee?.role === 'Administrator' || employee?.role === 'Super Admin';
+
+  const reportCards = [
+    {
+      title: "Finance Report",
+      description: "Monthly financial overview and analysis",
+      icon: Wallet,
+      path: "/reports/finance",
+      color: "text-blue-600"
+    },
+    {
+      title: "Day Book",
+      description: "Daily transaction records",
+      icon: BookOpen,
+      path: "/reports/daybook",
+      color: "text-green-600"
+    },
+    {
+      title: "Expenses",
+      description: "Track and analyze expenses",
+      icon: Receipt,
+      path: "/reports/expenses",
+      color: "text-orange-600"
+    },
+    {
+      title: "Reconciliation",
+      description: "Monthly account reconciliation",
+      icon: Calculator,
+      path: "/reports/reconciliation",
+      color: "text-purple-600"
+    },
+    {
+      title: "Risk Assessment",
+      description: "AI-powered risk analysis",
+      icon: AlertTriangle,
+      path: "/reports/risk",
+      color: "text-red-600"
+    },
+    {
+      title: "Store Reports",
+      description: "Inventory and store management",
+      icon: Store,
+      path: "/reports/store",
+      color: "text-indigo-600"
+    },
+    {
+      title: "Sales Reports",
+      description: "Sales performance and trends",
+      icon: ShoppingCart,
+      path: "/reports/sales",
+      color: "text-pink-600"
+    },
+    {
+      title: "Performance Analytics",
+      description: "Business performance metrics",
+      icon: TrendingUp,
+      path: "/reports/analytics",
+      color: "text-cyan-600"
+    },
+    {
+      title: "Report Generator",
+      description: "Create custom reports",
+      icon: FileText,
+      path: "/reports/generator",
+      color: "text-violet-600"
+    }
+  ];
+
+  if (isAdmin) {
+    reportCards.push({
+      title: "Field Operations",
+      description: "Manage field operations",
+      icon: MapPin,
+      path: "/reports/field-operations",
+      color: "text-emerald-600"
+    });
+  }
 
   return (
     <Layout 
@@ -40,211 +103,37 @@ const Reports = () => {
           <KeyMetrics />
         </div>
 
-        {/* Main Reports Section */}
-        <Tabs defaultValue="financial" className="space-y-6">
-          <TabsList className="grid grid-cols-2 lg:grid-cols-5 gap-2 h-auto bg-muted/50 p-1">
-            <TabsTrigger value="financial" className="data-[state=active]:bg-background">
-              <Wallet className="h-4 w-4 mr-2" />
-              Financial
-            </TabsTrigger>
-            <TabsTrigger value="operations" className="data-[state=active]:bg-background">
-              <Store className="h-4 w-4 mr-2" />
-              Operations
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-background">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="generate" className="data-[state=active]:bg-background">
-              <FileText className="h-4 w-4 mr-2" />
-              Generate
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="admin" className="data-[state=active]:bg-background">
-                <MapPin className="h-4 w-4 mr-2" />
-                Admin
-              </TabsTrigger>
-            )}
-          </TabsList>
-
-          {/* Financial Reports Tab */}
-          <TabsContent value="financial" className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Wallet className="h-5 w-5 text-primary" />
-                    Finance Report
-                  </CardTitle>
-                  <CardDescription>Monthly financial overview and analysis</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <FinanceMonthlyReport />
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                    Day Book
-                  </CardTitle>
-                  <CardDescription>Daily transaction records</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <DayBook />
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Receipt className="h-5 w-5 text-primary" />
-                    Expenses
-                  </CardTitle>
-                  <CardDescription>Track and analyze expenses</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ExpensesReport />
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calculator className="h-5 w-5 text-primary" />
-                    Reconciliation
-                  </CardTitle>
-                  <CardDescription>Monthly account reconciliation</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <MonthlyReconciliation />
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                  Risk Assessment
-                </CardTitle>
-                <CardDescription>AI-powered risk analysis and insights</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RiskAssessmentReport />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Operations Tab */}
-          <TabsContent value="operations" className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Store className="h-5 w-5 text-primary" />
-                    Store Reports
-                  </CardTitle>
-                  <CardDescription>Inventory and store management</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <StoreReportForm />
-                  <StorePrintReportGenerator />
-                  <StoreReportsList />
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5 text-primary" />
-                    Sales Reports
-                  </CardTitle>
-                  <CardDescription>Sales performance and trends</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <SalesReportsList />
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  Performance Analytics
-                </CardTitle>
-                <CardDescription>Business performance metrics and trends</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PerformanceDashboard />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Generate Reports Tab */}
-          <TabsContent value="generate" className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Report Generator
-                  </CardTitle>
-                  <CardDescription>Create custom reports</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ReportGenerator />
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-primary" />
-                    Print Reports
-                  </CardTitle>
-                  <CardDescription>Print-ready report formats</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <PrintReportGenerator />
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle>Recent Reports</CardTitle>
-                <CardDescription>View and manage generated reports</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RecentReports />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Admin Tab */}
-          {isAdmin && (
-            <TabsContent value="admin" className="space-y-6">
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    Field Operations
-                  </CardTitle>
-                  <CardDescription>Manage field operations and reports</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <FieldOperationsManagement />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
-        </Tabs>
+        {/* Report Categories */}
+        <div>
+          <h2 className="text-2xl font-semibold text-foreground mb-6">Report Categories</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {reportCards.map((report) => {
+              const Icon = report.icon;
+              return (
+                <Card 
+                  key={report.path}
+                  className="cursor-pointer hover:shadow-lg transition-all hover:scale-105 group"
+                  onClick={() => navigate(report.path)}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Icon className={`h-6 w-6 ${report.color}`} />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg">{report.title}</CardTitle>
+                        </div>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                    </div>
+                    <CardDescription className="mt-2">{report.description}</CardDescription>
+                  </CardHeader>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </Layout>
   );

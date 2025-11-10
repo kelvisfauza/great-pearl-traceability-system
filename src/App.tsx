@@ -30,6 +30,16 @@ import PermissionManagement from "./pages/PermissionManagement";
 import Expenses from "./pages/Expenses";
 import EURDocumentationPage from "./pages/EUDRDocumentation";
 import Suppliers from "./pages/Suppliers";
+import FinanceReport from "./pages/reports/FinanceReport";
+import DayBookReport from "./pages/reports/DayBookReport";
+import ExpensesReport from "./pages/reports/ExpensesReport";
+import ReconciliationReport from "./pages/reports/ReconciliationReport";
+import RiskReport from "./pages/reports/RiskReport";
+import StoreReports from "./pages/reports/StoreReports";
+import SalesReports from "./pages/reports/SalesReports";
+import AnalyticsReport from "./pages/reports/AnalyticsReport";
+import GenerateReport from "./pages/reports/GenerateReport";
+import FieldOperationsReport from "./pages/reports/FieldOperationsReport";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 import { OvertimeNotification } from "./components/OvertimeNotification";
 import RoleNotificationHandler from "./components/RoleNotificationHandler";
@@ -172,6 +182,56 @@ const App: React.ComponentType = () => {
                 <Route path="/suppliers" element={
                   <ProtectedRoute>
                     <Suppliers />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/finance" element={
+                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                    <FinanceReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/daybook" element={
+                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                    <DayBookReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/expenses" element={
+                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                    <ExpensesReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/reconciliation" element={
+                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                    <ReconciliationReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/risk" element={
+                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                    <RiskReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/store" element={
+                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                    <StoreReports />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/sales" element={
+                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                    <SalesReports />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/analytics" element={
+                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                    <AnalyticsReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/generator" element={
+                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                    <GenerateReport />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/field-operations" element={
+                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                    <FieldOperationsReport />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFound />} />
