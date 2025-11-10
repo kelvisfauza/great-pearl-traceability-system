@@ -44,11 +44,9 @@ const ComparisonReport = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [comparisonType, setComparisonType] = useState<ComparisonType>("purchases-vs-sales");
-  // Default to last 3 months for better data visibility
+  // Default to all available data (from August 2025) to match Store Reports page
   const [startDate, setStartDate] = useState<Date>(() => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - 3);
-    return date;
+    return new Date('2025-08-01'); // Start from when data collection began
   });
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
@@ -709,10 +707,22 @@ const ComparisonReport = () => {
               <div className="text-sm space-y-2">
                 <p className="font-medium">📊 Data Source Information:</p>
                 {dataSource === "store_reports" ? (
-                  <p className="text-muted-foreground">
-                    <strong>Store Reports (Comprehensive):</strong> Uses daily store reports which aggregate all purchases and sales. 
-                    This includes all transactions and provides the most complete picture of inventory movement.
-                  </p>
+                  <>
+                    <p className="text-muted-foreground">
+                      <strong>Store Reports (Comprehensive):</strong> Uses daily store reports which aggregate all purchases and sales. 
+                      This includes all transactions and provides the most complete picture of inventory movement.
+                    </p>
+                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded">
+                      <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">📅 Date Range Being Compared:</p>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        {format(startDate, "PPP")} to {format(endDate, "PPP")}
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                        ℹ️ To match with Store Reports page totals, make sure the date range matches. 
+                        Store Reports page shows filtered data based on your selection there.
+                      </p>
+                    </div>
+                  </>
                 ) : (
                   <p className="text-muted-foreground">
                     <strong>Individual Transactions:</strong> Uses individual records from assessed coffee (coffee_records) and sales transactions (sales_transactions). 
