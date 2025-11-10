@@ -20,7 +20,8 @@ import {
   Phone,
   MapPin,
   Edit,
-  Download
+  Download,
+  Printer
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useSuppliers } from "@/hooks/useSuppliers";
@@ -384,6 +385,143 @@ const Suppliers = () => {
     }
   });
 
+  const handlePrintSupplierStatement = () => {
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat('en-UG', {
+        style: 'currency',
+        currency: 'UGX',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount);
+    };
+
+    const dateRangeText = dateFrom || dateTo 
+      ? `From ${dateFrom || 'Beginning'} to ${dateTo || 'Present'}`
+      : 'All Transactions';
+
+    const printWindow = window.open('', '', 'width=1200,height=800');
+    if (!printWindow) return;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Supplier Statement - ${selectedSupplier.name}</title>
+          <style>
+            ${getStandardPrintStyles()}
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .supplier-info { margin: 20px 0; padding: 15px; background: #f9f9f9; border-left: 4px solid #333; }
+            .supplier-info h3 { margin: 0 0 10px 0; font-size: 18px; }
+            .supplier-info p { margin: 5px 0; }
+            .summary-section { margin: 20px 0; padding: 15px; background: #f0f0f0; }
+            .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+            .summary-item { padding: 10px; background: white; border-radius: 4px; }
+            .summary-item label { font-weight: bold; display: block; margin-bottom: 5px; }
+            .summary-item value { font-size: 18px; color: #333; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11px; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            .text-right { text-align: right; }
+            .filter-info { margin: 15px 0; padding: 10px; background: #e8f5e9; border-radius: 4px; }
+            @media print {
+              body { padding: 10px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
+            <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Logo" style="height: 60px; margin-bottom: 10px;" />
+            <h1 style="margin: 10px 0; font-size: 22px;">GREAT PEARL COFFEE FACTORY</h1>
+            <p style="margin: 5px 0;">Specialty Coffee Processing & Export</p>
+            <p style="margin: 5px 0;">+256781121639 / +256778536681</p>
+            <p style="margin: 5px 0;">www.greatpearlcoffee.com | greatpearlcoffee@gmail.com</p>
+            <h2 style="margin-top: 15px; font-size: 18px;">SUPPLIER STATEMENT</h2>
+            <p>Generated: ${new Date().toLocaleDateString('en-GB')} at ${new Date().toLocaleTimeString('en-GB')}</p>
+          </div>
+
+          <div class="supplier-info">
+            <h3>Supplier Information</h3>
+            <p><strong>Name:</strong> ${selectedSupplier.name}</p>
+            <p><strong>Code:</strong> ${selectedSupplier.code}</p>
+            <p><strong>Phone:</strong> ${selectedSupplier.phone || 'N/A'}</p>
+            <p><strong>Origin:</strong> ${selectedSupplier.origin}</p>
+          </div>
+
+          <div class="filter-info">
+            <strong>Filter Applied:</strong> ${dateRangeText}
+            ${coffeeTypeFilter !== 'all' ? ` | Coffee Type: ${coffeeTypeFilter}` : ''}
+            ${statusFilter !== 'all' ? ` | Status: ${statusFilter}` : ''}
+          </div>
+
+          <div class="summary-section">
+            <h3 style="margin: 0 0 15px 0;">Summary</h3>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <label>Total Kilograms:</label>
+                <value>${supplierStats.totalKilograms.toLocaleString()} kg</value>
+              </div>
+              <div class="summary-item">
+                <label>Total Bags:</label>
+                <value>${supplierStats.totalBags.toLocaleString()}</value>
+              </div>
+              <div class="summary-item">
+                <label>Total Transactions:</label>
+                <value>${supplierStats.totalTransactions}</value>
+              </div>
+              <div class="summary-item">
+                <label>Total Payments:</label>
+                <value>${formatCurrency(supplierStats.totalPayments)}</value>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="margin: 20px 0 10px 0;">Transaction History</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Batch Number</th>
+                <th>Coffee Type</th>
+                <th class="text-right">Kilograms</th>
+                <th class="text-right">Bags</th>
+                <th>Status</th>
+                <th class="text-right">Payment Amount</th>
+                <th>Payment Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredTransactions.map(t => `
+                <tr>
+                  <td>${new Date(t.date).toLocaleDateString('en-GB')}</td>
+                  <td>${t.batch_number}</td>
+                  <td>${t.coffee_type}</td>
+                  <td class="text-right">${t.kilograms.toLocaleString()}</td>
+                  <td class="text-right">${t.bags}</td>
+                  <td>${t.status}</td>
+                  <td class="text-right">${t.payment_amount ? formatCurrency(t.payment_amount) : '-'}</td>
+                  <td>${t.payment_status || 'No Payment'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <p style="text-align: center; color: #666; font-size: 11px;">
+              This is a computer-generated statement and does not require a signature.
+            </p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   if (suppliersLoading) {
     return (
       <Layout>
@@ -453,10 +591,20 @@ const Suppliers = () => {
               </Button>
             )}
             {selectedSupplier && (
-              <Button variant="outline" onClick={() => setSelectedSupplier(null)}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to List
-              </Button>
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={handlePrintSupplierStatement}
+                  disabled={filteredTransactions.length === 0}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print Statement
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedSupplier(null)}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to List
+                </Button>
+              </>
             )}
           </div>
         </div>
