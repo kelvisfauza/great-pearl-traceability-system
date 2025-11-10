@@ -20,7 +20,8 @@ type ComparisonType =
   | "eudr-vs-purchases"
   | "expenses-vs-revenue"
   | "field-operations-vs-purchases"
-  | "milling-vs-sales";
+  | "milling-vs-sales"
+  | "data-reconciliation";
 
 interface ComparisonData {
   metric1Name: string;
@@ -30,6 +31,13 @@ interface ComparisonData {
   difference: number;
   percentageDiff: number;
   trend: "up" | "down" | "neutral";
+  breakdown?: Array<{
+    date: string;
+    metric1: number;
+    metric2: number;
+    difference: number;
+    issue?: string;
+  }>;
 }
 
 const ComparisonReport = () => {
@@ -51,6 +59,7 @@ const ComparisonReport = () => {
 
   const comparisonOptions = [
     { value: "purchases-vs-sales", label: "Purchases vs Sales" },
+    { value: "data-reconciliation", label: "🔍 Data Reconciliation (Find Issues)" },
     { value: "quality-vs-purchases", label: "Quality Assessments vs Purchases" },
     { value: "eudr-vs-purchases", label: "EUDR Documentation vs Purchases" },
     { value: "expenses-vs-revenue", label: "Expenses vs Revenue" },
@@ -79,6 +88,9 @@ const ComparisonReport = () => {
       switch (comparisonType) {
         case "purchases-vs-sales":
           data = await fetchPurchasesVsSales();
+          break;
+        case "data-reconciliation":
+          data = await fetchDataReconciliation();
           break;
         case "quality-vs-purchases":
           data = await fetchQualityVsPurchases();
@@ -385,6 +397,112 @@ const ComparisonReport = () => {
     };
   };
 
+  const fetchDataReconciliation = async (): Promise<ComparisonData> => {
+    // Fetch coffee_records (actual transactions) by date
+    const { data: coffeeRecords } = await supabase
+      .from('coffee_records')
+      .select('date, kilograms')
+      .gte('date', startDate.toISOString().split('T')[0])
+      .lte('date', endDate.toISOString().split('T')[0])
+      .order('date');
+
+    // Fetch store_reports by date
+    const { data: storeReports } = await supabase
+      .from('store_reports')
+      .select('date, kilograms_bought, kilograms_sold')
+      .gte('date', startDate.toISOString().split('T')[0])
+      .lte('date', endDate.toISOString().split('T')[0])
+      .order('date');
+
+    // Fetch sales_transactions by date
+    const { data: salesTransactions } = await supabase
+      .from('sales_transactions')
+      .select('date, weight')
+      .gte('date', startDate.toISOString().split('T')[0])
+      .lte('date', endDate.toISOString().split('T')[0])
+      .order('date');
+
+    // Group coffee_records by date
+    const coffeeByDate = new Map<string, number>();
+    coffeeRecords?.forEach(r => {
+      const date = r.date;
+      coffeeByDate.set(date, (coffeeByDate.get(date) || 0) + (r.kilograms || 0));
+    });
+
+    // Group sales_transactions by date
+    const salesByDate = new Map<string, number>();
+    salesTransactions?.forEach(r => {
+      const date = r.date;
+      salesByDate.set(date, (salesByDate.get(date) || 0) + (r.weight || 0));
+    });
+
+    // Create store_reports map
+    const storeByDate = new Map<string, { bought: number; sold: number }>();
+    storeReports?.forEach(r => {
+      storeByDate.set(r.date, {
+        bought: r.kilograms_bought || 0,
+        sold: r.kilograms_sold || 0
+      });
+    });
+
+    // Get all unique dates
+    const allDates = new Set([
+      ...coffeeByDate.keys(),
+      ...storeByDate.keys(),
+      ...salesByDate.keys()
+    ]);
+
+    // Build breakdown
+    const breakdown = Array.from(allDates).sort().map(date => {
+      const coffeeKg = coffeeByDate.get(date) || 0;
+      const storeData = storeByDate.get(date);
+      const storeBoughtKg = storeData?.bought || 0;
+      const storeSoldKg = storeData?.sold || 0;
+      const salesKg = salesByDate.get(date) || 0;
+
+      const purchaseDiff = coffeeKg - storeBoughtKg;
+      const salesDiff = salesKg - storeSoldKg;
+
+      let issue = "";
+      if (Math.abs(purchaseDiff) > 1) {
+        issue += `Purchase mismatch: ${Math.abs(purchaseDiff).toFixed(2)} kg. `;
+      }
+      if (Math.abs(salesDiff) > 1) {
+        issue += `Sales mismatch: ${Math.abs(salesDiff).toFixed(2)} kg. `;
+      }
+      if (!storeData && (coffeeKg > 0 || salesKg > 0)) {
+        issue = "⚠️ Missing store report";
+      }
+      if (storeData && coffeeKg === 0 && storeBoughtKg > 0) {
+        issue = "⚠️ Store report exists but no transaction records";
+      }
+
+      return {
+        date: format(new Date(date), "MMM dd, yyyy"),
+        metric1: coffeeKg,
+        metric2: storeBoughtKg,
+        difference: purchaseDiff,
+        issue: issue || "✓ Matches"
+      };
+    });
+
+    const totalCoffeeRecords = Array.from(coffeeByDate.values()).reduce((sum, v) => sum + v, 0);
+    const totalStoreReports = Array.from(storeByDate.values()).reduce((sum, v) => sum + v.bought, 0);
+    const difference = totalCoffeeRecords - totalStoreReports;
+    const percentageDiff = totalStoreReports > 0 ? (difference / totalStoreReports) * 100 : 0;
+
+    return {
+      metric1Name: "Assessed Coffee Records (kg)",
+      metric1Value: totalCoffeeRecords,
+      metric2Name: "Store Purchase Reports (kg)",
+      metric2Value: totalStoreReports,
+      difference,
+      percentageDiff,
+      trend: Math.abs(difference) > 100 ? "down" : "neutral",
+      breakdown: breakdown.filter(b => b.issue !== "✓ Matches" || Math.abs(b.difference) > 1)
+    };
+  };
+
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(num);
   };
@@ -530,18 +648,20 @@ const ComparisonReport = () => {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Data Source</label>
-                <Select value={dataSource} onValueChange={(value) => setDataSource(value as "transactions" | "store_reports")}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="store_reports">Store Reports (Comprehensive)</SelectItem>
-                    <SelectItem value="transactions">Individual Transactions</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {comparisonType === "purchases-vs-sales" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data Source</label>
+                  <Select value={dataSource} onValueChange={(value) => setDataSource(value as "transactions" | "store_reports")}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="store_reports">Store Reports (Comprehensive)</SelectItem>
+                      <SelectItem value="transactions">Individual Transactions</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Start Date</label>
@@ -601,6 +721,36 @@ const ComparisonReport = () => {
                 )}
                 <p className="text-xs text-muted-foreground mt-2">
                   💡 Tip: For the most accurate comparison, use "Store Reports (Comprehensive)" as it includes all documented transactions.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Data Reconciliation Info */}
+        {comparisonType === "data-reconciliation" && (
+          <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+            <CardContent className="pt-6">
+              <div className="text-sm space-y-3">
+                <p className="font-semibold text-amber-900 dark:text-amber-100">🔍 Data Reconciliation Report</p>
+                <p className="text-muted-foreground">
+                  This report identifies discrepancies between your transaction records and store reports:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li><strong>Assessed Coffee</strong> - Individual purchase transactions from coffee_records table</li>
+                  <li><strong>Store Reports</strong> - Daily consolidated reports from store_reports table</li>
+                </ul>
+                <p className="text-muted-foreground">
+                  The breakdown shows specific dates where numbers don't match, helping you identify:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>Missing transaction records</li>
+                  <li>Missing store reports</li>
+                  <li>Data entry errors or discrepancies</li>
+                  <li>Unreconciled amounts</li>
+                </ul>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-3 p-2 bg-amber-100 dark:bg-amber-900/30 rounded">
+                  ⚠️ <strong>Action Required:</strong> Review each flagged date and reconcile the differences to ensure accurate inventory tracking.
                 </p>
               </div>
             </CardContent>
@@ -687,6 +837,56 @@ const ComparisonReport = () => {
                     <div className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
                       {insights}
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {comparisonData.breakdown && comparisonData.breakdown.length > 0 && (
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>🔍 Detailed Issue Breakdown</CardTitle>
+                  <CardDescription>
+                    Daily comparison showing discrepancies between assessed coffee and store reports
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Date</th>
+                          <th className="text-right p-2">Assessed Coffee (kg)</th>
+                          <th className="text-right p-2">Store Report (kg)</th>
+                          <th className="text-right p-2">Difference</th>
+                          <th className="text-left p-2">Issue</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comparisonData.breakdown.map((row, idx) => (
+                          <tr key={idx} className="border-b hover:bg-muted/50">
+                            <td className="p-2 font-medium">{row.date}</td>
+                            <td className="p-2 text-right">{formatNumber(row.metric1)}</td>
+                            <td className="p-2 text-right">{formatNumber(row.metric2)}</td>
+                            <td className={cn(
+                              "p-2 text-right font-semibold",
+                              Math.abs(row.difference) > 1 ? "text-destructive" : "text-muted-foreground"
+                            )}>
+                              {row.difference > 0 ? '+' : ''}{formatNumber(row.difference)}
+                            </td>
+                            <td className="p-2 text-sm">{row.issue}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-4 p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-semibold mb-2">Summary:</p>
+                    <ul className="text-sm space-y-1">
+                      <li>• Found {comparisonData.breakdown.length} dates with discrepancies</li>
+                      <li>• Total difference: {formatNumber(Math.abs(comparisonData.difference))} kg</li>
+                      <li>• Percentage variance: {formatNumber(Math.abs(comparisonData.percentageDiff))}%</li>
+                    </ul>
                   </div>
                 </CardContent>
               </Card>
