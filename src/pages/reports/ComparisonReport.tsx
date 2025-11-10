@@ -109,6 +109,7 @@ const ComparisonReport = () => {
     
     setLoadingInsights(true);
     try {
+      console.log("Generating insights for comparison...");
       const { data, error } = await supabase.functions.invoke('generate-comparison-insights', {
         body: {
           comparisonType: getComparisonLabel(),
@@ -126,18 +127,41 @@ const ComparisonReport = () => {
       if (error) {
         console.error("Error generating insights:", error);
         toast({
+          title: "Error Generating Insights",
+          description: error.message || "Could not generate detailed insights",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data?.error) {
+        console.error("AI Gateway error:", data.error);
+        toast({
           title: "Notice",
-          description: "Could not generate detailed insights",
+          description: data.error,
           variant: "default"
         });
         return;
       }
 
       if (data?.insights) {
+        console.log("Insights generated successfully");
         setInsights(data.insights);
+      } else {
+        console.error("No insights returned from function");
+        toast({
+          title: "Notice",
+          description: "No insights were generated",
+          variant: "default"
+        });
       }
     } catch (error) {
       console.error("Error generating insights:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive"
+      });
     } finally {
       setLoadingInsights(false);
     }
