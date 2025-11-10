@@ -37,36 +37,11 @@ const Index = () => {
     );
   }
 
-  const SectionHeader = ({ icon: Icon, title, subtitle, gradient }: { 
-    icon: any, 
-    title: string, 
-    subtitle: string, 
-    gradient: string 
-  }) => (
-    <div className="flex items-center gap-2 xs:gap-3 md:gap-4 mb-3 xs:mb-4 md:mb-6 lg:mb-8 animate-slide-up">
-      <div className={`p-2 xs:p-3 rounded-xl xs:rounded-2xl bg-gradient-to-r ${gradient} shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105`}>
-        <Icon className="h-4 w-4 xs:h-5 xs:w-5 md:h-6 md:w-6 text-white" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <h2 className={`text-lg xs:text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r ${gradient.replace('to-', 'to-').replace('from-', 'from-')} bg-clip-text text-transparent truncate`}>
-          {title}
-        </h2>
-        <p className="text-muted-foreground text-xs xs:text-sm md:text-base truncate">{subtitle}</p>
-      </div>
-    </div>
-  );
 
   return (
     <Layout title="Dashboard" subtitle="Welcome to your workspace" showMessageButton={false}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative overflow-hidden">
-        {/* Sophisticated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-r from-blue-100/30 to-indigo-100/30 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 left-20 w-80 h-80 bg-gradient-to-r from-slate-100/40 to-gray-100/40 dark:from-slate-800/30 dark:to-gray-800/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-50/20 to-indigo-50/20 dark:from-blue-950/15 dark:to-indigo-950/15 rounded-full blur-3xl animate-pulse delay-500"></div>
-        </div>
-
-        <div className="relative z-10 space-y-4 xs:space-y-6 md:space-y-8 lg:space-y-12 p-2 xs:p-4 md:p-6 lg:p-8">
+      <div className="min-h-screen bg-background">
+        <div className="p-6 space-y-6">
           {/* Dynamic Header */}
           <div className="animate-fade-in">
             <DynamicHeader />
@@ -79,117 +54,100 @@ const Index = () => {
 
           {/* Admin Dashboard Section */}
           {employee.role === 'Administrator' && (
-            <div className="space-y-4 xs:space-y-6 md:space-y-8 animate-fade-in delay-200">
-              <SectionHeader 
-                icon={Settings}
-                title="Administration Center"
-                subtitle="System oversight and user management"
-                gradient="from-slate-600 to-slate-700"
-              />
-              <div className="bg-gradient-to-br from-white/95 via-slate-50/90 to-blue-50/70 dark:from-slate-800/95 dark:via-slate-700/90 dark:to-slate-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-slate-600/40 rounded-2xl xs:rounded-3xl p-3 xs:p-4 md:p-6 lg:p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] hover:border-blue-300/40 dark:hover:border-blue-700/40">
+            <div className="space-y-4 animate-fade-in delay-200">
+              <div className="flex items-center gap-3">
+                <Settings className="h-6 w-6 text-primary" />
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">Administration Center</h2>
+                  <p className="text-sm text-muted-foreground">System oversight and user management</p>
+                </div>
+              </div>
+              <div className="bg-card rounded-xl border shadow-sm">
                 <AdminDashboard />
               </div>
             </div>
           )}
 
-          {/* Main Dashboard Grid */}
-          <div className="space-y-4 xs:space-y-6 md:space-y-8 lg:space-y-12">
-            {/* Stats Section */}
-            <div className="space-y-4 xs:space-y-6 md:space-y-8 animate-fade-in delay-300">
-              <SectionHeader 
-                icon={BarChart3}
-                title="Performance Analytics"
-                subtitle="Key metrics and operational insights"
-                gradient="from-blue-600 to-blue-700"
-              />
-              <DashboardStats />
-            </div>
+          {/* Stats Section */}
+          <div className="space-y-4 animate-fade-in delay-300">
+            <DashboardStats />
+          </div>
 
-            {/* Quick Actions & Activities */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-5 gap-3 xs:gap-4 md:gap-6 lg:gap-8 animate-fade-in delay-400">
-              <div className="lg:col-span-2 xl:col-span-3 space-y-3 xs:space-y-4 md:space-y-6 lg:space-y-8">
-                <SectionHeader 
-                  icon={TrendingUp}
-                  title="Quick Operations"
-                  subtitle="Streamlined workflow tools"
-                  gradient="from-emerald-600 to-teal-700"
-                />
-                <div className="bg-gradient-to-br from-white/95 via-emerald-50/60 to-teal-50/50 dark:from-slate-800/95 dark:via-emerald-950/40 dark:to-teal-950/30 rounded-2xl xs:rounded-3xl p-3 xs:p-4 md:p-6 lg:p-8 border border-emerald-200/50 dark:border-emerald-800/40 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-xl hover:border-emerald-300/60 dark:hover:border-emerald-700/50">
-                  <QuickActions />
-                </div>
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Quick Actions - 2 columns */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">Quick Operations</h3>
               </div>
-              
-              <div className="lg:col-span-1 xl:col-span-2 space-y-3 xs:space-y-4 md:space-y-6 lg:space-y-8">
-                <SectionHeader 
-                  icon={Activity}
-                  title="System Activity"
-                  subtitle="Recent operations and updates"
-                  gradient="from-indigo-600 to-purple-700"
-                />
-                <div className="animate-slide-up delay-500">
-                  <RecentActivity />
-                </div>
+              <div className="bg-card rounded-xl border shadow-sm p-6">
+                <QuickActions />
               </div>
             </div>
+            
+            {/* Recent Activity - 1 column */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Activity className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
+              </div>
+              <RecentActivity />
+            </div>
+          </div>
 
-            {/* Approval Requests Section - Make it prominent for authorized users */}
-            {roleData?.canApproveRequests && (
-              <div className="space-y-8 animate-fade-in delay-500">
-                <SectionHeader 
-                  icon={Shield}
-                  title="Approval Management Center"
-                  subtitle="Review and process pending requests from all departments"
-                  gradient="from-red-500 to-rose-600"
-                />
-                <div className="bg-gradient-to-br from-white/95 via-red-50/60 to-rose-50/50 dark:from-slate-800/95 dark:via-red-950/40 dark:to-rose-950/30 backdrop-blur-xl border border-red-200/60 dark:border-red-800/40 rounded-3xl p-6 md:p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.005] hover:border-red-300/60 dark:hover:border-red-700/50">
-                  <ApprovalCenter />
+          {/* Approval Center - Full Width */}
+          {roleData?.canApproveRequests && (
+            <div className="space-y-4 animate-fade-in delay-500">
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5 text-destructive" />
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Approval Management</h3>
+                  <p className="text-sm text-muted-foreground">Review and process pending requests</p>
+                </div>
+              </div>
+              <div className="bg-card rounded-xl border shadow-sm p-6">
+                <ApprovalCenter />
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Grid - Performance, Notifications, EUDR */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Performance */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">Performance</h3>
+              </div>
+              <div className="bg-card rounded-xl border shadow-sm p-6">
+                <PerformanceOverview />
+              </div>
+            </div>
+            
+            {/* Notifications */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Bell className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">Notifications</h3>
+              </div>
+              <div className="bg-card rounded-xl border shadow-sm p-6">
+                <NotificationWidget onViewAll={() => setIsNotificationOpen(true)} />
+              </div>
+            </div>
+
+            {/* EUDR Compliance */}
+            {(employee.department === 'Store' || employee.role === 'Administrator') && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Coffee className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold text-foreground">EUDR Compliance</h3>
+                </div>
+                <div className="bg-card rounded-xl border shadow-sm p-6">
+                  <EUDRSummaryCard />
                 </div>
               </div>
             )}
-
-            {/* Performance & Additional Sections */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 animate-fade-in delay-600">
-              {/* Performance Section */}
-              <div className="space-y-6 md:space-y-8">
-                <SectionHeader 
-                  icon={BarChart3}
-                  title="Performance"
-                  subtitle="System analytics"
-                  gradient="from-amber-500 to-orange-600"
-                />
-                <div className="bg-gradient-to-br from-card via-card/98 to-muted/5 rounded-3xl p-6 md:p-8 border border-border/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
-                  <PerformanceOverview />
-                </div>
-              </div>
-              
-              {/* Notifications Section */}
-              <div className="space-y-6 md:space-y-8">
-                <SectionHeader 
-                  icon={Bell}
-                  title="Notifications"
-                  subtitle="Recent alerts & updates"
-                  gradient="from-violet-500 to-purple-600"
-                />
-                <div className="bg-gradient-to-br from-card via-card/98 to-muted/5 rounded-3xl p-6 md:p-8 border border-border/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
-                  <NotificationWidget onViewAll={() => setIsNotificationOpen(true)} />
-                </div>
-              </div>
-
-              {/* EUDR Compliance Section */}
-              {(employee.department === 'Store' || employee.role === 'Administrator') && (
-                <div className="space-y-6 md:space-y-8">
-                  <SectionHeader 
-                    icon={Coffee}
-                    title="EUDR Compliance"
-                    subtitle="Documentation status"
-                    gradient="from-green-500 to-emerald-600"
-                  />
-                  <div className="bg-gradient-to-br from-card via-card/98 to-muted/5 rounded-3xl p-6 md:p-8 border border-border/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01] backdrop-blur-sm">
-                    <EUDRSummaryCard />
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
           
           {/* Notification Panel */}

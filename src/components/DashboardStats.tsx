@@ -253,46 +253,59 @@ const DashboardStats = () => {
   const stats = getStatsForRole();
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {stats.map((stat, index) => (
-        <div 
-          key={index} 
-          className="group animate-scale-in"
-          style={{ animationDelay: `${index * 150}ms` }}
-        >
-          <Card className="relative overflow-hidden bg-gradient-to-br from-white/95 via-slate-50/90 to-gray-50/80 dark:from-slate-800/95 dark:via-slate-700/90 dark:to-slate-800/80 backdrop-blur-xl border border-slate-200/50 dark:border-slate-600/30 hover:border-slate-300/60 dark:hover:border-slate-500/40 transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:shadow-slate-200/20 dark:hover:shadow-slate-900/20 cursor-pointer">
-            {/* Sophisticated hover effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-100/40 via-transparent to-blue-50/30 dark:from-slate-700/40 dark:via-transparent dark:to-slate-600/30 opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
-            
-            {/* Professional border glow */}
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-slate-300/30 via-blue-200/20 to-slate-300/30 dark:from-slate-600/30 dark:via-blue-800/20 dark:to-slate-600/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
-            
-            <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors duration-300">
-                {stat.title}
-              </CardTitle>
-              <div className="p-3 rounded-xl bg-gradient-to-br from-white/90 to-slate-100/70 dark:from-slate-700/90 dark:to-slate-600/70 border border-slate-200/50 dark:border-slate-600/50 shadow-sm group-hover:shadow-lg group-hover:scale-110 transition-all duration-300 backdrop-blur-sm">
-                <stat.icon className={`h-5 w-5 ${stat.color.replace('text-', 'text-').replace('-600', '-700')} group-hover:scale-110 transition-all duration-300`} />
-              </div>
-            </CardHeader>
-            <CardContent className="relative z-10 space-y-4">
-              <div className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 group-hover:text-slate-900 dark:group-hover:text-white transition-colors duration-300">
-                {stat.value}
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors duration-300 truncate">
+        <Card key={index} className="bg-card hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              {stat.title}
+            </CardTitle>
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${stat.bgColor}`}>
+              <stat.icon className={`h-5 w-5 ${stat.color}`} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="text-3xl font-bold text-foreground">
+                  {stat.value}
+                </div>
+                <p className="text-xs text-muted-foreground">
                   {stat.change}
                 </p>
-                <Badge 
-                  variant={stat.trend === 'positive' ? 'default' : stat.trend === 'attention' ? 'destructive' : 'secondary'}
-                  className="text-xs font-medium shrink-0 ml-2 group-hover:scale-105 transition-transform duration-300"
-                >
-                  {stat.trend === 'positive' ? '↗ Good' : stat.trend === 'attention' ? '⚠ Action' : '→ Stable'}
-                </Badge>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              {/* Circular Progress */}
+              <div className="relative h-16 w-16">
+                <svg className="transform -rotate-90 h-16 w-16">
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r="28"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                    className="text-muted"
+                  />
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r="28"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                    strokeDasharray={`${stat.trend === 'positive' ? 75 : stat.trend === 'attention' ? 45 : 60} 175.93`}
+                    className={stat.trend === 'positive' ? 'text-green-500' : stat.trend === 'attention' ? 'text-red-500' : 'text-blue-500'}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className={`text-xs font-semibold ${stat.trend === 'positive' ? 'text-green-600' : stat.trend === 'attention' ? 'text-red-600' : 'text-blue-600'}`}>
+                    {stat.trend === 'positive' ? '75%' : stat.trend === 'attention' ? '45%' : '60%'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );
