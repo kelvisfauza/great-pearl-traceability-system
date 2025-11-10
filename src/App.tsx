@@ -135,7 +135,7 @@ const App: React.ComponentType = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/reports" element={
-                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <Reports />
                   </ProtectedRoute>
                 } />
@@ -185,52 +185,52 @@ const App: React.ComponentType = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/finance" element={
-                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <FinanceReport />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/daybook" element={
-                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <DayBookReport />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/expenses" element={
-                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <ExpensesReport />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/reconciliation" element={
-                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <ReconciliationReport />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/risk" element={
-                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <RiskReport />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/store" element={
-                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <StoreReports />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/sales" element={
-                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <SalesReports />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/analytics" element={
-                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <AnalyticsReport />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/generator" element={
-                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <GenerateReport />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/field-operations" element={
-                  <ProtectedRoute requiredPermissions={["Reports"]}>
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <FieldOperationsReport />
                   </ProtectedRoute>
                 } />

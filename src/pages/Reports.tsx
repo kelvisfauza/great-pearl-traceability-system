@@ -10,7 +10,7 @@ import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton"
 const Reports = () => {
   const { employee } = useAuth();
   const navigate = useNavigate();
-  const isAdmin = employee?.role === 'Administrator' || employee?.role === 'Super Admin';
+  const isAdmin = employee?.role === 'Administrator' || employee?.role === 'Super Admin' || employee?.role === 'Manager';
 
   const reportCards = [
     {

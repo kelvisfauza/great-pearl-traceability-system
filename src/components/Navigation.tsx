@@ -127,13 +127,16 @@ const Navigation = () => {
     console.log('🔍 Filtering navigation for employee:', employee);
     console.log('🔍 Employee permissions:', employee.permissions);
     
-    // Remove hardcoded navigation overrides - use permission system instead
-    
     return navigationItems.map(section => ({
       ...section,
       items: section.items.filter(item => {
         // If no permission required, show to everyone
         if (!item.permission) return true;
+        
+        // Special handling for Reports - only show to Managers and Administrators
+        if (item.permission === 'Reports') {
+          return hasRole('Manager') || hasRole('Administrator') || hasRole('Super Admin');
+        }
         
         // If user is admin, show everything
         if (isAdmin()) return true;
