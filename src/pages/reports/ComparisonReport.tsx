@@ -2,7 +2,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Printer } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import StandardPrintHeader from "@/components/print/StandardPrintHeader";
 
 type ComparisonType = 
   | "purchases-vs-sales"
@@ -300,20 +301,102 @@ const ComparisonReport = () => {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const getComparisonLabel = () => {
+    const option = comparisonOptions.find(opt => opt.value === comparisonType);
+    return option?.label || "Comparison Report";
+  };
+
   return (
-    <Layout 
-      title="Comparison Reports" 
-      subtitle="Compare different business metrics and identify trends"
-    >
-      <div className="space-y-6">
-        <Button 
-          variant="outline" 
-          onClick={() => navigate("/reports")}
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Reports
-        </Button>
+    <>
+      {/* Print View */}
+      <div className="print-only">
+        <StandardPrintHeader
+          title="Comparison Report"
+          subtitle={getComparisonLabel()}
+          additionalInfo={`Period: ${format(startDate, "PPP")} - ${format(endDate, "PPP")}`}
+          includeDate
+        />
+        
+        {comparisonData && (
+          <div className="space-y-6 p-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="border rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-primary mb-2">{comparisonData.metric1Name}</h3>
+                <div className="text-4xl font-bold">{formatNumber(comparisonData.metric1Value)}</div>
+              </div>
+
+              <div className="border rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-primary mb-2">{comparisonData.metric2Name}</h3>
+                <div className="text-4xl font-bold">{formatNumber(comparisonData.metric2Value)}</div>
+              </div>
+            </div>
+
+            <div className="border rounded-lg p-6 space-y-4">
+              <h3 className="text-xl font-semibold mb-4">Analysis</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Difference</p>
+                  <p className="text-2xl font-bold">{formatNumber(Math.abs(comparisonData.difference))}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Percentage</p>
+                  <p className="text-2xl font-bold">{formatNumber(Math.abs(comparisonData.percentageDiff))}%</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <h4 className="font-semibold mb-2">Insights</h4>
+                <p className="text-sm">
+                  {comparisonData.difference > 0 
+                    ? `${comparisonData.metric1Name} exceeds ${comparisonData.metric2Name} by ${formatNumber(comparisonData.difference)}`
+                    : comparisonData.difference < 0
+                    ? `${comparisonData.metric2Name} exceeds ${comparisonData.metric1Name} by ${formatNumber(Math.abs(comparisonData.difference))}`
+                    : `${comparisonData.metric1Name} and ${comparisonData.metric2Name} are balanced`
+                  }
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-4 border-t text-center text-sm text-gray-600">
+              <p>Generated on {format(new Date(), "PPP 'at' pp")}</p>
+              <p className="mt-2">This is a computer-generated report. No signature is required.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Screen View */}
+      <Layout 
+        title="Comparison Reports" 
+        subtitle="Compare different business metrics and identify trends"
+      >
+        <div className="space-y-6 no-print">
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/reports")}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Reports
+          </Button>
+          
+          {comparisonData && (
+            <Button 
+              onClick={handlePrint}
+              className="gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              Print Report
+            </Button>
+          )}
+        </div>
 
         {/* Filter Section */}
         <Card>
@@ -440,8 +523,9 @@ const ComparisonReport = () => {
             </Card>
           </div>
         ) : null}
-      </div>
-    </Layout>
+        </div>
+      </Layout>
+    </>
   );
 };
 
