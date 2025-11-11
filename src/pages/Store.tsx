@@ -24,6 +24,7 @@ import { Autocomplete } from "@/components/ui/autocomplete";
 
 import { StoreRecordsManager } from "@/components/store/StoreRecordsManager";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
+import ManualStoreReportForm from "@/components/reports/ManualStoreReportForm";
 
 const Store = () => {
   const [searchParams] = useSearchParams();
@@ -147,6 +148,7 @@ const Store = () => {
   const [showAddRecordModal, setShowAddRecordModal] = useState(false);
   const [showGRNModal, setShowGRNModal] = useState(false);
   const [selectedGRNData, setSelectedGRNData] = useState(null);
+  const [showQuickReportModal, setShowQuickReportModal] = useState(false);
 
   const loading = storeLoading || suppliersLoading || qualityLoading || processingLoading;
 
@@ -448,7 +450,17 @@ const Store = () => {
       subtitle="Manage suppliers and coffee inventory records"
     >
       <div className="space-y-6">
-        <PriceTicker />
+        <div className="flex justify-between items-center">
+          <PriceTicker />
+          <Button 
+            onClick={() => setShowQuickReportModal(true)}
+            className="gap-2"
+            size="sm"
+          >
+            <FileText className="h-4 w-4" />
+            Quick Add Report
+          </Button>
+        </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1">
@@ -1227,8 +1239,21 @@ const Store = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Quick Report Modal */}
+        <Dialog open={showQuickReportModal} onOpenChange={setShowQuickReportModal}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Quick Add Store Report</DialogTitle>
+              <DialogDescription>
+                Add a report with document scanning. This allows you to input reports without accessing the full reports section.
+              </DialogDescription>
+            </DialogHeader>
+            <ManualStoreReportForm />
+          </DialogContent>
+        </Dialog>
+
         {/* GRN Print Modal */}
-        <GRNPrintModal 
+        <GRNPrintModal
           open={showGRNModal}
           onClose={() => setShowGRNModal(false)}
           grnData={selectedGRNData}
