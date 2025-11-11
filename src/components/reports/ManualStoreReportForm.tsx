@@ -167,22 +167,23 @@ const ManualStoreReportForm = () => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Scanner Selection */}
+          {/* Document Upload Section */}
           <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
             <h3 className="text-lg font-medium flex items-center gap-2">
-              <Scan className="h-4 w-4" />
-              Scanner Setup
+              <Upload className="h-4 w-4" />
+              Document Upload (Required)
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="scanner_used">Select Scanner</Label>
+                <Label htmlFor="scanner_used">Scanner Used</Label>
                 <Select 
                   value={formData.scanner_used} 
                   onValueChange={(value) => handleInputChange('scanner_used', value)}
+                  required
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Choose scanner/printer" />
+                    <SelectValue placeholder="Select scanner/printer" />
                   </SelectTrigger>
                   <SelectContent>
                     {scannerOptions.map((scanner) => (
@@ -195,38 +196,24 @@ const ManualStoreReportForm = () => {
               </div>
 
               <div className="space-y-2">
-                <Label>Document Attachment</Label>
+                <Label htmlFor="file-upload-visible">Upload Document (PDF, JPG, PNG)</Label>
                 <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={triggerScan}
-                    disabled={!formData.scanner_used || uploadingFile}
-                    className="flex-1"
-                  >
-                    <Scan className="h-4 w-4 mr-2" />
-                    {uploadingFile ? 'Scanning...' : 'Scan Document'}
-                  </Button>
                   <input
-                    id="file-upload"
+                    id="file-upload-visible"
                     type="file"
                     accept=".jpg,.jpeg,.png,.pdf"
                     onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('file-upload')?.click()}
                     disabled={uploadingFile}
-                  >
-                    <Upload className="h-4 w-4" />
-                  </Button>
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
                 </div>
+                {uploadingFile && (
+                  <p className="text-sm text-muted-foreground">Uploading document...</p>
+                )}
                 {formData.attachment_name && (
-                  <div className="flex items-center gap-2 mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                    <FileText className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-green-800">{formData.attachment_name}</span>
+                  <div className="flex items-center gap-2 p-2 bg-primary/10 border border-primary/20 rounded">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-foreground font-medium">{formData.attachment_name}</span>
                   </div>
                 )}
               </div>
