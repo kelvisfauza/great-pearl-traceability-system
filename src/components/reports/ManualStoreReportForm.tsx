@@ -31,32 +31,16 @@ const ManualStoreReportForm = () => {
     advances_given: 0,
     advances_paid: 0,
     input_by: employee?.name || '',
-    scanner_used: '',
     attachment_url: '',
     attachment_name: ''
   });
 
-  const scannerOptions = [
-    'HP LaserJet Pro M404n',
-    'Canon PIXMA TS3520',
-    'Epson WorkForce ES-50',
-    'Brother DCP-L2550DW',
-    'Samsung Xpress M2020W',
-    'Xerox WorkCentre 3215',
-    'Ricoh SP 213w',
-    'Kyocera ECOSYS P2040dn'
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.attachment_url) {
-      toast.error("Please attach a scanned document before submitting");
-      return;
-    }
-    
-    if (!formData.scanner_used) {
-      toast.error("Please select the scanner used");
+      toast.error("Please attach a document before submitting");
       return;
     }
     
@@ -82,7 +66,6 @@ const ManualStoreReportForm = () => {
         advances_given: 0,
         advances_paid: 0,
         input_by: employee?.name || '',
-        scanner_used: '',
         attachment_url: '',
         attachment_name: ''
       });
@@ -174,49 +157,25 @@ const ManualStoreReportForm = () => {
               Document Upload (Required)
             </h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="scanner_used">Scanner Used</Label>
-                <Select 
-                  value={formData.scanner_used} 
-                  onValueChange={(value) => handleInputChange('scanner_used', value)}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select scanner/printer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {scannerOptions.map((scanner) => (
-                      <SelectItem key={scanner} value={scanner}>
-                        {scanner}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="file-upload-visible">Upload Document (PDF, JPG, PNG)</Label>
-                <div className="flex gap-2">
-                  <input
-                    id="file-upload-visible"
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.pdf"
-                    onChange={handleFileUpload}
-                    disabled={uploadingFile}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
+            <div className="space-y-2">
+              <Label htmlFor="file-upload-visible">Upload Document (PDF, JPG, PNG)</Label>
+              <input
+                id="file-upload-visible"
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                onChange={handleFileUpload}
+                disabled={uploadingFile}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              {uploadingFile && (
+                <p className="text-sm text-muted-foreground">Uploading document...</p>
+              )}
+              {formData.attachment_name && (
+                <div className="flex items-center gap-2 p-2 bg-primary/10 border border-primary/20 rounded">
+                  <FileText className="h-4 w-4 text-primary" />
+                  <span className="text-sm text-foreground font-medium">{formData.attachment_name}</span>
                 </div>
-                {uploadingFile && (
-                  <p className="text-sm text-muted-foreground">Uploading document...</p>
-                )}
-                {formData.attachment_name && (
-                  <div className="flex items-center gap-2 p-2 bg-primary/10 border border-primary/20 rounded">
-                    <FileText className="h-4 w-4 text-primary" />
-                    <span className="text-sm text-foreground font-medium">{formData.attachment_name}</span>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
 
@@ -339,10 +298,10 @@ const ManualStoreReportForm = () => {
 
           <Button 
             type="submit" 
-            disabled={loading || !formData.attachment_url || !formData.scanner_used} 
+            disabled={loading || !formData.attachment_url} 
             className="w-full"
           >
-            {loading ? 'Saving...' : 'Save Manual Report with Attachment'}
+            {loading ? 'Saving...' : 'Save Report with Attachment'}
           </Button>
         </form>
       </CardContent>
