@@ -395,7 +395,8 @@ export const useGlobalSearch = (searchTerm: string) => {
           }
         }
 
-        // Search Overtime Awards
+        // Search Overtime Awards (HR permission required for sensitive pay data)
+        const canAccessHR = hasPermission && (hasPermission('User Management') || hasPermission('HR Management') || employee?.permissions?.includes('*'));
         if (canAccessHR) {
           const { data: overtimeAwards } = await supabase
             .from('overtime_awards')
