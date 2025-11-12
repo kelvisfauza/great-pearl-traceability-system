@@ -16,11 +16,14 @@ import {
   XCircle,
   TrendingUp,
   Package,
-  BarChart3
+  BarChart3,
+  Printer
 } from 'lucide-react';
 import { FieldOperationsAnalytics } from './FieldOperationsAnalytics';
+import { useToast } from '@/hooks/use-toast';
 
 export const FieldOperationsManagement = () => {
+  const { toast } = useToast();
   const { 
     farmers, 
     purchases, 
@@ -37,6 +40,238 @@ export const FieldOperationsManagement = () => {
   const todayAttendance = attendanceLogs.filter(
     log => format(new Date(log.check_in_time), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
   ).length;
+
+  const printDailyReport = (report: any) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({
+        title: "Error",
+        description: "Please allow pop-ups to print the report",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Daily Field Report - ${format(new Date(report.report_date), 'MMM dd, yyyy')}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              font-family: 'Arial', sans-serif; 
+              padding: 40px; 
+              color: #000;
+              line-height: 1.6;
+            }
+            .header { 
+              text-align: center; 
+              margin-bottom: 40px; 
+              border-bottom: 3px solid #2563eb; 
+              padding-bottom: 30px; 
+            }
+            .company-logo {
+              font-size: 32px;
+              font-weight: bold;
+              color: #2563eb;
+              margin-bottom: 10px;
+            }
+            .company-name {
+              font-size: 28px;
+              font-weight: bold;
+              color: #1e40af;
+              margin-bottom: 5px;
+            }
+            .company-tagline {
+              font-size: 14px;
+              color: #64748b;
+              font-style: italic;
+            }
+            .report-title {
+              font-size: 24px;
+              font-weight: bold;
+              color: #1e293b;
+              margin: 20px 0 10px 0;
+            }
+            .report-date {
+              font-size: 16px;
+              color: #64748b;
+              margin-bottom: 5px;
+            }
+            .section {
+              margin: 30px 0;
+              page-break-inside: avoid;
+            }
+            .section-title {
+              font-size: 18px;
+              font-weight: bold;
+              color: #1e293b;
+              margin-bottom: 15px;
+              padding-bottom: 8px;
+              border-bottom: 2px solid #e2e8f0;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: 150px 1fr;
+              gap: 12px;
+              margin-bottom: 20px;
+            }
+            .info-label {
+              font-weight: bold;
+              color: #475569;
+            }
+            .info-value {
+              color: #1e293b;
+            }
+            .challenges-box {
+              background-color: #fef3c7;
+              border-left: 4px solid #f59e0b;
+              padding: 15px;
+              margin: 15px 0;
+              border-radius: 4px;
+            }
+            .actions-box {
+              background-color: #dbeafe;
+              border-left: 4px solid #3b82f6;
+              padding: 15px;
+              margin: 15px 0;
+              border-radius: 4px;
+            }
+            .farmers-list {
+              columns: 2;
+              column-gap: 30px;
+              margin: 15px 0;
+            }
+            .farmer-item {
+              break-inside: avoid;
+              padding: 5px 0;
+            }
+            .farmer-item:before {
+              content: "• ";
+              color: #2563eb;
+              font-weight: bold;
+            }
+            .footer {
+              margin-top: 50px;
+              padding-top: 20px;
+              border-top: 2px solid #e2e8f0;
+              text-align: center;
+              color: #64748b;
+              font-size: 12px;
+            }
+            .signature-section {
+              margin-top: 60px;
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 50px;
+            }
+            .signature-line {
+              border-top: 1px solid #000;
+              padding-top: 8px;
+              text-align: center;
+            }
+            @media print {
+              body { padding: 20px; }
+              .section { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-logo">☕</div>
+            <div class="company-name">COFFEE MANAGEMENT SYSTEM</div>
+            <div class="company-tagline">Excellence in Coffee Operations</div>
+            <div class="report-title">Daily Field Operations Report</div>
+            <div class="report-date">${format(new Date(report.report_date), 'EEEE, MMMM dd, yyyy')}</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Report Information</div>
+            <div class="info-grid">
+              <div class="info-label">Date:</div>
+              <div class="info-value">${format(new Date(report.report_date), 'MMMM dd, yyyy')}</div>
+              
+              <div class="info-label">Submitted By:</div>
+              <div class="info-value">${report.submitted_by}</div>
+              
+              <div class="info-label">District:</div>
+              <div class="info-value">${report.district}</div>
+              
+              <div class="info-label">Villages Visited:</div>
+              <div class="info-value">${report.villages_visited}</div>
+              
+              <div class="info-label">Report Submitted:</div>
+              <div class="info-value">${format(new Date(report.created_at), 'MMM dd, yyyy HH:mm')}</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Performance Metrics</div>
+            <div class="info-grid">
+              <div class="info-label">Farmers Visited:</div>
+              <div class="info-value">${report.farmers_visited?.length || 0} farmers</div>
+              
+              <div class="info-label">Total KGs Mobilized:</div>
+              <div class="info-value">${report.total_kgs_mobilized.toFixed(2)} kg</div>
+            </div>
+          </div>
+
+          ${report.farmers_visited && report.farmers_visited.length > 0 ? `
+            <div class="section">
+              <div class="section-title">Farmers Visited</div>
+              <div class="farmers-list">
+                ${report.farmers_visited.map((farmer: string) => `
+                  <div class="farmer-item">${farmer}</div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          ${report.challenges ? `
+            <div class="section">
+              <div class="section-title">Challenges Encountered</div>
+              <div class="challenges-box">
+                ${report.challenges}
+              </div>
+            </div>
+          ` : ''}
+
+          ${report.actions_needed_from_office ? `
+            <div class="section">
+              <div class="section-title">Actions Needed from Office</div>
+              <div class="actions-box">
+                ${report.actions_needed_from_office}
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="signature-section">
+            <div>
+              <div class="signature-line">Field Officer Signature</div>
+            </div>
+            <div>
+              <div class="signature-line">Supervisor Signature</div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>This is an official report generated by the Coffee Management System</p>
+            <p>Generated on ${format(new Date(), 'MMMM dd, yyyy HH:mm')}</p>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
 
   if (loading) {
     return (
@@ -221,12 +456,13 @@ export const FieldOperationsManagement = () => {
                     <TableHead>Kgs Mobilized</TableHead>
                     <TableHead>Challenges</TableHead>
                     <TableHead>Submitted By</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {dailyReports.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
                         No reports submitted yet
                       </TableCell>
                     </TableRow>
@@ -240,6 +476,17 @@ export const FieldOperationsManagement = () => {
                         <TableCell>{report.total_kgs_mobilized.toFixed(1)} kg</TableCell>
                         <TableCell className="max-w-xs truncate">{report.challenges || '-'}</TableCell>
                         <TableCell>{report.submitted_by}</TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => printDailyReport(report)}
+                            className="gap-2"
+                          >
+                            <Printer className="h-3 w-3" />
+                            Print
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
