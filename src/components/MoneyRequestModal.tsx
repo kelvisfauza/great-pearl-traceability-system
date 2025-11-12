@@ -99,30 +99,34 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {weeklyAllowance && (
-            <Alert>
-              <Calendar className="h-4 w-4" />
-              <AlertDescription>
-                <div className="space-y-1">
-                  <div className="font-medium">Your Weekly Allowance (Based on Attendance)</div>
-                  <div className="text-sm">
-                    <div>Days Attended: <strong>{weeklyAllowance.days_attended}</strong> days</div>
-                    <div>Total Eligible: <strong>UGX {weeklyAllowance.total_eligible_amount?.toLocaleString()}</strong></div>
-                    <div>Already Requested: <strong>UGX {weeklyAllowance.amount_requested?.toLocaleString()}</strong></div>
-                    <div className="text-green-600 font-medium">Available: UGX {weeklyAllowance.balance_available?.toLocaleString()}</div>
-                  </div>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {!weeklyAllowance && requestType === 'lunch_refreshment' && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                No attendance record found for this week. Please contact admin to mark your attendance first.
-              </AlertDescription>
-            </Alert>
+          {requestType === 'lunch_refreshment' && (
+            <>
+              {weeklyAllowance ? (
+                <Alert className="border-green-200 bg-green-50">
+                  <Calendar className="h-4 w-4 text-green-600" />
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <div className="font-semibold text-green-900">Weekly Meal Allowance (Max 15,000 UGX)</div>
+                      <div className="text-sm text-green-800 space-y-1">
+                        <div>📅 Days Present: <strong>{weeklyAllowance.days_attended}</strong> days × 2,500 = <strong>{weeklyAllowance.total_eligible_amount?.toLocaleString()} UGX</strong></div>
+                        <div>✅ Available to Request: <strong className="text-green-700 text-base">{weeklyAllowance.balance_available?.toLocaleString()} UGX</strong></div>
+                        <div className="text-xs text-green-600 pt-1">Already requested this week: {weeklyAllowance.amount_requested?.toLocaleString()} UGX</div>
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="space-y-1">
+                      <div className="font-medium">No Attendance Record</div>
+                      <div className="text-sm">You must be marked present to request meal money. Please contact admin to mark your attendance first.</div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
           )}
 
           <div className="space-y-2">
@@ -132,17 +136,26 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
                 <SelectValue placeholder="Select request type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="lunch_refreshment">Lunch & Refreshments (Attendance-Based)</SelectItem>
-                <SelectItem value="advance">Salary Advance</SelectItem>
-                <SelectItem value="bonus">Bonus Request</SelectItem>
-                <SelectItem value="expense">Expense Reimbursement</SelectItem>
-                <SelectItem value="emergency">Emergency Fund</SelectItem>
+                <SelectItem value="lunch_refreshment">
+                  🍽️ Meal Money (Max 15k/week based on attendance)
+                </SelectItem>
+                <SelectItem value="advance">💰 Salary Advance (From monthly salary)</SelectItem>
+                <SelectItem value="bonus">🎁 Bonus Request</SelectItem>
+                <SelectItem value="expense">📋 Expense Reimbursement</SelectItem>
+                <SelectItem value="emergency">🚨 Emergency Fund</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount (UGX)</Label>
+            <Label htmlFor="amount">
+              Amount (UGX)
+              {requestType === 'lunch_refreshment' && weeklyAllowance && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  Max: {weeklyAllowance.balance_available?.toLocaleString()} UGX
+                </span>
+              )}
+            </Label>
             <Input
               id="amount"
               type="number"
@@ -152,7 +165,11 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
               required
               min="1000"
               step="1000"
+              max={requestType === 'lunch_refreshment' && weeklyAllowance ? weeklyAllowance.balance_available : undefined}
             />
+            {requestType === 'lunch_refreshment' && weeklyAllowance && parseFloat(amount) > weeklyAllowance.balance_available && (
+              <p className="text-xs text-destructive">Amount exceeds your available weekly meal allowance</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -176,7 +193,15 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !amount || !reason}>
+            <Button 
+              type="submit" 
+              disabled={
+                loading || 
+                !amount || 
+                !reason || 
+                (requestType === 'lunch_refreshment' && (!weeklyAllowance || parseFloat(amount) > weeklyAllowance.balance_available))
+              }
+            >
               {loading ? 'Submitting...' : 'Submit Request'}
             </Button>
           </div>
