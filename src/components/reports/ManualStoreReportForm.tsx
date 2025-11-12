@@ -32,7 +32,9 @@ const ManualStoreReportForm = () => {
     advances_paid: 0,
     input_by: employee?.name || '',
     attachment_url: '',
-    attachment_name: ''
+    attachment_name: '',
+    delivery_note_url: '',
+    delivery_note_name: ''
   });
 
 
@@ -62,7 +64,9 @@ const ManualStoreReportForm = () => {
         advances_paid: 0,
         input_by: employee?.name || '',
         attachment_url: '',
-        attachment_name: ''
+        attachment_name: '',
+        delivery_note_url: '',
+        delivery_note_name: ''
       });
     } catch (error) {
       console.error('Error submitting manual store report:', error);
@@ -79,7 +83,7 @@ const ManualStoreReportForm = () => {
     }));
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, fieldPrefix: 'attachment' | 'delivery_note') => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -113,11 +117,11 @@ const ManualStoreReportForm = () => {
 
       setFormData(prev => ({
         ...prev,
-        attachment_url: filePath, // Store file path instead of public URL
-        attachment_name: file.name
+        [`${fieldPrefix}_url`]: filePath,
+        [`${fieldPrefix}_name`]: file.name
       }));
 
-      toast.success("Document uploaded successfully");
+      toast.success(`Document ${fieldPrefix === 'attachment' ? '1' : '2'} uploaded successfully`);
     } catch (error) {
       console.error('Error uploading file:', error);
       toast.error("Failed to upload document");
@@ -126,11 +130,6 @@ const ManualStoreReportForm = () => {
     }
   };
 
-  const triggerScan = () => {
-    // Simulate scanner trigger - in real implementation this would interface with scanner API
-    toast.info("Scanner activated. Please place document on scanner bed and press scan.");
-    document.getElementById('file-upload')?.click();
-  };
 
   return (
     <Card className="w-full">
@@ -149,29 +148,52 @@ const ManualStoreReportForm = () => {
           <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
             <h3 className="text-lg font-medium flex items-center gap-2">
               <Upload className="h-4 w-4" />
-              Document Upload (Optional)
+              Document Uploads (Optional - Upload up to 2 documents)
             </h3>
             
-            <div className="space-y-2">
-              <Label htmlFor="file-upload-visible">Upload Document (PDF, JPG, PNG)</Label>
-              <input
-                id="file-upload-visible"
-                type="file"
-                accept=".jpg,.jpeg,.png,.pdf"
-                onChange={handleFileUpload}
-                disabled={uploadingFile}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-              {uploadingFile && (
-                <p className="text-sm text-muted-foreground">Uploading document...</p>
-              )}
-              {formData.attachment_name && (
-                <div className="flex items-center gap-2 p-2 bg-primary/10 border border-primary/20 rounded">
-                  <FileText className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-foreground font-medium">{formData.attachment_name}</span>
-                </div>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* First Attachment */}
+              <div className="space-y-2">
+                <Label htmlFor="file-upload-1">Document 1 (PDF, JPG, PNG)</Label>
+                <input
+                  id="file-upload-1"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={(e) => handleFileUpload(e, 'attachment')}
+                  disabled={uploadingFile}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                {formData.attachment_name && (
+                  <div className="flex items-center gap-2 p-2 bg-primary/10 border border-primary/20 rounded">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-foreground font-medium">{formData.attachment_name}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Second Attachment */}
+              <div className="space-y-2">
+                <Label htmlFor="file-upload-2">Document 2 (PDF, JPG, PNG)</Label>
+                <input
+                  id="file-upload-2"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={(e) => handleFileUpload(e, 'delivery_note')}
+                  disabled={uploadingFile}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+                {formData.delivery_note_name && (
+                  <div className="flex items-center gap-2 p-2 bg-primary/10 border border-primary/20 rounded">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-foreground font-medium">{formData.delivery_note_name}</span>
+                  </div>
+                )}
+              </div>
             </div>
+            
+            {uploadingFile && (
+              <p className="text-sm text-muted-foreground">Uploading document...</p>
+            )}
           </div>
 
           {/* Regular Form Fields */}
