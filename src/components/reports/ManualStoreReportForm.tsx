@@ -29,7 +29,6 @@ const ManualStoreReportForm = () => {
     bags_left: 0,
     kilograms_left: 0,
     advances_given: 0,
-    advances_paid: 0,
     input_by: employee?.name || '',
     attachment_url: '',
     attachment_name: '',
@@ -61,7 +60,6 @@ const ManualStoreReportForm = () => {
         bags_left: 0,
         kilograms_left: 0,
         advances_given: 0,
-        advances_paid: 0,
         input_by: employee?.name || '',
         attachment_url: '',
         attachment_name: '',
@@ -286,17 +284,6 @@ const ManualStoreReportForm = () => {
                 step="0.01"
                 value={formData.advances_given}
                 onChange={(e) => handleInputChange('advances_given', parseFloat(e.target.value) || 0)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="advances_paid">Advances Paid (UGX)</Label>
-              <Input
-                id="advances_paid"
-                type="number"
-                step="0.01"
-                value={formData.advances_paid}
-                onChange={(e) => handleInputChange('advances_paid', parseFloat(e.target.value) || 0)}
               />
             </div>
 
