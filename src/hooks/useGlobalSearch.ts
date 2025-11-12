@@ -220,19 +220,14 @@ export const useGlobalSearch = (searchTerm: string) => {
           }
         }
 
-        // Search Coffee Records by Batch Number - Check both Store Management permission and wildcard
-        const canAccessStore = hasPermission && (hasPermission('Store Management') || employee?.permissions?.includes('*'));
-        console.log('🔍 Can access store:', canAccessStore, 'Employee permissions:', employee?.permissions);
-        
-        if (canAccessStore) {
+        // Search Coffee Records by Batch Number - Available to all authenticated users
+        try {
           // Search in store_records table (Supabase)
           const { data: storeRecords, error: storeError } = await supabase
             .from('store_records')
             .select('*')
             .or(`batch_number.ilike.%${searchTerm}%,supplier_name.ilike.%${searchTerm}%,reference_number.ilike.%${searchTerm}%`)
             .limit(10);
-
-          console.log('🔍 Store records search result:', storeRecords, 'Error:', storeError);
 
           if (storeError) console.error('Store records search error:', storeError);
 
@@ -267,39 +262,36 @@ export const useGlobalSearch = (searchTerm: string) => {
                 subtitle: `${record.supplier_name} | ${record.kilograms}kg | ${record.date}`,
                 navigateTo: `/quality-control`,
                 department: 'Quality',
-                module: 'Coffee Records (Supabase)',
+                module: 'Coffee Records',
                 metadata: record
               });
             });
           }
 
           // Search coffee_records in Firebase
-          try {
-            const coffeeQuery = query(
-              collection(db, 'coffee_records'),
-              where('batch_number', '>=', searchTerm.toUpperCase()),
-              where('batch_number', '<=', searchTerm.toUpperCase() + '\uf8ff')
-            );
-            
-            const snapshot = await getDocs(coffeeQuery);
-            console.log('🔍 Firebase coffee records found:', snapshot.size);
-            
-            snapshot.docs.slice(0, 10).forEach(doc => {
-              const record = doc.data();
-              searchResults.push({
-                id: doc.id,
-                type: 'batch',
-                title: `Batch: ${record.batch_number}`,
-                subtitle: `${record.supplier_name} | ${record.kilograms}kg | ${record.date}`,
-                navigateTo: `/quality-control`,
-                department: 'Quality',
-                module: 'Coffee Records (Firebase)',
-                metadata: { ...record, id: doc.id }
-              });
+          const coffeeQuery = query(
+            collection(db, 'coffee_records'),
+            where('batch_number', '>=', searchTerm.toUpperCase()),
+            where('batch_number', '<=', searchTerm.toUpperCase() + '\uf8ff')
+          );
+          
+          const snapshot = await getDocs(coffeeQuery);
+          
+          snapshot.docs.slice(0, 10).forEach(doc => {
+            const record = doc.data();
+            searchResults.push({
+              id: doc.id,
+              type: 'batch',
+              title: `Batch: ${record.batch_number}`,
+              subtitle: `${record.supplier_name} | ${record.kilograms}kg | ${record.date}`,
+              navigateTo: `/quality-control`,
+              department: 'Quality',
+              module: 'Coffee Records',
+              metadata: { ...record, id: doc.id }
             });
-          } catch (firebaseError) {
-            console.error('Firebase search error:', firebaseError);
-          }
+          });
+        } catch (error) {
+          console.error('Store/Coffee records search error:', error);
         }
 
         // Search Quality Assessments
@@ -327,13 +319,12 @@ export const useGlobalSearch = (searchTerm: string) => {
           }
         }
 
-        // Search Employees (HR permission)
-        const canAccessHR = hasPermission && (hasPermission('User Management') || hasPermission('HR Management') || employee?.permissions?.includes('*'));
-        if (canAccessHR) {
+        // Search Employees - Basic info available to all
+        try {
           const { data: employees } = await supabase
             .from('employees')
-            .select('*')
-            .or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,employee_id.ilike.%${searchTerm}%,department.ilike.%${searchTerm}%`)
+            .select('id, name, position, department, employee_id')
+            .or(`name.ilike.%${searchTerm}%,employee_id.ilike.%${searchTerm}%,department.ilike.%${searchTerm}%`)
             .limit(10);
 
           if (employees) {
@@ -343,13 +334,15 @@ export const useGlobalSearch = (searchTerm: string) => {
                 type: 'employee',
                 title: emp.name,
                 subtitle: `${emp.position} | ${emp.department}`,
-                navigateTo: `/human-resources?employee=${emp.id}`,
+                navigateTo: `/human-resources`,
                 department: 'HR',
-                module: 'Employee Management',
+                module: 'Employees',
                 metadata: emp
               });
             });
           }
+        } catch (error) {
+          console.error('Employee search error:', error);
         }
 
         // Search Payment Records (Finance permission)
