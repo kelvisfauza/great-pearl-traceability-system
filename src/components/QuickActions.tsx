@@ -15,10 +15,12 @@ import {
   DollarSign,
   Coffee,
   ShoppingCart,
-  Receipt
+  Receipt,
+  Eye
 } from "lucide-react";
 import SupplierAdvanceModal from "@/components/finance/SupplierAdvanceModal";
 import IssueReceiptModal from "@/components/finance/IssueReceiptModal";
+import StorePreviewModal from "@/components/store/StorePreviewModal";
 
 const QuickActions = () => {
   const navigate = useNavigate();
@@ -26,10 +28,19 @@ const QuickActions = () => {
   const access = useRoleBasedAccess();
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showStorePreviewModal, setShowStorePreviewModal] = useState(false);
 
   if (!employee) return null;
 
   const allActions = [
+    {
+      title: "Store Preview",
+      description: "View recent transactions",
+      icon: Eye,
+      color: "bg-teal-600 hover:bg-teal-700",
+      action: () => setShowStorePreviewModal(true),
+      access: access.canManageInventory
+    },
     {
       title: "Purchase Coffee",
       description: "Record new coffee delivery",
@@ -169,6 +180,11 @@ const QuickActions = () => {
       <IssueReceiptModal
         open={showReceiptModal}
         onClose={() => setShowReceiptModal(false)}
+      />
+
+      <StorePreviewModal
+        open={showStorePreviewModal}
+        onOpenChange={setShowStorePreviewModal}
       />
     </Card>
   );
