@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { smsService } from '@/services/smsService';
 
 export interface OvertimeAward {
   id: string;
@@ -308,9 +309,35 @@ export const useOvertimeAwards = () => {
         console.error('Error sending notification:', notifError);
       }
 
+      // Send SMS notification to employee
+      try {
+        // Get employee phone number
+        const { data: employeeData } = await supabase
+          .from('employees')
+          .select('phone')
+          .eq('email', awardData.employee_email)
+          .maybeSingle();
+
+        if (employeeData?.phone) {
+          const smsMessage = `Great Pearl Coffee: Your overtime claim (Ref: ${awardData.reference_number}) has been completed and paid. Amount: UGX ${awardData.total_amount.toLocaleString()}. Thank you!`;
+          
+          const smsResult = await smsService.sendSMS(employeeData.phone, smsMessage);
+          
+          if (smsResult.success) {
+            console.log('✅ SMS sent successfully to:', employeeData.phone);
+          } else {
+            console.error('⚠️ SMS failed:', smsResult.error);
+          }
+        } else {
+          console.log('⚠️ No phone number found for employee:', awardData.employee_email);
+        }
+      } catch (smsError) {
+        console.error('Error sending SMS:', smsError);
+      }
+
       toast({
         title: "Claim Completed",
-        description: "Overtime claim has been marked as completed"
+        description: "Overtime claim has been marked as completed and SMS sent"
       });
 
       // Refresh data
