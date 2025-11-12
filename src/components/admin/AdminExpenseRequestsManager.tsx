@@ -168,20 +168,16 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
 
   const confirmApproval = async (paymentMethod: 'cash' | 'transfer', comments?: string) => {
     try {
-      alert('🚀 CONFIRM APPROVAL CALLED! Payment: ' + paymentMethod);
       console.log('🚀 confirmApproval STARTED');
       console.log('🚀 selectedRequest:', selectedRequest);
       
       if (!selectedRequest || !selectedRequest.id) {
-        alert('ERROR: No request selected!');
         console.error('No request selected for approval');
         return;
       }
       
       const requestId = selectedRequest.id;
       const approverName = employee?.name || 'Admin Team';
-      
-      alert('🎯 About to update status for: ' + requestId);
       console.log('🎯 Starting approval for ID:', requestId);
       
       // Determine which admin approval slot to use
@@ -205,7 +201,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       // Set status to Approved if this is the final approval, otherwise keep as Pending
       const newStatus = isFullyApproved ? 'Approved' : 'Pending';
       
-      alert('📝 Calling updateRequestStatus with type: ' + approvalType + ' and status: ' + newStatus);
+      console.log('📝 Calling updateRequestStatus with type:', approvalType, 'and status:', newStatus);
       
       const success = await updateRequestStatus(
         requestId, 
@@ -216,7 +212,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
         approverName
       );
       
-      alert('✅ Update result: ' + (success ? 'SUCCESS' : 'FAILED'));
+      console.log('✅ Update result:', success ? 'SUCCESS' : 'FAILED');
       console.log('🎯 Update success:', success);
       
       if (success) {

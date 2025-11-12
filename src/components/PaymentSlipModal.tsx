@@ -13,6 +13,7 @@ interface PaymentSlipModalProps {
     request_type: string;
     reason: string;
     payment_slip_number: string | null;
+    paymentMethod?: string;
     finance_approved_by: string | null;
     finance_approved_at: string | null;
     admin_approved_by: string | null;
@@ -49,7 +50,7 @@ const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({ open, onOpenChange,
         <div style="margin-bottom: 20px;">
           <h3 style="margin: 0 0 10px 0; color: #333;">Payment Information</h3>
           <p style="margin: 5px 0;"><strong>Amount:</strong> UGX ${request.amount.toLocaleString()}</p>
-          <p style="margin: 5px 0;"><strong>Payment Method:</strong> Bank Transfer</p>
+          <p style="margin: 5px 0;"><strong>Payment Method:</strong> ${request.paymentMethod || 'Bank Transfer'}</p>
           <p style="margin: 5px 0;"><strong>Status:</strong> Approved & Processed</p>
         </div>
         
@@ -133,7 +134,7 @@ const PaymentSlipModal: React.FC<PaymentSlipModalProps> = ({ open, onOpenChange,
             <h3 className="font-semibold text-gray-900 mb-3">Payment Information</h3>
             <div className="space-y-2 text-sm">
               <div><span className="font-medium">Amount:</span> <span className="font-bold text-green-600">UGX {request.amount.toLocaleString()}</span></div>
-              <div><span className="font-medium">Payment Method:</span> Bank Transfer</div>
+              <div><span className="font-medium">Payment Method:</span> {request.paymentMethod || 'Bank Transfer'}</div>
               <div><span className="font-medium">Status:</span> <span className="text-green-600">Approved & Processed</span></div>
             </div>
           </div>
