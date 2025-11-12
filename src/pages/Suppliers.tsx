@@ -585,21 +585,25 @@ const Suppliers = () => {
           </div>
           <div className="flex gap-2">
             {!selectedSupplier && isAdmin() && suppliers.length > 0 && (
-              <Button variant="outline" onClick={handlePrintSuppliersList}>
-                <Download className="h-4 w-4 mr-2" />
-                Download List
-              </Button>
+              <>
+                <Button variant="outline" onClick={handlePrintSuppliersList}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print List
+                </Button>
+              </>
             )}
             {selectedSupplier && (
               <>
-                <Button 
-                  variant="outline" 
-                  onClick={handlePrintSupplierStatement}
-                  disabled={filteredTransactions.length === 0}
-                >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print Statement
-                </Button>
+                {isAdmin() && (
+                  <Button 
+                    variant="outline" 
+                    onClick={handlePrintSupplierStatement}
+                    disabled={filteredTransactions.length === 0}
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print Statement
+                  </Button>
+                )}
                 <Button variant="outline" onClick={() => setSelectedSupplier(null)}>
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to List
