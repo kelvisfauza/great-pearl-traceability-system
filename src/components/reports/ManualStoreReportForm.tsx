@@ -43,6 +43,15 @@ const ManualStoreReportForm = () => {
     setLoading(true);
     
     try {
+      console.log('📋 Submitting store report with data:', {
+        date: formData.date,
+        coffee_type: formData.coffee_type,
+        attachment_url: formData.attachment_url,
+        attachment_name: formData.attachment_name,
+        delivery_note_url: formData.delivery_note_url,
+        delivery_note_name: formData.delivery_note_name
+      });
+
       await addStoreReport(formData);
       
       toast.success("Manual store report submitted successfully");
@@ -85,6 +94,8 @@ const ManualStoreReportForm = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log(`📤 Uploading ${fieldPrefix}:`, file.name);
+
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
@@ -105,24 +116,40 @@ const ManualStoreReportForm = () => {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `reports/${fileName}`;
 
+      console.log(`📁 Uploading to storage path: ${filePath}`);
+
       const { error: uploadError } = await supabase.storage
         .from('report-documents')
         .upload(filePath, file);
 
       if (uploadError) {
+        console.error(`❌ Upload error for ${fieldPrefix}:`, uploadError);
         throw uploadError;
       }
 
-      setFormData(prev => ({
-        ...prev,
-        [`${fieldPrefix}_url`]: filePath,
-        [`${fieldPrefix}_name`]: file.name
-      }));
+      console.log(`✅ ${fieldPrefix} uploaded successfully:`, filePath);
+
+      // Update form data with both URL and name
+      const urlField = `${fieldPrefix}_url`;
+      const nameField = `${fieldPrefix}_name`;
+      
+      setFormData(prev => {
+        const updated = {
+          ...prev,
+          [urlField]: filePath,
+          [nameField]: file.name
+        };
+        console.log(`📝 Form data updated for ${fieldPrefix}:`, {
+          [urlField]: updated[urlField],
+          [nameField]: updated[nameField]
+        });
+        return updated;
+      });
 
       toast.success(`Document ${fieldPrefix === 'attachment' ? '1' : '2'} uploaded successfully`);
     } catch (error) {
-      console.error('Error uploading file:', error);
-      toast.error("Failed to upload document");
+      console.error(`❌ Error uploading ${fieldPrefix}:`, error);
+      toast.error(`Failed to upload document ${fieldPrefix === 'attachment' ? '1' : '2'}: ${(error as Error).message}`);
     } finally {
       setUploadingFile(false);
     }
