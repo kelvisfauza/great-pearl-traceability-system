@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText, Printer, Calendar } from "lucide-react";
+import { Plus, Package, Users, Scale, Send, Truck, ShoppingCart, Factory, DollarSign, Edit, Trash2, AlertTriangle, FileText, Printer, Calendar, Eye } from "lucide-react";
 import { useStoreManagement } from "@/hooks/useStoreManagement";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -25,6 +25,7 @@ import { Autocomplete } from "@/components/ui/autocomplete";
 import { StoreRecordsManager } from "@/components/store/StoreRecordsManager";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
 import ManualStoreReportForm from "@/components/reports/ManualStoreReportForm";
+import StorePreviewModal from "@/components/store/StorePreviewModal";
 
 const Store = () => {
   const [searchParams] = useSearchParams();
@@ -149,6 +150,7 @@ const Store = () => {
   const [showGRNModal, setShowGRNModal] = useState(false);
   const [selectedGRNData, setSelectedGRNData] = useState(null);
   const [showQuickReportModal, setShowQuickReportModal] = useState(false);
+  const [showStorePreviewModal, setShowStorePreviewModal] = useState(false);
 
   const loading = storeLoading || suppliersLoading || qualityLoading || processingLoading;
 
@@ -452,14 +454,25 @@ const Store = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <PriceTicker />
-          <Button 
-            onClick={() => setShowQuickReportModal(true)}
-            className="gap-2"
-            size="sm"
-          >
-            <FileText className="h-4 w-4" />
-            Quick Add Report
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => setShowStorePreviewModal(true)}
+              className="gap-2"
+              size="sm"
+              variant="outline"
+            >
+              <Eye className="h-4 w-4" />
+              Store Preview
+            </Button>
+            <Button 
+              onClick={() => setShowQuickReportModal(true)}
+              className="gap-2"
+              size="sm"
+            >
+              <FileText className="h-4 w-4" />
+              Quick Add Report
+            </Button>
+          </div>
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -1251,6 +1264,12 @@ const Store = () => {
             <ManualStoreReportForm />
           </DialogContent>
         </Dialog>
+
+        {/* Store Preview Modal */}
+        <StorePreviewModal 
+          open={showStorePreviewModal}
+          onOpenChange={setShowStorePreviewModal}
+        />
 
         {/* GRN Print Modal */}
         <GRNPrintModal
