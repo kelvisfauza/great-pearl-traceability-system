@@ -563,8 +563,30 @@ Make this report COMPREHENSIVE, DATA-DRIVEN, and ACTIONABLE. Use specific number
       throw new Error(`AI API error: ${aiResponse.status}`);
     }
 
-    const aiData = await aiResponse.json();
+    // Get response text first to handle parsing errors better
+    const responseText = await aiResponse.text();
+    console.log('AI API response length:', responseText.length);
+    
+    // Try to parse JSON with better error handling
+    let aiData;
+    try {
+      aiData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('JSON parse error. Response preview:', responseText.substring(0, 500));
+      throw new Error(`Failed to parse AI response: ${parseError instanceof Error ? parseError.message : 'Invalid JSON'}`);
+    }
+
+    // Validate response structure
+    if (!aiData.choices || !aiData.choices[0] || !aiData.choices[0].message) {
+      console.error('Invalid AI response structure:', aiData);
+      throw new Error('Invalid AI API response structure');
+    }
+
     const riskAssessment = aiData.choices[0].message.content;
+    
+    if (!riskAssessment) {
+      throw new Error('AI API returned empty content');
+    }
 
     console.log('Risk assessment generated successfully');
 
