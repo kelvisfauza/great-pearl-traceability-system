@@ -39,11 +39,6 @@ const ManualStoreReportForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.attachment_url) {
-      toast.error("Please attach a document before submitting");
-      return;
-    }
-    
     setLoading(true);
     
     try {
@@ -154,7 +149,7 @@ const ManualStoreReportForm = () => {
           <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
             <h3 className="text-lg font-medium flex items-center gap-2">
               <Upload className="h-4 w-4" />
-              Document Upload (Required)
+              Document Upload (Optional)
             </h3>
             
             <div className="space-y-2">
@@ -298,10 +293,10 @@ const ManualStoreReportForm = () => {
 
           <Button 
             type="submit" 
-            disabled={loading || !formData.attachment_url} 
+            disabled={loading} 
             className="w-full"
           >
-            {loading ? 'Saving...' : 'Save Report with Attachment'}
+            {loading ? 'Saving...' : 'Save Report'}
           </Button>
         </form>
       </CardContent>
