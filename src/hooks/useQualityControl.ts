@@ -544,7 +544,6 @@ export const useQualityControl = () => {
           stones: updates.stones,
           // Calculator results
           fm: updates.fm,
-          actual_ott: updates.actual_ott,
           clean_d14: updates.clean_d14,
           outturn: updates.outturn,
           outturn_price: updates.outturn_price,
