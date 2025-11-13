@@ -54,6 +54,7 @@ const ComparisonReport = () => {
   const [insights, setInsights] = useState<string>("");
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [dataSource, setDataSource] = useState<"transactions" | "store_reports">("store_reports");
+  const [showAllBreakdown, setShowAllBreakdown] = useState(false);
 
   const comparisonOptions = [
     { value: "purchases-vs-sales", label: "Purchases vs Sales" },
@@ -520,6 +521,111 @@ const ComparisonReport = () => {
     window.print();
   };
 
+  const handlePrintBreakdown = () => {
+    const filteredBreakdown = showAllBreakdown 
+      ? comparisonData?.breakdown 
+      : comparisonData?.breakdown?.filter(b => b.issue !== "✓ Matches");
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Data Reconciliation Breakdown - ${format(new Date(), "PPP")}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            color: #000;
+          }
+          .company-logo { height: 64px; width: auto; margin-bottom: 8px; }
+          .company-name { font-weight: bold; font-size: 20px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; color: #111; text-align: center; }
+          .company-details { font-size: 14px; color: #666; margin-bottom: 16px; text-align: center; }
+          .document-title { font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; color: #111; margin-bottom: 8px; text-align: center; }
+          .period-info { font-size: 14px; color: #666; margin-bottom: 24px; text-align: center; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th { background-color: #f5f5f5; padding: 12px; text-align: left; border: 1px solid #ddd; font-weight: bold; }
+          td { padding: 10px; border: 1px solid #ddd; }
+          tr:nth-child(even) { background-color: #fafafa; }
+          .text-right { text-align: right; }
+          .issue-cell { font-weight: 500; }
+          .error { color: #dc2626; font-weight: bold; }
+          .warning { color: #f59e0b; }
+          .success { color: #16a34a; }
+          .summary { margin-top: 30px; padding: 15px; background-color: #f9fafb; border: 1px solid #e5e7eb; }
+          .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 20px; }
+          @media print {
+            body { margin: 0; }
+            @page { margin: 20mm; }
+          }
+        </style>
+      </head>
+      <body>
+        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 16px; margin-bottom: 24px;">
+          <img src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" alt="Company Logo" class="company-logo" />
+          <h1 class="company-name">GREAT PEARL COFFEE FACTORY</h1>
+          <div class="company-details">
+            <p>Specialty Coffee Processing & Export</p>
+            <p>+256781121639 / +256778536681</p>
+            <p>www.greatpearlcoffee.com | greatpearlcoffee@gmail.com</p>
+            <p>Uganda Coffee Development Authority Licensed</p>
+          </div>
+          <h2 class="document-title">Data Reconciliation - Detailed Issue Breakdown</h2>
+          <div class="period-info">
+            <p><strong>Period:</strong> ${format(startDate, "PPP")} - ${format(endDate, "PPP")}</p>
+            <p><strong>Generated:</strong> ${format(new Date(), "PPP 'at' pp")}</p>
+            <p><strong>Filter:</strong> ${showAllBreakdown ? "All Records" : "Issues Only"}</p>
+          </div>
+        </div>
+
+        <div class="summary">
+          <h3 style="margin-top: 0;">Summary</h3>
+          <p><strong>Total Assessed Coffee:</strong> ${formatNumber(comparisonData?.metric1Value || 0)} kg</p>
+          <p><strong>Total Store Reports:</strong> ${formatNumber(comparisonData?.metric2Value || 0)} kg</p>
+          <p><strong>Total Difference:</strong> ${formatNumber(Math.abs(comparisonData?.difference || 0))} kg</p>
+          <p><strong>Records Shown:</strong> ${filteredBreakdown?.length || 0} ${showAllBreakdown ? "total records" : "records with issues"}</p>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th class="text-right">Assessed Coffee (kg)</th>
+              <th class="text-right">Store Report (kg)</th>
+              <th class="text-right">Difference (kg)</th>
+              <th>Issue / Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredBreakdown?.map(row => `
+              <tr>
+                <td><strong>${row.date}</strong></td>
+                <td class="text-right">${formatNumber(row.metric1)}</td>
+                <td class="text-right">${formatNumber(row.metric2)}</td>
+                <td class="text-right ${Math.abs(row.difference) > 1 ? 'error' : ''}">${row.difference > 0 ? '+' : ''}${formatNumber(row.difference)}</td>
+                <td class="issue-cell ${row.issue?.includes('⚠️') ? 'warning' : row.issue === '✓ Matches' ? 'success' : 'error'}">${row.issue}</td>
+              </tr>
+            `).join('') || '<tr><td colspan="5" style="text-align: center; padding: 20px;">No records found</td></tr>'}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <p>This is a computer-generated report from Great Pearl Coffee Factory Management System</p>
+          <p>For queries, contact: greatpearlcoffee@gmail.com | +256781121639</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  };
+
   const getComparisonLabel = () => {
     const option = comparisonOptions.find(opt => opt.value === comparisonType);
     return option?.label || "Comparison Report";
@@ -855,12 +961,40 @@ const ComparisonReport = () => {
             {comparisonData.breakdown && comparisonData.breakdown.length > 0 && (
               <Card className="md:col-span-2">
                 <CardHeader>
-                  <CardTitle>🔍 Detailed Issue Breakdown</CardTitle>
-                  <CardDescription>
-                    Daily comparison showing discrepancies between assessed coffee and store reports
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>🔍 Detailed Issue Breakdown</CardTitle>
+                      <CardDescription>
+                        Daily comparison showing discrepancies between assessed coffee and store reports
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAllBreakdown(!showAllBreakdown)}
+                      >
+                        {showAllBreakdown ? "Show Issues Only" : "Show All Records"}
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handlePrintBreakdown}
+                        className="gap-2"
+                      >
+                        <Printer className="h-4 w-4" />
+                        Print Breakdown
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
+                  <div className="mb-4 p-3 bg-muted rounded-lg text-sm">
+                    <p className="font-medium">
+                      Showing: {showAllBreakdown ? "All records" : "Issues only"} 
+                      ({(showAllBreakdown ? comparisonData.breakdown : comparisonData.breakdown.filter(b => b.issue !== "✓ Matches")).length} records)
+                    </p>
+                  </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
@@ -873,7 +1007,7 @@ const ComparisonReport = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {comparisonData.breakdown.map((row, idx) => (
+                        {(showAllBreakdown ? comparisonData.breakdown : comparisonData.breakdown.filter(b => b.issue !== "✓ Matches")).map((row, idx) => (
                           <tr key={idx} className="border-b hover:bg-muted/50">
                             <td className="p-2 font-medium">{row.date}</td>
                             <td className="p-2 text-right">{formatNumber(row.metric1)}</td>
@@ -884,19 +1018,17 @@ const ComparisonReport = () => {
                             )}>
                               {row.difference > 0 ? '+' : ''}{formatNumber(row.difference)}
                             </td>
-                            <td className="p-2 text-sm">{row.issue}</td>
+                            <td className={cn(
+                              "p-2",
+                              row.issue?.includes('⚠️') ? "text-amber-600 font-medium" : 
+                              row.issue === "✓ Matches" ? "text-green-600" : "text-destructive font-medium"
+                            )}>
+                              {row.issue}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                  <div className="mt-4 p-4 bg-muted rounded-lg">
-                    <p className="text-sm font-semibold mb-2">Summary:</p>
-                    <ul className="text-sm space-y-1">
-                      <li>• Found {comparisonData.breakdown.length} dates with discrepancies</li>
-                      <li>• Total difference: {formatNumber(Math.abs(comparisonData.difference))} kg</li>
-                      <li>• Percentage variance: {formatNumber(Math.abs(comparisonData.percentageDiff))}%</li>
-                    </ul>
                   </div>
                 </CardContent>
               </Card>
