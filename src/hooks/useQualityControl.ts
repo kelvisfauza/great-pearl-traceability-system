@@ -69,14 +69,32 @@ export const useQualityControl = () => {
       
       const coffeeQuery = query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'));
       const coffeeSnapshot = await getDocs(coffeeQuery);
-      const coffeeData = coffeeSnapshot.docs
+      const allRecords = coffeeSnapshot.docs
         .map(doc => ({
           id: doc.id,
           ...doc.data()
         } as StoreRecord))
         .filter(record => record.status !== 'sales' && record.status !== 'inventory'); // Filter out sold/inventoried records
 
-      console.log('Loaded coffee records (excluding paid):', coffeeData.length, 'records');
+      // Deduplicate by batch_number - keep the most recent one
+      const batchMap = new Map();
+      allRecords.forEach(record => {
+        if (record.batch_number) {
+          const existing = batchMap.get(record.batch_number);
+          if (!existing || new Date(record.created_at) > new Date(existing.created_at)) {
+            batchMap.set(record.batch_number, record);
+          }
+        } else {
+          // Keep records without batch numbers (shouldn't happen but just in case)
+          batchMap.set(record.id, record);
+        }
+      });
+      
+      const coffeeData = Array.from(batchMap.values()).sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      console.log('Loaded coffee records (deduplicated):', coffeeData.length, 'records (from', allRecords.length, 'total)');
       setStoreRecords(coffeeData || []);
       return coffeeData;
     } catch (error) {
