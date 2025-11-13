@@ -493,6 +493,25 @@ export const useStoreManagement = () => {
     try {
       console.log('Adding coffee record to Firebase:', recordData);
       
+      // Check for duplicate batch number in Firebase
+      const duplicateQuery = query(
+        collection(db, 'coffee_records'),
+        where('batch_number', '==', recordData.batchNumber)
+      );
+      const duplicateSnapshot = await getDocs(duplicateQuery);
+      
+      if (!duplicateSnapshot.empty) {
+        const error = `Duplicate batch number: ${recordData.batchNumber} already exists`;
+        console.error('❌', error);
+        toast({
+          title: "❌ Duplicate Batch Number",
+          description: error,
+          variant: "destructive",
+          duration: 5000
+        });
+        throw new Error(error);
+      }
+      
       // Find supplier to get supplier ID
       const supplier = suppliers.find(s => s.name === recordData.supplierName);
       const contract = supplier ? getActiveContractForSupplier(supplier.id) : null;
