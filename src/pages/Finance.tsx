@@ -158,8 +158,20 @@ const Finance = () => {
                 <TabsContent value="expenses" className="mt-6">
                   <Suspense fallback={<LoadingSpinner />}>
                     <div className="space-y-6">
-                      <MoneyRequestsManager />
-                      <ExpenseManagement />
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <DollarSign className="h-5 w-5" />
+                          Salary Requests
+                        </h3>
+                        <MoneyRequestsManager />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <Receipt className="h-5 w-5" />
+                          Company Expenses
+                        </h3>
+                        <ExpenseManagement />
+                      </div>
                     </div>
                   </Suspense>
                 </TabsContent>
