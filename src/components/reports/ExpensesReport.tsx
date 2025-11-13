@@ -9,6 +9,7 @@ import { Receipt, Printer, DollarSign, Calendar, User, FileText, Download, Clock
 import { useEnhancedExpenseManagement } from '@/hooks/useEnhancedExpenseManagement';
 import { useOvertimeAwards } from '@/hooks/useOvertimeAwards';
 import { useArchivedExpenses } from '@/hooks/useArchivedExpenses';
+import { useMoneyRequests } from '@/hooks/useMoneyRequests';
 import StandardPrintHeader from '@/components/print/StandardPrintHeader';
 import { useReactToPrint } from 'react-to-print';
 
@@ -16,6 +17,7 @@ export const ExpensesReport = () => {
   const { expenseRequests, loading } = useEnhancedExpenseManagement();
   const { awards: overtimeAwards, loading: overtimeLoading } = useOvertimeAwards();
   const { archivedExpenses, loading: archivedLoading } = useArchivedExpenses();
+  const { moneyRequests, loading: moneyRequestsLoading } = useMoneyRequests();
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [includeArchived, setIncludeArchived] = useState(true);
@@ -37,12 +39,39 @@ export const ExpensesReport = () => {
     (req.type === 'Employee Expense Request' || req.type.includes('Expense'))
   );
 
-  const approvedSalaryRequests = allExpenses.filter(req =>
-    req.status === 'Approved' &&
-    req.financeApprovedAt &&
-    req.adminApprovedAt &&
-    (req.type === 'Employee Salary Request' || req.type === 'Salary Payment')
-  );
+  // Include money_requests in salary requests
+  const approvedMoneyRequests = moneyRequests
+    .filter(req => 
+      req.status === 'approved' && 
+      req.finance_approved_at && 
+      req.admin_approved_at &&
+      (includeArchived || !req.isArchived)
+    )
+    .map(req => ({
+      id: req.id,
+      type: 'Salary Request',
+      title: `Salary Request - ${req.requested_by}`,
+      description: req.reason,
+      amount: req.amount,
+      requestedby: req.requested_by,
+      daterequested: req.created_at,
+      status: 'Approved',
+      financeApprovedAt: req.finance_approved_at,
+      adminApprovedAt: req.admin_approved_at,
+      financeApprovedBy: req.finance_approved_by,
+      adminApprovedBy: req.admin_approved_by,
+      isArchived: req.isArchived
+    }));
+
+  const approvedSalaryRequests = [
+    ...allExpenses.filter(req =>
+      req.status === 'Approved' &&
+      req.financeApprovedAt &&
+      req.adminApprovedAt &&
+      (req.type === 'Employee Salary Request' || req.type === 'Salary Payment')
+    ),
+    ...approvedMoneyRequests
+  ];
 
   const approvedRequisitions = allExpenses.filter(req =>
     req.status === 'Approved' &&
@@ -160,7 +189,7 @@ export const ExpensesReport = () => {
     return `PS-${now.getFullYear()}-${now.getMonth() + 1}-${requestId.slice(0, 8).toUpperCase()}`;
   };
 
-  if (loading || overtimeLoading || archivedLoading) {
+  if (loading || overtimeLoading || archivedLoading || moneyRequestsLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center h-64">
