@@ -311,6 +311,17 @@ const Expenses = () => {
       return;
     }
 
+    // Check if authUserId exists
+    if (!employee.authUserId) {
+      console.error('❌ Missing authUserId for employee:', { id: employee.id, email: employee.email });
+      toast({
+        title: "Authentication Error",
+        description: "Your account is not properly linked. Please log out and log back in, or contact IT support.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const numericAmount = parseFloat(salaryFormData.amount);
     if (isNaN(numericAmount) || numericAmount < 10000) {
       toast({
@@ -340,9 +351,17 @@ const Expenses = () => {
       ? 'Salary Advance'
       : 'Emergency Salary Request';
 
+    console.log('🔍 Submitting salary request:', {
+      user_id: employee.authUserId,
+      amount: numericAmount,
+      request_type: requestTypeLabel,
+      employee_email: employee.email,
+      request_period: salaryFormData.requestType
+    });
+
     try {
       // Submit to Supabase money_requests for proper two-tier approval flow
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('money_requests')
         .insert({
           user_id: employee.authUserId,
@@ -365,9 +384,15 @@ const Expenses = () => {
             available_before_request: periodInfo.availableAmount,
             overtime_included: periodInfo.overtimeEarned || 0
           }
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase insert error:', error);
+        throw error;
+      }
+
+      console.log('✅ Salary request submitted successfully:', data);
 
       toast({
         title: "Success",
@@ -384,11 +409,23 @@ const Expenses = () => {
       
       // Refetch salary info
       refetchSalaryInfo();
-    } catch (error) {
-      console.error('Error submitting salary request:', error);
+    } catch (error: any) {
+      console.error('❌ Error submitting salary request:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = "Failed to submit salary request";
+      
+      if (error?.message?.includes('refresh_token') || error?.message?.includes('JWT') || error?.code === 'refresh_token_not_found') {
+        errorMessage = "Your session has expired. Please log out and log back in to continue.";
+      } else if (error?.code === '23503') {
+        errorMessage = "Account not properly linked. Please contact IT support.";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to submit salary request",
+        description: errorMessage,
         variant: "destructive"
       });
     }
