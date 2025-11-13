@@ -368,22 +368,9 @@ const Expenses = () => {
           amount: numericAmount,
           reason: salaryFormData.reason,
           request_type: requestTypeLabel,
-          requested_by: employee.name,
+          requested_by: employee.email,
           status: 'pending',
-          approval_stage: 'pending_finance',
-          metadata: {
-            employee_email: employee.email,
-            employee_name: employee.name,
-            employee_phone: salaryFormData.phoneNumber,
-            employee_department: employee?.department,
-            request_period: salaryFormData.requestType,
-            month: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-            is_advance: salaryFormData.requestType === 'advance',
-            is_emergency: salaryFormData.requestType === 'emergency',
-            base_salary: employee.salary,
-            available_before_request: periodInfo.availableAmount,
-            overtime_included: periodInfo.overtimeEarned || 0
-          }
+          approval_stage: 'pending_finance'
         })
         .select();
 
