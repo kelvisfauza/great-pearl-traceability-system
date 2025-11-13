@@ -92,16 +92,11 @@ const Finance = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="pending-coffee" className="w-full">
-                <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-9 justify-start md:justify-center">
+                <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-8 justify-start md:justify-center">
                   <TabsTrigger value="pending-coffee" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
                     <Coffee className="h-3 w-3 md:h-4 md:w-4" />
                     <span className="hidden sm:inline">Pending Coffee</span>
                     <span className="sm:hidden">Coffee</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="salary-requests" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
-                    <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
-                    <span className="hidden sm:inline">Salary Requests</span>
-                    <span className="sm:hidden">Salary</span>
                   </TabsTrigger>
                   <TabsTrigger value="completed" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
                     <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />
@@ -142,12 +137,6 @@ const Finance = () => {
                   </Suspense>
                 </TabsContent>
 
-                <TabsContent value="salary-requests" className="mt-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <MoneyRequestsManager />
-                  </Suspense>
-                </TabsContent>
-
                 <TabsContent value="completed" className="mt-6">
                   <Suspense fallback={<LoadingSpinner />}>
                     <CompletedTransactions />
@@ -168,7 +157,10 @@ const Finance = () => {
 
                 <TabsContent value="expenses" className="mt-6">
                   <Suspense fallback={<LoadingSpinner />}>
-                    <ExpenseManagement />
+                    <div className="space-y-6">
+                      <MoneyRequestsManager />
+                      <ExpenseManagement />
+                    </div>
                   </Suspense>
                 </TabsContent>
 
