@@ -699,7 +699,7 @@ export const useQualityControl = () => {
   };
 
   // Filter pending records to exclude those that already have assessments
-  const pendingRecords = storeRecords.filter(record => {
+  const pendingRecordsFiltered = storeRecords.filter(record => {
     // Only include records with pending or quality_review status
     if (record.status !== 'pending' && record.status !== 'quality_review') {
       return false;
@@ -714,6 +714,21 @@ export const useQualityControl = () => {
     // Only include if no assessment exists yet
     return !hasAssessment;
   });
+
+  // Deduplicate pending records by batch_number (keep the most recent one)
+  const batchMap = new Map();
+  pendingRecordsFiltered.forEach(record => {
+    if (record.batch_number) {
+      const existing = batchMap.get(record.batch_number);
+      if (!existing || new Date(record.created_at) > new Date(existing.created_at)) {
+        batchMap.set(record.batch_number, record);
+      }
+    }
+  });
+  
+  const pendingRecords = Array.from(batchMap.values()).sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   const refreshData = useCallback(async () => {
     await loadData();
