@@ -15,6 +15,7 @@ const SupplierAdvancesPage = lazy(() => import('@/components/finance/SupplierAdv
 const PaymentHistory = lazy(() => import('@/components/finance/PaymentHistory').then(m => ({ default: m.PaymentHistory })));
 const ExpenseManagement = lazy(() => import('@/components/finance/ExpenseManagement').then(m => ({ default: m.ExpenseManagement })));
 const HRPayments = lazy(() => import('@/components/finance/HRPayments').then(m => ({ default: m.HRPayments })));
+const MoneyRequestsManager = lazy(() => import('@/components/finance/MoneyRequestsManager').then(m => ({ default: m.default })));
 const DayBook = lazy(() => import('@/components/reports/DayBook'));
 const FinanceReports = lazy(() => import('@/components/finance/FinanceReports').then(m => ({ default: m.FinanceReports })));
 const SupplierAdvanceModal = lazy(() => import('@/components/finance/SupplierAdvanceModal'));
@@ -162,7 +163,10 @@ const Finance = () => {
 
                 <TabsContent value="hr-payments" className="mt-6">
                   <Suspense fallback={<LoadingSpinner />}>
-                    <HRPayments />
+                    <div className="space-y-6">
+                      <MoneyRequestsManager />
+                      <HRPayments />
+                    </div>
                   </Suspense>
                 </TabsContent>
 
