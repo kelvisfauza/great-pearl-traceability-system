@@ -34,7 +34,6 @@ export interface QualityAssessment {
   stones: number;
   // Calculator results
   fm?: number;
-  actual_ott?: number;
   clean_d14?: number;
   outturn?: number;
   outturn_price?: number;
