@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Receipt, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, Plus, Eye, FileText, ShieldAlert } from 'lucide-react';
+import { Receipt, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, Plus, Eye, FileText, ShieldAlert, Loader2 } from 'lucide-react';
 import { useEnhancedExpenseManagement } from '@/hooks/useEnhancedExpenseManagement';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +13,8 @@ import { AddExpenseModal } from './AddExpenseModal';
 import { FinanceReviewModal } from './FinanceReviewModal';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
 import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
+
+const MoneyRequestsManager = lazy(() => import('./MoneyRequestsManager').then(m => ({ default: m.default })));
 
 export const ExpenseManagement = () => {
   const { expenseRequests, loading, updateRequestApproval, refetch } = useEnhancedExpenseManagement();
@@ -321,6 +323,14 @@ export const ExpenseManagement = () => {
             </TabsContent>
 
             <TabsContent value="salary-requests" className="space-y-4">
+              <Suspense fallback={
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              }>
+                <MoneyRequestsManager />
+              </Suspense>
+              
               {salaryRequests.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
