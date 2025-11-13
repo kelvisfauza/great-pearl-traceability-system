@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const updateTimothyPermissions = async () => {
   try {
-    console.log('🔧 Adding Quality Control:edit permission to Timothy...');
+    console.log('🔧 Granting full Quality Control access to Timothy...');
     
     // First get current permissions
     const { data: current, error: fetchError } = await supabase
@@ -16,10 +16,23 @@ export const updateTimothyPermissions = async () => {
     const currentPermissions = current?.permissions || [];
     const updatedPermissions = [...currentPermissions];
     
-    // Add Quality Control:edit if not already present
-    if (!updatedPermissions.includes('Quality Control:edit')) {
-      updatedPermissions.push('Quality Control:edit');
-    }
+    // Add all Quality Control permissions for full access
+    const qualityPermissions = [
+      'Quality Control:view',
+      'Quality Control:create',
+      'Quality Control:edit',
+      'Quality Control:delete',
+      'Quality Control:manage',
+      'Quality Control:approve',
+      'Quality Control:export',
+      'Quality Control:print'
+    ];
+    
+    qualityPermissions.forEach(permission => {
+      if (!updatedPermissions.includes(permission)) {
+        updatedPermissions.push(permission);
+      }
+    });
     
     // Update Timothy's permissions directly in Supabase
     const { data, error } = await supabase
@@ -36,7 +49,7 @@ export const updateTimothyPermissions = async () => {
     }
     
     console.log('✅ Timothy permissions updated in Supabase:', data);
-    alert('✅ Quality Control:edit permission added to Timothy successfully! He can now assess quality records.');
+    alert('✅ Full Quality Control access granted to Timothy successfully! He now has complete access to the quality section.');
     
     return { success: true, data };
   } catch (error) {
