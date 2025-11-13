@@ -493,18 +493,79 @@ export const useStoreManagement = () => {
     try {
       console.log('Adding coffee record to Firebase:', recordData);
       
-      // Check for duplicate batch number in Firebase
-      const duplicateQuery = query(
+      // COMPREHENSIVE DUPLICATE CHECK - Check batch number in Firebase
+      const batchDuplicateQuery = query(
         collection(db, 'coffee_records'),
         where('batch_number', '==', recordData.batchNumber)
       );
-      const duplicateSnapshot = await getDocs(duplicateQuery);
+      const batchDuplicateSnapshot = await getDocs(batchDuplicateQuery);
       
-      if (!duplicateSnapshot.empty) {
+      if (!batchDuplicateSnapshot.empty) {
         const error = `Duplicate batch number: ${recordData.batchNumber} already exists`;
         console.error('❌', error);
         toast({
           title: "❌ Duplicate Batch Number",
+          description: error,
+          variant: "destructive",
+          duration: 5000
+        });
+        throw new Error(error);
+      }
+
+      // Check for exact duplicate record (same supplier, weight, date) in Firebase
+      const exactDuplicateQuery = query(
+        collection(db, 'coffee_records'),
+        where('supplier_name', '==', recordData.supplierName),
+        where('kilograms', '==', recordData.kilograms),
+        where('date', '==', recordData.date)
+      );
+      const exactDuplicateSnapshot = await getDocs(exactDuplicateQuery);
+      
+      if (!exactDuplicateSnapshot.empty) {
+        const error = `Duplicate entry detected: A record with ${recordData.kilograms}kg from ${recordData.supplierName} on ${recordData.date} already exists`;
+        console.error('❌', error);
+        toast({
+          title: "❌ Duplicate Record",
+          description: error,
+          variant: "destructive",
+          duration: 5000
+        });
+        throw new Error(error);
+      }
+
+      // Check batch number in Supabase
+      const { data: supabaseBatchCheck } = await supabase
+        .from('coffee_records')
+        .select('id, batch_number')
+        .eq('batch_number', recordData.batchNumber)
+        .limit(1);
+
+      if (supabaseBatchCheck && supabaseBatchCheck.length > 0) {
+        const error = `Duplicate batch number in Supabase: ${recordData.batchNumber} already exists`;
+        console.error('❌', error);
+        toast({
+          title: "❌ Duplicate Batch Number",
+          description: error,
+          variant: "destructive",
+          duration: 5000
+        });
+        throw new Error(error);
+      }
+
+      // Check for exact duplicate in Supabase (same supplier, weight, date)
+      const { data: supabaseExactCheck } = await supabase
+        .from('coffee_records')
+        .select('id, supplier_name, kilograms, date')
+        .eq('supplier_name', recordData.supplierName)
+        .eq('kilograms', recordData.kilograms)
+        .eq('date', recordData.date)
+        .limit(1);
+
+      if (supabaseExactCheck && supabaseExactCheck.length > 0) {
+        const error = `Duplicate entry in Supabase: A record with ${recordData.kilograms}kg from ${recordData.supplierName} on ${recordData.date} already exists`;
+        console.error('❌', error);
+        toast({
+          title: "❌ Duplicate Record",
           description: error,
           variant: "destructive",
           duration: 5000
@@ -538,8 +599,6 @@ export const useStoreManagement = () => {
       console.log('✅ Coffee record added to Firebase with ID:', docRef.id);
 
       // Immediately add to Supabase tables for parallel workflow
-      const { supabase } = await import('@/integrations/supabase/client');
-      
       console.log('📤 Attempting to save to Supabase coffee_records...');
       // Insert into coffee_records (don't set ID, let Supabase generate it)
       const { data: supabaseCoffeeRecord, error: coffeeError } = await supabase
