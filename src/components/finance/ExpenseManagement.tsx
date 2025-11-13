@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { AddExpenseModal } from './AddExpenseModal';
 import { FinanceReviewModal } from './FinanceReviewModal';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
 import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
+import { supabase } from '@/integrations/supabase/client';
 
 const MoneyRequestsManager = lazy(() => import('./MoneyRequestsManager').then(m => ({ default: m.default })));
 
@@ -25,6 +26,7 @@ export const ExpenseManagement = () => {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [moneyRequestsCount, setMoneyRequestsCount] = useState(0);
 
   // Filter different types of expense requests that need finance action
   const userExpenseRequests = expenseRequests.filter(
@@ -54,6 +56,41 @@ export const ExpenseManagement = () => {
       return isSalaryRequest && !isRejected && !hasFinanceApproval;
     }
   );
+
+  // Fetch money_requests count
+  useEffect(() => {
+    const fetchMoneyRequestsCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('money_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('approval_stage', 'pending_finance');
+        
+        if (error) throw error;
+        setMoneyRequestsCount(count || 0);
+      } catch (error) {
+        console.error('Error fetching money requests count:', error);
+      }
+    };
+
+    fetchMoneyRequestsCount();
+
+    // Subscribe to changes in money_requests table
+    const subscription = supabase
+      .channel('money_requests_count')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'money_requests' },
+        () => fetchMoneyRequestsCount()
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Combined salary requests count
+  const totalSalaryRequestsCount = salaryRequests.length + moneyRequestsCount;
 
   const handleReview = (request: any) => {
     setSelectedRequest(request);
@@ -246,7 +283,7 @@ export const ExpenseManagement = () => {
                 Expense Requests ({userExpenseRequests.length})
               </TabsTrigger>
               <TabsTrigger value="salary-requests">
-                Salary Requests ({salaryRequests.length})
+                Salary Requests ({totalSalaryRequestsCount})
               </TabsTrigger>
             </TabsList>
 
