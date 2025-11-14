@@ -196,7 +196,11 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       console.log('🎯 Approval type:', approvalType);
       
       // Determine if this will be the final approval
-      const isFullyApproved = approvalType === 'admin2' || (approvalType === 'admin' && !selectedRequest?.requiresThreeApprovals);
+      // For standard 2-tier: finance approved + admin approval = fully approved
+      // For 3-tier: finance approved + admin1 + admin2 = fully approved
+      const isFullyApproved = 
+        approvalType === 'admin2' || // Final admin in 3-tier approval
+        (approvalType === 'admin' && selectedRequest.finance_approved_at && !selectedRequest.requiresThreeApprovals); // Standard 2-tier approval
       
       // Set status to Approved if this is the final approval, otherwise keep as Pending
       const newStatus = isFullyApproved ? 'Approved' : 'Pending';
