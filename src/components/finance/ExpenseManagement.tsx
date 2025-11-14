@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -92,12 +92,13 @@ export const ExpenseManagement = () => {
   // Combined salary requests count
   const totalSalaryRequestsCount = salaryRequests.length + moneyRequestsCount;
 
-  const handleReview = (request: any) => {
+  // Memoize handlers for better performance
+  const handleReview = useCallback((request: any) => {
     setSelectedRequest(request);
     setReviewModalOpen(true);
-  };
+  }, []);
 
-  const handleApproveFromReview = async () => {
+  const handleApproveFromReview = useCallback(async () => {
     try {
       // ⚠️ CRITICAL: Check Separation of Duties
       const sodCheck = await checkExpenseRequestEligibility(selectedRequest.id);
@@ -135,14 +136,14 @@ export const ExpenseManagement = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [selectedRequest, checkExpenseRequestEligibility, showSoDViolationWarning, employee, updateRequestApproval, toast, refetch]);
 
-  const handleRejectFromReview = () => {
+  const handleRejectFromReview = useCallback(() => {
     setReviewModalOpen(false);
     setRejectionModalOpen(true);
-  };
+  }, []);
 
-  const handleConfirmRejection = async (reason: string, comments?: string) => {
+  const handleConfirmRejection = useCallback(async (reason: string, comments?: string) => {
     try {
       const fullReason = comments ? `${reason}\n\nComments: ${comments}` : reason;
       console.log('🔄 Starting rejection with reason:', fullReason);
@@ -175,7 +176,7 @@ export const ExpenseManagement = () => {
         variant: "destructive"
       });
     }
-  };
+  }, [selectedRequest, updateRequestApproval, employee, toast, refetch]);
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
