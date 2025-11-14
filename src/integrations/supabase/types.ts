@@ -2888,6 +2888,8 @@ export type Database = {
       payment_records: {
         Row: {
           amount: number
+          amount_paid: number | null
+          balance: number | null
           batch_number: string | null
           created_at: string
           date: string
@@ -2900,6 +2902,8 @@ export type Database = {
         }
         Insert: {
           amount: number
+          amount_paid?: number | null
+          balance?: number | null
           batch_number?: string | null
           created_at?: string
           date: string
@@ -2912,6 +2916,8 @@ export type Database = {
         }
         Update: {
           amount?: number
+          amount_paid?: number | null
+          balance?: number | null
           batch_number?: string | null
           created_at?: string
           date?: string
