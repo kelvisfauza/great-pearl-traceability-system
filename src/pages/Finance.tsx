@@ -1,7 +1,7 @@
 import React, { useState, lazy, Suspense } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ResponsiveTabs } from '@/components/ui/responsive-tabs';
 import { Button } from '@/components/ui/button';
 import { DollarSign, Wallet, Receipt, Users, TrendingUp, Coffee, CheckCircle, HandCoins, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -91,94 +91,92 @@ const Finance = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="pending-coffee" className="w-full">
-                <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-8 justify-start md:justify-center">
-                  <TabsTrigger value="pending-coffee" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
-                    <Coffee className="h-3 w-3 md:h-4 md:w-4" />
-                    <span className="hidden sm:inline">Pending Coffee</span>
-                    <span className="sm:hidden">Coffee</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="completed" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
-                    <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />
-                    <span className="hidden sm:inline">Completed</span>
-                    <span className="sm:hidden">Done</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="advances" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
-                    <HandCoins className="h-3 w-3 md:h-4 md:w-4" />
-                    <span>Advances</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="payments" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
-                    <Receipt className="h-3 w-3 md:h-4 md:w-4" />
-                    <span>Payments</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="expenses" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
-                    <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
-                    <span>Expenses</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="hr-payments" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
-                    <Users className="h-3 w-3 md:h-4 md:w-4" />
-                    <span className="hidden sm:inline">HR Payments</span>
-                    <span className="sm:hidden">HR</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="daybook" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
-                    <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
-                    <span className="hidden sm:inline">Day Book</span>
-                    <span className="sm:hidden">Book</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="reports" className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm">
-                    <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
-                    <span>Reports</span>
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="pending-coffee" className="mt-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <PendingCoffeePayments />
-                  </Suspense>
-                </TabsContent>
-
-                <TabsContent value="completed" className="mt-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <CompletedTransactions />
-                  </Suspense>
-                </TabsContent>
-
-                <TabsContent value="advances" className="mt-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <SupplierAdvancesPage />
-                  </Suspense>
-                </TabsContent>
-
-                <TabsContent value="payments" className="mt-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <PaymentHistory />
-                  </Suspense>
-                </TabsContent>
-
-                <TabsContent value="expenses" className="mt-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <ExpenseManagement />
-                  </Suspense>
-                </TabsContent>
-
-                <TabsContent value="hr-payments" className="mt-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <HRPayments />
-                  </Suspense>
-                </TabsContent>
-
-                <TabsContent value="daybook" className="mt-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <DayBook />
-                  </Suspense>
-                </TabsContent>
-
-                <TabsContent value="reports" className="mt-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <FinanceReports />
-                  </Suspense>
-                </TabsContent>
-              </Tabs>
+              <ResponsiveTabs
+                defaultValue="pending-coffee"
+                visibleTabsCount={4}
+                tabs={[
+                  {
+                    value: "pending-coffee",
+                    icon: <Coffee className="h-3 w-3 md:h-4 md:w-4" />,
+                    label: <><span className="hidden sm:inline">Pending Coffee</span><span className="sm:hidden">Coffee</span></>,
+                    content: (
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <PendingCoffeePayments />
+                      </Suspense>
+                    )
+                  },
+                  {
+                    value: "completed",
+                    icon: <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />,
+                    label: <><span className="hidden sm:inline">Completed</span><span className="sm:hidden">Done</span></>,
+                    content: (
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <CompletedTransactions />
+                      </Suspense>
+                    )
+                  },
+                  {
+                    value: "advances",
+                    icon: <HandCoins className="h-3 w-3 md:h-4 md:w-4" />,
+                    label: "Advances",
+                    content: (
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <SupplierAdvancesPage />
+                      </Suspense>
+                    )
+                  },
+                  {
+                    value: "payments",
+                    icon: <Receipt className="h-3 w-3 md:h-4 md:w-4" />,
+                    label: "Payments",
+                    content: (
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <PaymentHistory />
+                      </Suspense>
+                    )
+                  },
+                  {
+                    value: "expenses",
+                    icon: <DollarSign className="h-3 w-3 md:h-4 md:w-4" />,
+                    label: "Expenses",
+                    content: (
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <ExpenseManagement />
+                      </Suspense>
+                    )
+                  },
+                  {
+                    value: "hr-payments",
+                    icon: <Users className="h-3 w-3 md:h-4 md:w-4" />,
+                    label: <><span className="hidden sm:inline">HR Payments</span><span className="sm:hidden">HR</span></>,
+                    content: (
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <HRPayments />
+                      </Suspense>
+                    )
+                  },
+                  {
+                    value: "daybook",
+                    icon: <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />,
+                    label: <><span className="hidden sm:inline">Day Book</span><span className="sm:hidden">Book</span></>,
+                    content: (
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <DayBook />
+                      </Suspense>
+                    )
+                  },
+                  {
+                    value: "reports",
+                    icon: <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />,
+                    label: "Reports",
+                    content: (
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <FinanceReports />
+                      </Suspense>
+                    )
+                  }
+                ]}
+              />
             </CardContent>
           </Card>
         </div>
