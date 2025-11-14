@@ -50,43 +50,53 @@ const Finance = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 p-3 sm:p-6">
+        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex-1"></div>
-              <h1 className="text-4xl font-bold text-primary flex items-center gap-3">
-                <Wallet className="h-10 w-10" />
-                Finance Department
-              </h1>
-              <div className="flex-1 flex justify-end">
+          <div className="text-center space-y-4 animate-in">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex-1 hidden sm:block"></div>
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-primary/10 rounded-xl">
+                  <Wallet className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
+                </div>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gradient">
+                  Finance Department
+                </h1>
+              </div>
+              <div className="flex-1 flex justify-center sm:justify-end">
                 <Button 
                   onClick={() => setShowAdvanceModal(true)}
-                  className="bg-amber-600 hover:bg-amber-700"
+                  className="btn-glow bg-warning hover:bg-warning/90 text-warning-foreground shadow-md hover:shadow-lg transition-all"
+                  size="sm"
                 >
                   <HandCoins className="h-4 w-4 mr-2" />
-                  Give Supplier Advance
+                  <span className="hidden sm:inline">Give Supplier Advance</span>
+                  <span className="sm:hidden">Advance</span>
                 </Button>
               </div>
             </div>
-            <p className="text-muted-foreground">Manage coffee payments, expenses, and financial operations</p>
+            <p className="text-muted-foreground text-sm sm:text-base">Manage coffee payments, expenses, and financial operations</p>
           </div>
 
           {/* Finance Statistics */}
-          <FinanceStats />
+          <div className="animate-in-delay">
+            <FinanceStats />
+          </div>
           
           {/* Pending Cash Deposits for Finance Confirmation */}
-          <PendingCashDeposits />
+          <div className="animate-in-delay">
+            <PendingCashDeposits />
+          </div>
 
           {/* Main Finance Tabs */}
-          <Card>
+          <Card className="card-modern animate-in-delay">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-xl sm:text-2xl">
+                <TrendingUp className="h-5 w-5 text-primary" />
                 Financial Management
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Complete financial operations management system
               </CardDescription>
             </CardHeader>

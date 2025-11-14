@@ -37,13 +37,13 @@ export function ResponsiveTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className={cn("w-full", className)}>
-      <div className="flex items-center gap-2">
-        <TabsList className="flex-1 justify-start overflow-x-auto">
+      <div className="flex items-center gap-2 bg-muted/50 p-2 rounded-lg">
+        <TabsList className="flex-1 justify-start overflow-x-auto bg-transparent">
           {visibleTabs.map((tab) => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 text-xs md:text-sm"
+              className="flex items-center gap-1 md:gap-2 whitespace-nowrap px-2 md:px-3 py-1.5 text-xs md:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
               {tab.icon}
               {tab.label}
@@ -57,20 +57,20 @@ export function ResponsiveTabs({
               <Button
                 variant="outline"
                 size="sm"
-                className="shrink-0 h-10 px-3 bg-background"
+                className="shrink-0 h-9 px-3 bg-background border-border/50 hover:bg-accent/50 transition-all"
               >
                 <MoreHorizontal className="h-4 w-4" />
                 <span className="sr-only">More tabs</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-background z-50">
+            <DropdownMenuContent align="end" className="w-48 bg-popover z-50 shadow-lg border-border/50">
               {dropdownTabs.map((tab) => (
                 <DropdownMenuItem
                   key={tab.value}
                   onClick={() => setActiveTab(tab.value)}
                   className={cn(
-                    "flex items-center gap-2 cursor-pointer",
-                    activeTab === tab.value && "bg-accent"
+                    "flex items-center gap-2 cursor-pointer transition-colors",
+                    activeTab === tab.value && "bg-accent text-accent-foreground"
                   )}
                 >
                   {tab.icon}
@@ -83,7 +83,7 @@ export function ResponsiveTabs({
       </div>
 
       {tabs.map((tab) => (
-        <TabsContent key={tab.value} value={tab.value} className="mt-6">
+        <TabsContent key={tab.value} value={tab.value} className="mt-4 sm:mt-6">
           {tab.content}
         </TabsContent>
       ))}
