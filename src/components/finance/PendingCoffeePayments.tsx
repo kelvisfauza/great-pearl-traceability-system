@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveDataDisplay, ColumnDef } from '@/components/ui/responsive-data-display';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
@@ -213,6 +213,113 @@ export const PendingCoffeePayments = () => {
     );
   }, [coffeePayments, searchTerm]);
 
+  // Define columns for responsive display
+  const columns: ColumnDef<any>[] = [
+    {
+      header: "Batch Number",
+      mobileLabel: "Batch",
+      cell: (payment) => <Badge variant="outline">{payment.batchNumber}</Badge>
+    },
+    {
+      header: "Supplier",
+      cell: (payment) => payment.supplier
+    },
+    {
+      header: "Quality Assessor",
+      mobileLabel: "Assessor",
+      cell: (payment) => (
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          {payment.assessedBy}
+        </div>
+      )
+    },
+    {
+      header: "Quantity (kg)",
+      mobileLabel: "Quantity",
+      cell: (payment) => `${payment.quantity} kg`
+    },
+    {
+      header: "Price/kg",
+      mobileLabel: "Price",
+      cell: (payment) => payment.isPricedByQuality ? (
+        <div className="flex items-center gap-1">
+          {formatCurrency(payment.pricePerKg)}
+          <Badge variant="secondary" className="ml-2 text-xs">Quality</Badge>
+        </div>
+      ) : (
+        <Badge variant="outline" className="text-warning">Not Priced</Badge>
+      )
+    },
+    {
+      header: "Total Amount",
+      mobileLabel: "Total",
+      cell: (payment) => (
+        <span className="font-bold text-success">
+          {payment.isPricedByQuality ? formatCurrency(payment.totalAmount) : '-'}
+        </span>
+      )
+    },
+    {
+      header: "Date",
+      cell: (payment) => (
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          {payment.dateAssessed}
+        </div>
+      ),
+      hiddenOnMobile: true
+    },
+    {
+      header: "Actions",
+      cell: (payment) => (
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedPayment(payment);
+              setShowDetailsDialog(true);
+            }}
+            className="text-xs"
+          >
+            <Eye className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+            <span className="hidden sm:inline">View</span>
+          </Button>
+          <Button
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedPayment(payment);
+              setCashAmount(payment.totalAmount.toString());
+              setFinancePrice('');
+              setShowPaymentDialog(true);
+            }}
+            className="bg-success hover:bg-success/90 text-xs"
+          >
+            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+            <span className="hidden sm:inline">{payment.isPricedByQuality ? 'Pay' : 'Price'}</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedPayment(payment);
+              setDeleteReason('');
+              setShowDeleteDialog(true);
+            }}
+            className="text-xs"
+          >
+            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Delete</span>
+          </Button>
+        </div>
+      )
+    }
+  ];
+
   if (loading) {
     return (
       <Card>
@@ -227,24 +334,24 @@ export const PendingCoffeePayments = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Coffee className="h-5 w-5" />
                 Incoming Coffee Payments
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Coffee assessments completed by Quality Control ready for payment processing
               </CardDescription>
             </div>
-            <div className="relative w-80">
+            <div className="relative w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search by batch, supplier, assessor..."
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-9"
+                className="pl-9 pr-9 text-sm"
               />
               {searchTerm && (
                 <Button
@@ -281,96 +388,19 @@ export const PendingCoffeePayments = () => {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Batch Number</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead>Quality Assessor</TableHead>
-                  <TableHead>Quantity (kg)</TableHead>
-                  <TableHead>Price/kg</TableHead>
-                  <TableHead>Total Amount</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPayments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell className="font-medium">
-                      <Badge variant="outline">{payment.batchNumber}</Badge>
-                    </TableCell>
-                    <TableCell>{payment.supplier}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        {payment.assessedBy}
-                      </div>
-                    </TableCell>
-                    <TableCell>{payment.quantity}</TableCell>
-                    <TableCell>
-                      {payment.isPricedByQuality ? (
-                        <div className="flex items-center gap-1">
-                          {formatCurrency(payment.pricePerKg)}
-                          <Badge variant="secondary" className="ml-2 text-xs">Quality</Badge>
-                        </div>
-                      ) : (
-                        <Badge variant="outline" className="text-yellow-600">Not Priced</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-bold text-green-600">
-                      {payment.isPricedByQuality ? formatCurrency(payment.totalAmount) : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        {payment.dateAssessed}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedPayment(payment);
-                            setShowDetailsDialog(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View Details
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setSelectedPayment(payment);
-                            setCashAmount(payment.totalAmount.toString());
-                            setFinancePrice('');
-                            setShowPaymentDialog(true);
-                          }}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <DollarSign className="h-4 w-4 mr-1" />
-                          {payment.isPricedByQuality ? 'Process Payment' : 'Price & Pay'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            setSelectedPayment(payment);
-                            setDeleteReason('');
-                            setShowDeleteDialog(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <ResponsiveDataDisplay
+              data={filteredPayments}
+              columns={columns}
+              getRowKey={(payment) => payment.id}
+              mobileCardTitle={(payment) => (
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline">{payment.batchNumber}</Badge>
+                  <Badge variant={payment.isPricedByQuality ? "secondary" : "outline"} className="text-xs">
+                    {payment.isPricedByQuality ? "Priced" : "Not Priced"}
+                  </Badge>
+                </div>
+              )}
+            />
           )}
         </CardContent>
       </Card>
