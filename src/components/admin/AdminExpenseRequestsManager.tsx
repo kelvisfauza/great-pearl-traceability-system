@@ -255,15 +255,31 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
           // Get user details from employees table for SMS notification
           if (selectedRequest.department === 'Field Operations' || selectedRequest.type === 'Field Financing Request') {
             try {
-              const { data: employeeData } = await supabase
+              console.log('🔍 Fetching employee data for SMS, email:', selectedRequest.requestedby);
+              
+              const { data: employeeData, error: employeeError } = await supabase
                 .from('employees')
                 .select('name, email, phone')
                 .eq('email', selectedRequest.requestedby)
                 .single();
               
-              if (employeeData && employeeData.phone) {
-                console.log('📱 Sending field financing approval SMS to:', employeeData.name);
-                await sendFieldFinancingApprovalSMS(
+              if (employeeError) {
+                console.error('❌ Error fetching employee data:', employeeError);
+                toast({
+                  title: "SMS Warning",
+                  description: `Employee not found for ${selectedRequest.requestedby}. SMS notification skipped.`,
+                  variant: "destructive"
+                });
+              } else if (!employeeData?.phone) {
+                console.warn('⚠️ No phone number found for employee:', selectedRequest.requestedby);
+                toast({
+                  title: "SMS Warning",
+                  description: `No phone number found for ${employeeData?.name || selectedRequest.requestedby}. Please add phone number in HR records.`,
+                  variant: "destructive"
+                });
+              } else {
+                console.log('📱 Sending field financing approval SMS to:', employeeData.name, 'Phone:', employeeData.phone);
+                const smsSuccess = await sendFieldFinancingApprovalSMS(
                   employeeData.name || selectedRequest.requestedby,
                   employeeData.phone,
                   employeeData.email,
@@ -271,11 +287,25 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                   selectedRequest.details?.request_type || 'Field Financing',
                   paymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash Payment'
                 );
-              } else {
-                console.warn('No phone number found for employee:', selectedRequest.requestedby);
+                
+                if (smsSuccess) {
+                  console.log('✅ SMS sent successfully to field officer');
+                } else {
+                  console.error('❌ SMS sending failed');
+                  toast({
+                    title: "SMS Failed",
+                    description: "Failed to send SMS notification. Check edge function logs.",
+                    variant: "destructive"
+                  });
+                }
               }
             } catch (error) {
-              console.error('Error sending field financing SMS:', error);
+              console.error('❌ Error in field financing SMS flow:', error);
+              toast({
+                title: "SMS Error",
+                description: `Failed to send SMS: ${error.message}`,
+                variant: "destructive"
+              });
             }
           }
 
