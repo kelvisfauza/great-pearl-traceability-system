@@ -166,13 +166,13 @@ export const useMonthlySalaryTracking = (
       let periodType: 'mid-month' | 'end-month' | 'closed' = 'closed';
       let maxAmount = 0;
       
-      // Mid-month period: 13th-15th (50% of base available after last month's deduction)
-      if (requestType === 'mid-month' && dayOfMonth >= 13 && dayOfMonth <= 15) {
+      // Mid-month period: 14th-15th (FULL balance available)
+      if (requestType === 'mid-month' && dayOfMonth >= 14 && dayOfMonth <= 15) {
         periodType = 'mid-month';
-        maxAmount = baseAvailable / 2;
+        maxAmount = baseAvailable;
       } 
-      // End-month period: 31st to 2nd (full remaining balance after last month)
-      else if (requestType === 'end-month' && (dayOfMonth === 31 || dayOfMonth === 1 || dayOfMonth === 2)) {
+      // End-month period: 28th-31st (FULL balance available)
+      else if (requestType === 'end-month' && dayOfMonth >= 28 && dayOfMonth <= 31) {
         periodType = 'end-month';
         maxAmount = baseAvailable;
       }
@@ -190,12 +190,12 @@ export const useMonthlySalaryTracking = (
         const overtimeInfo = overtimeEarned > 0 ? ` Overtime: +UGX ${overtimeEarned.toLocaleString()}.` : '';
         if (requestType === 'mid-month') {
           message = paidLastMonth > 0
-            ? `Mid-month requests (13th-15th only). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning}${overtimeInfo} Base available: UGX ${baseAvailable.toLocaleString()}`
-            : `Mid-month requests are only available from 13th-15th of each month.${debtWarning}${overtimeInfo}`;
+            ? `Mid-month requests (14th-15th only). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning}${overtimeInfo} Full balance: UGX ${baseAvailable.toLocaleString()}`
+            : `Mid-month requests are only available from 14th-15th of each month.${debtWarning}${overtimeInfo}`;
         } else if (requestType === 'end-month') {
           message = paidLastMonth > 0
-            ? `End-month requests (31st-2nd only). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning}${overtimeInfo} Base available: UGX ${baseAvailable.toLocaleString()}`
-            : `End-month requests are only available from 31st-2nd of each month.${debtWarning}${overtimeInfo}`;
+            ? `End-month requests (28th-31st only). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning}${overtimeInfo} Full balance: UGX ${baseAvailable.toLocaleString()}`
+            : `End-month requests are only available from 28th-31st of each month.${debtWarning}${overtimeInfo}`;
         } else {
           message = `This request type is not available in the current period.${debtWarning}${overtimeInfo}`;
         }
@@ -207,10 +207,10 @@ export const useMonthlySalaryTracking = (
         const overtimeInfo = overtimeEarned > 0 ? ` Overtime: +UGX ${overtimeEarned.toLocaleString()}.` : '';
         if (canRequest) {
           message = paidLastMonth > 0
-            ? `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (50%).${debtInfo}${overtimeInfo} Last month: UGX ${paidLastMonth.toLocaleString()}. Requested: UGX ${alreadyRequested.toLocaleString()}`
-            : `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (50%).${debtInfo}${overtimeInfo} Requested: UGX ${alreadyRequested.toLocaleString()}`;
+            ? `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (Full Balance).${debtInfo}${overtimeInfo} Last month: UGX ${paidLastMonth.toLocaleString()}. Requested: UGX ${alreadyRequested.toLocaleString()}`
+            : `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (Full Balance).${debtInfo}${overtimeInfo} Requested: UGX ${alreadyRequested.toLocaleString()}`;
         } else {
-          message = `You have already requested your mid-month allocation.${debtInfo}${overtimeInfo}`;
+          message = `You have already requested your mid-month full balance.${debtInfo}${overtimeInfo}`;
         }
       } else if (periodType === 'end-month') {
         // For end-month, available is base minus what was already requested this month
