@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,7 @@ interface FinanceReviewModalProps {
   onReject: () => void;
 }
 
-export const FinanceReviewModal: React.FC<FinanceReviewModalProps> = ({
+const FinanceReviewModalComponent: React.FC<FinanceReviewModalProps> = ({
   open,
   onOpenChange,
   request,
@@ -36,6 +36,24 @@ export const FinanceReviewModal: React.FC<FinanceReviewModalProps> = ({
   onApprove,
   onReject,
 }) => {
+  // Memoize computed values to prevent recalculation on every render
+  const { phoneNumber, reason, expenseCategory } = useMemo(() => {
+    if (!request) return { phoneNumber: '', reason: '', expenseCategory: '' };
+    
+    const phone = details.phoneNumber || 'Not provided';
+    const isSalaryRequest = request.type?.includes('Salary');
+    const requestReason = isSalaryRequest 
+      ? request.description || request.title 
+      : (details.reason || request.description || 'No reason provided');
+    const category = details.expenseCategory || details.expenseType || 'Not specified';
+    
+    return {
+      phoneNumber: phone,
+      reason: requestReason,
+      expenseCategory: category
+    };
+  }, [request, details]);
+
   if (!request) return null;
 
   const formatDateTime = (dateString: string) => {
@@ -60,14 +78,6 @@ export const FinanceReviewModal: React.FC<FinanceReviewModalProps> = ({
       });
     }
   };
-
-  const phoneNumber = details.phoneNumber || 'Not provided';
-  // For salary requests, use title/description as reason
-  const isSalaryRequest = request.type?.includes('Salary');
-  const reason = isSalaryRequest 
-    ? request.description || request.title 
-    : (details.reason || request.description || 'No reason provided');
-  const expenseCategory = details.expenseCategory || details.expenseType || 'Not specified';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -178,3 +188,6 @@ export const FinanceReviewModal: React.FC<FinanceReviewModalProps> = ({
     </Dialog>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+export const FinanceReviewModal = React.memo(FinanceReviewModalComponent);
