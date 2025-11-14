@@ -230,8 +230,34 @@ export const useMessages = () => {
     senderName?: string;
   }) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      console.log('📤 Attempting to send message:', { conversationId, content: content.substring(0, 50) });
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error('❌ Auth error:', authError);
+        throw new Error(`Authentication failed: ${authError.message}`);
+      }
+      if (!user) {
+        console.error('❌ No user found');
+        throw new Error('User not authenticated');
+      }
+
+      console.log('✅ User authenticated:', user.id);
+
+      // Verify user is a participant
+      const { data: participantCheck, error: participantError } = await supabase
+        .from('conversation_participants')
+        .select('user_id')
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (participantError) {
+        console.error('❌ Participant check error:', participantError);
+        throw new Error(`Not a participant in this conversation: ${participantError.message}`);
+      }
+
+      console.log('✅ User is a participant');
 
       // Get recipients of this conversation (excluding sender)
       const { data: participants } = await supabase
@@ -255,6 +281,8 @@ export const useMessages = () => {
       
       setMessages(prev => [...prev, optimisticMessage]);
 
+      console.log('📝 Inserting message into database...');
+
       // Send to database
       const { data: newMessage, error } = await supabase
         .from('messages')
@@ -269,7 +297,17 @@ export const useMessages = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database insert error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+        
+        throw new Error(`Failed to send message: ${error.message}`);
+      }
+
+      console.log('✅ Message sent successfully:', newMessage.id);
 
       // Check if this is the first unread message and send SMS notifications
       if (participants && participants.length > 0) {
@@ -326,11 +364,13 @@ export const useMessages = () => {
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', conversationId);
-    } catch (error) {
-      console.error('Error sending message:', error);
+    } catch (error: any) {
+      console.error('💥 Error sending message:', error);
+      console.error('Error stack:', error.stack);
+      
       toast({
-        title: "Error",
-        description: "Failed to send message",
+        title: "Failed to Send Message",
+        description: error.message || "Could not send your message. Please check your connection and try again.",
         variant: "destructive"
       });
       throw error;
