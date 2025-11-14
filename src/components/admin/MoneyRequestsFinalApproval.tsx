@@ -102,44 +102,7 @@ const MoneyRequestsFinalApproval = () => {
 
       if (error) throw error;
 
-      // Send SMS notification to requester
-      if (data && data.length > 0) {
-        const request = data[0];
-        
-        // Get requester details from employees table
-        const { data: requesterData } = await supabase
-          .from('employees')
-          .select('name, phone')
-          .eq('auth_user_id', request.user_id)
-          .single();
-        
-        if (requesterData?.phone) {
-          console.log('📱 Sending final approval SMS to requester:', requesterData.name);
-          
-          if (approve) {
-            // Notify final approval
-            await supabase.functions.invoke('send-sms', {
-              body: {
-                phone: requesterData.phone,
-                message: `Dear ${requesterData.name}, your money request of UGX ${request.amount.toLocaleString()} has been APPROVED by Admin. Payment will be processed shortly.`,
-                userName: requesterData.name,
-                messageType: 'money_request_final_approval'
-              }
-            });
-          } else {
-            // Notify rejection
-            await supabase.functions.invoke('send-sms', {
-              body: {
-                phone: requesterData.phone,
-                message: `Dear ${requesterData.name}, your money request of UGX ${request.amount.toLocaleString()} has been rejected by Admin.`,
-                userName: requesterData.name,
-                messageType: 'money_request_rejection'
-              }
-            });
-          }
-        }
-      }
-
+      // Show immediate feedback
       toast({
         title: approve ? "✓ Request Approved" : "Request Rejected",
         description: approve 
@@ -148,8 +111,42 @@ const MoneyRequestsFinalApproval = () => {
         variant: approve ? "default" : "destructive"
       });
 
+      // Refresh list immediately
       setShowDetails(false);
-      fetchRequests();
+      await fetchRequests();
+
+      // Send SMS notification in background (non-blocking)
+      if (data && data.length > 0) {
+        const request = data[0];
+        
+        // Fire and forget - don't block the UI
+        (async () => {
+          try {
+            const { data: requesterData } = await supabase
+              .from('employees')
+              .select('name, phone')
+              .eq('auth_user_id', request.user_id)
+              .single();
+            
+            if (requesterData?.phone) {
+              const message = approve
+                ? `Dear ${requesterData.name}, your money request of UGX ${request.amount.toLocaleString()} has been APPROVED by Admin. Payment will be processed shortly.`
+                : `Dear ${requesterData.name}, your money request of UGX ${request.amount.toLocaleString()} has been rejected by Admin.`;
+              
+              await supabase.functions.invoke('send-sms', {
+                body: {
+                  phone: requesterData.phone,
+                  message,
+                  userName: requesterData.name,
+                  messageType: approve ? 'money_request_final_approval' : 'money_request_rejection'
+                }
+              });
+            }
+          } catch (err) {
+            console.error('Background SMS error:', err);
+          }
+        })();
+      }
     } catch (error: any) {
       console.error('Error processing final approval:', error);
       toast({
