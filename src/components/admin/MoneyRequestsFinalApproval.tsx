@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
 import { useSMSNotifications } from '@/hooks/useSMSNotifications';
+import { RejectionModal } from '@/components/workflow/RejectionModal';
 
 interface MoneyRequest {
   id: string;
@@ -35,6 +36,8 @@ const MoneyRequestsFinalApproval = () => {
   const [selectedRequest, setSelectedRequest] = useState<MoneyRequest | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showPaymentSlip, setShowPaymentSlip] = useState(false);
+  const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
+  const [requestToReject, setRequestToReject] = useState<string | null>(null);
   const { employee } = useAuth();
   const { toast } = useToast();
   const { checkMoneyRequestEligibility, showSoDViolationWarning } = useSeparationOfDuties();
@@ -62,7 +65,7 @@ const MoneyRequestsFinalApproval = () => {
     }
   };
 
-  const handleFinalApproval = async (requestId: string, approve: boolean) => {
+  const handleFinalApproval = async (requestId: string, approve: boolean, rejectionReason?: string, rejectionComments?: string) => {
     try {
       // ⚠️ CRITICAL: Check Separation of Duties before approving
       if (approve) {
@@ -85,7 +88,10 @@ const MoneyRequestsFinalApproval = () => {
         updateData.approval_stage = 'completed';
       } else {
         updateData.status = 'rejected';
-        updateData.rejection_reason = 'Rejected by Administrator';
+        updateData.rejection_reason = rejectionReason || 'Rejected by Administrator';
+        if (rejectionComments) {
+          updateData.rejection_comments = rejectionComments;
+        }
       }
 
       const { data, error } = await supabase
@@ -152,6 +158,19 @@ const MoneyRequestsFinalApproval = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleRejectClick = (requestId: string) => {
+    setRequestToReject(requestId);
+    setRejectionModalOpen(true);
+  };
+
+  const handleConfirmRejection = async (reason: string, comments?: string) => {
+    if (!requestToReject) return;
+    
+    await handleFinalApproval(requestToReject, false, reason, comments);
+    setRejectionModalOpen(false);
+    setRequestToReject(null);
   };
 
   const generatePaymentSlip = (request: MoneyRequest) => {
@@ -286,7 +305,7 @@ const MoneyRequestsFinalApproval = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleFinalApproval(request.id, false)}
+                        onClick={() => handleRejectClick(request.id)}
                         className="border-red-200 text-red-700 hover:bg-red-50"
                       >
                         <XCircle className="h-4 w-4 mr-1" />
@@ -365,7 +384,7 @@ const MoneyRequestsFinalApproval = () => {
               <div className="flex gap-2 pt-4 border-t">
                 <Button
                   variant="outline"
-                  onClick={() => handleFinalApproval(selectedRequest.id, false)}
+                  onClick={() => handleRejectClick(selectedRequest.id)}
                   className="flex-1 border-red-200 text-red-700 hover:bg-red-50"
                 >
                   <XCircle className="h-4 w-4 mr-1" />
@@ -383,6 +402,17 @@ const MoneyRequestsFinalApproval = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <RejectionModal
+        open={rejectionModalOpen}
+        onClose={() => {
+          setRejectionModalOpen(false);
+          setRequestToReject(null);
+        }}
+        onConfirm={handleConfirmRejection}
+        title="Reject Salary Request"
+        description="Please select a reason for rejecting this salary request and provide any additional comments."
+      />
     </div>
   );
 };
