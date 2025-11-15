@@ -228,6 +228,22 @@ const MoneyRequestsFinalApproval = () => {
 
   useEffect(() => {
     fetchRequests();
+
+    // Set up real-time subscription for automatic updates
+    const channel = supabase
+      .channel('money_requests_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'money_requests' },
+        () => {
+          console.log('Money requests changed, refreshing...');
+          fetchRequests();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (loading) {
