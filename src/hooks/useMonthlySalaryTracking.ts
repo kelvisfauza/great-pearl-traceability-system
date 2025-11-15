@@ -108,8 +108,9 @@ export const useMonthlySalaryTracking = (
 
       const totalRequestedThisMonth = monthlyRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0;
       
-      // Calculate base available (monthly salary minus what was paid last month AND minus advances owed PLUS overtime earned)
-      const baseAvailable = monthlySalary - paidLastMonth - advancesOwed + overtimeEarned;
+      // Calculate base available for THIS month (monthly salary minus advances owed plus overtime earned)
+      // Note: Last month's payments don't affect this month's availability - each month is independent
+      const baseAvailable = monthlySalary - advancesOwed + overtimeEarned;
       
       // Salary Advance - can be requested anytime and creates negative balance
       if (requestType === 'advance') {
@@ -168,14 +169,13 @@ export const useMonthlySalaryTracking = (
       // Mid-month period: 14th-15th (50% of monthly salary available)
       if (requestType === 'mid-month' && dayOfMonth >= 14 && dayOfMonth <= 15) {
         periodType = 'mid-month';
-        // Mid-month is 50% of base salary, adjusted for advances and overtime
-        const halfSalary = monthlySalary / 2;
-        maxAmount = halfSalary - advancesOwed + overtimeEarned;
+        // Mid-month is 50% of monthly salary (adjusted for advances and overtime)
+        maxAmount = (monthlySalary / 2) - advancesOwed + overtimeEarned;
       } 
-      // End-month period: 28th-31st (Remaining balance after mid-month payment)
+      // End-month period: 28th-31st (Remaining balance after mid-month)
       else if (requestType === 'end-month' && dayOfMonth >= 28 && dayOfMonth <= 31) {
         periodType = 'end-month';
-        // End-month gets remaining balance (full salary minus what was paid last month)
+        // End-month gets full month's available balance (will subtract what was already requested below)
         maxAmount = baseAvailable;
       }
 
