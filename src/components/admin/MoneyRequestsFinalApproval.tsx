@@ -88,6 +88,7 @@ const MoneyRequestsFinalApproval = () => {
         updateData.approval_stage = 'completed';
       } else {
         updateData.status = 'rejected';
+        updateData.approval_stage = 'rejected';
         updateData.rejection_reason = rejectionReason || 'Rejected by Administrator';
         if (rejectionComments) {
           updateData.rejection_comments = rejectionComments;
