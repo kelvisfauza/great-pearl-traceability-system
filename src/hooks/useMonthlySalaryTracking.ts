@@ -60,7 +60,7 @@ export const useMonthlySalaryTracking = (
       const startOfLastMonth = new Date(currentYear, currentMonth - 1, 1);
       const endOfLastMonth = new Date(currentYear, currentMonth, 0, 23, 59, 59);
       
-      // Get ONLY THE MOST RECENT MID-MONTH approved request from LAST MONTH per person
+      // Get ALL approved salary requests from LAST MONTH (mid-month + end-month)
       const { data: lastMonthRequests } = await supabase
         .from('approval_requests')
         .select('amount, title, details, created_at')
@@ -69,11 +69,10 @@ export const useMonthlySalaryTracking = (
         .eq('status', 'Approved')
         .gte('created_at', startOfLastMonth.toISOString())
         .lte('created_at', endOfLastMonth.toISOString())
-        .ilike('title', '%Mid-Month%')
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .order('created_at', { ascending: false });
 
-      const paidLastMonth = lastMonthRequests?.[0]?.amount || 0;
+      // Sum all payments from last month
+      const paidLastMonth = lastMonthRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0;
       
       // Get all salary advances (these create negative balances)
       const { data: advanceRequests } = await supabase
