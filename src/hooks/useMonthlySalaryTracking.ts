@@ -165,14 +165,17 @@ export const useMonthlySalaryTracking = (
       let periodType: 'mid-month' | 'end-month' | 'closed' = 'closed';
       let maxAmount = 0;
       
-      // Mid-month period: 14th-15th (FULL balance available)
+      // Mid-month period: 14th-15th (50% of monthly salary available)
       if (requestType === 'mid-month' && dayOfMonth >= 14 && dayOfMonth <= 15) {
         periodType = 'mid-month';
-        maxAmount = baseAvailable;
+        // Mid-month is 50% of base salary, adjusted for advances and overtime
+        const halfSalary = monthlySalary / 2;
+        maxAmount = halfSalary - advancesOwed + overtimeEarned;
       } 
-      // End-month period: 28th-31st (FULL balance available)
+      // End-month period: 28th-31st (Remaining balance after mid-month payment)
       else if (requestType === 'end-month' && dayOfMonth >= 28 && dayOfMonth <= 31) {
         periodType = 'end-month';
+        // End-month gets remaining balance (full salary minus what was paid last month)
         maxAmount = baseAvailable;
       }
 
@@ -189,12 +192,12 @@ export const useMonthlySalaryTracking = (
         const overtimeInfo = overtimeEarned > 0 ? ` Overtime: +UGX ${overtimeEarned.toLocaleString()}.` : '';
         if (requestType === 'mid-month') {
           message = paidLastMonth > 0
-            ? `Mid-month requests (14th-15th only). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning}${overtimeInfo} Full balance: UGX ${baseAvailable.toLocaleString()}`
-            : `Mid-month requests are only available from 14th-15th of each month.${debtWarning}${overtimeInfo}`;
+            ? `Mid-month requests (14th-15th only, 50% of salary). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning}${overtimeInfo} Available mid-month: UGX ${(monthlySalary / 2).toLocaleString()}`
+            : `Mid-month requests are only available from 14th-15th (50% of monthly salary).${debtWarning}${overtimeInfo}`;
         } else if (requestType === 'end-month') {
           message = paidLastMonth > 0
-            ? `End-month requests (28th-31st only). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning}${overtimeInfo} Full balance: UGX ${baseAvailable.toLocaleString()}`
-            : `End-month requests are only available from 28th-31st of each month.${debtWarning}${overtimeInfo}`;
+            ? `End-month requests (28th-31st only, remaining balance). Last month: UGX ${paidLastMonth.toLocaleString()}.${debtWarning}${overtimeInfo} Remaining: UGX ${baseAvailable.toLocaleString()}`
+            : `End-month requests are only available from 28th-31st (remaining salary after mid-month).${debtWarning}${overtimeInfo}`;
         } else {
           message = `This request type is not available in the current period.${debtWarning}${overtimeInfo}`;
         }
@@ -206,10 +209,10 @@ export const useMonthlySalaryTracking = (
         const overtimeInfo = overtimeEarned > 0 ? ` Overtime: +UGX ${overtimeEarned.toLocaleString()}.` : '';
         if (canRequest) {
           message = paidLastMonth > 0
-            ? `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (Full Balance).${debtInfo}${overtimeInfo} Last month: UGX ${paidLastMonth.toLocaleString()}. Requested: UGX ${alreadyRequested.toLocaleString()}`
-            : `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (Full Balance).${debtInfo}${overtimeInfo} Requested: UGX ${alreadyRequested.toLocaleString()}`;
+            ? `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (50% of salary).${debtInfo}${overtimeInfo} Last month: UGX ${paidLastMonth.toLocaleString()}. Requested: UGX ${alreadyRequested.toLocaleString()}`
+            : `Available: UGX ${availableAmount.toLocaleString()} of UGX ${maxAmount.toLocaleString()} (50% of salary).${debtInfo}${overtimeInfo} Requested: UGX ${alreadyRequested.toLocaleString()}`;
         } else {
-          message = `You have already requested your mid-month full balance.${debtInfo}${overtimeInfo}`;
+          message = `You have already requested your mid-month 50% salary limit.${debtInfo}${overtimeInfo}`;
         }
       } else if (periodType === 'end-month') {
         // For end-month, available is base minus what was already requested this month
@@ -220,8 +223,8 @@ export const useMonthlySalaryTracking = (
         const overtimeInfo = overtimeEarned > 0 ? ` Overtime: +UGX ${overtimeEarned.toLocaleString()}.` : '';
         if (canRequest) {
           message = paidLastMonth > 0
-            ? `Available: UGX ${availableAmount.toLocaleString()} of UGX ${baseAvailable.toLocaleString()}.${debtInfo}${overtimeInfo} Last month: UGX ${paidLastMonth.toLocaleString()}. Requested: UGX ${alreadyRequested.toLocaleString()}`
-            : `Available: UGX ${availableAmount.toLocaleString()}.${debtInfo}${overtimeInfo} Requested: UGX ${alreadyRequested.toLocaleString()}`;
+            ? `Available: UGX ${availableAmount.toLocaleString()} of UGX ${baseAvailable.toLocaleString()} (Remaining after mid-month).${debtInfo}${overtimeInfo} Paid last month: UGX ${paidLastMonth.toLocaleString()}. Requested this month: UGX ${alreadyRequested.toLocaleString()}`
+            : `Available: UGX ${availableAmount.toLocaleString()} (Full salary available).${debtInfo}${overtimeInfo} Requested: UGX ${alreadyRequested.toLocaleString()}`;
         } else {
           message = `You have already requested your full available balance.${debtInfo}${overtimeInfo}`;
         }
