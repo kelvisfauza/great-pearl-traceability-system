@@ -2753,6 +2753,7 @@ export type Database = {
       }
       money_requests: {
         Row: {
+          admin_approved: boolean | null
           admin_approved_at: string | null
           admin_approved_by: string | null
           amount: number
@@ -2760,6 +2761,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          finance_approved: boolean | null
           finance_approved_at: string | null
           finance_approved_by: string | null
           id: string
@@ -2774,6 +2776,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_approved?: boolean | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           amount: number
@@ -2781,6 +2784,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
           id?: string
@@ -2795,6 +2799,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_approved?: boolean | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           amount?: number
@@ -2802,6 +2807,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
           id?: string

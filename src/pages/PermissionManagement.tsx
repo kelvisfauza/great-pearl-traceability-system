@@ -59,6 +59,24 @@ const PermissionManagement = () => {
     }
   };
 
+  const handleGrantDenisFinance = async () => {
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({
+          permissions: ['Finance Management', 'Finance', 'Admin']
+        })
+        .eq('email', 'bwambaledenis8@gmail.com');
+
+      if (error) throw error;
+
+      toast.success('Finance permissions granted to Denis');
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+      toast.error('Failed to update permissions');
+    }
+  };
+
   return (
     <Layout title="Permission Management" subtitle="Manage user roles and permissions">
       <div className="space-y-6">
@@ -76,6 +94,13 @@ const PermissionManagement = () => {
             variant="outline"
           >
             Grant IT Access to Kusa
+          </Button>
+
+          <Button 
+            onClick={handleGrantDenisFinance}
+            variant="default"
+          >
+            Grant Finance to Denis
           </Button>
         </div>
         <UserPermissionsList />
