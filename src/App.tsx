@@ -120,11 +120,12 @@ const App: React.ComponentType = () => {
                     <SalesMarketing />
                   </ProtectedRoute>
                 } />
-                <Route path="/finance" element={
+                {/* ❌ Finance route disabled - will be used in separate Finance portal */}
+                {/* <Route path="/finance" element={
                   <ProtectedRoute requiredPermissions={["Finance"]}>
                     <Finance />
                   </ProtectedRoute>
-                } />
+                } /> */}
                 <Route path="/human-resources" element={
                   <ProtectedRoute requiredPermissions={["Human Resources"]}>
                     <HumanResources />

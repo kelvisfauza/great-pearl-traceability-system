@@ -78,12 +78,13 @@ const RoleBasedNavigation = () => {
           path: "/sales-marketing", 
           access: access.canViewSales
         },
-        { 
-          name: "Finance", 
-          icon: DollarSign, 
-          path: "/finance", 
-          access: access.canViewFinance
-        },
+        // ❌ Finance hidden - will be used in separate Finance portal
+        // { 
+        //   name: "Finance", 
+        //   icon: DollarSign, 
+        //   path: "/finance", 
+        //   access: access.canViewFinance
+        // },
         { 
           name: "Human Resources", 
           icon: Users, 
