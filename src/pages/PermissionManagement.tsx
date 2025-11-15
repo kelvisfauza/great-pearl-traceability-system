@@ -77,6 +77,26 @@ const PermissionManagement = () => {
     }
   };
 
+  const handleFixDenisLogin = async () => {
+    try {
+      toast.loading('Fixing Denis login...');
+      
+      const { data, error } = await supabase.functions.invoke('fix-denis-final');
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`Denis login fixed! Email: ${data.email}, Password: ${data.password}`);
+        alert(`✅ Denis can now log in!\n\nEmail: ${data.email}\nPassword: ${data.password}`);
+      } else {
+        toast.error('Failed to fix login');
+      }
+    } catch (error) {
+      console.error('Error fixing Denis login:', error);
+      toast.error('Failed to fix Denis login');
+    }
+  };
+
   return (
     <Layout title="Permission Management" subtitle="Manage user roles and permissions">
       <div className="space-y-6">
@@ -101,6 +121,13 @@ const PermissionManagement = () => {
             variant="default"
           >
             Grant Finance to Denis
+          </Button>
+
+          <Button 
+            onClick={handleFixDenisLogin}
+            variant="destructive"
+          >
+            Fix Denis Login
           </Button>
         </div>
         <UserPermissionsList />
