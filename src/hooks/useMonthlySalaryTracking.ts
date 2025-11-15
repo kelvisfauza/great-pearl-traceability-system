@@ -96,13 +96,15 @@ export const useMonthlySalaryTracking = (
       const overtimeEarned = overtimeAwards?.reduce((sum, award) => sum + Number(award.total_amount), 0) || 0;
       
       // Get all requests for THIS month (only Approved - Pending and Rejected don't count)
+      // Exclude requests made in first 2 days of month as they're for previous month's end-month period
+      const cutoffDate = new Date(currentYear, currentMonth, 3); // Start counting from 3rd of month
       const { data: monthlyRequests, error: requestsError } = await supabase
         .from('approval_requests')
         .select('amount, status, created_at')
         .eq('requestedby', employeeEmail)
         .eq('type', 'Employee Salary Request')
         .eq('status', 'Approved')
-        .gte('created_at', startOfMonth.toISOString());
+        .gte('created_at', cutoffDate.toISOString());
 
       if (requestsError) throw requestsError;
 
