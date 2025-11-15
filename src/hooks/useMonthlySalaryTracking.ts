@@ -83,7 +83,17 @@ export const useMonthlySalaryTracking = (
         .eq('status', 'Approved')
         .gte('created_at', startOfMonth.toISOString());
 
-      const advancesOwed = advanceRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0;
+      // Also check money_requests table for advances
+      const { data: moneyAdvances } = await supabase
+        .from('money_requests')
+        .select('amount, status, created_at')
+        .eq('requested_by', employeeEmail)
+        .eq('request_type', 'advance')
+        .eq('status', 'approved')
+        .gte('created_at', startOfMonth.toISOString());
+
+      const advancesOwed = (advanceRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0) +
+                           (moneyAdvances?.reduce((sum, req) => sum + Number(req.amount), 0) || 0);
       
       // Get overtime awards for THIS month that haven't been claimed
       const { data: overtimeAwards } = await supabase
@@ -106,9 +116,19 @@ export const useMonthlySalaryTracking = (
         .eq('status', 'Approved')
         .gte('created_at', cutoffDate.toISOString());
 
+      // Also check money_requests table for mid-month and end-month salary requests
+      const { data: moneySalaryRequests } = await supabase
+        .from('money_requests')
+        .select('amount, status, created_at')
+        .eq('requested_by', employeeEmail)
+        .in('request_type', ['mid-month', 'end-month', 'Mid-Month Salary', 'End-Month Salary'])
+        .eq('status', 'approved')
+        .gte('created_at', cutoffDate.toISOString());
+
       if (requestsError) throw requestsError;
 
-      const totalRequestedThisMonth = monthlyRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0;
+      const totalRequestedThisMonth = (monthlyRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0) +
+                                       (moneySalaryRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0);
       
       // Calculate base available for THIS month (monthly salary minus advances owed plus overtime earned)
       // Note: Last month's payments don't affect this month's availability - each month is independent

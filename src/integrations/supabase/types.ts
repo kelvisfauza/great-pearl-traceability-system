@@ -129,6 +129,8 @@ export type Database = {
           rejection_comments: string | null
           rejection_reason: string | null
           requestedby: string
+          requestedby_name: string | null
+          requestedby_position: string | null
           requires_three_approvals: boolean | null
           status: string
           title: string
@@ -162,6 +164,8 @@ export type Database = {
           rejection_comments?: string | null
           rejection_reason?: string | null
           requestedby: string
+          requestedby_name?: string | null
+          requestedby_position?: string | null
           requires_three_approvals?: boolean | null
           status?: string
           title: string
@@ -195,6 +199,8 @@ export type Database = {
           rejection_comments?: string | null
           rejection_reason?: string | null
           requestedby?: string
+          requestedby_name?: string | null
+          requestedby_position?: string | null
           requires_three_approvals?: boolean | null
           status?: string
           title?: string
