@@ -107,13 +107,13 @@ export const useEnhancedExpenseManagement = () => {
 
   const updateRequestApproval = async (
     requestId: string, 
-    approvalType: 'finance' | 'admin' | 'admin1' | 'admin2', 
+    approvalType: 'admin' | 'admin1' | 'admin2', 
     approved: boolean,
     approvedBy: string,
     rejectionReason?: string
   ) => {
     try {
-      console.log(`Updating ${approvalType} approval for request ${requestId}:`, approved);
+      console.log(`[ADMIN APPROVAL] Updating ${approvalType} approval for request ${requestId}:`, approved);
 
       // First, get the current request to check approval state
       const { data: currentRequest } = await supabase
@@ -131,63 +131,28 @@ export const useEnhancedExpenseManagement = () => {
         return false;
       }
 
-      // Check if request requires three approvals
-      const requiresThree = currentRequest.requires_three_approvals;
-      
-      // Enforce approval order
-      if (approvalType === 'admin1' && approved && !currentRequest.finance_approved_at) {
-        toast({
-          title: "Approval Not Allowed",
-          description: "Request must be approved by Finance first",
-          variant: "destructive"
-        });
-        return false;
-      }
-      
-      if (approvalType === 'admin2' && approved && (!currentRequest.finance_approved_at || !currentRequest.admin_approved_1_at)) {
-        toast({
-          title: "Approval Not Allowed",
-          description: "Request must be approved by Finance and first Admin",
-          variant: "destructive"
-        });
-        return false;
-      }
-      
-      // Legacy admin approval
-      if (approvalType === 'admin' && approved && !currentRequest.finance_approved_at) {
-        toast({
-          title: "Approval Not Allowed",
-          description: "Request must be approved by Finance first",
-          variant: "destructive"
-        });
-        return false;
-      }
-
       const updateData: any = {};
       
       if (approved) {
-        // Approval logic
-        if (approvalType === 'finance') {
-          updateData.finance_approved = true;
-          updateData.finance_approved_at = new Date().toISOString();
-          updateData.finance_approved_by = approvedBy;
-          updateData.status = 'Finance Approved';
+        // ADMIN APPROVAL - First step in main app
+        if (approvalType === 'admin') {
+          updateData.admin_approved = true;
+          updateData.admin_approved_at = new Date().toISOString();
+          updateData.admin_approved_by = approvedBy;
+          updateData.status = 'Pending Finance'; // ✅ NEW: Admin approved, now waiting for Finance portal
+          console.log('✅ Admin approved - status set to Pending Finance');
         } else if (approvalType === 'admin1') {
           updateData.admin_approved_1 = true;
           updateData.admin_approved_1_at = new Date().toISOString();
           updateData.admin_approved_1_by = approvedBy;
-          updateData.status = 'Admin 1 Approved';
+          updateData.status = 'Pending Finance';
+          console.log('✅ Admin 1 approved - status set to Pending Finance');
         } else if (approvalType === 'admin2') {
           updateData.admin_approved_2 = true;
           updateData.admin_approved_2_at = new Date().toISOString();
           updateData.admin_approved_2_by = approvedBy;
-          // Status will be set to Approved by trigger if all approvals are complete
-        } else {
-          // Legacy admin approval
-          updateData.admin_approved = true;
-          updateData.admin_approved_at = new Date().toISOString();
-          updateData.admin_approved_by = approvedBy;
-          // Status will be set to Approved by trigger if all approvals are complete
+          updateData.status = 'Pending Finance';
+          console.log('✅ Admin 2 approved - status set to Pending Finance');
         }
       } else {
         // Rejection logic - only set rejection fields, don't modify approval timestamps
@@ -195,6 +160,7 @@ export const useEnhancedExpenseManagement = () => {
         updateData.rejection_reason = rejectionReason || 'No reason provided';
         updateData.rejected_at = new Date().toISOString();
         updateData.rejected_by = approvedBy;
+        console.log('❌ Request rejected by admin');
       }
 
       console.log('📝 Update data to send:', updateData);
@@ -217,7 +183,7 @@ export const useEnhancedExpenseManagement = () => {
       setExpenseRequests(prev => prev.map(req => {
         if (req.id === requestId) {
           const updatedReq = { ...req };
-          if (approvalType === 'finance') {
+          if (approvalType === 'admin') {
             updatedReq.financeApproved = approved;
             updatedReq.financeApprovedAt = approved ? new Date().toISOString() : undefined;
             updatedReq.financeApprovedBy = approved ? approvedBy : undefined;

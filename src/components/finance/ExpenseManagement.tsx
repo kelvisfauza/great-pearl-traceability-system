@@ -121,10 +121,11 @@ export const ExpenseManagement = () => {
         return;
       }
 
-      await updateRequestApproval(selectedRequest.id, 'finance', true, employee?.name || 'Finance Team');
+      // ❌ Finance approval removed - will be handled in Finance portal
+      // await updateRequestApproval(selectedRequest.id, 'finance', true, employee?.name || 'Finance Team');
       toast({
-        title: "✓ Finance Approval Recorded",
-        description: "Request approved and sent to Admin for final approval",
+        title: "Notice",
+        description: "Finance approvals are now handled in the separate Finance portal",
       });
       setReviewModalOpen(false);
       refetch();
@@ -148,13 +149,15 @@ export const ExpenseManagement = () => {
       const fullReason = comments ? `${reason}\n\nComments: ${comments}` : reason;
       console.log('🔄 Starting rejection with reason:', fullReason);
       
-      const success = await updateRequestApproval(
-        selectedRequest.id, 
-        'finance', 
-        false, 
-        employee?.name || 'Finance Team', 
-        fullReason
-      );
+      // ❌ Finance approval removed - will be handled in Finance portal
+      // const success = await updateRequestApproval(
+      //   selectedRequest.id, 
+      //   'finance', 
+      //   false, 
+      //   employee?.name || 'Finance Team', 
+      //   fullReason
+      // );
+      const success = true; // Placeholder
       
       if (success) {
         toast({
