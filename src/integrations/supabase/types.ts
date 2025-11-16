@@ -1873,6 +1873,7 @@ export type Database = {
           current_balance: number
           id: string
           last_updated: string
+          singleton: boolean
           updated_by: string
         }
         Insert: {
@@ -1880,6 +1881,7 @@ export type Database = {
           current_balance?: number
           id?: string
           last_updated?: string
+          singleton?: boolean
           updated_by: string
         }
         Update: {
@@ -1887,6 +1889,7 @@ export type Database = {
           current_balance?: number
           id?: string
           last_updated?: string
+          singleton?: boolean
           updated_by?: string
         }
         Relationships: []
@@ -4235,7 +4238,7 @@ export type Database = {
           requested_at: string
           requested_by: string
           status: Database["public"]["Enums"]["payment_status"]
-          supplier_id: string
+          supplier_id: string | null
           updated_at: string
         }
         Insert: {
@@ -4253,7 +4256,7 @@ export type Database = {
           requested_at?: string
           requested_by: string
           status?: Database["public"]["Enums"]["payment_status"]
-          supplier_id: string
+          supplier_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -4271,7 +4274,7 @@ export type Database = {
           requested_at?: string
           requested_by?: string
           status?: Database["public"]["Enums"]["payment_status"]
-          supplier_id?: string
+          supplier_id?: string | null
           updated_at?: string
         }
         Relationships: [
