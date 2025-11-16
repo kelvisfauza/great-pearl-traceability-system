@@ -307,6 +307,25 @@ export const usePendingCoffeePayments = () => {
       }
       console.log('✅ Coffee record updated to paid');
 
+      // Update quality assessment status to "paid" 
+      if (paymentData.qualityAssessmentId) {
+        console.log('📋 Updating quality assessment status...');
+        const { error: qaUpdateError } = await supabase
+          .from('quality_assessments')
+          .update({ 
+            status: 'paid',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', paymentData.qualityAssessmentId);
+        
+        if (qaUpdateError) {
+          console.error('❌ Failed to update quality assessment:', qaUpdateError);
+          // Don't throw - payment succeeded, this is just status sync
+        } else {
+          console.log('✅ Quality assessment status updated to paid');
+        }
+      }
+
       // Handle advance recovery if applicable  
       if (paymentData.advanceRecovered && paymentData.advanceRecovered > 0 && paymentData.supplierId) {
         console.log('💰 Processing advance recovery from Supabase...');
