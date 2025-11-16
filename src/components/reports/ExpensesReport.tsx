@@ -130,18 +130,43 @@ export const ExpensesReport = () => {
     });
   };
 
-  // Sort by most recent first (using finance_approved_at as primary sort field)
-  const sortByMostRecent = (requests: any[]) => {
-    return [...requests].sort((a, b) => {
-      const dateA = new Date(a.financeApprovedAt || a.created_at || a.daterequested);
-      const dateB = new Date(b.financeApprovedAt || b.created_at || b.daterequested);
-      return dateB.getTime() - dateA.getTime(); // Descending order
-    });
+  // Group expenses by month
+  const groupByMonth = (requests: any[]) => {
+    const grouped = requests.reduce((acc: Record<string, any[]>, req) => {
+      const dateStr = req.financeApprovedAt || req.created_at || req.daterequested;
+      const date = new Date(dateStr);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!acc[monthKey]) {
+        acc[monthKey] = [];
+      }
+      acc[monthKey].push(req);
+      return acc;
+    }, {});
+
+    // Sort months in descending order (most recent first)
+    return Object.keys(grouped)
+      .sort((a, b) => b.localeCompare(a))
+      .map(monthKey => ({
+        month: monthKey,
+        monthName: new Date(monthKey + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        requests: grouped[monthKey].sort((a, b) => {
+          const dateA = new Date(a.financeApprovedAt || a.created_at || a.daterequested);
+          const dateB = new Date(b.financeApprovedAt || b.created_at || b.daterequested);
+          return dateB.getTime() - dateA.getTime();
+        }),
+        total: grouped[monthKey].reduce((sum, r) => sum + r.amount, 0)
+      }));
   };
 
-  const filteredExpenses = sortByMostRecent(filterByPeriod(approvedExpenses));
-  const filteredSalaryRequests = sortByMostRecent(filterByPeriod(approvedSalaryRequests));
-  const filteredRequisitions = sortByMostRecent(filterByPeriod(approvedRequisitions));
+  const groupedExpenses = groupByMonth(filterByPeriod(approvedExpenses));
+  const groupedSalaryRequests = groupByMonth(filterByPeriod(approvedSalaryRequests));
+  const groupedRequisitions = groupByMonth(filterByPeriod(approvedRequisitions));
+  
+  // Flatten grouped data for totals and counts
+  const filteredExpenses = groupedExpenses.flatMap(g => g.requests);
+  const filteredSalaryRequests = groupedSalaryRequests.flatMap(g => g.requests);
+  const filteredRequisitions = groupedRequisitions.flatMap(g => g.requests);
   
   // Filter overtime by period (using completed_at)
   const filterOvertimeByPeriod = (awards: any[]) => {
@@ -171,6 +196,32 @@ export const ExpensesReport = () => {
   };
 
   const filteredOvertimeAwards = filterOvertimeByPeriod(completedOvertimeAwards);
+  
+  // Group overtime by month
+  const groupedOvertimeAwards = filteredOvertimeAwards.reduce((acc: Record<string, any[]>, award) => {
+    const dateStr = award.completed_at;
+    const date = new Date(dateStr);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    
+    if (!acc[monthKey]) {
+      acc[monthKey] = [];
+    }
+    acc[monthKey].push(award);
+    return acc;
+  }, {});
+
+  const groupedOvertime = Object.keys(groupedOvertimeAwards)
+    .sort((a, b) => b.localeCompare(a))
+    .map(monthKey => ({
+      month: monthKey,
+      monthName: new Date(monthKey + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      awards: groupedOvertimeAwards[monthKey].sort((a, b) => {
+        const dateA = new Date(a.completed_at);
+        const dateB = new Date(b.completed_at);
+        return dateB.getTime() - dateA.getTime();
+      }),
+      total: groupedOvertimeAwards[monthKey].reduce((sum, a) => sum + (a.total_amount || 0), 0)
+    }));
 
   // Calculate totals
   const totalExpenses = filteredExpenses.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
@@ -518,42 +569,48 @@ export const ExpensesReport = () => {
                   <p>No completed overtime awards found</p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Completed Date</TableHead>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Reference</TableHead>
-                      <TableHead>Hours</TableHead>
-                      <TableHead>Completed By</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredOvertimeAwards.map((award) => (
-                      <TableRow key={award.id}>
-                        <TableCell>{formatDate(award.completed_at!)}</TableCell>
-                        <TableCell className="font-medium">{award.employee_name}</TableCell>
-                        <TableCell>{award.department}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{award.reference_number}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {award.hours}h {award.minutes}m
-                        </TableCell>
-                        <TableCell className="text-xs">{award.completed_by}</TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {formatCurrency(award.total_amount)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow className="bg-orange-50 font-bold">
-                      <TableCell colSpan={6} className="text-right">Subtotal:</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totalOvertime)}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                groupedOvertime.map((monthGroup) => (
+                  <div key={monthGroup.month} className="mb-8">
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b">
+                      <h3 className="text-lg font-semibold">{monthGroup.monthName}</h3>
+                      <Badge variant="outline" className="text-lg">
+                        Total: UGX {monthGroup.total.toLocaleString()}
+                      </Badge>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Completed Date</TableHead>
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Department</TableHead>
+                          <TableHead>Reference</TableHead>
+                          <TableHead>Hours</TableHead>
+                          <TableHead>Completed By</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {monthGroup.awards.map((award) => (
+                          <TableRow key={award.id}>
+                            <TableCell>{formatDate(award.completed_at!)}</TableCell>
+                            <TableCell className="font-medium">{award.employee_name}</TableCell>
+                            <TableCell>{award.department}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{award.reference_number}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {award.hours}h {award.minutes}m
+                            </TableCell>
+                            <TableCell className="text-xs">{award.completed_by}</TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {formatCurrency(award.total_amount)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ))
               )}
             </TabsContent>
           </Tabs>
