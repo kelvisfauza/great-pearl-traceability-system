@@ -1228,6 +1228,36 @@ export type Database = {
         }
         Relationships: []
       }
+      email_verification_codes: {
+        Row: {
+          attempts: number | null
+          code: string
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          verified_at: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          code: string
+          created_at?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          verified_at?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          code?: string
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           address: string | null
@@ -4743,6 +4773,10 @@ export type Database = {
       can_perform_action: { Args: { action_type: string }; Returns: boolean }
       check_auth_user_exists: { Args: { user_uuid: string }; Returns: Json }
       check_unread_messages_for_sms: { Args: never; Returns: undefined }
+      cleanup_expired_email_verification_codes: {
+        Args: never
+        Returns: undefined
+      }
       cleanup_expired_verification_codes: { Args: never; Returns: undefined }
       cleanup_inactive_sessions: { Args: never; Returns: undefined }
       create_timothy_auth_account: { Args: never; Returns: Json }
