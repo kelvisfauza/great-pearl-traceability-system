@@ -27,7 +27,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check if user is admin
+    // Check if user exists (allow non-company emails during migration)
     const { data: employee, error: employeeError } = await supabase
       .from('employees')
       .select('role')
@@ -36,9 +36,14 @@ serve(async (req) => {
 
     if (employeeError) {
       console.error('Error fetching employee:', employeeError);
+      // Return success but indicate user not found - let login proceed for email migration
       return new Response(
-        JSON.stringify({ error: 'User not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          allowed: true, 
+          reason: 'User not found in directory - proceeding with authentication',
+          requiresEmailUpdate: true
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
