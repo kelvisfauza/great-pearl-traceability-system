@@ -130,9 +130,18 @@ export const ExpensesReport = () => {
     });
   };
 
-  const filteredExpenses = filterByPeriod(approvedExpenses);
-  const filteredSalaryRequests = filterByPeriod(approvedSalaryRequests);
-  const filteredRequisitions = filterByPeriod(approvedRequisitions);
+  // Sort by most recent first (using finance_approved_at as primary sort field)
+  const sortByMostRecent = (requests: any[]) => {
+    return [...requests].sort((a, b) => {
+      const dateA = new Date(a.financeApprovedAt || a.created_at || a.daterequested);
+      const dateB = new Date(b.financeApprovedAt || b.created_at || b.daterequested);
+      return dateB.getTime() - dateA.getTime(); // Descending order
+    });
+  };
+
+  const filteredExpenses = sortByMostRecent(filterByPeriod(approvedExpenses));
+  const filteredSalaryRequests = sortByMostRecent(filterByPeriod(approvedSalaryRequests));
+  const filteredRequisitions = sortByMostRecent(filterByPeriod(approvedRequisitions));
   
   // Filter overtime by period (using completed_at)
   const filterOvertimeByPeriod = (awards: any[]) => {
