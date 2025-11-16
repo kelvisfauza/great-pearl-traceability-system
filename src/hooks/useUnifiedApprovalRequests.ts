@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useWorkflowTracking } from './useWorkflowTracking';
 import { useNotifications } from './useNotifications';
 import { useGlobalErrorHandler } from './useGlobalErrorHandler';
@@ -33,6 +34,7 @@ export interface UnifiedApprovalRequest {
 export const useUnifiedApprovalRequests = () => {
   const [requests, setRequests] = useState<UnifiedApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const { employee } = useAuth();
   const { trackWorkflowStep } = useWorkflowTracking();
   const { createAnnouncement } = useNotifications();
   const { reportDatabaseError, reportWorkflowError } = useGlobalErrorHandler();
@@ -220,13 +222,23 @@ export const useUnifiedApprovalRequests = () => {
       if (request.source === 'supabase') {
         // Handle Supabase approval requests
         const updateData: any = {
-          status,
+          admin_approved: status === 'Approved',
+          admin_approved_by: employee?.name || employee?.email || 'Admin',
+          admin_approved_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
 
-        if (status === 'Rejected' && rejectionReason) {
-          updateData.rejection_reason = rejectionReason;
-          updateData.rejection_comments = rejectionComments || '';
+        if (status === 'Approved') {
+          // Route to Finance for final approval
+          updateData.status = 'Pending Finance';
+          updateData.approval_stage = 'pending_finance';
+        } else {
+          // Rejected by admin
+          updateData.status = 'Rejected';
+          updateData.rejection_reason = rejectionReason || 'Rejected by Administrator';
+          if (rejectionComments) {
+            updateData.rejection_comments = rejectionComments;
+          }
         }
 
         const { error } = await supabase
@@ -239,8 +251,9 @@ export const useUnifiedApprovalRequests = () => {
           return false;
         }
 
-        // Handle specific Supabase request types
-        if (status === 'Approved') {
+        // Only handle deletions/edits for non-financial requests
+        // Financial requests will be handled after Finance approval
+        if (status === 'Approved' && !['Money Request', 'Salary Payment', 'Requisition', 'Expense'].includes(request.type)) {
           // Handle deletion requests
           if (request.type === 'deletion' && request.details?.table_name && request.details?.record_id) {
             try {

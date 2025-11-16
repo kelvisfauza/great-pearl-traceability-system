@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, BarChart3, Settings, Calendar, Archive } from 'lucide-react';
 import DeletionRequestsManager from './DeletionRequestsManager';
-import MoneyRequestsFinalApproval from './MoneyRequestsFinalApproval';
 import RoleAssignmentManager from './RoleAssignmentManager';
 import PermissionOverview from './PermissionOverview';
 import UserPermissionsList from './UserPermissionsList';
@@ -289,16 +288,6 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent className="pt-6">
               <AdminExpenseRequestsManager />
-            </CardContent>
-          </Card>
-
-          {/* Money Requests */}
-          <Card className="border-2">
-            <CardHeader className="bg-muted/30">
-              <CardTitle className="text-lg">Money Requests - Final Approval</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <MoneyRequestsFinalApproval />
             </CardContent>
           </Card>
 
