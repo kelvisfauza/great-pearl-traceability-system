@@ -99,7 +99,7 @@ export const ExpensesReport = () => {
     amount: s.amount
   })));
 
-  // Apply filters
+  // Apply filters - use finance_approved_at or created_at for reliable date filtering
   const filterByPeriod = (requests: any[]) => {
     if (filterPeriod === 'all') return requests;
     
@@ -123,7 +123,17 @@ export const ExpensesReport = () => {
         return requests;
     }
     
-    return requests.filter(req => new Date(req.daterequested) >= startDate);
+    // Use financeApprovedAt for approved requests (reliable ISO date) or created_at as fallback
+    return requests.filter(req => {
+      const dateToCheck = req.financeApprovedAt || req.created_at || req.daterequested;
+      try {
+        return new Date(dateToCheck) >= startDate;
+      } catch {
+        // If date parsing fails, include the record to avoid hiding data
+        console.warn('Failed to parse date:', dateToCheck, 'for request:', req.id);
+        return true;
+      }
+    });
   };
 
   const filteredExpenses = filterByPeriod(approvedExpenses);
@@ -177,11 +187,42 @@ export const ExpensesReport = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+    try {
+      // Handle multiple date formats
+      let date: Date;
+      
+      // Check if it's already an ISO string
+      if (dateString.includes('T') || dateString.includes('-')) {
+        date = new Date(dateString);
+      } else {
+        // Handle DD/MM/YYYY or MM/DD/YYYY formats
+        const parts = dateString.split('/');
+        if (parts.length === 3) {
+          // Try DD/MM/YYYY first (most common format)
+          date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+          
+          // If invalid, try MM/DD/YYYY
+          if (isNaN(date.getTime())) {
+            date = new Date(`${parts[2]}-${parts[0]}-${parts[1]}`);
+          }
+        } else {
+          date = new Date(dateString);
+        }
+      }
+      
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        return dateString; // Return original if parsing fails
+      }
+      
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch {
+      return dateString; // Return original on error
+    }
   };
 
   const generatePaymentSlipNumber = (requestId: string) => {
