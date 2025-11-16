@@ -80,27 +80,25 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // First, check network access
+      // Check network access (optional - allow login even if check fails for email migration)
       console.log('🌐 Checking network access for:', email);
       const { data: networkCheck, error: networkError } = await supabase.functions.invoke('check-network-access', {
         body: { email }
       });
 
-      if (networkError) {
-        console.error('Network check error:', networkError);
-        setError('Failed to verify network access. Please try again.');
-        setLoading(false);
-        return;
-      }
-
-      if (!networkCheck.allowed) {
+      // Only block if explicitly denied (not if user not found)
+      if (networkCheck && !networkCheck.allowed && networkCheck.reason !== 'User not found') {
         console.log('❌ Network access denied:', networkCheck.reason);
         setError(networkCheck.reason || 'Access denied. You must be connected to the factory network.');
         setLoading(false);
         return;
       }
 
-      console.log('✅ Network access granted:', networkCheck.reason);
+      if (networkCheck?.allowed) {
+        console.log('✅ Network access granted:', networkCheck.reason);
+      } else {
+        console.log('⚠️ Network check skipped or inconclusive, proceeding with login');
+      }
 
       // Proceed with authentication
       console.log('🔐 Attempting login for:', email);
