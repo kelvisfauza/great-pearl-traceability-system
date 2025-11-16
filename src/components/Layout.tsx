@@ -17,8 +17,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import FeatureAnnouncementModal from "./FeatureAnnouncementModal";
 import AnnouncementDialog from "./notifications/AnnouncementDialog";
 import TrainingTour from "./training/TrainingTour";
+import ForceEmailUpdate from "./auth/ForceEmailUpdate";
 import { Menu } from "lucide-react";
 import { Button } from "./ui/button";
+
+const COMPANY_DOMAIN = "@greatpearlcoffee.com";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -41,12 +44,21 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   console.log('Layout - notification unread count:', notificationUnreadCount);
   console.log('Layout - user:', user);
 
+  // Check if user needs to update email to company domain
+  const email = user?.email?.toLowerCase() || "";
+  const needsEmailUpdate = email && !email.endsWith(COMPANY_DOMAIN);
+
   const toggleMessaging = () => setIsMessagingOpen(!isMessagingOpen);
   const toggleNotifications = () => setIsNotificationOpen(!isNotificationOpen);
 
   const handleOpenAnnouncement = () => {
     toggleNotifications();
   };
+
+  // Force email update screen if needed
+  if (needsEmailUpdate) {
+    return <ForceEmailUpdate />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row relative">
