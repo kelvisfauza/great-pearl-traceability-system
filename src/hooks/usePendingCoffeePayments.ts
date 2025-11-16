@@ -240,25 +240,56 @@ export const usePendingCoffeePayments = () => {
         throw new Error(`Insufficient funds. Available: UGX ${availableCash.toLocaleString()}, Required: UGX ${paymentData.amount.toLocaleString()}`);
       }
 
-      // Create payment record in Supabase
-      console.log('📝 Creating payment record in Supabase...');
-      const { error: paymentInsertError } = await supabase
+      // Update or create payment record in Supabase
+      console.log('📝 Updating payment record in Supabase...');
+      
+      // Check if payment record already exists for this batch
+      const { data: existingPayment } = await supabase
         .from('payment_records')
-        .insert({
-          supplier: paymentData.supplier,
-          amount: paymentData.amount,
-          status: paymentData.method === 'Cash' ? 'Paid' : 'Processing',
-          method: paymentData.method === 'Cash' ? 'Cash' : 'Bank Transfer',
-          date: new Date().toISOString().split('T')[0],
-          batch_number: paymentData.batchNumber,
-          quality_assessment_id: paymentData.qualityAssessmentId
-        });
+        .select('id')
+        .eq('batch_number', paymentData.batchNumber)
+        .maybeSingle();
 
-      if (paymentInsertError) {
-        console.error('❌ Failed to create payment record:', paymentInsertError);
-        throw new Error(`Failed to create payment record: ${paymentInsertError.message}`);
+      if (existingPayment) {
+        // Update existing payment record
+        const { error: paymentUpdateError } = await supabase
+          .from('payment_records')
+          .update({
+            status: paymentData.method === 'Cash' ? 'Paid' : 'Processing',
+            method: paymentData.method === 'Cash' ? 'Cash' : 'Bank Transfer',
+            amount_paid: paymentData.amount,
+            balance: 0,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingPayment.id);
+
+        if (paymentUpdateError) {
+          console.error('❌ Failed to update payment record:', paymentUpdateError);
+          throw new Error(`Failed to update payment record: ${paymentUpdateError.message}`);
+        }
+        console.log('✅ Payment record updated in Supabase');
+      } else {
+        // Create new payment record
+        const { error: paymentInsertError } = await supabase
+          .from('payment_records')
+          .insert({
+            supplier: paymentData.supplier,
+            amount: paymentData.amount,
+            amount_paid: paymentData.amount,
+            balance: 0,
+            status: paymentData.method === 'Cash' ? 'Paid' : 'Processing',
+            method: paymentData.method === 'Cash' ? 'Cash' : 'Bank Transfer',
+            date: new Date().toISOString().split('T')[0],
+            batch_number: paymentData.batchNumber,
+            quality_assessment_id: paymentData.qualityAssessmentId
+          });
+
+        if (paymentInsertError) {
+          console.error('❌ Failed to create payment record:', paymentInsertError);
+          throw new Error(`Failed to create payment record: ${paymentInsertError.message}`);
+        }
+        console.log('✅ Payment record created in Supabase');
       }
-      console.log('✅ Payment record created in Supabase');
 
       // Update coffee_record status to "inventory" in Supabase (after payment)
       console.log('📦 Updating coffee record in Supabase...');
