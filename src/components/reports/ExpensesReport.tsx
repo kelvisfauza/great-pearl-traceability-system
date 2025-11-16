@@ -31,11 +31,9 @@ export const ExpensesReport = () => {
       }))]
     : expenseRequests;
 
-  // Filter approved expenses and salary requests
+  // Filter finance-approved expenses (regardless of admin approval status or exact status value)
   const approvedExpenses = allExpenses.filter(req => 
-    req.status === 'Approved' && 
     req.financeApprovedAt && 
-    req.adminApprovedAt &&
     (req.type === 'Employee Expense Request' || req.type.includes('Expense'))
   );
 
@@ -65,18 +63,14 @@ export const ExpensesReport = () => {
 
   const approvedSalaryRequests = [
     ...allExpenses.filter(req =>
-      req.status === 'Approved' &&
       req.financeApprovedAt &&
-      req.adminApprovedAt &&
       (req.type === 'Employee Salary Request' || req.type === 'Salary Payment')
     ),
     ...approvedMoneyRequests
   ];
 
   const approvedRequisitions = allExpenses.filter(req =>
-    req.status === 'Approved' &&
     req.financeApprovedAt &&
-    req.adminApprovedAt &&
     req.type === 'Requisition'
   );
 
