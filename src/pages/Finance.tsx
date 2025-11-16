@@ -9,6 +9,7 @@ import { FinanceStats } from '@/components/finance/FinanceStats';
 import { PendingCashDeposits } from '@/components/finance/PendingCashDeposits';
 
 // Lazy load heavy components
+const PendingApprovalRequests = lazy(() => import('@/components/finance/PendingApprovalRequests'));
 const PendingCoffeePayments = lazy(() => import('@/components/finance/PendingCoffeePayments').then(m => ({ default: m.PendingCoffeePayments })));
 const CompletedTransactions = lazy(() => import('@/components/finance/CompletedTransactions').then(m => ({ default: m.CompletedTransactions })));
 const SupplierAdvancesPage = lazy(() => import('@/components/finance/SupplierAdvancesPage').then(m => ({ default: m.SupplierAdvancesPage })));
@@ -102,9 +103,19 @@ const Finance = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveTabs
-                defaultValue="pending-coffee"
+                defaultValue="pending-approvals"
                 visibleTabsCount={4}
                 tabs={[
+                  {
+                    value: "pending-approvals",
+                    icon: <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />,
+                    label: <><span className="hidden sm:inline">Pending Approvals</span><span className="sm:hidden">Approvals</span></>,
+                    content: (
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <PendingApprovalRequests />
+                      </Suspense>
+                    )
+                  },
                   {
                     value: "pending-coffee",
                     icon: <Coffee className="h-3 w-3 md:h-4 md:w-4" />,
