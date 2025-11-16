@@ -383,11 +383,11 @@ export const useQualityControl = () => {
         clean_d14: Number(assessment.clean_d14) || 0,
         outturn: Number(assessment.outturn) || 0,
         outturn_price: Number(assessment.outturn_price) || 0,
-        final_price: Number(assessment.final_price) || finalPrice,
+        final_price: isRejected ? 0 : (Number(assessment.final_price) || finalPrice),
         quality_note: assessment.quality_note || null,
         reject_outturn_price: Boolean(assessment.reject_outturn_price),
         reject_final: isRejected,
-        suggested_price: finalPrice, // This is the price that finance will see
+        suggested_price: isRejected ? 0 : finalPrice, // Rejected batches have 0 price
         status: isRejected ? 'rejected' : 'submitted_to_finance', // Rejected batches go to rejected status
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed || new Date().toISOString().split('T')[0],
