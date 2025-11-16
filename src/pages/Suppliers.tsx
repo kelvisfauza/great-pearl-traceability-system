@@ -34,6 +34,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import StandardPrintHeader from "@/components/print/StandardPrintHeader";
 import { useReactToPrint } from "react-to-print";
 import { getStandardPrintStyles } from "@/utils/printStyles";
+import { FixPendingPaymentsButton } from "@/components/finance/FixPendingPaymentsButton";
 
 interface SupplierTransaction {
   id: string;
@@ -586,6 +587,7 @@ const Suppliers = () => {
           <div className="flex gap-2">
             {!selectedSupplier && isAdmin() && suppliers.length > 0 && (
               <>
+                <FixPendingPaymentsButton />
                 <Button variant="outline" onClick={handlePrintSuppliersList}>
                   <Printer className="h-4 w-4 mr-2" />
                   Print List
