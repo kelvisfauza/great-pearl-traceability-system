@@ -4892,6 +4892,16 @@ export type Database = {
         Returns: Json
       }
       refresh_current_week_allowances: { Args: never; Returns: Json }
+      reset_money_requests_to_pending_admin: {
+        Args: never
+        Returns: {
+          amount: number
+          id: string
+          new_stage: string
+          old_stage: string
+          request_type: string
+        }[]
+      }
       trigger_daily_salary_processing: { Args: never; Returns: Json }
       user_has_permission: {
         Args: { permission_name: string }
