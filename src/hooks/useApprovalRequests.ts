@@ -141,7 +141,6 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
       const { data: supabaseRequests, error } = await supabase
         .from('approval_requests')
         .select('*')
-        .in('status', ['Pending', 'Pending Admin', 'Pending Admin Approval'])
         .or('admin_approved.is.null,admin_approved.eq.false')
         .order('created_at', { ascending: false });
       
