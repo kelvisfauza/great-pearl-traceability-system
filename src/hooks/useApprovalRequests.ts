@@ -142,6 +142,7 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
         .from('approval_requests')
         .select('*')
         .or('admin_approved.is.null,admin_approved.eq.false')
+        .not('status', 'in', '("Approved","Rejected")')
         .order('created_at', { ascending: false });
       
       if (error) {
