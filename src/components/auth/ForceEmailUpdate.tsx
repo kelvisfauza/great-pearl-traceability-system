@@ -44,6 +44,8 @@ const ForceEmailUpdate: React.FC = () => {
       // 1) Update Supabase Auth user
       const { error: authError } = await supabase.auth.updateUser({
         email: trimmed,
+      }, {
+        emailRedirectTo: `${window.location.origin}/auth`
       });
 
       if (authError) {
