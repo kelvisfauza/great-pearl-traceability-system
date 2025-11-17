@@ -96,10 +96,21 @@ export const useUserAccount = () => {
   };
 
   const createMoneyRequest = async (amount: number, reason: string, requestType: string = 'advance') => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.error('❌ No user ID found - cannot create money request');
+      return;
+    }
+
+    console.log('💰 Creating money request:', { 
+      user_id: user.id, 
+      amount, 
+      reason, 
+      request_type: requestType,
+      approval_stage: 'pending_admin'
+    });
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('money_requests')
         .insert([{
           user_id: user.id,
@@ -111,13 +122,19 @@ export const useUserAccount = () => {
           status: 'pending',
           admin_approved: false,
           finance_approved: false
-        }]);
+        }])
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error inserting money request:', error);
+        throw error;
+      }
+
+      console.log('✅ Money request created successfully:', data);
 
       toast({
         title: "Request Submitted",
-        description: "Your money request has been submitted for approval",
+        description: "Your money request has been submitted for admin approval",
       });
 
       fetchUserAccount(); // Refresh data

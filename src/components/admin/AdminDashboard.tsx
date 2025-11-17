@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,16 +20,50 @@ import { DataArchiveManager } from './DataArchiveManager';
 import { useUnifiedApprovalRequests } from '@/hooks/useUnifiedApprovalRequests';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import ActiveUsers from '@/components/it/ActiveUsers';
+import { supabase } from '@/integrations/supabase/client';
 
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [cashModalOpen, setCashModalOpen] = useState(false);
+  const [moneyRequestsCount, setMoneyRequestsCount] = useState(0);
   const { requests, loading: requestsLoading } = useUnifiedApprovalRequests();
   const { onlineCount, loading: presenceLoading } = usePresenceList();
 
   console.log('🚀 AdminDashboard - activeTab:', activeTab);
   console.log('🚀 AdminDashboard component loaded');
+
+  // Fetch money requests count for badge
+  useEffect(() => {
+    const fetchMoneyRequestsCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('money_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('approval_stage', 'pending_admin');
+        
+        if (error) throw error;
+        setMoneyRequestsCount(count || 0);
+      } catch (error) {
+        console.error('Error fetching money requests count:', error);
+      }
+    };
+
+    fetchMoneyRequestsCount();
+
+    // Subscribe to changes
+    const channel = supabase
+      .channel('admin_money_requests_count')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'money_requests' },
+        () => fetchMoneyRequestsCount()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -74,9 +108,9 @@ const AdminDashboard = () => {
           <TabsTrigger value="approvals" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
             <Shield className="h-4 w-4" />
             Approvals
-            {requests.length > 0 && (
+            {(requests.length > 0 || moneyRequestsCount > 0) && (
               <Badge variant="destructive" className="ml-1 px-1.5 py-0.5 text-xs">
-                {requests.length}
+                {requests.length + moneyRequestsCount}
               </Badge>
             )}
           </TabsTrigger>
