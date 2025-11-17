@@ -38,9 +38,9 @@ export const useFinanceApprovals = () => {
       const { data, error } = await supabase
         .from('approval_requests')
         .select('*')
-        .eq('admin_approved', true)
-        .eq('finance_approved', false)
-        .in('status', ['Pending Finance', 'Admin Approved'])
+        .eq('admin_approved', true) // Admin has approved
+        .or('finance_approved.is.null,finance_approved.eq.false') // Finance hasn't approved yet
+        .eq('status', 'Pending Finance') // Correct status for admin-approved requests
         .order('created_at', { ascending: false });
 
       if (error) throw error;

@@ -141,7 +141,8 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
       const { data: supabaseRequests, error } = await supabase
         .from('approval_requests')
         .select('*')
-        .in('status', ['Pending', 'Pending Admin', 'Pending Admin Approval', 'Finance Approved']) // All statuses that need admin review
+        .in('status', ['Pending', 'Pending Admin', 'Pending Admin Approval']) // Only NEW flow requests awaiting admin
+        .or('admin_approved.is.null,admin_approved.eq.false') // Not yet admin-approved
         .order('created_at', { ascending: false });
       
       if (error) {
