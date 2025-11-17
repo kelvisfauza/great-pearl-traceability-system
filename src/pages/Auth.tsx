@@ -7,27 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, AlertCircle, Phone, Mail, MessageCircle, User, Lock } from 'lucide-react';
+import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 import BiometricVerification from '@/components/BiometricVerification';
-import { EmailVerification } from '@/components/EmailVerification';
 import { NetworkDetector } from '@/components/NetworkDetector';
 import { supabase } from '@/integrations/supabase/client';
 import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [showBiometric, setShowBiometric] = useState(false);
-  const [showEmailVerification, setShowEmailVerification] = useState(false);
-  const [pendingSignupEmail, setPendingSignupEmail] = useState('');
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -82,116 +76,6 @@ const Auth = () => {
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    // Validation
-    if (!name.trim()) {
-      setError('Please enter your name');
-      return;
-    }
-
-    if (!email.trim() || !email.includes('@')) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Check if user already exists
-      const { data: existingEmployee } = await supabase
-        .from('employees')
-        .select('email')
-        .eq('email', email)
-        .single();
-
-      if (existingEmployee) {
-        setError('An account with this email already exists. Please login instead.');
-        setLoading(false);
-        return;
-      }
-
-      // Show email verification
-      setPendingSignupEmail(email);
-      setShowEmailVerification(true);
-    } catch (err: any) {
-      console.error('Error during signup:', err);
-      setError(err.message || 'Failed to sign up. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmailVerificationComplete = async () => {
-    setLoading(true);
-    try {
-      // Create the user account after email verification
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: pendingSignupEmail,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            name: name
-          }
-        }
-      });
-
-      if (signUpError) throw signUpError;
-
-      if (authData.user) {
-        // Create employee record
-        const { error: employeeError } = await supabase
-          .from('employees')
-          .insert({
-            name: name,
-            email: pendingSignupEmail,
-            auth_user_id: authData.user.id,
-            role: 'User',
-            department: 'General',
-            position: 'Employee',
-            status: 'Active',
-            permissions: [],
-            salary: 0
-          });
-
-        if (employeeError) {
-          console.error('Error creating employee record:', employeeError);
-        }
-
-        toast({
-          title: "Account Created",
-          description: "Your account has been created successfully! Please sign in.",
-        });
-
-        // Reset form and switch to login mode
-        setShowEmailVerification(false);
-        setPendingSignupEmail('');
-        setMode('login');
-        setPassword('');
-        setConfirmPassword('');
-        setName('');
-      }
-    } catch (err: any) {
-      console.error('Error completing signup:', err);
-      setError(err.message || 'Failed to create account. Please try again.');
-      setShowEmailVerification(false);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,22 +184,6 @@ const Auth = () => {
     setLoading(false);
   };
 
-  // Show email verification screen for signup
-  if (showEmailVerification) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
-        <EmailVerification
-          email={pendingSignupEmail}
-          onVerificationComplete={handleEmailVerificationComplete}
-          onCancel={() => {
-            setShowEmailVerification(false);
-            setPendingSignupEmail('');
-            setLoading(false);
-          }}
-        />
-      </div>
-    );
-  }
 
   // Show biometric verification screen for admins
   if (showBiometric) {
@@ -355,35 +223,14 @@ const Auth = () => {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-xl">
-              {mode === 'login' ? 'Sign In' : 'Create Account'}
+              Sign In
             </CardTitle>
             <CardDescription>
-              {mode === 'login' 
-                ? 'Enter your credentials to access your account'
-                : 'Enter your details to create a new account'
-              }
+              Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={mode === 'login' ? handleSubmit : handleSignup} className="space-y-4">
-              {mode === 'signup' && (
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      disabled={loading}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
+            <form onSubmit={handleSubmit} className="space-y-4">
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -414,30 +261,9 @@ const Auth = () => {
                     required
                     disabled={loading}
                     className="pl-10"
-                    minLength={mode === 'signup' ? 6 : undefined}
                   />
                 </div>
               </div>
-
-              {mode === 'signup' && (
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="Confirm your password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                      className="pl-10"
-                      minLength={6}
-                    />
-                  </div>
-                </div>
-              )}
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -464,33 +290,12 @@ const Auth = () => {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {mode === 'login' ? 'Signing in...' : 'Creating Account...'}
+                    Signing in...
                   </>
                 ) : (
-                  mode === 'login' ? 'Sign In' : 'Create Account'
+                  'Sign In'
                 )}
               </Button>
-
-              <div className="text-center text-sm">
-                <span className="text-muted-foreground">
-                  {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
-                </span>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="p-0 h-auto font-normal"
-                  onClick={() => {
-                    setMode(mode === 'login' ? 'signup' : 'login');
-                    setError('');
-                    setPassword('');
-                    setConfirmPassword('');
-                    setName('');
-                  }}
-                  disabled={loading}
-                >
-                  {mode === 'login' ? 'Sign up' : 'Sign in'}
-                </Button>
-              </div>
             </form>
           </CardContent>
         </Card>
@@ -520,7 +325,7 @@ const Auth = () => {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                New employees: Contact HR for account creation. Existing users with login issues: Contact IT Support.
+                New employees: Your account will be created by the administrator. Contact IT Support for login issues.
               </AlertDescription>
             </Alert>
           </CardContent>
