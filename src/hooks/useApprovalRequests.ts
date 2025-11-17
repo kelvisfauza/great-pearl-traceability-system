@@ -142,7 +142,7 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
         .from('approval_requests')
         .select('*')
         .in('status', ['Pending', 'Pending Admin', 'Pending Admin Approval'])
-        .is('finance_approved', null) // Finance hasn't approved yet (admin goes first now)
+        .or('admin_approved.is.null,admin_approved.eq.false')
         .order('created_at', { ascending: false });
       
       if (error) {
