@@ -10,6 +10,7 @@ import PermissionOverview from './PermissionOverview';
 import UserPermissionsList from './UserPermissionsList';
 import QuickPermissionAssignment from './QuickPermissionAssignment';
 import AdminExpenseRequestsManager from './AdminExpenseRequestsManager';
+import AdminMoneyRequestsManager from './AdminMoneyRequestsManager';
 import ApprovedRequestsHistory from './ApprovedRequestsHistory';
 import CashManagementModal from './CashManagementModal';
 import TopSuppliersChart from './TopSuppliersChart';
@@ -288,6 +289,16 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent className="pt-6">
               <AdminExpenseRequestsManager />
+            </CardContent>
+          </Card>
+
+          {/* Money Requests (Salary/Lunch) - Admin Approval First */}
+          <Card className="border-2">
+            <CardHeader className="bg-muted/30">
+              <CardTitle className="text-lg">Money Requests (Pending Admin Approval)</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <AdminMoneyRequestsManager />
             </CardContent>
           </Card>
 

@@ -106,7 +106,11 @@ export const useUserAccount = () => {
           amount,
           reason,
           request_type: requestType,
-          requested_by: user.email || 'Unknown'
+          requested_by: user.email || 'Unknown',
+          approval_stage: 'pending_admin', // Admin approves first, then finance
+          status: 'pending',
+          admin_approved: false,
+          finance_approved: false
         }]);
 
       if (error) throw error;
