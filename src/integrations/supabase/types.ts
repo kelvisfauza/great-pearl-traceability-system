@@ -4459,6 +4459,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_sessions: {
         Row: {
           created_at: string
@@ -4871,10 +4895,22 @@ export type Database = {
           wallet_balance: number
         }[]
       }
-      get_user_role: { Args: never; Returns: string }
+      get_user_role:
+        | { Args: never; Returns: string }
+        | {
+            Args: { _user_id: string }
+            Returns: Database["public"]["Enums"]["app_role"]
+          }
       get_wallet_balance_safe: { Args: { user_uuid: string }; Returns: number }
       get_wallet_balance_text: { Args: { user_uuid: string }; Returns: number }
       "great pearl": { Args: { conversation_id: string }; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       invalidate_other_sessions: {
         Args: { p_current_session_token: string; p_user_id: string }
         Returns: undefined
