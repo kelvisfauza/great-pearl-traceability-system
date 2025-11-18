@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useApprovalRequests } from '@/hooks/useApprovalRequests';
 import { useRiskAssessment } from '@/hooks/useRiskAssessment';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield, Phone, AlertTriangle, Printer, Eye } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText, Shield, Phone, AlertTriangle, Printer, Eye, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
 import { AdminApprovalModal } from './AdminApprovalModal';
@@ -40,6 +40,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const [recentSlipsModalOpen, setRecentSlipsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [approvingRequestId, setApprovingRequestId] = useState<string | null>(null);
 
   // Include all expense-related requests (Expense Request, Employee Salary Request, Requisition, category-specific requests)
   const expenseRequests = requests.filter(request => 
@@ -180,6 +181,8 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       }
       
       const requestId = selectedRequest.id;
+      setApprovingRequestId(requestId); // Set loading state
+      
       const approverName = employee?.name || 'Admin Team';
       console.log('🎯 Starting approval for ID:', requestId);
       
@@ -350,6 +353,8 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
       setApprovalModalOpen(false);
     } catch (error) {
       console.error('❌ Approval error:', error);
+    } finally {
+      setApprovingRequestId(null); // Clear loading state
     }
   };
 
@@ -676,6 +681,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                                       if (isMyExpenseType) {
                                         // Direct approval for My Expenses - no payment method modal
                                         setSelectedRequest(request);
+                                        setApprovingRequestId(request.id);
                                         setTimeout(async () => {
                                           await confirmApproval('transfer', 'Admin approved - Finance will handle payment');
                                         }, 0);
@@ -685,10 +691,15 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                                         setApprovalModalOpen(true);
                                       }
                                     }}
-                                    className="gap-1 bg-green-600 hover:bg-green-700"
+                                    disabled={approvingRequestId === request.id}
+                                    className="gap-1 bg-green-600 hover:bg-green-700 disabled:opacity-50"
                                   >
-                                    <CheckCircle className="h-4 w-4" />
-                                    Approve
+                                    {approvingRequestId === request.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <CheckCircle className="h-4 w-4" />
+                                    )}
+                                    {approvingRequestId === request.id ? 'Approving...' : 'Approve'}
                                   </Button>
                                 </>
                               );
