@@ -4856,6 +4856,7 @@ export type Database = {
       cleanup_inactive_sessions: { Args: never; Returns: undefined }
       create_timothy_auth_account: { Args: never; Returns: Json }
       fix_denis_auth_final: { Args: never; Returns: Json }
+      get_available_to_request: { Args: { user_uuid: string }; Returns: number }
       get_available_to_request_safe: {
         Args: { user_uuid: string }
         Returns: number
@@ -4864,6 +4865,7 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: number
       }
+      get_pending_withdrawals: { Args: { user_uuid: string }; Returns: number }
       get_pending_withdrawals_safe: {
         Args: { user_uuid: string }
         Returns: number
@@ -4901,6 +4903,7 @@ export type Database = {
             Args: { _user_id: string }
             Returns: Database["public"]["Enums"]["app_role"]
           }
+      get_wallet_balance: { Args: { user_uuid: string }; Returns: number }
       get_wallet_balance_safe: { Args: { user_uuid: string }; Returns: number }
       get_wallet_balance_text: { Args: { user_uuid: string }; Returns: number }
       "great pearl": { Args: { conversation_id: string }; Returns: boolean }

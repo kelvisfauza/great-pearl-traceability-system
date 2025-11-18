@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { vehicleSchema } from "@/lib/validations";
+import { ZodError } from "zod";
 
 interface AddVehicleModalProps {
   open: boolean;
@@ -30,14 +32,17 @@ export const AddVehicleModal = ({ open, onOpenChange }: AddVehicleModalProps) =>
     setLoading(true);
 
     try {
+      // Validate form data using zod
+      const validatedData = vehicleSchema.parse(formData);
+      
       const { error } = await supabase.from('vehicles').insert({
-        name: formData.name,
-        vehicle_type: formData.vehicle_type,
-        driver_name: formData.driver_name,
-        driver_phone: formData.driver_phone || null,
-        route: formData.route,
-        status: formData.status,
-        load_capacity_bags: formData.load_capacity_bags ? parseInt(formData.load_capacity_bags) : null
+        name: validatedData.name,
+        vehicle_type: validatedData.vehicle_type,
+        driver_name: validatedData.driver_name,
+        driver_phone: validatedData.driver_phone || null,
+        route: validatedData.route,
+        status: validatedData.status,
+        load_capacity_bags: validatedData.load_capacity_bags ? parseInt(validatedData.load_capacity_bags) : null
       });
 
       if (error) throw error;
@@ -59,11 +64,20 @@ export const AddVehicleModal = ({ open, onOpenChange }: AddVehicleModalProps) =>
       });
     } catch (error) {
       console.error('Error adding vehicle:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add vehicle",
-        variant: "destructive"
-      });
+      
+      if (error instanceof ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add vehicle. Please try again.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
     }

@@ -59,11 +59,16 @@ const GlobalSearch = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || term.length < 2) return;
 
-    await supabase.from('search_history').insert({
-      user_id: user.id,
-      search_term: term,
-      result_count: count
-    });
+    try {
+      await supabase.from('search_history').insert([{
+        user_id: user.id,
+        search_term: term,
+        result_count: count
+      }]);
+    } catch (error) {
+      console.error('Error saving search history:', error);
+      // Don't throw - search history is non-critical
+    }
   };
 
   const deleteSearchHistory = async (id: string) => {
