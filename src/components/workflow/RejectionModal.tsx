@@ -13,14 +13,16 @@ interface RejectionModalProps {
   onConfirm: (reason: string, comments?: string) => void;
   title: string;
   description?: string;
+  reasons?: Array<{ value: string; label: string }>;
 }
 
-const REJECTION_REASONS = [
-  { value: 'duplicate_order', label: 'Duplicate Order' },
-  { value: 'price_too_high', label: 'Offered Price Too High' },
-  { value: 'no_demand', label: 'No Demand' },
-  { value: 'quality_issues', label: 'Quality Issues' },
-  { value: 'insufficient_funds', label: 'Insufficient Funds' },
+const DEFAULT_FINANCE_REJECTION_REASONS = [
+  { value: 'insufficient_budget', label: 'Insufficient Budget' },
+  { value: 'missing_documentation', label: 'Missing Documentation' },
+  { value: 'policy_violation', label: 'Policy Violation' },
+  { value: 'incorrect_amount', label: 'Incorrect Amount/Calculation' },
+  { value: 'requires_additional_approval', label: 'Requires Additional Approval' },
+  { value: 'invalid_justification', label: 'Invalid or Unclear Justification' },
   { value: 'other', label: 'Other' }
 ];
 
@@ -29,7 +31,8 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
   onClose,
   onConfirm,
   title,
-  description
+  description,
+  reasons = DEFAULT_FINANCE_REJECTION_REASONS
 }) => {
   const [reason, setReason] = useState('');
   const [comments, setComments] = useState('');
@@ -65,7 +68,7 @@ export const RejectionModal: React.FC<RejectionModalProps> = ({
                 <SelectValue placeholder="Select a reason" />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50">
-                {REJECTION_REASONS.map(reasonOption => (
+                {reasons.map(reasonOption => (
                   <SelectItem key={reasonOption.value} value={reasonOption.value}>
                     {reasonOption.label}
                   </SelectItem>
