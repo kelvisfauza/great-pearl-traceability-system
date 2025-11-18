@@ -75,27 +75,69 @@ export const useAttendance = () => {
       const now = new Date();
       const dayOfWeek = now.getDay();
       let weekStart: Date;
+      let weekEnd: Date;
       
       if (dayOfWeek === 0) {
         // Sunday - get last week's allowance (previous Monday)
         weekStart = new Date(now);
         weekStart.setDate(now.getDate() - 6); // Go back to last Monday
+        weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 5); // Saturday
       } else {
         // Monday-Saturday - get current week's allowance (this Monday)
         const diff = now.getDate() - dayOfWeek + 1;
         weekStart = new Date(now.setDate(diff));
+        weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 5); // Saturday
       }
       
+      weekStart.setHours(0, 0, 0, 0);
+      weekEnd.setHours(23, 59, 59, 999);
+      
       const weekStartStr = weekStart.toISOString().split('T')[0];
+      const weekEndStr = weekEnd.toISOString().split('T')[0];
 
+      // Try to get existing allowance
       const { data, error } = await supabase
         .from('weekly_allowances')
         .select('*')
         .eq('employee_id', employeeId)
         .eq('week_start_date', weekStartStr)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
+      
+      // If allowance doesn't exist for this week, create it with fixed 15,000 UGX limit
+      if (!data) {
+        // Get employee details
+        const { data: empData } = await supabase
+          .from('employees')
+          .select('name, email')
+          .eq('id', employeeId)
+          .single();
+
+        const WEEKLY_LUNCH_LIMIT = 15000;
+
+        const { data: newAllowance, error: insertError } = await supabase
+          .from('weekly_allowances')
+          .insert({
+            employee_id: employeeId,
+            employee_name: empData?.name || '',
+            employee_email: empData?.email || '',
+            week_start_date: weekStartStr,
+            week_end_date: weekEndStr,
+            days_attended: 0, // Not used for lunch allowance anymore
+            total_eligible_amount: WEEKLY_LUNCH_LIMIT,
+            amount_requested: 0,
+            balance_available: WEEKLY_LUNCH_LIMIT
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        return newAllowance;
+      }
+
       return data;
     } catch (error) {
       console.error('Error fetching current week allowance:', error);
