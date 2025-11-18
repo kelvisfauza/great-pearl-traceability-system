@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { useAttendance } from '@/hooks/useAttendance';
 import Layout from '@/components/Layout';
 
 interface ExpenseRequest {
@@ -29,11 +30,13 @@ interface ExpenseRequest {
 }
 
 const MyExpenses = () => {
-  const { employee } = useAuth();
+  const { employee, user } = useAuth();
+  const { getCurrentWeekAllowance, deductFromAllowance } = useAttendance();
   const [activeTab, setActiveTab] = useState('requisitions');
   const [loading, setLoading] = useState(false);
   const [myRequests, setMyRequests] = useState<ExpenseRequest[]>([]);
   const [fetchingRequests, setFetchingRequests] = useState(true);
+  const [weeklyAllowance, setWeeklyAllowance] = useState<any>(null);
 
   // Cash Requisition Form State
   const [requisitionForm, setRequisitionForm] = useState({
@@ -86,6 +89,17 @@ const MyExpenses = () => {
   useEffect(() => {
     fetchMyRequests();
   }, [employee?.email]);
+
+  // Fetch weekly allowance when user opens personal expenses tab
+  useEffect(() => {
+    const fetchAllowance = async () => {
+      if (activeTab === 'personal' && user?.id) {
+        const allowance = await getCurrentWeekAllowance(user.id);
+        setWeeklyAllowance(allowance);
+      }
+    };
+    fetchAllowance();
+  }, [activeTab, user?.id]);
 
   // Submit Cash Requisition
   const handleRequisitionSubmit = async (e: React.FormEvent) => {
@@ -144,9 +158,9 @@ const MyExpenses = () => {
   // Submit Personal Expense
   const handlePersonalExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!employee) return;
+    if (!employee || !user) return;
 
-    if (!personalExpenseForm.title || !personalExpenseForm.amount || !personalExpenseForm.description) {
+    if (!personalExpenseForm.expenseType || !personalExpenseForm.amount || !personalExpenseForm.description) {
       toast({
         title: "Missing Information",
         description: "Please fill in all fields",
@@ -155,15 +169,52 @@ const MyExpenses = () => {
       return;
     }
 
+    const requestAmount = parseFloat(personalExpenseForm.amount);
+
+    // Special validation for Weekly Lunch Allowance
+    if (personalExpenseForm.expenseType === 'Weekly Lunch Allowance') {
+      if (!weeklyAllowance) {
+        toast({
+          title: "Error",
+          description: "Unable to load weekly allowance. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (weeklyAllowance.balance_available < requestAmount) {
+        toast({
+          title: "Insufficient Balance",
+          description: `You have ${weeklyAllowance.balance_available.toLocaleString()} UGX available this week. Your allowance refreshes every Monday.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (requestAmount > 15000) {
+        toast({
+          title: "Amount Exceeds Limit",
+          description: "Weekly lunch allowance is limited to 15,000 UGX per week.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     setLoading(true);
     try {
+      // For lunch allowance, deduct from weekly allowance first
+      if (personalExpenseForm.expenseType === 'Weekly Lunch Allowance') {
+        await deductFromAllowance(user.id, requestAmount);
+      }
+
       const { error } = await supabase
         .from('approval_requests')
         .insert({
           type: 'Personal Expense',
           title: personalExpenseForm.title,
           description: personalExpenseForm.description,
-          amount: parseFloat(personalExpenseForm.amount),
+          amount: requestAmount,
           requestedby: employee.email,
           requestedby_name: employee.name,
           requestedby_position: employee.position,
@@ -182,6 +233,12 @@ const MyExpenses = () => {
       });
 
       setPersonalExpenseForm({ title: '', expenseType: '', amount: '', description: '' });
+      
+      // Refresh allowance and requests
+      if (personalExpenseForm.expenseType === 'Weekly Lunch Allowance') {
+        const updatedAllowance = await getCurrentWeekAllowance(user.id);
+        setWeeklyAllowance(updatedAllowance);
+      }
       fetchMyRequests();
     } catch (error) {
       console.error('Error submitting expense:', error);
@@ -461,25 +518,51 @@ const MyExpenses = () => {
                     </Select>
                     
                     {personalExpenseForm.expenseType === 'Weekly Lunch Allowance' && (
-                      <Alert className="border-blue-200 bg-blue-50 mt-2">
-                        <AlertCircle className="h-4 w-4 text-blue-600" />
-                        <AlertDescription className="text-xs text-blue-800">
-                          <div className="space-y-1">
-                            <div className="font-semibold">Weekly Lunch Allowance Policy:</div>
-                            <ul className="list-disc list-inside space-y-0.5 ml-1">
-                              <li>Fixed allowance: <strong>15,000 UGX per week</strong></li>
-                              <li>Coverage: <strong>Monday to Saturday</strong> (Sunday excluded)</li>
-                              <li>Auto-refreshes every <strong>Monday</strong></li>
-                              <li>Request full amount or in portions throughout the week</li>
-                            </ul>
-                          </div>
-                        </AlertDescription>
-                      </Alert>
+                      <>
+                        {weeklyAllowance ? (
+                          <Alert className="border-green-200 bg-green-50 mt-2">
+                            <Coffee className="h-4 w-4 text-green-600" />
+                            <AlertDescription className="text-xs text-green-800">
+                              <div className="space-y-2">
+                                <div className="font-semibold">Your Weekly Lunch Allowance</div>
+                                <div className="space-y-1">
+                                  <div>💰 Weekly Limit: <strong>15,000 UGX</strong></div>
+                                  <div>✅ Available to Request: <strong className="text-green-700 text-base">{weeklyAllowance.balance_available?.toLocaleString()} UGX</strong></div>
+                                  <div className="text-xs text-green-600">Already requested: {weeklyAllowance.amount_requested?.toLocaleString()} UGX</div>
+                                  <div className="text-xs text-green-600 pt-1">⏰ Refreshes every Monday</div>
+                                </div>
+                              </div>
+                            </AlertDescription>
+                          </Alert>
+                        ) : (
+                          <Alert className="border-blue-200 bg-blue-50 mt-2">
+                            <AlertCircle className="h-4 w-4 text-blue-600" />
+                            <AlertDescription className="text-xs text-blue-800">
+                              <div className="space-y-1">
+                                <div className="font-semibold">Weekly Lunch Allowance Policy:</div>
+                                <ul className="list-disc list-inside space-y-0.5 ml-1">
+                                  <li>Fixed allowance: <strong>15,000 UGX per week</strong></li>
+                                  <li>Coverage: <strong>Monday to Saturday</strong> (Sunday excluded)</li>
+                                  <li>Auto-refreshes every <strong>Monday</strong></li>
+                                  <li>Request full amount or in portions throughout the week</li>
+                                </ul>
+                              </div>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="exp-amount">Amount (UGX)</Label>
+                    <Label htmlFor="exp-amount">
+                      Amount (UGX)
+                      {personalExpenseForm.expenseType === 'Weekly Lunch Allowance' && weeklyAllowance && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          Max: {weeklyAllowance.balance_available?.toLocaleString()} UGX
+                        </span>
+                      )}
+                    </Label>
                     <Input
                       id="exp-amount"
                       type="number"
@@ -487,7 +570,15 @@ const MyExpenses = () => {
                       value={personalExpenseForm.amount}
                       onChange={(e) => setPersonalExpenseForm({ ...personalExpenseForm, amount: e.target.value })}
                       required
+                      min="1000"
+                      step="1000"
+                      max={personalExpenseForm.expenseType === 'Weekly Lunch Allowance' && weeklyAllowance ? weeklyAllowance.balance_available : undefined}
                     />
+                    {personalExpenseForm.expenseType === 'Weekly Lunch Allowance' && 
+                     weeklyAllowance && 
+                     parseFloat(personalExpenseForm.amount) > weeklyAllowance.balance_available && (
+                      <p className="text-xs text-destructive">Amount exceeds your available weekly allowance</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -502,7 +593,15 @@ const MyExpenses = () => {
                     />
                   </div>
 
-                  <Button type="submit" disabled={loading} className="w-full">
+                  <Button 
+                    type="submit" 
+                    disabled={
+                      loading || 
+                      (personalExpenseForm.expenseType === 'Weekly Lunch Allowance' && 
+                       (!weeklyAllowance || parseFloat(personalExpenseForm.amount) > weeklyAllowance.balance_available))
+                    }
+                    className="w-full"
+                  >
                     {loading ? 'Submitting...' : 'Submit Expense'}
                   </Button>
                 </form>
