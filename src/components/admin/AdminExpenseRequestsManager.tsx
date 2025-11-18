@@ -463,8 +463,21 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     );
   }
 
-  // Filter requests that need admin review (must have Finance approval first)
+  // Filter requests that need admin review
+  // My Expenses types (Cash Requisition, Personal Expense, Salary Request) can be reviewed without Finance approval
   const needsAdminReview = expenseRequests.filter(r => {
+    const isMyExpenseType = ['Cash Requisition', 'Personal Expense', 'Salary Request'].includes(r.type);
+    
+    // For My Expenses types, show if not admin approved yet (no finance approval required)
+    if (isMyExpenseType) {
+      if (r.requiresThreeApprovals) {
+        return !r.admin_approved_1_at || !r.admin_approved_2_at;
+      } else {
+        return !r.admin_approved_at;
+      }
+    }
+    
+    // For other types, require Finance approval first
     if (!r.finance_approved_at) return false;
     
     if (r.requiresThreeApprovals) {
@@ -490,7 +503,7 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
             Admin Approval Center
           </CardTitle>
           <CardDescription>
-            Review and approve expense requests and salary payments that have passed finance review
+            Review and approve expense requests. Personal expenses go directly to Admin, others require Finance approval first.
           </CardDescription>
         </CardHeader>
         <CardContent>
