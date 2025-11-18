@@ -10,14 +10,17 @@ import UserProfile from '@/components/settings/UserProfile';
 import PaymentSlipGenerator from '@/components/settings/PaymentSlipGenerator';
 import ContractGenerator from '@/components/settings/ContractGenerator';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import UserPresencePanel from '@/components/admin/UserPresencePanel';
 import AccountStatusManager from '@/components/admin/AccountStatusManager';
+import { Database, ArrowRight } from 'lucide-react';
 
 const Settings = () => {
   const { canManageEmployees, isAdmin, employee } = useAuth();
   const { employees, createEmployee, updateEmployee, deleteEmployee } = useUnifiedEmployees();
   const [showPaymentSlipModal, setShowPaymentSlipModal] = useState(false);
   const [showContractModal, setShowContractModal] = useState(false);
+  const navigate = useNavigate();
 
   // Wrapper functions to match the expected interface
   const handleEmployeeAdded = async (employee: any): Promise<void> => {
@@ -109,6 +112,41 @@ const Settings = () => {
           {isAdmin() && (
             <TabsContent value="admin" className="space-y-6">
               <AccountStatusManager />
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="h-5 w-5" />
+                    System Settings
+                  </CardTitle>
+                  <CardDescription>
+                    Advanced system configuration and data management
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Card className="border-dashed">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <h3 className="font-semibold text-sm md:text-base">Firebase to Supabase Migration</h3>
+                          <p className="text-xs md:text-sm text-muted-foreground">
+                            Transfer all data from Firebase to Supabase with progress tracking
+                          </p>
+                        </div>
+                        <Button 
+                          onClick={() => navigate('/admin/system-settings')}
+                          size="sm"
+                          className="gap-2"
+                        >
+                          Open
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>System Presence</CardTitle>
