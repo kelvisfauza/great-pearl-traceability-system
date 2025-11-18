@@ -1,10 +1,10 @@
 project_id = "pudfybkyfedeggmokhco"
 
 [functions.check-duplicate-expense]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-unread-messages]
-verify_jwt = false
+verify_jwt = true
 
 [api]
 enabled = true
@@ -48,25 +48,25 @@ port = 54329
 enabled = false
 
 [functions.process-withdrawal]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-withdrawal-status]
-verify_jwt = false
+verify_jwt = true
 
 [functions.test-function]
-verify_jwt = false
+verify_jwt = true
 
 [functions.test-sms]
-verify_jwt = false
+verify_jwt = true
 
 [functions.sms-login-link]
-verify_jwt = false
+verify_jwt = true
 
 [functions.detect-ip]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-network-access]
-verify_jwt = false
+verify_jwt = true
 
 [functions.calculate-metrics]
 verify_jwt = true
@@ -75,7 +75,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.generate-risk-assessment]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-comparison-insights]
-verify_jwt = false
+verify_jwt = true
