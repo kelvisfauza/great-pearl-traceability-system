@@ -1,6 +1,7 @@
 import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FirebaseMigrationTool from "@/components/admin/FirebaseMigrationTool";
+import SuperAdminCreator from "@/components/admin/SuperAdminCreator";
 import { Database, Settings, Shield } from "lucide-react";
 
 const SystemSettings = () => {
@@ -30,9 +31,7 @@ const SystemSettings = () => {
         </TabsContent>
 
         <TabsContent value="general" className="space-y-4">
-          <div className="text-center text-muted-foreground py-8">
-            General settings coming soon...
-          </div>
+          <SuperAdminCreator />
         </TabsContent>
 
         <TabsContent value="security" className="space-y-4">
