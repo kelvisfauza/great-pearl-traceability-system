@@ -633,19 +633,55 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleReview(request);
-                            }}
-                            className="gap-2"
-                          >
-                            <Eye className="h-4 w-4" />
-                            Review
-                          </Button>
+                          <div className="flex gap-2 justify-end">
+                            {(() => {
+                              const isMyExpenseType = ['Cash Requisition', 'Personal Expense', 'Salary Request'].includes(request.type);
+                              const adminAlreadyApproved = request.admin_approved_at || request.admin_approved_1_at;
+                              const canApprove = !(isMyExpenseType && adminAlreadyApproved);
+                              
+                              if (!canApprove) {
+                                return (
+                                  <span className="text-xs text-muted-foreground italic">
+                                    Awaiting Finance
+                                  </span>
+                                );
+                              }
+                              
+                              return (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setSelectedRequest(request);
+                                      setSelectedRequestId(request.id);
+                                      setSelectedRequestTitle(request.title);
+                                      setRejectionModalOpen(true);
+                                    }}
+                                    className="gap-1 text-red-600 hover:text-red-700"
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                    Reject
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setSelectedRequest(request);
+                                      setApprovalModalOpen(true);
+                                    }}
+                                    className="gap-1 bg-green-600 hover:bg-green-700"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                    Approve
+                                  </Button>
+                                </>
+                              );
+                            })()}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
