@@ -62,11 +62,11 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
       // For lunch/refreshment requests, check and deduct from weekly allowance
       if (requestType === 'lunch_refreshment' && user?.id) {
         if (!weeklyAllowance) {
-          throw new Error('No attendance record found for this week. Please contact admin.');
+          throw new Error('Unable to load weekly allowance. Please try again.');
         }
 
         if (weeklyAllowance.balance_available < requestAmount) {
-          throw new Error(`Insufficient balance. You have ${weeklyAllowance.balance_available} UGX available based on ${weeklyAllowance.days_attended} days attended.`);
+          throw new Error(`Insufficient balance. You have ${weeklyAllowance.balance_available.toLocaleString()} UGX available this week (limit: 15,000 UGX).`);
         }
 
         // Deduct from allowance
@@ -106,9 +106,9 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
                   <Calendar className="h-4 w-4 text-green-600" />
                   <AlertDescription>
                     <div className="space-y-2">
-                      <div className="font-semibold text-green-900">Weekly Meal Allowance (Max 15,000 UGX)</div>
+                      <div className="font-semibold text-green-900">Weekly Lunch Allowance (Mon-Sat)</div>
                       <div className="text-sm text-green-800 space-y-1">
-                        <div>📅 Days Present: <strong>{weeklyAllowance.days_attended}</strong> days × 2,500 = <strong>{weeklyAllowance.total_eligible_amount?.toLocaleString()} UGX</strong></div>
+                        <div>💰 Weekly Limit: <strong>15,000 UGX</strong></div>
                         <div>✅ Available to Request: <strong className="text-green-700 text-base">{weeklyAllowance.balance_available?.toLocaleString()} UGX</strong></div>
                         <div className="text-xs text-green-600 pt-1">Already requested this week: {weeklyAllowance.amount_requested?.toLocaleString()} UGX</div>
                       </div>
@@ -120,8 +120,8 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     <div className="space-y-1">
-                      <div className="font-medium">No Attendance Record</div>
-                      <div className="text-sm">You must be marked present to request meal money. Please contact admin to mark your attendance first.</div>
+                      <div className="font-medium">Weekly Allowance Not Available</div>
+                      <div className="text-sm">Unable to load your weekly lunch allowance. Please try again or contact admin.</div>
                     </div>
                   </AlertDescription>
                 </Alert>
