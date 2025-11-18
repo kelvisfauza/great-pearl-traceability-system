@@ -37,7 +37,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const messagesData = useMessages();
   const { unreadCount: notificationUnreadCount } = useNotifications();
-  const { user } = useAuth();
+  const { user, employee } = useAuth();
   const isMobile = useIsMobile();
   usePresence(user?.id);
   
@@ -45,8 +45,9 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
   console.log('Layout - user:', user);
 
   // Check if user needs to update email to company domain
+  // Skip this check for Super Admin accounts
   const email = user?.email?.toLowerCase() || "";
-  const needsEmailUpdate = email && !email.endsWith(COMPANY_DOMAIN);
+  const needsEmailUpdate = email && !email.endsWith(COMPANY_DOMAIN) && employee?.role !== 'Super Admin';
 
   const toggleMessaging = () => setIsMessagingOpen(!isMessagingOpen);
   const toggleNotifications = () => setIsNotificationOpen(!isNotificationOpen);

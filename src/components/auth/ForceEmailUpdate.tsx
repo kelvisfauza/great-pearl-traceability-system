@@ -11,6 +11,11 @@ const ForceEmailUpdate: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Skip email update requirement for Super Admin accounts
+  if (employee?.role === 'Super Admin') {
+    return null;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,31 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Shield, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Validation schema
+const adminSchema = z.object({
+  email: z.string()
+    .trim()
+    .email({ message: "Invalid email address" })
+    .max(255, { message: "Email must be less than 255 characters" }),
+  password: z.string()
+    .min(8, { message: "Password must be at least 8 characters" })
+    .max(100, { message: "Password must be less than 100 characters" }),
+  name: z.string()
+    .trim()
+    .min(1, { message: "Name is required" })
+    .max(100, { message: "Name must be less than 100 characters" }),
+  department: z.string()
+    .trim()
+    .max(100, { message: "Department must be less than 100 characters" }),
+  position: z.string()
+    .trim()
+    .max(100, { message: "Position must be less than 100 characters" }),
+  phone: z.string()
+    .trim()
+    .max(20, { message: "Phone must be less than 20 characters" })
+    .optional()
+});
 
 const SuperAdminCreator = () => {
   const [loading, setLoading] = useState(false);
@@ -25,32 +51,29 @@ const SuperAdminCreator = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setCreated(false);
 
     try {
-      // Validate
-      if (!formData.email || !formData.password || !formData.name) {
+      // Validate using zod schema
+      const validationResult = adminSchema.safeParse(formData);
+      
+      if (!validationResult.success) {
+        const firstError = validationResult.error.errors[0];
         toast({
           title: "Validation Error",
-          description: "Email, password, and name are required",
+          description: firstError.message,
           variant: "destructive"
         });
+        setLoading(false);
         return;
       }
 
-      if (formData.password.length < 8) {
-        toast({
-          title: "Password Too Short",
-          description: "Password must be at least 8 characters",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('Creating Super Admin account...');
+      const validatedData = validationResult.data;
+      console.log('Creating Super Admin account with validated data...');
 
       // Call edge function to create admin user with email confirmation bypassed
       const { data, error } = await supabase.functions.invoke('create-admin-user', {
-        body: formData
+        body: validatedData
       });
 
       if (error) throw error;
