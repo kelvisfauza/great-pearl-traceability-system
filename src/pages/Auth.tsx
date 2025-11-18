@@ -10,7 +10,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, AlertCircle, Phone, Mail, MessageCircle, Lock } from 'lucide-react';
 import PasswordChangeModal from '@/components/PasswordChangeModal';
 import BiometricVerification from '@/components/BiometricVerification';
-import { NetworkDetector } from '@/components/NetworkDetector';
 import { supabase } from '@/integrations/supabase/client';
 import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
@@ -330,11 +329,6 @@ const Auth = () => {
             </Alert>
           </CardContent>
         </Card>
-
-        {/* Network Detection */}
-        <div className="mt-4">
-          <NetworkDetector />
-        </div>
       </div>
 
       <PasswordChangeModal
