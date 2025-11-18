@@ -55,6 +55,7 @@ const MyExpenses = () => {
 
   // Salary Request Form State
   const [salaryForm, setSalaryForm] = useState({
+    requestType: '',
     amount: '',
     reason: ''
   });
@@ -257,7 +258,7 @@ const MyExpenses = () => {
     e.preventDefault();
     if (!employee) return;
 
-    if (!salaryForm.amount || !salaryForm.reason) {
+    if (!salaryForm.requestType || !salaryForm.amount || !salaryForm.reason) {
       toast({
         title: "Missing Information",
         description: "Please fill in all fields",
@@ -272,7 +273,7 @@ const MyExpenses = () => {
         .from('approval_requests')
         .insert({
           type: 'Salary Request',
-          title: `Salary Request - ${employee.name}`,
+          title: `${salaryForm.requestType} Salary Request - ${employee.name}`,
           description: salaryForm.reason,
           amount: parseFloat(salaryForm.amount),
           requestedby: employee.email,
@@ -292,7 +293,7 @@ const MyExpenses = () => {
         description: "Salary request submitted successfully"
       });
 
-      setSalaryForm({ amount: '', reason: '' });
+      setSalaryForm({ requestType: '', amount: '', reason: '' });
       fetchMyRequests();
     } catch (error) {
       console.error('Error submitting salary request:', error);
@@ -668,6 +669,69 @@ const MyExpenses = () => {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSalarySubmit} className="space-y-4">
+                  {employee?.salary && (
+                    <Alert className="border-blue-200 bg-blue-50">
+                      <Wallet className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-sm text-blue-800">
+                        <div className="space-y-1">
+                          <div className="font-semibold">Your Monthly Salary: {employee.salary.toLocaleString()} UGX</div>
+                          <div className="text-xs">
+                            • Mid-Month: {(employee.salary / 2).toLocaleString()} UGX (Half salary)<br/>
+                            • End of Month: {employee.salary.toLocaleString()} UGX (Full salary)
+                          </div>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="sal-type">Request Type</Label>
+                    <Select 
+                      value={salaryForm.requestType} 
+                      onValueChange={(value) => {
+                        const calculatedAmount = value === 'Mid-Month' 
+                          ? (employee?.salary ? employee.salary / 2 : 0)
+                          : (employee?.salary ? employee.salary : 0);
+                        
+                        setSalaryForm({ 
+                          ...salaryForm, 
+                          requestType: value,
+                          amount: calculatedAmount.toString()
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select request type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Mid-Month">
+                          📅 Mid-Month Request (Half Salary)
+                        </SelectItem>
+                        <SelectItem value="End of Month">
+                          💰 End of Month Request (Full Salary)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {salaryForm.requestType && (
+                      <Alert className="border-green-200 bg-green-50 mt-2">
+                        <AlertCircle className="h-4 w-4 text-green-600" />
+                        <AlertDescription className="text-xs text-green-800">
+                          {salaryForm.requestType === 'Mid-Month' ? (
+                            <div>
+                              <strong>Mid-Month Request:</strong> You will receive half of your monthly salary ({(employee?.salary ? employee.salary / 2 : 0).toLocaleString()} UGX). 
+                              The remaining half will be paid at the end of the month.
+                            </div>
+                          ) : (
+                            <div>
+                              <strong>End of Month Request:</strong> You will receive your full monthly salary ({employee?.salary?.toLocaleString()} UGX).
+                            </div>
+                          )}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="sal-amount">Amount (UGX)</Label>
                     <Input
@@ -675,9 +739,12 @@ const MyExpenses = () => {
                       type="number"
                       placeholder="0.00"
                       value={salaryForm.amount}
-                      onChange={(e) => setSalaryForm({ ...salaryForm, amount: e.target.value })}
-                      required
+                      readOnly
+                      className="bg-muted"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Amount is automatically calculated based on request type
+                    </p>
                   </div>
 
                   <div className="space-y-2">
