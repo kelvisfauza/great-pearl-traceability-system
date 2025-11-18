@@ -38,7 +38,6 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
         { name: "Finance", icon: DollarSign, path: "/finance", permission: "Finance" },
-        { name: "Expenses", icon: Receipt, path: "/expenses", permission: null },
         { name: "My Expenses", icon: DollarSign, path: "/my-expenses", permission: null },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
         { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },

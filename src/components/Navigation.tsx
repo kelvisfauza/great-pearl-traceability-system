@@ -91,7 +91,6 @@ const Navigation = () => {
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
         // ❌ Finance hidden - will be used in separate Finance portal
         // { name: "Finance", icon: DollarSign, path: "/finance", permission: "Finance" },
-        { name: "Expenses", icon: Receipt, path: "/expenses", permission: null },
         { name: "My Expenses", icon: DollarSign, path: "/my-expenses", permission: null },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
         { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },
