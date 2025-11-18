@@ -72,7 +72,9 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
     }
   };
 
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString: string | null | undefined) => {
+    if (!dateString) return 'Not available';
+    
     const date = new Date(dateString);
     // Check if the date string includes time info (ISO format with T)
     const hasTime = dateString.includes('T') || dateString.includes(':');
@@ -179,20 +181,22 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
             </div>
           </div>
 
-          {/* Finance Approval Info */}
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-            <h4 className="font-semibold text-green-900 mb-3">Finance Approval</h4>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-green-800">Approved By:</span>
-                <span className="font-medium">{request.finance_approved_by}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-green-800">Approval Time:</span>
-                <span className="font-medium">{formatDateTime(request.finance_approved_at)}</span>
+          {/* Finance Approval Info - only show if finance has approved */}
+          {request.finance_approved_at && (
+            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+              <h4 className="font-semibold text-green-900 mb-3">Finance Approval</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-green-800">Approved By:</span>
+                  <span className="font-medium">{request.finance_approved_by || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-green-800">Approval Time:</span>
+                  <span className="font-medium">{formatDateTime(request.finance_approved_at)}</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Risk Assessment */}
           <div className="p-4 bg-slate-50 rounded-lg border">
