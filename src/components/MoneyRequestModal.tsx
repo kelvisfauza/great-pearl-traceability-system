@@ -137,7 +137,7 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="lunch_refreshment">
-                  🍽️ Meal Money (Max 15k/week based on attendance)
+                  🍽️ Weekly Lunch Allowance (15,000 UGX/week)
                 </SelectItem>
                 <SelectItem value="advance">💰 Salary Advance (From monthly salary)</SelectItem>
                 <SelectItem value="bonus">🎁 Bonus Request</SelectItem>
@@ -145,6 +145,23 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
                 <SelectItem value="emergency">🚨 Emergency Fund</SelectItem>
               </SelectContent>
             </Select>
+            
+            {requestType === 'lunch_refreshment' && (
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-xs text-blue-800">
+                  <div className="space-y-1">
+                    <div className="font-semibold">Weekly Lunch Allowance Policy:</div>
+                    <ul className="list-disc list-inside space-y-0.5 ml-1">
+                      <li>Fixed allowance: <strong>15,000 UGX per week</strong></li>
+                      <li>Coverage: <strong>Monday to Saturday</strong> (Sunday excluded)</li>
+                      <li>Auto-refreshes every <strong>Monday</strong></li>
+                      <li>Request full amount or in portions throughout the week</li>
+                    </ul>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           <div className="space-y-2">
