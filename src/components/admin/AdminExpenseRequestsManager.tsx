@@ -475,12 +475,13 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
   const needsAdminReview = expenseRequests.filter(r => {
     const isMyExpenseType = ['Cash Requisition', 'Personal Expense', 'Salary Request'].includes(r.type);
     
-    // For My Expenses types, show if not admin approved yet (no finance approval required)
+    // For My Expenses types, show ONLY if not yet admin approved (after admin approves, Finance handles it)
     if (isMyExpenseType) {
       if (r.requiresThreeApprovals) {
         return !r.admin_approved_1_at || !r.admin_approved_2_at;
       } else {
-        return !r.admin_approved_at;
+        // Only show if admin hasn't approved yet
+        return !r.admin_approved_at && !r.admin_approved_1_at;
       }
     }
     

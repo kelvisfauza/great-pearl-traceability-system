@@ -98,6 +98,11 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
   };
 
   const paymentPhone = request.details?.phoneNumber || userProfile?.phone || 'Not provided';
+
+  // Check if this is a My Expenses type that admin has already approved
+  const isMyExpenseType = ['Cash Requisition', 'Personal Expense', 'Salary Request'].includes(request.type);
+  const adminAlreadyApproved = request.admin_approved_at || request.admin_approved_1_at;
+  const canApprove = !(isMyExpenseType && adminAlreadyApproved);
   // For salary requests, use title/description as reason, otherwise use details.reason
   const isSalaryRequest = request.type?.includes('Salary');
   const expenseReason = isSalaryRequest 
@@ -260,18 +265,25 @@ export const AdminExpenseReviewModal: React.FC<AdminExpenseReviewModalProps> = (
               <XCircle className="h-4 w-4" />
               Reject
             </Button>
-            <Button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onApprove();
-              }}
-              className="gap-2 bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle className="h-4 w-4" />
-              Approve
-            </Button>
+            {canApprove && (
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onApprove();
+                }}
+                className="gap-2 bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Approve
+              </Button>
+            )}
+            {!canApprove && (
+              <div className="text-sm text-muted-foreground italic">
+                Admin approved - awaiting Finance final approval
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
