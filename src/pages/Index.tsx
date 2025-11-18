@@ -53,7 +53,7 @@ const Index = () => {
           </div>
 
           {/* Admin Dashboard Section */}
-          {employee.role === 'Administrator' && (
+          {(employee.role === 'Administrator' || employee.role === 'Super Admin') && (
             <div className="space-y-4 animate-in-delay">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
