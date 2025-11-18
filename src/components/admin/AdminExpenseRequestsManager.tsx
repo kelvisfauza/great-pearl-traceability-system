@@ -48,6 +48,9 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     request.type === 'Employee Expense Request' ||
     request.type === 'Requisition' ||
     request.type === 'Field Financing Request' ||
+    request.type === 'Cash Requisition' ||
+    request.type === 'Personal Expense' ||
+    request.type === 'Salary Request' ||
     request.department === 'Field Operations' ||
     request.type.includes('Request') && (
       request.type.includes('Expense') || 
