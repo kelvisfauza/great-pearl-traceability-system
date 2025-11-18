@@ -8,8 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
@@ -44,6 +45,7 @@ const MyExpenses = () => {
   // Personal Expense Form State
   const [personalExpenseForm, setPersonalExpenseForm] = useState({
     title: '',
+    expenseType: '',
     amount: '',
     description: ''
   });
@@ -179,7 +181,7 @@ const MyExpenses = () => {
         description: "Personal expense submitted successfully"
       });
 
-      setPersonalExpenseForm({ title: '', amount: '', description: '' });
+      setPersonalExpenseForm({ title: '', expenseType: '', amount: '', description: '' });
       fetchMyRequests();
     } catch (error) {
       console.error('Error submitting expense:', error);
@@ -439,14 +441,41 @@ const MyExpenses = () => {
               <CardContent>
                 <form onSubmit={handlePersonalExpenseSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="exp-title">Expense Type</Label>
-                    <Input
-                      id="exp-title"
-                      placeholder="e.g., Lunch, Airtime, Transport"
-                      value={personalExpenseForm.title}
-                      onChange={(e) => setPersonalExpenseForm({ ...personalExpenseForm, title: e.target.value })}
-                      required
-                    />
+                    <Label htmlFor="exp-type">Expense Type</Label>
+                    <Select 
+                      value={personalExpenseForm.expenseType} 
+                      onValueChange={(value) => setPersonalExpenseForm({ ...personalExpenseForm, expenseType: value, title: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select expense type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Weekly Lunch Allowance">
+                          🍽️ Weekly Lunch Allowance
+                        </SelectItem>
+                        <SelectItem value="Airtime">📱 Airtime</SelectItem>
+                        <SelectItem value="Transport">🚗 Transport</SelectItem>
+                        <SelectItem value="Office Supplies">📋 Office Supplies</SelectItem>
+                        <SelectItem value="Other">💼 Other Personal Expense</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {personalExpenseForm.expenseType === 'Weekly Lunch Allowance' && (
+                      <Alert className="border-blue-200 bg-blue-50 mt-2">
+                        <AlertCircle className="h-4 w-4 text-blue-600" />
+                        <AlertDescription className="text-xs text-blue-800">
+                          <div className="space-y-1">
+                            <div className="font-semibold">Weekly Lunch Allowance Policy:</div>
+                            <ul className="list-disc list-inside space-y-0.5 ml-1">
+                              <li>Fixed allowance: <strong>15,000 UGX per week</strong></li>
+                              <li>Coverage: <strong>Monday to Saturday</strong> (Sunday excluded)</li>
+                              <li>Auto-refreshes every <strong>Monday</strong></li>
+                              <li>Request full amount or in portions throughout the week</li>
+                            </ul>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
 
                   <div className="space-y-2">
