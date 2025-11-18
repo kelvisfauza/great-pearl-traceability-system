@@ -667,11 +667,20 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                                   </Button>
                                   <Button
                                     size="sm"
-                                    onClick={(e) => {
+                                    onClick={async (e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
                                       setSelectedRequest(request);
-                                      setApprovalModalOpen(true);
+                                      
+                                      // For My Expenses types, approve directly without payment method modal
+                                      const isMyExpenseType = ['Cash Requisition', 'Personal Expense', 'Salary Request'].includes(request.type);
+                                      if (isMyExpenseType) {
+                                        // Approve directly for My Expenses (Finance will choose payment method)
+                                        await confirmApproval('transfer', 'Admin approval - awaiting Finance final approval');
+                                      } else {
+                                        // For other types, show payment method modal
+                                        setApprovalModalOpen(true);
+                                      }
                                     }}
                                     className="gap-1 bg-green-600 hover:bg-green-700"
                                   >
