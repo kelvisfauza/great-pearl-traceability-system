@@ -55,8 +55,8 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Admin accounts that bypass employee record checks
-const ADMIN_EMAILS = ['kelvifauza@gmail.com'];
+// Admin access is now managed through the user_roles table in the database
+// No hardcoded admin bypasses for security and auditability
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -132,26 +132,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Normalize email consistently
     const normalizedEmail = email.toLowerCase().trim();
-    
-    // HARDCODED MAIN ADMIN - No database lookup needed
-    if (ADMIN_EMAILS.includes(normalizedEmail)) {
-      const mainAdminProfile: Employee = {
-        id: 'main-admin',
-        name: 'Main Administrator',
-        email: normalizedEmail,
-        position: 'System Administrator',
-        department: 'Administration',
-        salary: 0,
-        role: 'Administrator',
-        permissions: ['*'], // All permissions - hardcoded
-        status: 'Active',
-        join_date: new Date().toISOString(),
-        isOneTimePassword: false,
-        mustChangePassword: false,
-        authUserId: targetUserId
-      };
-      return mainAdminProfile;
-    }
 
     console.log('🔍 fetchEmployeeData called for user:', { targetUserId, normalizedEmail });
     try {

@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Fingerprint, Loader2, AlertCircle, CheckCircle, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { verificationCodeSchema } from '@/lib/validations';
+import { ZodError } from 'zod';
 
 interface BiometricVerificationProps {
   email: string;
@@ -228,11 +230,18 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       // Generate verification code
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       
-      // Store in database
-      await supabase.from('verification_codes').insert({
+      // Validate data using zod
+      const validatedData = verificationCodeSchema.parse({
         email: email,
         phone: employee.phone,
         code: code,
+      });
+      
+      // Store in database
+      await supabase.from('verification_codes').insert({
+        email: validatedData.email,
+        phone: validatedData.phone,
+        code: validatedData.code,
         expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
       });
 

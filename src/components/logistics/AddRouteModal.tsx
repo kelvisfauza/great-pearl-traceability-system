@@ -7,6 +7,8 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, X } from "lucide-react";
+import { deliveryRouteSchema } from "@/lib/validations";
+import { ZodError } from "zod";
 
 interface AddRouteModalProps {
   open: boolean;
@@ -47,22 +49,18 @@ export const AddRouteModal = ({ open, onOpenChange }: AddRouteModalProps) => {
     try {
       const filteredLocations = locations.filter(loc => loc.trim() !== "");
       
-      if (filteredLocations.length < 2) {
-        toast({
-          title: "Error",
-          description: "Please add at least 2 locations",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
+      // Validate form data using zod
+      const validatedData = deliveryRouteSchema.parse({
+        ...formData,
+        locations: filteredLocations
+      });
 
       const { error } = await supabase.from('delivery_routes').insert({
-        name: formData.name,
-        locations: filteredLocations,
-        distance_km: parseFloat(formData.distance_km),
-        frequency: formData.frequency,
-        estimated_hours: formData.estimated_hours ? parseFloat(formData.estimated_hours) : null,
+        name: validatedData.name,
+        locations: validatedData.locations,
+        distance_km: parseFloat(validatedData.distance_km),
+        frequency: validatedData.frequency,
+        estimated_hours: validatedData.estimated_hours ? parseFloat(validatedData.estimated_hours) : null,
         active_vehicles: 0
       });
 
@@ -83,11 +81,20 @@ export const AddRouteModal = ({ open, onOpenChange }: AddRouteModalProps) => {
       setLocations(["", ""]);
     } catch (error) {
       console.error('Error adding route:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add route",
-        variant: "destructive"
-      });
+      
+      if (error instanceof ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add route. Please try again.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
     }
