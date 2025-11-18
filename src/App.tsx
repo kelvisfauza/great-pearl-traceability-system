@@ -28,6 +28,7 @@ import ITDepartment from "./pages/ITDepartment";
 import Milling from "./pages/Milling";
 import PermissionManagement from "./pages/PermissionManagement";
 import Expenses from "./pages/Expenses";
+import MyExpenses from "./pages/MyExpenses";
 import EURDocumentationPage from "./pages/EUDRDocumentation";
 import Suppliers from "./pages/Suppliers";
 import FinanceReport from "./pages/reports/FinanceReport";
@@ -175,6 +176,11 @@ const App: React.ComponentType = () => {
                 <Route path="/expenses" element={
                   <ProtectedRoute>
                     <Expenses />
+                  </ProtectedRoute>
+                } />
+                <Route path="/my-expenses" element={
+                  <ProtectedRoute>
+                    <MyExpenses />
                   </ProtectedRoute>
                 } />
                 <Route path="/eudr-documentation" element={
