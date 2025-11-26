@@ -118,5 +118,5 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       departmentFilter: (isSuperAdminUser || isManagerUser || isAdminUser) ? null : employee.department,
       roleLevel
     };
-  }, [employee, hasPermission, hasRole, isSuperAdmin, isAdministrator, isManager, isSupervisor, canPerformAction]);
+  }, [employee, hasPermission, hasRole, isSuperAdmin, isAdministrator, isManager, isSupervisor, canPerformAction, canEditQuality]);
 };
