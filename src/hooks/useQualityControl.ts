@@ -524,11 +524,14 @@ export const useQualityControl = () => {
         });
       }
       
-      // Refresh both quality assessments AND store records to update the pending list
-      await Promise.all([
+      // Refresh both quality assessments AND store records in background
+      // Don't await - let UI respond immediately while data refreshes
+      Promise.all([
         loadQualityAssessments(),
         loadStoreRecords()
-      ]);
+      ]).catch(error => {
+        console.error('Error refreshing data after assessment save:', error);
+      });
       
       return newAssessment;
     } catch (error) {
@@ -631,11 +634,14 @@ export const useQualityControl = () => {
         console.warn('Firebase update failed (non-critical):', firebaseError);
       }
 
-      // Refresh both quality assessments AND store records to update the pending list
-      await Promise.all([
+      // Refresh both quality assessments AND store records in background
+      // Don't await - let UI respond immediately while data refreshes
+      Promise.all([
         loadQualityAssessments(),
         loadStoreRecords()
-      ]);
+      ]).catch(error => {
+        console.error('Error refreshing data after assessment update:', error);
+      });
       
       toast({
         title: "Success",
