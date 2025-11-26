@@ -1,6 +1,8 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useMemo } from 'react';
+import { useGranularPermissions } from './useGranularPermissions';
+import { PERMISSION_MODULES } from '@/types/granularPermissions';
 
 interface RoleBasedAccess {
   // Page access
@@ -38,6 +40,7 @@ interface RoleBasedAccess {
 
 export const useRoleBasedAccess = (): RoleBasedAccess => {
   const { employee, hasPermission, hasRole, isSuperAdmin, isAdministrator, isManager, isSupervisor, canPerformAction } = useAuth();
+  const { canEdit: canEditQuality } = useGranularPermissions();
 
   return useMemo(() => {
     if (!employee) {
@@ -108,7 +111,7 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       canManageInventory: canPerformAction('edit') && (isSuperAdminUser || isManagerUser || hasPermission('Inventory') || hasPermission('Store Management')),
       canViewSalaries: isSuperAdminUser || isManagerUser || hasPermission('Finance') || hasPermission('Human Resources'),
       canGenerateReports: canPerformAction('print') || canPerformAction('export'), // Managers and above can generate
-      canManageQuality: canPerformAction('edit') && (isSuperAdminUser || isManagerUser || hasPermission('Quality Control')),
+      canManageQuality: isSuperAdminUser || isManagerUser || (hasPermission('Quality Control') && canEditQuality(PERMISSION_MODULES.QUALITY)),
       canCreatePurchaseOrders: canPerformAction('create') && (isSuperAdminUser || isManagerUser || hasPermission('Procurement')),
       
       // Data filtering - Supervisors and Users see only their department

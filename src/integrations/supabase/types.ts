@@ -2012,9 +2012,11 @@ export type Database = {
       finance_expenses: {
         Row: {
           amount: number
+          approval_request_id: string | null
           category: string
           created_at: string
           date: string
+          department: string | null
           description: string
           id: string
           status: string
@@ -2022,9 +2024,11 @@ export type Database = {
         }
         Insert: {
           amount: number
+          approval_request_id?: string | null
           category: string
           created_at?: string
           date: string
+          department?: string | null
           description: string
           id?: string
           status?: string
@@ -2032,15 +2036,25 @@ export type Database = {
         }
         Update: {
           amount?: number
+          approval_request_id?: string | null
           category?: string
           created_at?: string
           date?: string
+          department?: string | null
           description?: string
           id?: string
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finance_expenses_approval_request_id_fkey"
+            columns: ["approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "approval_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_ledgers: {
         Row: {
