@@ -1,3 +1,5 @@
+import { supabase } from '@/integrations/supabase/client';
+
 interface CoffeePrices {
   iceArabica: number;
   robusta: number;
@@ -9,53 +11,62 @@ interface CoffeePrices {
 
 export class BarchartService {
   /**
-   * Get reference prices from Firebase
+   * Get reference prices from Supabase
    */
   async getCoffeePrices(): Promise<CoffeePrices> {
     try {
-      const { doc, getDoc } = await import('firebase/firestore');
-      const { db } = await import('@/lib/firebase');
+      const { data, error } = await supabase
+        .from('market_prices' as any)
+        .select('*')
+        .eq('price_type', 'reference_prices')
+        .single();
       
-      const docRef = doc(db, 'market_prices', 'reference_prices');
-      const docSnap = await getDoc(docRef);
+      if (error) throw error;
       
-      if (docSnap.exists()) {
-        const data = docSnap.data();
+      if (data) {
+        const priceData = data as any;
         return {
-          iceArabica: data.iceArabica || 185.50,
-          robusta: data.robusta || 2450,
-          exchangeRate: data.exchangeRate || 3750,
-          drugarLocal: data.drugarLocal || 8500,
-          wugarLocal: data.wugarLocal || 8200,
-          robustaFaqLocal: data.robustaFaqLocal || 7800
+          iceArabica: priceData.ice_arabica || 185.50,
+          robusta: priceData.robusta || 2450,
+          exchangeRate: priceData.exchange_rate || 3750,
+          drugarLocal: priceData.drugar_local || 8500,
+          wugarLocal: priceData.wugar_local || 8200,
+          robustaFaqLocal: priceData.robusta_faq_local || 7800
         };
       }
       
       return this.getFallbackPrices();
     } catch (error) {
-      console.error('Error fetching reference prices from Firebase:', error);
+      console.error('Error fetching reference prices from Supabase:', error);
       return this.getFallbackPrices();
     }
   }
 
   /**
-   * Save reference prices to Firebase
+   * Save reference prices to Supabase
    */
   async saveReferencePrices(prices: CoffeePrices): Promise<void> {
     try {
-      const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-      const { db } = await import('@/lib/firebase');
+      const { error } = await supabase
+        .from('market_prices' as any)
+        .upsert({
+          price_type: 'reference_prices',
+          ice_arabica: prices.iceArabica,
+          robusta: prices.robusta,
+          exchange_rate: prices.exchangeRate,
+          drugar_local: prices.drugarLocal,
+          wugar_local: prices.wugarLocal,
+          robusta_faq_local: prices.robustaFaqLocal,
+          last_updated: new Date().toISOString()
+        }, {
+          onConflict: 'price_type'
+        });
       
-      const docRef = doc(db, 'market_prices', 'reference_prices');
-      await setDoc(docRef, {
-        ...prices,
-        lastUpdated: serverTimestamp(),
-        updatedAt: new Date().toISOString()
-      });
+      if (error) throw error;
       
-      console.log('Reference prices saved to Firebase successfully');
+      console.log('Reference prices saved to Supabase successfully');
     } catch (error) {
-      console.error('Error saving reference prices to Firebase:', error);
+      console.error('Error saving reference prices to Supabase:', error);
       throw error;
     }
   }
