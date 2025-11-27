@@ -9,9 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { collection, getDocs, query, orderBy, updateDoc, doc, addDoc, deleteDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
-import { db, auth } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, CheckCircle, XCircle, Clock, UserPlus, Printer, Trash2 } from 'lucide-react';
 import { Textarea } from "@/components/ui/textarea";
@@ -89,16 +87,30 @@ const RegistrationRequestsManager = () => {
 
   const fetchRequests = async () => {
     try {
-      console.log('Fetching registration requests...');
-      const requestsQuery = query(
-        collection(db, 'user_registration_requests'),
-        orderBy('created_at', 'desc')
-      );
-      const querySnapshot = await getDocs(requestsQuery);
+      console.log('Fetching registration requests from Supabase...');
       
-      const requestsData = querySnapshot.docs.map(doc => ({
+      const { data, error } = await supabase
+        .from('user_registration_requests' as any)
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        throw error;
+      }
+      
+      const requestsData = (data || []).map((doc: any) => ({
         id: doc.id,
-        ...doc.data()
+        firstName: doc.first_name,
+        lastName: doc.last_name,
+        email: doc.email,
+        phone: doc.phone,
+        department: doc.department,
+        role: doc.role,
+        reason: doc.reason,
+        status: doc.status,
+        requestedAt: doc.requested_at || doc.created_at,
+        permissions: doc.permissions || [],
+        created_at: doc.created_at
       })) as RegistrationRequest[];
       
       console.log('Fetched requests:', requestsData.length);
@@ -150,10 +162,21 @@ const RegistrationRequestsManager = () => {
       const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
       console.log('Generated temporary password');
       
-      // Step 2: Create Firebase user
-      console.log('Creating Firebase user for:', selectedRequest.email);
-      const userCredential = await createUserWithEmailAndPassword(auth, selectedRequest.email, tempPassword);
-      console.log('Firebase user created successfully:', userCredential.user.uid);
+      // Step 2: Create Supabase user
+      console.log('Creating Supabase user for:', selectedRequest.email);
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: selectedRequest.email,
+        password: tempPassword,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+      
+      if (authError) {
+        throw authError;
+      }
+      
+      console.log('Supabase user created successfully:', authData.user?.id);
       
       // Step 3: Prepare employee data with proper permission validation
       const finalPermissions = selectedRequest.modifiedPermissions && selectedRequest.modifiedPermissions.length > 0
@@ -176,32 +199,44 @@ const RegistrationRequestsManager = () => {
         permissions: validatedPermissions,
         status: 'Active',
         join_date: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        authUserId: userCredential.user.uid,
-        isOneTimePassword: true,
-        mustChangePassword: true
+        auth_user_id: authData.user?.id,
       };
       
       console.log('Creating employee record with data:', employeeData);
       
       // Step 4: Create employee record
-      const employeeDoc = await addDoc(collection(db, 'employees'), employeeData);
-      console.log('Employee record created successfully:', employeeDoc.id);
+      const { data: employeeRecord, error: employeeError } = await supabase
+        .from('employees')
+        .insert(employeeData)
+        .select()
+        .single();
+      
+      if (employeeError) {
+        throw employeeError;
+      }
+      
+      console.log('Employee record created successfully:', employeeRecord.id);
 
       // Step 5: Update request status
       console.log('Updating request status to approved');
-      await updateDoc(doc(db, 'user_registration_requests', selectedRequest.id), {
-        status: 'approved',
-        approvedAt: new Date().toISOString(),
-        approvedBy: employee.name,
-        finalDepartment: selectedRequest.modifiedDepartment || selectedRequest.department,
-        finalRole: selectedRequest.modifiedRole || selectedRequest.role,
-        finalSalary: selectedRequest.modifiedSalary || 0,
-        finalPermissions: validatedPermissions,
-        tempPassword: tempPassword,
-        employeeId: employeeDoc.id
-      });
+      const { error: updateError } = await supabase
+        .from('user_registration_requests' as any)
+        .update({
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: employee.name,
+          final_department: selectedRequest.modifiedDepartment || selectedRequest.department,
+          final_role: selectedRequest.modifiedRole || selectedRequest.role,
+          final_salary: selectedRequest.modifiedSalary || 0,
+          final_permissions: validatedPermissions,
+          temp_password: tempPassword,
+          employee_id: employeeRecord.id
+        })
+        .eq('id', selectedRequest.id);
+      
+      if (updateError) {
+        throw updateError;
+      }
       
       console.log('Request updated successfully');
 
@@ -276,12 +311,19 @@ const RegistrationRequestsManager = () => {
     setProcessing(selectedRequest.id);
     
     try {
-      await updateDoc(doc(db, 'user_registration_requests', selectedRequest.id), {
-        status: 'rejected',
-        rejectedAt: new Date().toISOString(),
-        rejectedBy: employee.name,
-        rejectionReason: rejectionReason.trim()
-      });
+      const { error } = await supabase
+        .from('user_registration_requests' as any)
+        .update({
+          status: 'rejected',
+          rejected_at: new Date().toISOString(),
+          rejected_by: employee.name,
+          rejection_reason: rejectionReason.trim()
+        })
+        .eq('id', selectedRequest.id);
+      
+      if (error) {
+        throw error;
+      }
 
       setRequests(prev => prev.map(req => 
         req.id === selectedRequest.id 
@@ -312,7 +354,14 @@ const RegistrationRequestsManager = () => {
     console.log('Deleting request:', requestId);
     
     try {
-      await deleteDoc(doc(db, 'user_registration_requests', requestId));
+      const { error } = await supabase
+        .from('user_registration_requests' as any)
+        .delete()
+        .eq('id', requestId);
+      
+      if (error) {
+        throw error;
+      }
       
       setRequests(prev => prev.filter(req => req.id !== requestId));
       
