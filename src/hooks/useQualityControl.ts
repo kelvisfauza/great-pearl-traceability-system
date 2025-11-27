@@ -569,16 +569,6 @@ export const useQualityControl = () => {
         }
       }
 
-      // Update Firebase for backward compatibility
-      try {
-        await updateDoc(doc(db, 'quality_assessments', id), {
-          ...updates,
-          updated_at: new Date().toISOString()
-        });
-        console.log('Quality assessment updated in Firebase successfully');
-      } catch (firebaseError) {
-        console.warn('Firebase update failed (non-critical):', firebaseError);
-      }
 
       // Refresh both quality assessments AND store records in background
       // Don't await - let UI respond immediately while data refreshes
