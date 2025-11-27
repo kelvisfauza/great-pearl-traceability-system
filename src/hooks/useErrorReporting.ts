@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, query, orderBy, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useNotifications } from './useNotifications';
 import { useToast } from './use-toast';
 
@@ -226,18 +224,8 @@ export const useErrorReporting = () => {
   const fetchErrors = async () => {
     try {
       setLoading(true);
-      const errorsQuery = query(
-        collection(db, 'system_errors'), 
-        orderBy('timestamp', 'desc')
-      );
-      const snapshot = await getDocs(errorsQuery);
-      
-      const errorsList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as SystemError[];
-      
-      setErrors(errorsList);
+      // Error reporting disabled - no longer fetching from Firebase
+      setErrors([]);
     } catch (error) {
       console.error('Failed to fetch errors:', error);
     } finally {
@@ -251,18 +239,8 @@ export const useErrorReporting = () => {
     resolvedBy?: string
   ) => {
     try {
-      const updateData: any = {
-        status,
-        updatedAt: new Date().toISOString()
-      };
-
-      if (status === 'resolved' && resolvedBy) {
-        updateData.resolvedBy = resolvedBy;
-        updateData.resolvedAt = new Date().toISOString();
-      }
-
-      await updateDoc(doc(db, 'system_errors', errorId), updateData);
-      await fetchErrors();
+      // Error reporting disabled
+      console.log('Error status update disabled:', errorId, status, resolvedBy);
 
       toast({
         title: "Error Status Updated",
