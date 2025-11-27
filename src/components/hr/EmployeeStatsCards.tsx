@@ -2,8 +2,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, DollarSign, UserCheck, TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Employee {
   id: string;
@@ -23,22 +22,29 @@ const EmployeeStatsCards = ({ employees }: EmployeeStatsCardsProps) => {
   useEffect(() => {
     const fetchSalaryRequests = async () => {
       try {
-        console.log('Fetching salary payment requests for stats...');
-        const salaryQuery = query(
-          collection(db, 'approval_requests'),
-          where('type', '==', 'Salary Payment'),
-          where('status', '==', 'Pending')
-        );
+        console.log('Fetching salary payment requests for stats from Supabase...');
         
-        const snapshot = await getDocs(salaryQuery);
+        const { data: salaryRequests, error } = await supabase
+          .from('approval_requests')
+          .select('amount')
+          .eq('type', 'Salary Payment')
+          .eq('status', 'Pending');
+        
+        if (error) {
+          console.error('Error fetching salary requests:', error);
+          return;
+        }
+        
         let total = 0;
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          const amount = typeof data.amount === 'string' 
-            ? parseFloat(data.amount.replace(/[^\d.]/g, '')) 
-            : Number(data.amount) || 0;
-          total += amount;
-        });
+        if (salaryRequests) {
+          salaryRequests.forEach((request: any) => {
+            const rawAmount = request.amount;
+            const amount = typeof rawAmount === 'string' 
+              ? parseFloat(String(rawAmount).replace(/[^\d.]/g, '')) 
+              : Number(rawAmount) || 0;
+            total += amount;
+          });
+        }
         
         setSalaryRequestsTotal(total);
         console.log('Salary requests total calculated:', total);
