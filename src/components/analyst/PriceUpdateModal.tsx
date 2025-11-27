@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
 interface PriceUpdateModalProps {
@@ -40,32 +39,44 @@ export const PriceUpdateModal = ({ open, onOpenChange }: PriceUpdateModalProps) 
     setLoading(true);
 
     try {
-      // Save market update
+      // Save market update to Supabase
       const marketUpdate = {
         date: new Date().toISOString().split('T')[0],
         outturn: parseFloat(formData.outturn),
         moisture: parseFloat(formData.moisture),
         fm: parseFloat(formData.fm),
         price: parseFloat(formData.price),
-        timestamp: new Date(),
-        updatedBy: "Data Analyst"
+        updated_by: "Data Analyst",
+        created_at: new Date().toISOString()
       };
 
-      await addDoc(collection(db, "market_updates"), marketUpdate);
+      const { error: insertError } = await supabase
+        .from('market_updates' as any)
+        .insert(marketUpdate);
+
+      if (insertError) {
+        throw insertError;
+      }
 
       // Send SMS notifications if checked
       if (formData.sendNotification) {
-        const suppliersSnapshot = await getDocs(collection(db, "suppliers"));
-        const suppliers = suppliersSnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter((s: any) => s.phone);
+        const { data: suppliers, error: suppliersError } = await supabase
+          .from('suppliers')
+          .select('id, name, phone')
+          .not('phone', 'is', null);
+
+        if (suppliersError) {
+          console.error('Error fetching suppliers:', suppliersError);
+        }
+
+        const suppliersList = suppliers?.filter(s => s.phone) || [];
 
         const date = new Date().toLocaleDateString('en-GB');
         const message = `Great Pearl Coffee updates\nToday: ${date}\n\nArabica Price Update:\nOutturn:     ${formData.outturn}%\nMoisture:    ${formData.moisture}%\nFM:          ${formData.fm}%\nPrice:  UGX ${parseFloat(formData.price).toLocaleString()}/kg\n\nDeliver now to get served best.`;
 
         // Send SMS to each supplier
-        console.log(`📱 Sending SMS to ${suppliers.length} suppliers`);
-        const smsPromises = suppliers.map(async (supplier: any) => {
+        console.log(`📱 Sending SMS to ${suppliersList.length} suppliers`);
+        const smsPromises = suppliersList.map(async (supplier) => {
           try {
             console.log(`Sending to ${supplier.name} at ${supplier.phone}`);
             const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
