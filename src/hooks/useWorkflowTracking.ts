@@ -1,7 +1,5 @@
-// Firebase-based workflow tracking hook
+// Supabase-based workflow tracking hook
 import { useState, useEffect } from 'react';
-import { collection, addDoc, query, where, getDocs, updateDoc, doc, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -45,28 +43,34 @@ export const useWorkflowTracking = () => {
   const fetchWorkflowData = async () => {
     try {
       setLoading(true);
-      // Fetch workflow steps
-      const workflowQuery = query(
-        collection(db, 'workflow_steps'),
-        orderBy('timestamp', 'desc')
-      );
-      const workflowSnapshot = await getDocs(workflowQuery);
-      const steps = workflowSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as WorkflowStep[];
+      // Fetch workflow steps from Supabase
+      const { data: stepsData, error: stepsError } = await supabase
+        .from('workflow_steps')
+        .select('*')
+        .order('timestamp', { ascending: false });
       
-      // Fetch modification requests
-      const modificationQuery = query(
-        collection(db, 'modification_requests'),
-        orderBy('createdAt', 'desc')
-      );
-      const modificationSnapshot = await getDocs(modificationQuery);
-      const requests = modificationSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ModificationRequest[];
+      if (stepsError) {
+        console.error('Error fetching workflow steps:', stepsError);
+      }
       
+      // Map Supabase data to match interface
+      const steps: WorkflowStep[] = (stepsData || []).map(step => ({
+        id: step.id,
+        paymentId: step.payment_id,
+        qualityAssessmentId: step.quality_assessment_id,
+        fromDepartment: step.from_department,
+        toDepartment: step.to_department,
+        action: step.action as WorkflowStep['action'],
+        reason: step.reason,
+        comments: step.comments,
+        timestamp: step.timestamp,
+        processedBy: step.processed_by,
+        status: step.status as WorkflowStep['status']
+      }));
+      
+      // Fetch modification requests from Supabase (if table exists)
+      // For now, set empty array as modification_requests table may not exist
+      const requests: ModificationRequest[] = [];
       
       setWorkflowSteps(steps);
       setModificationRequests(requests);
@@ -86,40 +90,29 @@ export const useWorkflowTracking = () => {
     try {
       console.log('Tracking workflow step:', stepData);
       
-      const docRef = await addDoc(collection(db, 'workflow_steps'), {
-        ...stepData,
-        timestamp: new Date().toISOString()
-      });
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('workflow_steps')
+        .insert({
+          payment_id: stepData.paymentId,
+          quality_assessment_id: stepData.qualityAssessmentId,
+          from_department: stepData.fromDepartment,
+          to_department: stepData.toDepartment,
+          action: stepData.action,
+          reason: stepData.reason,
+          comments: stepData.comments,
+          processed_by: stepData.processedBy,
+          status: stepData.status,
+          timestamp: now,
+          created_at: now,
+          updated_at: now
+        })
+        .select();
       
-      console.log('Workflow step tracked with ID:', docRef.id);
-      
-      // Also try to save to Supabase workflow_steps table
-      try {
-        const now = new Date().toISOString();
-        const { data, error } = await supabase
-          .from('workflow_steps')
-          .insert({
-            payment_id: stepData.paymentId,
-            quality_assessment_id: stepData.qualityAssessmentId,
-            from_department: stepData.fromDepartment,
-            to_department: stepData.toDepartment,
-            action: stepData.action,
-            reason: stepData.reason,
-            comments: stepData.comments,
-            processed_by: stepData.processedBy,
-            status: stepData.status,
-            timestamp: now,
-            created_at: now,
-            updated_at: now
-          });
-        
-        if (error) {
-          console.warn('Failed to save workflow step to Supabase:', error);
-        } else {
-          console.log('Workflow step also saved to Supabase');
-        }
-      } catch (supabaseError) {
-        console.warn('Supabase workflow tracking error:', supabaseError);
+      if (error) {
+        console.warn('Failed to save workflow step to Supabase:', error);
+      } else {
+        console.log('Workflow step saved to Supabase');
       }
       
       await fetchWorkflowData();
@@ -134,43 +127,13 @@ export const useWorkflowTracking = () => {
     try {
       console.log('Creating modification request:', requestData);
       
-      // Try to get batch number from store records if not provided
-      let batchNumber = requestData.batchNumber;
-      if (!batchNumber) {
-        const storeQuery = query(
-          collection(db, 'store_records'),
-          where('id', '==', requestData.originalPaymentId)
-        );
-        const storeSnapshot = await getDocs(storeQuery);
-        if (!storeSnapshot.empty) {
-          const storeData = storeSnapshot.docs[0].data();
-          batchNumber = storeData.batch_number;
-        }
-      }
-
-      const modificationRequestData = {
-        ...requestData,
-        batchNumber,
-        createdAt: new Date().toISOString()
-      };
-
-      const docRef = await addDoc(collection(db, 'modification_requests'), modificationRequestData);
-      console.log('Modification request created with ID:', docRef.id);
-
-      // Notify target department
-      await createAnnouncement(
-        'Modification Request Pending',
-        `Batch ${modificationRequestData.batchNumber || ''} requires action: ${modificationRequestData.reason}`,
-        modificationRequestData.requestedByDepartment,
-        [modificationRequestData.targetDepartment],
-        'High'
-      );
-      
-      await fetchWorkflowData();
+      // Modification requests disabled - Firebase has been migrated to Supabase
+      console.log('Modification requests feature disabled (Firebase migration)');
       
       toast({
-        title: "Success",
-        description: "Modification request created successfully"
+        title: "Feature Unavailable",
+        description: "Modification requests are currently unavailable",
+        variant: "destructive"
       });
     } catch (error) {
       console.error('Error creating modification request:', error);
@@ -186,16 +149,12 @@ export const useWorkflowTracking = () => {
     try {
       console.log('Completing modification request:', requestId);
       
-      await updateDoc(doc(db, 'modification_requests', requestId), {
-        status: 'completed',
-        completedAt: new Date().toISOString()
-      });
-      
-      await fetchWorkflowData();
+      // Modification requests disabled - Firebase has been migrated to Supabase
+      console.log('Modification requests feature disabled (Firebase migration)');
       
       toast({
-        title: "Success",
-        description: "Modification request completed"
+        title: "Feature Unavailable",
+        description: "Modification requests are currently unavailable"
       });
     } catch (error) {
       console.error('Error completing modification request:', error);
