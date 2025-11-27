@@ -4859,6 +4859,7 @@ export type Database = {
         Args: { user_email: string }
         Returns: boolean
       }
+      can_manage_quality_assessments: { Args: never; Returns: boolean }
       can_perform_action: { Args: { action_type: string }; Returns: boolean }
       check_auth_user_exists: { Args: { user_uuid: string }; Returns: Json }
       check_unread_messages_for_sms: { Args: never; Returns: undefined }
@@ -4953,6 +4954,18 @@ export type Database = {
           new_stage: string
           old_stage: string
           request_type: string
+        }[]
+      }
+      test_rls_auth_context: {
+        Args: never
+        Returns: {
+          current_uid: string
+          employee_email: string
+          employee_found: boolean
+          employee_role: string
+          employee_status: string
+          has_qc_create: boolean
+          has_qc_general: boolean
         }[]
       }
       trigger_daily_salary_processing: { Args: never; Returns: Json }
