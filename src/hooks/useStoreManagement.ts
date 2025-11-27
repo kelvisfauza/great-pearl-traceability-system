@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -40,33 +38,31 @@ export const useStoreManagement = () => {
       if (!silent) {
         setLoading(true);
       }
-      console.log('Fetching store records from Firebase...');
+      console.log('Fetching store records from Supabase...');
       
-      const recordsQuery = query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'));
-      const querySnapshot = await getDocs(recordsQuery);
-      
-      console.log('Raw Firebase documents:', querySnapshot.size);
-      
-      const transformedRecords: StoreRecord[] = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        
-        return {
-          id: doc.id,
-          supplierName: data.supplier_name || '',
-          coffeeType: data.coffee_type || '',
-          bags: Number(data.bags) || 0,
-          kilograms: Number(data.kilograms) || 0,
-          date: data.date || '',
-          batchNumber: data.batch_number || '',
-          status: data.status || 'pending'
-        };
-      });
-
-      // Get latest status from Supabase (source of truth)
-      const { data: supabaseRecords } = await supabase
+      const { data: supabaseRecords, error } = await supabase
         .from('coffee_records')
-        .select('id, batch_number, status')
-        .in('id', transformedRecords.map(r => r.id));
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching coffee records:', error);
+        setStoreRecords([]);
+        return;
+      }
+
+      console.log('Supabase records:', supabaseRecords?.length || 0);
+      
+      const transformedRecords: StoreRecord[] = (supabaseRecords || []).map(record => ({
+        id: record.id,
+        supplierName: record.supplier_name || '',
+        coffeeType: record.coffee_type || '',
+        bags: Number(record.bags) || 0,
+        kilograms: Number(record.kilograms) || 0,
+        date: record.date || '',
+        batchNumber: record.batch_number || '',
+        status: record.status || 'pending'
+      }));
       
       // Get quality assessments status
       const { data: qualityAssessments } = await supabase
@@ -81,7 +77,6 @@ export const useStoreManagement = () => {
         .in('batch_number', transformedRecords.map(r => r.batchNumber).filter(Boolean));
       
       // Create lookup maps
-      const supabaseStatusMap = new Map(supabaseRecords?.map(r => [r.id, r.status]));
       const qualityStatusMap = new Map(qualityAssessments?.map(qa => [qa.batch_number, qa.status]));
       const paymentStatusMap = new Map(paymentRecords?.map(pr => [pr.batch_number, pr.status]));
       
@@ -90,11 +85,10 @@ export const useStoreManagement = () => {
         let finalStatus = record.status;
         
         // Priority order: rejected > paid > submitted_to_finance > assessed > current
-        const supabaseStatus = supabaseStatusMap.get(record.id);
         const qualityStatus = qualityStatusMap.get(record.batchNumber);
         const paymentStatus = paymentStatusMap.get(record.batchNumber);
         
-        if (supabaseStatus === 'rejected' || qualityStatus === 'rejected') {
+        if (record.status === 'rejected' || qualityStatus === 'rejected') {
           finalStatus = 'rejected';
         } else if (paymentStatus === 'Paid' || paymentStatus === 'paid' || paymentStatus === 'completed') {
           finalStatus = 'paid';
@@ -102,8 +96,6 @@ export const useStoreManagement = () => {
           finalStatus = 'submitted_to_finance';
         } else if (qualityStatus === 'assessed') {
           finalStatus = 'assessed';
-        } else if (supabaseStatus) {
-          finalStatus = supabaseStatus;
         }
         
         return {
@@ -133,23 +125,28 @@ export const useStoreManagement = () => {
 
   const fetchSuppliers = async () => {
     try {
-      console.log('Fetching suppliers from Firebase...');
+      console.log('Fetching suppliers from Supabase...');
       
-      const suppliersQuery = query(collection(db, 'suppliers'), orderBy('created_at', 'desc'));
-      const querySnapshot = await getDocs(suppliersQuery);
-      
-      const transformedSuppliers: Supplier[] = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.name || '',
-          origin: data.origin || '',
-          phone: data.phone || '',
-          code: data.code || '',
-          opening_balance: Number(data.opening_balance) || 0,
-          date_registered: data.date_registered || ''
-        };
-      });
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching suppliers:', error);
+        setSuppliers([]);
+        return;
+      }
+
+      const transformedSuppliers: Supplier[] = (data || []).map(supplier => ({
+        id: supplier.id,
+        name: supplier.name || '',
+        origin: supplier.origin || '',
+        phone: supplier.phone || '',
+        code: supplier.code || '',
+        opening_balance: Number(supplier.opening_balance) || 0,
+        date_registered: supplier.date_registered || ''
+      }));
 
       console.log('Suppliers loaded:', transformedSuppliers);
       setSuppliers(transformedSuppliers);
@@ -165,25 +162,25 @@ export const useStoreManagement = () => {
 
   const addSupplier = async (supplierData: any) => {
     try {
-      console.log('Adding supplier to Firebase:', supplierData);
+      console.log('Adding supplier to Supabase:', supplierData);
       
-      const supplierDoc = {
-        name: supplierData.name,
-        origin: supplierData.location,
-        phone: supplierData.phone,
-        code: `SUP${Date.now()}`,
-        opening_balance: 0,
-        date_registered: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      const { error } = await supabase
+        .from('suppliers')
+        .insert({
+          name: supplierData.name,
+          origin: supplierData.location,
+          phone: supplierData.phone || null,
+          code: `SUP${Date.now()}`,
+          opening_balance: 0,
+          date_registered: new Date().toISOString().split('T')[0]
+        });
 
-      const docRef = await addDoc(collection(db, 'suppliers'), supplierDoc);
-      console.log('Supplier added with ID:', docRef.id);
+      if (error) throw error;
       
+      console.log('Supplier added successfully');
       toast({
         title: "Success",
-        description: "Supplier added successfully to database"
+        description: "Supplier added successfully"
       });
       
       // Refresh suppliers list
@@ -192,7 +189,7 @@ export const useStoreManagement = () => {
       console.error('Error adding supplier:', error);
       toast({
         title: "Error",
-        description: "Failed to add supplier to database",
+        description: "Failed to add supplier",
         variant: "destructive"
       });
       throw error;
@@ -201,35 +198,9 @@ export const useStoreManagement = () => {
 
   const updateCoffeeRecord = async (recordId: string, recordData: Partial<Omit<StoreRecord, 'id'>>) => {
     try {
-      console.log('🔄 Updating coffee record across all systems:', recordId, recordData);
+      console.log('🔄 Updating coffee record:', recordId, recordData);
       
-      // Get the current record to know the batch number
-      const currentRecord = storeRecords.find(r => r.id === recordId);
-      if (!currentRecord) {
-        throw new Error('Record not found');
-      }
-      
-      const batchNumber = currentRecord.batchNumber;
-      
-      // 1. Update Firebase
-      console.log('📝 Updating Firebase...');
-      const docRef = doc(db, 'coffee_records', recordId);
-      const firebaseUpdate = {
-        supplier_name: recordData.supplierName,
-        coffee_type: recordData.coffeeType,
-        bags: recordData.bags,
-        kilograms: recordData.kilograms,
-        date: recordData.date,
-        batch_number: recordData.batchNumber,
-        status: recordData.status,
-        updated_at: new Date().toISOString()
-      };
-      await updateDoc(docRef, firebaseUpdate);
-      
-      // 2. Update Supabase coffee_records by batch_number
-      console.log('📝 Updating Supabase coffee_records...');
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { error: supabaseError } = await supabase
+      const { error: updateError } = await supabase
         .from('coffee_records')
         .update({
           supplier_name: recordData.supplierName,
@@ -240,64 +211,38 @@ export const useStoreManagement = () => {
           batch_number: recordData.batchNumber,
           status: recordData.status
         })
-        .eq('batch_number', batchNumber);
+        .eq('id', recordId);
       
-      if (supabaseError) {
-        console.error('Supabase update error:', supabaseError);
+      if (updateError) {
+        console.error('Error updating coffee record:', updateError);
+        throw updateError;
       }
       
-      // 3. Update quality_assessments (by batch_number and store_record_id)
-      console.log('📝 Updating quality assessments...');
-      const { error: qualityError } = await supabase
-        .from('quality_assessments')
-        .update({
-          batch_number: recordData.batchNumber,
-          kilograms: recordData.kilograms
-        })
-        .eq('batch_number', batchNumber);
-      
-      if (qualityError) {
-        console.error('Quality assessment update error:', qualityError);
-      }
-      
-      // Also try updating by store_record_id (Firebase ID)
-      await supabase
-        .from('quality_assessments')
-        .update({
-          batch_number: recordData.batchNumber,
-          kilograms: recordData.kilograms
-        })
-        .eq('store_record_id', recordId);
-      
-      // 4. Update finance_coffee_lots (by batch number)
-      console.log('📝 Updating finance coffee lots...');
-      // First get the Supabase coffee_record IDs with this batch number
-      const { data: supabaseCoffeeRecords } = await supabase
-        .from('coffee_records')
-        .select('id')
-        .eq('batch_number', batchNumber);
-      
-      if (supabaseCoffeeRecords && supabaseCoffeeRecords.length > 0) {
-        const coffeeRecordIds = supabaseCoffeeRecords.map(r => r.id);
-        
-        const { error: financeError } = await supabase
-          .from('finance_coffee_lots')
+      // Update related quality assessments
+      if (recordData.batchNumber) {
+        await supabase
+          .from('quality_assessments')
           .update({
-            quantity_kg: recordData.kilograms
+            batch_number: recordData.batchNumber,
+            kilograms: recordData.kilograms
           })
-          .in('coffee_record_id', coffeeRecordIds);
-        
-        if (financeError) {
-          console.error('Finance coffee lots update error:', financeError);
-        }
+          .eq('store_record_id', recordId);
       }
+      
+      // Update finance_coffee_lots
+      await supabase
+        .from('finance_coffee_lots')
+        .update({
+          quantity_kg: recordData.kilograms
+        })
+        .eq('coffee_record_id', recordId);
 
       await fetchStoreData();
       
-      console.log('✅ Successfully updated record across all systems');
+      console.log('✅ Successfully updated record');
       toast({
         title: "Success",
-        description: "Coffee record updated successfully in Store, Quality, and Finance"
+        description: "Coffee record updated successfully"
       });
     } catch (error) {
       console.error('Error updating coffee record:', error);
@@ -314,12 +259,12 @@ export const useStoreManagement = () => {
     try {
       console.log('🗑️ Starting deletion process for record:', recordId);
       
-      // Get the coffee record to check its batch number
+      // Get the coffee record
       const coffeeRecord = storeRecords.find(record => record.id === recordId);
       if (!coffeeRecord) {
         toast({
           title: "Error",
-          description: "Coffee record not found in current list",
+          description: "Coffee record not found",
           variant: "destructive"
         });
         return;
@@ -331,34 +276,15 @@ export const useStoreManagement = () => {
         kg: coffeeRecord.kilograms
       });
 
-      const { supabase } = await import('@/integrations/supabase/client');
-
-      // Check payment status in Firebase
-      console.log('🔍 Checking Firebase payment records...');
-      const paymentQuery = query(
-        collection(db, 'payment_records'), 
-        where('batch_number', '==', coffeeRecord.batchNumber)
-      );
-      const paymentSnapshot = await getDocs(paymentQuery);
-      
-      const paidPayments = paymentSnapshot.docs.filter(doc => {
-        const data = doc.data();
-        return ['Paid', 'paid', 'Processing', 'Approved', 'completed', 'Completed'].includes(data.status);
-      });
-
-      console.log(`Found ${paidPayments.length} paid payments in Firebase`);
-
-      // Check Supabase payment_records
-      console.log('🔍 Checking Supabase payment records...');
-      const { data: supabasePayments } = await supabase
+      // Check payment status
+      console.log('🔍 Checking payment records...');
+      const { data: payments } = await supabase
         .from('payment_records')
         .select('*')
         .eq('batch_number', coffeeRecord.batchNumber)
         .in('status', ['Paid', 'paid', 'Processing', 'Approved', 'completed', 'Completed']);
 
-      console.log(`Found ${supabasePayments?.length || 0} paid payments in Supabase`);
-
-      if (paidPayments.length > 0 || (supabasePayments && supabasePayments.length > 0)) {
+      if (payments && payments.length > 0) {
         toast({
           title: "❌ Cannot Delete",
           description: `Payment has been processed for this batch (${coffeeRecord.batchNumber}). Contact Finance to reverse the payment first.`,
@@ -368,22 +294,15 @@ export const useStoreManagement = () => {
         return;
       }
 
-      // Check quality assessments in Firebase
-      console.log('🔍 Checking Firebase quality assessments...');
-      const qualityQuery = query(
-        collection(db, 'quality_assessments'), 
-        where('store_record_id', '==', recordId)
-      );
-      const qualitySnapshot = await getDocs(qualityQuery);
-      
-      const submittedQuality = qualitySnapshot.docs.filter(doc => {
-        const data = doc.data();
-        return ['submitted_to_finance', 'paid'].includes(data.status);
-      });
+      // Check quality assessments
+      console.log('🔍 Checking quality assessments...');
+      const { data: qualityAssessments } = await supabase
+        .from('quality_assessments')
+        .select('*')
+        .eq('store_record_id', recordId)
+        .in('status', ['submitted_to_finance', 'paid']);
 
-      console.log(`Found ${submittedQuality.length} submitted quality assessments`);
-
-      if (submittedQuality.length > 0) {
+      if (qualityAssessments && qualityAssessments.length > 0) {
         toast({
           title: "❌ Cannot Delete",
           description: `Quality assessment has been submitted to Finance for batch ${coffeeRecord.batchNumber}. Please contact Quality department.`,
@@ -395,76 +314,38 @@ export const useStoreManagement = () => {
 
       console.log('✅ All checks passed, proceeding with deletion...');
       
-      // DELETE FROM FIREBASE
-      console.log('🔥 Deleting from Firebase...');
-      const docRef = doc(db, 'coffee_records', recordId);
-      await deleteDoc(docRef);
-      console.log('✅ Deleted from Firebase');
-      
-      // DELETE FROM SUPABASE - Cascade through all related tables
+      // Delete in cascade order
       console.log('🗄️ Deleting from Supabase...');
       
-      // 1. Delete quality assessments
-      const { error: qaDeleteError } = await supabase
+      // 1. Delete finance_coffee_lots
+      await supabase
+        .from('finance_coffee_lots')
+        .delete()
+        .eq('coffee_record_id', recordId);
+      
+      // 2. Delete quality assessments
+      await supabase
         .from('quality_assessments')
         .delete()
         .eq('store_record_id', recordId);
-        
-      if (qaDeleteError) {
-        console.error('⚠️ Error deleting quality assessments:', qaDeleteError);
-      } else {
-        console.log('✅ Deleted quality assessments');
-      }
       
-      // 2. Delete payment records
-      const { error: paymentDeleteError } = await supabase
+      // 3. Delete payment records
+      await supabase
         .from('payment_records')
         .delete()
         .eq('batch_number', coffeeRecord.batchNumber);
-        
-      if (paymentDeleteError) {
-        console.error('⚠️ Error deleting payment records:', paymentDeleteError);
-      } else {
-        console.log('✅ Deleted payment records');
-      }
       
-      // 3. Get Supabase coffee_records to delete finance_coffee_lots
-      const { data: supabaseCoffeeRecords } = await supabase
+      // 4. Delete coffee record
+      const { error: deleteError } = await supabase
         .from('coffee_records')
-        .select('id')
-        .eq('batch_number', coffeeRecord.batchNumber);
+        .delete()
+        .eq('id', recordId);
       
-      if (supabaseCoffeeRecords && supabaseCoffeeRecords.length > 0) {
-        const supabaseRecordIds = supabaseCoffeeRecords.map(r => r.id);
-        
-        // 4. Delete finance_coffee_lots
-        const { error: financeDeleteError } = await supabase
-          .from('finance_coffee_lots')
-          .delete()
-          .in('coffee_record_id', supabaseRecordIds);
-          
-        if (financeDeleteError) {
-          console.error('⚠️ Error deleting finance lots:', financeDeleteError);
-        } else {
-          console.log('✅ Deleted finance lots');
-        }
-        
-        // 5. Delete coffee_records from Supabase
-        const { error: coffeeDeleteError } = await supabase
-          .from('coffee_records')
-          .delete()
-          .in('id', supabaseRecordIds);
-          
-        if (coffeeDeleteError) {
-          console.error('⚠️ Error deleting coffee records from Supabase:', coffeeDeleteError);
-        } else {
-          console.log('✅ Deleted coffee records from Supabase');
-        }
+      if (deleteError) {
+        throw deleteError;
       }
 
-      console.log('🔄 Refreshing data...');
-      // Force a clean refresh by clearing state first
-      setStoreRecords([]);
+      console.log('✅ Deleted successfully');
       await fetchStoreData(false);
       
       toast({
@@ -472,11 +353,6 @@ export const useStoreManagement = () => {
         description: `Coffee record deleted: ${coffeeRecord.supplierName} - ${coffeeRecord.kilograms}kg (${coffeeRecord.batchNumber})`,
         duration: 3000
       });
-      
-      // Additional refresh after a short delay to ensure Firebase sync
-      setTimeout(() => {
-        fetchStoreData(true);
-      }, 500);
     } catch (error: any) {
       console.error('❌ Error deleting coffee record:', error);
       toast({
@@ -491,16 +367,16 @@ export const useStoreManagement = () => {
 
   const addCoffeeRecord = async (recordData: Omit<StoreRecord, 'id'>) => {
     try {
-      console.log('Adding coffee record to Firebase:', recordData);
+      console.log('Adding coffee record to Supabase:', recordData);
       
-      // COMPREHENSIVE DUPLICATE CHECK - Check batch number in Firebase
-      const batchDuplicateQuery = query(
-        collection(db, 'coffee_records'),
-        where('batch_number', '==', recordData.batchNumber)
-      );
-      const batchDuplicateSnapshot = await getDocs(batchDuplicateQuery);
-      
-      if (!batchDuplicateSnapshot.empty) {
+      // Check for duplicate batch number
+      const { data: batchCheck } = await supabase
+        .from('coffee_records')
+        .select('id, batch_number')
+        .eq('batch_number', recordData.batchNumber)
+        .limit(1);
+
+      if (batchCheck && batchCheck.length > 0) {
         const error = `Duplicate batch number: ${recordData.batchNumber} already exists`;
         console.error('❌', error);
         toast({
@@ -512,48 +388,8 @@ export const useStoreManagement = () => {
         throw new Error(error);
       }
 
-      // Check for exact duplicate record (same supplier, weight, date) in Firebase
-      const exactDuplicateQuery = query(
-        collection(db, 'coffee_records'),
-        where('supplier_name', '==', recordData.supplierName),
-        where('kilograms', '==', recordData.kilograms),
-        where('date', '==', recordData.date)
-      );
-      const exactDuplicateSnapshot = await getDocs(exactDuplicateQuery);
-      
-      if (!exactDuplicateSnapshot.empty) {
-        const error = `Duplicate entry detected: A record with ${recordData.kilograms}kg from ${recordData.supplierName} on ${recordData.date} already exists`;
-        console.error('❌', error);
-        toast({
-          title: "❌ Duplicate Record",
-          description: error,
-          variant: "destructive",
-          duration: 5000
-        });
-        throw new Error(error);
-      }
-
-      // Check batch number in Supabase
-      const { data: supabaseBatchCheck } = await supabase
-        .from('coffee_records')
-        .select('id, batch_number')
-        .eq('batch_number', recordData.batchNumber)
-        .limit(1);
-
-      if (supabaseBatchCheck && supabaseBatchCheck.length > 0) {
-        const error = `Duplicate batch number in Supabase: ${recordData.batchNumber} already exists`;
-        console.error('❌', error);
-        toast({
-          title: "❌ Duplicate Batch Number",
-          description: error,
-          variant: "destructive",
-          duration: 5000
-        });
-        throw new Error(error);
-      }
-
-      // Check for exact duplicate in Supabase (same supplier, weight, date)
-      const { data: supabaseExactCheck } = await supabase
+      // Check for exact duplicate record (same supplier, weight, date)
+      const { data: exactCheck } = await supabase
         .from('coffee_records')
         .select('id, supplier_name, kilograms, date')
         .eq('supplier_name', recordData.supplierName)
@@ -561,8 +397,8 @@ export const useStoreManagement = () => {
         .eq('date', recordData.date)
         .limit(1);
 
-      if (supabaseExactCheck && supabaseExactCheck.length > 0) {
-        const error = `Duplicate entry in Supabase: A record with ${recordData.kilograms}kg from ${recordData.supplierName} on ${recordData.date} already exists`;
+      if (exactCheck && exactCheck.length > 0) {
+        const error = `Duplicate entry: A record with ${recordData.kilograms}kg from ${recordData.supplierName} on ${recordData.date} already exists`;
         console.error('❌', error);
         toast({
           title: "❌ Duplicate Record",
@@ -577,30 +413,7 @@ export const useStoreManagement = () => {
       const supplier = suppliers.find(s => s.name === recordData.supplierName);
       const contract = supplier ? getActiveContractForSupplier(supplier.id) : null;
       
-      const coffeeDoc = {
-        supplier_name: recordData.supplierName,
-        coffee_type: recordData.coffeeType,
-        bags: recordData.bags,
-        kilograms: recordData.kilograms,
-        date: recordData.date,
-        batch_number: recordData.batchNumber,
-        status: recordData.status,
-        supplier_id: supplier?.id || null,
-        contract_info: contract ? {
-          contractId: contract.id,
-          contractPrice: contract.pricePerKg,
-          contractType: contract.contractType
-        } : null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      const docRef = await addDoc(collection(db, 'coffee_records'), coffeeDoc);
-      console.log('✅ Coffee record added to Firebase with ID:', docRef.id);
-
-      // Immediately add to Supabase tables for parallel workflow
-      console.log('📤 Attempting to save to Supabase coffee_records...');
-      // Insert into coffee_records (don't set ID, let Supabase generate it)
+      // Insert into Supabase coffee_records
       const { data: supabaseCoffeeRecord, error: coffeeError } = await supabase
         .from('coffee_records')
         .insert({
@@ -611,42 +424,43 @@ export const useStoreManagement = () => {
           date: recordData.date,
           batch_number: recordData.batchNumber,
           status: recordData.status,
-          supplier_id: supplier?.id || null
+          supplier_id: supplier?.id || null,
+          created_by: 'Store Department'
         })
         .select()
         .single();
 
       if (coffeeError) {
-        console.error('❌ Error adding to Supabase coffee_records:', coffeeError);
-      } else {
-        console.log('✅ Added to Supabase coffee_records:', supabaseCoffeeRecord);
-        
-        // Only add to finance if coffee_records was successful
-        console.log('📤 Attempting to save to finance_coffee_lots...');
-        const unitPrice = contract?.pricePerKg || 7000;
-        const { error: financeError } = await supabase
-          .from('finance_coffee_lots')
-          .insert({
-            coffee_record_id: supabaseCoffeeRecord.id,
-            supplier_id: supplier?.id || null,
-            assessed_by: 'Store Department',
-            quality_json: {
-              batch_number: recordData.batchNumber,
-              coffee_type: recordData.coffeeType,
-              supplier_name: recordData.supplierName,
-              status: 'pending_assessment',
-              note: 'Awaiting quality assessment - available for finance processing'
-            },
-            unit_price_ugx: unitPrice,
-            quantity_kg: recordData.kilograms,
-            finance_status: 'READY_FOR_FINANCE'
-          });
+        console.error('❌ Error adding to Supabase:', coffeeError);
+        throw coffeeError;
+      }
 
-        if (financeError) {
-          console.error('❌ Error adding to finance_coffee_lots:', financeError);
-        } else {
-          console.log('✅ Successfully added to finance_coffee_lots - ready for Finance department!');
-        }
+      console.log('✅ Coffee record added to Supabase:', supabaseCoffeeRecord);
+      
+      // Add to finance_coffee_lots
+      const unitPrice = contract?.pricePerKg || 7000;
+      const { error: financeError } = await supabase
+        .from('finance_coffee_lots')
+        .insert({
+          coffee_record_id: supabaseCoffeeRecord.id,
+          supplier_id: supplier?.id || null,
+          assessed_by: 'Store Department',
+          quality_json: {
+            batch_number: recordData.batchNumber,
+            coffee_type: recordData.coffeeType,
+            supplier_name: recordData.supplierName,
+            status: 'pending_assessment',
+            note: 'Awaiting quality assessment - available for finance processing'
+          },
+          unit_price_ugx: unitPrice,
+          quantity_kg: recordData.kilograms,
+          finance_status: 'READY_FOR_FINANCE'
+        });
+
+      if (financeError) {
+        console.error('❌ Error adding to finance_coffee_lots:', financeError);
+      } else {
+        console.log('✅ Successfully added to finance_coffee_lots');
       }
       
       await fetchStoreData();
@@ -689,15 +503,16 @@ export const useStoreManagement = () => {
 
   const updateCoffeeRecordStatus = async (recordId: string, status: string) => {
     try {
-      console.log('Updating coffee record status in Firebase:', recordId, status);
+      console.log('Updating coffee record status in Supabase:', recordId, status);
       
       const record = storeRecords.find(r => r.id === recordId);
       
-      const docRef = doc(db, 'coffee_records', recordId);
-      await updateDoc(docRef, {
-        status,
-        updated_at: new Date().toISOString()
-      });
+      const { error } = await supabase
+        .from('coffee_records')
+        .update({ status })
+        .eq('id', recordId);
+
+      if (error) throw error;
 
       // Departmental notifications based on status changes
       if (record) {

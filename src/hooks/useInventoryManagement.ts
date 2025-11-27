@@ -1,8 +1,4 @@
-
 import { useState, useEffect } from 'react';
-import { firebaseClient } from '@/lib/firebaseClient';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface InventoryItem {
@@ -33,18 +29,17 @@ export const useInventoryManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch coffee_records from Firebase (original deliveries - NEVER modified by sales)
-      const { data: coffeeRecords, error: coffeeError } = await firebaseClient
+      // Fetch coffee_records from Supabase (original deliveries)
+      const { data: coffeeRecords, error: coffeeError } = await supabase
         .from('coffee_records')
-        .select()
-        .order('created_at', { ascending: false })
-        .get();
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (coffeeError) {
-        console.error('Error fetching coffee records from Firebase:', coffeeError);
+        console.error('Error fetching coffee records from Supabase:', coffeeError);
         setInventoryItems([]);
       } else if (coffeeRecords && coffeeRecords.length > 0) {
-        console.log('📦 Coffee records from Firebase (original deliveries):', coffeeRecords.length);
+        console.log('📦 Coffee records from Supabase (original deliveries):', coffeeRecords.length);
         
         // Get all sales tracking to calculate what's been sold
         const { data: salesTracking } = await supabase
@@ -64,7 +59,7 @@ export const useInventoryManagement = () => {
         const transformedInventory: InventoryItem[] = coffeeRecords
           .filter((record: any) => record.status !== 'rejected') // Exclude rejected batches
           .map((record: any) => {
-            const originalKg = Number(record.kilograms || record.weight || 0);
+            const originalKg = Number(record.kilograms || 0);
             const soldKg = soldByRecord[record.id] || 0;
             const availableKg = originalKg - soldKg;
             
@@ -72,13 +67,13 @@ export const useInventoryManagement = () => {
             
             return {
               id: record.id,
-              coffeeType: record.coffee_type || record.coffeeType || 'Arabica',
-              totalBags: record.bags || record.quantity || 0,
+              coffeeType: record.coffee_type || 'Arabica',
+              totalBags: record.bags || 0,
               totalKilograms: Math.max(0, availableKg), // Available = Original - Sold
               location: 'Store 1',
               status: availableKg <= 0 ? 'out_of_stock' : availableKg < 100 ? 'low_stock' : 'available',
-              batchNumbers: [record.batch_number || record.batchNumber || 'N/A'],
-              lastUpdated: record.updated_at || record.updatedAt || record.created_at || record.createdAt || new Date().toISOString()
+              batchNumbers: [record.batch_number || 'N/A'],
+              lastUpdated: record.updated_at || record.created_at || new Date().toISOString()
             };
           })
           .filter(item => item.totalKilograms > 0); // Only show items with available stock
@@ -86,7 +81,7 @@ export const useInventoryManagement = () => {
         console.log('✅ Available inventory (after sales):', transformedInventory.length, 'items');
         setInventoryItems(transformedInventory);
       } else {
-        console.log('No coffee records found in Firebase');
+        console.log('No coffee records found in Supabase');
         setInventoryItems([]);
       }
 
@@ -116,7 +111,7 @@ export const useInventoryManagement = () => {
       setStorageLocations(defaultStorageLocations);
       
     } catch (error) {
-      console.error('Error fetching inventory data from Firebase:', error);
+      console.error('Error fetching inventory data from Supabase:', error);
       setInventoryItems([]);
       
       // Set default empty storage locations on error
@@ -168,14 +163,25 @@ export const useInventoryManagement = () => {
   useEffect(() => {
     fetchInventoryData();
 
-    // Set up real-time listener for coffee_records changes
-    const coffeeRecordsRef = collection(db, 'coffee_records');
-    const unsubscribe = onSnapshot(coffeeRecordsRef, (snapshot) => {
-      console.log('📊 Inventory updated - coffee records changed');
-      fetchInventoryData();
-    });
+    // Set up real-time subscription for coffee_records changes
+    const channel = supabase
+      .channel('inventory-changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'coffee_records' 
+        }, 
+        () => {
+          console.log('📊 Inventory updated - coffee records changed');
+          fetchInventoryData();
+        }
+      )
+      .subscribe();
 
-    return () => unsubscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return {
