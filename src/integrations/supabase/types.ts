@@ -2458,6 +2458,48 @@ export type Database = {
         }
         Relationships: []
       }
+      market_prices: {
+        Row: {
+          created_at: string | null
+          drugar_local: number
+          exchange_rate: number
+          ice_arabica: number
+          id: string
+          last_updated: string | null
+          price_type: string
+          robusta: number
+          robusta_faq_local: number
+          updated_at: string | null
+          wugar_local: number
+        }
+        Insert: {
+          created_at?: string | null
+          drugar_local?: number
+          exchange_rate?: number
+          ice_arabica?: number
+          id?: string
+          last_updated?: string | null
+          price_type?: string
+          robusta?: number
+          robusta_faq_local?: number
+          updated_at?: string | null
+          wugar_local?: number
+        }
+        Update: {
+          created_at?: string | null
+          drugar_local?: number
+          exchange_rate?: number
+          ice_arabica?: number
+          id?: string
+          last_updated?: string | null
+          price_type?: string
+          robusta?: number
+          robusta_faq_local?: number
+          updated_at?: string | null
+          wugar_local?: number
+        }
+        Relationships: []
+      }
       marketing_campaigns: {
         Row: {
           budget: number
