@@ -6,9 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUnifiedEmployees } from "@/hooks/useUnifiedEmployees";
 import { useApprovalRequests } from "@/hooks/useApprovalRequests";
 import { useState, useEffect } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { firebaseClient } from "@/lib/firebaseClient";
+import { supabase } from "@/integrations/supabase/client";
 
 const DashboardStats = () => {
   const { hasRole, hasPermission, employee } = useAuth();
@@ -25,14 +23,13 @@ const DashboardStats = () => {
   useEffect(() => {
     const fetchRealData = async () => {
       try {
-        console.log('Fetching real-time dashboard data...');
+        console.log('Fetching real-time dashboard data from Supabase...');
         
-        // Fetch coffee records using firebaseClient (same as inventory page)
-        const { data: coffeeRecords, error: coffeeError } = await firebaseClient
+        // Fetch coffee records from Supabase
+        const { data: coffeeRecords, error: coffeeError } = await supabase
           .from('coffee_records')
-          .select()
-          .order('created_at', { ascending: false })
-          .get();
+          .select('*')
+          .order('created_at', { ascending: false });
 
         let totalKgs = 0;
         let totalBags = 0;
@@ -40,37 +37,48 @@ const DashboardStats = () => {
         
         if (coffeeRecords && coffeeRecords.length > 0) {
           coffeeRecords.forEach((record) => {
-            totalKgs += Number(record.kilograms || record.weight) || 0;
-            totalBags += Number(record.bags || record.quantity) || 0;
-            if (record.batch_number || record.batchNumber) {
-              batches.add(record.batch_number || record.batchNumber);
+            totalKgs += Number(record.kilograms) || 0;
+            totalBags += Number(record.bags) || 0;
+            if (record.batch_number) {
+              batches.add(record.batch_number);
             }
           });
         }
 
-        // Fetch finance transactions for revenue
-        const transactionsSnapshot = await getDocs(collection(db, 'finance_transactions'));
+        // Fetch finance cash transactions from Supabase
+        const { data: transactions } = await supabase
+          .from('finance_cash_transactions')
+          .select('*');
+        
         let totalRevenue = 0;
-        transactionsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.type === 'Income' || data.type === 'Revenue') {
-            totalRevenue += Number(data.amount) || 0;
-          }
-        });
+        if (transactions) {
+          transactions.forEach((txn) => {
+            if (txn.transaction_type === 'cash_in' || txn.transaction_type === 'revenue') {
+              totalRevenue += Number(txn.amount) || 0;
+            }
+          });
+        }
 
-        // Fetch expenses
-        const expensesSnapshot = await getDocs(collection(db, 'finance_expenses'));
+        // Fetch expenses from Supabase
+        const { data: expenses } = await supabase
+          .from('finance_expenses')
+          .select('*');
+        
         let totalExpenses = 0;
-        expensesSnapshot.forEach((doc) => {
-          const data = doc.data();
-          totalExpenses += Number(data.amount) || 0;
-        });
+        if (expenses) {
+          expenses.forEach((expense) => {
+            totalExpenses += Number(expense.amount) || 0;
+          });
+        }
 
-        // Fetch suppliers count
-        const suppliersSnapshot = await getDocs(collection(db, 'suppliers'));
-        const supplierCount = suppliersSnapshot.size;
+        // Fetch suppliers count from Supabase
+        const { data: suppliers } = await supabase
+          .from('suppliers')
+          .select('id');
+        
+        const supplierCount = suppliers?.length || 0;
 
-        // Use coffee records as inventory data (same as inventory page)
+        // Use coffee records as inventory data
         let inventoryBags = totalBags;
         let inventoryKgs = totalKgs;
 
