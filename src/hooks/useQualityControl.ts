@@ -1,7 +1,4 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import { collection, getDocs, query, orderBy, addDoc, doc, updateDoc, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
@@ -65,27 +62,25 @@ export const useQualityControl = () => {
 
   const loadStoreRecords = useCallback(async () => {
     try {
-      console.log('Loading coffee records from Firebase...');
+      console.log('Loading coffee records from Supabase...');
       
-      const coffeeQuery = query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'));
-      const coffeeSnapshot = await getDocs(coffeeQuery);
-      const allRecords = coffeeSnapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as StoreRecord))
-        .filter(record => record.status !== 'sales' && record.status !== 'inventory'); // Filter out sold/inventoried records
+      const { data: allRecords, error } = await supabase
+        .from('coffee_records')
+        .select('*')
+        .not('status', 'in', '("sales","inventory")')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
 
       // Deduplicate by batch_number - keep the most recent one
       const batchMap = new Map();
-      allRecords.forEach(record => {
+      (allRecords || []).forEach(record => {
         if (record.batch_number) {
           const existing = batchMap.get(record.batch_number);
           if (!existing || new Date(record.created_at) > new Date(existing.created_at)) {
             batchMap.set(record.batch_number, record);
           }
         } else {
-          // Keep records without batch numbers (shouldn't happen but just in case)
           batchMap.set(record.id, record);
         }
       });
@@ -94,7 +89,7 @@ export const useQualityControl = () => {
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      console.log('Loaded coffee records (deduplicated):', coffeeData.length, 'records (from', allRecords.length, 'total)');
+      console.log('Loaded coffee records (deduplicated):', coffeeData.length, 'records (from', allRecords?.length || 0, 'total)');
       setStoreRecords(coffeeData || []);
       return coffeeData;
     } catch (error) {
@@ -106,9 +101,8 @@ export const useQualityControl = () => {
 
   const loadQualityAssessments = useCallback(async () => {
     try {
-      console.log('Loading quality assessments from both Supabase and Firebase...');
+      console.log('Loading quality assessments from Supabase...');
       
-      // Fetch from Supabase - get quality assessments first, then join data manually
       const { data: supabaseQualityData, error: qualityError } = await supabase
         .from('quality_assessments')
         .select('*')
@@ -118,7 +112,6 @@ export const useQualityControl = () => {
         console.error('Error fetching quality assessments from Supabase:', qualityError);
       }
 
-      // If we have quality assessments, fetch corresponding coffee records
       let enrichedSupabaseData = [];
       if (supabaseQualityData && supabaseQualityData.length > 0) {
         const storeRecordIds = [...new Set(supabaseQualityData.map(qa => qa.store_record_id).filter(Boolean))];
@@ -129,7 +122,6 @@ export const useQualityControl = () => {
             .select('*')
             .in('id', storeRecordIds);
 
-          // Manually join the data
           enrichedSupabaseData = supabaseQualityData.map(assessment => {
             const coffeeRecord = coffeeRecords?.find(record => record.id === assessment.store_record_id);
             return {
@@ -137,8 +129,7 @@ export const useQualityControl = () => {
               supplier_name: coffeeRecord?.supplier_name || 'Unknown',
               coffee_type: coffeeRecord?.coffee_type || 'Unknown',
               kilograms: coffeeRecord?.kilograms || 0,
-              batch_number: coffeeRecord?.batch_number || assessment.batch_number,
-              source: 'supabase'
+              batch_number: coffeeRecord?.batch_number || assessment.batch_number
             };
           });
         } else {
@@ -147,56 +138,16 @@ export const useQualityControl = () => {
             supplier_name: 'Unknown',
             coffee_type: 'Unknown',
             kilograms: 0,
-            batch_number: assessment.batch_number,
-            source: 'supabase'
+            batch_number: assessment.batch_number
           }));
         }
       }
 
-      // Fetch from Firebase
-      let firebaseQualityData = [];
-      try {
-        const firebaseQuery = query(collection(db, 'quality_assessments'), orderBy('created_at', 'desc'));
-        const firebaseSnapshot = await getDocs(firebaseQuery);
-        firebaseQualityData = firebaseSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          source: 'firebase'
-        }));
-        console.log('Loaded quality assessments from Firebase:', firebaseQualityData.length, 'assessments');
-      } catch (firebaseError) {
-        console.error('Error fetching quality assessments from Firebase:', firebaseError);
-      }
-
-      // Transform the enriched Supabase data (no need to flatten since we manually joined)
-      const transformedSupabaseData = enrichedSupabaseData;
-
-      // Combine data from both sources, removing duplicates by batch_number
-      const batchMap = new Map();
-      
-      // Add Supabase data first (priority)
-      transformedSupabaseData.forEach(assessment => {
-        if (assessment.batch_number) {
-          batchMap.set(assessment.batch_number, assessment);
-        }
-      });
-      
-      // Add Firebase data only if batch_number doesn't exist
-      firebaseQualityData.forEach(assessment => {
-        if (assessment.batch_number && !batchMap.has(assessment.batch_number)) {
-          batchMap.set(assessment.batch_number, assessment);
-        }
-      });
-
-      const combinedData = Array.from(batchMap.values()).sort((a, b) => 
+      const combinedData = enrichedSupabaseData.sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      console.log('Combined quality assessments:', {
-        supabase: transformedSupabaseData.length,
-        firebase: firebaseQualityData.length,
-        total: combinedData.length
-      });
+      console.log('Loaded quality assessments:', combinedData.length);
       
       setQualityAssessments(combinedData);
       return combinedData;
@@ -252,12 +203,17 @@ export const useQualityControl = () => {
 
   const updateStoreRecord = async (id: string, updates: Partial<StoreRecord>) => {
     try {
-      console.log('Updating store record in Firebase:', id, updates);
+      console.log('Updating store record in Supabase:', id, updates);
       
-      await updateDoc(doc(db, 'coffee_records', id), {
-        ...updates,
-        updated_at: new Date().toISOString()
-      });
+      const { error } = await supabase
+        .from('coffee_records')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
 
       console.log('Store record updated successfully');
       
@@ -446,18 +402,6 @@ export const useQualityControl = () => {
         console.log(`✅ Coffee record status updated to "${newStatus}" in Supabase`);
       }
 
-      // Update coffee_records status in Firebase as well
-      try {
-        const coffeeDocRef = doc(db, 'coffee_records', assessment.store_record_id);
-        await updateDoc(coffeeDocRef, {
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        });
-        console.log(`✅ Coffee record status updated to "${newStatus}" in Firebase`);
-      } catch (firebaseError) {
-        console.error('Error updating coffee record status in Firebase:', firebaseError);
-        // Don't throw - this is a sync issue but not critical
-      }
       
       // Only create payment record and send notifications if NOT rejected
       if (!isRejected) {
