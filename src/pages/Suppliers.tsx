@@ -27,8 +27,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { EditSupplierModal } from "@/components/suppliers/EditSupplierModal";
 import { useAuth } from "@/contexts/AuthContext";
 import StandardPrintHeader from "@/components/print/StandardPrintHeader";
@@ -156,59 +154,8 @@ const Suppliers = () => {
         console.log('📦 Sample matched record:', supabaseRecords[0]);
       }
 
-      // Fetch ALL Firebase records
-      let firebaseCoffeeRecords: any[] = [];
-      
-      try {
-        const allFirebaseQuery = query(
-          collection(db, 'coffee_records')
-        );
-        const allFirebaseSnapshot = await getDocs(allFirebaseQuery);
-        
-        console.log('📊 Total Firebase records:', allFirebaseSnapshot.docs.length);
-        
-        // Map and log all records
-        const allFirebaseRecords = allFirebaseSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            date: data.date || '',
-            batch_number: data.batch_number || '',
-            coffee_type: data.coffee_type || '',
-            kilograms: Number(data.kilograms) || 0,
-            bags: Number(data.bags) || 0,
-            status: data.status || 'pending',
-            supplier_id: data.supplier_id,
-            supplier_name: data.supplier_name
-          };
-        });
-        
-        console.log('📋 Firebase supplier_ids found:', [...new Set(allFirebaseRecords.map(r => r.supplier_id))]);
-        console.log('📋 Firebase supplier_names found:', [...new Set(allFirebaseRecords.map(r => r.supplier_name))]);
-        
-        // Filter by supplier_name (supplier_id is null in Firebase too)
-        firebaseCoffeeRecords = allFirebaseRecords.filter(record => {
-          const matchesDate = record.date >= cutoffDate;
-          // Match by current name or "Jelema" (old name for Jeremiah)
-          const matchesSupplier = record.supplier_name === selectedSupplier?.name ||
-                                 (selectedSupplier?.name === 'Jeremiah' && record.supplier_name === 'Jelema');
-          
-          return matchesDate && matchesSupplier;
-        });
-        
-        console.log('✅ Firebase records for ' + selectedSupplier?.name + ':', firebaseCoffeeRecords.length);
-        if (firebaseCoffeeRecords.length > 0) {
-          console.log('🔥 Sample matched Firebase record:', firebaseCoffeeRecords[0]);
-        }
-      } catch (firebaseError) {
-        console.error('❌ Firebase query error:', firebaseError);
-      }
-
-      // Combine all sources and remove duplicates
-      const allCoffeeRecords = [
-        ...supabaseRecords, 
-        ...firebaseCoffeeRecords
-      ];
+      // Use only Supabase records (Firebase has been migrated)
+      const allCoffeeRecords = supabaseRecords;
       
       // Remove duplicates based on batch_number
       const uniqueRecords = allCoffeeRecords.filter((record, index, self) =>
@@ -223,29 +170,13 @@ const Suppliers = () => {
       // Get payment records from both sources
       const batchNumbers = uniqueRecords.map(r => r.batch_number);
       
-      // Supabase payments
+      // Get payment records from Supabase only (Firebase has been migrated)
       const { data: supabasePayments } = await supabase
         .from('payment_records')
         .select('*')
         .in('batch_number', batchNumbers);
 
-      // Firebase payments
-      const paymentsQuery = query(
-        collection(db, 'payment_records'),
-        where('batch_number', 'in', batchNumbers.length > 0 ? batchNumbers : [''])
-      );
-      const paymentsSnapshot = await getDocs(paymentsQuery);
-      
-      const firebasePayments = paymentsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          batch_number: data.batch_number,
-          amount: Number(data.amount) || 0,
-          status: data.status || 'Pending'
-        };
-      });
-
-      const allPayments = [...(supabasePayments || []), ...firebasePayments];
+      const allPayments = supabasePayments || [];
 
       // Merge the data
       const transactionsData: SupplierTransaction[] = uniqueRecords.map(record => {

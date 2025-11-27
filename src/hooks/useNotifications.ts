@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, where, getDocs, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -48,20 +46,12 @@ export const useNotifications = () => {
         ? parseFloat(requestData.amount.replace(/[^\d.-]/g, '')) 
         : requestData.amount;
 
-      await addDoc(collection(db, 'notifications'), {
+      // Notifications disabled - Firebase has been migrated to Supabase
+      console.log('Notification created (disabled):', {
         type: 'approval_request',
         title: 'New Approval Request',
-        message: `You have a pending approval from ${requestData.requestedBy} of UGX ${amount?.toLocaleString() || requestData.amount}`,
-        amount: amount || 0,
-        department: requestData.department,
         requestedBy: requestData.requestedBy,
-        senderName: requestData.requestedBy,
-        senderDepartment: requestData.department,
-        priority: requestData.priority,
-        isRead: false,
-        targetRole: 'Administrator',
-        approvalRequestId: requestData.id,
-        createdAt: new Date().toISOString()
+        amount: amount || 0
       });
     } catch (error) {
       console.error('Error creating approval notification:', error);
@@ -77,18 +67,11 @@ export const useNotifications = () => {
     priority: 'High' | 'Medium' | 'Low' = 'Medium'
   ) => {
     try {
-      await addDoc(collection(db, 'notifications'), {
+      // Notifications disabled - Firebase has been migrated to Supabase
+      console.log('Notification created (disabled):', {
         type: 'system',
         title,
-        message,
-        department: 'IT',
-        senderName: employee?.name || 'System',
-        senderDepartment: employee?.department || 'IT',
-        priority,
-        isRead: false,
-        targetRole,
-        targetDepartment,
-        createdAt: new Date().toISOString()
+        message
       });
     } catch (error) {
       console.error('Error creating system notification:', error);
@@ -129,8 +112,8 @@ export const useNotifications = () => {
       
       console.log('Creating notification with data:', notificationData);
       
-      await addDoc(collection(db, 'notifications'), notificationData);
-      console.log('Role assignment notification created successfully');
+      // Notifications disabled - Firebase has been migrated to Supabase
+      console.log('Role assignment notification created (disabled):', notificationData);
     } catch (error) {
       console.error('Error creating role assignment notification:', error);
     }
@@ -146,18 +129,13 @@ export const useNotifications = () => {
     metadata?: any
   ) => {
     try {
-      await addDoc(collection(db, 'notifications'), {
+      // Notifications disabled - Firebase has been migrated to Supabase
+      console.log('Workflow notification created (disabled):', {
         type: 'system',
         title,
         message,
-        department: fromDepartment,
-        senderName: employee?.name || 'System',
-        senderDepartment: fromDepartment,
-        priority,
-        isRead: false,
-        targetDepartment: toDepartment,
-        metadata,
-        createdAt: new Date().toISOString()
+        fromDepartment,
+        toDepartment
       });
     } catch (error) {
       console.error('Error creating workflow notification:', error);
@@ -236,9 +214,9 @@ export const useNotifications = () => {
       if (targetRole !== undefined) {
         notificationData.targetRole = targetRole;
       }
-
-      await addDoc(collection(db, 'notifications'), notificationData);
-      console.log('Announcement created successfully');
+      
+      // Notifications disabled - Firebase has been migrated to Supabase
+      console.log('Announcement created (disabled):', notificationData);
     } catch (error) {
       console.error('Error creating announcement:', error);
     }
@@ -247,11 +225,8 @@ export const useNotifications = () => {
   // Clear all notifications for current user only
   const clearAllNotifications = async () => {
     try {
-      const promises = notifications.map(notification =>
-        deleteDoc(doc(db, 'notifications', notification.id))
-      );
-      await Promise.all(promises);
-      console.log('All notifications cleared successfully');
+      // Notifications disabled - Firebase has been migrated to Supabase
+      console.log('All notifications cleared (disabled)');
     } catch (error) {
       console.error('Error clearing notifications:', error);
     }
@@ -260,10 +235,8 @@ export const useNotifications = () => {
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {
     try {
-      await updateDoc(doc(db, 'notifications', notificationId), {
-        isRead: true,
-        readAt: new Date().toISOString()
-      });
+      // Notifications disabled - Firebase has been migrated to Supabase
+      console.log('Notification marked as read (disabled):', notificationId);
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -272,8 +245,8 @@ export const useNotifications = () => {
   // Delete individual notification
   const deleteNotification = async (notificationId: string) => {
     try {
-      await deleteDoc(doc(db, 'notifications', notificationId));
-      console.log('Notification deleted successfully');
+      // Notifications disabled - Firebase has been migrated to Supabase
+      console.log('Notification deleted (disabled):', notificationId);
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -282,183 +255,19 @@ export const useNotifications = () => {
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      const unreadNotifications = notifications.filter(n => !n.isRead);
-      const promises = unreadNotifications.map(notification =>
-        updateDoc(doc(db, 'notifications', notification.id), {
-          isRead: true,
-          readAt: new Date().toISOString()
-        })
-      );
-      await Promise.all(promises);
+      // Notifications disabled - Firebase has been migrated to Supabase
+      console.log('All notifications marked as read (disabled)');
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
   };
 
   useEffect(() => {
-    let mounted = true;
-    
-    if (!employee?.id) {
-      setNotifications([]);
-      setUnreadCount(0);
-      setLoading(false);
-      return;
-    }
-
-    const notificationsQuery = query(
-      collection(db, 'notifications'),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-      if (!mounted) return;
-      
-      const allNotifications = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Notification[];
-
-      // Filter notifications based on user role and department
-      const userNotifications = allNotifications.filter(notification => {
-        // Show all notifications to administrators
-        if (employee.role === 'Administrator') {
-          return true;
-        }
-        
-        // Show notifications targeted to specific user by name
-        if (notification.targetUser && notification.targetUser === employee.name) {
-          console.log('Notification matched by targetUser:', {
-            notificationTargetUser: notification.targetUser,
-            employeeName: employee.name,
-            notificationTitle: notification.title
-          });
-          return true;
-        }
-        
-        // Show notifications targeted to user's role
-        if (notification.targetRole && notification.targetRole === employee.role) {
-          return true;
-        }
-        
-        // Show notifications targeted to user's department or permissions
-        if (notification.targetDepartment) {
-          // Special handling for "All Departments" - show to everyone
-          if (notification.targetDepartment === 'All Departments') {
-            return true;
-          }
-          
-          // Check exact department match
-          if (notification.targetDepartment === employee.department) {
-            return true;
-          }
-          
-          // Check if user has permissions for the target department (case-insensitive)
-          if (employee.permissions) {
-            const hasPermission = employee.permissions.some(permission => 
-              permission.toLowerCase().includes(notification.targetDepartment.toLowerCase()) ||
-              notification.targetDepartment.toLowerCase().includes(permission.toLowerCase()) ||
-              permission === notification.targetDepartment ||
-              // Special mapping for Quality Control permission to Quality department
-              (permission === 'Quality Control' && notification.targetDepartment === 'Quality') ||
-              (notification.targetDepartment === 'Quality Control' && employee.permissions.includes('Quality Control'))
-            );
-            if (hasPermission) {
-              return true;
-            }
-          }
-          
-          // Special case for Quality Control permission mapping to Quality department
-          if (notification.targetDepartment === 'Quality' && 
-              employee.permissions && employee.permissions.includes('Quality Control')) {
-            return true;
-          }
-          
-          // Special case for Quality Control department mapping to Quality notifications
-          if (employee.department === 'Quality' && notification.targetDepartment === 'Quality Control') {
-            return true;
-          }
-          
-          // Special case for Data Analysis permission mapping to Reports department
-          if (notification.targetDepartment === 'Reports' && 
-              employee.permissions && employee.permissions.includes('Data Analysis')) {
-            return true;
-          }
-          
-          // Special case for Data Analysis department mapping to Reports notifications
-          if (employee.department === 'Data Analysis' && notification.targetDepartment === 'Reports') {
-            return true;
-          }
-        }
-
-        // Check multiple target departments (new array format)
-        if (notification.targetDepartments && Array.isArray(notification.targetDepartments)) {
-          const isTargeted = notification.targetDepartments.some(targetDept => {
-            if (targetDept === 'All Departments') return true;
-            if (targetDept === employee.department) return true;
-            
-            // Enhanced permission checking for multiple departments
-            if (employee.permissions) {
-              const hasPermission = employee.permissions.some(permission => 
-                permission.toLowerCase().includes(targetDept.toLowerCase()) ||
-                targetDept.toLowerCase().includes(permission.toLowerCase()) ||
-                permission === targetDept ||
-                // Special mapping for Quality Control permission to Quality department
-                (permission === 'Quality Control' && targetDept === 'Quality') ||
-                (targetDept === 'Quality Control' && employee.permissions.includes('Quality Control'))
-              );
-              if (hasPermission) return true;
-            }
-            
-            if (targetDept === 'Quality' && employee.permissions && employee.permissions.includes('Quality Control')) return true;
-            if (employee.department === 'Quality' && targetDept === 'Quality Control') return true;
-            
-            if (targetDept === 'Reports' && employee.permissions && employee.permissions.includes('Data Analysis')) return true;
-            if (employee.department === 'Data Analysis' && targetDept === 'Reports') return true;
-            return false;
-          });
-          
-          if (isTargeted) {
-            return true;
-          }
-        }
-        
-        // Show notifications from user's department (announcements from same department)
-        if (notification.department === employee.department && notification.type === 'announcement') {
-          return true;
-        }
-        
-        // Show system notifications to everyone
-        if (notification.type === 'system' && !notification.targetRole && !notification.targetDepartment && !notification.targetUser) {
-          return true;
-        }
-        
-        // Show announcements without specific targets to everyone
-        if (notification.type === 'announcement' && !notification.targetRole && !notification.targetDepartment) {
-          return true;
-        }
-        
-        return false;
-      });
-
-      if (!mounted) return;
-      
-      // Sort notifications by createdAt descending (most recent first)
-      const sortedNotifications = userNotifications.sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
-        return dateB - dateA;
-      });
-      
-      setNotifications(sortedNotifications);
-      const unreadCount = sortedNotifications.filter(n => !n.isRead).length;
-      setUnreadCount(unreadCount);
-      setLoading(false);
-    });
-
-    return () => {
-      mounted = false;
-      unsubscribe();
-    };
+    // Notifications disabled - Firebase has been migrated to Supabase
+    // Set empty notifications array
+    setNotifications([]);
+    setUnreadCount(0);
+    setLoading(false);
   }, [employee?.id]);
 
   return {
