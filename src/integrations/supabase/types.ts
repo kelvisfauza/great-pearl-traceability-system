@@ -4929,6 +4929,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_quality_assessment: {
+        Args: { assessment_data: Json }
+        Returns: Json
+      }
       invalidate_other_sessions: {
         Args: { p_current_session_token: string; p_user_id: string }
         Returns: undefined

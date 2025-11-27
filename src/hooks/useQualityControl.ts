@@ -398,13 +398,13 @@ export const useQualityControl = () => {
       console.log('🔍 About to insert - suggested_price:', assessmentData.suggested_price);
       console.log('🔍 About to insert - final_price:', assessmentData.final_price);
 
-      // Create assessment record in Supabase
-      console.log('Inserting quality assessment into Supabase...');
-      const { data: newAssessment, error: insertError } = await supabase
-        .from('quality_assessments')
-        .insert([assessmentData])
-        .select()
-        .single();
+      // Create assessment record using the SECURITY DEFINER function
+      // This bypasses RLS issues while still enforcing permissions
+      console.log('Inserting quality assessment into Supabase using insert function...');
+      const { data: insertResult, error: insertError } = await supabase
+        .rpc('insert_quality_assessment', {
+          assessment_data: assessmentData
+        });
 
       if (insertError) {
         console.error('Error inserting quality assessment:', insertError);
@@ -423,6 +423,8 @@ export const useQualityControl = () => {
         throw new Error(errorMessage);
       }
 
+      // Parse the returned JSON to get the assessment object
+      const newAssessment = insertResult as any;
       console.log('Quality assessment saved successfully:', newAssessment);
       
       // Determine the new status based on rejection
