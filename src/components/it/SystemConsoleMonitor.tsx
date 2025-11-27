@@ -38,21 +38,11 @@ const SystemConsoleMonitor = () => {
   const stats = getLogStats();
 
   useEffect(() => {
-    fetchLogs({
-      level: filters.level !== 'all' ? filters.level : undefined,
-      department: filters.department !== 'all' ? filters.department : undefined,
-      timeRange: parseInt(filters.timeRange),
-      limit: 500
-    });
+    // Console monitoring disabled
   }, [filters, fetchLogs]);
 
   const handleRefresh = () => {
-    fetchLogs({
-      level: filters.level !== 'all' ? filters.level : undefined,
-      department: filters.department !== 'all' ? filters.department : undefined,
-      timeRange: parseInt(filters.timeRange),
-      limit: 500
-    });
+    // Console monitoring disabled
   };
 
   const handleClearOldLogs = async () => {
@@ -376,11 +366,11 @@ const SystemConsoleMonitor = () => {
       </Card>
 
       {/* Alert for high error rates */}
-      {stats.recentErrors > 10 && (
+      {stats.recentErrors.length > 10 && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            High error rate detected: {stats.recentErrors} errors in the last 24 hours. 
+            High error rate detected: {stats.recentErrors.length} errors in the last 24 hours. 
             Consider investigating system stability.
           </AlertDescription>
         </Alert>
