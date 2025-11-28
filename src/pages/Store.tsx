@@ -108,7 +108,7 @@ type StatusKey =
 
 type StatusConfig = {
   label: string;
-  variant: "default" | "secondary" | "destructive" | "outline" | "ghost";
+  variant: "default" | "secondary" | "destructive" | "outline";
 };
 
 /* -------------------------------------------------------------------------- */
