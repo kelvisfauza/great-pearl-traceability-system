@@ -167,7 +167,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           phone: employeeData.phone || '',
           position: employeeData.position,
           department: employeeData.department,
-          salary: employeeData.salary || 0,
+          salary: employeeData.salary ? Number(employeeData.salary) : 0,
           role: employeeData.role,
           permissions: employeeData.permissions || ['General Access'],
           status: employeeData.status,
