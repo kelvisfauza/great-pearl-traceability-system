@@ -51,7 +51,7 @@ export const useSupabaseEmployees = () => {
         phone: emp.phone || '',
         position: emp.position,
         department: emp.department,
-        salary: emp.salary || 0,
+        salary: emp.salary ? Number(emp.salary) : 0,
         role: emp.role || 'User',
         permissions: emp.permissions || ['General Access'],
         status: emp.status || 'Active',
