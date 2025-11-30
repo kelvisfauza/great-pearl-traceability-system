@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Receipt, Printer, DollarSign, Calendar, User, FileText, Download, Clock, Archive } from 'lucide-react';
 import { useEnhancedExpenseManagement } from '@/hooks/useEnhancedExpenseManagement';
 import { useOvertimeAwards } from '@/hooks/useOvertimeAwards';
@@ -12,6 +13,7 @@ import { useArchivedExpenses } from '@/hooks/useArchivedExpenses';
 import { useMoneyRequests } from '@/hooks/useMoneyRequests';
 import StandardPrintHeader from '@/components/print/StandardPrintHeader';
 import { useReactToPrint } from 'react-to-print';
+import { format, subMonths } from 'date-fns';
 
 export const ExpensesReport = () => {
   const { expenseRequests, loading } = useEnhancedExpenseManagement();
@@ -21,6 +23,9 @@ export const ExpensesReport = () => {
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [includeArchived, setIncludeArchived] = useState(true);
+  const [monthDialogOpen, setMonthDialogOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [monthReportData, setMonthReportData] = useState<any>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Combine current and archived data
@@ -284,6 +289,276 @@ export const ExpensesReport = () => {
     return `PS-${now.getFullYear()}-${now.getMonth() + 1}-${requestId.slice(0, 8).toUpperCase()}`;
   };
 
+  // Generate month options including the current month
+  const getMonthOptions = () => {
+    const options = [];
+    const today = new Date();
+    for (let i = 0; i < 12; i++) {
+      const date = subMonths(today, i);
+      const value = format(date, 'yyyy-MM');
+      const label = format(date, 'MMMM yyyy');
+      options.push({ value, label });
+    }
+    return options;
+  };
+
+  const generateMonthReport = (monthValue: string) => {
+    const [year, month] = monthValue.split('-');
+    const targetYear = parseInt(year);
+    const targetMonth = parseInt(month) - 1; // JavaScript months are 0-indexed
+    
+    // Filter expenses for the selected month
+    const filteredExpenses = approvedExpenses.filter(e => {
+      const date = new Date(e.financeApprovedAt || e.daterequested);
+      return date.getMonth() === targetMonth && date.getFullYear() === targetYear;
+    });
+
+    const filteredSalaryRequests = approvedSalaryRequests.filter(s => {
+      const date = new Date(s.financeApprovedAt || s.daterequested);
+      return date.getMonth() === targetMonth && date.getFullYear() === targetYear;
+    });
+
+    const filteredRequisitions = approvedRequisitions.filter(r => {
+      const date = new Date(r.financeApprovedAt || r.daterequested);
+      return date.getMonth() === targetMonth && date.getFullYear() === targetYear;
+    });
+
+    const filteredOvertime = completedOvertimeAwards.filter(o => {
+      const date = new Date(o.completed_at);
+      return date.getMonth() === targetMonth && date.getFullYear() === targetYear;
+    });
+
+    const totalExpenses = filteredExpenses.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
+    const totalSalaryRequests = filteredSalaryRequests.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
+    const totalRequisitions = filteredRequisitions.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
+    const totalOvertime = filteredOvertime.reduce((sum, award) => sum + (award.total_amount || 0), 0);
+
+    const data = {
+      expenses: filteredExpenses,
+      salaryRequests: filteredSalaryRequests,
+      requisitions: filteredRequisitions,
+      overtime: filteredOvertime,
+      summary: {
+        totalExpenses,
+        totalSalaryRequests,
+        totalRequisitions,
+        totalOvertime,
+        grandTotal: totalExpenses + totalSalaryRequests + totalRequisitions + totalOvertime,
+      },
+      monthName: format(new Date(targetYear, targetMonth), 'MMMM yyyy')
+    };
+    
+    setMonthReportData(data);
+  };
+
+  const printMonthReport = () => {
+    if (!monthReportData) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Expenses Report - ${monthReportData.monthName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .header h1 { margin: 0; color: #333; }
+            .header h2 { margin: 5px 0; color: #666; font-weight: normal; }
+            .summary { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+            .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 10px; }
+            .summary-item { text-align: center; }
+            .summary-item .label { font-size: 12px; color: #666; }
+            .summary-item .value { font-size: 18px; font-weight: bold; color: #333; }
+            .section { margin: 30px 0; }
+            .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #333; padding-bottom: 5px; }
+            table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            .total-row { background-color: #f9f9f9; font-weight: bold; }
+            .grand-total { margin-top: 20px; text-align: right; font-size: 20px; font-weight: bold; }
+            @media print {
+              body { padding: 10px; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Monthly Expenses Report</h1>
+            <h2>${monthReportData.monthName}</h2>
+            <p>Generated on ${new Date().toLocaleDateString('en-GB')}</p>
+          </div>
+
+          <div class="summary">
+            <h3 style="margin-top: 0;">Summary</h3>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="label">Expenses</div>
+                <div class="value">UGX ${monthReportData.summary.totalExpenses.toLocaleString()}</div>
+                <div class="label">${monthReportData.expenses.length} transactions</div>
+              </div>
+              <div class="summary-item">
+                <div class="label">Salary Payments</div>
+                <div class="value">UGX ${monthReportData.summary.totalSalaryRequests.toLocaleString()}</div>
+                <div class="label">${monthReportData.salaryRequests.length} transactions</div>
+              </div>
+              <div class="summary-item">
+                <div class="label">Requisitions</div>
+                <div class="value">UGX ${monthReportData.summary.totalRequisitions.toLocaleString()}</div>
+                <div class="label">${monthReportData.requisitions.length} transactions</div>
+              </div>
+              <div class="summary-item">
+                <div class="label">Overtime</div>
+                <div class="value">UGX ${monthReportData.summary.totalOvertime.toLocaleString()}</div>
+                <div class="label">${monthReportData.overtime.length} awards</div>
+              </div>
+              <div class="summary-item" style="grid-column: span 2;">
+                <div class="label">Grand Total</div>
+                <div class="value" style="font-size: 24px; color: #2563eb;">UGX ${monthReportData.summary.grandTotal.toLocaleString()}</div>
+              </div>
+            </div>
+          </div>
+
+          ${monthReportData.expenses.length > 0 ? `
+          <div class="section">
+            <div class="section-title">Expense Requests (${monthReportData.expenses.length})</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Title</th>
+                  <th>Requested By</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${monthReportData.expenses.map((exp: any) => `
+                  <tr>
+                    <td>${formatDate(exp.financeApprovedAt || exp.daterequested)}</td>
+                    <td>${exp.title}</td>
+                    <td>${exp.requestedby || 'N/A'}</td>
+                    <td>UGX ${parseFloat(exp.amount).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+                <tr class="total-row">
+                  <td colspan="3">Subtotal</td>
+                  <td>UGX ${monthReportData.summary.totalExpenses.toLocaleString()}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+
+          ${monthReportData.salaryRequests.length > 0 ? `
+          <div class="section">
+            <div class="section-title">Salary Requests (${monthReportData.salaryRequests.length})</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Employee</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${monthReportData.salaryRequests.map((sal: any) => `
+                  <tr>
+                    <td>${formatDate(sal.financeApprovedAt || sal.daterequested)}</td>
+                    <td>${sal.employee_name || sal.requestedby || 'N/A'}</td>
+                    <td>${sal.request_type || 'Salary Request'}</td>
+                    <td>UGX ${parseFloat(sal.amount).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+                <tr class="total-row">
+                  <td colspan="3">Subtotal</td>
+                  <td>UGX ${monthReportData.summary.totalSalaryRequests.toLocaleString()}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+
+          ${monthReportData.requisitions.length > 0 ? `
+          <div class="section">
+            <div class="section-title">Requisitions (${monthReportData.requisitions.length})</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Title</th>
+                  <th>Requested By</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${monthReportData.requisitions.map((req: any) => `
+                  <tr>
+                    <td>${formatDate(req.financeApprovedAt || req.daterequested)}</td>
+                    <td>${req.title}</td>
+                    <td>${req.requestedby || 'N/A'}</td>
+                    <td>UGX ${parseFloat(req.amount).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+                <tr class="total-row">
+                  <td colspan="3">Subtotal</td>
+                  <td>UGX ${monthReportData.summary.totalRequisitions.toLocaleString()}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+
+          ${monthReportData.overtime.length > 0 ? `
+          <div class="section">
+            <div class="section-title">Overtime Awards (${monthReportData.overtime.length})</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Employee</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${monthReportData.overtime.map((ot: any) => `
+                  <tr>
+                    <td>${formatDate(ot.completed_at)}</td>
+                    <td>${ot.employee_name || 'N/A'}</td>
+                    <td>${ot.description || 'Overtime'}</td>
+                    <td>UGX ${(ot.total_amount || 0).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+                <tr class="total-row">
+                  <td colspan="3">Subtotal</td>
+                  <td>UGX ${monthReportData.summary.totalOvertime.toLocaleString()}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+
+          <div class="grand-total">
+            Grand Total: UGX ${monthReportData.summary.grandTotal.toLocaleString()}
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   if (loading || overtimeLoading || archivedLoading || moneyRequestsLoading) {
     return (
       <Card>
@@ -328,10 +603,59 @@ export const ExpensesReport = () => {
                   <SelectItem value="quarter">Last Quarter</SelectItem>
                 </SelectContent>
               </Select>
-              <Button onClick={() => handlePrint?.()} className="gap-2">
+              <Button onClick={() => handlePrint?.()} className="gap-2" variant="outline">
                 <Printer className="h-4 w-4" />
                 Print Report
               </Button>
+              <Dialog open={monthDialogOpen} onOpenChange={setMonthDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Print Monthly Report
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Select Month to Print</DialogTitle>
+                    <DialogDescription>
+                      Choose a month to generate and print a detailed monthly expenses report
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getMonthOptions().map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setMonthDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          if (selectedMonth) {
+                            generateMonthReport(selectedMonth);
+                            setTimeout(() => {
+                              printMonthReport();
+                              setMonthDialogOpen(false);
+                            }, 500);
+                          }
+                        }}
+                        disabled={!selectedMonth}
+                      >
+                        Generate & Print
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </CardHeader>
