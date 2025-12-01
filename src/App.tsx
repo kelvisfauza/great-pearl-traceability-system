@@ -31,6 +31,13 @@ import Expenses from "./pages/Expenses";
 import MyExpenses from "./pages/MyExpenses";
 import EURDocumentationPage from "./pages/EUDRDocumentation";
 import Suppliers from "./pages/Suppliers";
+
+// V2 System Pages
+import V2Index from "./pages/v2/Index";
+import V2CoffeeReceipts from "./pages/v2/store/CoffeeReceipts";
+import V2PendingLots from "./pages/v2/quality/PendingLots";
+import V2AssessLot from "./pages/v2/quality/AssessLot";
+
 import FinanceReport from "./pages/reports/FinanceReport";
 import DayBookReport from "./pages/reports/DayBookReport";
 import ExpensesReport from "./pages/reports/ExpensesReport";
@@ -87,6 +94,30 @@ const App: React.ComponentType = () => {
               
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                
+                {/* V2 System Routes */}
+                <Route path="/v2" element={
+                  <ProtectedRoute>
+                    <V2Index />
+                  </ProtectedRoute>
+                } />
+                <Route path="/v2/store" element={
+                  <ProtectedRoute requiredPermissions={["Store Management"]}>
+                    <V2CoffeeReceipts />
+                  </ProtectedRoute>
+                } />
+                <Route path="/v2/quality" element={
+                  <ProtectedRoute requiredPermissions={["Quality Control"]}>
+                    <V2PendingLots />
+                  </ProtectedRoute>
+                } />
+                <Route path="/v2/quality/assess/:id" element={
+                  <ProtectedRoute requiredPermissions={["Quality Control"]}>
+                    <V2AssessLot />
+                  </ProtectedRoute>
+                } />
+                
+                {/* V1 System Routes */}
                 <Route path="/" element={
                   <ProtectedRoute>
                     <Index />
