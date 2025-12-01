@@ -266,7 +266,25 @@ export const useOvertimeAwards = () => {
     try {
       console.log('✅ Completing overtime claim:', awardId);
       console.log('✅ Current employee:', employee);
+      console.log('✅ Employee role:', employee?.role);
+      console.log('✅ Employee permissions:', employee?.permissions);
       
+      // Check user permissions before attempting update
+      if (!employee) {
+        throw new Error('No employee data found. Please ensure you are logged in.');
+      }
+
+      const hasPermission = 
+        employee.role === 'Super Admin' ||
+        employee.role === 'Administrator' ||
+        employee.role === 'Manager' ||
+        employee.permissions?.includes('Human Resources') ||
+        employee.permissions?.includes('Finance');
+
+      if (!hasPermission) {
+        throw new Error('You do not have permission to complete overtime claims. Required: HR, Finance, or Admin role.');
+      }
+
       const { data, error } = await supabase
         .from('overtime_awards')
         .update({
@@ -282,12 +300,12 @@ export const useOvertimeAwards = () => {
 
       if (error) {
         console.error('✅ Database error:', error);
-        throw error;
+        throw new Error(`Database error: ${error.message}`);
       }
 
       if (!data) {
         console.error('✅ No data returned - RLS policy blocking update');
-        throw new Error('Update failed - you may not have permission to complete this claim');
+        throw new Error('Update failed. Please contact your system administrator.');
       }
 
       // Send notification to the employee
