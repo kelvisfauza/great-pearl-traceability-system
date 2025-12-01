@@ -10,6 +10,7 @@ import { useReportTemplates } from '@/hooks/useReportTemplates';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
 
 const ReportGenerator = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -45,17 +46,74 @@ const ReportGenerator = () => {
         throw new Error(data?.error || 'Failed to generate report');
       }
 
-      // Create downloadable file
-      const reportContent = JSON.stringify(data.report, null, 2);
-      const blob = new Blob([reportContent], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${template.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      // Generate PDF with company header
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      let yPosition = 20;
+
+      // Company Header
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Great Pearl Coffee', pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 10;
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(template.name, pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 7;
+      pdf.setFontSize(10);
+      pdf.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
+      
+      // Separator line
+      yPosition += 5;
+      pdf.line(15, yPosition, pageWidth - 15, yPosition);
+      yPosition += 10;
+
+      // Summary Section
+      if (data.report.summary) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Summary', 15, yPosition);
+        yPosition += 7;
+
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        const summary = data.report.summary;
+        for (const [key, value] of Object.entries(summary)) {
+          const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          pdf.text(`${label}: ${typeof value === 'number' ? value.toLocaleString() : value}`, 15, yPosition);
+          yPosition += 6;
+          
+          if (yPosition > 270) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+        }
+      }
+
+      // Data Sources Section
+      yPosition += 5;
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Data Sources', 15, yPosition);
+      yPosition += 7;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      data.report.data_sources?.forEach((source: any) => {
+        pdf.text(`• ${source.source}: ${source.record_count} records`, 15, yPosition);
+        yPosition += 6;
+        
+        if (yPosition > 270) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+      });
+
+      // Save PDF
+      const fileName = `${template.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
 
       // Also save to reports table for history
       generateReport.mutate({
