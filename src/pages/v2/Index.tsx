@@ -2,35 +2,96 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import { Package, FlaskConical, Wallet, Warehouse, ShoppingCart, TrendingUp, Clock, CheckCircle2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const V2Index = () => {
   const { employee } = useAuth();
 
+  // Fetch pending quality check count
+  const { data: pendingQualityCount } = useQuery({
+    queryKey: ["pending-quality-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("coffee_records")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "PENDING");
+      
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
+  // Fetch ready for payment count
+  const { data: readyForPaymentCount } = useQuery({
+    queryKey: ["ready-for-payment-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("finance_coffee_lots")
+        .select("*", { count: "exact", head: true })
+        .eq("finance_status", "READY_FOR_FINANCE");
+      
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
+  // Fetch total available stock
+  const { data: totalStock } = useQuery({
+    queryKey: ["total-available-stock"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inventory_items")
+        .select("total_kilograms")
+        .eq("status", "available");
+      
+      if (error) throw error;
+      const total = data?.reduce((sum, item) => sum + (item.total_kilograms || 0), 0) || 0;
+      return Math.round(total).toLocaleString();
+    },
+  });
+
+  // Fetch completed assessments today
+  const { data: completedToday } = useQuery({
+    queryKey: ["completed-today"],
+    queryFn: async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const { count, error } = await supabase
+        .from("quality_assessments")
+        .select("*", { count: "exact", head: true })
+        .gte("assessed_at", `${today}T00:00:00`)
+        .lte("assessed_at", `${today}T23:59:59`);
+      
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
   const quickStats = [
     {
       label: "Pending Quality Check",
-      value: "12",
+      value: pendingQualityCount?.toString() || "0",
       icon: Clock,
       color: "text-orange-500",
       bgColor: "bg-orange-500/10"
     },
     {
       label: "Ready for Payment",
-      value: "8",
+      value: readyForPaymentCount?.toString() || "0",
       icon: Wallet,
       color: "text-blue-500",
       bgColor: "bg-blue-500/10"
     },
     {
       label: "Available Stock (kg)",
-      value: "2,450",
+      value: totalStock || "0",
       icon: Warehouse,
       color: "text-green-500",
       bgColor: "bg-green-500/10"
     },
     {
       label: "Completed Today",
-      value: "15",
+      value: completedToday?.toString() || "0",
       icon: CheckCircle2,
       color: "text-primary",
       bgColor: "bg-primary/10"
