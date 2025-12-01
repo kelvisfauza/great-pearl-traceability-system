@@ -181,8 +181,11 @@ const Auth = () => {
 
   const handleSystemSelection = (version: 'v1' | 'v2') => {
     console.log(`✅ User selected ${version.toUpperCase()} system`);
-    // For now, both navigate to home. You can change routes later as needed
-    navigate('/');
+    if (version === 'v2') {
+      navigate('/v2');
+    } else {
+      navigate('/');
+    }
   };
 
   const handleBiometricCancel = () => {
