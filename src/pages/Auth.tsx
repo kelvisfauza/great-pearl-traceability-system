@@ -21,6 +21,7 @@ const Auth = () => {
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [showBiometric, setShowBiometric] = useState(false);
+  const [showSystemSelection, setShowSystemSelection] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -143,9 +144,9 @@ const Auth = () => {
         setShowBiometric(true);
         setLoading(false);
       } else {
-        // Regular user or preview environment - no biometric verification
-        console.log('✅ Login complete, redirecting to home...');
-        navigate('/');
+        // Regular user or preview environment - show system selection
+        console.log('✅ Login complete, showing system selection...');
+        setShowSystemSelection(true);
         setLoading(false);
       }
     } catch (error: any) {
@@ -170,11 +171,17 @@ const Auth = () => {
 
   const handlePasswordChangeComplete = () => {
     setShowPasswordChange(false);
-    navigate('/');
+    setShowSystemSelection(true);
   };
 
   const handleBiometricComplete = () => {
     setShowBiometric(false);
+    setShowSystemSelection(true);
+  };
+
+  const handleSystemSelection = (version: 'v1' | 'v2') => {
+    console.log(`✅ User selected ${version.toUpperCase()} system`);
+    // For now, both navigate to home. You can change routes later as needed
     navigate('/');
   };
 
@@ -193,6 +200,60 @@ const Auth = () => {
           onVerificationComplete={handleBiometricComplete}
           onCancel={handleBiometricCancel}
         />
+      </div>
+    );
+  }
+
+  // Show system selection screen after successful login
+  if (showSystemSelection) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-6">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-white rounded-full shadow-lg">
+                <img 
+                  src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+                  alt="Great Pearl Coffee Factory" 
+                  className="h-16 w-16 object-contain"
+                />
+              </div>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Welcome to Great Pearl Coffee Factory
+            </h1>
+            <p className="text-gray-600">
+              Please select your system version
+            </p>
+          </div>
+
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-xl">
+                Choose System Version
+              </CardTitle>
+              <CardDescription>
+                Select which version of the system you want to use
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                onClick={() => handleSystemSelection('v1')}
+                className="w-full h-20 text-lg"
+                variant="default"
+              >
+                Use V1 System
+              </Button>
+              <Button
+                onClick={() => handleSystemSelection('v2')}
+                className="w-full h-20 text-lg"
+                variant="outline"
+              >
+                Use V2 System
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
