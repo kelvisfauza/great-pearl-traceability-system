@@ -80,15 +80,77 @@ const ReportGenerator = () => {
         pdf.setFontSize(10);
         pdf.setFont('helvetica', 'normal');
         const summary = data.report.summary;
+        
+        // Basic metrics
         for (const [key, value] of Object.entries(summary)) {
-          const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-          pdf.text(`${label}: ${typeof value === 'number' ? value.toLocaleString() : value}`, 15, yPosition);
-          yPosition += 6;
+          if (key.includes('suppliers') && !Array.isArray(value)) {
+            const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            pdf.text(`${label}: ${typeof value === 'number' ? value.toLocaleString() : value}`, 15, yPosition);
+            yPosition += 6;
+          }
           
           if (yPosition > 270) {
             pdf.addPage();
             yPosition = 20;
           }
+        }
+
+        // Top Suppliers Section
+        if (summary.top_5_suppliers && summary.top_5_suppliers.length > 0) {
+          yPosition += 5;
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Top 5 Suppliers by Payment Volume', 15, yPosition);
+          yPosition += 7;
+
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'normal');
+          summary.top_5_suppliers.forEach((supplier: any, index: number) => {
+            const amountFormatted = new Intl.NumberFormat('en-UG', { 
+              style: 'currency', 
+              currency: 'UGX',
+              minimumFractionDigits: 0
+            }).format(supplier.total_amount);
+            
+            pdf.text(`${index + 1}. ${supplier.name}`, 20, yPosition);
+            yPosition += 5;
+            pdf.text(`   Code: ${supplier.supplier_code || 'N/A'} | Payments: ${supplier.payments} | Total: ${amountFormatted}`, 25, yPosition);
+            yPosition += 7;
+            
+            if (yPosition > 270) {
+              pdf.addPage();
+              yPosition = 20;
+            }
+          });
+        }
+
+        // Bottom Suppliers Section
+        if (summary.bottom_5_suppliers && summary.bottom_5_suppliers.length > 0) {
+          yPosition += 5;
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Bottom 5 Suppliers by Payment Volume', 15, yPosition);
+          yPosition += 7;
+
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'normal');
+          summary.bottom_5_suppliers.forEach((supplier: any, index: number) => {
+            const amountFormatted = new Intl.NumberFormat('en-UG', { 
+              style: 'currency', 
+              currency: 'UGX',
+              minimumFractionDigits: 0
+            }).format(supplier.total_amount);
+            
+            pdf.text(`${index + 1}. ${supplier.name}`, 20, yPosition);
+            yPosition += 5;
+            pdf.text(`   Code: ${supplier.supplier_code || 'N/A'} | Payments: ${supplier.payments} | Total: ${amountFormatted}`, 25, yPosition);
+            yPosition += 7;
+            
+            if (yPosition > 270) {
+              pdf.addPage();
+              yPosition = 20;
+            }
+          });
         }
       }
 

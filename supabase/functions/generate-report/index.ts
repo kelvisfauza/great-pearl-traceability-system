@@ -105,10 +105,57 @@ Deno.serve(async (req) => {
       case 'Procurement':
         const suppliers = reportData.data.suppliers || [];
         const contracts = reportData.data.supplier_contracts || [];
+        const paymentRecords = reportData.data.payment_records || [];
+        
+        // Calculate supplier performance metrics
+        const supplierPayments: { [key: string]: { count: number, total: number, supplier: any } } = {};
+        
+        paymentRecords.forEach((payment: any) => {
+          const supplierName = payment.supplier_name;
+          if (!supplierName) return;
+          
+          if (!supplierPayments[supplierName]) {
+            supplierPayments[supplierName] = {
+              count: 0,
+              total: 0,
+              supplier: suppliers.find((s: any) => s.name === supplierName) || { name: supplierName }
+            };
+          }
+          
+          supplierPayments[supplierName].count++;
+          supplierPayments[supplierName].total += Number(payment.amount) || 0;
+        });
+        
+        // Sort suppliers by total payments
+        const sortedSuppliers = Object.values(supplierPayments)
+          .sort((a, b) => b.total - a.total);
+        
+        const topSuppliers = sortedSuppliers.slice(0, 5);
+        const bottomSuppliers = sortedSuppliers.slice(-5).reverse();
+        
         summaryStats = {
           total_suppliers: suppliers.length,
           active_contracts: contracts.filter((c: any) => c.status === 'Active').length,
-          total_contracts: contracts.length
+          total_contracts: contracts.length,
+          total_payments: paymentRecords.length,
+          total_paid_amount: paymentRecords.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0),
+          top_supplier: topSuppliers[0] ? {
+            name: topSuppliers[0].supplier.name,
+            payments: topSuppliers[0].count,
+            total_amount: topSuppliers[0].total
+          } : null,
+          top_5_suppliers: topSuppliers.map((s) => ({
+            name: s.supplier.name,
+            payments: s.count,
+            total_amount: s.total,
+            supplier_code: s.supplier.supplier_code
+          })),
+          bottom_5_suppliers: bottomSuppliers.map((s) => ({
+            name: s.supplier.name,
+            payments: s.count,
+            total_amount: s.total,
+            supplier_code: s.supplier.supplier_code
+          }))
         };
         break;
 
