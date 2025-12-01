@@ -41,6 +41,22 @@ const ReportGenerator = () => {
 
       if (error) throw error;
 
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Failed to generate report');
+      }
+
+      // Create downloadable file
+      const reportContent = JSON.stringify(data.report, null, 2);
+      const blob = new Blob([reportContent], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${template.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
       // Also save to reports table for history
       generateReport.mutate({
         name: `${template.name} - ${new Date().toLocaleDateString()}`,
@@ -49,7 +65,7 @@ const ReportGenerator = () => {
         format: selectedFormat
       });
 
-      toast.success(`${template.name} generated successfully!`);
+      toast.success(`${template.name} generated and downloaded successfully!`);
     } catch (error: any) {
       console.error('Error generating report:', error);
       toast.error(error.message || 'Failed to generate report');
