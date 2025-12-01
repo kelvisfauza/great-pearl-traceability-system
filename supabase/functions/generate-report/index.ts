@@ -107,6 +107,11 @@ Deno.serve(async (req) => {
         const contracts = reportData.data.supplier_contracts || [];
         const paymentRecords = reportData.data.payment_records || [];
         
+        console.log(`📊 Processing Procurement category...`);
+        console.log(`  - Suppliers: ${suppliers.length}`);
+        console.log(`  - Contracts: ${contracts.length}`);
+        console.log(`  - Payment Records: ${paymentRecords.length}`);
+        
         // Calculate supplier performance metrics
         const supplierPayments: { [key: string]: { count: number, total: number, supplier: any } } = {};
         
@@ -126,12 +131,16 @@ Deno.serve(async (req) => {
           supplierPayments[supplierName].total += Number(payment.amount) || 0;
         });
         
+        console.log(`  - Unique suppliers with payments: ${Object.keys(supplierPayments).length}`);
+        
         // Sort suppliers by total payments
         const sortedSuppliers = Object.values(supplierPayments)
           .sort((a, b) => b.total - a.total);
         
         const topSuppliers = sortedSuppliers.slice(0, 5);
         const bottomSuppliers = sortedSuppliers.slice(-5).reverse();
+        
+        console.log(`  - Top supplier: ${topSuppliers[0]?.supplier?.name} with ${topSuppliers[0]?.count} payments`);
         
         summaryStats = {
           total_suppliers: suppliers.length,
@@ -157,6 +166,8 @@ Deno.serve(async (req) => {
             supplier_code: s.supplier.supplier_code
           }))
         };
+        
+        console.log('📈 Procurement Summary Stats:', JSON.stringify(summaryStats, null, 2));
         break;
 
       case 'Inventory':
@@ -200,6 +211,7 @@ Deno.serve(async (req) => {
     };
 
     console.log(`✅ Report generated successfully with ${Object.keys(reportData.data).length} data sources`);
+    console.log('📦 Final Report Summary Keys:', Object.keys(summaryStats).join(', '));
 
     return new Response(
       JSON.stringify(reportResult),

@@ -46,6 +46,10 @@ const ReportGenerator = () => {
         throw new Error(data?.error || 'Failed to generate report');
       }
 
+      console.log('📊 Report data received:', data);
+      console.log('📈 Summary stats:', data.report.summary);
+      console.log('📋 Summary keys:', Object.keys(data.report.summary || {}));
+
       // Generate PDF with company header
       const pdf = new jsPDF();
       const pageWidth = pdf.internal.pageSize.getWidth();
@@ -81,11 +85,12 @@ const ReportGenerator = () => {
         pdf.setFont('helvetica', 'normal');
         const summary = data.report.summary;
         
-        // Basic metrics
+        // Basic metrics - display ALL non-array, non-object values
         for (const [key, value] of Object.entries(summary)) {
-          if (key.includes('suppliers') && !Array.isArray(value)) {
+          if (!Array.isArray(value) && typeof value !== 'object') {
             const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            pdf.text(`${label}: ${typeof value === 'number' ? value.toLocaleString() : value}`, 15, yPosition);
+            const displayValue = typeof value === 'number' ? value.toLocaleString() : String(value);
+            pdf.text(`${label}: ${displayValue}`, 15, yPosition);
             yPosition += 6;
           }
           
