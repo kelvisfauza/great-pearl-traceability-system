@@ -134,7 +134,8 @@ export const useOvertimeAwards = () => {
         department,
         hours,
         minutes,
-        notes
+        notes,
+        currentEmployee: employee
       });
 
       // Calculate total amount (4000 UGX per hour)
@@ -154,6 +155,7 @@ export const useOvertimeAwards = () => {
       };
 
       console.log('🎯 Insert data:', insertData);
+      console.log('🎯 Current user auth:', await supabase.auth.getUser());
 
       const { data, error } = await supabase
         .from('overtime_awards')
@@ -167,7 +169,8 @@ export const useOvertimeAwards = () => {
           message: error.message,
           code: error.code,
           details: error.details,
-          hint: error.hint
+          hint: error.hint,
+          insertData
         });
         throw error;
       }
@@ -206,6 +209,7 @@ export const useOvertimeAwards = () => {
       return false;
     }
   };
+
 
   const claimOvertime = async (awardId: string) => {
     try {
