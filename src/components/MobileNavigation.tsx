@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   Coffee, Users, Package, TrendingUp, Shield, FileText, Settings,
   Truck, BarChart3, DollarSign, ClipboardCheck, MapPin, LineChart,
-  Receipt, UserCheck, Home, X
+  Receipt, UserCheck, Home, X, ArrowRight
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -136,7 +136,17 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
           </ScrollArea>
 
           {/* Footer */}
-          <div className="p-4 border-t border-border">
+          <div className="p-4 border-t border-border space-y-2">
+            <Button
+              variant="outline"
+              className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+              asChild
+            >
+              <Link to="/v2" onClick={onClose}>
+                <ArrowRight className="h-4 w-4 mr-2" />
+                <span className="text-sm font-medium">Switch to V2</span>
+              </Link>
+            </Button>
             <Button
               variant="outline"
               className="w-full justify-start"
