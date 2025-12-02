@@ -37,6 +37,7 @@ import V2Index from "./pages/v2/Index";
 import V2CoffeeReceipts from "./pages/v2/store/CoffeeReceipts";
 import V2PendingLots from "./pages/v2/quality/PendingLots";
 import V2AssessLot from "./pages/v2/quality/AssessLot";
+import V2InventoryIndex from "./pages/v2/inventory/Index";
 
 import FinanceReport from "./pages/reports/FinanceReport";
 import DayBookReport from "./pages/reports/DayBookReport";
@@ -114,6 +115,11 @@ const App: React.ComponentType = () => {
                 <Route path="/v2/quality/assess/:id" element={
                   <ProtectedRoute requiredPermissions={["Quality Control"]}>
                     <V2AssessLot />
+                  </ProtectedRoute>
+                } />
+                <Route path="/v2/inventory" element={
+                  <ProtectedRoute requiredPermissions={["Store Management"]}>
+                    <V2InventoryIndex />
                   </ProtectedRoute>
                 } />
                 
