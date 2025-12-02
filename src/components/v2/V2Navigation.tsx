@@ -4,7 +4,6 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   Package, 
   FlaskConical, 
-  Wallet, 
   Warehouse, 
   ShoppingCart,
   ArrowLeft
@@ -21,7 +20,6 @@ const V2Navigation = () => {
       items: [
         { icon: Package, label: "Store", path: "/v2/store", permission: "Store Management" },
         { icon: FlaskConical, label: "Quality", path: "/v2/quality", permission: "Quality Control" },
-        { icon: Wallet, label: "Finance", path: "/v2/finance", permission: "Finance" },
         { icon: Warehouse, label: "Inventory", path: "/v2/inventory", permission: "Store Management" },
         { icon: ShoppingCart, label: "Sales", path: "/v2/sales", permission: "Sales Marketing" },
       ]

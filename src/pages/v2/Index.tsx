@@ -116,14 +116,6 @@ const V2Index = () => {
       path: "/v2/quality"
     },
     {
-      title: "Finance",
-      description: "Process supplier payments and manage advances",
-      icon: Wallet,
-      color: "text-green-600",
-      bgColor: "bg-green-500/10",
-      path: "/v2/finance"
-    },
-    {
       title: "Inventory",
       description: "Track stock levels and movements",
       icon: Warehouse,
@@ -153,7 +145,7 @@ const V2Index = () => {
             </h1>
           </div>
           <p className="text-muted-foreground text-lg">
-            Store → Quality → Finance → Inventory → Sales
+            Store → Quality → Inventory → Sales
           </p>
         </div>
 
