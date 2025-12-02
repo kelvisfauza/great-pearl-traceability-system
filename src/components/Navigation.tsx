@@ -18,7 +18,8 @@ import {
   LineChart,
   LogOut,
   Receipt,
-  UserCheck
+  UserCheck,
+  ArrowRight
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
@@ -247,6 +248,17 @@ const Navigation = () => {
             </div>
           </div>
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-xs xs:text-sm h-8 xs:h-9 text-blue-600 hover:text-blue-700 hover:bg-blue-50 mb-1"
+          asChild
+        >
+          <Link to="/v2">
+            <ArrowRight className="h-3 w-3 xs:h-4 xs:w-4 mr-1 xs:mr-2 flex-shrink-0" />
+            <span className="truncate">Switch to V2</span>
+          </Link>
+        </Button>
         <Button
           variant="ghost"
           size="sm"
