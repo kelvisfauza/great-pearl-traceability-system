@@ -23,7 +23,7 @@ const PendingLotsTable = () => {
       const { data, error } = await supabase
         .from('coffee_records')
         .select('*')
-        .eq('status', 'PENDING')
+        .eq('status', 'pending')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
