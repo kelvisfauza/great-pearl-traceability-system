@@ -4,19 +4,23 @@ import V2Navigation from "@/components/v2/V2Navigation";
 import { ShoppingCart } from "lucide-react";
 import SalesTransactionsList from "@/components/v2/sales/SalesTransactionsList";
 import NewSaleForm from "@/components/v2/sales/NewSaleForm";
+import PriceTicker from "@/components/PriceTicker";
 
 const SalesIndex = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3">
             <ShoppingCart className="h-8 w-8 text-pink-600" />
-            <h1 className="text-3xl font-bold text-foreground">Sales Management</h1>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Sales Management</h1>
+              <p className="text-muted-foreground mt-1">
+                Manage customer sales and track transactions
+              </p>
+            </div>
           </div>
-          <p className="text-muted-foreground mt-2">
-            Manage customer sales and track transactions
-          </p>
+          <PriceTicker />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

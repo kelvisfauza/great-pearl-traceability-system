@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import V2Navigation from "@/components/v2/V2Navigation";
 import CoffeeReceiptsTable from "@/components/v2/store/CoffeeReceiptsTable";
 import NewCoffeeReceiptDialog from "@/components/v2/store/NewCoffeeReceiptDialog";
+import PriceTicker from "@/components/PriceTicker";
 
 const CoffeeReceipts = () => {
   const [showNewDialog, setShowNewDialog] = useState(false);
@@ -12,11 +13,14 @@ const CoffeeReceipts = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground">Store Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Register and manage coffee receipts
-          </p>
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Store Management</h1>
+            <p className="text-muted-foreground mt-2">
+              Register and manage coffee receipts
+            </p>
+          </div>
+          <PriceTicker />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

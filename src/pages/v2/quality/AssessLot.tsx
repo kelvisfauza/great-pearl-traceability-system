@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import V2Navigation from "@/components/v2/V2Navigation";
 import QualityAssessmentForm from "@/components/v2/quality/QualityAssessmentForm";
+import PriceTicker from "@/components/PriceTicker";
 
 const AssessLot = () => {
   const { id } = useParams();
@@ -44,17 +45,20 @@ const AssessLot = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
-        <div className="mb-6 flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => navigate('/v2/quality')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Quality Assessment</h1>
-            <p className="text-muted-foreground mt-2">
-              Batch: {lot.batch_number}
-            </p>
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="sm" onClick={() => navigate('/v2/quality')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Quality Assessment</h1>
+              <p className="text-muted-foreground mt-2">
+                Batch: {lot.batch_number}
+              </p>
+            </div>
           </div>
+          <PriceTicker />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
