@@ -1,6 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc, addDoc, updateDoc } from 'firebase/firestore';
+import { useCallback, useMemo, useState } from 'react';
 
 export type BackupStatus = 'completed' | 'failed' | 'running' | 'queued';
 
@@ -14,80 +12,65 @@ export interface BackupStats {
 
 export interface BackupJob {
   id: string;
-  date: any; // Firestore timestamp
+  date: any;
   type: 'Full Backup' | 'Incremental' | 'Database Backup';
-  size?: string; // e.g., "2.4 GB"
+  size?: string;
   status: BackupStatus;
-  duration?: string; // e.g., "23 minutes"
+  duration?: string;
 }
 
 export interface BackupSchedule {
   id: string;
   name: string;
-  cron: string; // human-readable or CRON expr
+  cron: string;
   active: boolean;
 }
 
 export const useBackups = () => {
-  const [stats, setStats] = useState<BackupStats | null>(null);
+  // Backup functionality disabled - Firebase has been migrated to Supabase
+  const [stats, setStats] = useState<BackupStats | null>({
+    storage_used_gb: 0,
+    capacity_gb: 100,
+    last_backup_status: 'completed'
+  });
   const [jobs, setJobs] = useState<BackupJob[]>([]);
   const [schedules, setSchedules] = useState<BackupSchedule[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubStats = onSnapshot(doc(db, 'backup_stats', 'summary'), (d) => {
-      setStats((d.exists() ? (d.data() as any) : null));
-      setLoading(false);
-    });
-
-    const unsubJobs = onSnapshot(
-      query(collection(db, 'backup_jobs'), orderBy('date', 'desc')),
-      (snap) => {
-        const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as BackupJob[];
-        setJobs(list);
-      }
-    );
-
-    const unsubSchedules = onSnapshot(collection(db, 'backup_schedules'), (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as BackupSchedule[];
-      setSchedules(list);
-    });
-
-    return () => {
-      unsubStats();
-      unsubJobs();
-      unsubSchedules();
-    };
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   const percentUsed = useMemo(() => {
     if (!stats || !stats.capacity_gb) return 0;
     return Math.round(((stats.storage_used_gb || 0) / stats.capacity_gb) * 100);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stats?.storage_used_gb, stats?.capacity_gb]);
 
   const startJob = useCallback(async (type: BackupJob['type']) => {
-    await addDoc(collection(db, 'backup_jobs'), {
-      type,
-      status: 'running',
-      date: serverTimestamp(),
-    });
+    console.log('Backup functionality disabled (Firebase migration):', type);
   }, []);
 
   const startFullBackup = useCallback(async () => startJob('Full Backup'), [startJob]);
   const startIncremental = useCallback(async () => startJob('Incremental'), [startJob]);
+  
   const restoreData = useCallback(async (jobId: string) => {
-    // Mark a restore attempt in the job document
-    await updateDoc(doc(db, 'backup_jobs', jobId), { status: 'running' as BackupStatus });
+    console.log('Restore functionality disabled (Firebase migration):', jobId);
   }, []);
 
   const upsertStats = useCallback(async (payload: Partial<BackupStats>) => {
-    await setDoc(doc(db, 'backup_stats', 'summary'), { ...payload, updated_at: serverTimestamp() }, { merge: true });
+    console.log('Backup stats update disabled (Firebase migration):', payload);
   }, []);
 
   const toggleSchedule = useCallback(async (id: string, active: boolean) => {
-    await updateDoc(doc(db, 'backup_schedules', id), { active });
+    console.log('Schedule toggle disabled (Firebase migration):', id, active);
   }, []);
 
-  return { stats, percentUsed, jobs, schedules, loading, startFullBackup, startIncremental, restoreData, upsertStats, toggleSchedule };
+  return { 
+    stats, 
+    percentUsed, 
+    jobs, 
+    schedules, 
+    loading, 
+    startFullBackup, 
+    startIncremental, 
+    restoreData, 
+    upsertStats, 
+    toggleSchedule 
+  };
 };

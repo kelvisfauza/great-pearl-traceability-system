@@ -29,7 +29,7 @@ const ReferencePriceInput: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  // Update local state when Firebase data changes
+  // Update local state when Supabase data changes
   useEffect(() => {
     setPrices({
       iceArabica: currentPrices.iceArabica,
@@ -56,13 +56,13 @@ const ReferencePriceInput: React.FC = () => {
       
       toast({
         title: "Reference Prices Updated",
-        description: "New reference prices have been saved to Firebase successfully"
+        description: "New reference prices have been saved successfully"
       });
     } catch (error) {
       console.error('Error saving prices:', error);
       toast({
         title: "Error",
-        description: "Failed to save reference prices to Firebase",
+        description: "Failed to save reference prices",
         variant: "destructive"
       });
     } finally {
@@ -169,7 +169,7 @@ const ReferencePriceInput: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4">
           <Button onClick={handleSave} disabled={loading || hookLoading}>
-            {loading ? 'Saving to Firebase...' : 'Save Reference Prices'}
+            {loading ? 'Saving...' : 'Save Reference Prices'}
           </Button>
           <Button variant="outline" onClick={handleReset}>
             Reset to Defaults
