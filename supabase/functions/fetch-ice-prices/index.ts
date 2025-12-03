@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,7 +37,6 @@ serve(async (req) => {
       console.log('📊 Arabica meta:', JSON.stringify(arabicaData?.chart?.result?.[0]?.meta).substring(0, 300));
       
       const meta = arabicaData?.chart?.result?.[0]?.meta;
-      // regularMarketPrice is the current live price
       const price = meta?.regularMarketPrice;
       if (price) {
         iceArabica = parseFloat(price.toFixed(2));
@@ -58,6 +58,68 @@ serve(async (req) => {
       }
     } else {
       console.error('❌ Failed to fetch Robusta:', robustaResponse.status);
+    }
+
+    // Save to database if we have prices
+    if (iceArabica || iceRobusta) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      const today = new Date().toISOString().split('T')[0];
+
+      // Check if we have a record for today
+      const { data: existing } = await supabase
+        .from('price_history')
+        .select('id')
+        .eq('price_date', today)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing record
+        const updateData: Record<string, number> = {};
+        if (iceArabica) updateData.ice_arabica = iceArabica;
+        if (iceRobusta) updateData.robusta_international = iceRobusta;
+
+        const { error } = await supabase
+          .from('price_history')
+          .update(updateData)
+          .eq('id', existing.id);
+
+        if (error) {
+          console.error('❌ Error updating price history:', error);
+        } else {
+          console.log('✅ Updated price_history for today');
+        }
+      } else {
+        // Insert new record with ICE prices
+        const { error } = await supabase
+          .from('price_history')
+          .insert({
+            price_date: today,
+            ice_arabica: iceArabica || 0,
+            robusta_international: iceRobusta || 0,
+            arabica_outturn: 0,
+            arabica_moisture: 0,
+            arabica_fm: 0,
+            arabica_buying_price: 0,
+            robusta_outturn: 0,
+            robusta_moisture: 0,
+            robusta_fm: 0,
+            robusta_buying_price: 0,
+            exchange_rate: 0,
+            drugar_local: 0,
+            wugar_local: 0,
+            robusta_faq_local: 0,
+            recorded_by: 'system-auto-fetch'
+          });
+
+        if (error) {
+          console.error('❌ Error inserting price history:', error);
+        } else {
+          console.log('✅ Inserted new price_history for today');
+        }
+      }
     }
 
     const result = {
