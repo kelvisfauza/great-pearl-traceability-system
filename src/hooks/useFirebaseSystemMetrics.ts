@@ -51,18 +51,27 @@ export const useFirebaseSystemMetrics = () => {
 
     try {
       const metricsQuery = query(collection(db, 'system_metrics'), orderBy('updated_at', 'desc'));
-      const unsubscribe = onSnapshot(metricsQuery, (snapshot) => {
-        const metricsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as SystemMetric[];
-        setMetrics(metricsData);
-        setLoading(false);
-      });
+      const unsubscribe = onSnapshot(metricsQuery, 
+        (snapshot) => {
+          const metricsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as SystemMetric[];
+          setMetrics(metricsData);
+          setLoading(false);
+        },
+        (error) => {
+          // Silently handle missing collection - don't show error toast
+          console.log('System metrics collection not available:', error.code);
+          setMetrics([]);
+          setLoading(false);
+        }
+      );
       return unsubscribe;
     } catch (error) {
-      console.error('Error listening to system metrics:', error);
-      toast({ title: 'Error', description: 'Failed to listen for system metrics', variant: 'destructive' });
+      console.log('Error setting up metrics listener:', error);
+      setMetrics([]);
+      setLoading(false);
       return () => {};
     }
   };
@@ -73,18 +82,27 @@ export const useFirebaseSystemMetrics = () => {
 
     try {
       const servicesQuery = query(collection(db, 'system_services'), orderBy('name', 'asc'));
-      const unsubscribe = onSnapshot(servicesQuery, (snapshot) => {
-        const servicesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as SystemService[];
-        setServices(servicesData);
-        setLoading(false);
-      });
+      const unsubscribe = onSnapshot(servicesQuery, 
+        (snapshot) => {
+          const servicesData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as SystemService[];
+          setServices(servicesData);
+          setLoading(false);
+        },
+        (error) => {
+          // Silently handle missing collection
+          console.log('System services collection not available:', error.code);
+          setServices([]);
+          setLoading(false);
+        }
+      );
       return unsubscribe;
     } catch (error) {
-      console.error('Error listening to system services:', error);
-      toast({ title: 'Error', description: 'Failed to listen for system services', variant: 'destructive' });
+      console.log('Error setting up services listener:', error);
+      setServices([]);
+      setLoading(false);
       return () => {};
     }
   };
@@ -99,23 +117,26 @@ export const useFirebaseSystemMetrics = () => {
         orderBy('timestamp', 'desc')
       );
       
-      const unsubscribe = onSnapshot(activitiesQuery, (snapshot) => {
-        const activitiesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as SystemActivity[];
-        
-        setActivities(activitiesData.slice(0, 10)); // Only keep latest 10 activities
-      });
+      const unsubscribe = onSnapshot(activitiesQuery, 
+        (snapshot) => {
+          const activitiesData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as SystemActivity[];
+          
+          setActivities(activitiesData.slice(0, 10));
+        },
+        (error) => {
+          // Silently handle missing collection
+          console.log('System activities collection not available:', error.code);
+          setActivities([]);
+        }
+      );
 
       return unsubscribe;
     } catch (error) {
-      console.error('Error setting up activities listener:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch system activities",
-        variant: "destructive"
-      });
+      console.log('Error setting up activities listener:', error);
+      setActivities([]);
     }
   };
 
