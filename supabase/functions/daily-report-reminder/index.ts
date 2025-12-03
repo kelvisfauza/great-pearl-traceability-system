@@ -82,7 +82,7 @@ serve(async (req) => {
         continue;
       }
 
-      const message = `Dear ${emp.name}, please submit your daily report for ${today} before 7 PM. Login to the system at https://great-pearl-coffee.lovable.app, go to "Daily Reports" from the menu, and click "New Report" to submit. - Great Pearl Coffee`;
+      const message = `Dear ${emp.name}, please submit your daily report for ${today} before 7 PM. Login at www.greatpearlcoffeesystem.site, go to "Daily Reports" and click "New Report". - Great Pearl Coffee`;
 
       try {
         // Send SMS
