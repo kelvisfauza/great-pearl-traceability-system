@@ -52,6 +52,8 @@ import GenerateReport from "./pages/reports/GenerateReport";
 import FieldOperationsReport from "./pages/reports/FieldOperationsReport";
 import ComparisonReport from "./pages/reports/ComparisonReport";
 import SystemSettings from "./pages/admin/SystemSettings";
+import UserDailyReports from "./pages/UserDailyReports";
+import { DailyReportReminder } from "./components/reports/DailyReportReminder";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 import { OvertimeNotification } from "./components/OvertimeNotification";
 import RoleNotificationHandler from "./components/RoleNotificationHandler";
@@ -90,8 +92,9 @@ const App: React.ComponentType = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              {/* OvertimeNotification moved inside Router context */}
+              {/* Global notifications and reminders */}
               <OvertimeNotification />
+              <DailyReportReminder />
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
               <Routes>
@@ -234,6 +237,11 @@ const App: React.ComponentType = () => {
                 <Route path="/suppliers" element={
                   <ProtectedRoute>
                     <Suppliers />
+                  </ProtectedRoute>
+                } />
+                <Route path="/user-daily-reports" element={
+                  <ProtectedRoute>
+                    <UserDailyReports />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports/finance" element={

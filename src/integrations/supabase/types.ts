@@ -1258,6 +1258,48 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_daily_reports: {
+        Row: {
+          created_at: string
+          department: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          report_data: Json
+          report_date: string
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          report_data?: Json
+          report_date?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          report_data?: Json
+          report_date?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           address: string | null
