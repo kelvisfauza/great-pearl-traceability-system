@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,33 +6,93 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { getQuestionsForDepartment, ReportQuestion } from '@/config/departmentReportQuestions';
-import { FileText, Send, Clock } from 'lucide-react';
+import { departmentQuestions, getQuestionsForDepartment, ReportQuestion } from '@/config/departmentReportQuestions';
+import { FileText, Send, Clock, Users } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface DailyReportFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  reportDate?: string; // For missed reports
+  reportDate?: string;
   onSuccess?: () => void;
 }
+
+// All available departments for cross-support
+const ALL_DEPARTMENTS = [
+  'Quality Control',
+  'Store',
+  'Finance',
+  'Sales',
+  'Human Resources',
+  'Administration',
+  'Data Analysis',
+  'Field Operations',
+  'Operations',
+  'EUDR Documentation',
+  'Support Staff',
+  'IT',
+];
 
 export const DailyReportForm = ({ open, onOpenChange, reportDate, onSuccess }: DailyReportFormProps) => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Record<string, string | number>>({});
+  const [supportedDepartments, setSupportedDepartments] = useState<string[]>([]);
 
-  const department = employee?.department || 'Default';
-  const questions = getQuestionsForDepartment(department);
+  const primaryDepartment = employee?.department || 'Default';
+  const primaryQuestions = getQuestionsForDepartment(primaryDepartment);
   const dateForReport = reportDate || format(new Date(), 'yyyy-MM-dd');
   const isBackdatedReport = reportDate && reportDate !== format(new Date(), 'yyyy-MM-dd');
 
+  // Get available departments (exclude employee's primary department)
+  const availableDepartments = useMemo(() => {
+    return ALL_DEPARTMENTS.filter(dept => 
+      dept.toLowerCase() !== primaryDepartment.toLowerCase()
+    );
+  }, [primaryDepartment]);
+
+  // Get all questions including supported departments
+  const allQuestions = useMemo(() => {
+    const questions: { department: string; questions: ReportQuestion[] }[] = [
+      { department: primaryDepartment, questions: primaryQuestions }
+    ];
+
+    supportedDepartments.forEach(dept => {
+      const deptQuestions = departmentQuestions[dept];
+      if (deptQuestions) {
+        questions.push({ department: dept, questions: deptQuestions });
+      }
+    });
+
+    return questions;
+  }, [primaryDepartment, primaryQuestions, supportedDepartments]);
+
   const handleInputChange = (questionId: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [questionId]: value }));
+  };
+
+  const handleDepartmentToggle = (department: string, checked: boolean) => {
+    if (checked) {
+      setSupportedDepartments(prev => [...prev, department]);
+    } else {
+      setSupportedDepartments(prev => prev.filter(d => d !== department));
+      // Clear data for that department's questions
+      const deptQuestions = departmentQuestions[department];
+      if (deptQuestions) {
+        setFormData(prev => {
+          const newData = { ...prev };
+          deptQuestions.forEach(q => {
+            delete newData[`${department}_${q.id}`];
+          });
+          return newData;
+        });
+      }
+    }
   };
 
   const handleSubmit = async () => {
@@ -41,8 +101,8 @@ export const DailyReportForm = ({ open, onOpenChange, reportDate, onSuccess }: D
       return;
     }
 
-    // Validate required fields
-    const missingRequired = questions
+    // Validate required fields for primary department only
+    const missingRequired = primaryQuestions
       .filter(q => q.required && !formData[q.id])
       .map(q => q.label);
 
@@ -57,13 +117,19 @@ export const DailyReportForm = ({ open, onOpenChange, reportDate, onSuccess }: D
 
     setLoading(true);
     try {
+      // Include supported departments in report data
+      const reportDataWithDepts = {
+        ...formData,
+        supported_departments: supportedDepartments,
+      };
+
       const { error } = await supabase.from('employee_daily_reports').upsert({
         employee_id: employee.id,
         employee_name: employee.name,
         employee_email: employee.email,
         department: employee.department,
         report_date: dateForReport,
-        report_data: formData,
+        report_data: reportDataWithDepts,
         status: 'submitted',
         submitted_at: new Date().toISOString(),
       }, {
@@ -78,6 +144,7 @@ export const DailyReportForm = ({ open, onOpenChange, reportDate, onSuccess }: D
       });
 
       setFormData({});
+      setSupportedDepartments([]);
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
@@ -92,17 +159,18 @@ export const DailyReportForm = ({ open, onOpenChange, reportDate, onSuccess }: D
     }
   };
 
-  const renderQuestion = (question: ReportQuestion) => {
-    const value = formData[question.id] || '';
+  const renderQuestion = (question: ReportQuestion, prefix: string = '') => {
+    const fieldId = prefix ? `${prefix}_${question.id}` : question.id;
+    const value = formData[fieldId] || '';
 
     switch (question.type) {
       case 'number':
         return (
           <Input
             type="number"
-            id={question.id}
+            id={fieldId}
             value={value}
-            onChange={(e) => handleInputChange(question.id, e.target.value ? Number(e.target.value) : '')}
+            onChange={(e) => handleInputChange(fieldId, e.target.value ? Number(e.target.value) : '')}
             placeholder={question.placeholder || '0'}
             className="mt-1"
           />
@@ -110,9 +178,9 @@ export const DailyReportForm = ({ open, onOpenChange, reportDate, onSuccess }: D
       case 'textarea':
         return (
           <Textarea
-            id={question.id}
+            id={fieldId}
             value={value}
-            onChange={(e) => handleInputChange(question.id, e.target.value)}
+            onChange={(e) => handleInputChange(fieldId, e.target.value)}
             placeholder={question.placeholder}
             className="mt-1 min-h-[80px]"
           />
@@ -121,7 +189,7 @@ export const DailyReportForm = ({ open, onOpenChange, reportDate, onSuccess }: D
         return (
           <Select
             value={value as string}
-            onValueChange={(val) => handleInputChange(question.id, val)}
+            onValueChange={(val) => handleInputChange(fieldId, val)}
           >
             <SelectTrigger className="mt-1">
               <SelectValue placeholder="Select an option" />
@@ -139,9 +207,9 @@ export const DailyReportForm = ({ open, onOpenChange, reportDate, onSuccess }: D
         return (
           <Input
             type="text"
-            id={question.id}
+            id={fieldId}
             value={value}
-            onChange={(e) => handleInputChange(question.id, e.target.value)}
+            onChange={(e) => handleInputChange(fieldId, e.target.value)}
             placeholder={question.placeholder}
             className="mt-1"
           />
@@ -155,7 +223,7 @@ export const DailyReportForm = ({ open, onOpenChange, reportDate, onSuccess }: D
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            Daily Report - {department}
+            Daily Report - {primaryDepartment}
           </DialogTitle>
           <DialogDescription className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
@@ -168,14 +236,55 @@ export const DailyReportForm = ({ open, onOpenChange, reportDate, onSuccess }: D
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="space-y-4 py-2">
-            {questions.map((question) => (
-              <div key={question.id} className="space-y-1">
-                <Label htmlFor={question.id} className="flex items-center gap-1">
-                  {question.label}
-                  {question.required && <span className="text-destructive">*</span>}
-                </Label>
-                {renderQuestion(question)}
+          <div className="space-y-6 py-2">
+            {/* Supported Departments Section */}
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Users className="h-4 w-4" />
+                Did you support any other department today?
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {availableDepartments.map((dept) => (
+                  <div key={dept} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`dept-${dept}`}
+                      checked={supportedDepartments.includes(dept)}
+                      onCheckedChange={(checked) => handleDepartmentToggle(dept, checked as boolean)}
+                    />
+                    <label
+                      htmlFor={`dept-${dept}`}
+                      className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {dept}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Questions by Department */}
+            {allQuestions.map(({ department, questions }, index) => (
+              <div key={department} className="space-y-4">
+                {index > 0 && (
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm font-semibold text-primary mb-3">
+                      {department} Support
+                    </h3>
+                  </div>
+                )}
+                {questions.map((question) => {
+                  const isSupported = index > 0;
+                  const prefix = isSupported ? department : '';
+                  return (
+                    <div key={`${department}-${question.id}`} className="space-y-1">
+                      <Label htmlFor={prefix ? `${prefix}_${question.id}` : question.id} className="flex items-center gap-1">
+                        {question.label}
+                        {question.required && !isSupported && <span className="text-destructive">*</span>}
+                      </Label>
+                      {renderQuestion(question, prefix)}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
