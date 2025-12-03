@@ -1,78 +1,41 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import Layout from '@/components/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { RefreshCcw, Plus } from 'lucide-react';
 import MarketMonitor from '@/components/analyst/MarketMonitor';
 import ProcurementAdvisory from '@/components/analyst/ProcurementAdvisory';
 import OutturnSimulator from '@/components/analyst/OutturnSimulator';
 import PriceRecommendationPanel from '@/components/analyst/PriceRecommendationPanel';
 import TrendAnalysisPanel from '@/components/analyst/TrendAnalysisPanel';
-import { PriceUpdateModal } from '@/components/analyst/PriceUpdateModal';
+import ReferencePriceInput from '@/components/analyst/ReferencePriceInput';
+import PriceOverview from '@/components/analyst/PriceOverview';
+import PriceTrendsChart from '@/components/analyst/PriceTrendsChart';
 
 const DataAnalyst = () => {
-  const [priceUpdateModalOpen, setPriceUpdateModalOpen] = useState(false);
-
   return (
-    <Layout title="Data Analytics" subtitle="Advanced market analysis and pricing intelligence">
-      <div className="mb-4 flex justify-start gap-2">
-        <Button 
-          variant="outline"
-          onClick={async () => {
-            const testMessage = `Great Pearl Coffee updates\nToday: ${new Date().toLocaleDateString('en-GB')}\n\nArabica Price Update:\nOutturn:        70%\nMoisture:     12.5%\nFM:              5%\nPrice:  UGX 8,500/kg\n\nDeliver now to get served best.`;
-            try {
-              console.log('📱 Sending test SMS to 0781121639');
-              const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
-                },
-                body: JSON.stringify({
-                  phone: '0781121639',
-                  message: testMessage,
-                  userName: 'Test User',
-                  messageType: 'price_update',
-                  triggeredBy: 'Data Analyst Test',
-                  department: 'Analyst'
-                })
-              });
-              const result = await response.json();
-              console.log('✅ Test SMS result:', result);
-            } catch (error) {
-              console.error('❌ Test SMS error:', error);
-            }
-          }}
-        >
-          Test SMS
-        </Button>
-        <Button onClick={() => setPriceUpdateModalOpen(true)}>
-          <RefreshCcw className="h-4 w-4 mr-2" />
-          Update Market Prices
-        </Button>
-      </div>
-
-      <PriceUpdateModal 
-        open={priceUpdateModalOpen} 
-        onOpenChange={setPriceUpdateModalOpen}
-      />
-
-      <Tabs defaultValue="price-recommendations" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="price-recommendations">Price Recommendations</TabsTrigger>
-          <TabsTrigger value="trend-analysis">Trend Analysis</TabsTrigger>
+    <Layout title="Data Analytics" subtitle="Market analysis, pricing intelligence & price management">
+      <Tabs defaultValue="price-overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="price-overview">Price Overview</TabsTrigger>
+          <TabsTrigger value="set-prices">Set Prices</TabsTrigger>
+          <TabsTrigger value="price-trends">Price Trends</TabsTrigger>
           <TabsTrigger value="market-monitor">Market Monitor</TabsTrigger>
-          <TabsTrigger value="procurement">Procurement Advisory</TabsTrigger>
+          <TabsTrigger value="procurement">Procurement</TabsTrigger>
           <TabsTrigger value="outturn">Outturn Simulator</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="price-recommendations">
-          <PriceRecommendationPanel />
+        <TabsContent value="price-overview">
+          <PriceOverview />
         </TabsContent>
 
-        <TabsContent value="trend-analysis">
-          <TrendAnalysisPanel />
+        <TabsContent value="set-prices">
+          <ReferencePriceInput />
+        </TabsContent>
+
+        <TabsContent value="price-trends">
+          <div className="space-y-6">
+            <PriceTrendsChart />
+            <TrendAnalysisPanel />
+          </div>
         </TabsContent>
 
         <TabsContent value="market-monitor">
@@ -80,7 +43,10 @@ const DataAnalyst = () => {
         </TabsContent>
 
         <TabsContent value="procurement">
-          <ProcurementAdvisory />
+          <div className="space-y-6">
+            <ProcurementAdvisory />
+            <PriceRecommendationPanel />
+          </div>
         </TabsContent>
 
         <TabsContent value="outturn">
