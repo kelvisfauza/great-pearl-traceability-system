@@ -2460,12 +2460,16 @@ export type Database = {
       }
       market_prices: {
         Row: {
+          buying_price: number | null
           created_at: string | null
           drugar_local: number
           exchange_rate: number
+          fm: number | null
           ice_arabica: number
           id: string
           last_updated: string | null
+          moisture: number | null
+          outturn: number | null
           price_type: string
           robusta: number
           robusta_faq_local: number
@@ -2473,12 +2477,16 @@ export type Database = {
           wugar_local: number
         }
         Insert: {
+          buying_price?: number | null
           created_at?: string | null
           drugar_local?: number
           exchange_rate?: number
+          fm?: number | null
           ice_arabica?: number
           id?: string
           last_updated?: string | null
+          moisture?: number | null
+          outturn?: number | null
           price_type?: string
           robusta?: number
           robusta_faq_local?: number
@@ -2486,12 +2494,16 @@ export type Database = {
           wugar_local?: number
         }
         Update: {
+          buying_price?: number | null
           created_at?: string | null
           drugar_local?: number
           exchange_rate?: number
+          fm?: number | null
           ice_arabica?: number
           id?: string
           last_updated?: string | null
+          moisture?: number | null
+          outturn?: number | null
           price_type?: string
           robusta?: number
           robusta_faq_local?: number

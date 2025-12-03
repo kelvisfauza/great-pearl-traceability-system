@@ -8,6 +8,10 @@ interface ReferencePrices {
   drugarLocal: number;
   wugarLocal: number;
   robustaFaqLocal: number;
+  outturn: number;
+  moisture: number;
+  fm: number;
+  buyingPrice: number;
   lastUpdated?: string;
 }
 
@@ -18,7 +22,11 @@ export const useReferencePrices = () => {
     exchangeRate: 3750,
     drugarLocal: 8500,
     wugarLocal: 8200,
-    robustaFaqLocal: 7800
+    robustaFaqLocal: 7800,
+    outturn: 70,
+    moisture: 12.5,
+    fm: 5,
+    buyingPrice: 8500
   });
   const [loading, setLoading] = useState(false);
 
@@ -45,6 +53,10 @@ export const useReferencePrices = () => {
           drugarLocal: data.drugar_local || 8500,
           wugarLocal: data.wugar_local || 8200,
           robustaFaqLocal: data.robusta_faq_local || 7800,
+          outturn: data.outturn || 70,
+          moisture: data.moisture || 12.5,
+          fm: data.fm || 5,
+          buyingPrice: data.buying_price || 8500,
           lastUpdated: data.last_updated
         });
       }
@@ -69,6 +81,10 @@ export const useReferencePrices = () => {
         drugar_local: newPrices.drugarLocal,
         wugar_local: newPrices.wugarLocal,
         robusta_faq_local: newPrices.robustaFaqLocal,
+        outturn: newPrices.outturn,
+        moisture: newPrices.moisture,
+        fm: newPrices.fm,
+        buying_price: newPrices.buyingPrice,
         last_updated: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -158,6 +174,10 @@ export const useReferencePrices = () => {
               drugarLocal: data.drugar_local || 8500,
               wugarLocal: data.wugar_local || 8200,
               robustaFaqLocal: data.robusta_faq_local || 7800,
+              outturn: data.outturn || 70,
+              moisture: data.moisture || 12.5,
+              fm: data.fm || 5,
+              buyingPrice: data.buying_price || 8500,
               lastUpdated: data.last_updated
             });
           }
