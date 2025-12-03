@@ -3273,6 +3273,69 @@ export type Database = {
         }
         Relationships: []
       }
+      price_history: {
+        Row: {
+          arabica_buying_price: number | null
+          arabica_fm: number | null
+          arabica_moisture: number | null
+          arabica_outturn: number | null
+          created_at: string | null
+          drugar_local: number | null
+          exchange_rate: number | null
+          ice_arabica: number | null
+          id: string
+          price_date: string
+          recorded_by: string | null
+          robusta_buying_price: number | null
+          robusta_faq_local: number | null
+          robusta_fm: number | null
+          robusta_international: number | null
+          robusta_moisture: number | null
+          robusta_outturn: number | null
+          wugar_local: number | null
+        }
+        Insert: {
+          arabica_buying_price?: number | null
+          arabica_fm?: number | null
+          arabica_moisture?: number | null
+          arabica_outturn?: number | null
+          created_at?: string | null
+          drugar_local?: number | null
+          exchange_rate?: number | null
+          ice_arabica?: number | null
+          id?: string
+          price_date?: string
+          recorded_by?: string | null
+          robusta_buying_price?: number | null
+          robusta_faq_local?: number | null
+          robusta_fm?: number | null
+          robusta_international?: number | null
+          robusta_moisture?: number | null
+          robusta_outturn?: number | null
+          wugar_local?: number | null
+        }
+        Update: {
+          arabica_buying_price?: number | null
+          arabica_fm?: number | null
+          arabica_moisture?: number | null
+          arabica_outturn?: number | null
+          created_at?: string | null
+          drugar_local?: number | null
+          exchange_rate?: number | null
+          ice_arabica?: number | null
+          id?: string
+          price_date?: string
+          recorded_by?: string | null
+          robusta_buying_price?: number | null
+          robusta_faq_local?: number | null
+          robusta_fm?: number | null
+          robusta_international?: number | null
+          robusta_moisture?: number | null
+          robusta_outturn?: number | null
+          wugar_local?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
