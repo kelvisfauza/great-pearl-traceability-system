@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight, ClipboardList } from "lucide-react";
 import KeyMetrics from "@/components/reports/KeyMetrics";
 import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
 
@@ -86,6 +86,13 @@ const Reports = () => {
   ];
 
   if (isAdmin) {
+    reportCards.push({
+      title: "Staff Daily Reports",
+      description: "View all employee daily reports",
+      icon: ClipboardList,
+      path: "/user-daily-reports",
+      color: "text-amber-600"
+    });
     reportCards.push({
       title: "Field Operations",
       description: "Manage field operations",
