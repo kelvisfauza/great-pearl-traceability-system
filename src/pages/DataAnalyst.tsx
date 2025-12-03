@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MarketMonitor from '@/components/analyst/MarketMonitor';
@@ -10,11 +10,20 @@ import ReferencePriceInput from '@/components/analyst/ReferencePriceInput';
 import PriceOverview from '@/components/analyst/PriceOverview';
 import PriceTrendsChart from '@/components/analyst/PriceTrendsChart';
 import DailyMarketReport from '@/components/analyst/DailyMarketReport';
+import AnalystDailyReminders from '@/components/analyst/AnalystDailyReminders';
 
 const DataAnalyst = () => {
+  const [activeTab, setActiveTab] = useState('price-overview');
+
   return (
     <Layout title="Data Analytics" subtitle="Market analysis, pricing intelligence & price management">
-      <Tabs defaultValue="price-overview" className="space-y-6">
+      {/* Daily reminders for data analyst */}
+      <AnalystDailyReminders 
+        onNavigateToSetPrices={() => setActiveTab('set-prices')}
+        onNavigateToDailyReports={() => setActiveTab('daily-reports')}
+      />
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="price-overview">Price Overview</TabsTrigger>
           <TabsTrigger value="set-prices">Set Prices</TabsTrigger>
