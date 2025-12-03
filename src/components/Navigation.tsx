@@ -137,15 +137,10 @@ const Navigation = () => {
         // If no permission required, show to everyone
         if (!item.permission) return true;
         
-        // Special handling for Reports - only show to Managers and Administrators
-        if (item.permission === 'Reports') {
-          return hasRole('Manager') || hasRole('Administrator') || hasRole('Super Admin');
-        }
-        
         // If user is admin, show everything
         if (isAdmin()) return true;
         
-        // Check if user has the specific permission
+        // Check if user has the specific permission (includes granular like :view)
         return hasPermission(item.permission);
       })
     })).filter(section => section.items.length > 0); // Remove empty sections
