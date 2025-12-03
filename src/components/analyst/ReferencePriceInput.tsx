@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Coffee } from 'lucide-react';
+import { Loader2, Coffee, Send } from 'lucide-react';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -47,6 +47,7 @@ const ReferencePriceInput: React.FC = () => {
     robustaBuyingPrice: 7800
   });
   const [loading, setLoading] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
   const [sendNotification, setSendNotification] = useState(false);
 
   useEffect(() => {
@@ -167,6 +168,52 @@ const ReferencePriceInput: React.FC = () => {
       robustaFm: 3,
       robustaBuyingPrice: 7800
     });
+  };
+
+  const handleTestSMS = async () => {
+    try {
+      setTestLoading(true);
+      const date = new Date().toLocaleDateString('en-GB');
+      const message = `Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256778536681`;
+
+      console.log('📱 Sending test SMS to 0781121639');
+      console.log('Message:', message);
+
+      const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
+        },
+        body: JSON.stringify({
+          phone: '0781121639',
+          message: message,
+          userName: 'Test User',
+          messageType: 'price_update_test',
+          triggeredBy: 'Data Analyst',
+          department: 'Analyst'
+        })
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        toast({
+          title: "Test SMS Sent",
+          description: "SMS sent to 0781121639 - check your phone!"
+        });
+      } else {
+        throw new Error(result.error || 'Failed to send test SMS');
+      }
+    } catch (error) {
+      console.error('Error sending test SMS:', error);
+      toast({
+        title: "Test SMS Failed",
+        description: "Could not send test SMS",
+        variant: "destructive"
+      });
+    } finally {
+      setTestLoading(false);
+    }
   };
 
   return (
@@ -370,13 +417,25 @@ const ReferencePriceInput: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3 pt-4">
+        <div className="flex flex-wrap gap-3 pt-4">
           <Button onClick={handleSave} disabled={loading || hookLoading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {loading ? 'Saving...' : 'Save Reference Prices'}
           </Button>
           <Button variant="outline" onClick={handleReset}>
             Reset to Defaults
+          </Button>
+          <Button 
+            variant="secondary" 
+            onClick={handleTestSMS} 
+            disabled={testLoading}
+          >
+            {testLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="mr-2 h-4 w-4" />
+            )}
+            {testLoading ? 'Sending...' : 'Test SMS (0781121639)'}
           </Button>
         </div>
       </CardContent>
