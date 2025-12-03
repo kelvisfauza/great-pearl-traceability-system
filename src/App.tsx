@@ -38,6 +38,7 @@ import V2CoffeeReceipts from "./pages/v2/store/CoffeeReceipts";
 import V2PendingLots from "./pages/v2/quality/PendingLots";
 import V2AssessLot from "./pages/v2/quality/AssessLot";
 import V2InventoryIndex from "./pages/v2/inventory/Index";
+import V2SalesIndex from "./pages/v2/sales/Index";
 
 import FinanceReport from "./pages/reports/FinanceReport";
 import DayBookReport from "./pages/reports/DayBookReport";
@@ -120,6 +121,11 @@ const App: React.ComponentType = () => {
                 <Route path="/v2/inventory" element={
                   <ProtectedRoute requiredPermissions={["Store Management"]}>
                     <V2InventoryIndex />
+                  </ProtectedRoute>
+                } />
+                <Route path="/v2/sales" element={
+                  <ProtectedRoute requiredPermissions={["Sales Marketing"]}>
+                    <V2SalesIndex />
                   </ProtectedRoute>
                 } />
                 
