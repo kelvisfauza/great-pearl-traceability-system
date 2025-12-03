@@ -123,6 +123,44 @@ export const departmentQuestions: Record<string, ReportQuestion[]> = {
     { id: 'comments', label: 'Additional Comments', type: 'textarea' },
   ],
   
+  'EUDR Documentation': [
+    { id: 'documents_processed', label: 'Documents Processed Today', type: 'number', required: true },
+    { id: 'batches_documented', label: 'Batches Documented', type: 'number', required: true },
+    { id: 'receipts_collected', label: 'Receipts Collected', type: 'number' },
+    { id: 'farmers_documented', label: 'Farmers Documented', type: 'number' },
+    { id: 'gps_coordinates_captured', label: 'GPS Coordinates Captured', type: 'number' },
+    { id: 'compliance_checks_done', label: 'Compliance Checks Completed', type: 'number' },
+    { id: 'traceability_updates', label: 'Traceability Records Updated', type: 'select', options: ['Yes', 'No', 'Partially'] },
+    { id: 'documentation_issues', label: 'Documentation Issues', type: 'textarea', placeholder: 'Any issues with documentation or compliance' },
+    { id: 'pending_documentation', label: 'Pending Documentation', type: 'textarea', placeholder: 'Documents pending completion' },
+    { id: 'farmer_verification', label: 'Farmer Verifications Done', type: 'number' },
+    { id: 'field_visits', label: 'Field Visits for Documentation', type: 'number' },
+    { id: 'comments', label: 'Additional Comments', type: 'textarea' },
+  ],
+  
+  'Support Staff': [
+    { id: 'tasks_completed', label: 'Tasks Completed', type: 'number', required: true },
+    { id: 'office_maintenance', label: 'Office Maintenance Tasks', type: 'textarea', placeholder: 'Cleaning, organization, etc.' },
+    { id: 'errands_run', label: 'Errands Completed', type: 'number' },
+    { id: 'supplies_managed', label: 'Supplies/Materials Managed', type: 'textarea' },
+    { id: 'visitors_assisted', label: 'Visitors Assisted', type: 'number' },
+    { id: 'issues_reported', label: 'Issues Reported', type: 'textarea', placeholder: 'Any facility or equipment issues' },
+    { id: 'comments', label: 'Additional Comments', type: 'textarea' },
+  ],
+  
+  'IT': [
+    { id: 'issues_resolved', label: 'IT Issues Resolved', type: 'number', required: true },
+    { id: 'tickets_handled', label: 'Support Tickets Handled', type: 'number' },
+    { id: 'system_maintenance', label: 'System Maintenance Done?', type: 'select', options: ['Yes', 'No', 'Not Required'] },
+    { id: 'backups_completed', label: 'Backups Completed?', type: 'select', options: ['Yes', 'No', 'Not Required'] },
+    { id: 'software_updates', label: 'Software Updates Applied', type: 'number' },
+    { id: 'network_issues', label: 'Network Issues', type: 'textarea', placeholder: 'Any network or connectivity issues' },
+    { id: 'security_checks', label: 'Security Checks Done?', type: 'select', options: ['Yes', 'No', 'Partially'] },
+    { id: 'user_support', label: 'Users Supported', type: 'number' },
+    { id: 'pending_issues', label: 'Pending IT Issues', type: 'textarea', placeholder: 'Issues to be resolved tomorrow' },
+    { id: 'comments', label: 'Additional Comments', type: 'textarea' },
+  ],
+  
   // Default questions for any department not specifically defined
   'Default': [
     { id: 'tasks_completed', label: 'Tasks Completed Today', type: 'number', required: true },
