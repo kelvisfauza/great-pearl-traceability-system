@@ -61,7 +61,6 @@ export const useReferencePrices = () => {
       setLoading(true);
       
       const priceData = {
-        price_type: 'reference_prices',
         ice_arabica: newPrices.iceArabica,
         robusta: newPrices.robusta,
         exchange_rate: newPrices.exchangeRate,
@@ -72,11 +71,38 @@ export const useReferencePrices = () => {
         updated_at: new Date().toISOString()
       };
       
-      const { error } = await supabase
+      // First try to update existing record
+      const { data: existing, error: selectError } = await supabase
         .from('market_prices')
-        .upsert(priceData, { onConflict: 'price_type' });
+        .select('id')
+        .eq('price_type', 'reference_prices')
+        .single();
       
-      if (error) throw error;
+      if (selectError && selectError.code !== 'PGRST116') {
+        console.error('Error checking existing prices:', selectError);
+        throw selectError;
+      }
+      
+      let error;
+      if (existing) {
+        // Update existing record
+        const result = await supabase
+          .from('market_prices')
+          .update(priceData)
+          .eq('price_type', 'reference_prices');
+        error = result.error;
+      } else {
+        // Insert new record
+        const result = await supabase
+          .from('market_prices')
+          .insert({ ...priceData, price_type: 'reference_prices' });
+        error = result.error;
+      }
+      
+      if (error) {
+        console.error('Error saving reference prices:', error);
+        throw error;
+      }
       
       // Update local state
       setPrices({
