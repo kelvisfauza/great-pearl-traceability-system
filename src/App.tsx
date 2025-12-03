@@ -100,34 +100,34 @@ const App: React.ComponentType = () => {
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 
-                {/* V2 System Routes */}
+                {/* V2 System Routes - Admin Only */}
                 <Route path="/v2" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
                     <V2Index />
                   </ProtectedRoute>
                 } />
                 <Route path="/v2/store" element={
-                  <ProtectedRoute requiredPermissions={["Store Management"]}>
+                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
                     <V2CoffeeReceipts />
                   </ProtectedRoute>
                 } />
                 <Route path="/v2/quality" element={
-                  <ProtectedRoute requiredPermissions={["Quality Control"]}>
+                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
                     <V2PendingLots />
                   </ProtectedRoute>
                 } />
                 <Route path="/v2/quality/assess/:id" element={
-                  <ProtectedRoute requiredPermissions={["Quality Control"]}>
+                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
                     <V2AssessLot />
                   </ProtectedRoute>
                 } />
                 <Route path="/v2/inventory" element={
-                  <ProtectedRoute requiredPermissions={["Store Management"]}>
+                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
                     <V2InventoryIndex />
                   </ProtectedRoute>
                 } />
                 <Route path="/v2/sales" element={
-                  <ProtectedRoute requiredPermissions={["Sales Marketing"]}>
+                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
                     <V2SalesIndex />
                   </ProtectedRoute>
                 } />
