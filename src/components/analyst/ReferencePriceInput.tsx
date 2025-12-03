@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Coffee, Send } from 'lucide-react';
+import { Loader2, Coffee, Send, Globe, RefreshCw } from 'lucide-react';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -48,6 +48,7 @@ const ReferencePriceInput: React.FC = () => {
   });
   const [loading, setLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
+  const [fetchingICE, setFetchingICE] = useState(false);
   const [sendNotification, setSendNotification] = useState(false);
 
   useEffect(() => {
@@ -216,6 +217,59 @@ const ReferencePriceInput: React.FC = () => {
     }
   };
 
+  const handleFetchICEPrices = async () => {
+    try {
+      setFetchingICE(true);
+      console.log('🌐 Fetching ICE prices from Yahoo Finance...');
+
+      const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/fetch-ice-prices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      console.log('📊 ICE prices result:', result);
+
+      if (result.success && result.data) {
+        const updates: Partial<ReferencePrices> = {};
+        
+        if (result.data.iceArabica) {
+          updates.iceArabica = result.data.iceArabica;
+        }
+        if (result.data.iceRobusta) {
+          updates.robusta = result.data.iceRobusta;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          setPrices(prev => ({ ...prev, ...updates }));
+          toast({
+            title: "ICE Prices Fetched",
+            description: `Arabica: ${result.data.iceArabica || 'N/A'} ¢/lb, Robusta: ${result.data.iceRobusta || 'N/A'} $/MT`
+          });
+        } else {
+          toast({
+            title: "No Data",
+            description: "Could not retrieve ICE prices",
+            variant: "destructive"
+          });
+        }
+      } else {
+        throw new Error(result.error || 'Failed to fetch ICE prices');
+      }
+    } catch (error) {
+      console.error('Error fetching ICE prices:', error);
+      toast({
+        title: "Fetch Failed",
+        description: "Could not fetch ICE market prices",
+        variant: "destructive"
+      });
+    } finally {
+      setFetchingICE(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -329,7 +383,22 @@ const ReferencePriceInput: React.FC = () => {
 
         {/* International Markets */}
         <div>
-          <h3 className="text-lg font-semibold mb-3">International Markets</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold">International Markets</h3>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleFetchICEPrices}
+              disabled={fetchingICE}
+            >
+              {fetchingICE ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Globe className="mr-2 h-4 w-4" />
+              )}
+              {fetchingICE ? 'Fetching...' : 'Fetch ICE Prices'}
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="iceArabica">ICE Arabica C (¢/lb)</Label>

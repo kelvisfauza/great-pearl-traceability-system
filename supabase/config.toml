@@ -79,3 +79,6 @@ verify_jwt = true
 
 [functions.generate-comparison-insights]
 verify_jwt = true
+
+[functions.fetch-ice-prices]
+verify_jwt = false
