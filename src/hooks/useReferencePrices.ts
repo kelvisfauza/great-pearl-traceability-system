@@ -60,6 +60,8 @@ export const useReferencePrices = () => {
     try {
       setLoading(true);
       
+      console.log('💾 Starting save prices operation...');
+      
       const priceData = {
         ice_arabica: newPrices.iceArabica,
         robusta: newPrices.robusta,
@@ -71,6 +73,8 @@ export const useReferencePrices = () => {
         updated_at: new Date().toISOString()
       };
       
+      console.log('💾 Price data to save:', priceData);
+      
       // First try to update existing record
       const { data: existing, error: selectError } = await supabase
         .from('market_prices')
@@ -78,31 +82,39 @@ export const useReferencePrices = () => {
         .eq('price_type', 'reference_prices')
         .single();
       
+      console.log('💾 Existing record:', existing, 'Select error:', selectError);
+      
       if (selectError && selectError.code !== 'PGRST116') {
-        console.error('Error checking existing prices:', selectError);
+        console.error('❌ Error checking existing prices:', selectError);
         throw selectError;
       }
       
       let error;
       if (existing) {
+        console.log('💾 Updating existing record with id:', existing.id);
         // Update existing record
         const result = await supabase
           .from('market_prices')
           .update(priceData)
           .eq('price_type', 'reference_prices');
         error = result.error;
+        console.log('💾 Update result error:', result.error);
       } else {
+        console.log('💾 Inserting new record');
         // Insert new record
         const result = await supabase
           .from('market_prices')
           .insert({ ...priceData, price_type: 'reference_prices' });
         error = result.error;
+        console.log('💾 Insert result error:', result.error);
       }
       
       if (error) {
-        console.error('Error saving reference prices:', error);
+        console.error('❌ Error saving reference prices:', error);
         throw error;
       }
+      
+      console.log('✅ Prices saved successfully');
       
       // Update local state
       setPrices({
@@ -111,8 +123,9 @@ export const useReferencePrices = () => {
       });
       
       return true;
-    } catch (error) {
-      console.error('Error saving reference prices:', error);
+    } catch (error: any) {
+      console.error('❌ Error saving reference prices:', error);
+      console.error('❌ Error details:', error?.message, error?.code, error?.details);
       throw error;
     } finally {
       setLoading(false);
