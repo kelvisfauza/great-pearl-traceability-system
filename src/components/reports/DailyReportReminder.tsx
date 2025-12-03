@@ -87,17 +87,23 @@ export const DailyReportReminder = () => {
   }, [employee, checkTodayReport, checkYesterdayReport]);
 
   useEffect(() => {
-    checkAndShowReminders();
+    // Initial check after 10 minutes delay (600000ms)
+    const initialTimeout = setTimeout(() => {
+      checkAndShowReminders();
+    }, 600000); // 10 minutes delay
 
-    // Set up interval to check every minute during the reminder window (6-7 PM)
+    // Set up interval to check every 10 minutes during the reminder window (6-7 PM)
     const interval = setInterval(() => {
-      if (isAfter6PM() && isBefore7PM()) {
+      if (isAfter6PM() && isBefore7PM() && !showForm) {
         checkAndShowReminders();
       }
-    }, 60000); // Check every minute
+    }, 600000); // Check every 10 minutes
 
-    return () => clearInterval(interval);
-  }, [checkAndShowReminders]);
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, [checkAndShowReminders, showForm]);
 
   // Real-time subscription to auto-dismiss when report is submitted
   useEffect(() => {
