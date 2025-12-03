@@ -14,6 +14,7 @@ export const DailyReportReminder = () => {
   const [missedReportDate, setMissedReportDate] = useState<string | null>(null);
   const [showMissedReportPrompt, setShowMissedReportPrompt] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [todayReportSubmitted, setTodayReportSubmitted] = useState(false);
 
   const getTodayDate = () => format(new Date(), 'yyyy-MM-dd');
   const getYesterdayDate = () => format(subDays(new Date(), 1), 'yyyy-MM-dd');
@@ -29,7 +30,7 @@ export const DailyReportReminder = () => {
   };
 
   const checkTodayReport = useCallback(async () => {
-    if (!employee) return true;
+    if (!employee) return false;
 
     const { data } = await supabase
       .from('employee_daily_reports')
@@ -38,7 +39,9 @@ export const DailyReportReminder = () => {
       .eq('report_date', getTodayDate())
       .limit(1);
 
-    return data && data.length > 0;
+    const hasReport = data && data.length > 0;
+    setTodayReportSubmitted(hasReport);
+    return hasReport;
   }, [employee]);
 
   const checkYesterdayReport = useCallback(async () => {
@@ -60,7 +63,18 @@ export const DailyReportReminder = () => {
       return;
     }
 
-    // Check for missed report from yesterday (on login)
+    // Always check today's report status first
+    const todayReportExists = await checkTodayReport();
+    
+    // If today's report is already submitted, close all reminders and don't show any new ones
+    if (todayReportExists) {
+      setShowReminder(false);
+      setShowMissedReportPrompt(false);
+      setLoading(false);
+      return;
+    }
+
+    // Check for missed report from yesterday (only if today's report not submitted)
     const yesterdayReportExists = await checkYesterdayReport();
     if (!yesterdayReportExists) {
       const dismissedKey = `missed_report_dismissed_${employee.id}_${getYesterdayDate()}`;
@@ -72,14 +86,11 @@ export const DailyReportReminder = () => {
       }
     }
 
-    // Check for today's report if it's after 6 PM and before 7 PM
+    // Check for today's report reminder if it's after 6 PM and before 7 PM
     if (isAfter6PM() && isBefore7PM()) {
-      const todayReportExists = await checkTodayReport();
-      if (!todayReportExists) {
-        const dismissedKey = `report_reminder_dismissed_${employee.id}_${getTodayDate()}`;
-        if (!localStorage.getItem(dismissedKey)) {
-          setShowReminder(true);
-        }
+      const dismissedKey = `report_reminder_dismissed_${employee.id}_${getTodayDate()}`;
+      if (!localStorage.getItem(dismissedKey)) {
+        setShowReminder(true);
       }
     }
 
@@ -92,9 +103,15 @@ export const DailyReportReminder = () => {
       checkAndShowReminders();
     }, 600000); // 10 minutes delay
 
+    // Also do an immediate check to set initial state (without showing popups)
+    if (employee) {
+      checkTodayReport();
+    }
+
     // Set up interval to check every 10 minutes during the reminder window (6-7 PM)
     const interval = setInterval(() => {
-      if (isAfter6PM() && isBefore7PM() && !showForm) {
+      // Don't show if form is open or report already submitted
+      if (isAfter6PM() && isBefore7PM() && !showForm && !todayReportSubmitted) {
         checkAndShowReminders();
       }
     }, 600000); // Check every 10 minutes
@@ -103,7 +120,7 @@ export const DailyReportReminder = () => {
       clearTimeout(initialTimeout);
       clearInterval(interval);
     };
-  }, [checkAndShowReminders, showForm]);
+  }, [checkAndShowReminders, checkTodayReport, showForm, todayReportSubmitted, employee]);
 
   // Real-time subscription to auto-dismiss when report is submitted
   useEffect(() => {
@@ -119,10 +136,19 @@ export const DailyReportReminder = () => {
           table: 'employee_daily_reports',
           filter: `employee_id=eq.${employee.id}`,
         },
-        () => {
-          setShowReminder(false);
-          setShowForm(false);
-          setShowMissedReportPrompt(false);
+        (payload) => {
+          // Check if the inserted report is for today
+          const reportDate = (payload.new as any)?.report_date;
+          if (reportDate === getTodayDate()) {
+            setTodayReportSubmitted(true);
+            setShowReminder(false);
+            setShowForm(false);
+          }
+          // Also dismiss missed report prompt if that date was filled
+          if (reportDate === missedReportDate) {
+            setShowMissedReportPrompt(false);
+            setMissedReportDate(null);
+          }
         }
       )
       .subscribe();
@@ -130,7 +156,7 @@ export const DailyReportReminder = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [employee]);
+  }, [employee, missedReportDate]);
 
   const handleDismissReminder = () => {
     if (employee) {
@@ -157,12 +183,22 @@ export const DailyReportReminder = () => {
     setShowForm(true);
   };
 
+  const handleFormSuccess = () => {
+    setMissedReportDate(null);
+    setTodayReportSubmitted(true);
+    // Recheck in case there are other pending items
+    checkAndShowReminders();
+  };
+
   if (loading || !employee) return null;
+
+  // Don't render anything if today's report is submitted (extra safety check)
+  if (todayReportSubmitted && !showMissedReportPrompt && !showForm) return null;
 
   return (
     <>
       {/* Evening Reminder Dialog (6-7 PM) */}
-      <Dialog open={showReminder} onOpenChange={setShowReminder}>
+      <Dialog open={showReminder && !todayReportSubmitted} onOpenChange={setShowReminder}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-600">
@@ -238,10 +274,7 @@ export const DailyReportReminder = () => {
         open={showForm}
         onOpenChange={setShowForm}
         reportDate={missedReportDate || undefined}
-        onSuccess={() => {
-          setMissedReportDate(null);
-          checkAndShowReminders();
-        }}
+        onSuccess={handleFormSuccess}
       />
     </>
   );
