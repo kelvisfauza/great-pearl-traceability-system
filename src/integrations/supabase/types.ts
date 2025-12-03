@@ -2524,6 +2524,54 @@ export type Database = {
         }
         Relationships: []
       }
+      market_reports: {
+        Row: {
+          analysis_notes: string | null
+          arabica_price: number | null
+          created_at: string
+          created_by: string
+          ice_arabica: number | null
+          ice_robusta: number | null
+          id: string
+          market_trend: string | null
+          recommendations: string | null
+          report_date: string
+          report_type: string
+          robusta_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          analysis_notes?: string | null
+          arabica_price?: number | null
+          created_at?: string
+          created_by: string
+          ice_arabica?: number | null
+          ice_robusta?: number | null
+          id?: string
+          market_trend?: string | null
+          recommendations?: string | null
+          report_date: string
+          report_type?: string
+          robusta_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          analysis_notes?: string | null
+          arabica_price?: number | null
+          created_at?: string
+          created_by?: string
+          ice_arabica?: number | null
+          ice_robusta?: number | null
+          id?: string
+          market_trend?: string | null
+          recommendations?: string | null
+          report_date?: string
+          report_type?: string
+          robusta_price?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       marketing_campaigns: {
         Row: {
           budget: number

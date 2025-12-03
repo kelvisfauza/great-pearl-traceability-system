@@ -14,6 +14,7 @@ import ApprovedRequestsHistory from './ApprovedRequestsHistory';
 import CashManagementModal from './CashManagementModal';
 import TopSuppliersChart from './TopSuppliersChart';
 import InventoryOverviewChart from './InventoryOverviewChart';
+import BuyingRecommendationsCard from './BuyingRecommendationsCard';
 import { AttendanceManager } from './AttendanceManager';
 import { DataArchiveManager } from './DataArchiveManager';
 import { useUnifiedApprovalRequests } from '@/hooks/useUnifiedApprovalRequests';
@@ -259,6 +260,9 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Buying Recommendations */}
+          <BuyingRecommendationsCard />
 
           {/* System Overview */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
