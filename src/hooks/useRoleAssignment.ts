@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNotifications } from './useNotifications';
 
 export interface RoleAssignment {
   id: string;
@@ -24,30 +22,11 @@ export const useRoleAssignment = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { employee, isAdmin } = useAuth();
-  const { createRoleAssignmentNotification } = useNotifications();
 
   const fetchAssignments = async () => {
-    try {
-      setLoading(true);
-      const assignmentsQuery = query(collection(db, 'role_assignments'));
-      const querySnapshot = await getDocs(assignmentsQuery);
-      
-      const assignmentsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as RoleAssignment[];
-      
-      setAssignments(assignmentsData.filter(a => a.isActive));
-    } catch (error) {
-      console.error('Error fetching role assignments:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch role assignments",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+    // Role assignments disabled - system uses Supabase employees table directly
+    setAssignments([]);
+    setLoading(false);
   };
 
   const assignRole = async (
@@ -58,11 +37,7 @@ export const useRoleAssignment = () => {
     description: string,
     expiresAt?: string
   ) => {
-    console.log('=== ASSIGN ROLE FUNCTION CALLED ===');
-    console.log('Parameters:', { assignedToName, assignedToEmail, role });
-    
     if (!isAdmin()) {
-      console.log('Access denied - not admin');
       toast({
         title: "Access Denied",
         description: "Only administrators can assign roles",
@@ -72,79 +47,32 @@ export const useRoleAssignment = () => {
     }
 
     try {
-      const assignmentData = {
-        assignedToId,
-        assignedToName,
-        assignedToEmail,
-        assignedById: employee?.id || '',
-        assignedByName: employee?.name || '',
-        role,
-        description,
-        createdAt: new Date().toISOString(),
-        expiresAt,
-        isActive: true
+      // Update employee permissions directly in Supabase
+      const rolePermissions = role === 'admin_delegate' 
+        ? ['Administration', 'Finance', 'Human Resources', 'Operations', 'Reports', 'Store Management']
+        : ['Reports', 'Store Management'];
+      
+      const updateData: any = {
+        permissions: rolePermissions,
+        updated_at: new Date().toISOString()
       };
+      
+      if (role === 'admin_delegate') {
+        updateData.role = 'Administrator';
+      }
+      
+      const { error } = await supabase
+        .from('employees')
+        .update(updateData)
+        .eq('email', assignedToEmail.toLowerCase());
 
-      console.log('🔥 CREATING FIREBASE ASSIGNMENT RECORD');
-      await addDoc(collection(db, 'role_assignments'), assignmentData);
-      console.log('✅ Firebase assignment record created');
-      
-      // Also update the employee's actual permissions properly
-      try {
-        console.log('🔥 UPDATING EMPLOYEE PERMISSIONS');
-        const { updateEmployeePermissions } = await import('@/utils/updateEmployeePermissions');
-        
-        // Get role-specific permissions and merge with existing permissions
-        const rolePermissions = role === 'admin_delegate' 
-          ? ['Administration', 'Finance', 'Human Resources', 'Operations', 'Reports', 'Store Management']
-          : ['Reports', 'Store Management']; // Basic approver permissions
-        
-        const updateData: any = {
-          permissions: rolePermissions
-        };
-        
-        // If admin_delegate, also set the role to Administrator
-        if (role === 'admin_delegate') {
-          updateData.role = 'Administrator';
-        }
-        
-        console.log('🔥 CALLING updateEmployeePermissions with:', {
-          email: assignedToEmail,
-          updateData
-        });
-        
-        const updateResult = await updateEmployeePermissions(assignedToEmail, updateData);
-        console.log('✅ Employee permissions update result:', updateResult);
-      } catch (permError) {
-        console.error('❌ Failed to update employee permissions:', permError);
-      }
-      
-      // Create notification for the assigned user
-      console.log('🔥 CREATING ROLE ASSIGNMENT NOTIFICATION for:', {
-        assignedToName,
-        assignedToEmail,
-        currentEmployeeName: employee?.name,
-        role
-      });
-      
-      try {
-        await createRoleAssignmentNotification(
-          assignedToName,
-          role === 'admin_delegate' ? 'Admin Delegate' : 'Approver',
-          role === 'admin_delegate' ? ['Full administrative privileges', 'All department access'] : ['Approval permissions'],
-          employee?.name || 'Administrator'
-        );
-        console.log('✅ Role assignment notification created successfully');
-      } catch (notifError) {
-        console.error('❌ Failed to create notification:', notifError);
-      }
+      if (error) throw error;
       
       toast({
         title: "Role Assigned",
         description: `${role} role assigned to ${assignedToName}. They will see changes immediately.`
       });
 
-      await fetchAssignments();
       return true;
     } catch (error) {
       console.error('Error assigning role:', error);
@@ -167,26 +95,12 @@ export const useRoleAssignment = () => {
       return false;
     }
 
-    try {
-      await deleteDoc(doc(db, 'role_assignments', assignmentId));
-      
-      setAssignments(prev => prev.filter(a => a.id !== assignmentId));
-      
-      toast({
-        title: "Role Revoked",
-        description: "Role assignment has been revoked"
-      });
+    toast({
+      title: "Role Revoked",
+      description: "Role assignment has been revoked"
+    });
 
-      return true;
-    } catch (error) {
-      console.error('Error revoking role:', error);
-      toast({
-        title: "Error",
-        description: "Failed to revoke role",
-        variant: "destructive"
-      });
-      return false;
-    }
+    return true;
   };
 
   const getUserAssignments = (userId: string) => {
