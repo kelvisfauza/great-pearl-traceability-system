@@ -1268,6 +1268,7 @@ export type Database = {
           id: string
           report_data: Json
           report_date: string
+          report_number: number | null
           status: string
           submitted_at: string | null
           updated_at: string
@@ -1281,6 +1282,7 @@ export type Database = {
           id?: string
           report_data?: Json
           report_date?: string
+          report_number?: number | null
           status?: string
           submitted_at?: string | null
           updated_at?: string
@@ -1294,6 +1296,7 @@ export type Database = {
           id?: string
           report_data?: Json
           report_date?: string
+          report_number?: number | null
           status?: string
           submitted_at?: string | null
           updated_at?: string
