@@ -14,10 +14,11 @@ serve(async (req) => {
   try {
     console.log('🌐 Fetching ICE coffee prices from Yahoo Finance...');
 
-    // Fetch Arabica Coffee futures (KC=F)
-    const arabicaUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/KC=F?interval=1d&range=1d';
-    // Fetch Robusta Coffee futures (RC=F)
-    const robustaUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/RC=F?interval=1d&range=1d';
+    // Fetch Arabica Coffee futures - March 2025 contract (KCH25=F)
+    // Month codes: H=March, K=May, N=July, U=September, Z=December
+    const arabicaUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/KCH25=F?interval=1d&range=1d';
+    // Fetch Robusta Coffee futures - March 2025 contract (RMH25=F)
+    const robustaUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/RMH25=F?interval=1d&range=1d';
 
     const [arabicaResponse, robustaResponse] = await Promise.all([
       fetch(arabicaUrl, {
