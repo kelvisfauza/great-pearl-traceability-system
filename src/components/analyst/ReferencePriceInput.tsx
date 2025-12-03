@@ -170,13 +170,13 @@ const ReferencePriceInput: React.FC = () => {
     });
   };
 
-  const handleTestSMS = async () => {
+  const handleTestSMS = async (phoneNumber: string) => {
     try {
       setTestLoading(true);
       const date = new Date().toLocaleDateString('en-GB');
       const message = `Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256778536681`;
 
-      console.log('📱 Sending test SMS to 0781121639');
+      console.log(`📱 Sending test SMS to ${phoneNumber}`);
       console.log('Message:', message);
 
       const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
@@ -186,7 +186,7 @@ const ReferencePriceInput: React.FC = () => {
           'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
         },
         body: JSON.stringify({
-          phone: '0781121639',
+          phone: phoneNumber,
           message: message,
           userName: 'Test User',
           messageType: 'price_update_test',
@@ -199,7 +199,7 @@ const ReferencePriceInput: React.FC = () => {
       if (response.ok) {
         toast({
           title: "Test SMS Sent",
-          description: "SMS sent to 0781121639 - check your phone!"
+          description: `SMS sent to ${phoneNumber} - check your phone!`
         });
       } else {
         throw new Error(result.error || 'Failed to send test SMS');
@@ -427,7 +427,7 @@ const ReferencePriceInput: React.FC = () => {
           </Button>
           <Button 
             variant="secondary" 
-            onClick={handleTestSMS} 
+            onClick={() => handleTestSMS('0781121639')} 
             disabled={testLoading}
           >
             {testLoading ? (
@@ -436,6 +436,18 @@ const ReferencePriceInput: React.FC = () => {
               <Send className="mr-2 h-4 w-4" />
             )}
             {testLoading ? 'Sending...' : 'Test SMS (0781121639)'}
+          </Button>
+          <Button 
+            variant="secondary" 
+            onClick={() => handleTestSMS('0707756445')} 
+            disabled={testLoading}
+          >
+            {testLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="mr-2 h-4 w-4" />
+            )}
+            {testLoading ? 'Sending...' : 'Test SMS (0707756445)'}
           </Button>
         </div>
       </CardContent>
