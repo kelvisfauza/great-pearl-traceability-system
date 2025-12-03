@@ -1,5 +1,3 @@
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 
 interface MetricData {
@@ -18,25 +16,30 @@ interface MetricData {
 }
 
 export const calculateMetricsFromFirebase = async () => {
-  console.log('📊 Starting metrics calculation from Firebase...');
+  console.log('📊 Starting metrics calculation from Supabase...');
 
   try {
-    // Fetch coffee records from Firebase
-    const coffeeSnapshot = await getDocs(
-      query(collection(db, 'coffee_records'), orderBy('created_at', 'desc'))
-    );
+    // Fetch coffee records from Supabase
+    const { data: coffeeRecords, error: coffeeError } = await supabase
+      .from('coffee_records')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (coffeeError) {
+      console.error('Error fetching coffee records:', coffeeError);
+      throw coffeeError;
+    }
 
     // Calculate totals from coffee records
     let totalBags = 0;
     let totalKg = 0;
     
-    coffeeSnapshot.forEach(doc => {
-      const data = doc.data();
-      totalBags += data.bags || 0;
-      totalKg += data.kilograms || 0;
+    (coffeeRecords || []).forEach(record => {
+      totalBags += record.bags || 0;
+      totalKg += record.kilograms || 0;
     });
 
-    // Count active COFFEE suppliers from Supabase (not milling customers)
+    // Count active COFFEE suppliers from Supabase
     const { count: activeSuppliers, error: supplierError } = await supabase
       .from('suppliers')
       .select('*', { count: 'exact', head: true });
@@ -45,24 +48,29 @@ export const calculateMetricsFromFirebase = async () => {
       console.error('Error fetching suppliers:', supplierError);
     }
 
-    // Fetch sales from Firebase
-    const salesSnapshot = await getDocs(query(collection(db, 'sales_transactions')));
+    // Fetch sales from Supabase
+    const { data: salesRecords, error: salesError } = await supabase
+      .from('sales_transactions')
+      .select('*');
+
+    if (salesError) {
+      console.error('Error fetching sales:', salesError);
+    }
 
     // Calculate revenue from sales
     let totalRevenue = 0;
-    salesSnapshot.forEach(doc => {
-      const data = doc.data();
-      totalRevenue += data.total_amount || 0;
+    (salesRecords || []).forEach(record => {
+      totalRevenue += record.total_amount || 0;
     });
     const revenueInMillions = (totalRevenue / 1_000_000).toFixed(1);
 
     // Calculate quality score (records with status "assessed" or "completed")
-    const assessedRecords = Array.from(coffeeSnapshot.docs).filter(doc => {
-      const status = doc.data().status;
+    const assessedRecords = (coffeeRecords || []).filter(record => {
+      const status = record.status;
       return status === 'quality_review' || status === 'pricing' || status === 'batched';
     }).length;
-    const qualityScore = coffeeSnapshot.size > 0 
-      ? ((assessedRecords / coffeeSnapshot.size) * 100).toFixed(1)
+    const qualityScore = (coffeeRecords || []).length > 0 
+      ? ((assessedRecords / coffeeRecords.length) * 100).toFixed(1)
       : '0.0';
 
     console.log('📊 Calculated metrics:', {
@@ -150,9 +158,9 @@ export const calculateMetricsFromFirebase = async () => {
 
     const productionPercentage = (totalBags / productionTarget) * 100;
     const qualityPercentage = (parseFloat(qualityScore) / qualityTarget) * 100;
-    const salesValue = salesSnapshot.size;
+    const salesValue = (salesRecords || []).length;
     const salesPercentage = (salesValue / salesTarget) * 100;
-    const efficiencyValue = 87.3; // Can be calculated from processing data if available
+    const efficiencyValue = 87.3;
     const efficiencyPercentage = (efficiencyValue / efficiencyTarget) * 100;
 
     const performanceMetrics: MetricData[] = [

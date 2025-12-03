@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -23,23 +22,30 @@ export const useReferencePrices = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  // Fetch reference prices from Firebase
+  // Fetch reference prices from Supabase
   const fetchPrices = useCallback(async () => {
     try {
       setLoading(true);
-      const docRef = doc(db, 'market_prices', 'reference_prices');
-      const docSnap = await getDoc(docRef);
+      const { data, error } = await supabase
+        .from('market_prices')
+        .select('*')
+        .eq('price_type', 'reference_prices')
+        .single();
       
-      if (docSnap.exists()) {
-        const data = docSnap.data();
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching reference prices:', error);
+        return;
+      }
+      
+      if (data) {
         setPrices({
-          iceArabica: data.iceArabica || 185.50,
+          iceArabica: data.ice_arabica || 185.50,
           robusta: data.robusta || 2450,
-          exchangeRate: data.exchangeRate || 3750,
-          drugarLocal: data.drugarLocal || 8500,
-          wugarLocal: data.wugarLocal || 8200,
-          robustaFaqLocal: data.robustaFaqLocal || 7800,
-          lastUpdated: data.updatedAt
+          exchangeRate: data.exchange_rate || 3750,
+          drugarLocal: data.drugar_local || 8500,
+          wugarLocal: data.wugar_local || 8200,
+          robustaFaqLocal: data.robusta_faq_local || 7800,
+          lastUpdated: data.last_updated
         });
       }
     } catch (error) {
@@ -49,19 +55,28 @@ export const useReferencePrices = () => {
     }
   }, []);
 
-  // Save reference prices to Firebase
+  // Save reference prices to Supabase
   const savePrices = async (newPrices: Omit<ReferencePrices, 'lastUpdated'>) => {
     try {
       setLoading(true);
-      const docRef = doc(db, 'market_prices', 'reference_prices');
       
       const priceData = {
-        ...newPrices,
-        lastUpdated: serverTimestamp(),
-        updatedAt: new Date().toISOString()
+        price_type: 'reference_prices',
+        ice_arabica: newPrices.iceArabica,
+        robusta: newPrices.robusta,
+        exchange_rate: newPrices.exchangeRate,
+        drugar_local: newPrices.drugarLocal,
+        wugar_local: newPrices.wugarLocal,
+        robusta_faq_local: newPrices.robustaFaqLocal,
+        last_updated: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       
-      await setDoc(docRef, priceData);
+      const { error } = await supabase
+        .from('market_prices')
+        .upsert(priceData, { onConflict: 'price_type' });
+      
+      if (error) throw error;
       
       // Update local state
       setPrices({
@@ -80,29 +95,40 @@ export const useReferencePrices = () => {
 
   // Subscribe to real-time updates
   useEffect(() => {
-    const docRef = doc(db, 'market_prices', 'reference_prices');
-    
-    const unsubscribe = onSnapshot(docRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        setPrices({
-          iceArabica: data.iceArabica || 185.50,
-          robusta: data.robusta || 2450,
-          exchangeRate: data.exchangeRate || 3750,
-          drugarLocal: data.drugarLocal || 8500,
-          wugarLocal: data.wugarLocal || 8200,
-          robustaFaqLocal: data.robustaFaqLocal || 7800,
-          lastUpdated: data.updatedAt
-        });
-      }
-    }, (error) => {
-      console.error('Error listening to price updates:', error);
-    });
-
     // Initial fetch
     fetchPrices();
 
-    return () => unsubscribe();
+    // Subscribe to changes
+    const channel = supabase
+      .channel('market_prices_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'market_prices',
+          filter: 'price_type=eq.reference_prices'
+        },
+        (payload) => {
+          if (payload.new) {
+            const data = payload.new as any;
+            setPrices({
+              iceArabica: data.ice_arabica || 185.50,
+              robusta: data.robusta || 2450,
+              exchangeRate: data.exchange_rate || 3750,
+              drugarLocal: data.drugar_local || 8500,
+              wugarLocal: data.wugar_local || 8200,
+              robustaFaqLocal: data.robusta_faq_local || 7800,
+              lastUpdated: data.last_updated
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchPrices]);
 
   return {

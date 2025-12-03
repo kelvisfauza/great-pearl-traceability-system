@@ -34,7 +34,7 @@ export const PriceProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const refreshPrices = async () => {
     try {
       setLoading(true);
-      console.log('Refreshing prices from Firebase...');
+      console.log('Refreshing prices from Supabase...');
       
       const data = await barchartService.getCoffeePrices();
       setPrices(data);
@@ -58,7 +58,7 @@ export const PriceProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Load prices on component mount and set up periodic refresh
   useEffect(() => {
-    // Initial price fetch from Firebase
+    // Initial price fetch from Supabase
     refreshPrices();
     
     // Set up periodic refresh every 30 minutes
