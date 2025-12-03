@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
+import PriceTicker from "@/components/PriceTicker";
 import { Package, FlaskConical, Wallet, Warehouse, ShoppingCart, TrendingUp, Clock, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -137,16 +138,19 @@ const V2Index = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="h-8 w-8 text-primary" />
-            <h1 className="text-4xl font-bold text-foreground">
-              Coffee Management System
-            </h1>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <TrendingUp className="h-8 w-8 text-primary" />
+              <h1 className="text-4xl font-bold text-foreground">
+                Coffee Management System
+              </h1>
+            </div>
+            <p className="text-muted-foreground text-lg">
+              Store → Quality → Inventory → Sales
+            </p>
           </div>
-          <p className="text-muted-foreground text-lg">
-            Store → Quality → Inventory → Sales
-          </p>
+          <PriceTicker />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

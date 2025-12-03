@@ -3,20 +3,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import V2Navigation from "@/components/v2/V2Navigation";
 import StockOverview from "@/components/v2/inventory/StockOverview";
 import MovementsLog from "@/components/v2/inventory/MovementsLog";
+import PriceTicker from "@/components/PriceTicker";
 import { Package } from "lucide-react";
 
 const InventoryIndex = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3">
             <Package className="h-8 w-8 text-orange-600" />
-            <h1 className="text-3xl font-bold text-foreground">Inventory Management</h1>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Inventory Management</h1>
+              <p className="text-muted-foreground mt-1">
+                Track physical stock levels and movements
+              </p>
+            </div>
           </div>
-          <p className="text-muted-foreground mt-2">
-            Track physical stock levels and movements
-          </p>
+          <PriceTicker />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
