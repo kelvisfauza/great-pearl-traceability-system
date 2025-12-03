@@ -9,9 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DailyReportForm } from '@/components/reports/DailyReportForm';
-import { FileText, Plus, Search, Calendar, User, Building2, Clock, Eye } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { StaffReportsPrint } from '@/components/reports/StaffReportsPrint';
+import { FileText, Plus, Search, Calendar, User, Building2, Clock, Eye, Printer, Filter } from 'lucide-react';
+import { format, parseISO, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { getQuestionsForDepartment } from '@/config/departmentReportQuestions';
 
 interface DailyReport {
@@ -36,6 +38,13 @@ const UserDailyReports = () => {
   const [showNewReportForm, setShowNewReportForm] = useState(false);
   const [selectedReport, setSelectedReport] = useState<DailyReport | null>(null);
   const [activeTab, setActiveTab] = useState('my-reports');
+  
+  // Date filtering
+  const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
+  const [employees, setEmployees] = useState<{id: string, name: string}[]>([]);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
 
   const fetchMyReports = async () => {
     if (!employee) return;
@@ -54,26 +63,54 @@ const UserDailyReports = () => {
   const fetchAllReports = async () => {
     if (!isAdmin()) return;
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('employee_daily_reports')
       .select('*')
-      .order('report_date', { ascending: false })
-      .limit(100);
+      .gte('report_date', startDate)
+      .lte('report_date', endDate)
+      .order('report_date', { ascending: false });
+
+    if (selectedEmployee !== 'all') {
+      query = query.eq('employee_id', selectedEmployee);
+    }
+
+    const { data, error } = await query;
 
     if (!error && data) {
       setAllReports(data as DailyReport[]);
     }
   };
 
+  const fetchEmployees = async () => {
+    if (!isAdmin()) return;
+    
+    const { data } = await supabase
+      .from('employees')
+      .select('id, name')
+      .eq('status', 'Active')
+      .order('name');
+    
+    if (data) {
+      setEmployees(data);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      await Promise.all([fetchMyReports(), fetchAllReports()]);
+      await Promise.all([fetchMyReports(), fetchAllReports(), fetchEmployees()]);
       setLoading(false);
     };
 
     fetchData();
   }, [employee]);
+
+  // Refetch when filters change
+  useEffect(() => {
+    if (isAdmin()) {
+      fetchAllReports();
+    }
+  }, [startDate, endDate, selectedEmployee]);
 
   const filteredReports = reports.filter(report =>
     report.report_date.includes(searchTerm) ||
@@ -207,7 +244,55 @@ const UserDailyReports = () => {
           </TabsContent>
 
           {isAdmin() && (
-            <TabsContent value="all-reports" className="mt-4">
+            <TabsContent value="all-reports" className="mt-4 space-y-4">
+              {/* Filters */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium">Start Date</label>
+                      <Input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-40"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium">End Date</label>
+                      <Input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-40"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium">Employee</label>
+                      <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="All Employees" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Employees</SelectItem>
+                          {employees.map(emp => (
+                            <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowPrintDialog(true)}
+                      disabled={filteredAllReports.length === 0}
+                    >
+                      <Printer className="h-4 w-4 mr-2" />
+                      Print Reports ({filteredAllReports.length})
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               {loading ? (
                 <div className="text-center py-8 text-muted-foreground">Loading reports...</div>
               ) : filteredAllReports.length === 0 ? (
@@ -238,6 +323,16 @@ const UserDailyReports = () => {
 
         {/* Report Detail View */}
         {selectedReport && renderReportDetail(selectedReport)}
+
+        {/* Print Dialog */}
+        <StaffReportsPrint
+          open={showPrintDialog}
+          onOpenChange={setShowPrintDialog}
+          reports={filteredAllReports}
+          startDate={startDate}
+          endDate={endDate}
+          employeeName={selectedEmployee !== 'all' ? employees.find(e => e.id === selectedEmployee)?.name : undefined}
+        />
       </div>
     </Layout>
   );
