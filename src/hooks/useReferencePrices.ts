@@ -8,10 +8,16 @@ interface ReferencePrices {
   drugarLocal: number;
   wugarLocal: number;
   robustaFaqLocal: number;
-  outturn: number;
-  moisture: number;
-  fm: number;
-  buyingPrice: number;
+  // Arabica parameters
+  arabicaOutturn: number;
+  arabicaMoisture: number;
+  arabicaFm: number;
+  arabicaBuyingPrice: number;
+  // Robusta parameters
+  robustaOutturn: number;
+  robustaMoisture: number;
+  robustaFm: number;
+  robustaBuyingPrice: number;
   lastUpdated?: string;
 }
 
@@ -23,10 +29,14 @@ export const useReferencePrices = () => {
     drugarLocal: 8500,
     wugarLocal: 8200,
     robustaFaqLocal: 7800,
-    outturn: 70,
-    moisture: 12.5,
-    fm: 5,
-    buyingPrice: 8500
+    arabicaOutturn: 70,
+    arabicaMoisture: 12.5,
+    arabicaFm: 5,
+    arabicaBuyingPrice: 8500,
+    robustaOutturn: 80,
+    robustaMoisture: 13,
+    robustaFm: 3,
+    robustaBuyingPrice: 7800
   });
   const [loading, setLoading] = useState(false);
 
@@ -53,10 +63,14 @@ export const useReferencePrices = () => {
           drugarLocal: data.drugar_local || 8500,
           wugarLocal: data.wugar_local || 8200,
           robustaFaqLocal: data.robusta_faq_local || 7800,
-          outturn: data.outturn || 70,
-          moisture: data.moisture || 12.5,
-          fm: data.fm || 5,
-          buyingPrice: data.buying_price || 8500,
+          arabicaOutturn: data.arabica_outturn || 70,
+          arabicaMoisture: data.arabica_moisture || 12.5,
+          arabicaFm: data.arabica_fm || 5,
+          arabicaBuyingPrice: data.arabica_buying_price || 8500,
+          robustaOutturn: data.robusta_outturn || 80,
+          robustaMoisture: data.robusta_moisture || 13,
+          robustaFm: data.robusta_fm || 3,
+          robustaBuyingPrice: data.robusta_buying_price || 7800,
           lastUpdated: data.last_updated
         });
       }
@@ -81,10 +95,14 @@ export const useReferencePrices = () => {
         drugar_local: newPrices.drugarLocal,
         wugar_local: newPrices.wugarLocal,
         robusta_faq_local: newPrices.robustaFaqLocal,
-        outturn: newPrices.outturn,
-        moisture: newPrices.moisture,
-        fm: newPrices.fm,
-        buying_price: newPrices.buyingPrice,
+        arabica_outturn: newPrices.arabicaOutturn,
+        arabica_moisture: newPrices.arabicaMoisture,
+        arabica_fm: newPrices.arabicaFm,
+        arabica_buying_price: newPrices.arabicaBuyingPrice,
+        robusta_outturn: newPrices.robustaOutturn,
+        robusta_moisture: newPrices.robustaMoisture,
+        robusta_fm: newPrices.robustaFm,
+        robusta_buying_price: newPrices.robustaBuyingPrice,
         last_updated: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -108,7 +126,6 @@ export const useReferencePrices = () => {
       let error;
       if (existing) {
         console.log('💾 Updating existing record with id:', existing.id);
-        // Update existing record
         const result = await supabase
           .from('market_prices')
           .update(priceData)
@@ -117,7 +134,6 @@ export const useReferencePrices = () => {
         console.log('💾 Update result error:', result.error);
       } else {
         console.log('💾 Inserting new record');
-        // Insert new record
         const result = await supabase
           .from('market_prices')
           .insert({ ...priceData, price_type: 'reference_prices' });
@@ -132,7 +148,6 @@ export const useReferencePrices = () => {
       
       console.log('✅ Prices saved successfully');
       
-      // Update local state
       setPrices({
         ...newPrices,
         lastUpdated: new Date().toISOString()
@@ -150,10 +165,8 @@ export const useReferencePrices = () => {
 
   // Subscribe to real-time updates
   useEffect(() => {
-    // Initial fetch
     fetchPrices();
 
-    // Subscribe to changes
     const channel = supabase
       .channel('market_prices_changes')
       .on(
@@ -174,10 +187,14 @@ export const useReferencePrices = () => {
               drugarLocal: data.drugar_local || 8500,
               wugarLocal: data.wugar_local || 8200,
               robustaFaqLocal: data.robusta_faq_local || 7800,
-              outturn: data.outturn || 70,
-              moisture: data.moisture || 12.5,
-              fm: data.fm || 5,
-              buyingPrice: data.buying_price || 8500,
+              arabicaOutturn: data.arabica_outturn || 70,
+              arabicaMoisture: data.arabica_moisture || 12.5,
+              arabicaFm: data.arabica_fm || 5,
+              arabicaBuyingPrice: data.arabica_buying_price || 8500,
+              robustaOutturn: data.robusta_outturn || 80,
+              robustaMoisture: data.robusta_moisture || 13,
+              robustaFm: data.robusta_fm || 3,
+              robustaBuyingPrice: data.robusta_buying_price || 7800,
               lastUpdated: data.last_updated
             });
           }

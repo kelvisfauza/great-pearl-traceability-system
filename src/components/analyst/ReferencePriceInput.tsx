@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Coffee } from 'lucide-react';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -16,10 +16,14 @@ interface ReferencePrices {
   drugarLocal: number;
   wugarLocal: number;
   robustaFaqLocal: number;
-  outturn: number;
-  moisture: number;
-  fm: number;
-  buyingPrice: number;
+  arabicaOutturn: number;
+  arabicaMoisture: number;
+  arabicaFm: number;
+  arabicaBuyingPrice: number;
+  robustaOutturn: number;
+  robustaMoisture: number;
+  robustaFm: number;
+  robustaBuyingPrice: number;
 }
 
 const ReferencePriceInput: React.FC = () => {
@@ -33,15 +37,18 @@ const ReferencePriceInput: React.FC = () => {
     drugarLocal: 8500,
     wugarLocal: 8200,
     robustaFaqLocal: 7800,
-    outturn: 70,
-    moisture: 12.5,
-    fm: 5,
-    buyingPrice: 8500
+    arabicaOutturn: 70,
+    arabicaMoisture: 12.5,
+    arabicaFm: 5,
+    arabicaBuyingPrice: 8500,
+    robustaOutturn: 80,
+    robustaMoisture: 13,
+    robustaFm: 3,
+    robustaBuyingPrice: 7800
   });
   const [loading, setLoading] = useState(false);
   const [sendNotification, setSendNotification] = useState(false);
 
-  // Update local state when Supabase data changes
   useEffect(() => {
     setPrices({
       iceArabica: currentPrices.iceArabica,
@@ -50,10 +57,14 @@ const ReferencePriceInput: React.FC = () => {
       drugarLocal: currentPrices.drugarLocal,
       wugarLocal: currentPrices.wugarLocal,
       robustaFaqLocal: currentPrices.robustaFaqLocal,
-      outturn: currentPrices.outturn,
-      moisture: currentPrices.moisture,
-      fm: currentPrices.fm,
-      buyingPrice: currentPrices.buyingPrice
+      arabicaOutturn: currentPrices.arabicaOutturn,
+      arabicaMoisture: currentPrices.arabicaMoisture,
+      arabicaFm: currentPrices.arabicaFm,
+      arabicaBuyingPrice: currentPrices.arabicaBuyingPrice,
+      robustaOutturn: currentPrices.robustaOutturn,
+      robustaMoisture: currentPrices.robustaMoisture,
+      robustaFm: currentPrices.robustaFm,
+      robustaBuyingPrice: currentPrices.robustaBuyingPrice
     });
   }, [currentPrices]);
 
@@ -70,7 +81,6 @@ const ReferencePriceInput: React.FC = () => {
       setLoading(true);
       await savePrices(prices);
 
-      // Send SMS notifications if checked
       if (sendNotification) {
         const { data: suppliers, error: suppliersError } = await supabase
           .from('suppliers')
@@ -82,15 +92,13 @@ const ReferencePriceInput: React.FC = () => {
         }
 
         const suppliersList = suppliers?.filter(s => s.phone) || [];
-
         const date = new Date().toLocaleDateString('en-GB');
-        const message = `Great Pearl Coffee updates\nToday: ${date}\n\nArabica Price Update:\nOutturn:     ${prices.outturn}%\nMoisture:    ${prices.moisture}%\nFM:          ${prices.fm}%\nPrice:  UGX ${prices.buyingPrice.toLocaleString()}/kg\n\nDeliver now to get served best.`;
+        
+        const message = `Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\nDeliver now!`;
 
-        // Send SMS to each supplier
         console.log(`📱 Sending SMS to ${suppliersList.length} suppliers`);
         const smsPromises = suppliersList.map(async (supplier) => {
           try {
-            console.log(`Sending to ${supplier.name} at ${supplier.phone}`);
             const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
               method: 'POST',
               headers: {
@@ -150,10 +158,14 @@ const ReferencePriceInput: React.FC = () => {
       drugarLocal: 8500,
       wugarLocal: 8200,
       robustaFaqLocal: 7800,
-      outturn: 70,
-      moisture: 12.5,
-      fm: 5,
-      buyingPrice: 8500
+      arabicaOutturn: 70,
+      arabicaMoisture: 12.5,
+      arabicaFm: 5,
+      arabicaBuyingPrice: 8500,
+      robustaOutturn: 80,
+      robustaMoisture: 13,
+      robustaFm: 3,
+      robustaBuyingPrice: 7800
     });
   };
 
@@ -168,48 +180,101 @@ const ReferencePriceInput: React.FC = () => {
         )}
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Buying Parameters */}
-        <div>
-          <h3 className="text-lg font-semibold mb-3 text-primary">Daily Buying Parameters</h3>
+        {/* Arabica Buying Parameters */}
+        <div className="p-4 border rounded-lg bg-amber-50 dark:bg-amber-950/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Coffee className="h-5 w-5 text-amber-700" />
+            <h3 className="text-lg font-semibold text-amber-700">Arabica Buying Parameters</h3>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <Label htmlFor="outturn">Outturn (%)</Label>
+              <Label htmlFor="arabicaOutturn">Outturn (%)</Label>
               <Input
-                id="outturn"
+                id="arabicaOutturn"
                 type="number"
                 step="0.1"
-                value={prices.outturn}
-                onChange={(e) => handleInputChange('outturn', e.target.value)}
+                value={prices.arabicaOutturn}
+                onChange={(e) => handleInputChange('arabicaOutturn', e.target.value)}
               />
             </div>
             <div>
-              <Label htmlFor="moisture">Moisture (%)</Label>
+              <Label htmlFor="arabicaMoisture">Moisture (%)</Label>
               <Input
-                id="moisture"
+                id="arabicaMoisture"
                 type="number"
                 step="0.1"
-                value={prices.moisture}
-                onChange={(e) => handleInputChange('moisture', e.target.value)}
+                value={prices.arabicaMoisture}
+                onChange={(e) => handleInputChange('arabicaMoisture', e.target.value)}
               />
             </div>
             <div>
-              <Label htmlFor="fm">FM (%)</Label>
+              <Label htmlFor="arabicaFm">FM (%)</Label>
               <Input
-                id="fm"
+                id="arabicaFm"
                 type="number"
                 step="0.1"
-                value={prices.fm}
-                onChange={(e) => handleInputChange('fm', e.target.value)}
+                value={prices.arabicaFm}
+                onChange={(e) => handleInputChange('arabicaFm', e.target.value)}
               />
             </div>
             <div>
-              <Label htmlFor="buyingPrice">Buying Price (UGX/kg)</Label>
+              <Label htmlFor="arabicaBuyingPrice">Buying Price (UGX/kg)</Label>
               <Input
-                id="buyingPrice"
+                id="arabicaBuyingPrice"
                 type="number"
                 step="50"
-                value={prices.buyingPrice}
-                onChange={(e) => handleInputChange('buyingPrice', e.target.value)}
+                value={prices.arabicaBuyingPrice}
+                onChange={(e) => handleInputChange('arabicaBuyingPrice', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Robusta Buying Parameters */}
+        <div className="p-4 border rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Coffee className="h-5 w-5 text-emerald-700" />
+            <h3 className="text-lg font-semibold text-emerald-700">Robusta Buying Parameters</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label htmlFor="robustaOutturn">Outturn (%)</Label>
+              <Input
+                id="robustaOutturn"
+                type="number"
+                step="0.1"
+                value={prices.robustaOutturn}
+                onChange={(e) => handleInputChange('robustaOutturn', e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="robustaMoisture">Moisture (%)</Label>
+              <Input
+                id="robustaMoisture"
+                type="number"
+                step="0.1"
+                value={prices.robustaMoisture}
+                onChange={(e) => handleInputChange('robustaMoisture', e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="robustaFm">FM (%)</Label>
+              <Input
+                id="robustaFm"
+                type="number"
+                step="0.1"
+                value={prices.robustaFm}
+                onChange={(e) => handleInputChange('robustaFm', e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="robustaBuyingPrice">Buying Price (UGX/kg)</Label>
+              <Input
+                id="robustaBuyingPrice"
+                type="number"
+                step="50"
+                value={prices.robustaBuyingPrice}
+                onChange={(e) => handleInputChange('robustaBuyingPrice', e.target.value)}
               />
             </div>
           </div>
