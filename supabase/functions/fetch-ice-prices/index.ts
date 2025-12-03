@@ -14,23 +14,19 @@ serve(async (req) => {
   try {
     console.log('🌐 Fetching ICE coffee prices from Yahoo Finance...');
 
-    // Fetch Arabica Coffee futures - March 2025 contract (KCH25=F)
-    // Month codes: H=March, K=May, N=July, U=September, Z=December
-    const arabicaUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/KCH25=F?interval=1d&range=1d';
-    // Fetch Robusta Coffee futures - March 2025 contract (RMH25=F)
-    const robustaUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/RMH25=F?interval=1d&range=1d';
+    // Use quote API for real-time prices - KC=F is Arabica Coffee front-month
+    const arabicaUrl = 'https://query2.finance.yahoo.com/v10/finance/quoteSummary/KC=F?modules=price';
+    // RC=F for Robusta Coffee
+    const robustaUrl = 'https://query2.finance.yahoo.com/v10/finance/quoteSummary/RC=F?modules=price';
+
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept': 'application/json',
+    };
 
     const [arabicaResponse, robustaResponse] = await Promise.all([
-      fetch(arabicaUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-      }),
-      fetch(robustaUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-      })
+      fetch(arabicaUrl, { headers }),
+      fetch(robustaUrl, { headers })
     ]);
 
     let iceArabica = null;
@@ -40,32 +36,25 @@ serve(async (req) => {
       const arabicaData = await arabicaResponse.json();
       console.log('📊 Arabica response:', JSON.stringify(arabicaData).substring(0, 500));
       
-      const arabicaResult = arabicaData?.chart?.result?.[0];
-      if (arabicaResult) {
-        // Get the most recent price
-        const quote = arabicaResult.meta?.regularMarketPrice || 
-                      arabicaResult.indicators?.quote?.[0]?.close?.slice(-1)[0];
-        if (quote) {
-          iceArabica = parseFloat(quote.toFixed(2));
-          console.log(`☕ ICE Arabica price: ${iceArabica} cents/lb`);
-        }
+      const price = arabicaData?.quoteSummary?.result?.[0]?.price?.regularMarketPrice?.raw;
+      if (price) {
+        iceArabica = parseFloat(price.toFixed(2));
+        console.log(`☕ ICE Arabica price: ${iceArabica} cents/lb`);
       }
     } else {
       console.error('❌ Failed to fetch Arabica:', arabicaResponse.status);
+      const errorText = await arabicaResponse.text();
+      console.error('Error details:', errorText.substring(0, 200));
     }
 
     if (robustaResponse.ok) {
       const robustaData = await robustaResponse.json();
       console.log('📊 Robusta response:', JSON.stringify(robustaData).substring(0, 500));
       
-      const robustaResult = robustaData?.chart?.result?.[0];
-      if (robustaResult) {
-        const quote = robustaResult.meta?.regularMarketPrice || 
-                      robustaResult.indicators?.quote?.[0]?.close?.slice(-1)[0];
-        if (quote) {
-          iceRobusta = parseFloat(quote.toFixed(2));
-          console.log(`☕ ICE Robusta price: ${iceRobusta} USD/mt`);
-        }
+      const price = robustaData?.quoteSummary?.result?.[0]?.price?.regularMarketPrice?.raw;
+      if (price) {
+        iceRobusta = parseFloat(price.toFixed(2));
+        console.log(`☕ ICE Robusta price: ${iceRobusta} USD/mt`);
       }
     } else {
       console.error('❌ Failed to fetch Robusta:', robustaResponse.status);
