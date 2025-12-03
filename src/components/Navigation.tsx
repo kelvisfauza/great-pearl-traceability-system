@@ -19,7 +19,8 @@ import {
   LogOut,
   Receipt,
   UserCheck,
-  ArrowRight
+  ArrowRight,
+  FileCheck
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
@@ -101,6 +102,7 @@ const Navigation = () => {
     {
       title: "System",
       items: [
+        { name: "My Daily Reports", icon: FileCheck, path: "/user-daily-reports", permission: null },
         { name: "Reports", icon: FileText, path: "/reports", permission: "Reports" },
         { name: "Settings", icon: Settings, path: "/settings", permission: "Reports" },
         { name: "Logistics", icon: Truck, path: "/logistics", permission: "Logistics" },
