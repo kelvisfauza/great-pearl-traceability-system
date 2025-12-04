@@ -184,7 +184,7 @@ const Store = () => {
 
   const { processingBatches, machines, loading: processingLoading, todayMetrics } = useProcessingOperations();
 
-  const { hasPermission } = useAuth();
+  const { hasPermission, isAdmin } = useAuth();
 
   const loading = storeLoading || suppliersLoading || qualityLoading || processingLoading;
 
@@ -1135,91 +1135,97 @@ const Store = () => {
                     </CardDescription>
                   </div>
 
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Supplier
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Register New Supplier</DialogTitle>
-                        <DialogDescription>Add a new coffee supplier to the system</DialogDescription>
-                      </DialogHeader>
-
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="supplier-name">Supplier Name *</Label>
-                            <Input
-                              id="supplier-name"
-                              value={newSupplier.name}
-                              onChange={(e) =>
-                                setNewSupplier((prev) => ({
-                                  ...prev,
-                                  name: e.target.value,
-                                }))
-                              }
-                              placeholder="Enter supplier name"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="supplier-phone">Phone Number</Label>
-                            <Input
-                              id="supplier-phone"
-                              value={newSupplier.phone}
-                              onChange={(e) =>
-                                setNewSupplier((prev) => ({
-                                  ...prev,
-                                  phone: e.target.value,
-                                }))
-                              }
-                              placeholder="+256..."
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="supplier-origin">Origin *</Label>
-                            <Input
-                              id="supplier-origin"
-                              value={newSupplier.origin}
-                              onChange={(e) =>
-                                setNewSupplier((prev) => ({
-                                  ...prev,
-                                  origin: e.target.value,
-                                }))
-                              }
-                              placeholder="e.g., Mount Elgon"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="opening-balance">Opening Balance (UGX)</Label>
-                            <Input
-                              id="opening-balance"
-                              type="number"
-                              value={newSupplier.opening_balance}
-                              onChange={(e) =>
-                                setNewSupplier((prev) => ({
-                                  ...prev,
-                                  opening_balance: Number(e.target.value),
-                                }))
-                              }
-                              placeholder="0"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <DialogFooter>
-                        <Button onClick={handleSaveSupplier} disabled={submittingSupplier}>
-                          {submittingSupplier ? "Saving..." : "Save Supplier"}
+                  {isAdmin() ? (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Supplier
                         </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Register New Supplier</DialogTitle>
+                          <DialogDescription>Add a new coffee supplier to the system</DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="supplier-name">Supplier Name *</Label>
+                              <Input
+                                id="supplier-name"
+                                value={newSupplier.name}
+                                onChange={(e) =>
+                                  setNewSupplier((prev) => ({
+                                    ...prev,
+                                    name: e.target.value,
+                                  }))
+                                }
+                                placeholder="Enter supplier name"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="supplier-phone">Phone Number</Label>
+                              <Input
+                                id="supplier-phone"
+                                value={newSupplier.phone}
+                                onChange={(e) =>
+                                  setNewSupplier((prev) => ({
+                                    ...prev,
+                                    phone: e.target.value,
+                                  }))
+                                }
+                                placeholder="+256..."
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="supplier-origin">Origin *</Label>
+                              <Input
+                                id="supplier-origin"
+                                value={newSupplier.origin}
+                                onChange={(e) =>
+                                  setNewSupplier((prev) => ({
+                                    ...prev,
+                                    origin: e.target.value,
+                                  }))
+                                }
+                                placeholder="e.g., Mount Elgon"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="opening-balance">Opening Balance (UGX)</Label>
+                              <Input
+                                id="opening-balance"
+                                type="number"
+                                value={newSupplier.opening_balance}
+                                onChange={(e) =>
+                                  setNewSupplier((prev) => ({
+                                    ...prev,
+                                    opening_balance: Number(e.target.value),
+                                  }))
+                                }
+                                placeholder="0"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <DialogFooter>
+                          <Button onClick={handleSaveSupplier} disabled={submittingSupplier}>
+                            {submittingSupplier ? "Saving..." : "Save Supplier"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">
+                      Only admins can add suppliers
+                    </Badge>
+                  )}
                 </div>
               </CardHeader>
 

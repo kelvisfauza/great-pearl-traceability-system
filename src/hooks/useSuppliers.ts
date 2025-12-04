@@ -14,6 +14,50 @@ export interface Supplier {
   updated_at: string;
 }
 
+// Normalize name for comparison (lowercase, remove extra spaces, common variations)
+const normalizeName = (name: string): string => {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ') // normalize multiple spaces to single
+    .replace(/[^a-z0-9\s]/g, ''); // remove special characters
+};
+
+// Calculate similarity between two strings (Levenshtein distance based)
+const calculateSimilarity = (str1: string, str2: string): number => {
+  const s1 = normalizeName(str1);
+  const s2 = normalizeName(str2);
+  
+  if (s1 === s2) return 1;
+  
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+  
+  if (longer.length === 0) return 1;
+  
+  // Check if one contains the other
+  if (longer.includes(shorter) || shorter.includes(longer)) {
+    return 0.9;
+  }
+  
+  // Simple word overlap check
+  const words1 = s1.split(' ').filter(w => w.length > 2);
+  const words2 = s2.split(' ').filter(w => w.length > 2);
+  const commonWords = words1.filter(w => words2.some(w2 => w2.includes(w) || w.includes(w2)));
+  
+  if (commonWords.length > 0 && (commonWords.length >= words1.length * 0.5 || commonWords.length >= words2.length * 0.5)) {
+    return 0.85;
+  }
+  
+  return 0;
+};
+
+export interface DuplicateCheckResult {
+  isDuplicate: boolean;
+  existingSupplier?: Supplier;
+  similarity?: number;
+}
+
 export const useSuppliers = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,17 +92,54 @@ export const useSuppliers = () => {
     }
   };
 
+  // Check if a supplier with similar name already exists
+  const checkDuplicateSupplier = (name: string): DuplicateCheckResult => {
+    const normalizedNewName = normalizeName(name);
+    
+    for (const supplier of suppliers) {
+      const similarity = calculateSimilarity(name, supplier.name);
+      
+      // Exact match (after normalization)
+      if (normalizeName(supplier.name) === normalizedNewName) {
+        return { isDuplicate: true, existingSupplier: supplier, similarity: 1 };
+      }
+      
+      // Similar name (85%+ similarity)
+      if (similarity >= 0.85) {
+        return { isDuplicate: true, existingSupplier: supplier, similarity };
+      }
+    }
+    
+    return { isDuplicate: false };
+  };
+
   const addSupplier = async (supplierData: {
     name: string;
     phone: string;
     origin: string;
     opening_balance: number;
   }) => {
+    // Check for duplicates first
+    const duplicateCheck = checkDuplicateSupplier(supplierData.name);
+    
+    if (duplicateCheck.isDuplicate && duplicateCheck.existingSupplier) {
+      const message = duplicateCheck.similarity === 1 
+        ? `Supplier "${duplicateCheck.existingSupplier.name}" already exists in the system.`
+        : `A similar supplier "${duplicateCheck.existingSupplier.name}" already exists. Please verify if this is the same person.`;
+      
+      toast({
+        title: "Duplicate Supplier Detected",
+        description: message,
+        variant: "destructive"
+      });
+      throw new Error(message);
+    }
+    
     try {
       console.log('Adding supplier to Supabase (new suppliers go to Supabase only):', supplierData);
       
       const supplierToAdd = {
-        name: supplierData.name,
+        name: supplierData.name.trim(),
         origin: supplierData.origin,
         phone: supplierData.phone || null,
         code: `SUP${Date.now()}`,
@@ -81,13 +162,15 @@ export const useSuppliers = () => {
       });
       
       await fetchSuppliers(); // Refresh the list
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding supplier:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add supplier",
-        variant: "destructive"
-      });
+      if (!error.message?.includes('Duplicate')) {
+        toast({
+          title: "Error",
+          description: "Failed to add supplier",
+          variant: "destructive"
+        });
+      }
       throw error;
     }
   };
@@ -143,6 +226,7 @@ export const useSuppliers = () => {
     fetchSuppliers,
     addSupplier,
     updateSupplier,
+    checkDuplicateSupplier,
     refetchSuppliers: fetchSuppliers
   };
 };
