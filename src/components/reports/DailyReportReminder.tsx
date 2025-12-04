@@ -184,8 +184,11 @@ export const DailyReportReminder = () => {
   };
 
   const handleFormSuccess = () => {
+    // Only mark today as submitted if the report was for today, not a missed date
+    if (!missedReportDate || missedReportDate === getTodayDate()) {
+      setTodayReportSubmitted(true);
+    }
     setMissedReportDate(null);
-    setTodayReportSubmitted(true);
     // Recheck in case there are other pending items
     checkAndShowReminders();
   };
