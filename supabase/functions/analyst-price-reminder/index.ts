@@ -37,7 +37,7 @@ serve(async (req) => {
     const { data: todayPrices, error: priceError } = await supabase
       .from('price_history')
       .select('id, arabica_buying_price, robusta_buying_price')
-      .eq('date', today)
+      .eq('price_date', today)
       .limit(1);
 
     if (priceError) {
