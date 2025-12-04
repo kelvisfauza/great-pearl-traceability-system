@@ -35,7 +35,7 @@ const Procurement = () => {
   const { suppliers, loading: suppliersLoading } = useSuppliers();
   const { purchaseOrders, loading: ordersLoading } = usePurchaseOrders();
   const { deliveries, loading: deliveriesLoading } = useDeliveries();
-  const { hasPermission } = useAuth();
+  const { hasPermission, isAdmin } = useAuth();
   const [marketData, setMarketData] = useState<any[]>([]);
   const [marketLoading, setMarketLoading] = useState(true);
 
@@ -188,10 +188,16 @@ const Procurement = () => {
                       <Filter className="h-4 w-4 mr-2" />
                       Filter
                     </Button>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Supplier
-                    </Button>
+                    {isAdmin() ? (
+                      <Button disabled title="Use Store page to add suppliers">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Supplier
+                      </Button>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">
+                        Only admins can add suppliers
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </CardHeader>
