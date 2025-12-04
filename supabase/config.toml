@@ -94,3 +94,6 @@ verify_jwt = false
 
 [functions.analyst-price-reminder]
 verify_jwt = false
+
+[functions.morning-report-reminder]
+verify_jwt = false
