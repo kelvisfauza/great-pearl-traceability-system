@@ -91,3 +91,6 @@ verify_jwt = false
 
 [functions.send-sms]
 verify_jwt = false
+
+[functions.analyst-price-reminder]
+verify_jwt = false
