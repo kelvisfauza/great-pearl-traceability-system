@@ -14,6 +14,7 @@ import { useSalesMarketing } from "@/hooks/useSalesMarketing";
 import SalesForm from "@/components/sales/SalesForm";
 import SalesHistory from "@/components/sales/SalesHistory";
 import { ContractFileUpload } from "@/components/sales/ContractFileUpload";
+import { SupplierSubcontracts } from "@/components/sales/SupplierSubcontracts";
 
 const SalesMarketing = () => {
   const {
@@ -142,10 +143,11 @@ const SalesMarketing = () => {
         </div>
 
         <Tabs defaultValue="sales-form" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="sales-form">Sales Form</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="contract-files">Contract Files</TabsTrigger>
+            <TabsTrigger value="supplier-subcontracts">Supplier Contracts</TabsTrigger>
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
@@ -157,6 +159,10 @@ const SalesMarketing = () => {
 
           <TabsContent value="contract-files" className="space-y-4">
             <ContractFileUpload />
+          </TabsContent>
+
+          <TabsContent value="supplier-subcontracts" className="space-y-4">
+            <SupplierSubcontracts />
           </TabsContent>
 
           <TabsContent value="customers" className="space-y-4">

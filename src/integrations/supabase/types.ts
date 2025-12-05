@@ -4578,6 +4578,77 @@ export type Database = {
           },
         ]
       }
+      supplier_subcontracts: {
+        Row: {
+          contract_ref: string
+          contract_size: string
+          created_at: string
+          created_by: string | null
+          cuttings: string | null
+          delivery_station: string
+          id: string
+          moisture: number | null
+          net_weight: number
+          outturn: number | null
+          price_per_kg: number
+          price_subject_to_uprisal: boolean | null
+          status: string | null
+          supplier_id: string | null
+          supplier_name: string
+          terms: string | null
+          total_fm: number | null
+          updated_at: string
+        }
+        Insert: {
+          contract_ref: string
+          contract_size: string
+          created_at?: string
+          created_by?: string | null
+          cuttings?: string | null
+          delivery_station: string
+          id?: string
+          moisture?: number | null
+          net_weight: number
+          outturn?: number | null
+          price_per_kg: number
+          price_subject_to_uprisal?: boolean | null
+          status?: string | null
+          supplier_id?: string | null
+          supplier_name: string
+          terms?: string | null
+          total_fm?: number | null
+          updated_at?: string
+        }
+        Update: {
+          contract_ref?: string
+          contract_size?: string
+          created_at?: string
+          created_by?: string | null
+          cuttings?: string | null
+          delivery_station?: string
+          id?: string
+          moisture?: number | null
+          net_weight?: number
+          outturn?: number | null
+          price_per_kg?: number
+          price_subject_to_uprisal?: boolean | null
+          status?: string | null
+          supplier_id?: string | null
+          supplier_name?: string
+          terms?: string | null
+          total_fm?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_subcontracts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           code: string
