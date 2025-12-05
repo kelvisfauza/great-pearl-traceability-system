@@ -17,6 +17,7 @@ export interface SupplierSubcontract {
   outturn: number | null;
   moisture: number | null;
   total_fm: number | null;
+  duration: string | null;
   status: string;
   created_at: string;
   updated_at: string;

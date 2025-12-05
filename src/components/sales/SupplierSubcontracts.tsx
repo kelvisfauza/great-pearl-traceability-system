@@ -9,13 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Printer, Eye, FileText } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Printer, FileText, MoreHorizontal, CheckCircle, XCircle, Clock, Pause } from "lucide-react";
 import { useSupplierSubcontracts, SupplierSubcontract } from '@/hooks/useSupplierSubcontracts';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useToast } from '@/hooks/use-toast';
 
 export const SupplierSubcontracts = () => {
-  const { subcontracts, loading, createSubcontract, generateContractRef } = useSupplierSubcontracts();
+  const { subcontracts, loading, createSubcontract, updateSubcontract, generateContractRef } = useSupplierSubcontracts();
   const { suppliers } = useSuppliers();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -35,7 +36,8 @@ export const SupplierSubcontracts = () => {
     terms: '',
     outturn: '',
     moisture: '',
-    total_fm: ''
+    total_fm: '',
+    duration: ''
   });
 
   const handleSupplierChange = (supplierId: string) => {
@@ -73,6 +75,7 @@ export const SupplierSubcontracts = () => {
         outturn: formData.outturn ? parseFloat(formData.outturn) : null,
         moisture: formData.moisture ? parseFloat(formData.moisture) : null,
         total_fm: formData.total_fm ? parseFloat(formData.total_fm) : null,
+        duration: formData.duration || null,
         status: 'active',
         created_by: null
       });
@@ -97,13 +100,18 @@ export const SupplierSubcontracts = () => {
       terms: '',
       outturn: '',
       moisture: '',
-      total_fm: ''
+      total_fm: '',
+      duration: ''
     });
   };
 
   const handlePrint = (contract: SupplierSubcontract) => {
     setSelectedContract(contract);
     setIsPrintPreviewOpen(true);
+  };
+
+  const handleStatusChange = async (contract: SupplierSubcontract, newStatus: string) => {
+    await updateSubcontract(contract.id, { status: newStatus });
   };
 
   const printContract = () => {
@@ -126,6 +134,8 @@ export const SupplierSubcontracts = () => {
           .label { font-weight: bold; width: 200px; }
           .value { flex: 1; }
           .terms-section { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px; }
+          .quality-notice { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          .quality-notice-title { font-weight: bold; color: #856404; margin-bottom: 8px; }
           .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #666; }
           .signatures { display: flex; justify-content: space-between; margin-top: 60px; }
           .signature-box { width: 45%; text-align: center; }
@@ -144,8 +154,9 @@ export const SupplierSubcontracts = () => {
         <div class="section">
           <div class="section-title">Supplier Information</div>
           <div class="row"><span class="label">Supplier Name:</span><span class="value">${selectedContract.supplier_name}</span></div>
-          <div class="row"><span class="label">Contract Size:</span><span class="value">${selectedContract.contract_size}</span></div>
+          <div class="row"><span class="label">Contract Size:</span><span class="value">${selectedContract.contract_size || 'N/A'}</span></div>
           <div class="row"><span class="label">Delivery Station:</span><span class="value">${selectedContract.delivery_station}</span></div>
+          <div class="row"><span class="label">Contract Duration:</span><span class="value">${selectedContract.duration || 'N/A'}</span></div>
         </div>
         
         <div class="section">
@@ -162,6 +173,11 @@ export const SupplierSubcontracts = () => {
           <div class="row"><span class="label">Outturn:</span><span class="value">${selectedContract.outturn || 'N/A'}%</span></div>
           <div class="row"><span class="label">Moisture:</span><span class="value">${selectedContract.moisture || 'N/A'}%</span></div>
           <div class="row"><span class="label">Total FM:</span><span class="value">${selectedContract.total_fm || 'N/A'}%</span></div>
+        </div>
+
+        <div class="quality-notice">
+          <div class="quality-notice-title">⚠️ Important Notice</div>
+          <p style="margin: 0;">All deliveries under this contract are subjected to quality checks, uprisal adjustments, and cuttings as per Great Pearl Coffee's quality standards and market conditions at the time of delivery.</p>
         </div>
         
         ${selectedContract.terms ? `
@@ -199,10 +215,11 @@ export const SupplierSubcontracts = () => {
     setIsPrintPreviewOpen(false);
   };
 
-  const statusColors: Record<string, string> = {
-    active: 'bg-green-100 text-green-800',
-    completed: 'bg-blue-100 text-blue-800',
-    cancelled: 'bg-red-100 text-red-800'
+  const statusConfig: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
+    active: { color: 'bg-green-100 text-green-800', icon: <Clock className="h-3 w-3" />, label: 'Active' },
+    completed: { color: 'bg-blue-100 text-blue-800', icon: <CheckCircle className="h-3 w-3" />, label: 'Completed' },
+    cancelled: { color: 'bg-red-100 text-red-800', icon: <XCircle className="h-3 w-3" />, label: 'Cancelled' },
+    suspended: { color: 'bg-yellow-100 text-yellow-800', icon: <Pause className="h-3 w-3" />, label: 'Suspended' }
   };
 
   if (loading) {
@@ -261,6 +278,16 @@ export const SupplierSubcontracts = () => {
                   </div>
 
                   <div>
+                    <Label htmlFor="duration">Duration</Label>
+                    <Input
+                      id="duration"
+                      value={formData.duration}
+                      onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+                      placeholder="e.g., 3 months, Jan-Mar 2025"
+                    />
+                  </div>
+
+                  <div>
                     <Label htmlFor="delivery_station">Delivery Station *</Label>
                     <Input
                       id="delivery_station"
@@ -295,6 +322,16 @@ export const SupplierSubcontracts = () => {
                     />
                   </div>
 
+                  <div>
+                    <Label htmlFor="cuttings">Cuttings</Label>
+                    <Input
+                      id="cuttings"
+                      value={formData.cuttings}
+                      onChange={(e) => setFormData(prev => ({ ...prev, cuttings: e.target.value }))}
+                      placeholder="e.g., 2%"
+                    />
+                  </div>
+
                   <div className="flex items-center space-x-2 col-span-2">
                     <Checkbox
                       id="price_subject_to_uprisal"
@@ -304,16 +341,6 @@ export const SupplierSubcontracts = () => {
                       }
                     />
                     <Label htmlFor="price_subject_to_uprisal">Price Subject to Uprisal</Label>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="cuttings">Cuttings</Label>
-                    <Input
-                      id="cuttings"
-                      value={formData.cuttings}
-                      onChange={(e) => setFormData(prev => ({ ...prev, cuttings: e.target.value }))}
-                      placeholder="e.g., 2%"
-                    />
                   </div>
 
                   <div>
@@ -362,6 +389,10 @@ export const SupplierSubcontracts = () => {
                       rows={4}
                     />
                   </div>
+
+                  <div className="col-span-2 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-800">
+                    <strong>Note:</strong> All deliveries are subjected to quality checks, uprisal adjustments, and cuttings as per company standards.
+                  </div>
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4">
@@ -384,10 +415,10 @@ export const SupplierSubcontracts = () => {
               <TableRow>
                 <TableHead>Contract Ref</TableHead>
                 <TableHead>Supplier</TableHead>
+                <TableHead>Duration</TableHead>
                 <TableHead>Net Weight</TableHead>
                 <TableHead>Price/Kg</TableHead>
                 <TableHead>Total Value</TableHead>
-                <TableHead>Delivery Station</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -397,16 +428,41 @@ export const SupplierSubcontracts = () => {
                 <TableRow key={contract.id}>
                   <TableCell className="font-medium">{contract.contract_ref}</TableCell>
                   <TableCell>{contract.supplier_name}</TableCell>
+                  <TableCell>{contract.duration || '-'}</TableCell>
                   <TableCell>{contract.net_weight.toLocaleString()} kg</TableCell>
                   <TableCell>UGX {contract.price_per_kg.toLocaleString()}</TableCell>
                   <TableCell className="font-semibold text-green-600">
                     UGX {(contract.net_weight * contract.price_per_kg).toLocaleString()}
                   </TableCell>
-                  <TableCell>{contract.delivery_station}</TableCell>
                   <TableCell>
-                    <Badge className={statusColors[contract.status] || 'bg-gray-100'}>
-                      {contract.status}
-                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 px-2">
+                          <Badge className={`${statusConfig[contract.status]?.color || 'bg-gray-100'} flex items-center gap-1 cursor-pointer`}>
+                            {statusConfig[contract.status]?.icon}
+                            {statusConfig[contract.status]?.label || contract.status}
+                          </Badge>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleStatusChange(contract, 'active')}>
+                          <Clock className="h-4 w-4 mr-2 text-green-600" />
+                          Active
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleStatusChange(contract, 'completed')}>
+                          <CheckCircle className="h-4 w-4 mr-2 text-blue-600" />
+                          Completed
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleStatusChange(contract, 'suspended')}>
+                          <Pause className="h-4 w-4 mr-2 text-yellow-600" />
+                          Suspended
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleStatusChange(contract, 'cancelled')}>
+                          <XCircle className="h-4 w-4 mr-2 text-red-600" />
+                          Cancelled
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
@@ -424,26 +480,21 @@ export const SupplierSubcontracts = () => {
 
       {/* Print Preview Dialog */}
       <Dialog open={isPrintPreviewOpen} onOpenChange={setIsPrintPreviewOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Print Contract</DialogTitle>
             <DialogDescription>
-              {selectedContract && `Contract ${selectedContract.contract_ref} for ${selectedContract.supplier_name}`}
+              Print subcontract {selectedContract?.contract_ref} for {selectedContract?.supplier_name}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Click the button below to print or save this contract as PDF.
-            </p>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsPrintPreviewOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={printContract}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print Contract
-              </Button>
-            </div>
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button variant="outline" onClick={() => setIsPrintPreviewOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={printContract}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print Contract
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

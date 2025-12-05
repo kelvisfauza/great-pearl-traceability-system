@@ -4586,6 +4586,7 @@ export type Database = {
           created_by: string | null
           cuttings: string | null
           delivery_station: string
+          duration: string | null
           id: string
           moisture: number | null
           net_weight: number
@@ -4606,6 +4607,7 @@ export type Database = {
           created_by?: string | null
           cuttings?: string | null
           delivery_station: string
+          duration?: string | null
           id?: string
           moisture?: number | null
           net_weight: number
@@ -4626,6 +4628,7 @@ export type Database = {
           created_by?: string | null
           cuttings?: string | null
           delivery_station?: string
+          duration?: string | null
           id?: string
           moisture?: number | null
           net_weight?: number
