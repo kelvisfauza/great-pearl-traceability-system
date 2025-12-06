@@ -52,28 +52,32 @@ export const useSupplierSubcontracts = () => {
 
   const generateContractRef = async (): Promise<string> => {
     try {
-      // Get the count of existing contracts to generate next number
+      // Get the highest contract number to generate next
       const { data, error } = await supabase
         .from('supplier_subcontracts')
         .select('contract_ref')
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      let nextNum = 1;
+      let maxNum = 0;
       if (data && data.length > 0) {
-        const lastRef = data[0].contract_ref;
-        const match = lastRef.match(/GPC\s*(\d+)/);
-        if (match) {
-          nextNum = parseInt(match[1]) + 1;
-        }
+        // Find the highest number from all existing refs
+        data.forEach(item => {
+          const match = item.contract_ref.match(/GPC\s*(\d+)/);
+          if (match) {
+            const num = parseInt(match[1]);
+            if (num > maxNum) maxNum = num;
+          }
+        });
       }
 
+      const nextNum = maxNum + 1;
       return `GPC ${nextNum.toString().padStart(4, '0')}`;
     } catch (error) {
       console.error('Error generating contract ref:', error);
-      return `GPC ${Date.now().toString().slice(-4)}`;
+      // Use timestamp for uniqueness as fallback
+      return `GPC ${Date.now().toString().slice(-8)}`;
     }
   };
 
