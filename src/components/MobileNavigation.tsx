@@ -37,7 +37,8 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
       items: [
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
-        { name: "Finance", icon: DollarSign, path: "/finance", permission: "Finance" },
+        // ❌ Finance hidden - will be used in separate Finance portal
+        // { name: "Finance", icon: DollarSign, path: "/finance", permission: "Finance" },
         { name: "My Expenses", icon: DollarSign, path: "/my-expenses", permission: null },
         { name: "Human Resources", icon: Users, path: "/human-resources", permission: "Human Resources" },
         { name: "Data Analyst", icon: LineChart, path: "/data-analyst", permission: "Data Analysis" },
@@ -61,7 +62,7 @@ const MobileNavigation = ({ isOpen, onClose }: MobileNavigationProps) => {
       items: section.items.filter(item => {
         if (!item.permission) return true;
         if (section.title === 'Reports') return true;
-        if (isAdmin) return true;
+        if (isAdmin()) return true; // Fixed: isAdmin is a function, needs to be called
         return hasPermission(item.permission);
       })
     })).filter(section => section.items.length > 0);
