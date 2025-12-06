@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 
 interface MonthlyReconciliation {
@@ -57,19 +55,44 @@ export const useMonthlyReconciliation = (selectedMonth: number, selectedYear: nu
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      // Fetch purchases from Firebase (coffee_records)
-      const purchasesSnapshot = await getDocs(collection(db, 'coffee_records'));
+      // Fetch coffee records from Supabase
+      const { data: coffeeRecords, error: coffeeError } = await supabase
+        .from('coffee_records')
+        .select('*');
+
+      if (coffeeError) {
+        console.error('Error fetching coffee records:', coffeeError);
+      }
+
       let totalPurchases = 0;
       let totalPurchaseKg = 0;
       let openingInventoryValue = 0;
       let closingInventoryValue = 0;
       let closingInventoryKg = 0;
 
-      purchasesSnapshot.forEach(doc => {
-        const record = doc.data();
+      // Get finance_coffee_lots for pricing data
+      const { data: financeLots } = await supabase
+        .from('finance_coffee_lots')
+        .select('coffee_record_id, unit_price_ugx, quantity_kg');
+
+      // Create a map of coffee_record_id to pricing
+      const pricingMap = new Map<string, { unitPrice: number; quantityKg: number }>();
+      financeLots?.forEach(lot => {
+        if (lot.coffee_record_id) {
+          pricingMap.set(lot.coffee_record_id, {
+            unitPrice: Number(lot.unit_price_ugx) || 0,
+            quantityKg: Number(lot.quantity_kg) || 0
+          });
+        }
+      });
+
+      coffeeRecords?.forEach(record => {
         const recordDate = new Date(record.date);
         const kg = Number(record.kilograms) || 0;
-        const price = Number(record.price_per_kg) || 0;
+        
+        // Get price from finance lots if available
+        const pricing = pricingMap.get(record.id);
+        const price = pricing?.unitPrice || 0;
         const value = kg * price;
 
         // Purchases in selected month
@@ -100,26 +123,24 @@ export const useMonthlyReconciliation = (selectedMonth: number, selectedYear: nu
       const totalSales = salesData?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0;
       const totalSalesKg = salesData?.reduce((sum, sale) => sum + Number(sale.weight), 0) || 0;
 
-      // Fetch payments to suppliers
+      // Fetch payments to suppliers from supplier_payments
       const { data: paymentsData } = await supabase
-        .from('payment_records')
-        .select('amount')
-        .eq('status', 'Paid')
-        .gte('date', startDateStr)
-        .lte('date', endDateStr);
+        .from('supplier_payments')
+        .select('amount_paid_ugx, approved_at')
+        .eq('status', 'POSTED')
+        .gte('approved_at', startDate.toISOString())
+        .lte('approved_at', endDate.toISOString());
 
-      const totalPaymentsToSuppliers = paymentsData?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+      const totalPaymentsToSuppliers = paymentsData?.reduce((sum, p) => sum + Number(p.amount_paid_ugx), 0) || 0;
 
-      // Fetch advances from Firebase
-      const advancesSnapshot = await getDocs(collection(db, 'supplier_advances'));
-      let totalAdvancesGiven = 0;
-      advancesSnapshot.forEach(doc => {
-        const advance = doc.data();
-        const advanceDate = advance.issued_at?.toDate?.() || new Date(advance.issued_at);
-        if (advanceDate >= startDate && advanceDate <= endDate) {
-          totalAdvancesGiven += Number(advance.amount_ugx) || 0;
-        }
-      });
+      // Fetch advances from Supabase supplier_advances
+      const { data: advancesData } = await supabase
+        .from('supplier_advances')
+        .select('amount_ugx, issued_at')
+        .gte('issued_at', startDate.toISOString())
+        .lte('issued_at', endDate.toISOString());
+
+      const totalAdvancesGiven = advancesData?.reduce((sum, a) => sum + Number(a.amount_ugx), 0) || 0;
 
       // Fetch expenses from Supabase
       const { data: expensesData } = await supabase
@@ -163,7 +184,7 @@ export const useMonthlyReconciliation = (selectedMonth: number, selectedYear: nu
 
       // Calculate Balance Sheet
       const totalAssets = closingInventoryValue + netCashFlow;
-      const totalLiabilities = totalAdvancesGiven; // Outstanding advances
+      const totalLiabilities = totalAdvancesGiven;
       const equity = totalAssets - totalLiabilities;
 
       setData({
@@ -193,6 +214,33 @@ export const useMonthlyReconciliation = (selectedMonth: number, selectedYear: nu
       });
     } catch (error) {
       console.error('Error fetching reconciliation data:', error);
+      // Set default data even on error so UI shows zeros instead of "no data"
+      const startDate = new Date(selectedYear, selectedMonth, 1);
+      setData({
+        month: startDate.toLocaleString('default', { month: 'long' }),
+        year: selectedYear,
+        totalPurchases: 0,
+        totalPurchaseKg: 0,
+        totalSales: 0,
+        totalSalesKg: 0,
+        openingInventoryValue: 0,
+        closingInventoryValue: 0,
+        closingInventoryKg: 0,
+        totalPaymentsToSuppliers: 0,
+        totalAdvancesGiven: 0,
+        totalExpenses: 0,
+        totalCashIn: 0,
+        totalCashOut: 0,
+        netCashFlow: 0,
+        revenue: 0,
+        costOfGoodsSold: 0,
+        grossProfit: 0,
+        operatingExpenses: 0,
+        netProfit: 0,
+        totalAssets: 0,
+        totalLiabilities: 0,
+        equity: 0
+      });
     } finally {
       setLoading(false);
     }
