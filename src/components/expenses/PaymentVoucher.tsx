@@ -55,108 +55,120 @@ const PaymentVoucher: React.FC<PaymentVoucherProps> = ({
               max-width: 800px;
               margin: 0 auto;
               border: 2px solid #333;
-              padding: 30px;
             }
             .header {
-              text-align: center;
-              border-bottom: 2px solid #333;
-              padding-bottom: 20px;
-              margin-bottom: 20px;
-            }
-            .company-name {
-              font-size: 28px;
-              font-weight: bold;
-              color: #1a5f2a;
-              margin-bottom: 5px;
-            }
-            .company-tagline {
-              font-size: 12px;
-              color: #666;
-              margin-bottom: 10px;
-            }
-            .voucher-title {
-              font-size: 22px;
-              font-weight: bold;
-              margin-top: 15px;
-              text-transform: uppercase;
-              letter-spacing: 2px;
-            }
-            .voucher-number {
-              font-size: 14px;
-              color: #666;
-              margin-top: 5px;
-            }
-            .content {
-              margin: 25px 0;
-            }
-            .row {
+              background: linear-gradient(135deg, #1a5f2a 0%, #2d8a3e 100%);
+              color: white;
+              padding: 25px 30px;
               display: flex;
-              border-bottom: 1px solid #ddd;
-              padding: 12px 0;
+              align-items: center;
+              justify-content: space-between;
             }
-            .row:last-child {
-              border-bottom: none;
+            .logo-section {
+              display: flex;
+              align-items: center;
+              gap: 15px;
             }
-            .label {
-              font-weight: 600;
-              width: 180px;
-              color: #444;
+            .logo-icon {
+              width: 60px;
+              height: 60px;
+              background: white;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 28px;
             }
-            .value {
-              flex: 1;
-              color: #333;
+            .company-info h1 {
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 4px;
             }
-            .amount-section {
-              background: #f5f5f5;
-              padding: 20px;
-              margin: 25px 0;
+            .company-info p {
+              font-size: 12px;
+              opacity: 0.9;
+            }
+            .voucher-badge {
+              background: rgba(255,255,255,0.2);
+              padding: 10px 20px;
               border-radius: 8px;
               text-align: center;
             }
-            .amount-label {
+            .voucher-badge h2 {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+            .voucher-badge p {
+              font-size: 11px;
+              opacity: 0.9;
+            }
+            .content {
+              padding: 25px 30px;
+            }
+            .section-title {
               font-size: 14px;
+              font-weight: 600;
+              color: #1a5f2a;
+              margin-bottom: 15px;
+              padding-bottom: 8px;
+              border-bottom: 2px solid #1a5f2a;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .details-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 12px;
+              margin-bottom: 20px;
+            }
+            .detail-item {
+              padding: 10px;
+              background: #f8f9fa;
+              border-radius: 6px;
+            }
+            .detail-item.full-width {
+              grid-column: 1 / -1;
+            }
+            .detail-label {
+              font-size: 11px;
               color: #666;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 4px;
+            }
+            .detail-value {
+              font-size: 14px;
+              color: #333;
+              font-weight: 500;
+            }
+            .amount-section {
+              background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+              border: 2px solid #1a5f2a;
+              padding: 25px;
+              margin: 20px 0;
+              border-radius: 12px;
+              text-align: center;
+            }
+            .amount-label {
+              font-size: 12px;
+              color: #166534;
+              text-transform: uppercase;
+              letter-spacing: 1px;
               margin-bottom: 8px;
             }
             .amount-value {
-              font-size: 32px;
+              font-size: 36px;
               font-weight: bold;
               color: #1a5f2a;
             }
             .amount-words {
-              font-size: 12px;
-              color: #666;
+              font-size: 13px;
+              color: #166534;
               margin-top: 8px;
               font-style: italic;
             }
-            .signatures {
-              display: flex;
-              justify-content: space-between;
-              margin-top: 50px;
-              padding-top: 20px;
-            }
-            .signature-box {
-              text-align: center;
-              width: 200px;
-            }
-            .signature-line {
-              border-top: 1px solid #333;
-              margin-bottom: 8px;
-              padding-top: 10px;
-            }
-            .signature-title {
-              font-size: 12px;
-              color: #666;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              padding-top: 20px;
-              border-top: 1px dashed #ccc;
-              font-size: 11px;
-              color: #888;
-            }
-            .status-badge {
+            .status-approved {
               display: inline-block;
               background: #22c55e;
               color: white;
@@ -166,23 +178,56 @@ const PaymentVoucher: React.FC<PaymentVoucherProps> = ({
               font-weight: 600;
               text-transform: uppercase;
               letter-spacing: 1px;
+              margin-top: 10px;
             }
             .instructions {
               background: #fef3c7;
               border: 1px solid #f59e0b;
-              padding: 15px;
-              margin-top: 20px;
+              padding: 15px 20px;
+              margin: 20px 0;
               border-radius: 8px;
-              font-size: 12px;
             }
             .instructions-title {
               font-weight: bold;
               color: #92400e;
-              margin-bottom: 8px;
+              margin-bottom: 10px;
+              font-size: 13px;
             }
             .instructions-list {
               color: #78350f;
               padding-left: 20px;
+              font-size: 12px;
+              line-height: 1.8;
+            }
+            .signatures {
+              display: flex;
+              justify-content: space-between;
+              margin-top: 40px;
+              padding-top: 20px;
+            }
+            .signature-box {
+              text-align: center;
+              width: 180px;
+            }
+            .signature-line {
+              border-top: 1px solid #333;
+              margin-bottom: 8px;
+              padding-top: 40px;
+            }
+            .signature-title {
+              font-size: 11px;
+              color: #666;
+            }
+            .footer {
+              background: #f8f9fa;
+              text-align: center;
+              padding: 15px;
+              font-size: 11px;
+              color: #666;
+              border-top: 1px solid #ddd;
+            }
+            .footer p {
+              margin: 3px 0;
             }
             @media print {
               body { padding: 0; }
@@ -247,77 +292,78 @@ const PaymentVoucher: React.FC<PaymentVoucherProps> = ({
         <div ref={voucherRef}>
           <div className="voucher">
             <div className="header">
-              <div className="company-name">GREAT PEARL COFFEE</div>
-              <div className="company-tagline">Premium Coffee Trading & Export</div>
-              <div className="voucher-title">Payment Voucher</div>
-              <div className="voucher-number">Voucher No: {voucherNumber}</div>
+              <div className="logo-section">
+                <div className="logo-icon">☕</div>
+                <div className="company-info">
+                  <h1>GREAT PEARL COFFEE</h1>
+                  <p>Premium Coffee Trading & Export</p>
+                </div>
+              </div>
+              <div className="voucher-badge">
+                <h2>PAYMENT VOUCHER</h2>
+                <p>No: {voucherNumber}</p>
+              </div>
             </div>
 
             <div className="content">
-              <div className="row">
-                <div className="label">Payee Name:</div>
-                <div className="value">{employeeName}</div>
-              </div>
-              <div className="row">
-                <div className="label">Department:</div>
-                <div className="value">{employeeDepartment}</div>
-              </div>
-              <div className="row">
-                <div className="label">Request Type:</div>
-                <div className="value">{request.type}</div>
-              </div>
-              <div className="row">
-                <div className="label">Purpose:</div>
-                <div className="value">{request.title}</div>
-              </div>
-              <div className="row">
-                <div className="label">Description:</div>
-                <div className="value">{request.description}</div>
-              </div>
-              <div className="row">
-                <div className="label">Request Date:</div>
-                <div className="value">{formatDate(request.created_at)}</div>
-              </div>
-              <div className="row">
-                <div className="label">Approval Date:</div>
-                <div className="value">{formatDate(request.finance_approved_at || request.admin_approved_at || new Date().toISOString())}</div>
-              </div>
-              <div className="row">
-                <div className="label">Status:</div>
-                <div className="value">
-                  <span className="status-badge">✓ APPROVED</span>
+              <div className="section-title">Payee Information</div>
+              <div className="details-grid">
+                <div className="detail-item">
+                  <div className="detail-label">Payee Name</div>
+                  <div className="detail-value">{employeeName}</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Department</div>
+                  <div className="detail-value">{employeeDepartment}</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Request Type</div>
+                  <div className="detail-value">{request.type}</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Request Date</div>
+                  <div className="detail-value">{formatDate(request.created_at)}</div>
+                </div>
+                <div className="detail-item full-width">
+                  <div className="detail-label">Purpose</div>
+                  <div className="detail-value">{request.title}</div>
+                </div>
+                <div className="detail-item full-width">
+                  <div className="detail-label">Description</div>
+                  <div className="detail-value">{request.description}</div>
                 </div>
               </div>
-            </div>
 
-            <div className="amount-section">
-              <div className="amount-label">Amount Approved for Payment</div>
-              <div className="amount-value">UGX {request.amount.toLocaleString()}</div>
-              <div className="amount-words">{numberToWords(request.amount)}</div>
-            </div>
-
-            <div className="instructions">
-              <div className="instructions-title">📋 Payment Instructions:</div>
-              <ul className="instructions-list">
-                <li>Present this voucher to the Finance Department</li>
-                <li>Carry a valid ID for verification</li>
-                <li>Sign the payment register upon receiving payment</li>
-                <li>This voucher is valid for 7 days from approval date</li>
-              </ul>
-            </div>
-
-            <div className="signatures">
-              <div className="signature-box">
-                <div className="signature-line">________________</div>
-                <div className="signature-title">Payee Signature</div>
+              <div className="amount-section">
+                <div className="amount-label">Amount Approved for Payment</div>
+                <div className="amount-value">UGX {request.amount.toLocaleString()}</div>
+                <div className="amount-words">{numberToWords(request.amount)}</div>
+                <span className="status-approved">✓ APPROVED</span>
               </div>
-              <div className="signature-box">
-                <div className="signature-line">________________</div>
-                <div className="signature-title">Finance Officer</div>
+
+              <div className="instructions">
+                <div className="instructions-title">📋 Payment Instructions:</div>
+                <ul className="instructions-list">
+                  <li>Present this voucher to the Finance Department</li>
+                  <li>Carry a valid ID for verification</li>
+                  <li>Sign the payment register upon receiving payment</li>
+                  <li>This voucher is valid for 7 days from approval date</li>
+                </ul>
               </div>
-              <div className="signature-box">
-                <div className="signature-line">________________</div>
-                <div className="signature-title">Authorized By</div>
+
+              <div className="signatures">
+                <div className="signature-box">
+                  <div className="signature-line"></div>
+                  <div className="signature-title">Payee Signature</div>
+                </div>
+                <div className="signature-box">
+                  <div className="signature-line"></div>
+                  <div className="signature-title">Finance Officer</div>
+                </div>
+                <div className="signature-box">
+                  <div className="signature-line"></div>
+                  <div className="signature-title">Authorized By</div>
+                </div>
               </div>
             </div>
 
