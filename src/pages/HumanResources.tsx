@@ -180,26 +180,28 @@ const HumanResources = () => {
 
   return (
     <Layout>
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Human Resources</h1>
-          <p className="text-muted-foreground">Manage employees, track performance, and handle HR operations</p>
+      <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-3xl font-bold tracking-tight mb-1 sm:mb-2">Human Resources</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage employees, track performance, and handle HR operations</p>
         </div>
 
-        <Tabs defaultValue="employees" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-11">
-            <TabsTrigger value="employees">System Users</TabsTrigger>
-            <TabsTrigger value="company-employees">Company Employees</TabsTrigger>
-            <TabsTrigger value="payslips">Payslips</TabsTrigger>
-            <TabsTrigger value="roles">Role Management</TabsTrigger>
-            <TabsTrigger value="account-status">Account Status</TabsTrigger>
-            <TabsTrigger value="create">Create User</TabsTrigger>
-            <TabsTrigger value="print-details">Print Details</TabsTrigger>
-            <TabsTrigger value="requests">Registration Requests</TabsTrigger>
-            <TabsTrigger value="payments">Salary Payments</TabsTrigger>
-            <TabsTrigger value="my-salary">My Salary Requests</TabsTrigger>
-            <TabsTrigger value="overtime">Overtime</TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="employees" className="space-y-4 sm:space-y-6">
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
+              <TabsTrigger value="employees" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">System Users</TabsTrigger>
+              <TabsTrigger value="company-employees" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Company</TabsTrigger>
+              <TabsTrigger value="payslips" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Payslips</TabsTrigger>
+              <TabsTrigger value="roles" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Roles</TabsTrigger>
+              <TabsTrigger value="account-status" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Account</TabsTrigger>
+              <TabsTrigger value="create" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Create</TabsTrigger>
+              <TabsTrigger value="print-details" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Print</TabsTrigger>
+              <TabsTrigger value="requests" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Requests</TabsTrigger>
+              <TabsTrigger value="payments" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Salary</TabsTrigger>
+              <TabsTrigger value="my-salary" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">My Salary</TabsTrigger>
+              <TabsTrigger value="overtime" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Overtime</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="employees" className="space-y-6">
             <EmployeeStatsCards employees={employees} />

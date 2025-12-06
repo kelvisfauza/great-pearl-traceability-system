@@ -580,47 +580,45 @@ const Store = () => {
   /* -------------------------------------------------------------------------- */
 
   return (
-    <Layout title="Store Management" subtitle="Manage suppliers and coffee inventory records">
-      <div className="space-y-6">
+    <Layout title="Store Management" subtitle="Manage suppliers and coffee inventory">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header row: ticker + quick actions */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <PriceTicker />
           <div className="flex gap-2">
             <Button onClick={() => setShowStorePreviewModal(true)} className="gap-2" size="sm" variant="outline">
               <Eye className="h-4 w-4" />
-              Store Preview
+              <span className="hidden sm:inline">Store </span>Preview
             </Button>
             <Button onClick={() => setShowQuickReportModal(true)} className="gap-2" size="sm">
               <FileText className="h-4 w-4" />
-              Quick Add Report
+              <span className="hidden sm:inline">Quick </span>Add Report
             </Button>
           </div>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as StoreTab)} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1">
-            <TabsTrigger value="records" className="text-xs sm:text-sm">
-              <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden xs:inline">Coffee </span>Records
-            </TabsTrigger>
-
-            <TabsTrigger value="pricing" className="text-xs sm:text-sm">
-              <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden xs:inline">Pricing</span>
-              <span className="xs:hidden">Price</span>
-            </TabsTrigger>
-
-            <TabsTrigger value="operations" className="text-xs sm:text-sm">
-              <Scale className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Operations
-            </TabsTrigger>
-
-            <TabsTrigger value="suppliers" className="text-xs sm:text-sm">
-              <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden xs:inline">Supplier </span>Suppliers
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
+              <TabsTrigger value="records" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Records
+              </TabsTrigger>
+              <TabsTrigger value="pricing" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Pricing
+              </TabsTrigger>
+              <TabsTrigger value="operations" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <Scale className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Operations
+              </TabsTrigger>
+              <TabsTrigger value="suppliers" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Suppliers
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ------------------------------------------------------------------ */}
           {/*                            Coffee Records                         */}

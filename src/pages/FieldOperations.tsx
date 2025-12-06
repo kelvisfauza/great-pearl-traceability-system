@@ -18,41 +18,43 @@ const FieldOperations = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Field Operations</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-3xl font-bold">Field Operations</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Manage field activities, farmers, and daily operations
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="dashboard" className="flex items-center gap-2">
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="farmers" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Farmers
-            </TabsTrigger>
-            <TabsTrigger value="purchase" className="flex items-center gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              Purchase
-            </TabsTrigger>
-            <TabsTrigger value="financing" className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Financing
-            </TabsTrigger>
-            <TabsTrigger value="report" className="flex items-center gap-2">
-              <ClipboardList className="h-4 w-4" />
-              Daily Report
-            </TabsTrigger>
-            <TabsTrigger value="attendance" className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Attendance
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
+              <TabsTrigger value="dashboard" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="farmers" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Farmers
+              </TabsTrigger>
+              <TabsTrigger value="purchase" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Purchase
+              </TabsTrigger>
+              <TabsTrigger value="financing" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Financing
+              </TabsTrigger>
+              <TabsTrigger value="report" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <ClipboardList className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Report
+              </TabsTrigger>
+              <TabsTrigger value="attendance" className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Attendance
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="dashboard" className="space-y-6">
             <FieldDashboard onNavigate={handleNavigate} />

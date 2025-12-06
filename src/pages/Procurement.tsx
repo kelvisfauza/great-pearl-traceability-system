@@ -107,56 +107,56 @@ const Procurement = () => {
   return (
     <Layout 
       title="Procurement Management" 
-      subtitle="Comprehensive coffee sourcing, supplier management, and procurement operations"
+      subtitle="Coffee sourcing, supplier management, and procurement"
     >
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Suppliers</p>
-                  <p className="text-2xl font-bold">{suppliersLoading ? '...' : suppliers.length}</p>
-                  <p className="text-xs text-green-600">Real-time data</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Active Suppliers</p>
+                  <p className="text-lg sm:text-2xl font-bold">{suppliersLoading ? '...' : suppliers.length}</p>
+                  <p className="text-xs text-green-600 hidden sm:block">Real-time data</p>
                 </div>
-                <Users className="h-8 w-8 text-blue-600" />
+                <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Orders</p>
-                  <p className="text-2xl font-bold">{ordersLoading ? '...' : activeOrders}</p>
-                  <p className="text-xs text-blue-600">From database</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Active Orders</p>
+                  <p className="text-lg sm:text-2xl font-bold">{ordersLoading ? '...' : activeOrders}</p>
+                  <p className="text-xs text-blue-600 hidden sm:block">From database</p>
                 </div>
-                <Package className="h-8 w-8 text-green-600" />
+                <Package className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Pending Deliveries</p>
-                  <p className="text-2xl font-bold">{deliveriesLoading ? '...' : pendingDeliveries}</p>
-                  <p className="text-xs text-amber-600">Live data</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Pending</p>
+                  <p className="text-lg sm:text-2xl font-bold">{deliveriesLoading ? '...' : pendingDeliveries}</p>
+                  <p className="text-xs text-amber-600 hidden sm:block">Live data</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-amber-600" />
+                <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-amber-600" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Order Value</p>
-                  <p className="text-2xl font-bold">UGX {totalOrderValue.toLocaleString()}</p>
-                  <p className="text-xs text-green-600">Current month</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Order Value</p>
+                  <p className="text-lg sm:text-2xl font-bold">{(totalOrderValue / 1000000).toFixed(1)}M</p>
+                  <p className="text-xs text-green-600 hidden sm:block">Current month</p>
                 </div>
-                <DollarSign className="h-8 w-8 text-green-600" />
+                <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
@@ -164,15 +164,17 @@ const Procurement = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="suppliers" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
-            <TabsTrigger value="orders">Purchase Orders</TabsTrigger>
-            <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="pricing">Price Management</TabsTrigger>
-            <TabsTrigger value="approvals">Approvals</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
+              <TabsTrigger value="suppliers" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Suppliers</TabsTrigger>
+              <TabsTrigger value="orders" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Orders</TabsTrigger>
+              <TabsTrigger value="deliveries" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Deliveries</TabsTrigger>
+              <TabsTrigger value="analytics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Analytics</TabsTrigger>
+              <TabsTrigger value="documents" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Docs</TabsTrigger>
+              <TabsTrigger value="pricing" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Pricing</TabsTrigger>
+              <TabsTrigger value="approvals" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Approvals</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Supplier Overview */}
           <TabsContent value="suppliers" className="space-y-4">
