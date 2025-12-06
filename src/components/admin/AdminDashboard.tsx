@@ -66,23 +66,23 @@ const AdminDashboard = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20">
-            <Shield className="h-8 w-8 text-primary" />
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20">
+            <Shield className="h-5 w-5 sm:h-8 sm:w-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               Administrator Hub
             </h1>
-            <p className="text-muted-foreground">System oversight, analytics, and critical operations</p>
+            <p className="text-xs sm:text-base text-muted-foreground">System oversight, analytics, and critical operations</p>
           </div>
         </div>
         <Button 
           onClick={() => setCashModalOpen(true)} 
-          size="lg"
-          className="flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+          size="default"
+          className="flex items-center gap-2 shadow-lg hover:shadow-xl transition-all text-sm sm:text-base"
         >
           <DollarSign className="h-4 w-4" />
           Finance Cash
@@ -91,38 +91,40 @@ const AdminDashboard = () => {
 
       <CashManagementModal open={cashModalOpen} onOpenChange={setCashModalOpen} />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-6 lg:w-auto bg-muted/50 p-1 rounded-xl">
-          <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
-            <TrendingUp className="h-4 w-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="attendance" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
-            <Calendar className="h-4 w-4" />
-            Attendance
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
-            <BarChart3 className="h-4 w-4" />
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="approvals" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
-            <Shield className="h-4 w-4" />
-            Approvals
-            {(requests.length > 0 || moneyRequestsCount > 0) && (
-              <Badge variant="destructive" className="ml-1 px-1.5 py-0.5 text-xs">
-                {requests.length + moneyRequestsCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="permissions" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
-            <Settings className="h-4 w-4" />
-            Permissions
-          </TabsTrigger>
-          <TabsTrigger value="archive" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-md">
-            <Archive className="h-4 w-4" />
-            Archive
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 sm:grid sm:grid-cols-6 bg-muted/50 p-1 rounded-xl gap-1">
+            <TabsTrigger value="overview" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
+              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="attendance" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
+              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Attendance
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
+              <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="approvals" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
+              <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Approvals
+              {(requests.length > 0 || moneyRequestsCount > 0) && (
+                <Badge variant="destructive" className="ml-1 px-1.5 py-0.5 text-xs">
+                  {requests.length + moneyRequestsCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="permissions" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
+              <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Permissions
+            </TabsTrigger>
+            <TabsTrigger value="archive" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
+              <Archive className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Archive
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           {/* System Status Cards */}
