@@ -806,15 +806,25 @@ const QualityControl = () => {
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="pending">Pending Assessment ({pendingRecords.length})</TabsTrigger>
-            <TabsTrigger value="modifications">Modification Requests ({pendingModificationRequests.length})</TabsTrigger>
-            <TabsTrigger value="assessments">Quality Assessments ({qualityAssessments.length})</TabsTrigger>
-            <TabsTrigger value="reports">Assessment Reports</TabsTrigger>
-            <TabsTrigger value="price-calculator" disabled={!selectedRecord}>
-              {selectedRecord ? 'Price Assessment' : 'Select Record First'}
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
+              <TabsTrigger value="pending" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Pending ({pendingRecords.length})
+              </TabsTrigger>
+              <TabsTrigger value="modifications" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Modifications ({pendingModificationRequests.length})
+              </TabsTrigger>
+              <TabsTrigger value="assessments" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Assessments ({qualityAssessments.length})
+              </TabsTrigger>
+              <TabsTrigger value="reports" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Reports
+              </TabsTrigger>
+              <TabsTrigger value="price-calculator" disabled={!selectedRecord} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                {selectedRecord ? 'Price Assess' : 'Select First'}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="pending">
             <Card>
