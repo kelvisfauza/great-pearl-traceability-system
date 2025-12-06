@@ -413,10 +413,14 @@ export const useStoreManagement = () => {
       const supplier = suppliers.find(s => s.name === recordData.supplierName);
       const contract = supplier ? getActiveContractForSupplier(supplier.id) : null;
       
+      // Generate a unique ID since the table has text id with empty default
+      const uniqueId = crypto.randomUUID();
+      
       // Insert into Supabase coffee_records
       const { data: supabaseCoffeeRecord, error: coffeeError } = await supabase
         .from('coffee_records')
         .insert({
+          id: uniqueId,
           supplier_name: recordData.supplierName,
           coffee_type: recordData.coffeeType,
           bags: recordData.bags,
