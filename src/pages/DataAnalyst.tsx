@@ -16,23 +16,25 @@ const DataAnalyst = () => {
   const [activeTab, setActiveTab] = useState('price-overview');
 
   return (
-    <Layout title="Data Analytics" subtitle="Market analysis, pricing intelligence & price management">
+    <Layout title="Data Analytics" subtitle="Market analysis & price management">
       {/* Daily reminders for data analyst */}
       <AnalystDailyReminders 
         onNavigateToSetPrices={() => setActiveTab('set-prices')}
         onNavigateToDailyReports={() => setActiveTab('daily-reports')}
       />
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="price-overview">Price Overview</TabsTrigger>
-          <TabsTrigger value="set-prices">Set Prices</TabsTrigger>
-          <TabsTrigger value="price-trends">Price Trends</TabsTrigger>
-          <TabsTrigger value="market-monitor">Market Monitor</TabsTrigger>
-          <TabsTrigger value="daily-reports">Daily Reports</TabsTrigger>
-          <TabsTrigger value="procurement">Procurement</TabsTrigger>
-          <TabsTrigger value="outturn">Outturn Simulator</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
+            <TabsTrigger value="price-overview" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Overview</TabsTrigger>
+            <TabsTrigger value="set-prices" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Set Prices</TabsTrigger>
+            <TabsTrigger value="price-trends" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Trends</TabsTrigger>
+            <TabsTrigger value="market-monitor" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Market</TabsTrigger>
+            <TabsTrigger value="daily-reports" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Reports</TabsTrigger>
+            <TabsTrigger value="procurement" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Procurement</TabsTrigger>
+            <TabsTrigger value="outturn" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Outturn</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="price-overview">
           <PriceOverview />

@@ -89,68 +89,70 @@ const SalesMarketing = () => {
       title="Sales & Marketing" 
       subtitle="Manage sales contracts, customers, and marketing initiatives"
     >
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Monthly Sales</p>
-                  <p className="text-2xl font-bold">{stats.monthlySales}</p>
-                  <p className="text-xs text-green-600">+12% from last month</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Monthly Sales</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.monthlySales}</p>
+                  <p className="text-xs text-green-600 hidden sm:block">+12% from last month</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-600" />
+                <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Customers</p>
-                  <p className="text-2xl font-bold">{stats.activeCustomers}</p>
-                  <p className="text-xs text-blue-600">+{customers.length - 3} new this month</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Customers</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.activeCustomers}</p>
+                  <p className="text-xs text-blue-600 hidden sm:block">+{customers.length - 3} new</p>
                 </div>
-                <Users className="h-8 w-8 text-blue-600" />
+                <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Export Revenue</p>
-                  <p className="text-2xl font-bold">{stats.exportRevenue}</p>
-                  <p className="text-xs text-purple-600">73% of total sales</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Export Rev</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.exportRevenue}</p>
+                  <p className="text-xs text-purple-600 hidden sm:block">73% of total</p>
                 </div>
-                <DollarSign className="h-8 w-8 text-purple-600" />
+                <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Campaigns</p>
-                  <p className="text-2xl font-bold">{stats.activeCampaigns}</p>
-                  <p className="text-xs text-amber-600">ROI: +{stats.activeCampaigns * 15}%</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Campaigns</p>
+                  <p className="text-lg sm:text-2xl font-bold">{stats.activeCampaigns}</p>
+                  <p className="text-xs text-amber-600 hidden sm:block">ROI: +{stats.activeCampaigns * 15}%</p>
                 </div>
-                <Target className="h-8 w-8 text-amber-600" />
+                <Target className="h-6 w-6 sm:h-8 sm:w-8 text-amber-600" />
               </div>
             </CardContent>
           </Card>
         </div>
 
         <Tabs defaultValue="sales-form" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="sales-form">Sales Form</TabsTrigger>
-            <TabsTrigger value="customers">Customers</TabsTrigger>
-            <TabsTrigger value="contract-files">Contract Files</TabsTrigger>
-            <TabsTrigger value="supplier-subcontracts">Supplier Contracts</TabsTrigger>
-            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
+              <TabsTrigger value="sales-form" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Sales</TabsTrigger>
+              <TabsTrigger value="customers" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Customers</TabsTrigger>
+              <TabsTrigger value="contract-files" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Contracts</TabsTrigger>
+              <TabsTrigger value="supplier-subcontracts" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Subcontracts</TabsTrigger>
+              <TabsTrigger value="campaigns" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Campaigns</TabsTrigger>
+              <TabsTrigger value="analytics" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Analytics</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="sales-form" className="space-y-4">
             <SalesForm />
