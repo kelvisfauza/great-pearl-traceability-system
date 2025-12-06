@@ -121,36 +121,36 @@ const QuickActions = () => {
 
   return (
     <Card className="bg-gradient-to-br from-card to-card/80 backdrop-blur-sm border-border/50">
-      <CardHeader className="pb-6">
-        <CardTitle className="flex items-center text-xl">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground mr-3">
-            <Plus className="h-5 w-5" />
+      <CardHeader className="pb-3 sm:pb-6 p-4 sm:p-6">
+        <CardTitle className="flex items-center text-base sm:text-xl">
+          <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground mr-2 sm:mr-3">
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           Quick Actions
         </CardTitle>
-        <CardDescription className="text-base">
-          Available actions for {employee.role} in {employee.department}
+        <CardDescription className="text-sm sm:text-base">
+          Available actions for {employee.role}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
         {availableActions.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {availableActions.map((action, index) => (
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-2 sm:gap-4">
+            {availableActions.slice(0, 6).map((action, index) => (
               <Button
                 key={index}
                 variant="outline"
-                className="group h-auto p-5 flex items-center space-x-4 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 text-left border-border/50 hover:border-primary/30 bg-gradient-to-r from-background to-muted/30 hover:scale-[1.02]"
+                className="group h-auto p-3 sm:p-5 flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 text-center sm:text-left border-border/50 hover:border-primary/30 bg-gradient-to-r from-background to-muted/30 hover:scale-[1.02]"
                 onClick={() => action.action ? action.action() : navigate(action.route)}
                 {...(action.dataAction && { 'data-action': action.dataAction })}
               >
-                <div className={`p-3 rounded-xl ${action.color} text-white flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-md`}>
-                  <action.icon className="h-6 w-6" />
+                <div className={`p-2 sm:p-3 rounded-xl ${action.color} text-white flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-md`}>
+                  <action.icon className="h-4 w-4 sm:h-6 sm:w-6" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors duration-300">
+                  <div className="font-semibold text-xs sm:text-sm text-foreground group-hover:text-primary transition-colors duration-300 truncate">
                     {action.title}
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  <div className="hidden sm:block text-sm text-muted-foreground mt-1 line-clamp-2">
                     {action.description}
                   </div>
                 </div>
@@ -158,15 +158,15 @@ const QuickActions = () => {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
-              <Package className="h-12 w-12 text-muted-foreground" />
+          <div className="text-center py-6 sm:py-12">
+            <div className="p-3 sm:p-4 rounded-full bg-muted/50 w-fit mx-auto mb-3 sm:mb-4">
+              <Package className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground" />
             </div>
-            <p className="text-base font-medium text-muted-foreground mb-2">
-              No quick actions available for {employee.role} role
+            <p className="text-sm sm:text-base font-medium text-muted-foreground mb-1 sm:mb-2">
+              No quick actions available
             </p>
-            <p className="text-sm text-muted-foreground/80">
-              Contact your administrator if you need additional access
+            <p className="text-xs sm:text-sm text-muted-foreground/80">
+              Contact your administrator for access
             </p>
           </div>
         )}

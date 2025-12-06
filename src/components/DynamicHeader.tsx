@@ -222,45 +222,45 @@ const DynamicHeader = () => {
   };
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-card via-card/95 to-muted/30 rounded-3xl p-8 border border-border/50 backdrop-blur-sm shadow-lg">
+    <div className="relative overflow-hidden bg-gradient-to-br from-card via-card/95 to-muted/30 rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-border/50 backdrop-blur-sm shadow-lg">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className={`absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl ${greeting.color} opacity-10 rounded-full blur-3xl animate-pulse`}></div>
-        <div className="absolute bottom-0 left-0 w-72 h-72 bg-gradient-to-tr from-primary/10 to-accent/10 rounded-full blur-2xl"></div>
+        <div className={`absolute top-0 right-0 w-48 sm:w-96 h-48 sm:h-96 bg-gradient-to-bl ${greeting.color} opacity-10 rounded-full blur-3xl animate-pulse`}></div>
+        <div className="absolute bottom-0 left-0 w-36 sm:w-72 h-36 sm:h-72 bg-gradient-to-tr from-primary/10 to-accent/10 rounded-full blur-2xl"></div>
       </div>
 
-      <div className="relative z-10 space-y-6">
+      <div className="relative z-10 space-y-4 sm:space-y-6">
         {/* Main Greeting */}
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-full bg-gradient-to-r ${greeting.color} shadow-lg animate-fade-in`}>
-              <GreetingIcon className="h-8 w-8 text-white" />
+        <div className="flex items-center gap-3 sm:gap-6">
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            <div className={`p-2 sm:p-3 rounded-full bg-gradient-to-r ${greeting.color} shadow-lg animate-fade-in`}>
+              <GreetingIcon className="h-5 w-5 sm:h-8 sm:w-8 text-white" />
             </div>
-            <Avatar className="h-16 w-16 border-4 border-white shadow-lg">
+            <Avatar className="h-10 w-10 sm:h-16 sm:w-16 border-2 sm:border-4 border-white shadow-lg">
               <AvatarImage 
                 src={employee?.avatar_url} 
                 alt={employee?.name}
-                key={employee?.avatar_url} // Force re-render when avatar URL changes
+                key={employee?.avatar_url}
                 className="object-cover"
               />
-              <AvatarFallback className="text-lg font-semibold bg-gradient-to-br from-primary to-primary-foreground text-white">
+              <AvatarFallback className="text-sm sm:text-lg font-semibold bg-gradient-to-br from-primary to-primary-foreground text-white">
                 {employee?.name?.split(' ').map(n => n[0]).join('') || 'U'}
               </AvatarFallback>
             </Avatar>
           </div>
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-4xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent truncate">
               {greeting.text}, {employee?.name?.split(' ')[0] || 'User'}!
             </h1>
             {showMainGreeting ? (
-              <p className="text-lg text-muted-foreground mt-1">
+              <p className="text-sm sm:text-lg text-muted-foreground mt-0.5 sm:mt-1">
                 Welcome to your dashboard
               </p>
             ) : showCoffeeChain ? (
-              <div className="mt-2">
+              <div className="mt-1 sm:mt-2">
                 <p 
                   key={currentMessageIndex} 
-                  className="text-base text-foreground/80 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-yellow-600/10 rounded-lg px-4 py-2.5 border-l-4 border-amber-500/40 transition-all duration-700 animate-fade-in shadow-sm"
+                  className="text-xs sm:text-base text-foreground/80 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-yellow-600/10 rounded-lg px-2 sm:px-4 py-1.5 sm:py-2.5 border-l-4 border-amber-500/40 transition-all duration-700 animate-fade-in shadow-sm line-clamp-2"
                 >
                   {getCoffeeChainMessages()[currentMessageIndex % getCoffeeChainMessages().length]}
                 </p>
@@ -269,8 +269,8 @@ const DynamicHeader = () => {
           </div>
         </div>
 
-        {/* Time and Date Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Time and Date Section - Hidden on mobile, shown on larger screens */}
+        <div className="hidden sm:grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Digital Clock */}
           <div className="flex items-center justify-center p-4 bg-gradient-to-br from-slate-50/80 via-white/90 to-blue-50/60 dark:from-slate-800/80 dark:via-slate-700/90 dark:to-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-600/40 backdrop-blur-sm shadow-lg">
             <DigitalClock className="animate-scale-in" showSeconds={true} showDate={false} />
@@ -290,16 +290,22 @@ const DynamicHeader = () => {
           </div>
         </div>
 
+        {/* Compact Time/Date for Mobile */}
+        <div className="flex sm:hidden items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>{formatDate(currentTime)}</span>
+          <span className="font-mono">{formatTime(currentTime)}</span>
+        </div>
+
         {/* Role Badge */}
-        <div className="flex items-center gap-3">
-          <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-secondary/10 to-secondary/20 rounded-full border border-secondary/30 shadow-sm">
-            <div className="w-2 h-2 bg-secondary rounded-full mr-3 animate-pulse"></div>
-            <span className="text-sm font-medium text-secondary-foreground">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="inline-flex items-center px-3 sm:px-6 py-1.5 sm:py-3 bg-gradient-to-r from-secondary/10 to-secondary/20 rounded-full border border-secondary/30 shadow-sm">
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-secondary rounded-full mr-2 sm:mr-3 animate-pulse"></div>
+            <span className="text-xs sm:text-sm font-medium text-secondary-foreground">
               {employee?.role} • {employee?.department}
             </span>
           </div>
-          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-full border border-green-500/20">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+          <div className="inline-flex items-center px-2 sm:px-4 py-1 sm:py-2 bg-gradient-to-r from-green-500/10 to-green-600/10 rounded-full border border-green-500/20">
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full mr-1.5 sm:mr-2 animate-pulse"></div>
             <span className="text-xs font-medium text-green-700 dark:text-green-400">Online</span>
           </div>
         </div>

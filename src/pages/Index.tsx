@@ -76,22 +76,22 @@ const Index = () => {
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            {/* Quick Actions - 2 columns */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
+            {/* Quick Actions - 2 columns on desktop */}
+            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg">
                   <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">Quick Operations</h3>
+                <h3 className="text-sm sm:text-lg font-semibold text-foreground">Quick Operations</h3>
               </div>
-              <div className="card-modern p-4 sm:p-6">
+              <div className="card-modern p-3 sm:p-6">
                 <QuickActions />
               </div>
             </div>
             
-            {/* Recent Activity - 1 column */}
-            <div className="space-y-4">
+            {/* Recent Activity - 1 column, hidden on mobile */}
+            <div className="hidden lg:block space-y-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
                   <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
@@ -104,60 +104,60 @@ const Index = () => {
 
           {/* Approval Center - Full Width */}
           {roleData?.canApproveRequests && (
-            <div className="space-y-4 animate-in-delay">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-destructive/10 rounded-lg">
+            <div className="space-y-3 sm:space-y-4 animate-in-delay">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-destructive/10 rounded-lg">
                   <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold text-foreground">Approval Management</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Review and process pending requests</p>
+                  <h3 className="text-sm sm:text-lg font-semibold text-foreground">Approval Management</h3>
+                  <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground">Review and process pending requests</p>
                 </div>
               </div>
-              <div className="card-modern p-4 sm:p-6">
+              <div className="card-modern p-3 sm:p-6">
                 <ApprovalCenter />
               </div>
             </div>
           )}
 
           {/* Bottom Grid - Performance, Notifications, EUDR */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {/* Performance */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg">
                   <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">Performance</h3>
+                <h3 className="text-sm sm:text-lg font-semibold text-foreground">Performance</h3>
               </div>
-              <div className="card-modern p-4 sm:p-6">
+              <div className="card-modern p-3 sm:p-6">
                 <PerformanceOverview />
               </div>
             </div>
             
             {/* Notifications */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg">
                   <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">Notifications</h3>
+                <h3 className="text-sm sm:text-lg font-semibold text-foreground">Notifications</h3>
               </div>
-              <div className="card-modern p-4 sm:p-6">
+              <div className="card-modern p-3 sm:p-6">
                 <NotificationWidget onViewAll={() => setIsNotificationOpen(true)} />
               </div>
             </div>
 
             {/* EUDR Compliance */}
             {(employee.department === 'Store' || employee.role === 'Administrator') && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-success/10 rounded-lg">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 bg-success/10 rounded-lg">
                     <Coffee className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
                   </div>
-                  <h3 className="text-base sm:text-lg font-semibold text-foreground">EUDR Compliance</h3>
+                  <h3 className="text-sm sm:text-lg font-semibold text-foreground">EUDR Compliance</h3>
                 </div>
-                <div className="card-modern p-4 sm:p-6">
+                <div className="card-modern p-3 sm:p-6">
                   <EUDRSummaryCard />
                 </div>
               </div>

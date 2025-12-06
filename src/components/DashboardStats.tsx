@@ -261,54 +261,63 @@ const DashboardStats = () => {
   const stats = getStatsForRole();
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
       {stats.map((stat, index) => (
         <Card key={index} className="bg-card hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide truncate">
               {stat.title}
             </CardTitle>
-            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${stat.bgColor}`}>
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
+            <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${stat.bgColor}`}>
+              <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="text-3xl font-bold text-foreground">
-                  {stat.value}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {stat.change}
-                </p>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="space-y-1">
+              <div className="text-lg sm:text-3xl font-bold text-foreground truncate">
+                {stat.value}
               </div>
-              {/* Circular Progress */}
-              <div className="relative h-16 w-16">
-                <svg className="transform -rotate-90 h-16 w-16">
-                  <circle
-                    cx="32"
-                    cy="32"
-                    r="28"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    className="text-muted"
+              <p className="text-xs text-muted-foreground truncate">
+                {stat.change}
+              </p>
+              {/* Simplified progress bar for mobile - hidden circular on mobile */}
+              <div className="hidden sm:block">
+                <div className="relative h-16 w-16 mx-auto mt-2">
+                  <svg className="transform -rotate-90 h-16 w-16">
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r="28"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      className="text-muted"
+                    />
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r="28"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      strokeDasharray={`${stat.trend === 'positive' ? 75 : stat.trend === 'attention' ? 45 : 60} 175.93`}
+                      className={stat.trend === 'positive' ? 'text-green-500' : stat.trend === 'attention' ? 'text-red-500' : 'text-blue-500'}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className={`text-xs font-semibold ${stat.trend === 'positive' ? 'text-green-600' : stat.trend === 'attention' ? 'text-red-600' : 'text-blue-600'}`}>
+                      {stat.trend === 'positive' ? '75%' : stat.trend === 'attention' ? '45%' : '60%'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {/* Simple progress bar for mobile */}
+              <div className="sm:hidden mt-2">
+                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full ${stat.trend === 'positive' ? 'bg-green-500' : stat.trend === 'attention' ? 'bg-red-500' : 'bg-blue-500'}`}
+                    style={{ width: stat.trend === 'positive' ? '75%' : stat.trend === 'attention' ? '45%' : '60%' }}
                   />
-                  <circle
-                    cx="32"
-                    cy="32"
-                    r="28"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    strokeDasharray={`${stat.trend === 'positive' ? 75 : stat.trend === 'attention' ? 45 : 60} 175.93`}
-                    className={stat.trend === 'positive' ? 'text-green-500' : stat.trend === 'attention' ? 'text-red-500' : 'text-blue-500'}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className={`text-xs font-semibold ${stat.trend === 'positive' ? 'text-green-600' : stat.trend === 'attention' ? 'text-red-600' : 'text-blue-600'}`}>
-                    {stat.trend === 'positive' ? '75%' : stat.trend === 'attention' ? '45%' : '60%'}
-                  </span>
                 </div>
               </div>
             </div>
