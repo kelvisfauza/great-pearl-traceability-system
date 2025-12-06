@@ -14,7 +14,7 @@ import { useSalesMarketing } from "@/hooks/useSalesMarketing";
 import SalesForm from "@/components/sales/SalesForm";
 import SalesHistory from "@/components/sales/SalesHistory";
 import { ContractFileUpload } from "@/components/sales/ContractFileUpload";
-import { SupplierSubcontracts } from "@/components/sales/SupplierSubcontracts";
+import { BuyerContractsManager } from "@/components/sales/BuyerContractsManager";
 
 const SalesMarketing = () => {
   const {
@@ -162,7 +162,7 @@ const SalesMarketing = () => {
           </TabsContent>
 
           <TabsContent value="supplier-subcontracts" className="space-y-4">
-            <SupplierSubcontracts />
+            <BuyerContractsManager />
           </TabsContent>
 
           <TabsContent value="customers" className="space-y-4">

@@ -569,6 +569,78 @@ export type Database = {
         }
         Relationships: []
       }
+      buyer_contracts: {
+        Row: {
+          allocated_quantity: number
+          buyer_address: string | null
+          buyer_name: string
+          buyer_phone: string | null
+          buyer_ref: string | null
+          contract_ref: string
+          created_at: string
+          created_by: string | null
+          delivery_period_end: string | null
+          delivery_period_start: string | null
+          delivery_terms: string | null
+          id: string
+          notes: string | null
+          packaging: string | null
+          price_per_kg: number
+          quality: string
+          quality_terms: string | null
+          seller_name: string | null
+          status: string
+          total_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          allocated_quantity?: number
+          buyer_address?: string | null
+          buyer_name: string
+          buyer_phone?: string | null
+          buyer_ref?: string | null
+          contract_ref: string
+          created_at?: string
+          created_by?: string | null
+          delivery_period_end?: string | null
+          delivery_period_start?: string | null
+          delivery_terms?: string | null
+          id?: string
+          notes?: string | null
+          packaging?: string | null
+          price_per_kg: number
+          quality: string
+          quality_terms?: string | null
+          seller_name?: string | null
+          status?: string
+          total_quantity: number
+          updated_at?: string
+        }
+        Update: {
+          allocated_quantity?: number
+          buyer_address?: string | null
+          buyer_name?: string
+          buyer_phone?: string | null
+          buyer_ref?: string | null
+          contract_ref?: string
+          created_at?: string
+          created_by?: string | null
+          delivery_period_end?: string | null
+          delivery_period_start?: string | null
+          delivery_terms?: string | null
+          id?: string
+          notes?: string | null
+          packaging?: string | null
+          price_per_kg?: number
+          quality?: string
+          quality_terms?: string | null
+          seller_name?: string | null
+          status?: string
+          total_quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       buying_stations: {
         Row: {
           capacity: number
@@ -4580,6 +4652,7 @@ export type Database = {
       }
       supplier_subcontracts: {
         Row: {
+          buyer_contract_id: string | null
           contract_ref: string
           contract_size: string
           created_at: string
@@ -4601,6 +4674,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          buyer_contract_id?: string | null
           contract_ref: string
           contract_size: string
           created_at?: string
@@ -4622,6 +4696,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          buyer_contract_id?: string | null
           contract_ref?: string
           contract_size?: string
           created_at?: string
@@ -4643,6 +4718,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "supplier_subcontracts_buyer_contract_id_fkey"
+            columns: ["buyer_contract_id"]
+            isOneToOne: false
+            referencedRelation: "buyer_contracts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "supplier_subcontracts_supplier_id_fkey"
             columns: ["supplier_id"]
