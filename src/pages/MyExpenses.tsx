@@ -10,11 +10,12 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle } from 'lucide-react';
+import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, Printer } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useAttendance } from '@/hooks/useAttendance';
 import Layout from '@/components/Layout';
+import PaymentVoucher from '@/components/expenses/PaymentVoucher';
 
 interface ExpenseRequest {
   id: string;
@@ -27,6 +28,8 @@ interface ExpenseRequest {
   finance_approved_at?: string | null;
   admin_approved_at?: string | null;
   rejection_reason?: string | null;
+  requestedby_name?: string;
+  department?: string;
 }
 
 const MyExpenses = () => {
@@ -37,6 +40,12 @@ const MyExpenses = () => {
   const [myRequests, setMyRequests] = useState<ExpenseRequest[]>([]);
   const [fetchingRequests, setFetchingRequests] = useState(true);
   const [weeklyAllowance, setWeeklyAllowance] = useState<any>(null);
+  const [selectedVoucherRequest, setSelectedVoucherRequest] = useState<ExpenseRequest | null>(null);
+
+  const isFullyApproved = (request: ExpenseRequest) => {
+    return request.status === 'Approved' || 
+      (!!request.finance_approved_at && !!request.admin_approved_at);
+  };
 
   // Cash Requisition Form State
   const [requisitionForm, setRequisitionForm] = useState({
@@ -467,9 +476,22 @@ const MyExpenses = () => {
                                 </span>
                               </div>
                             </div>
-                            <Badge className={getStatusColor(request.status)}>
-                              {getApprovalStatus(request)}
-                            </Badge>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge className={getStatusColor(request.status)}>
+                                {getApprovalStatus(request)}
+                              </Badge>
+                              {isFullyApproved(request) && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="gap-1 text-xs"
+                                  onClick={() => setSelectedVoucherRequest(request)}
+                                >
+                                  <Printer className="h-3 w-3" />
+                                  Print Voucher
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           {request.rejection_reason && (
                             <Alert variant="destructive" className="mt-4">
@@ -638,9 +660,22 @@ const MyExpenses = () => {
                                 </span>
                               </div>
                             </div>
-                            <Badge className={getStatusColor(request.status)}>
-                              {getApprovalStatus(request)}
-                            </Badge>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge className={getStatusColor(request.status)}>
+                                {getApprovalStatus(request)}
+                              </Badge>
+                              {isFullyApproved(request) && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="gap-1 text-xs"
+                                  onClick={() => setSelectedVoucherRequest(request)}
+                                >
+                                  <Printer className="h-3 w-3" />
+                                  Print Voucher
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           {request.rejection_reason && (
                             <Alert variant="destructive" className="mt-4">
@@ -795,9 +830,22 @@ const MyExpenses = () => {
                                 </span>
                               </div>
                             </div>
-                            <Badge className={getStatusColor(request.status)}>
-                              {getApprovalStatus(request)}
-                            </Badge>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge className={getStatusColor(request.status)}>
+                                {getApprovalStatus(request)}
+                              </Badge>
+                              {isFullyApproved(request) && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="gap-1 text-xs"
+                                  onClick={() => setSelectedVoucherRequest(request)}
+                                >
+                                  <Printer className="h-3 w-3" />
+                                  Print Voucher
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           {request.rejection_reason && (
                             <Alert variant="destructive" className="mt-4">
@@ -815,6 +863,17 @@ const MyExpenses = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Payment Voucher Dialog */}
+        {selectedVoucherRequest && (
+          <PaymentVoucher
+            isOpen={!!selectedVoucherRequest}
+            onClose={() => setSelectedVoucherRequest(null)}
+            request={selectedVoucherRequest}
+            employeeName={employee?.name || ''}
+            employeeDepartment={employee?.department || ''}
+          />
+        )}
       </div>
     </Layout>
   );
