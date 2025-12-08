@@ -2,8 +2,11 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Pencil } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
+import { EditSalesTransactionDialog } from "./EditSalesTransactionDialog";
 
 interface SalesTransaction {
   id: string;
@@ -15,11 +18,16 @@ interface SalesTransaction {
   status: string;
   date: string;
   created_at: string;
+  moisture?: string;
+  truck_details?: string;
+  driver_details?: string;
 }
 
 const SalesTransactionsList = () => {
   const [transactions, setTransactions] = useState<SalesTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editTransaction, setEditTransaction] = useState<SalesTransaction | null>(null);
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     fetchTransactions();
@@ -52,6 +60,11 @@ const SalesTransactionsList = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  const handleEditSuccess = () => {
+    setEditTransaction(null);
+    fetchTransactions();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -69,38 +82,61 @@ const SalesTransactionsList = () => {
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Customer</TableHead>
-          <TableHead>Coffee Type</TableHead>
-          <TableHead className="text-right">Weight (kg)</TableHead>
-          <TableHead className="text-right">Unit Price</TableHead>
-          <TableHead className="text-right">Total</TableHead>
-          <TableHead>Status</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {transactions.map((transaction) => (
-          <TableRow key={transaction.id}>
-            <TableCell>
-              {format(new Date(transaction.date || transaction.created_at), 'dd MMM yyyy')}
-            </TableCell>
-            <TableCell className="font-medium">{transaction.customer}</TableCell>
-            <TableCell>{transaction.coffee_type}</TableCell>
-            <TableCell className="text-right">{transaction.weight?.toLocaleString()}</TableCell>
-            <TableCell className="text-right">
-              {transaction.unit_price?.toLocaleString()} UGX
-            </TableCell>
-            <TableCell className="text-right font-medium">
-              {transaction.total_amount?.toLocaleString()} UGX
-            </TableCell>
-            <TableCell>{getStatusBadge(transaction.status)}</TableCell>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead>Customer</TableHead>
+            <TableHead>Coffee Type</TableHead>
+            <TableHead className="text-right">Weight (kg)</TableHead>
+            <TableHead className="text-right">Unit Price</TableHead>
+            <TableHead className="text-right">Total</TableHead>
+            <TableHead>Status</TableHead>
+            {isAdmin && <TableHead className="text-center">Actions</TableHead>}
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {transactions.map((transaction) => (
+            <TableRow key={transaction.id}>
+              <TableCell>
+                {format(new Date(transaction.date || transaction.created_at), 'dd MMM yyyy')}
+              </TableCell>
+              <TableCell className="font-medium">{transaction.customer}</TableCell>
+              <TableCell>{transaction.coffee_type}</TableCell>
+              <TableCell className="text-right">{transaction.weight?.toLocaleString()}</TableCell>
+              <TableCell className="text-right">
+                {transaction.unit_price?.toLocaleString()} UGX
+              </TableCell>
+              <TableCell className="text-right font-medium">
+                {transaction.total_amount?.toLocaleString()} UGX
+              </TableCell>
+              <TableCell>{getStatusBadge(transaction.status)}</TableCell>
+              {isAdmin && (
+                <TableCell className="text-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditTransaction(transaction)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {editTransaction && (
+        <EditSalesTransactionDialog
+          transaction={editTransaction}
+          open={!!editTransaction}
+          onClose={() => setEditTransaction(null)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
+    </>
   );
 };
 
