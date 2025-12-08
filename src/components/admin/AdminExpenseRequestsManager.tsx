@@ -160,8 +160,12 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
     setRejectionModalOpen(true);
   };
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
+  const formatDateTime = (dateString: string | null | undefined) => {
+    if (!dateString) return 'Pending';
+    const date = new Date(dateString);
+    // Check for invalid date or epoch (1970)
+    if (isNaN(date.getTime()) || date.getFullYear() < 2000) return 'Pending';
+    return date.toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
