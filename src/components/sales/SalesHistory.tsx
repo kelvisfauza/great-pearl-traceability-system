@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useSalesTransactions } from '@/hooks/useSalesTransactions';
 import { format } from 'date-fns';
-import { FileText, Download, Trash2, Calendar } from 'lucide-react';
+import { FileText, Download, Trash2, Calendar, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,15 +21,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EditSalesTransactionDialog } from '@/components/v2/sales/EditSalesTransactionDialog';
 
 const SalesHistory = () => {
-  const { transactions, loading, getGRNFileUrl } = useSalesTransactions();
+  const { transactions, loading, getGRNFileUrl, fetchTransactions } = useSalesTransactions();
   const { isAdmin } = useAuth();
   const { submitDeletionRequest, isSubmitting } = useDeletionRequest();
   const { toast } = useToast();
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<any>(null);
+  const [editTransaction, setEditTransaction] = useState<any>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -212,16 +214,26 @@ const SalesHistory = () => {
                     </TableCell>
                     {isAdmin() && (
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openDeleteDialog(transaction)}
-                          disabled={isSubmitting}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          title="Delete sales record"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditTransaction(transaction)}
+                            title="Edit sales record"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog(transaction)}
+                            disabled={isSubmitting}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Delete sales record"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
@@ -266,6 +278,18 @@ const SalesHistory = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {editTransaction && (
+        <EditSalesTransactionDialog
+          transaction={editTransaction}
+          open={!!editTransaction}
+          onClose={() => setEditTransaction(null)}
+          onSuccess={() => {
+            setEditTransaction(null);
+            fetchTransactions();
+          }}
+        />
+      )}
     </Card>
   );
 };
