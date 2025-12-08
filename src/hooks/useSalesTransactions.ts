@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, updateDoc, doc, orderBy } from 'firebase/firestore';
 
 export interface SalesTransaction {
   id: string;
@@ -51,38 +49,35 @@ export const useSalesTransactions = () => {
 
   const checkInventoryAvailability = async (coffeeType: string, weightNeeded: number) => {
     try {
-      const coffeeRecordsRef = collection(db, 'coffee_records');
-      const snapshot = await getDocs(coffeeRecordsRef);
-      
       console.log(`🔍 Checking inventory for: "${coffeeType}"`);
-      console.log(`📦 Total records in database: ${snapshot.size}`);
       
-      // Step 1: Get total original delivery quantity from coffee_records
+      // Get coffee records from Supabase with matching coffee type
+      const { data: coffeeRecords, error: recordsError } = await supabase
+        .from('coffee_records')
+        .select('id, kilograms, batch_number, created_at')
+        .ilike('coffee_type', `%${coffeeType}%`);
+      
+      if (recordsError) {
+        console.error('Error fetching coffee records:', recordsError);
+        return { available: 0, sufficient: false };
+      }
+      
+      console.log(`📦 Total matching records: ${coffeeRecords?.length || 0}`);
+      
+      // Calculate total delivered
       let totalDelivered = 0;
       const matchedRecordIds: string[] = [];
       
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const recordCoffeeType = (data.coffee_type || '').toString();
-        const kilograms = Number(data.kilograms) || 0;
-        
+      coffeeRecords?.forEach(record => {
+        const kilograms = Number(record.kilograms) || 0;
         if (kilograms > 0) {
-          const searchLower = coffeeType.toLowerCase().trim();
-          const recordLower = recordCoffeeType.toLowerCase().trim();
-          
-          const matches = recordLower.includes(searchLower) || 
-                         searchLower.includes(recordLower) ||
-                         recordLower === searchLower;
-          
-          if (matches) {
-            console.log(`   ✅ Original delivery: ${doc.id} = ${kilograms} kg`);
-            totalDelivered += kilograms;
-            matchedRecordIds.push(doc.id);
-          }
+          console.log(`   ✅ Record: ${record.id} = ${kilograms} kg`);
+          totalDelivered += kilograms;
+          matchedRecordIds.push(record.id);
         }
       });
 
-      // Step 2: Get total already sold from sales tracking (does NOT modify coffee_records)
+      // Get total already sold from sales tracking
       let totalSold = 0;
       if (matchedRecordIds.length > 0) {
         const { data: salesTracking, error } = await supabase
@@ -96,7 +91,7 @@ export const useSalesTransactions = () => {
         }
       }
 
-      // Step 3: Calculate available = delivered - sold
+      // Calculate available = delivered - sold
       const totalAvailable = totalDelivered - totalSold;
       
       console.log(`📊 Summary for "${coffeeType}":`);
@@ -125,48 +120,24 @@ export const useSalesTransactions = () => {
     try {
       console.log(`📊 Recording sale tracking for ${quantityKg}kg of ${coffeeType}`);
       
-      // Get matching coffee records from Firebase (read-only, never modify!)
-      const coffeeRecordsRef = collection(db, 'coffee_records');
-      const snapshot = await getDocs(coffeeRecordsRef);
+      // Get matching coffee records from Supabase
+      const { data: coffeeRecords, error: recordsError } = await supabase
+        .from('coffee_records')
+        .select('id, kilograms, batch_number, created_at')
+        .ilike('coffee_type', `%${coffeeType}%`)
+        .order('created_at', { ascending: true }); // FIFO - oldest first
       
-      const matchedRecords: Array<{ 
-        id: string; 
-        kilograms: number; 
-        batch_number: string;
-        created_at: string 
-      }> = [];
+      if (recordsError) {
+        console.error('Error fetching coffee records:', recordsError);
+        throw recordsError;
+      }
       
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const recordCoffeeType = (data.coffee_type || '').toString();
-        const kilograms = Number(data.kilograms) || 0;
-        const batchNumber = data.batch_number || '';
-        
-        if (kilograms > 0) {
-          const searchLower = coffeeType.toLowerCase().trim();
-          const recordLower = recordCoffeeType.toLowerCase().trim();
-          
-          const matches = recordLower.includes(searchLower) || 
-                         searchLower.includes(recordLower) ||
-                         recordLower === searchLower;
-          
-          if (matches) {
-            matchedRecords.push({
-              id: docSnap.id,
-              kilograms,
-              batch_number: batchNumber,
-              created_at: data.created_at || new Date().toISOString()
-            });
-          }
-        }
-      });
-      
-      // Sort by creation date (FIFO - oldest first)
-      matchedRecords.sort((a, b) => {
-        const dateA = new Date(a.created_at).getTime();
-        const dateB = new Date(b.created_at).getTime();
-        return dateA - dateB;
-      });
+      const matchedRecords = coffeeRecords?.map(record => ({
+        id: record.id,
+        kilograms: Number(record.kilograms) || 0,
+        batch_number: record.batch_number || '',
+        created_at: record.created_at || new Date().toISOString()
+      })).filter(r => r.kilograms > 0) || [];
       
       // Get existing sales tracking to calculate what's been sold from each record
       const recordIds = matchedRecords.map(r => r.id);
@@ -208,7 +179,7 @@ export const useSalesTransactions = () => {
         remainingToSell -= toSellFromThis;
       }
       
-      // Insert sale tracking records (does NOT modify coffee_records!)
+      // Insert sale tracking records
       if (salesToTrack.length > 0) {
         const { error } = await supabase
           .from('sales_inventory_tracking')
@@ -216,7 +187,7 @@ export const useSalesTransactions = () => {
         
         if (error) throw error;
         
-        console.log(`✅ Tracked ${salesToTrack.length} sales records for ${quantityKg}kg (original coffee records UNCHANGED)`);
+        console.log(`✅ Tracked ${salesToTrack.length} sales records for ${quantityKg}kg`);
       }
       
       return true;
