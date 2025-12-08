@@ -141,8 +141,10 @@ const SalesForm = () => {
     setLoading(true);
     try {
       // Create sales transaction
+      // Format date in local timezone to prevent UTC conversion shifting the date
+      const localDate = `${formData.date.getFullYear()}-${String(formData.date.getMonth() + 1).padStart(2, '0')}-${String(formData.date.getDate()).padStart(2, '0')}`;
       const transactionData = {
-        date: formData.date.toISOString().split('T')[0],
+        date: localDate,
         customer: formData.customer,
         coffee_type: formData.coffeeType,
         moisture: formData.moisture,
