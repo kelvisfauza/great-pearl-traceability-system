@@ -200,6 +200,7 @@ const Store = () => {
     opening_balance: 0,
   });
   const [submittingSupplier, setSubmittingSupplier] = useState(false);
+  const [duplicateSupplierDetected, setDuplicateSupplierDetected] = useState<{ name: string } | null>(null);
 
   // New record form
   const [newRecord, setNewRecord] = useState<NewRecordForm>({
@@ -296,7 +297,7 @@ const Store = () => {
   /*                               Event Handlers                               */
   /* -------------------------------------------------------------------------- */
 
-  const handleSaveSupplier = async () => {
+  const handleSaveSupplier = async (skipDuplicateCheck = false) => {
     if (!newSupplier.name || !newSupplier.origin) {
       toast.error("Please fill in required fields");
       return;
@@ -304,14 +305,25 @@ const Store = () => {
 
     setSubmittingSupplier(true);
     try {
-      await addSupplier(newSupplier);
-      setNewSupplier({
-        name: "",
-        phone: "",
-        origin: "",
-        opening_balance: 0,
-      });
-      toast.success("Supplier registered successfully");
+      const result = await addSupplier(newSupplier, skipDuplicateCheck);
+      
+      if (result.duplicateDetected && result.existingSupplier) {
+        // Show duplicate warning and enable "Save Anyway" option
+        setDuplicateSupplierDetected({ name: result.existingSupplier.name });
+        toast.error(`Similar supplier "${result.existingSupplier.name}" found. Click "Save Anyway" if this is a different person.`);
+        return;
+      }
+      
+      if (result.success) {
+        setDuplicateSupplierDetected(null);
+        setNewSupplier({
+          name: "",
+          phone: "",
+          origin: "",
+          opening_balance: 0,
+        });
+        toast.success("Supplier registered successfully");
+      }
     } catch (error) {
       console.error(error);
       toast.error("Failed to register supplier");
@@ -1212,10 +1224,40 @@ const Store = () => {
                           </div>
                         </div>
 
-                        <DialogFooter>
-                          <Button onClick={handleSaveSupplier} disabled={submittingSupplier}>
-                            {submittingSupplier ? "Saving..." : "Save Supplier"}
-                          </Button>
+                        {duplicateSupplierDetected && (
+                          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p className="text-sm text-yellow-800">
+                              Similar supplier "{duplicateSupplierDetected.name}" found. 
+                              If this is a different person, click "Save Anyway" to proceed.
+                            </p>
+                          </div>
+                        )}
+
+                        <DialogFooter className="gap-2">
+                          {duplicateSupplierDetected && (
+                            <Button 
+                              variant="outline" 
+                              onClick={() => {
+                                setDuplicateSupplierDetected(null);
+                                setNewSupplier({ name: "", phone: "", origin: "", opening_balance: 0 });
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                          {duplicateSupplierDetected ? (
+                            <Button 
+                              onClick={() => handleSaveSupplier(true)} 
+                              disabled={submittingSupplier}
+                              className="bg-yellow-600 hover:bg-yellow-700"
+                            >
+                              {submittingSupplier ? "Saving..." : "Save Anyway (Different Person)"}
+                            </Button>
+                          ) : (
+                            <Button onClick={() => handleSaveSupplier(false)} disabled={submittingSupplier}>
+                              {submittingSupplier ? "Saving..." : "Save Supplier"}
+                            </Button>
+                          )}
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
