@@ -28,6 +28,7 @@ const SalesTransactionsList = () => {
   const [loading, setLoading] = useState(true);
   const [editTransaction, setEditTransaction] = useState<SalesTransaction | null>(null);
   const { isAdmin } = useAuth();
+  const userIsAdmin = isAdmin();
 
   useEffect(() => {
     fetchTransactions();
@@ -93,7 +94,7 @@ const SalesTransactionsList = () => {
             <TableHead className="text-right">Unit Price</TableHead>
             <TableHead className="text-right">Total</TableHead>
             <TableHead>Status</TableHead>
-            {isAdmin && <TableHead className="text-center">Actions</TableHead>}
+            {userIsAdmin && <TableHead className="text-center">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -112,7 +113,7 @@ const SalesTransactionsList = () => {
                 {transaction.total_amount?.toLocaleString()} UGX
               </TableCell>
               <TableCell>{getStatusBadge(transaction.status)}</TableCell>
-              {isAdmin && (
+              {userIsAdmin && (
                 <TableCell className="text-center">
                   <Button
                     variant="ghost"
