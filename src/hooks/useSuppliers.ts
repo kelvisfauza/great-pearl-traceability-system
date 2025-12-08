@@ -118,21 +118,31 @@ export const useSuppliers = () => {
     phone: string;
     origin: string;
     opening_balance: number;
-  }) => {
-    // Check for duplicates first
-    const duplicateCheck = checkDuplicateSupplier(supplierData.name);
-    
-    if (duplicateCheck.isDuplicate && duplicateCheck.existingSupplier) {
-      const message = duplicateCheck.similarity === 1 
-        ? `Supplier "${duplicateCheck.existingSupplier.name}" already exists in the system.`
-        : `A similar supplier "${duplicateCheck.existingSupplier.name}" already exists. Please verify if this is the same person.`;
+  }, skipDuplicateCheck = false): Promise<{ success: boolean; duplicateDetected?: boolean; existingSupplier?: Supplier }> => {
+    // Check for duplicates first (unless explicitly skipped)
+    if (!skipDuplicateCheck) {
+      const duplicateCheck = checkDuplicateSupplier(supplierData.name);
       
-      toast({
-        title: "Duplicate Supplier Detected",
-        description: message,
-        variant: "destructive"
-      });
-      throw new Error(message);
+      if (duplicateCheck.isDuplicate && duplicateCheck.existingSupplier) {
+        const isExactMatch = duplicateCheck.similarity === 1;
+        
+        if (isExactMatch) {
+          // Exact match - don't allow at all
+          toast({
+            title: "Duplicate Supplier",
+            description: `Supplier "${duplicateCheck.existingSupplier.name}" already exists in the system.`,
+            variant: "destructive"
+          });
+          return { success: false, duplicateDetected: true, existingSupplier: duplicateCheck.existingSupplier };
+        }
+        
+        // Similar name - return info so UI can prompt for confirmation
+        return { 
+          success: false, 
+          duplicateDetected: true, 
+          existingSupplier: duplicateCheck.existingSupplier 
+        };
+      }
     }
     
     try {
@@ -162,16 +172,15 @@ export const useSuppliers = () => {
       });
       
       await fetchSuppliers(); // Refresh the list
+      return { success: true };
     } catch (error: any) {
       console.error('Error adding supplier:', error);
-      if (!error.message?.includes('Duplicate')) {
-        toast({
-          title: "Error",
-          description: "Failed to add supplier",
-          variant: "destructive"
-        });
-      }
-      throw error;
+      toast({
+        title: "Error",
+        description: "Failed to add supplier",
+        variant: "destructive"
+      });
+      return { success: false };
     }
   };
 
