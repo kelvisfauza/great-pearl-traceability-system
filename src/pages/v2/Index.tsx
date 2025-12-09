@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
+import V2Agreement from "@/components/v2/V2Agreement";
 import PriceTicker from "@/components/PriceTicker";
 import { Package, FlaskConical, Wallet, Warehouse, ShoppingCart, TrendingUp, Clock, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -155,8 +156,9 @@ const V2Index = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Navigation Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-4">
             <V2Navigation />
+            <V2Agreement />
           </div>
 
           {/* Main Content */}
