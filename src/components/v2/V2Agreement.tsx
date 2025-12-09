@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Printer, FileText } from "lucide-react";
 import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
-import StandardPrintHeader from "@/components/print/StandardPrintHeader";
 
 const V2Agreement = () => {
   const printRef = useRef<HTMLDivElement>(null);
@@ -34,13 +33,6 @@ const V2Agreement = () => {
       </CardHeader>
       <CardContent>
         <div ref={printRef} className="print:p-8">
-          <div className="hidden print:block mb-6">
-            <StandardPrintHeader 
-              title="Sales Agreement" 
-              includeDate={false}
-            />
-          </div>
-          
           <div className="space-y-4 text-sm print:text-base">
             <h2 className="text-xl font-bold text-center uppercase">SALES AGREEMENT</h2>
             
