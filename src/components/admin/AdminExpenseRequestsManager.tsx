@@ -664,6 +664,19 @@ const AdminExpenseRequestsManager: React.FC<AdminExpenseRequestsManagerProps> = 
                                     onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
+                                      handleReview(request);
+                                    }}
+                                    className="gap-1"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                    Review
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
                                       setSelectedRequest(request);
                                       setSelectedRequestId(request.id);
                                       setSelectedRequestTitle(request.title);
