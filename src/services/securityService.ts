@@ -1,6 +1,4 @@
 import { supabase } from '@/integrations/supabase/client';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 
 export type SecurityEventType = 
   | 'failed_login'
@@ -27,34 +25,25 @@ class SecurityService {
 
   async logSecurityEvent(event: SecurityEvent) {
     try {
-      // Log to Firebase security_alerts
-      const alertData = {
-        type: this.getEventTitle(event.type),
-        severity: event.severity,
-        count: 1,
-        details: event.details,
-        status: 'open',
-        user_email: event.user_email,
-        user_id: event.user_id,
-        ip_address: event.ip_address,
-        metadata: event.metadata || {},
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp(),
-      };
-
-      await addDoc(collection(db, 'security_alerts'), alertData);
-
-      // Also log to Supabase audit_logs if available
+      // Log to Supabase audit_logs
       if (event.user_email) {
-        await supabase.from('audit_logs').insert({
+        const { error } = await supabase.from('audit_logs').insert({
           action: event.type,
           table_name: 'security_events',
           record_id: event.user_id || event.user_email,
           reason: event.details,
           performed_by: event.user_email,
           department: 'Security',
-          record_data: event.metadata || {},
+          record_data: {
+            severity: event.severity,
+            ip_address: event.ip_address,
+            ...(event.metadata || {}),
+          },
         });
+
+        if (error) {
+          console.error('Failed to log security event to Supabase:', error);
+        }
       }
 
       console.log('Security event logged:', event.type);
@@ -67,17 +56,21 @@ class SecurityService {
     try {
       const fifteenMinutesAgo = new Date(Date.now() - this.TIME_WINDOW_MINUTES * 60 * 1000);
       
-      const q = query(
-        collection(db, 'security_alerts'),
-        where('user_email', '==', email),
-        where('type', '==', 'Failed Login Attempts'),
-        where('created_at', '>=', fifteenMinutesAgo),
-        orderBy('created_at', 'desc'),
-        limit(10)
-      );
+      // Query Supabase audit_logs for failed login attempts
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('id')
+        .eq('performed_by', email)
+        .eq('action', 'failed_login')
+        .gte('created_at', fifteenMinutesAgo.toISOString())
+        .limit(10);
 
-      const snapshot = await getDocs(q);
-      const recentAttempts = snapshot.size;
+      if (error) {
+        console.error('Failed to check login attempts:', error);
+        return;
+      }
+
+      const recentAttempts = data?.length || 0;
 
       if (recentAttempts >= this.FAILED_LOGIN_THRESHOLD) {
         await this.logSecurityEvent({
@@ -163,19 +156,6 @@ class SecurityService {
       details: `Attempted to escalate privileges to ${targetRole}`,
       metadata: { targetRole },
     });
-  }
-
-  private getEventTitle(type: SecurityEventType): string {
-    const titles: Record<SecurityEventType, string> = {
-      failed_login: 'Failed Login Attempts',
-      unauthorized_access: 'Unauthorized Access Attempt',
-      permission_violation: 'Permission Violation',
-      suspicious_activity: 'Suspicious Activity',
-      data_access_violation: 'Data Access Violation',
-      role_escalation_attempt: 'Role Escalation Attempt',
-      multiple_failed_attempts: 'Multiple Failed Login Attempts',
-    };
-    return titles[type];
   }
 }
 
