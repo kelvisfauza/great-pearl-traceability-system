@@ -97,3 +97,6 @@ verify_jwt = false
 
 [functions.morning-report-reminder]
 verify_jwt = false
+
+[functions.fix-morjalia-account]
+verify_jwt = false
