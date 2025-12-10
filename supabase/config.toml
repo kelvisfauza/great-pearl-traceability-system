@@ -1,5 +1,8 @@
 project_id = "pudfybkyfedeggmokhco"
 
+[functions.reset-morjalia-password]
+verify_jwt = false
+
 [functions.check-duplicate-expense]
 verify_jwt = true
 
