@@ -5,8 +5,40 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Verify the caller is an authenticated Super Admin
+async function verifySuperAdminCaller(req: Request, supabaseAdmin: any): Promise<{ isAdmin: boolean; error?: string }> {
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader) {
+    return { isAdmin: false, error: 'Missing authorization header' }
+  }
+
+  const token = authHeader.replace('Bearer ', '')
+  
+  const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
+  
+  if (userError || !user) {
+    return { isAdmin: false, error: 'Invalid or expired token' }
+  }
+
+  const { data: employee, error: empError } = await supabaseAdmin
+    .from('employees')
+    .select('role')
+    .eq('auth_user_id', user.id)
+    .single()
+
+  if (empError || !employee) {
+    return { isAdmin: false, error: 'Employee record not found' }
+  }
+
+  // Only Super Admin can perform cleanup operations
+  if (employee.role !== 'Super Admin') {
+    return { isAdmin: false, error: 'Insufficient permissions - Super Admin role required' }
+  }
+
+  return { isAdmin: true }
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -14,7 +46,6 @@ Deno.serve(async (req) => {
   try {
     console.log('🧹 Starting user cleanup process...');
 
-    // Create Supabase admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -26,12 +57,20 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Define the main account email that should be kept
+    // Verify caller is Super Admin
+    const { isAdmin, error: authError } = await verifySuperAdminCaller(req, supabaseAdmin)
+    if (!isAdmin) {
+      console.error('🚫 Authorization failed:', authError)
+      return new Response(
+        JSON.stringify({ success: false, error: authError }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const MAIN_ACCOUNT_EMAIL = 'nicholusscottlangz@gmail.com';
 
     console.log(`📋 Main account to keep: ${MAIN_ACCOUNT_EMAIL}`);
 
-    // Get all users from Supabase auth
     const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (usersError) {
@@ -41,21 +80,17 @@ Deno.serve(async (req) => {
 
     console.log(`👥 Found ${users.length} total users`);
 
-    // Filter out the main account
     const usersToDelete = users.filter(user => user.email !== MAIN_ACCOUNT_EMAIL);
     
     console.log(`🗑️ Users to delete: ${usersToDelete.length}`);
-    console.log(`📧 Emails to delete:`, usersToDelete.map(u => u.email));
 
     let deletedCount = 0;
     let errors: string[] = [];
 
-    // Delete each user (except main account)
     for (const user of usersToDelete) {
       try {
         console.log(`🔄 Deleting user: ${user.email} (${user.id})`);
 
-        // First delete from employees table in Supabase
         const { error: employeeDeleteError } = await supabaseAdmin
           .from('employees')
           .delete()
@@ -68,7 +103,6 @@ Deno.serve(async (req) => {
           console.log(`✅ Deleted employee record for ${user.email}`);
         }
 
-        // Delete from Supabase auth
         const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
         
         if (authDeleteError) {
@@ -85,7 +119,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Also cleanup any orphaned employee records (where auth_user_id doesn't exist)
     console.log('🧹 Cleaning up orphaned employee records...');
     
     const { error: orphanedCleanupError } = await supabaseAdmin

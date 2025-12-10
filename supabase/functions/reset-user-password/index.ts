@@ -6,22 +6,45 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Verify the caller is an authenticated admin
+async function verifyAdminCaller(req: Request, supabaseAdmin: any): Promise<{ isAdmin: boolean; callerEmail?: string; error?: string }> {
+  const authHeader = req.headers.get('authorization')
+  if (!authHeader) {
+    return { isAdmin: false, error: 'Missing authorization header' }
+  }
+
+  const token = authHeader.replace('Bearer ', '')
+  
+  const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
+  
+  if (userError || !user) {
+    return { isAdmin: false, error: 'Invalid or expired token' }
+  }
+
+  const { data: employee, error: empError } = await supabaseAdmin
+    .from('employees')
+    .select('role, email')
+    .eq('auth_user_id', user.id)
+    .single()
+
+  if (empError || !employee) {
+    return { isAdmin: false, error: 'Employee record not found' }
+  }
+
+  const adminRoles = ['Super Admin', 'Administrator']
+  if (!adminRoles.includes(employee.role)) {
+    return { isAdmin: false, error: 'Insufficient permissions - admin role required' }
+  }
+
+  return { isAdmin: true, callerEmail: employee.email }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { email, newPassword } = await req.json()
-
-    if (!email || !newPassword) {
-      return new Response(
-        JSON.stringify({ error: 'Email and new password are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Create Supabase admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -33,7 +56,25 @@ serve(async (req) => {
       }
     )
 
-    // Get user by email
+    // Verify caller is admin
+    const { isAdmin, callerEmail, error: authError } = await verifyAdminCaller(req, supabaseAdmin)
+    if (!isAdmin) {
+      console.error('Authorization failed:', authError)
+      return new Response(
+        JSON.stringify({ error: authError }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { email, newPassword } = await req.json()
+
+    if (!email || !newPassword) {
+      return new Response(
+        JSON.stringify({ error: 'Email and new password are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const { data: { users }, error: getUserError } = await supabaseAdmin.auth.admin.listUsers()
     
     if (getUserError) {
@@ -50,7 +91,6 @@ serve(async (req) => {
       )
     }
 
-    // Update user password using admin API
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       user.id,
       { password: newPassword }
@@ -61,7 +101,8 @@ serve(async (req) => {
       throw updateError
     }
 
-    console.log(`Password successfully updated for user: ${email}`)
+    // Log the password reset action (without the password itself)
+    console.log(`Password reset by admin ${callerEmail} for user: ${email}`)
 
     return new Response(
       JSON.stringify({ 
