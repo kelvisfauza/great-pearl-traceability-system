@@ -8,12 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Edit, Trash2, Calendar, Search } from 'lucide-react';
 import { format, isToday, isThisWeek, isThisMonth, isThisYear, startOfDay, endOfDay } from 'date-fns';
 import { useMillingData } from '@/hooks/useMillingData';
-import { useRoleBasedAccess } from '@/hooks/useRoleBasedAccess';
+import { useAuth } from '@/contexts/AuthContext';
 import MillingTransactionEditModal from './MillingTransactionEditModal';
 
 const MillingTransactionsList = () => {
   const { transactions, loading, deleteTransaction } = useMillingData();
-  const { canDeleteEmployees } = useRoleBasedAccess();
+  const { isAdmin } = useAuth();
   const [editTransaction, setEditTransaction] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [periodFilter, setPeriodFilter] = useState('today');
@@ -163,7 +163,7 @@ const MillingTransactionsList = () => {
                           <Edit className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
-                        {canDeleteEmployees && (
+                        {isAdmin() && (
                           <Button
                             size="sm"
                             variant="destructive"
