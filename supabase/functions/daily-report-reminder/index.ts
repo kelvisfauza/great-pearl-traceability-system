@@ -17,6 +17,27 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if this reminder is enabled in system settings
+    const { data: settings, error: settingsError } = await supabase
+      .from('system_settings')
+      .select('setting_value')
+      .eq('setting_key', 'report_reminders')
+      .single();
+
+    if (settingsError && settingsError.code !== 'PGRST116') {
+      console.error('Error fetching settings:', settingsError);
+    }
+
+    const reminderSettings = settings?.setting_value || { daily_report_reminder: true };
+    
+    if (!reminderSettings.daily_report_reminder) {
+      console.log('Daily report reminder is disabled in system settings');
+      return new Response(
+        JSON.stringify({ message: 'Daily report reminder is disabled', enabled: false }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Get current time in EAT (UTC+3)
     const now = new Date();
     const eatTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));

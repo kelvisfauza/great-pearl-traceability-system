@@ -16,6 +16,27 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if this reminder is enabled in system settings
+    const { data: settings, error: settingsError } = await supabase
+      .from('system_settings')
+      .select('setting_value')
+      .eq('setting_key', 'report_reminders')
+      .single();
+
+    if (settingsError && settingsError.code !== 'PGRST116') {
+      console.error('Error fetching settings:', settingsError);
+    }
+
+    const reminderSettings = settings?.setting_value || { analyst_report_reminder: true };
+    
+    if (!reminderSettings.analyst_report_reminder) {
+      console.log('Analyst report reminder is disabled in system settings');
+      return new Response(
+        JSON.stringify({ message: 'Analyst report reminder is disabled', enabled: false }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Get today's date
     const today = new Date().toISOString().split('T')[0];
     
