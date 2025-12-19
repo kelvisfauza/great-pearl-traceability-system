@@ -151,12 +151,53 @@ export const WithdrawalRequestsManager: React.FC = () => {
         updateData.payment_voucher = paymentVoucher;
       }
 
+      // Update withdrawal request status
       const { error } = await supabase
         .from('withdrawal_requests')
         .update(updateData)
         .eq('id', selectedRequest.id);
 
       if (error) throw error;
+
+      // Reduce the user's balance
+      const { data: userAccount, error: accountError } = await supabase
+        .from('user_accounts')
+        .select('current_balance, total_withdrawn')
+        .eq('user_id', selectedRequest.user_id)
+        .maybeSingle();
+
+      if (userAccount) {
+        const newBalance = Math.max(0, (userAccount.current_balance || 0) - selectedRequest.amount);
+        const newTotalWithdrawn = (userAccount.total_withdrawn || 0) + selectedRequest.amount;
+
+        await supabase
+          .from('user_accounts')
+          .update({
+            current_balance: newBalance,
+            total_withdrawn: newTotalWithdrawn,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', selectedRequest.user_id);
+      }
+
+      // Send SMS notification to the requestor
+      const phoneToNotify = selectedRequest.employee_phone || selectedRequest.phone_number;
+      if (phoneToNotify) {
+        const paymentMethod = selectedRequest.channel === 'CASH' ? 'CASH' : 'Mobile Money';
+        const message = `Dear ${selectedRequest.employee_name}, your withdrawal request of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Payment method: ${paymentMethod}. ${selectedRequest.channel === 'CASH' ? 'Please collect your cash from the Finance office.' : `Funds will be sent to ${selectedRequest.phone_number}.`} Ref: ${selectedRequest.request_ref}`;
+        
+        try {
+          await supabase.functions.invoke('send-sms', {
+            body: {
+              phone: phoneToNotify,
+              message: message
+            }
+          });
+        } catch (smsError) {
+          console.error('SMS notification failed:', smsError);
+          // Don't fail the approval if SMS fails
+        }
+      }
 
       toast({
         title: "Withdrawal Approved",
