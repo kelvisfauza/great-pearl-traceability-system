@@ -23,6 +23,7 @@ import DeletionRequestsManager from '@/components/admin/DeletionRequestsManager'
 import { ComprehensiveSMSManager } from '@/components/it/ComprehensiveSMSManager';
 import { ITUserManagement } from '@/components/it/ITUserManagement';
 import { ITPermissionManager } from '@/components/it/ITPermissionManager';
+import ReportRemindersSettings from '@/components/it/ReportRemindersSettings';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
@@ -125,11 +126,12 @@ const ITDepartment = () => {
         </div>
 
         <Tabs defaultValue="permissions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="user-management">Users</TabsTrigger>
             <TabsTrigger value="errors">Errors</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
+            <TabsTrigger value="reminders">Reminders</TabsTrigger>
             <TabsTrigger value="deletions">Deletions</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="backup">Backup</TabsTrigger>
@@ -149,6 +151,10 @@ const ITDepartment = () => {
 
           <TabsContent value="sms" className="space-y-4">
             <ComprehensiveSMSManager />
+          </TabsContent>
+
+          <TabsContent value="reminders" className="space-y-4">
+            <ReportRemindersSettings />
           </TabsContent>
 
           <TabsContent value="deletions" className="space-y-4">
