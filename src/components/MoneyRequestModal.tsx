@@ -19,10 +19,11 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserAccount } from '@/hooks/useUserAccount';
 import { useAttendance } from '@/hooks/useAttendance';
+import { useMonthlySalaryTracking } from '@/hooks/useMonthlySalaryTracking';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { DollarSign, Calendar, AlertCircle, Phone, Banknote, Smartphone } from 'lucide-react';
+import { DollarSign, Calendar, AlertCircle, Phone, Banknote, Smartphone, Wallet } from 'lucide-react';
 
 interface MoneyRequestModalProps {
   open: boolean;
@@ -44,6 +45,13 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
   const { getCurrentWeekAllowance, deductFromAllowance } = useAttendance();
   const { user, employee } = useAuth();
   const { toast } = useToast();
+
+  // Get salary tracking info for advance requests
+  const { periodInfo, loading: salaryLoading } = useMonthlySalaryTracking(
+    employee?.email,
+    employee?.salary || 0,
+    requestType === 'advance' ? 'advance' : 'mid-month'
+  );
 
   useEffect(() => {
     const fetchAllowance = async () => {
@@ -176,6 +184,38 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
             </>
           )}
 
+          {/* Salary Balance for Advance Requests */}
+          {requestType === 'advance' && (
+            <>
+              {salaryLoading ? (
+                <Alert className="border-blue-200 bg-blue-50">
+                  <Wallet className="h-4 w-4 text-blue-600" />
+                  <AlertDescription>
+                    <div className="text-sm text-blue-800">Loading salary balance...</div>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert className={periodInfo.canRequest ? "border-green-200 bg-green-50" : "border-amber-200 bg-amber-50"}>
+                  <Wallet className={`h-4 w-4 ${periodInfo.canRequest ? "text-green-600" : "text-amber-600"}`} />
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <div className={`font-semibold ${periodInfo.canRequest ? "text-green-900" : "text-amber-900"}`}>
+                        Salary Advance Balance
+                      </div>
+                      <div className={`text-sm ${periodInfo.canRequest ? "text-green-800" : "text-amber-800"} space-y-1`}>
+                        <div>💰 Monthly Salary: <strong>UGX {(employee?.salary || 0).toLocaleString()}</strong></div>
+                        <div>✅ Available to Request: <strong className="text-base">UGX {periodInfo.availableAmount.toLocaleString()}</strong></div>
+                        {periodInfo.message && (
+                          <div className="text-xs pt-1">{periodInfo.message}</div>
+                        )}
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="requestType">Request Type</Label>
             <Select value={requestType} onValueChange={setRequestType}>
@@ -219,6 +259,11 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
                   Max: {weeklyAllowance.balance_available?.toLocaleString()} UGX
                 </span>
               )}
+              {requestType === 'advance' && periodInfo.canRequest && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  Max: {periodInfo.availableAmount.toLocaleString()} UGX
+                </span>
+              )}
             </Label>
             <Input
               id="amount"
@@ -229,10 +274,19 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
               required
               min="1000"
               step="1000"
-              max={requestType === 'lunch_refreshment' && weeklyAllowance ? weeklyAllowance.balance_available : undefined}
+              max={
+                requestType === 'lunch_refreshment' && weeklyAllowance 
+                  ? weeklyAllowance.balance_available 
+                  : requestType === 'advance' && periodInfo.canRequest 
+                    ? periodInfo.availableAmount 
+                    : undefined
+              }
             />
             {requestType === 'lunch_refreshment' && weeklyAllowance && parseFloat(amount) > weeklyAllowance.balance_available && (
               <p className="text-xs text-destructive">Amount exceeds your available weekly meal allowance</p>
+            )}
+            {requestType === 'advance' && periodInfo.canRequest && parseFloat(amount) > periodInfo.availableAmount && (
+              <p className="text-xs text-destructive">Amount exceeds your available salary balance</p>
             )}
           </div>
 
@@ -328,7 +382,8 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
                 !amount || 
                 !reason || 
                 (paymentChannel === 'MOBILE_MONEY' && !phoneNumber) ||
-                (requestType === 'lunch_refreshment' && (!weeklyAllowance || parseFloat(amount) > weeklyAllowance.balance_available))
+                (requestType === 'lunch_refreshment' && (!weeklyAllowance || parseFloat(amount) > weeklyAllowance.balance_available)) ||
+                (requestType === 'advance' && (!periodInfo.canRequest || parseFloat(amount) > periodInfo.availableAmount))
               }
             >
               {loading ? 'Submitting...' : 'Submit Request'}
