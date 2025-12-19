@@ -184,6 +184,12 @@ export const useUserWallet = () => {
   useEffect(() => {
     if (user && employee) {
       fetchWalletData();
+    } else if (user && !employee) {
+      // User exists but no employee profile - stop loading
+      setLoading(false);
+    } else if (!user) {
+      // No user - stop loading
+      setLoading(false);
     }
   }, [user, employee]);
 
