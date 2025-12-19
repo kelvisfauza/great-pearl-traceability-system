@@ -41,16 +41,124 @@ port = 54329
 [analytics]
 enabled = false
 
+[functions."2fa-verification"]
+verify_jwt = true
+
+[functions.analyst-price-reminder]
+verify_jwt = false
+
+[functions.analyst-report-reminder]
+verify_jwt = false
+
+[functions.archive-data]
+verify_jwt = true
+
+[functions.auto-login]
+verify_jwt = false
+
+[functions.backfill-salary-credits]
+verify_jwt = true
+
+[functions.bypass-sms-verification]
+verify_jwt = true
+
+[functions.calculate-metrics]
+verify_jwt = true
+
 [functions.check-duplicate-expense]
+verify_jwt = true
+
+[functions.check-network-access]
 verify_jwt = true
 
 [functions.check-unread-messages]
 verify_jwt = true
 
+[functions.check-withdrawal-status]
+verify_jwt = true
+
+[functions.cleanup-users]
+verify_jwt = true
+
+[functions.create-admin-user]
+verify_jwt = true
+
+[functions.create-denis-account]
+verify_jwt = true
+
+[functions.create-training-user]
+verify_jwt = true
+
+[functions.create-user-account]
+verify_jwt = true
+
+[functions.create-user]
+verify_jwt = true
+
+[functions.daily-report-reminder]
+verify_jwt = false
+
+[functions.detect-ip]
+verify_jwt = true
+
+[functions.fetch-ice-prices]
+verify_jwt = false
+
+[functions.fix-denis-final]
+verify_jwt = true
+
+[functions.fix-pending-payments]
+verify_jwt = true
+
+[functions.generate-comparison-insights]
+verify_jwt = true
+
+[functions.generate-report]
+verify_jwt = true
+
+[functions.generate-risk-assessment]
+verify_jwt = true
+
+[functions.migrate-firebase-data]
+verify_jwt = true
+
+[functions.morning-report-reminder]
+verify_jwt = false
+
+[functions.process-daily-salary]
+verify_jwt = true
+
 [functions.process-withdrawal]
 verify_jwt = true
 
-[functions.check-withdrawal-status]
+[functions.resend-approval-sms]
+verify_jwt = true
+
+[functions.reset-denis-final]
+verify_jwt = true
+
+[functions.reset-denis-password]
+verify_jwt = true
+
+[functions.reset-kibaba-password]
+verify_jwt = true
+
+[functions.reset-user-password]
+verify_jwt = true
+
+[functions.send-company-announcement]
+verify_jwt = true
+
+[functions.send-email-verification]
+verify_jwt = true
+
+[functions.send-password-reset-sms]
+verify_jwt = true
+
+[functions.send-sms]
+verify_jwt = false
+
+[functions.sms-login-link]
 verify_jwt = true
 
 [functions.test-function]
@@ -58,42 +166,3 @@ verify_jwt = true
 
 [functions.test-sms]
 verify_jwt = true
-
-[functions.sms-login-link]
-verify_jwt = true
-
-[functions.detect-ip]
-verify_jwt = true
-
-[functions.check-network-access]
-verify_jwt = true
-
-[functions.calculate-metrics]
-verify_jwt = true
-
-[functions.send-password-reset-sms]
-verify_jwt = true
-
-[functions.generate-risk-assessment]
-verify_jwt = true
-
-[functions.generate-comparison-insights]
-verify_jwt = true
-
-[functions.fetch-ice-prices]
-verify_jwt = false
-
-[functions.analyst-report-reminder]
-verify_jwt = false
-
-[functions.daily-report-reminder]
-verify_jwt = false
-
-[functions.send-sms]
-verify_jwt = false
-
-[functions.analyst-price-reminder]
-verify_jwt = false
-
-[functions.morning-report-reminder]
-verify_jwt = false
