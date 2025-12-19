@@ -511,7 +511,7 @@ LINK: ${loginLink}
     );
 
   } catch (error) {
-    console.error('Error in 2fa-verification function:', error);
+    console.error('Error in twofa-verification function:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     
