@@ -41,7 +41,7 @@ port = 54329
 [analytics]
 enabled = false
 
-[functions."2fa-verification"]
+[functions.twofa-verification]
 verify_jwt = true
 
 [functions.analyst-price-reminder]

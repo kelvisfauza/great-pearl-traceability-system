@@ -84,7 +84,7 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
           setError('');
 
           try {
-            const { data, error } = await supabase.functions.invoke('2fa-verification', {
+            const { data, error } = await supabase.functions.invoke('twofa-verification', {
               body: {
                 action: 'verify_code',
                 email,
@@ -143,7 +143,7 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
 
     try {
       console.log('📱 Sending verification code to:', { email, phone });
-      const { data, error } = await supabase.functions.invoke('2fa-verification', {
+      const { data, error } = await supabase.functions.invoke('twofa-verification', {
         body: {
           action: 'send_code',
           email,
@@ -216,7 +216,7 @@ const TwoFactorVerification: React.FC<TwoFactorVerificationProps> = ({
 
     try {
       console.log('📞 Calling 2FA verification function...');
-      const { data, error } = await supabase.functions.invoke('2fa-verification', {
+      const { data, error } = await supabase.functions.invoke('twofa-verification', {
         body: {
           action: 'verify_code',
           email,
