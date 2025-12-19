@@ -3091,8 +3091,10 @@ export type Database = {
           finance_approved_at: string | null
           finance_approved_by: string | null
           id: string
+          payment_channel: string | null
           payment_slip_generated: boolean | null
           payment_slip_number: string | null
+          phone_number: string | null
           reason: string
           rejection_reason: string | null
           request_type: string
@@ -3114,8 +3116,10 @@ export type Database = {
           finance_approved_at?: string | null
           finance_approved_by?: string | null
           id?: string
+          payment_channel?: string | null
           payment_slip_generated?: boolean | null
           payment_slip_number?: string | null
+          phone_number?: string | null
           reason: string
           rejection_reason?: string | null
           request_type?: string
@@ -3137,8 +3141,10 @@ export type Database = {
           finance_approved_at?: string | null
           finance_approved_by?: string | null
           id?: string
+          payment_channel?: string | null
           payment_slip_generated?: boolean | null
           payment_slip_number?: string | null
+          phone_number?: string | null
           reason?: string
           rejection_reason?: string | null
           request_type?: string

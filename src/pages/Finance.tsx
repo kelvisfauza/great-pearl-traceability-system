@@ -17,6 +17,7 @@ const PaymentHistory = lazy(() => import('@/components/finance/PaymentHistory').
 const ExpenseManagement = lazy(() => import('@/components/finance/ExpenseManagement').then(m => ({ default: m.ExpenseManagement })));
 const HRPayments = lazy(() => import('@/components/finance/HRPayments').then(m => ({ default: m.HRPayments })));
 const MoneyRequestsManager = lazy(() => import('@/components/finance/MoneyRequestsManager').then(m => ({ default: m.default })));
+const WithdrawalRequestsManager = lazy(() => import('@/components/finance/WithdrawalRequestsManager').then(m => ({ default: m.WithdrawalRequestsManager })));
 const DayBook = lazy(() => import('@/components/reports/DayBook'));
 const FinanceReports = lazy(() => import('@/components/finance/FinanceReports').then(m => ({ default: m.FinanceReports })));
 const SupplierAdvanceModal = lazy(() => import('@/components/finance/SupplierAdvanceModal'));
@@ -133,6 +134,16 @@ const Finance = () => {
                     content: (
                       <Suspense fallback={<LoadingSpinner />}>
                         <CompletedTransactions />
+                      </Suspense>
+                    )
+                  },
+                  {
+                    value: "withdrawals",
+                    icon: <Wallet className="h-3 w-3 md:h-4 md:w-4" />,
+                    label: <><span className="hidden sm:inline">Withdrawals</span><span className="sm:hidden">Withdraw</span></>,
+                    content: (
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <WithdrawalRequestsManager />
                       </Suspense>
                     )
                   },
