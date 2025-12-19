@@ -20,7 +20,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUserAccount } from '@/hooks/useUserAccount';
 import { useAttendance } from '@/hooks/useAttendance';
 import { useAuth } from '@/contexts/AuthContext';
-import { DollarSign, Calendar, AlertCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { DollarSign, Calendar, AlertCircle, Phone, Banknote, Smartphone } from 'lucide-react';
 
 interface MoneyRequestModalProps {
   open: boolean;
@@ -34,26 +36,44 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [requestType, setRequestType] = useState('advance');
+  const [paymentChannel, setPaymentChannel] = useState('CASH');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [weeklyAllowance, setWeeklyAllowance] = useState<any>(null);
   const { createMoneyRequest } = useUserAccount();
   const { getCurrentWeekAllowance, deductFromAllowance } = useAttendance();
-  const { user } = useAuth();
+  const { user, employee } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchAllowance = async () => {
       if (open && user?.id) {
         const allowance = await getCurrentWeekAllowance(user.id);
         setWeeklyAllowance(allowance);
+        
+        // Pre-fill phone number from employee profile if available
+        if (employee?.phone) {
+          setPhoneNumber(employee.phone);
+        }
       }
     };
     fetchAllowance();
-  }, [open, user]);
+  }, [open, user, employee]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!amount || !reason) return;
+    
+    // Validate phone number for mobile money
+    if (paymentChannel === 'MOBILE_MONEY' && !phoneNumber) {
+      toast({
+        title: "Phone Number Required",
+        description: "Please enter a phone number for mobile money payment",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const requestAmount = parseFloat(amount);
 
@@ -73,16 +93,43 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
         await deductFromAllowance(user.id, requestAmount);
       }
 
-      await createMoneyRequest(requestAmount, reason, requestType);
+      // Create money request with phone number and payment channel
+      const { error } = await supabase
+        .from('money_requests')
+        .insert([{
+          user_id: user?.id,
+          amount: requestAmount,
+          reason,
+          request_type: requestType,
+          requested_by: user?.email || 'Unknown',
+          approval_stage: 'pending_admin',
+          status: 'pending',
+          admin_approved: false,
+          finance_approved: false,
+          phone_number: paymentChannel === 'MOBILE_MONEY' ? phoneNumber : null,
+          payment_channel: paymentChannel
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Request Submitted",
+        description: `Your ${requestType === 'lunch_refreshment' ? 'lunch allowance' : 'money'} request has been submitted for admin approval. Payment will be via ${paymentChannel === 'MOBILE_MONEY' ? 'Mobile Money' : 'Cash'}.`,
+      });
       
       // Reset form
       setAmount('');
       setReason('');
       setRequestType('advance');
+      setPaymentChannel('CASH');
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error submitting request:', error);
-      alert(error.message || 'Failed to submit request');
+      toast({
+        title: "Error",
+        description: error.message || 'Failed to submit request',
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -90,7 +137,7 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
@@ -201,7 +248,71 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
             />
           </div>
 
-          <div className="flex justify-end space-x-2">
+          {/* Payment Method Section */}
+          <div className="border-t pt-4 mt-4">
+            <h3 className="font-medium mb-3 flex items-center gap-2">
+              <Banknote className="h-4 w-4" />
+              How do you want to receive payment?
+            </h3>
+            
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="paymentChannel">Payment Method</Label>
+                <Select value={paymentChannel} onValueChange={setPaymentChannel}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CASH">
+                      <div className="flex items-center gap-2">
+                        <Banknote className="h-4 w-4" />
+                        Cash - Collect from Finance
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="MOBILE_MONEY">
+                      <div className="flex items-center gap-2">
+                        <Smartphone className="h-4 w-4" />
+                        Mobile Money
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {paymentChannel === 'MOBILE_MONEY' && (
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber" className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Mobile Money Number
+                  </Label>
+                  <Input
+                    id="phoneNumber"
+                    type="tel"
+                    placeholder="Enter phone number (e.g., 256700123456)"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    required={paymentChannel === 'MOBILE_MONEY'}
+                    pattern="256[0-9]{9}"
+                    title="Please enter a valid Ugandan phone number starting with 256"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter phone number with country code (256). Money will be sent to this number after approval.
+                  </p>
+                </div>
+              )}
+
+              {paymentChannel === 'CASH' && (
+                <Alert className="border-blue-200 bg-blue-50">
+                  <Banknote className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-sm text-blue-800">
+                    <strong>Cash Payment:</strong> After approval, visit Finance department to collect your cash. Bring your ID.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
             <Button
               type="button"
               variant="outline"
@@ -216,6 +327,7 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
                 loading || 
                 !amount || 
                 !reason || 
+                (paymentChannel === 'MOBILE_MONEY' && !phoneNumber) ||
                 (requestType === 'lunch_refreshment' && (!weeklyAllowance || parseFloat(amount) > weeklyAllowance.balance_available))
               }
             >
