@@ -1,14 +1,5 @@
 project_id = "pudfybkyfedeggmokhco"
 
-[functions.create-morjalia-auth]
-verify_jwt = false
-
-[functions.check-duplicate-expense]
-verify_jwt = true
-
-[functions.check-unread-messages]
-verify_jwt = true
-
 [api]
 enabled = true
 port = 54321
@@ -49,6 +40,12 @@ port = 54329
 
 [analytics]
 enabled = false
+
+[functions.check-duplicate-expense]
+verify_jwt = true
+
+[functions.check-unread-messages]
+verify_jwt = true
 
 [functions.process-withdrawal]
 verify_jwt = true
@@ -99,7 +96,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.morning-report-reminder]
-verify_jwt = false
-
-[functions.fix-morjalia-account]
 verify_jwt = false
