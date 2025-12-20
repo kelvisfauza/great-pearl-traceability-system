@@ -26,8 +26,8 @@ serve(async (req) => {
       .eq('status', 'failed')
       .lt('retry_count', 10) // Max 10 retries
       .or(`next_retry_at.is.null,next_retry_at.lte.${now}`)
-      .order('created_at', { ascending: true })
-      .limit(20) // Process 20 at a time
+      .order('created_at', { ascending: false })
+      .limit(20) // Process 20 at a time, most recent first
 
     if (fetchError) {
       console.error('Error fetching failed messages:', fetchError)
