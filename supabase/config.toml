@@ -146,6 +146,9 @@ verify_jwt = true
 [functions.reset-user-password]
 verify_jwt = true
 
+[functions.retry-failed-sms]
+verify_jwt = false
+
 [functions.send-company-announcement]
 verify_jwt = true
 

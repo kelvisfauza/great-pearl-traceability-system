@@ -4245,14 +4245,18 @@ export type Database = {
           department: string | null
           failure_reason: string | null
           id: string
+          last_retry_at: string | null
+          max_retries: number | null
           message_content: string
           message_type: string
+          next_retry_at: string | null
           provider: string | null
           provider_response: Json | null
           recipient_email: string | null
           recipient_name: string | null
           recipient_phone: string
           request_id: string | null
+          retry_count: number | null
           status: string
           triggered_by: string | null
           updated_at: string
@@ -4263,14 +4267,18 @@ export type Database = {
           department?: string | null
           failure_reason?: string | null
           id?: string
+          last_retry_at?: string | null
+          max_retries?: number | null
           message_content: string
           message_type?: string
+          next_retry_at?: string | null
           provider?: string | null
           provider_response?: Json | null
           recipient_email?: string | null
           recipient_name?: string | null
           recipient_phone: string
           request_id?: string | null
+          retry_count?: number | null
           status?: string
           triggered_by?: string | null
           updated_at?: string
@@ -4281,14 +4289,18 @@ export type Database = {
           department?: string | null
           failure_reason?: string | null
           id?: string
+          last_retry_at?: string | null
+          max_retries?: number | null
           message_content?: string
           message_type?: string
+          next_retry_at?: string | null
           provider?: string | null
           provider_response?: Json | null
           recipient_email?: string | null
           recipient_name?: string | null
           recipient_phone?: string
           request_id?: string | null
+          retry_count?: number | null
           status?: string
           triggered_by?: string | null
           updated_at?: string
