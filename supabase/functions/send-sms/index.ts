@@ -160,9 +160,12 @@ serve(async (req) => {
         const errorText = await smsResponse.text();
         console.error('YoolaSMS API error:', errorText);
         
-        // Log failed SMS to database
+        // Log failed SMS to database with retry scheduling
         try {
           console.log('Attempting to log failed SMS to database...');
+          const nextRetry = new Date();
+          nextRetry.setMinutes(nextRetry.getMinutes() + 5); // Retry in 5 minutes
+          
           const logResult = await supabase.from('sms_logs').insert({
             recipient_phone: formattedPhone,
             recipient_name: userName,
@@ -174,13 +177,15 @@ serve(async (req) => {
             failure_reason: errorText,
             department: department,
             triggered_by: triggeredBy,
-            request_id: requestId
+            request_id: requestId,
+            retry_count: 0,
+            next_retry_at: nextRetry.toISOString()
           });
           
           if (logResult.error) {
             console.error('Database logging error (failed SMS):', logResult.error);
           } else {
-            console.log('Failed SMS successfully logged to database');
+            console.log('Failed SMS logged with retry scheduled for:', nextRetry.toISOString());
           }
         } catch (dbError) {
           console.error('Failed to log failed SMS to database:', dbError);
@@ -203,9 +208,12 @@ serve(async (req) => {
     } catch (error) {
       console.error('YoolaSMS request failed:', error)
       
-      // Log failed SMS to database
+      // Log failed SMS to database with retry scheduling
       try {
         console.log('Attempting to log exception SMS to database...');
+        const nextRetry = new Date();
+        nextRetry.setMinutes(nextRetry.getMinutes() + 5); // Retry in 5 minutes
+        
         const logResult = await supabase.from('sms_logs').insert({
           recipient_phone: formattedPhone,
           recipient_name: userName,
@@ -217,13 +225,15 @@ serve(async (req) => {
           failure_reason: error.message,
           department: department,
           triggered_by: triggeredBy,
-          request_id: requestId
+          request_id: requestId,
+          retry_count: 0,
+          next_retry_at: nextRetry.toISOString()
         });
         
         if (logResult.error) {
           console.error('Database logging error (exception):', logResult.error);
         } else {
-          console.log('Exception SMS successfully logged to database');
+          console.log('Exception SMS logged with retry scheduled for:', nextRetry.toISOString());
         }
       } catch (dbError) {
         console.error('Failed to log exception SMS to database:', dbError);
