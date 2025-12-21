@@ -39,9 +39,14 @@ const QuickAnalysisPrint = forwardRef<HTMLDivElement, QuickAnalysisPrintProps>(
       <div ref={ref} className="p-8 bg-white text-black min-h-[297mm] w-[210mm] mx-auto print:p-6">
         {/* Company Header */}
         <div className="text-center border-b-2 border-black pb-4 mb-6">
-          <h1 className="text-2xl font-bold uppercase tracking-wide">KAJON Coffee Limited</h1>
-          <p className="text-sm mt-1">Kanoni, Kazo District, Uganda</p>
-          <p className="text-sm">Tel: +256 782 123 456 | Email: info@kajoncoffee.com</p>
+          <img 
+            src="/images/great-pearl-coffee-logo.png" 
+            alt="Great Pearl Coffee Logo" 
+            className="h-20 mx-auto mb-3"
+          />
+          <h1 className="text-2xl font-bold uppercase tracking-wide">GREAT PEARL COFFEE</h1>
+          <p className="text-sm mt-1">Kasese, Uganda</p>
+          <p className="text-sm">Tel: +256781121639 | www.greatpearlcoffee.com</p>
           <div className="mt-4 bg-gray-100 py-2">
             <h2 className="text-lg font-bold">COFFEE QUALITY ANALYSIS REPORT</h2>
           </div>
@@ -176,7 +181,7 @@ const QuickAnalysisPrint = forwardRef<HTMLDivElement, QuickAnalysisPrintProps>(
 
         {/* Footer */}
         <div className="absolute bottom-8 left-8 right-8 text-center text-xs text-gray-500 border-t pt-4">
-          <p>This is an official quality analysis document from KAJON Coffee Limited</p>
+          <p>This is an official quality analysis document from Great Pearl Coffee</p>
           <p>Generated on {format(new Date(), 'dd MMM yyyy HH:mm')}</p>
         </div>
       </div>
