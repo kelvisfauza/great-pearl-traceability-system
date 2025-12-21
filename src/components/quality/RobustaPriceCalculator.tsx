@@ -14,7 +14,6 @@ import RobustaPrint from './RobustaPrint';
 
 interface RobustaState {
   refPrice: string;
-  totalWeight: string;
   moisture: string;
   g1Defects: string;
   g2Defects: string;
@@ -28,24 +27,16 @@ interface RobustaState {
 interface RobustaResults {
   totalDefects: number;
   outturn: number;
-  podsKgs: number;
-  husksKgs: number;
-  stonesKgs: number;
-  deductionsPods: number;
-  deductionsHusks: number;
-  deductionsStones: number;
-  moistureWeightLoss: number;
-  totalKgsDeducted: number;
-  totalDeductions: number;
-  actualPrice: number;
-  amountToPay: number;
+  moistureDeductionPercent: number;
+  totalDeductionPercent: number;
+  deductionPerKg: number;
+  actualPricePerKg: number;
 }
 
 interface SavedRobustaAnalysis {
   id: string;
   supplier_name: string;
   ref_price: number;
-  total_weight: number;
   moisture: number;
   g1_defects: number;
   g2_defects: number;
@@ -56,17 +47,10 @@ interface SavedRobustaAnalysis {
   husks: number;
   stones: number;
   discretion: number;
-  pods_kgs: number;
-  husks_kgs: number;
-  stones_kgs: number;
-  deductions_pods: number;
-  deductions_husks: number;
-  deductions_stones: number;
-  moisture_weight_loss: number;
-  total_kgs_deducted: number;
-  total_deductions: number;
-  actual_price: number;
-  amount_to_pay: number;
+  moisture_deduction_percent: number;
+  total_deduction_percent: number;
+  deduction_per_kg: number;
+  actual_price_per_kg: number;
   created_by: string;
   created_at: string;
 }
@@ -86,7 +70,6 @@ const RobustaPriceCalculator = () => {
 
   const [state, setState] = useState<RobustaState>({
     refPrice: '',
-    totalWeight: '',
     moisture: '',
     g1Defects: '',
     g2Defects: '',
@@ -100,17 +83,10 @@ const RobustaPriceCalculator = () => {
   const [results, setResults] = useState<RobustaResults>({
     totalDefects: 0,
     outturn: 0,
-    podsKgs: 0,
-    husksKgs: 0,
-    stonesKgs: 0,
-    deductionsPods: 0,
-    deductionsHusks: 0,
-    deductionsStones: 0,
-    moistureWeightLoss: 0,
-    totalKgsDeducted: 0,
-    totalDeductions: 0,
-    actualPrice: 0,
-    amountToPay: 0
+    moistureDeductionPercent: 0,
+    totalDeductionPercent: 0,
+    deductionPerKg: 0,
+    actualPricePerKg: 0
   });
 
   const fetchReferencePrices = async () => {
@@ -155,7 +131,6 @@ const RobustaPriceCalculator = () => {
 
   const calculate = () => {
     const refPrice = parseValue(state.refPrice);
-    const totalWeight = parseValue(state.totalWeight);
     const moisture = parseValue(state.moisture);
     const g1Defects = parseValue(state.g1Defects);
     const g2Defects = parseValue(state.g2Defects);
@@ -165,52 +140,30 @@ const RobustaPriceCalculator = () => {
     const stones = parseValue(state.stones);
     const discretion = parseValue(state.discretion);
 
-    // Calculate total defects and outturn
+    // Calculate total defects and outturn (G1, G2, Less12 only affect outturn)
     const totalDefects = g1Defects + g2Defects + less12;
     const outturn = 100 - totalDefects;
 
-    // Calculate defect kgs for pods, husks, stones (these affect final price)
-    const podsKgs = (pods / 100) * totalWeight;
-    const husksKgs = (husks / 100) * totalWeight;
-    const stonesKgs = (stones / 100) * totalWeight;
-
-    // Calculate deductions based on reference price (only pods, husks, stones affect price)
-    const deductionsPods = podsKgs * refPrice;
-    const deductionsHusks = husksKgs * refPrice;
-    const deductionsStones = stonesKgs * refPrice;
-
-    // Calculate moisture weight loss (using fixed target moisture of 15)
+    // Calculate moisture deduction percentage (using fixed target moisture of 15)
     const moistureDiff = moisture - TARGET_MOISTURE;
-    const moistureWeightLoss = moistureDiff > 0 ? (moistureDiff / 100) * totalWeight : 0;
+    const moistureDeductionPercent = moistureDiff > 0 ? moistureDiff : 0;
 
-    // Total kgs deducted (only pods + husks + stones + moisture loss affect price)
-    // G1, G2, Less12 only affect outturn, not the final price
-    const totalKgsDeducted = podsKgs + husksKgs + stonesKgs + moistureWeightLoss;
+    // Total deduction percentage (pods + husks + stones + moisture affect price)
+    const totalDeductionPercent = pods + husks + stones + moistureDeductionPercent;
 
-    // Total deductions in UGX (only pods, husks, stones, moisture)
-    const totalDeductions = deductionsPods + deductionsHusks + deductionsStones + (moistureWeightLoss * refPrice) + discretion;
+    // Deduction per kg = refPrice × totalDeductionPercent / 100
+    const deductionPerKg = (refPrice * totalDeductionPercent) / 100 + discretion;
 
-    // Actual price per kg after deductions
-    const effectiveWeight = totalWeight - totalKgsDeducted;
-    const actualPrice = effectiveWeight > 0 ? refPrice - (totalDeductions / effectiveWeight) : 0;
-
-    // Amount to pay
-    const amountToPay = (totalWeight - totalKgsDeducted) * refPrice - discretion;
+    // Actual price per kg = refPrice - deduction per kg
+    const actualPricePerKg = refPrice - deductionPerKg;
 
     setResults({
       totalDefects,
       outturn,
-      podsKgs,
-      husksKgs,
-      stonesKgs,
-      deductionsPods,
-      deductionsHusks,
-      deductionsStones,
-      moistureWeightLoss,
-      totalKgsDeducted,
-      totalDeductions,
-      actualPrice: Math.max(0, actualPrice),
-      amountToPay: Math.max(0, amountToPay)
+      moistureDeductionPercent,
+      totalDeductionPercent,
+      deductionPerKg,
+      actualPricePerKg: Math.max(0, actualPricePerKg)
     });
   };
 
@@ -225,7 +178,6 @@ const RobustaPriceCalculator = () => {
   const resetAll = () => {
     setState({
       refPrice: referencePrice.toString(),
-      totalWeight: '',
       moisture: '',
       g1Defects: '',
       g2Defects: '',
@@ -248,10 +200,10 @@ const RobustaPriceCalculator = () => {
   });
 
   const handleSaveClick = () => {
-    if (!state.totalWeight || !state.moisture) {
+    if (!state.moisture) {
       toast({
         title: 'Missing Data',
-        description: 'Please enter at least total weight and moisture percentage before saving',
+        description: 'Please enter at least moisture percentage before saving',
         variant: 'destructive'
       });
       return;
@@ -276,23 +228,22 @@ const RobustaPriceCalculator = () => {
         coffee_type: 'robusta',
         ref_price: parseValue(state.refPrice),
         moisture: parseValue(state.moisture),
-        gp1: 0,
-        gp2: 0,
-        less12: 0,
+        gp1: parseValue(state.g1Defects),
+        gp2: parseValue(state.g2Defects),
+        less12: parseValue(state.less12),
         pods: parseValue(state.pods),
         husks: parseValue(state.husks),
-        stones: 0,
+        stones: parseValue(state.stones),
         discretion: parseValue(state.discretion),
-        fm: parseValue(state.pods) + parseValue(state.husks),
-        actual_ott: 0,
+        fm: parseValue(state.pods) + parseValue(state.husks) + parseValue(state.stones),
+        actual_ott: results.outturn,
         clean_d14: 0,
-        outturn: 0,
+        outturn: results.outturn,
         outturn_price: 0,
-        final_price: results.actualPrice,
-        quality_note: `Total Weight: ${state.totalWeight}kg, Amount to Pay: UGX ${fmtCurrency(results.amountToPay)}`,
+        final_price: results.actualPricePerKg,
+        quality_note: `Deduction/kg: UGX ${fmtCurrency(results.deductionPerKg)}, Total Deduction: ${fmt(results.totalDeductionPercent)}%`,
         is_rejected: false,
         created_by: employee?.name || 'Unknown',
-        // Store robusta-specific data in a JSON field or notes
       };
 
       const { data, error } = await supabase
@@ -308,7 +259,6 @@ const RobustaPriceCalculator = () => {
         id: data.id,
         supplier_name: supplierName.trim(),
         ref_price: parseValue(state.refPrice),
-        total_weight: parseValue(state.totalWeight),
         moisture: parseValue(state.moisture),
         g1_defects: parseValue(state.g1Defects),
         g2_defects: parseValue(state.g2Defects),
@@ -319,17 +269,10 @@ const RobustaPriceCalculator = () => {
         husks: parseValue(state.husks),
         stones: parseValue(state.stones),
         discretion: parseValue(state.discretion),
-        pods_kgs: results.podsKgs,
-        husks_kgs: results.husksKgs,
-        stones_kgs: results.stonesKgs,
-        deductions_pods: results.deductionsPods,
-        deductions_husks: results.deductionsHusks,
-        deductions_stones: results.deductionsStones,
-        moisture_weight_loss: results.moistureWeightLoss,
-        total_kgs_deducted: results.totalKgsDeducted,
-        total_deductions: results.totalDeductions,
-        actual_price: results.actualPrice,
-        amount_to_pay: results.amountToPay,
+        moisture_deduction_percent: results.moistureDeductionPercent,
+        total_deduction_percent: results.totalDeductionPercent,
+        deduction_per_kg: results.deductionPerKg,
+        actual_price_per_kg: results.actualPricePerKg,
         created_by: employee?.name || 'Unknown',
         created_at: new Date().toISOString()
       };
@@ -467,19 +410,6 @@ const RobustaPriceCalculator = () => {
                 />
               </div>
               <div>
-                <Label className="text-xs">Total Weight (kg)</Label>
-                <Input
-                  type="number"
-                  value={state.totalWeight}
-                  onChange={(e) => handleInputChange('totalWeight', e.target.value)}
-                  placeholder="e.g. 70"
-                  className="h-9"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
                 <Label className="text-xs">Moisture Content (%)</Label>
                 <Input
                   type="number"
@@ -490,6 +420,9 @@ const RobustaPriceCalculator = () => {
                   className="h-9"
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">G1 Defects (%)</Label>
                 <Input
@@ -501,9 +434,6 @@ const RobustaPriceCalculator = () => {
                   className="h-9"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">G2 Defects (%)</Label>
                 <Input
@@ -515,6 +445,9 @@ const RobustaPriceCalculator = () => {
                   className="h-9"
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Less 12 (%)</Label>
                 <Input
@@ -526,8 +459,17 @@ const RobustaPriceCalculator = () => {
                   className="h-9"
                 />
               </div>
+              <div>
+                <Label className="text-xs">Discretion (UGX/kg)</Label>
+                <Input
+                  type="number"
+                  value={state.discretion}
+                  onChange={(e) => handleInputChange('discretion', e.target.value)}
+                  placeholder="0"
+                  className="h-9"
+                />
+              </div>
             </div>
-
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs">Pods (%)</Label>
@@ -563,17 +505,6 @@ const RobustaPriceCalculator = () => {
                 />
               </div>
             </div>
-
-            <div>
-              <Label className="text-xs">Discretion (UGX)</Label>
-              <Input
-                type="number"
-                value={state.discretion}
-                onChange={(e) => handleInputChange('discretion', e.target.value)}
-                placeholder="0"
-                className="h-9"
-              />
-            </div>
           </CardContent>
         </Card>
 
@@ -586,7 +517,7 @@ const RobustaPriceCalculator = () => {
             {/* Defects & Outturn Section */}
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded">
-                <span className="text-muted-foreground text-xs">Total Defects</span>
+                <span className="text-muted-foreground text-xs">Total Defects (G1+G2+Less12)</span>
                 <p className="font-medium text-amber-700 dark:text-amber-400">{fmt(results.totalDefects)}%</p>
               </div>
               <div className="p-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded">
@@ -595,50 +526,20 @@ const RobustaPriceCalculator = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <div className="p-2 bg-muted rounded">
-                <span className="text-muted-foreground text-xs">Pods (kg)</span>
-                <p className="font-medium">{fmt(results.podsKgs)}</p>
-              </div>
-              <div className="p-2 bg-muted rounded">
-                <span className="text-muted-foreground text-xs">Husks (kg)</span>
-                <p className="font-medium">{fmt(results.husksKgs)}</p>
-              </div>
-              <div className="p-2 bg-muted rounded">
-                <span className="text-muted-foreground text-xs">Stones (kg)</span>
-                <p className="font-medium">{fmt(results.stonesKgs)}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <div className="p-2 bg-muted rounded">
-                <span className="text-muted-foreground text-xs">Ded. Pods (UGX)</span>
-                <p className="font-medium">{fmtCurrency(results.deductionsPods)}</p>
-              </div>
-              <div className="p-2 bg-muted rounded">
-                <span className="text-muted-foreground text-xs">Ded. Husks (UGX)</span>
-                <p className="font-medium">{fmtCurrency(results.deductionsHusks)}</p>
-              </div>
-              <div className="p-2 bg-muted rounded">
-                <span className="text-muted-foreground text-xs">Ded. Stones (UGX)</span>
-                <p className="font-medium">{fmtCurrency(results.deductionsStones)}</p>
-              </div>
-            </div>
-
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="p-2 bg-muted rounded">
-                <span className="text-muted-foreground text-xs">Moisture Loss (kg)</span>
-                <p className="font-medium">{fmt(results.moistureWeightLoss)}</p>
+                <span className="text-muted-foreground text-xs">Moisture Deduction</span>
+                <p className="font-medium">{fmt(results.moistureDeductionPercent)}%</p>
               </div>
               <div className="p-2 bg-muted rounded">
-                <span className="text-muted-foreground text-xs">Total Kgs Deducted</span>
-                <p className="font-medium">{fmt(results.totalKgsDeducted)}</p>
+                <span className="text-muted-foreground text-xs">Total Price Deduction</span>
+                <p className="font-medium">{fmt(results.totalDeductionPercent)}%</p>
               </div>
             </div>
 
-            <div className="p-2 bg-muted rounded text-sm">
-              <span className="text-muted-foreground text-xs">Total Deductions (UGX)</span>
-              <p className="font-medium">{fmtCurrency(results.totalDeductions)}</p>
+            <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded text-sm">
+              <span className="text-muted-foreground text-xs">Deduction per kg (UGX)</span>
+              <p className="font-bold text-red-600 dark:text-red-400 text-lg">{fmtCurrency(results.deductionPerKg)}</p>
             </div>
           </CardContent>
         </Card>
@@ -647,18 +548,15 @@ const RobustaPriceCalculator = () => {
       {/* Final Results */}
       <Card className="border-primary/20">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Final Calculation</CardTitle>
+          <CardTitle className="text-base">Final Price</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-primary/5 rounded-lg">
-              <span className="text-sm text-muted-foreground">Actual Price (UGX/kg)</span>
-              <p className="text-2xl font-bold text-primary">{fmtCurrency(results.actualPrice)}</p>
-            </div>
-            <div className="p-4 bg-green-500/10 rounded-lg">
-              <span className="text-sm text-muted-foreground">Amount To Pay (UGX)</span>
-              <p className="text-2xl font-bold text-green-600">{fmtCurrency(results.amountToPay)}</p>
-            </div>
+          <div className="p-4 bg-green-500/10 rounded-lg text-center">
+            <span className="text-sm text-muted-foreground">Actual Price per kg (UGX)</span>
+            <p className="text-3xl font-bold text-green-600">{fmtCurrency(results.actualPricePerKg)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Reference: {fmtCurrency(parseValue(state.refPrice))} - Deduction: {fmtCurrency(results.deductionPerKg)}
+            </p>
           </div>
         </CardContent>
       </Card>

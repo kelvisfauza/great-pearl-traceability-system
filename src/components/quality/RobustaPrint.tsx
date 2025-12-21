@@ -4,7 +4,6 @@ interface RobustaAnalysis {
   id: string;
   supplier_name: string;
   ref_price: number;
-  total_weight: number;
   moisture: number;
   g1_defects: number;
   g2_defects: number;
@@ -15,17 +14,10 @@ interface RobustaAnalysis {
   husks: number;
   stones: number;
   discretion: number;
-  pods_kgs: number;
-  husks_kgs: number;
-  stones_kgs: number;
-  deductions_pods: number;
-  deductions_husks: number;
-  deductions_stones: number;
-  moisture_weight_loss: number;
-  total_kgs_deducted: number;
-  total_deductions: number;
-  actual_price: number;
-  amount_to_pay: number;
+  moisture_deduction_percent: number;
+  total_deduction_percent: number;
+  deduction_per_kg: number;
+  actual_price_per_kg: number;
   created_by: string;
   created_at: string;
 }
@@ -105,20 +97,20 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
           <tr>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb', width: '25%' }}>Reference Price</td>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', width: '25%' }}>UGX {fmtCurrency(analysis.ref_price)}/kg</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb', width: '25%' }}>Total Weight</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', width: '25%' }}>{fmt(analysis.total_weight)} kg</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb', width: '25%' }}>Moisture Content</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', width: '25%' }}>{fmt(analysis.moisture)}%</td>
           </tr>
           <tr>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Moisture Content</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.moisture)}%</td>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>G1 Defects</td>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.g1_defects)}%</td>
-          </tr>
-          <tr>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>G2 Defects</td>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.g2_defects)}%</td>
+          </tr>
+          <tr>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Less 12</td>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.less12)}%</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Discretion</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>UGX {fmtCurrency(analysis.discretion)}/kg</td>
           </tr>
           <tr>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#dcfce7', fontWeight: 'bold' }}>Total Defects</td>
@@ -134,9 +126,7 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
           </tr>
           <tr>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Stones</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.stones)}%</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Discretion</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>UGX {fmtCurrency(analysis.discretion)}</td>
+            <td colSpan={3} style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.stones)}%</td>
           </tr>
         </tbody>
       </table>
@@ -150,32 +140,14 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
         </thead>
         <tbody>
           <tr>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb', width: '25%' }}>Pods (kg)</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', width: '25%' }}>{fmt(analysis.pods_kgs)}</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb', width: '25%' }}>Husks (kg)</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', width: '25%' }}>{fmt(analysis.husks_kgs)}</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb', width: '25%' }}>Moisture Deduction</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', width: '25%' }}>{fmt(analysis.moisture_deduction_percent)}%</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb', width: '25%' }}>Total Price Deduction</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', width: '25%', fontWeight: 'bold' }}>{fmt(analysis.total_deduction_percent)}%</td>
           </tr>
           <tr>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Stones (kg)</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.stones_kgs)}</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Ded. Stones</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>UGX {fmtCurrency(analysis.deductions_stones)}</td>
-          </tr>
-          <tr>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Deductions Pods</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>UGX {fmtCurrency(analysis.deductions_pods)}</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Deductions Husks</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>UGX {fmtCurrency(analysis.deductions_husks)}</td>
-          </tr>
-          <tr>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Moisture Weight Loss</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.moisture_weight_loss)} kg</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Total Kgs Deducted</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', fontWeight: 'bold' }}>{fmt(analysis.total_kgs_deducted)} kg</td>
-          </tr>
-          <tr>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Total Deductions (UGX)</td>
-            <td colSpan={3} style={{ padding: '5px', border: '1px solid #e5e7eb', fontWeight: 'bold' }}>UGX {fmtCurrency(analysis.total_deductions)}</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#fef2f2' }}>Deduction per kg</td>
+            <td colSpan={3} style={{ padding: '5px', border: '1px solid #e5e7eb', fontWeight: 'bold', color: '#dc2626' }}>UGX {fmtCurrency(analysis.deduction_per_kg)}</td>
           </tr>
         </tbody>
       </table>
@@ -184,24 +156,32 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
       <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '15px', fontSize: '9px' }}>
         <thead>
           <tr style={{ backgroundColor: '#166534', color: 'white' }}>
-            <th colSpan={2} style={{ padding: '6px', textAlign: 'left', fontSize: '10px' }}>Final Calculation</th>
+            <th colSpan={2} style={{ padding: '6px', textAlign: 'left', fontSize: '10px' }}>Final Price Calculation</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td style={{ padding: '8px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb', width: '50%', fontSize: '11px' }}>
-              <strong>Actual Price (UGX/kg)</strong>
+              <strong>Reference Price</strong>
             </td>
-            <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontSize: '14px', fontWeight: 'bold', color: '#166534' }}>
-              UGX {fmtCurrency(analysis.actual_price)}
+            <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontSize: '12px' }}>
+              UGX {fmtCurrency(analysis.ref_price)}/kg
             </td>
           </tr>
           <tr>
-            <td style={{ padding: '8px', border: '1px solid #e5e7eb', backgroundColor: '#dcfce7', fontSize: '11px' }}>
-              <strong>Amount To Pay</strong>
+            <td style={{ padding: '8px', border: '1px solid #e5e7eb', backgroundColor: '#fef2f2', fontSize: '11px' }}>
+              <strong>Deduction per kg</strong>
             </td>
-            <td style={{ padding: '8px', border: '1px solid #e5e7eb', backgroundColor: '#dcfce7', fontSize: '16px', fontWeight: 'bold', color: '#166534' }}>
-              UGX {fmtCurrency(analysis.amount_to_pay)}
+            <td style={{ padding: '8px', border: '1px solid #e5e7eb', fontSize: '12px', color: '#dc2626' }}>
+              - UGX {fmtCurrency(analysis.deduction_per_kg)}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: '10px', border: '1px solid #e5e7eb', backgroundColor: '#dcfce7', fontSize: '12px' }}>
+              <strong>ACTUAL PRICE PER KG</strong>
+            </td>
+            <td style={{ padding: '10px', border: '1px solid #e5e7eb', backgroundColor: '#dcfce7', fontSize: '18px', fontWeight: 'bold', color: '#166534' }}>
+              UGX {fmtCurrency(analysis.actual_price_per_kg)}
             </td>
           </tr>
         </tbody>
