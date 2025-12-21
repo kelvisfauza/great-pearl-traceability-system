@@ -13,11 +13,14 @@ interface RobustaAnalysis {
   outturn: number;
   pods: number;
   husks: number;
+  stones: number;
   discretion: number;
   pods_kgs: number;
   husks_kgs: number;
+  stones_kgs: number;
   deductions_pods: number;
   deductions_husks: number;
+  deductions_stones: number;
   moisture_weight_loss: number;
   total_kgs_deducted: number;
   total_deductions: number;
@@ -130,10 +133,10 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
             <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.husks)}%</td>
           </tr>
           <tr>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Stones</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.stones)}%</td>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Discretion</td>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>UGX {fmtCurrency(analysis.discretion)}</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}></td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}></td>
           </tr>
         </tbody>
       </table>
@@ -151,6 +154,12 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', width: '25%' }}>{fmt(analysis.pods_kgs)}</td>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb', width: '25%' }}>Husks (kg)</td>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', width: '25%' }}>{fmt(analysis.husks_kgs)}</td>
+          </tr>
+          <tr>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Stones (kg)</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.stones_kgs)}</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Ded. Stones</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>UGX {fmtCurrency(analysis.deductions_stones)}</td>
           </tr>
           <tr>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Deductions Pods</td>
