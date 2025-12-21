@@ -159,23 +159,29 @@ const RobustaPriceCalculator = () => {
     const totalDefects = g1Defects + g2Defects + less12;
     const outturn = 100 - totalDefects;
 
-    // Calculate pods and husks in kgs
+    // Calculate defect kgs (G1, G2, Less12 also deduct from weight)
+    const g1Kgs = (g1Defects / 100) * totalWeight;
+    const g2Kgs = (g2Defects / 100) * totalWeight;
+    const less12Kgs = (less12 / 100) * totalWeight;
     const podsKgs = (pods / 100) * totalWeight;
     const husksKgs = (husks / 100) * totalWeight;
 
     // Calculate deductions based on reference price
     const deductionsPods = podsKgs * refPrice;
     const deductionsHusks = husksKgs * refPrice;
+    const deductionsG1 = g1Kgs * refPrice;
+    const deductionsG2 = g2Kgs * refPrice;
+    const deductionsLess12 = less12Kgs * refPrice;
 
     // Calculate moisture weight loss (using fixed target moisture of 15)
     const moistureDiff = moisture - TARGET_MOISTURE;
     const moistureWeightLoss = moistureDiff > 0 ? (moistureDiff / 100) * totalWeight : 0;
 
-    // Total kgs deducted (pods + husks + moisture loss)
-    const totalKgsDeducted = podsKgs + husksKgs + moistureWeightLoss;
+    // Total kgs deducted (g1 + g2 + less12 + pods + husks + moisture loss)
+    const totalKgsDeducted = g1Kgs + g2Kgs + less12Kgs + podsKgs + husksKgs + moistureWeightLoss;
 
-    // Total deductions in UGX
-    const totalDeductions = deductionsPods + deductionsHusks + (moistureWeightLoss * refPrice) + discretion;
+    // Total deductions in UGX (includes G1, G2, Less12, pods, husks, moisture)
+    const totalDeductions = deductionsG1 + deductionsG2 + deductionsLess12 + deductionsPods + deductionsHusks + (moistureWeightLoss * refPrice) + discretion;
 
     // Actual price per kg after deductions
     const effectiveWeight = totalWeight - totalKgsDeducted;
