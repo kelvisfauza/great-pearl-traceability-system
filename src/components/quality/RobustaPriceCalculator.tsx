@@ -16,13 +16,17 @@ interface RobustaState {
   refPrice: string;
   totalWeight: string;
   moisture: string;
-  targetMoisture: string;
+  g1Defects: string;
+  g2Defects: string;
+  less12: string;
   pods: string;
   husks: string;
   discretion: string;
 }
 
 interface RobustaResults {
+  totalDefects: number;
+  outturn: number;
   podsKgs: number;
   husksKgs: number;
   deductionsPods: number;
@@ -40,7 +44,11 @@ interface SavedRobustaAnalysis {
   ref_price: number;
   total_weight: number;
   moisture: number;
-  target_moisture: number;
+  g1_defects: number;
+  g2_defects: number;
+  less12: number;
+  total_defects: number;
+  outturn: number;
   pods: number;
   husks: number;
   discretion: number;
@@ -68,17 +76,23 @@ const RobustaPriceCalculator = () => {
   const [savedAnalysis, setSavedAnalysis] = useState<SavedRobustaAnalysis | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
+  const TARGET_MOISTURE = 15; // Fixed target moisture
+
   const [state, setState] = useState<RobustaState>({
     refPrice: '',
     totalWeight: '',
     moisture: '',
-    targetMoisture: '14',
+    g1Defects: '',
+    g2Defects: '',
+    less12: '',
     pods: '',
     husks: '',
     discretion: '0'
   });
 
   const [results, setResults] = useState<RobustaResults>({
+    totalDefects: 0,
+    outturn: 0,
     podsKgs: 0,
     husksKgs: 0,
     deductionsPods: 0,
@@ -134,10 +148,16 @@ const RobustaPriceCalculator = () => {
     const refPrice = parseValue(state.refPrice);
     const totalWeight = parseValue(state.totalWeight);
     const moisture = parseValue(state.moisture);
-    const targetMoisture = parseValue(state.targetMoisture);
+    const g1Defects = parseValue(state.g1Defects);
+    const g2Defects = parseValue(state.g2Defects);
+    const less12 = parseValue(state.less12);
     const pods = parseValue(state.pods);
     const husks = parseValue(state.husks);
     const discretion = parseValue(state.discretion);
+
+    // Calculate total defects and outturn
+    const totalDefects = g1Defects + g2Defects + less12;
+    const outturn = 100 - totalDefects;
 
     // Calculate pods and husks in kgs
     const podsKgs = (pods / 100) * totalWeight;
@@ -147,8 +167,8 @@ const RobustaPriceCalculator = () => {
     const deductionsPods = podsKgs * refPrice;
     const deductionsHusks = husksKgs * refPrice;
 
-    // Calculate moisture weight loss
-    const moistureDiff = moisture - targetMoisture;
+    // Calculate moisture weight loss (using fixed target moisture of 15)
+    const moistureDiff = moisture - TARGET_MOISTURE;
     const moistureWeightLoss = moistureDiff > 0 ? (moistureDiff / 100) * totalWeight : 0;
 
     // Total kgs deducted (pods + husks + moisture loss)
@@ -165,6 +185,8 @@ const RobustaPriceCalculator = () => {
     const amountToPay = (totalWeight - totalKgsDeducted) * refPrice - discretion;
 
     setResults({
+      totalDefects,
+      outturn,
       podsKgs,
       husksKgs,
       deductionsPods,
@@ -190,7 +212,9 @@ const RobustaPriceCalculator = () => {
       refPrice: referencePrice.toString(),
       totalWeight: '',
       moisture: '',
-      targetMoisture: '14',
+      g1Defects: '',
+      g2Defects: '',
+      less12: '',
       pods: '',
       husks: '',
       discretion: '0'
@@ -270,7 +294,11 @@ const RobustaPriceCalculator = () => {
         ref_price: parseValue(state.refPrice),
         total_weight: parseValue(state.totalWeight),
         moisture: parseValue(state.moisture),
-        target_moisture: parseValue(state.targetMoisture),
+        g1_defects: parseValue(state.g1Defects),
+        g2_defects: parseValue(state.g2Defects),
+        less12: parseValue(state.less12),
+        total_defects: results.totalDefects,
+        outturn: results.outturn,
         pods: parseValue(state.pods),
         husks: parseValue(state.husks),
         discretion: parseValue(state.discretion),
@@ -444,12 +472,38 @@ const RobustaPriceCalculator = () => {
                 />
               </div>
               <div>
-                <Label className="text-xs">Target Moisture (%)</Label>
+                <Label className="text-xs">G1 Defects (%)</Label>
                 <Input
                   type="number"
                   step="0.1"
-                  value={state.targetMoisture}
-                  onChange={(e) => handleInputChange('targetMoisture', e.target.value)}
+                  value={state.g1Defects}
+                  onChange={(e) => handleInputChange('g1Defects', e.target.value)}
+                  placeholder="e.g. 2"
+                  className="h-9"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">G2 Defects (%)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={state.g2Defects}
+                  onChange={(e) => handleInputChange('g2Defects', e.target.value)}
+                  placeholder="e.g. 1"
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Less 12 (%)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={state.less12}
+                  onChange={(e) => handleInputChange('less12', e.target.value)}
+                  placeholder="e.g. 0.5"
                   className="h-9"
                 />
               </div>
@@ -499,6 +553,18 @@ const RobustaPriceCalculator = () => {
             <CardTitle className="text-base">Calculated Values</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
+            {/* Defects & Outturn Section */}
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded">
+                <span className="text-muted-foreground text-xs">Total Defects</span>
+                <p className="font-medium text-amber-700 dark:text-amber-400">{fmt(results.totalDefects)}%</p>
+              </div>
+              <div className="p-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded">
+                <span className="text-muted-foreground text-xs">Outturn (100 - Defects)</span>
+                <p className="font-bold text-green-700 dark:text-green-400">{fmt(results.outturn)}%</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="p-2 bg-muted rounded">
                 <span className="text-muted-foreground text-xs">Pods (kg)</span>

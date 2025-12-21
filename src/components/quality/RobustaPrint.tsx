@@ -6,7 +6,11 @@ interface RobustaAnalysis {
   ref_price: number;
   total_weight: number;
   moisture: number;
-  target_moisture: number;
+  g1_defects: number;
+  g2_defects: number;
+  less12: number;
+  total_defects: number;
+  outturn: number;
   pods: number;
   husks: number;
   discretion: number;
@@ -104,8 +108,20 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
           <tr>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Moisture Content</td>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.moisture)}%</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Target Moisture</td>
-            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.target_moisture)}%</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>G1 Defects</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.g1_defects)}%</td>
+          </tr>
+          <tr>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>G2 Defects</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.g2_defects)}%</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Less 12</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb' }}>{fmt(analysis.less12)}%</td>
+          </tr>
+          <tr>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#dcfce7', fontWeight: 'bold' }}>Total Defects</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', fontWeight: 'bold' }}>{fmt(analysis.total_defects)}%</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#dcfce7', fontWeight: 'bold' }}>Outturn</td>
+            <td style={{ padding: '5px', border: '1px solid #e5e7eb', fontWeight: 'bold' }}>{fmt(analysis.outturn)}%</td>
           </tr>
           <tr>
             <td style={{ padding: '5px', border: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>Pods</td>
