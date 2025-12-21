@@ -1,0 +1,1 @@
+UPDATE approval_requests SET amount = 130000, updated_at = now() WHERE id = 'e37cbcc1-1530-4e60-87f4-0995d1300174';
