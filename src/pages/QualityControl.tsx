@@ -38,6 +38,7 @@ import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
 import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator";
 import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator";
+import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
 const QualityControl = () => {
   const {
@@ -825,6 +826,9 @@ const QualityControl = () => {
                 <Calculator className="h-4 w-4 mr-1" />
                 Calculator
               </TabsTrigger>
+              <TabsTrigger value="quick-analyses" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                Quick Analyses
+              </TabsTrigger>
               <TabsTrigger value="price-calculator" disabled={!selectedRecord} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 {selectedRecord ? 'Price Assess' : 'Select First'}
               </TabsTrigger>
@@ -1088,6 +1092,10 @@ const QualityControl = () => {
                 <QualityPriceCalculator />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="quick-analyses">
+            <QuickAnalysesList />
           </TabsContent>
 
           <TabsContent value="price-calculator">
