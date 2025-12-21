@@ -83,7 +83,44 @@ const ReferencePriceInput: React.FC = () => {
       setLoading(true);
       await savePrices(prices);
 
-      // Always send price update to all staff
+      // Helper function to send SMS with delay (throttled)
+      const sendSmsWithDelay = async (
+        recipient: { phone: string; name: string },
+        message: string,
+        messageType: string,
+        delayMs: number
+      ) => {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        try {
+          const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
+            },
+            body: JSON.stringify({
+              phone: recipient.phone,
+              message: message,
+              userName: recipient.name,
+              messageType: messageType,
+              triggeredBy: 'Data Analyst',
+              department: 'Analyst'
+            })
+          });
+          const result = await response.json();
+          if (!response.ok) {
+            console.error(`❌ Failed to send SMS to ${recipient.name}:`, result);
+            return { success: false, name: recipient.name };
+          }
+          console.log(`✅ SMS sent to ${recipient.name}`);
+          return { success: true, name: recipient.name };
+        } catch (error) {
+          console.error(`❌ Error sending SMS to ${recipient.name}:`, error);
+          return { success: false, name: recipient.name };
+        }
+      };
+
+      // Always send price update to all staff (throttled - 500ms between each)
       const { data: employees, error: employeesError } = await supabase
         .from('employees')
         .select('id, name, phone, email')
@@ -100,37 +137,22 @@ const ReferencePriceInput: React.FC = () => {
       // Staff message (shorter, internal)
       const staffMessage = `GPC Price Update - ${date}\n\nArabica: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg (${prices.arabicaOutturn}% outturn)\nRobusta: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg (${prices.robustaOutturn}% outturn)\n\nUse these prices for today's purchases.`;
 
-      console.log(`📱 Sending price update SMS to ${staffList.length} staff members`);
-      const staffSmsPromises = staffList.map(async (employee) => {
-        try {
-          const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
-            },
-            body: JSON.stringify({
-              phone: employee.phone,
-              message: staffMessage,
-              userName: employee.name,
-              messageType: 'staff_price_update',
-              triggeredBy: 'Data Analyst',
-              department: 'Analyst'
-            })
-          });
-
-          const result = await response.json();
-          if (!response.ok) {
-            console.error(`❌ Failed to send SMS to staff ${employee.name}:`, result);
-          } else {
-            console.log(`✅ Staff SMS sent to ${employee.name}`);
-          }
-        } catch (error) {
-          console.error(`❌ Error sending SMS to staff ${employee.name}:`, error);
-        }
-      });
-
-      await Promise.allSettled(staffSmsPromises);
+      console.log(`📱 Sending price update SMS to ${staffList.length} staff members (throttled)`);
+      
+      // Send staff SMS with 500ms delay between each to avoid overwhelming YoolaSMS
+      const staffResults = [];
+      for (let i = 0; i < staffList.length; i++) {
+        const employee = staffList[i];
+        const result = await sendSmsWithDelay(
+          { phone: employee.phone!, name: employee.name },
+          staffMessage,
+          'staff_price_update',
+          i === 0 ? 0 : 500 // No delay for first, 500ms for rest
+        );
+        staffResults.push(result);
+      }
+      
+      const staffSuccessCount = staffResults.filter(r => r.success).length;
 
       // Optionally also send to suppliers if checkbox is enabled
       if (sendNotification) {
@@ -148,46 +170,31 @@ const ReferencePriceInput: React.FC = () => {
         // Supplier message (more detailed, external)
         const supplierMessage = `Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256778536681`;
 
-        console.log(`📱 Sending SMS to ${suppliersList.length} suppliers`);
-        const smsPromises = suppliersList.map(async (supplier) => {
-          try {
-            const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
-              },
-              body: JSON.stringify({
-                phone: supplier.phone,
-                message: supplierMessage,
-                userName: supplier.name,
-                messageType: 'price_update',
-                triggeredBy: 'Data Analyst',
-                department: 'Analyst'
-              })
-            });
-
-            const result = await response.json();
-            if (!response.ok) {
-              console.error(`❌ Failed to send SMS to ${supplier.name}:`, result);
-            } else {
-              console.log(`✅ SMS sent to ${supplier.name}`);
-            }
-          } catch (error) {
-            console.error(`❌ Error sending SMS to ${supplier.name}:`, error);
-          }
-        });
-
-        await Promise.allSettled(smsPromises);
+        console.log(`📱 Sending SMS to ${suppliersList.length} suppliers (throttled)`);
+        
+        // Send supplier SMS with 500ms delay between each
+        const supplierResults = [];
+        for (let i = 0; i < suppliersList.length; i++) {
+          const supplier = suppliersList[i];
+          const result = await sendSmsWithDelay(
+            { phone: supplier.phone!, name: supplier.name },
+            supplierMessage,
+            'price_update',
+            500 // Always delay after staff messages
+          );
+          supplierResults.push(result);
+        }
+        
+        const supplierSuccessCount = supplierResults.filter(r => r.success).length;
         
         toast({
           title: "Reference Prices Updated",
-          description: `Prices saved, SMS sent to ${staffList.length} staff and ${suppliersList.length} suppliers`
+          description: `Prices saved, SMS sent to ${staffSuccessCount}/${staffList.length} staff and ${supplierSuccessCount}/${suppliersList.length} suppliers`
         });
       } else {
         toast({
           title: "Reference Prices Updated",
-          description: `Prices saved and SMS sent to ${staffList.length} staff members`
+          description: `Prices saved and SMS sent to ${staffSuccessCount}/${staffList.length} staff members`
         });
       }
     } catch (error) {
