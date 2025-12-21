@@ -21,6 +21,7 @@ interface RobustaState {
   less12: string;
   pods: string;
   husks: string;
+  stones: string;
   discretion: string;
 }
 
@@ -29,8 +30,10 @@ interface RobustaResults {
   outturn: number;
   podsKgs: number;
   husksKgs: number;
+  stonesKgs: number;
   deductionsPods: number;
   deductionsHusks: number;
+  deductionsStones: number;
   moistureWeightLoss: number;
   totalKgsDeducted: number;
   totalDeductions: number;
@@ -51,11 +54,14 @@ interface SavedRobustaAnalysis {
   outturn: number;
   pods: number;
   husks: number;
+  stones: number;
   discretion: number;
   pods_kgs: number;
   husks_kgs: number;
+  stones_kgs: number;
   deductions_pods: number;
   deductions_husks: number;
+  deductions_stones: number;
   moisture_weight_loss: number;
   total_kgs_deducted: number;
   total_deductions: number;
@@ -87,6 +93,7 @@ const RobustaPriceCalculator = () => {
     less12: '',
     pods: '',
     husks: '',
+    stones: '',
     discretion: '0'
   });
 
@@ -95,8 +102,10 @@ const RobustaPriceCalculator = () => {
     outturn: 0,
     podsKgs: 0,
     husksKgs: 0,
+    stonesKgs: 0,
     deductionsPods: 0,
     deductionsHusks: 0,
+    deductionsStones: 0,
     moistureWeightLoss: 0,
     totalKgsDeducted: 0,
     totalDeductions: 0,
@@ -153,6 +162,7 @@ const RobustaPriceCalculator = () => {
     const less12 = parseValue(state.less12);
     const pods = parseValue(state.pods);
     const husks = parseValue(state.husks);
+    const stones = parseValue(state.stones);
     const discretion = parseValue(state.discretion);
 
     // Calculate total defects and outturn
@@ -165,10 +175,12 @@ const RobustaPriceCalculator = () => {
     const less12Kgs = (less12 / 100) * totalWeight;
     const podsKgs = (pods / 100) * totalWeight;
     const husksKgs = (husks / 100) * totalWeight;
+    const stonesKgs = (stones / 100) * totalWeight;
 
     // Calculate deductions based on reference price
     const deductionsPods = podsKgs * refPrice;
     const deductionsHusks = husksKgs * refPrice;
+    const deductionsStones = stonesKgs * refPrice;
     const deductionsG1 = g1Kgs * refPrice;
     const deductionsG2 = g2Kgs * refPrice;
     const deductionsLess12 = less12Kgs * refPrice;
@@ -177,11 +189,11 @@ const RobustaPriceCalculator = () => {
     const moistureDiff = moisture - TARGET_MOISTURE;
     const moistureWeightLoss = moistureDiff > 0 ? (moistureDiff / 100) * totalWeight : 0;
 
-    // Total kgs deducted (g1 + g2 + less12 + pods + husks + moisture loss)
-    const totalKgsDeducted = g1Kgs + g2Kgs + less12Kgs + podsKgs + husksKgs + moistureWeightLoss;
+    // Total kgs deducted (g1 + g2 + less12 + pods + husks + stones + moisture loss)
+    const totalKgsDeducted = g1Kgs + g2Kgs + less12Kgs + podsKgs + husksKgs + stonesKgs + moistureWeightLoss;
 
-    // Total deductions in UGX (includes G1, G2, Less12, pods, husks, moisture)
-    const totalDeductions = deductionsG1 + deductionsG2 + deductionsLess12 + deductionsPods + deductionsHusks + (moistureWeightLoss * refPrice) + discretion;
+    // Total deductions in UGX (includes G1, G2, Less12, pods, husks, stones, moisture)
+    const totalDeductions = deductionsG1 + deductionsG2 + deductionsLess12 + deductionsPods + deductionsHusks + deductionsStones + (moistureWeightLoss * refPrice) + discretion;
 
     // Actual price per kg after deductions
     const effectiveWeight = totalWeight - totalKgsDeducted;
@@ -195,8 +207,10 @@ const RobustaPriceCalculator = () => {
       outturn,
       podsKgs,
       husksKgs,
+      stonesKgs,
       deductionsPods,
       deductionsHusks,
+      deductionsStones,
       moistureWeightLoss,
       totalKgsDeducted,
       totalDeductions,
@@ -223,6 +237,7 @@ const RobustaPriceCalculator = () => {
       less12: '',
       pods: '',
       husks: '',
+      stones: '',
       discretion: '0'
     });
   };
@@ -307,11 +322,14 @@ const RobustaPriceCalculator = () => {
         outturn: results.outturn,
         pods: parseValue(state.pods),
         husks: parseValue(state.husks),
+        stones: parseValue(state.stones),
         discretion: parseValue(state.discretion),
         pods_kgs: results.podsKgs,
         husks_kgs: results.husksKgs,
+        stones_kgs: results.stonesKgs,
         deductions_pods: results.deductionsPods,
         deductions_husks: results.deductionsHusks,
+        deductions_stones: results.deductionsStones,
         moisture_weight_loss: results.moistureWeightLoss,
         total_kgs_deducted: results.totalKgsDeducted,
         total_deductions: results.totalDeductions,
@@ -515,7 +533,7 @@ const RobustaPriceCalculator = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs">Pods (%)</Label>
                 <Input
@@ -535,6 +553,17 @@ const RobustaPriceCalculator = () => {
                   value={state.husks}
                   onChange={(e) => handleInputChange('husks', e.target.value)}
                   placeholder="e.g. 0.7"
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Stones (%)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={state.stones}
+                  onChange={(e) => handleInputChange('stones', e.target.value)}
+                  placeholder="e.g. 0.5"
                   className="h-9"
                 />
               </div>
@@ -571,7 +600,7 @@ const RobustaPriceCalculator = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-3 gap-2 text-sm">
               <div className="p-2 bg-muted rounded">
                 <span className="text-muted-foreground text-xs">Pods (kg)</span>
                 <p className="font-medium">{fmt(results.podsKgs)}</p>
@@ -580,16 +609,24 @@ const RobustaPriceCalculator = () => {
                 <span className="text-muted-foreground text-xs">Husks (kg)</span>
                 <p className="font-medium">{fmt(results.husksKgs)}</p>
               </div>
+              <div className="p-2 bg-muted rounded">
+                <span className="text-muted-foreground text-xs">Stones (kg)</span>
+                <p className="font-medium">{fmt(results.stonesKgs)}</p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-3 gap-2 text-sm">
               <div className="p-2 bg-muted rounded">
-                <span className="text-muted-foreground text-xs">Deductions Pods (UGX)</span>
+                <span className="text-muted-foreground text-xs">Ded. Pods (UGX)</span>
                 <p className="font-medium">{fmtCurrency(results.deductionsPods)}</p>
               </div>
               <div className="p-2 bg-muted rounded">
-                <span className="text-muted-foreground text-xs">Deductions Husks (UGX)</span>
+                <span className="text-muted-foreground text-xs">Ded. Husks (UGX)</span>
                 <p className="font-medium">{fmtCurrency(results.deductionsHusks)}</p>
+              </div>
+              <div className="p-2 bg-muted rounded">
+                <span className="text-muted-foreground text-xs">Ded. Stones (UGX)</span>
+                <p className="font-medium">{fmtCurrency(results.deductionsStones)}</p>
               </div>
             </div>
 
