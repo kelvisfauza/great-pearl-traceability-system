@@ -1,13 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RefreshCw, Loader2, Save, Printer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useReactToPrint } from 'react-to-print';
+import QuickAnalysisPrint from './QuickAnalysisPrint';
 
 interface PriceCalculatorState {
   refPrice: string;
@@ -40,11 +44,42 @@ interface ReferencePrices {
   robusta_faq_local: number;
 }
 
+interface SavedAnalysis {
+  id: string;
+  supplier_name: string;
+  coffee_type: string;
+  ref_price: number;
+  moisture: number;
+  gp1: number;
+  gp2: number;
+  less12: number;
+  pods: number;
+  husks: number;
+  stones: number;
+  discretion: number;
+  fm: number;
+  actual_ott: number;
+  clean_d14: number;
+  outturn: number;
+  outturn_price: number;
+  final_price: number;
+  quality_note: string;
+  is_rejected: boolean;
+  created_by: string;
+  created_at: string;
+}
+
 const QualityPriceCalculator = () => {
   const { toast } = useToast();
+  const { employee } = useAuth();
   const [coffeeType, setCoffeeType] = useState<'arabica' | 'robusta'>('arabica');
   const [loadingPrices, setLoadingPrices] = useState(true);
   const [referencePrices, setReferencePrices] = useState<ReferencePrices | null>(null);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [supplierName, setSupplierName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [savedAnalysis, setSavedAnalysis] = useState<SavedAnalysis | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
   
   const [state, setState] = useState<PriceCalculatorState>({
     refPrice: '',
@@ -253,6 +288,104 @@ const QualityPriceCalculator = () => {
     return isReject ? "destructive" : "default";
   };
 
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: savedAnalysis 
+      ? `Analysis-${savedAnalysis.supplier_name}-${new Date().toISOString().split('T')[0]}`
+      : 'Quality-Analysis'
+  });
+
+  const handleSaveClick = () => {
+    if (!state.moisture) {
+      toast({
+        title: 'Missing Data',
+        description: 'Please enter at least moisture percentage before saving',
+        variant: 'destructive'
+      });
+      return;
+    }
+    setSaveDialogOpen(true);
+  };
+
+  const handleSaveAnalysis = async () => {
+    if (!supplierName.trim()) {
+      toast({
+        title: 'Required',
+        description: 'Please enter the supplier name',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const parseValue = (value: string): number => {
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? 0 : parsed;
+      };
+
+      const isRejected = results.rejectFinal || results.finalPrice === 'REJECT';
+      const finalPriceNum = typeof results.finalPrice === 'number' ? results.finalPrice : 0;
+      const outturnPriceNum = typeof results.outturnPrice === 'number' ? results.outturnPrice : 0;
+      const outturnNum = typeof results.outturn === 'number' ? results.outturn : 0;
+
+      const analysisData = {
+        supplier_name: supplierName.trim(),
+        coffee_type: coffeeType,
+        ref_price: parseValue(state.refPrice),
+        moisture: parseValue(state.moisture),
+        gp1: parseValue(state.gp1),
+        gp2: parseValue(state.gp2),
+        less12: parseValue(state.less12),
+        pods: parseValue(state.pods),
+        husks: parseValue(state.husks),
+        stones: parseValue(state.stones),
+        discretion: parseValue(state.discretion),
+        fm: results.fm,
+        actual_ott: results.actualOtt,
+        clean_d14: results.cleanD14,
+        outturn: outturnNum,
+        outturn_price: outturnPriceNum,
+        final_price: finalPriceNum,
+        quality_note: results.qualityNote,
+        is_rejected: isRejected,
+        created_by: employee?.name || 'Unknown'
+      };
+
+      const { data, error } = await supabase
+        .from('quick_analyses')
+        .insert(analysisData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setSavedAnalysis(data);
+      setSaveDialogOpen(false);
+      setSupplierName('');
+      
+      toast({
+        title: 'Saved',
+        description: 'Analysis saved successfully. You can now print it.'
+      });
+
+      // Auto-trigger print after save
+      setTimeout(() => {
+        handlePrint();
+      }, 100);
+
+    } catch (err) {
+      console.error('Error saving analysis:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to save analysis',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loadingPrices) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -287,7 +420,65 @@ const QualityPriceCalculator = () => {
             <RefreshCw className="h-4 w-4 mr-2" />
             Reset
           </Button>
+          <Button onClick={handleSaveClick} variant="default" size="sm">
+            <Save className="h-4 w-4 mr-2" />
+            Save & Print
+          </Button>
         </div>
+      </div>
+
+      {/* Save Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Quick Analysis</DialogTitle>
+            <DialogDescription>
+              Enter the supplier who brought this offer sample. The analysis will be saved with your name and the current date/time.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="supplierName">Supplier Name *</Label>
+              <Input
+                id="supplierName"
+                placeholder="Enter supplier name..."
+                value={supplierName}
+                onChange={(e) => setSupplierName(e.target.value)}
+                maxLength={100}
+              />
+            </div>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p><strong>Coffee Type:</strong> {coffeeType.charAt(0).toUpperCase() + coffeeType.slice(1)}</p>
+              <p><strong>Analyzed By:</strong> {employee?.name || 'Unknown'}</p>
+              <p><strong>Date/Time:</strong> {new Date().toLocaleString()}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveAnalysis} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save & Print
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hidden print component */}
+      <div className="hidden">
+        {savedAnalysis && (
+          <QuickAnalysisPrint ref={printRef} analysis={savedAnalysis} />
+        )}
       </div>
 
       {referencePrices && (

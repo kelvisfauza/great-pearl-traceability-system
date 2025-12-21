@@ -3686,6 +3686,84 @@ export type Database = {
         }
         Relationships: []
       }
+      quick_analyses: {
+        Row: {
+          actual_ott: number | null
+          clean_d14: number | null
+          coffee_type: string
+          created_at: string | null
+          created_by: string
+          discretion: number | null
+          final_price: number | null
+          fm: number | null
+          gp1: number | null
+          gp2: number | null
+          husks: number | null
+          id: string
+          is_rejected: boolean | null
+          less12: number | null
+          moisture: number | null
+          outturn: number | null
+          outturn_price: number | null
+          pods: number | null
+          quality_note: string | null
+          ref_price: number
+          stones: number | null
+          supplier_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_ott?: number | null
+          clean_d14?: number | null
+          coffee_type: string
+          created_at?: string | null
+          created_by: string
+          discretion?: number | null
+          final_price?: number | null
+          fm?: number | null
+          gp1?: number | null
+          gp2?: number | null
+          husks?: number | null
+          id?: string
+          is_rejected?: boolean | null
+          less12?: number | null
+          moisture?: number | null
+          outturn?: number | null
+          outturn_price?: number | null
+          pods?: number | null
+          quality_note?: string | null
+          ref_price: number
+          stones?: number | null
+          supplier_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_ott?: number | null
+          clean_d14?: number | null
+          coffee_type?: string
+          created_at?: string | null
+          created_by?: string
+          discretion?: number | null
+          final_price?: number | null
+          fm?: number | null
+          gp1?: number | null
+          gp2?: number | null
+          husks?: number | null
+          id?: string
+          is_rejected?: boolean | null
+          less12?: number | null
+          moisture?: number | null
+          outturn?: number | null
+          outturn_price?: number | null
+          pods?: number | null
+          quality_note?: string | null
+          ref_price?: number
+          stones?: number | null
+          supplier_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       receipts: {
         Row: {
           created_at: string
