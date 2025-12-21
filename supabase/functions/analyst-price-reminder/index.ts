@@ -16,20 +16,30 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get today's date
+    // Get today's date (East Africa Time, UTC+3)
     const now = new Date();
     const eatTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
     const today = eatTime.toISOString().split('T')[0];
     const eatHour = eatTime.getUTCHours();
-    
-    console.log(`Morning price reminder check - EAT hour: ${eatHour}, date: ${today}`);
+    const eatDay = eatTime.getUTCDay(); // 0=Sun ... 6=Sat (in EAT)
+
+    console.log(`Morning price reminder check - EAT hour: ${eatHour}, EAT day: ${eatDay}, date: ${today}`);
+
+    // Only run Monday-Friday (skip Saturday/Sunday)
+    if (eatDay === 0 || eatDay === 6) {
+      console.log('Weekend (Sat/Sun) - skipping analyst price reminder');
+      return new Response(
+        JSON.stringify({ message: 'Weekend - skipping', eatHour, eatDay, date: today }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Only run between 7 AM and 10 AM EAT (morning window)
     if (eatHour < 7 || eatHour >= 10) {
       console.log('Outside morning reminder window (7-10 AM EAT), skipping');
       return new Response(
-        JSON.stringify({ message: "Outside morning reminder window", eatHour }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ message: 'Outside morning reminder window', eatHour, eatDay, date: today }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
