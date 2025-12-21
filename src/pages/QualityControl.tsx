@@ -37,6 +37,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
 import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator";
+import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
 const QualityControl = () => {
   const {
@@ -1080,11 +1081,11 @@ const QualityControl = () => {
                   Quick Price Calculator
                 </CardTitle>
                 <CardDescription>
-                  Use this calculator to quickly estimate coffee prices without selecting a specific lot
+                  Use this calculator to quickly estimate coffee prices using current reference prices from Data Analyst
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ArabicaPriceCalculator />
+                <QualityPriceCalculator />
               </CardContent>
             </Card>
           </TabsContent>
