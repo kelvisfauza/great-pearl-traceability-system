@@ -83,6 +83,56 @@ const ReferencePriceInput: React.FC = () => {
       setLoading(true);
       await savePrices(prices);
 
+      // Always send price update to all staff
+      const { data: employees, error: employeesError } = await supabase
+        .from('employees')
+        .select('id, name, phone, email')
+        .eq('status', 'Active')
+        .not('phone', 'is', null);
+
+      if (employeesError) {
+        console.error('Error fetching employees:', employeesError);
+      }
+
+      const staffList = employees?.filter(e => e.phone) || [];
+      const date = new Date().toLocaleDateString('en-GB');
+      
+      // Staff message (shorter, internal)
+      const staffMessage = `GPC Price Update - ${date}\n\nArabica: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg (${prices.arabicaOutturn}% outturn)\nRobusta: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg (${prices.robustaOutturn}% outturn)\n\nUse these prices for today's purchases.`;
+
+      console.log(`📱 Sending price update SMS to ${staffList.length} staff members`);
+      const staffSmsPromises = staffList.map(async (employee) => {
+        try {
+          const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
+            },
+            body: JSON.stringify({
+              phone: employee.phone,
+              message: staffMessage,
+              userName: employee.name,
+              messageType: 'staff_price_update',
+              triggeredBy: 'Data Analyst',
+              department: 'Analyst'
+            })
+          });
+
+          const result = await response.json();
+          if (!response.ok) {
+            console.error(`❌ Failed to send SMS to staff ${employee.name}:`, result);
+          } else {
+            console.log(`✅ Staff SMS sent to ${employee.name}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error sending SMS to staff ${employee.name}:`, error);
+        }
+      });
+
+      await Promise.allSettled(staffSmsPromises);
+
+      // Optionally also send to suppliers if checkbox is enabled
       if (sendNotification) {
         const { data: suppliers, error: suppliersError } = await supabase
           .from('suppliers')
@@ -94,9 +144,9 @@ const ReferencePriceInput: React.FC = () => {
         }
 
         const suppliersList = suppliers?.filter(s => s.phone) || [];
-        const date = new Date().toLocaleDateString('en-GB');
         
-        const message = `Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256778536681`;
+        // Supplier message (more detailed, external)
+        const supplierMessage = `Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256778536681`;
 
         console.log(`📱 Sending SMS to ${suppliersList.length} suppliers`);
         const smsPromises = suppliersList.map(async (supplier) => {
@@ -109,7 +159,7 @@ const ReferencePriceInput: React.FC = () => {
               },
               body: JSON.stringify({
                 phone: supplier.phone,
-                message: message,
+                message: supplierMessage,
                 userName: supplier.name,
                 messageType: 'price_update',
                 triggeredBy: 'Data Analyst',
@@ -132,12 +182,12 @@ const ReferencePriceInput: React.FC = () => {
         
         toast({
           title: "Reference Prices Updated",
-          description: `Prices saved and SMS sent to ${suppliersList.length} suppliers`
+          description: `Prices saved, SMS sent to ${staffList.length} staff and ${suppliersList.length} suppliers`
         });
       } else {
         toast({
           title: "Reference Prices Updated",
-          description: "New reference prices have been saved successfully"
+          description: `Prices saved and SMS sent to ${staffList.length} staff members`
         });
       }
     } catch (error) {
