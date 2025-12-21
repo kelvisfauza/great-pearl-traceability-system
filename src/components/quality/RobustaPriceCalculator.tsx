@@ -147,13 +147,13 @@ const RobustaPriceCalculator = () => {
     const stones = parseValue(state.stones);
     const discretion = parseValue(state.discretion);
 
-    // Calculate total defects and outturn (G1, G2, Less12 only affect outturn)
-    const totalDefects = g1Defects + g2Defects + less12;
-    const outturn = 100 - totalDefects;
-
     // Calculate total FM (pods + husks + stones)
     const totalFM = pods + husks + stones;
     const isRejected = totalFM > FM_REJECTION_THRESHOLD;
+
+    // Calculate total defects and outturn (G1, G2, Less12, and FM affect outturn)
+    const totalDefects = g1Defects + g2Defects + less12 + totalFM;
+    const outturn = 100 - totalDefects;
 
     // Calculate moisture deduction percentage (using fixed target moisture of 15)
     const moistureDiff = moisture - TARGET_MOISTURE;
