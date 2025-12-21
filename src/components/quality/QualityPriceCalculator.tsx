@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReactToPrint } from 'react-to-print';
 import QuickAnalysisPrint from './QuickAnalysisPrint';
+import RobustaPriceCalculator from './RobustaPriceCalculator';
 
 interface PriceCalculatorState {
   refPrice: string;
@@ -395,11 +396,31 @@ const QualityPriceCalculator = () => {
     );
   }
 
+  // If Robusta is selected, render the dedicated Robusta calculator
+  if (coffeeType === 'robusta') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Select value={coffeeType} onValueChange={(v) => setCoffeeType(v as 'arabica' | 'robusta')}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="arabica">Arabica</SelectItem>
+              <SelectItem value="robusta">Robusta</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <RobustaPriceCalculator />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-xl font-bold">Price Calculator</h2>
+          <h2 className="text-xl font-bold">Arabica Price Calculator</h2>
           <Badge variant="outline">UGX</Badge>
         </div>
         <div className="flex items-center gap-2">
