@@ -27,6 +27,8 @@ interface RobustaState {
 interface RobustaResults {
   totalDefects: number;
   outturn: number;
+  totalFM: number;
+  isRejected: boolean;
   moistureDeductionPercent: number;
   totalDeductionPercent: number;
   deductionPerKg: number;
@@ -47,6 +49,8 @@ interface SavedRobustaAnalysis {
   husks: number;
   stones: number;
   discretion: number;
+  total_fm: number;
+  is_rejected: boolean;
   moisture_deduction_percent: number;
   total_deduction_percent: number;
   deduction_per_kg: number;
@@ -67,6 +71,7 @@ const RobustaPriceCalculator = () => {
   const printRef = useRef<HTMLDivElement>(null);
 
   const TARGET_MOISTURE = 15; // Fixed target moisture
+  const FM_REJECTION_THRESHOLD = 6; // FM above 6% = rejection
 
   const [state, setState] = useState<RobustaState>({
     refPrice: '',
@@ -83,6 +88,8 @@ const RobustaPriceCalculator = () => {
   const [results, setResults] = useState<RobustaResults>({
     totalDefects: 0,
     outturn: 0,
+    totalFM: 0,
+    isRejected: false,
     moistureDeductionPercent: 0,
     totalDeductionPercent: 0,
     deductionPerKg: 0,
@@ -144,12 +151,16 @@ const RobustaPriceCalculator = () => {
     const totalDefects = g1Defects + g2Defects + less12;
     const outturn = 100 - totalDefects;
 
+    // Calculate total FM (pods + husks + stones)
+    const totalFM = pods + husks + stones;
+    const isRejected = totalFM > FM_REJECTION_THRESHOLD;
+
     // Calculate moisture deduction percentage (using fixed target moisture of 15)
     const moistureDiff = moisture - TARGET_MOISTURE;
     const moistureDeductionPercent = moistureDiff > 0 ? moistureDiff : 0;
 
     // Total deduction percentage (pods + husks + stones + moisture affect price)
-    const totalDeductionPercent = pods + husks + stones + moistureDeductionPercent;
+    const totalDeductionPercent = totalFM + moistureDeductionPercent;
 
     // Deduction per kg = refPrice × totalDeductionPercent / 100
     const deductionPerKg = (refPrice * totalDeductionPercent) / 100 + discretion;
@@ -160,6 +171,8 @@ const RobustaPriceCalculator = () => {
     setResults({
       totalDefects,
       outturn,
+      totalFM,
+      isRejected,
       moistureDeductionPercent,
       totalDeductionPercent,
       deductionPerKg,
@@ -235,14 +248,16 @@ const RobustaPriceCalculator = () => {
         husks: parseValue(state.husks),
         stones: parseValue(state.stones),
         discretion: parseValue(state.discretion),
-        fm: parseValue(state.pods) + parseValue(state.husks) + parseValue(state.stones),
+        fm: results.totalFM,
         actual_ott: results.outturn,
         clean_d14: 0,
         outturn: results.outturn,
         outturn_price: 0,
         final_price: results.actualPricePerKg,
-        quality_note: `Deduction/kg: UGX ${fmtCurrency(results.deductionPerKg)}, Total Deduction: ${fmt(results.totalDeductionPercent)}%`,
-        is_rejected: false,
+        quality_note: results.isRejected 
+          ? `REJECTED: FM ${fmt(results.totalFM)}% exceeds 6% threshold`
+          : `Deduction/kg: UGX ${fmtCurrency(results.deductionPerKg)}, Total Deduction: ${fmt(results.totalDeductionPercent)}%`,
+        is_rejected: results.isRejected,
         created_by: employee?.name || 'Unknown',
       };
 
@@ -269,6 +284,8 @@ const RobustaPriceCalculator = () => {
         husks: parseValue(state.husks),
         stones: parseValue(state.stones),
         discretion: parseValue(state.discretion),
+        total_fm: results.totalFM,
+        is_rejected: results.isRejected,
         moisture_deduction_percent: results.moistureDeductionPercent,
         total_deduction_percent: results.totalDeductionPercent,
         deduction_per_kg: results.deductionPerKg,
@@ -514,6 +531,28 @@ const RobustaPriceCalculator = () => {
             <CardTitle className="text-base">Calculated Values</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
+            {/* FM & Rejection Status */}
+            <div className={`p-3 rounded border ${results.isRejected 
+              ? 'bg-red-100 dark:bg-red-950/50 border-red-400 dark:border-red-700' 
+              : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-muted-foreground text-xs">Total FM (Pods+Husks+Stones)</span>
+                  <p className={`font-bold text-lg ${results.isRejected ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                    {fmt(results.totalFM)}%
+                  </p>
+                </div>
+                <Badge variant={results.isRejected ? "destructive" : "default"} className="text-sm">
+                  {results.isRejected ? "REJECTED" : "ACCEPTED"}
+                </Badge>
+              </div>
+              {results.isRejected && (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                  FM exceeds 6% threshold
+                </p>
+              )}
+            </div>
+
             {/* Defects & Outturn Section */}
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded">
@@ -546,17 +585,31 @@ const RobustaPriceCalculator = () => {
       </div>
 
       {/* Final Results */}
-      <Card className="border-primary/20">
+      <Card className={`border-2 ${results.isRejected ? 'border-red-400 dark:border-red-700' : 'border-primary/20'}`}>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Final Price</CardTitle>
+          <CardTitle className="text-base flex items-center justify-between">
+            Final Price
+            {results.isRejected && (
+              <Badge variant="destructive" className="text-sm">SAMPLE REJECTED</Badge>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="p-4 bg-green-500/10 rounded-lg text-center">
-            <span className="text-sm text-muted-foreground">Actual Price per kg (UGX)</span>
-            <p className="text-3xl font-bold text-green-600">{fmtCurrency(results.actualPricePerKg)}</p>
+          <div className={`p-4 rounded-lg text-center ${results.isRejected ? 'bg-red-100 dark:bg-red-950/50' : 'bg-green-500/10'}`}>
+            <span className="text-sm text-muted-foreground">
+              {results.isRejected ? 'Price (if accepted)' : 'Actual Price per kg (UGX)'}
+            </span>
+            <p className={`text-3xl font-bold ${results.isRejected ? 'text-red-600 line-through' : 'text-green-600'}`}>
+              {fmtCurrency(results.actualPricePerKg)}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">
               Reference: {fmtCurrency(parseValue(state.refPrice))} - Deduction: {fmtCurrency(results.deductionPerKg)}
             </p>
+            {results.isRejected && (
+              <p className="text-sm font-medium text-red-600 mt-2">
+                FM {fmt(results.totalFM)}% exceeds 6% maximum threshold
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

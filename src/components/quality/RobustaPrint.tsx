@@ -14,6 +14,8 @@ interface RobustaAnalysis {
   husks: number;
   stones: number;
   discretion: number;
+  total_fm: number;
+  is_rejected: boolean;
   moisture_deduction_percent: number;
   total_deduction_percent: number;
   deduction_per_kg: number;
@@ -65,6 +67,20 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
           <p style={{ margin: '2px 0', fontSize: '9px', color: '#666' }}>
             Date: {new Date(analysis.created_at).toLocaleDateString('en-UG')}
           </p>
+          {analysis.is_rejected && (
+            <p style={{ 
+              margin: '4px 0 0 0', 
+              fontSize: '10px', 
+              fontWeight: 'bold', 
+              color: '#dc2626',
+              backgroundColor: '#fef2f2',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              display: 'inline-block'
+            }}>
+              REJECTED
+            </p>
+          )}
         </div>
       </div>
 
@@ -84,6 +100,39 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
             {new Date(analysis.created_at).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
+      </div>
+
+      {/* FM Status */}
+      <div style={{ 
+        marginBottom: '12px', 
+        padding: '10px', 
+        backgroundColor: analysis.is_rejected ? '#fef2f2' : '#dcfce7', 
+        borderRadius: '4px',
+        border: analysis.is_rejected ? '2px solid #dc2626' : '2px solid #166534'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <span style={{ fontSize: '9px', color: '#666', display: 'block' }}>Total FM (Pods + Husks + Stones)</span>
+            <span style={{ fontWeight: 'bold', fontSize: '14px', color: analysis.is_rejected ? '#dc2626' : '#166534' }}>
+              {fmt(analysis.total_fm)}%
+            </span>
+          </div>
+          <span style={{ 
+            fontWeight: 'bold', 
+            fontSize: '12px', 
+            color: analysis.is_rejected ? '#dc2626' : '#166534',
+            backgroundColor: analysis.is_rejected ? '#fee2e2' : '#bbf7d0',
+            padding: '4px 12px',
+            borderRadius: '4px'
+          }}>
+            {analysis.is_rejected ? 'REJECTED' : 'ACCEPTED'}
+          </span>
+        </div>
+        {analysis.is_rejected && (
+          <p style={{ margin: '4px 0 0 0', fontSize: '9px', color: '#dc2626' }}>
+            FM exceeds 6% threshold - Sample does not meet quality requirements
+          </p>
+        )}
       </div>
 
       {/* Input Parameters */}
@@ -155,8 +204,10 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
       {/* Final Results */}
       <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '15px', fontSize: '9px' }}>
         <thead>
-          <tr style={{ backgroundColor: '#166534', color: 'white' }}>
-            <th colSpan={2} style={{ padding: '6px', textAlign: 'left', fontSize: '10px' }}>Final Price Calculation</th>
+          <tr style={{ backgroundColor: analysis.is_rejected ? '#dc2626' : '#166534', color: 'white' }}>
+            <th colSpan={2} style={{ padding: '6px', textAlign: 'left', fontSize: '10px' }}>
+              Final Price Calculation {analysis.is_rejected && '(REJECTED)'}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -177,10 +228,23 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
             </td>
           </tr>
           <tr>
-            <td style={{ padding: '10px', border: '1px solid #e5e7eb', backgroundColor: '#dcfce7', fontSize: '12px' }}>
-              <strong>ACTUAL PRICE PER KG</strong>
+            <td style={{ 
+              padding: '10px', 
+              border: '1px solid #e5e7eb', 
+              backgroundColor: analysis.is_rejected ? '#fef2f2' : '#dcfce7', 
+              fontSize: '12px' 
+            }}>
+              <strong>{analysis.is_rejected ? 'PRICE (IF ACCEPTED)' : 'ACTUAL PRICE PER KG'}</strong>
             </td>
-            <td style={{ padding: '10px', border: '1px solid #e5e7eb', backgroundColor: '#dcfce7', fontSize: '18px', fontWeight: 'bold', color: '#166534' }}>
+            <td style={{ 
+              padding: '10px', 
+              border: '1px solid #e5e7eb', 
+              backgroundColor: analysis.is_rejected ? '#fef2f2' : '#dcfce7', 
+              fontSize: '18px', 
+              fontWeight: 'bold', 
+              color: analysis.is_rejected ? '#dc2626' : '#166534',
+              textDecoration: analysis.is_rejected ? 'line-through' : 'none'
+            }}>
               UGX {fmtCurrency(analysis.actual_price_per_kg)}
             </td>
           </tr>
