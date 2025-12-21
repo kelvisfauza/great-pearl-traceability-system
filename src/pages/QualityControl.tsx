@@ -820,6 +820,10 @@ const QualityControl = () => {
               <TabsTrigger value="reports" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 Reports
               </TabsTrigger>
+              <TabsTrigger value="calculator" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
+                <Calculator className="h-4 w-4 mr-1" />
+                Calculator
+              </TabsTrigger>
               <TabsTrigger value="price-calculator" disabled={!selectedRecord} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">
                 {selectedRecord ? 'Price Assess' : 'Select First'}
               </TabsTrigger>
@@ -1064,6 +1068,23 @@ const QualityControl = () => {
                     </TableBody>
                   </Table>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="calculator">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5" />
+                  Quick Price Calculator
+                </CardTitle>
+                <CardDescription>
+                  Use this calculator to quickly estimate coffee prices without selecting a specific lot
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ArabicaPriceCalculator />
               </CardContent>
             </Card>
           </TabsContent>
