@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { TrendingUp, Package } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 const TopSuppliersChart = () => {
   const [supplierData, setSupplierData] = useState<any[]>([]);
@@ -12,16 +11,26 @@ const TopSuppliersChart = () => {
   useEffect(() => {
     const fetchSupplierData = async () => {
       try {
-        const coffeeSnapshot = await getDocs(collection(db, 'coffee_records'));
-        const supplierMap = new Map();
+        // Fetch from Supabase coffee_records
+        const { data: coffeeRecords, error } = await supabase
+          .from('coffee_records')
+          .select('supplier_name, kilograms');
 
-        coffeeSnapshot.forEach((doc) => {
-          const data = doc.data();
-          const supplierName = data.supplier_name || data.supplierName || 'Unknown';
-          const kgs = Number(data.kilograms || data.weight || 0);
+        if (error) {
+          console.error('Error fetching coffee records:', error);
+          setLoading(false);
+          return;
+        }
+
+        // Aggregate by supplier
+        const supplierMap = new Map<string, number>();
+
+        coffeeRecords?.forEach((record) => {
+          const supplierName = record.supplier_name || 'Unknown';
+          const kgs = Number(record.kilograms || 0);
           
           if (supplierMap.has(supplierName)) {
-            supplierMap.set(supplierName, supplierMap.get(supplierName) + kgs);
+            supplierMap.set(supplierName, supplierMap.get(supplierName)! + kgs);
           } else {
             supplierMap.set(supplierName, kgs);
           }
@@ -57,6 +66,25 @@ const TopSuppliersChart = () => {
         <CardContent>
           <div className="h-80 flex items-center justify-center">
             <div className="animate-pulse text-muted-foreground">Loading supplier data...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (supplierData.length === 0) {
+    return (
+      <Card className="border-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            Top 10 Suppliers by Volume
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">Coffee supplied (kilograms)</p>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 flex items-center justify-center text-muted-foreground">
+            No supplier data available
           </div>
         </CardContent>
       </Card>

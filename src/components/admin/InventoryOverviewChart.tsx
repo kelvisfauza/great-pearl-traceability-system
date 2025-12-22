@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Package, Coffee } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 
 const InventoryOverviewChart = () => {
   const [inventoryData, setInventoryData] = useState<any[]>([]);
@@ -13,18 +12,28 @@ const InventoryOverviewChart = () => {
   useEffect(() => {
     const fetchInventoryData = async () => {
       try {
-        const coffeeSnapshot = await getDocs(collection(db, 'coffee_records'));
-        const typeMap = new Map();
+        // Fetch from Supabase coffee_records for coffee type distribution
+        const { data: coffeeRecords, error } = await supabase
+          .from('coffee_records')
+          .select('coffee_type, kilograms');
+
+        if (error) {
+          console.error('Error fetching coffee records:', error);
+          setLoading(false);
+          return;
+        }
+
+        // Aggregate by coffee type
+        const typeMap = new Map<string, number>();
         let total = 0;
 
-        coffeeSnapshot.forEach((doc) => {
-          const data = doc.data();
-          const coffeeType = data.coffee_type || data.coffeeType || 'Unknown';
-          const kgs = Number(data.kilograms || data.weight || 0);
+        coffeeRecords?.forEach((record) => {
+          const coffeeType = record.coffee_type || 'Unknown';
+          const kgs = Number(record.kilograms || 0);
           
           total += kgs;
           if (typeMap.has(coffeeType)) {
-            typeMap.set(coffeeType, typeMap.get(coffeeType) + kgs);
+            typeMap.set(coffeeType, typeMap.get(coffeeType)! + kgs);
           } else {
             typeMap.set(coffeeType, kgs);
           }
@@ -34,7 +43,7 @@ const InventoryOverviewChart = () => {
           .map(([name, value]) => ({ 
             name, 
             value: Math.round(value),
-            percentage: ((value / total) * 100).toFixed(1)
+            percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0'
           }))
           .sort((a, b) => b.value - a.value);
 
@@ -70,6 +79,25 @@ const InventoryOverviewChart = () => {
         <CardContent>
           <div className="h-80 flex items-center justify-center">
             <div className="animate-pulse text-muted-foreground">Loading inventory data...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (inventoryData.length === 0) {
+    return (
+      <Card className="border-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-primary" />
+            Inventory Distribution by Coffee Type
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">Total: 0 kg</p>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 flex items-center justify-center text-muted-foreground">
+            No inventory data available
           </div>
         </CardContent>
       </Card>
