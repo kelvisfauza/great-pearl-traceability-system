@@ -805,6 +805,51 @@ export type Database = {
         }
         Relationships: []
       }
+      christmas_vouchers: {
+        Row: {
+          christmas_message: string
+          claimed_at: string | null
+          created_at: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          performance_rank: number
+          performance_score: number
+          voucher_amount: number
+          voucher_code: string
+          year: number
+        }
+        Insert: {
+          christmas_message: string
+          claimed_at?: string | null
+          created_at?: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          performance_rank: number
+          performance_score: number
+          voucher_amount: number
+          voucher_code?: string
+          year?: number
+        }
+        Update: {
+          christmas_message?: string
+          claimed_at?: string | null
+          created_at?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          performance_rank?: number
+          performance_score?: number
+          voucher_amount?: number
+          voucher_code?: string
+          year?: number
+        }
+        Relationships: []
+      }
       coffee_records: {
         Row: {
           bags: number

@@ -57,6 +57,7 @@ import { DailyReportReminder } from "./components/reports/DailyReportReminder";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 import { OvertimeNotification } from "./components/OvertimeNotification";
 import RoleNotificationHandler from "./components/RoleNotificationHandler";
+import ChristmasGiftBox from "./components/christmas/ChristmasGiftBox";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
@@ -95,6 +96,7 @@ const App: React.ComponentType = () => {
               {/* Global notifications and reminders */}
               <OvertimeNotification />
               <DailyReportReminder />
+              <ChristmasGiftBox />
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               
               <Routes>
