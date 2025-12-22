@@ -137,48 +137,65 @@ export const useChristmasVoucher = () => {
       // Sort by score descending
       performanceData.sort((a, b) => b.score - a.score);
 
-      // Calculate voucher amounts based on rank
+      // Calculate voucher amounts based on rank - ensure EVERYONE gets something
       const totalEmployees = performanceData.length;
-      let remainingBudget = TOTAL_BUDGET;
       const vouchersToInsert: any[] = [];
+
+      // Calculate amounts to ensure everyone gets a voucher within budget
+      // Distribution: Top performer gets max, others get proportionally less
+      const calculateAmount = (rank: number, total: number): number => {
+        if (total <= 4) {
+          // Small team - divide more evenly
+          return Math.min(Math.floor(TOTAL_BUDGET / total), MAX_INDIVIDUAL_VOUCHER);
+        }
+        
+        // For larger teams, use tiered distribution
+        const basePerPerson = Math.floor(TOTAL_BUDGET / total);
+        
+        if (rank === 1) {
+          return Math.min(basePerPerson * 2.5, MAX_INDIVIDUAL_VOUCHER); // Top gets 2.5x
+        } else if (rank === 2) {
+          return Math.min(basePerPerson * 2, MAX_INDIVIDUAL_VOUCHER); // 2nd gets 2x
+        } else if (rank === 3) {
+          return Math.min(basePerPerson * 1.5, MAX_INDIVIDUAL_VOUCHER); // 3rd gets 1.5x
+        } else if (rank <= Math.ceil(total / 2)) {
+          return Math.min(basePerPerson * 1.2, MAX_INDIVIDUAL_VOUCHER); // Top half gets 1.2x
+        } else {
+          return Math.min(basePerPerson * 0.8, MAX_INDIVIDUAL_VOUCHER); // Bottom half gets 0.8x
+        }
+      };
+
+      // First pass - calculate preliminary amounts
+      let preliminaryTotal = 0;
+      const preliminaryAmounts = performanceData.map((_, index) => {
+        const amount = calculateAmount(index + 1, totalEmployees);
+        preliminaryTotal += amount;
+        return amount;
+      });
+
+      // Adjust if over budget
+      const adjustmentFactor = preliminaryTotal > TOTAL_BUDGET 
+        ? TOTAL_BUDGET / preliminaryTotal 
+        : 1;
 
       performanceData.forEach((perf, index) => {
         const rank = index + 1;
+        const adjustedAmount = Math.floor(preliminaryAmounts[index] * adjustmentFactor);
+        const finalAmount = Math.max(10000, adjustedAmount); // Minimum 10k per person
         
-        // Calculate amount based on rank (higher rank = higher amount)
-        let baseAmount: number;
-        if (rank === 1) {
-          baseAmount = MAX_INDIVIDUAL_VOUCHER; // Top performer gets max
-        } else if (rank <= 3) {
-          baseAmount = 80000;
-        } else if (rank <= 5) {
-          baseAmount = 60000;
-        } else if (rank <= 10) {
-          baseAmount = 40000;
-        } else {
-          baseAmount = Math.max(20000, Math.floor((TOTAL_BUDGET - 300000) / (totalEmployees - 10)));
-        }
+        // Pick a Christmas message
+        const message = CHRISTMAS_MESSAGES[index % CHRISTMAS_MESSAGES.length];
 
-        // Ensure we don't exceed individual max or remaining budget
-        const amount = Math.min(baseAmount, MAX_INDIVIDUAL_VOUCHER, remainingBudget);
-        
-        if (amount > 0) {
-          remainingBudget -= amount;
-          
-          // Pick a random Christmas message
-          const message = CHRISTMAS_MESSAGES[index % CHRISTMAS_MESSAGES.length];
-
-          vouchersToInsert.push({
-            employee_id: employees.find(e => e.email === perf.employee_email)?.id,
-            employee_email: perf.employee_email,
-            employee_name: perf.employee_name,
-            voucher_amount: amount,
-            performance_rank: rank,
-            performance_score: perf.score,
-            christmas_message: message,
-            year: currentYear
-          });
-        }
+        vouchersToInsert.push({
+          employee_id: employees.find(e => e.email === perf.employee_email)?.id,
+          employee_email: perf.employee_email,
+          employee_name: perf.employee_name,
+          voucher_amount: finalAmount,
+          performance_rank: rank,
+          performance_score: perf.score,
+          christmas_message: message,
+          year: currentYear
+        });
       });
 
       console.log('🎄 Vouchers to insert:', vouchersToInsert.length);
