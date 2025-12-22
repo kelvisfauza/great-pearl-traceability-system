@@ -192,10 +192,71 @@ const Navigation = () => {
     }
   };
 
+  // Check if Christmas period
+  const isChristmasPeriod = new Date() < new Date('2026-01-01');
+
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="p-3 xs:p-4 border-b border-gray-200">
-        <h2 className="font-semibold text-base xs:text-lg text-gray-800 truncate">Coffee ERP</h2>
+    <div className={`h-full w-full flex flex-col relative ${isChristmasPeriod ? 'christmas-frame' : ''}`}>
+      {/* Christmas lights decoration */}
+      {isChristmasPeriod && (
+        <>
+          {/* Top lights */}
+          <div className="absolute top-0 left-0 right-0 h-6 flex justify-around items-center pointer-events-none z-10">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={`top-${i}`}
+                className="w-3 h-3 rounded-full animate-pulse"
+                style={{
+                  backgroundColor: ['#ff0000', '#00ff00', '#ffff00', '#ff6600', '#ff00ff', '#00ffff', '#ff0000', '#00ff00'][i],
+                  boxShadow: `0 0 10px 3px ${['#ff0000', '#00ff00', '#ffff00', '#ff6600', '#ff00ff', '#00ffff', '#ff0000', '#00ff00'][i]}`,
+                  animationDelay: `${i * 0.2}s`,
+                  animationDuration: '1.5s'
+                }}
+              />
+            ))}
+          </div>
+          {/* Left lights */}
+          <div className="absolute top-6 left-1 bottom-0 w-4 flex flex-col justify-around items-center pointer-events-none z-10">
+            {[...Array(10)].map((_, i) => (
+              <div
+                key={`left-${i}`}
+                className="w-2.5 h-2.5 rounded-full animate-pulse"
+                style={{
+                  backgroundColor: ['#ff0000', '#00ff00', '#ffff00', '#ff6600', '#ff00ff'][i % 5],
+                  boxShadow: `0 0 8px 2px ${['#ff0000', '#00ff00', '#ffff00', '#ff6600', '#ff00ff'][i % 5]}`,
+                  animationDelay: `${i * 0.15}s`,
+                  animationDuration: '1.2s'
+                }}
+              />
+            ))}
+          </div>
+          {/* Right lights */}
+          <div className="absolute top-6 right-1 bottom-0 w-4 flex flex-col justify-around items-center pointer-events-none z-10">
+            {[...Array(10)].map((_, i) => (
+              <div
+                key={`right-${i}`}
+                className="w-2.5 h-2.5 rounded-full animate-pulse"
+                style={{
+                  backgroundColor: ['#00ff00', '#ff0000', '#ff00ff', '#ffff00', '#00ffff'][i % 5],
+                  boxShadow: `0 0 8px 2px ${['#00ff00', '#ff0000', '#ff00ff', '#ffff00', '#00ffff'][i % 5]}`,
+                  animationDelay: `${i * 0.18}s`,
+                  animationDuration: '1.3s'
+                }}
+              />
+            ))}
+          </div>
+          {/* Corner decorations */}
+          <div className="absolute top-1 left-1 text-xl pointer-events-none z-10">🎄</div>
+          <div className="absolute top-1 right-1 text-xl pointer-events-none z-10">⭐</div>
+        </>
+      )}
+      
+      <div className={`p-3 xs:p-4 border-b border-gray-200 ${isChristmasPeriod ? 'pt-8' : ''}`}>
+        <h2 className="font-semibold text-base xs:text-lg text-gray-800 truncate flex items-center gap-2">
+          {isChristmasPeriod && <span>🎅</span>}
+          Coffee ERP
+          {isChristmasPeriod && <span>🎁</span>}
+        </h2>
       </div>
       
       <div className="flex-1 p-2 xs:p-3">
