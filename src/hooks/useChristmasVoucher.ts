@@ -76,27 +76,34 @@ export const useChristmasVoucher = () => {
 
   // Generate vouchers for all employees based on performance
   const generateVouchers = async () => {
+    console.log('🎄 Starting Christmas voucher generation...');
     try {
       // Check if vouchers already exist for this year
-      const { data: existingVouchers } = await supabase
+      const { data: existingVouchers, error: checkError } = await supabase
         .from('christmas_vouchers')
         .select('id')
         .eq('year', currentYear)
         .limit(1);
 
+      if (checkError) {
+        console.error('🎄 Error checking existing vouchers:', checkError);
+      }
+
       if (existingVouchers && existingVouchers.length > 0) {
-        console.log('Vouchers already generated for this year');
+        console.log('🎄 Vouchers already generated for this year');
         return;
       }
 
-      // Get all active employees
+      // Get all active employees (case-insensitive check)
       const { data: employees, error: empError } = await supabase
         .from('employees')
         .select('id, email, name')
-        .eq('status', 'active');
+        .ilike('status', 'active');
 
-      if (empError || !employees) {
-        console.error('Error fetching employees:', empError);
+      console.log('🎄 Fetched employees:', employees?.length, 'Error:', empError);
+
+      if (empError || !employees || employees.length === 0) {
+        console.error('🎄 Error fetching employees or no employees found:', empError);
         return;
       }
 
@@ -174,6 +181,8 @@ export const useChristmasVoucher = () => {
         }
       });
 
+      console.log('🎄 Vouchers to insert:', vouchersToInsert.length);
+
       // Insert vouchers
       if (vouchersToInsert.length > 0) {
         const { error: insertError } = await supabase
@@ -181,14 +190,16 @@ export const useChristmasVoucher = () => {
           .insert(vouchersToInsert);
 
         if (insertError) {
-          console.error('Error inserting vouchers:', insertError);
+          console.error('🎄 Error inserting vouchers:', insertError);
         } else {
-          console.log('Vouchers generated successfully!');
+          console.log('🎄 Vouchers generated successfully!');
           await fetchVoucher();
         }
+      } else {
+        console.log('🎄 No vouchers to insert - budget exhausted or no employees');
       }
     } catch (err) {
-      console.error('Error generating vouchers:', err);
+      console.error('🎄 Error generating vouchers:', err);
     }
   };
 
