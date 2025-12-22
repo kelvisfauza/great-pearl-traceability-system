@@ -14,6 +14,7 @@ const ChristmasVoucherManager: React.FC = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [pendingSearchTerm, setPendingSearchTerm] = useState('');
 
   const pendingVouchers = allVouchers.filter(v => v.status === 'pending');
   const claimedVouchers = allVouchers.filter(v => v.status === 'claimed');
@@ -22,6 +23,11 @@ const ChristmasVoucherManager: React.FC = () => {
   const filteredClaimedVouchers = claimedVouchers.filter(v => 
     v.employee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     v.voucher_code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredPendingVouchers = pendingVouchers.filter(v => 
+    v.employee_name.toLowerCase().includes(pendingSearchTerm.toLowerCase()) ||
+    v.voucher_code.toLowerCase().includes(pendingSearchTerm.toLowerCase())
   );
 
   const handleComplete = async (voucher: ChristmasVoucher) => {
@@ -128,6 +134,77 @@ const ChristmasVoucherManager: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Vouchers - Not Yet Claimed */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-yellow-600" />
+            Pending Vouchers - Not Yet Claimed
+          </CardTitle>
+          <div className="relative mt-2">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or voucher code (e.g. XMAS-C7D46C0F)..."
+              value={pendingSearchTerm}
+              onChange={(e) => setPendingSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {filteredPendingVouchers.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              {pendingVouchers.length === 0 
+                ? "No pending vouchers"
+                : "No vouchers match your search"}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {filteredPendingVouchers.map((voucher) => (
+                <div 
+                  key={voucher.id} 
+                  className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border border-yellow-200"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="text-2xl">{getRankEmoji(voucher.performance_rank)}</div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{voucher.employee_name}</span>
+                        {getStatusBadge(voucher.status)}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Code: <span className="font-mono font-bold text-red-600">{voucher.voucher_code}</span>
+                        {' • '}Rank: #{voucher.performance_rank}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="font-bold text-lg text-green-700">
+                        UGX {voucher.voucher_amount.toLocaleString()}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => handleComplete(voucher)}
+                      disabled={completingId === voucher.id}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {completingId === voucher.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                      )}
+                      Mark Paid & Send SMS
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Claimed Vouchers - Awaiting Payment */}
       <Card>
