@@ -56,7 +56,7 @@ const UserPermissionsList: React.FC = () => {
     setFilteredEmployees(filtered);
   }, [employees, searchTerm]);
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = async (retryCount = 0) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -65,16 +65,27 @@ const UserPermissionsList: React.FC = () => {
         .eq('status', 'Active')
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        // Retry once on network errors
+        if (retryCount < 1 && (error.message?.includes('network') || error.code === 'PGRST301')) {
+          console.log('Retrying employee fetch...');
+          setTimeout(() => fetchEmployees(retryCount + 1), 500);
+          return;
+        }
+        throw error;
+      }
       
       setEmployees(data || []);
     } catch (error: any) {
       console.error('Error fetching employees:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load employees",
-        variant: "destructive"
-      });
+      // Only show toast for actual errors, not empty results
+      if (error?.message && !error.message.includes('0 rows')) {
+        toast({
+          title: "Error",
+          description: "Failed to load employees. Please refresh the page.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -143,7 +154,7 @@ const UserPermissionsList: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchEmployees}
+              onClick={() => fetchEmployees()}
               disabled={loading}
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
