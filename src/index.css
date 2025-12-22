@@ -244,6 +244,32 @@ All colors MUST be HSL.
     animation: fadeIn 0.5s ease-in-out forwards;
     opacity: 0;
   }
+
+  /* Christmas snowflake animation */
+  @keyframes fall {
+    0% {
+      transform: translateY(-10vh) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(110vh) rotate(360deg);
+      opacity: 0.3;
+    }
+  }
+
+  .animate-fall {
+    animation: fall linear infinite;
+  }
+
+  /* Bell swing animation */
+  @keyframes swing {
+    0%, 100% {
+      transform: rotate(-10deg);
+    }
+    50% {
+      transform: rotate(10deg);
+    }
+  }
 }
 
 @layer utilities {
