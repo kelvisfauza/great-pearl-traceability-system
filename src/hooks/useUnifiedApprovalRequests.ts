@@ -51,7 +51,14 @@ export const useUnifiedApprovalRequests = () => {
         const { data: supabaseRequests, error } = await supabase
           .from('approval_requests')
           .select('*')
-          .or('status.eq.Pending,status.eq.Finance Approved - Awaiting Admin')
+          // NOTE: statuses in this project are not consistent across time; keep this list aligned with DB values
+          .in('status', [
+            'Pending',
+            'Pending Admin',
+            'Pending Admin Approval',
+            'Pending Finance',
+            'Finance Approved - Awaiting Admin',
+          ])
           .order('created_at', { ascending: false });
         
         if (!error && supabaseRequests) {
