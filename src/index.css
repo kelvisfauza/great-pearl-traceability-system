@@ -363,10 +363,19 @@ All colors MUST be HSL.
 
   @keyframes santa-walk {
     0% {
-      left: -200px;
+      left: -250px;
     }
     100% {
       left: 110%;
+    }
+  }
+
+  @keyframes santa-bob {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-8px);
     }
   }
 
