@@ -299,48 +299,83 @@ const Auth = () => {
           </p>
         </div>
 
-        <Card>
+        <Card className={isChristmasPeriod ? "relative overflow-visible border-2 border-red-200 shadow-lg" : ""}>
+          {isChristmasPeriod && (
+            <>
+              {/* Santa on top right of card */}
+              <div className="absolute -top-6 -right-4 text-4xl animate-bounce" style={{ animationDuration: '2s' }}>
+                🎅
+              </div>
+              {/* Holly on top left */}
+              <div className="absolute -top-3 -left-3 text-2xl">
+                🎄
+              </div>
+              {/* Candy canes decoration */}
+              <div className="absolute top-1/2 -left-4 text-xl transform -translate-y-1/2">
+                🍬
+              </div>
+              <div className="absolute top-1/2 -right-4 text-xl transform -translate-y-1/2">
+                🍭
+              </div>
+            </>
+          )}
           <CardHeader className="text-center">
-            <CardTitle className="text-xl">
+            <CardTitle className="text-xl flex items-center justify-center gap-2">
+              {isChristmasPeriod && <span>🔔</span>}
               Sign In
+              {isChristmasPeriod && <span>🔔</span>}
             </CardTitle>
             <CardDescription>
-              Enter your credentials to access your account
+              {isChristmasPeriod 
+                ? "🎁 Ho Ho Ho! Enter your credentials 🎁" 
+                : "Enter your credentials to access your account"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  {isChristmasPeriod && <span>⭐</span>}
+                  Email
+                </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder={isChristmasPeriod ? "🎄 Enter your email..." : "Enter your email"}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={loading}
-                    className="pl-10"
+                    className={`pl-10 ${isChristmasPeriod ? "border-green-300 focus:border-red-400 focus:ring-red-200" : ""}`}
                   />
+                  {isChristmasPeriod && (
+                    <span className="absolute right-3 top-2.5 text-lg">🎅</span>
+                  )}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="flex items-center gap-2">
+                  {isChristmasPeriod && <span>🎁</span>}
+                  Password
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder={isChristmasPeriod ? "🔐 Your secret gift code..." : "Enter your password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading}
-                    className="pl-10"
+                    className={`pl-10 ${isChristmasPeriod ? "border-red-300 focus:border-green-400 focus:ring-green-200" : ""}`}
                   />
+                  {isChristmasPeriod && (
+                    <span className="absolute right-3 top-2.5 text-lg">🎄</span>
+                  )}
                 </div>
               </div>
               {error && (
