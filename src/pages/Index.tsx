@@ -14,6 +14,8 @@ import NotificationWidget from '@/components/notifications/NotificationWidget';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Coffee, TrendingUp, Users, Shield, Bell, Activity, Settings, BarChart3 } from 'lucide-react';
+import { ChristmasBanner } from '@/components/ChristmasBanner';
+import { ChristmasOverlay } from '@/components/ChristmasOverlay';
 
 const Index = () => {
   const { employee } = useAuth();
@@ -40,8 +42,12 @@ const Index = () => {
 
   return (
     <Layout title="Dashboard" subtitle="Welcome to your workspace" showMessageButton={false}>
+      <ChristmasOverlay />
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+          {/* Christmas Banner */}
+          <ChristmasBanner userName={employee?.name} />
+          
           {/* Dynamic Header */}
           <div className="animate-in">
             <DynamicHeader />
