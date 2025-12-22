@@ -43,6 +43,7 @@ export const useUnifiedEmployees = () => {
         .order('name');
 
       if (error) {
+        console.error('Supabase error fetching employees:', error);
         throw error;
       }
 
@@ -71,13 +72,18 @@ export const useUnifiedEmployees = () => {
 
       setEmployees(transformedEmployees);
       console.log(`✅ Loaded ${transformedEmployees.length} employees from unified system`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error fetching employees:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch employees",
-        variant: "destructive"
-      });
+      // Only show toast for actual errors, not for empty results
+      if (error?.message) {
+        toast({
+          title: "Error",
+          description: `Failed to fetch employees: ${error.message}`,
+          variant: "destructive"
+        });
+      }
+      // Set empty array to prevent undefined errors
+      setEmployees([]);
     } finally {
       setLoading(false);
     }
