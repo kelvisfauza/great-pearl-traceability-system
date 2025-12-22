@@ -215,11 +215,11 @@ const Auth = () => {
         <div className="w-full max-w-md">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-4">
-              <div className="p-3 bg-white rounded-full shadow-lg">
+              <div className="p-4 bg-[#0d3d1f] rounded-2xl shadow-lg">
                 <img 
-                  src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+                  src="/lovable-uploads/great-pearl-coffee-logo.png" 
                   alt="Great Pearl Coffee Factory" 
-                  className="h-16 w-16 object-contain"
+                  className="h-20 w-auto object-contain"
                 />
               </div>
             </div>
@@ -280,11 +280,11 @@ const Auth = () => {
             </div>
           )}
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-white rounded-full shadow-lg relative">
+            <div className="p-4 bg-[#0d3d1f] rounded-2xl shadow-lg relative">
               <img 
-                src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+                src="/lovable-uploads/great-pearl-coffee-logo.png" 
                 alt="Great Pearl Coffee Factory" 
-                className="h-16 w-16 object-contain"
+                className="h-24 w-auto object-contain"
               />
               {isChristmasPeriod && (
                 <span className="absolute -top-2 -right-2 text-2xl animate-bounce">🎁</span>

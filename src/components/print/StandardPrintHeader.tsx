@@ -18,11 +18,11 @@ const StandardPrintHeader: React.FC<StandardPrintHeaderProps> = ({
   return (
     <div className="print-header text-center border-b-2 border-gray-800 pb-4 mb-6">
       {/* Logo - Centered */}
-      <div className="flex justify-center mb-4">
+      <div className="flex justify-center mb-4" style={{ backgroundColor: '#0d3d1f', padding: '12px 24px', borderRadius: '8px', display: 'inline-block' }}>
         <img 
-          src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+          src="/lovable-uploads/great-pearl-coffee-logo.png" 
           alt="Great Pearl Coffee Factory Logo" 
-          className="company-logo h-16 w-auto mb-2" 
+          className="company-logo h-20 w-auto" 
         />
       </div>
       
