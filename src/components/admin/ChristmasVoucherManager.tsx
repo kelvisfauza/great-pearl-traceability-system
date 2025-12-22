@@ -9,12 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Gift, CheckCircle, Clock, Search, Phone, User, Trophy, Loader2 } from 'lucide-react';
 
 const ChristmasVoucherManager: React.FC = () => {
-  const { allVouchers, completeVoucher, fetchAllVouchers } = useChristmasVoucher();
+  const { allVouchers, completeVoucher } = useChristmasVoucher();
   const { employee } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [completingId, setCompletingId] = useState<string | null>(null);
   const [pendingSearchTerm, setPendingSearchTerm] = useState('');
+  const [completedSearchTerm, setCompletedSearchTerm] = useState('');
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [completingId, setCompletingId] = useState<string | null>(null);
 
   const pendingVouchers = allVouchers.filter(v => v.status === 'pending');
   const claimedVouchers = allVouchers.filter(v => v.status === 'claimed');
@@ -29,6 +31,21 @@ const ChristmasVoucherManager: React.FC = () => {
     v.employee_name.toLowerCase().includes(pendingSearchTerm.toLowerCase()) ||
     v.voucher_code.toLowerCase().includes(pendingSearchTerm.toLowerCase())
   );
+
+  const sortedCompletedVouchers = [...completedVouchers].sort((a, b) => {
+    const ta = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+    const tb = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+    return tb - ta;
+  });
+
+  const filteredCompletedVouchers = sortedCompletedVouchers.filter(v =>
+    v.employee_name.toLowerCase().includes(completedSearchTerm.toLowerCase()) ||
+    v.voucher_code.toLowerCase().includes(completedSearchTerm.toLowerCase())
+  );
+
+  const displayedCompletedVouchers = completedSearchTerm.trim()
+    ? filteredCompletedVouchers
+    : (showAllCompleted ? filteredCompletedVouchers : filteredCompletedVouchers.slice(0, 10));
 
   const handleComplete = async (voucher: ChristmasVoucher) => {
     if (!employee?.email) return;
@@ -291,43 +308,77 @@ const ChristmasVoucherManager: React.FC = () => {
       {/* Completed Vouchers */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            Completed Vouchers
-          </CardTitle>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Completed Vouchers
+            </CardTitle>
+            {filteredCompletedVouchers.length > 10 && completedSearchTerm.trim() === '' && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAllCompleted((v) => !v)}
+              >
+                {showAllCompleted ? 'Show less' : 'Show all'}
+              </Button>
+            )}
+          </div>
+
+          <div className="relative mt-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search completed by name or voucher code (e.g. XMAS-083CD5C6)..."
+              value={completedSearchTerm}
+              onChange={(e) => {
+                setCompletedSearchTerm(e.target.value);
+                setShowAllCompleted(true);
+              }}
+              className="pl-10"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {completedVouchers.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No completed vouchers yet
-            </p>
+            <p className="text-center text-muted-foreground py-8">No completed vouchers yet</p>
+          ) : displayedCompletedVouchers.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No completed vouchers match your search</p>
           ) : (
             <div className="space-y-2">
-              {completedVouchers.slice(0, 10).map((voucher) => (
-                <div 
-                  key={voucher.id} 
+              {displayedCompletedVouchers.map((voucher) => (
+                <div
+                  key={voucher.id}
                   className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200"
                 >
                   <div className="flex items-center gap-3">
                     <div className="text-xl">{getRankEmoji(voucher.performance_rank)}</div>
                     <div>
                       <span className="font-medium">{voucher.employee_name}</span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        ({voucher.voucher_code})
-                      </span>
+                      <span className="text-sm text-muted-foreground ml-2">({voucher.voucher_code})</span>
+                      {voucher.completed_at && (
+                        <p className="text-xs text-muted-foreground">
+                          Paid:{' '}
+                          {new Date(voucher.completed_at).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="font-bold text-green-700">
-                      UGX {voucher.voucher_amount.toLocaleString()}
-                    </span>
+                    <span className="font-bold text-green-700">UGX {voucher.voucher_amount.toLocaleString()}</span>
                     {getStatusBadge(voucher.status)}
                   </div>
                 </div>
               ))}
-              {completedVouchers.length > 10 && (
+
+              {completedSearchTerm.trim() === '' && !showAllCompleted && filteredCompletedVouchers.length > 10 && (
                 <p className="text-center text-sm text-muted-foreground">
-                  + {completedVouchers.length - 10} more completed vouchers
+                  + {filteredCompletedVouchers.length - 10} more completed vouchers
                 </p>
               )}
             </div>
