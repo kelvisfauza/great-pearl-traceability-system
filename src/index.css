@@ -317,4 +317,86 @@ All colors MUST be HSL.
   .btn-glow:hover::before {
     @apply translate-x-[200%];
   }
+
+  /* Santa flying animation */
+  @keyframes santa-fly {
+    0% {
+      left: -300px;
+      transform: translateY(0px);
+    }
+    25% {
+      transform: translateY(-20px);
+    }
+    50% {
+      transform: translateY(10px);
+    }
+    75% {
+      transform: translateY(-15px);
+    }
+    100% {
+      left: 110%;
+      transform: translateY(0px);
+    }
+  }
+
+  @keyframes santa-fly-reverse {
+    0% {
+      right: -300px;
+      left: auto;
+      transform: translateY(0px) scaleX(-1);
+    }
+    25% {
+      transform: translateY(-15px) scaleX(-1);
+    }
+    50% {
+      transform: translateY(20px) scaleX(-1);
+    }
+    75% {
+      transform: translateY(-10px) scaleX(-1);
+    }
+    100% {
+      right: 110%;
+      left: auto;
+      transform: translateY(0px) scaleX(-1);
+    }
+  }
+
+  @keyframes santa-walk {
+    0% {
+      left: -200px;
+    }
+    100% {
+      left: 110%;
+    }
+  }
+
+  @keyframes gift-fall {
+    0% {
+      top: -50px;
+      transform: rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      top: 110%;
+      transform: rotate(360deg);
+      opacity: 0.5;
+    }
+  }
+
+  .animate-santa-fly {
+    animation: santa-fly 20s linear infinite;
+  }
+
+  .animate-santa-fly-reverse {
+    animation: santa-fly-reverse 25s linear infinite;
+    animation-delay: 10s;
+  }
+
+  .animate-santa-walk {
+    animation: santa-walk 30s linear infinite;
+  }
+
+  .animate-gift-fall {
+    animation: gift-fall 10s linear infinite;
+  }
 }
