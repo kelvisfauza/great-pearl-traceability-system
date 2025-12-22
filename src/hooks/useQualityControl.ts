@@ -115,32 +115,42 @@ export const useQualityControl = () => {
       let enrichedSupabaseData = [];
       if (supabaseQualityData && supabaseQualityData.length > 0) {
         const storeRecordIds = [...new Set(supabaseQualityData.map(qa => qa.store_record_id).filter(Boolean))];
+        const batchNumbers = [...new Set(supabaseQualityData.map(qa => qa.batch_number).filter(Boolean))];
         
-        if (storeRecordIds.length > 0) {
-          const { data: coffeeRecords } = await supabase
+        // Fetch coffee records by both id and batch_number for better matching
+        let coffeeRecords: any[] = [];
+        if (storeRecordIds.length > 0 || batchNumbers.length > 0) {
+          const { data: recordsById } = await supabase
             .from('coffee_records')
             .select('*')
             .in('id', storeRecordIds);
-
-          enrichedSupabaseData = supabaseQualityData.map(assessment => {
-            const coffeeRecord = coffeeRecords?.find(record => record.id === assessment.store_record_id);
-            return {
-              ...assessment,
-              supplier_name: coffeeRecord?.supplier_name || 'Unknown',
-              coffee_type: coffeeRecord?.coffee_type || 'Unknown',
-              kilograms: coffeeRecord?.kilograms || 0,
-              batch_number: coffeeRecord?.batch_number || assessment.batch_number
-            };
-          });
-        } else {
-          enrichedSupabaseData = supabaseQualityData.map(assessment => ({
-            ...assessment,
-            supplier_name: 'Unknown',
-            coffee_type: 'Unknown',
-            kilograms: 0,
-            batch_number: assessment.batch_number
-          }));
+          
+          const { data: recordsByBatch } = await supabase
+            .from('coffee_records')
+            .select('*')
+            .in('batch_number', batchNumbers);
+          
+          // Combine and deduplicate
+          const allRecords = [...(recordsById || []), ...(recordsByBatch || [])];
+          const uniqueRecords = new Map();
+          allRecords.forEach(r => uniqueRecords.set(r.id, r));
+          coffeeRecords = Array.from(uniqueRecords.values());
         }
+
+        enrichedSupabaseData = supabaseQualityData.map(assessment => {
+          // Try to find by store_record_id first, then fall back to batch_number
+          let coffeeRecord = coffeeRecords?.find(record => record.id === assessment.store_record_id);
+          if (!coffeeRecord && assessment.batch_number) {
+            coffeeRecord = coffeeRecords?.find(record => record.batch_number === assessment.batch_number);
+          }
+          return {
+            ...assessment,
+            supplier_name: coffeeRecord?.supplier_name || 'Unknown',
+            coffee_type: coffeeRecord?.coffee_type || 'Unknown',
+            kilograms: coffeeRecord?.kilograms || 0,
+            batch_number: coffeeRecord?.batch_number || assessment.batch_number
+          };
+        });
       }
 
       const combinedData = enrichedSupabaseData.sort((a, b) => 
