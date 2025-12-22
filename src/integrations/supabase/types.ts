@@ -809,6 +809,8 @@ export type Database = {
         Row: {
           christmas_message: string
           claimed_at: string | null
+          completed_at: string | null
+          completed_by: string | null
           created_at: string
           employee_email: string
           employee_id: string
@@ -816,6 +818,7 @@ export type Database = {
           id: string
           performance_rank: number
           performance_score: number
+          status: string
           voucher_amount: number
           voucher_code: string
           year: number
@@ -823,6 +826,8 @@ export type Database = {
         Insert: {
           christmas_message: string
           claimed_at?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           employee_email: string
           employee_id: string
@@ -830,6 +835,7 @@ export type Database = {
           id?: string
           performance_rank: number
           performance_score: number
+          status?: string
           voucher_amount: number
           voucher_code?: string
           year?: number
@@ -837,6 +843,8 @@ export type Database = {
         Update: {
           christmas_message?: string
           claimed_at?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           employee_email?: string
           employee_id?: string
@@ -844,6 +852,7 @@ export type Database = {
           id?: string
           performance_rank?: number
           performance_score?: number
+          status?: string
           voucher_amount?: number
           voucher_code?: string
           year?: number

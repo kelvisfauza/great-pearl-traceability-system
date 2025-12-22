@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, BarChart3, Settings, Calendar, Archive } from 'lucide-react';
+import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, BarChart3, Settings, Calendar, Archive, Gift } from 'lucide-react';
 import RoleAssignmentManager from './RoleAssignmentManager';
 import PermissionOverview from './PermissionOverview';
 import UserPermissionsList from './UserPermissionsList';
@@ -17,6 +17,7 @@ import InventoryOverviewChart from './InventoryOverviewChart';
 import BuyingRecommendationsCard from './BuyingRecommendationsCard';
 import { AttendanceManager } from './AttendanceManager';
 import { DataArchiveManager } from './DataArchiveManager';
+import ChristmasVoucherManager from './ChristmasVoucherManager';
 import { useUnifiedApprovalRequests } from '@/hooks/useUnifiedApprovalRequests';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import ActiveUsers from '@/components/it/ActiveUsers';
@@ -338,6 +339,18 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent className="pt-6">
               <AdminMoneyRequestsManager />
+            </CardContent>
+          </Card>
+          {/* Christmas Vouchers */}
+          <Card className="border-2 border-red-200">
+            <CardHeader className="bg-gradient-to-r from-red-50 to-green-50">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Gift className="h-5 w-5 text-red-600" />
+                🎄 Christmas Vouchers - Pending Completion
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <ChristmasVoucherManager />
             </CardContent>
           </Card>
 

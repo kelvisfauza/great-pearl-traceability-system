@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { smsService } from '@/services/smsService';
 
-interface ChristmasVoucher {
+export interface ChristmasVoucher {
   id: string;
   employee_id: string;
   employee_email: string;
@@ -14,6 +15,9 @@ interface ChristmasVoucher {
   claimed_at: string | null;
   voucher_code: string;
   year: number;
+  status: 'pending' | 'claimed' | 'completed';
+  completed_at: string | null;
+  completed_by: string | null;
 }
 
 interface PerformanceData {
@@ -42,6 +46,7 @@ const TOTAL_BUDGET = 400000; // 400k UGX total budget
 export const useChristmasVoucher = () => {
   const { employee } = useAuth();
   const [voucher, setVoucher] = useState<ChristmasVoucher | null>(null);
+  const [allVouchers, setAllVouchers] = useState<ChristmasVoucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
 
@@ -73,6 +78,26 @@ export const useChristmasVoucher = () => {
       setLoading(false);
     }
   }, [employee?.email, currentYear]);
+
+  // Fetch all vouchers for admin view
+  const fetchAllVouchers = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('christmas_vouchers')
+        .select('*')
+        .eq('year', currentYear)
+        .order('performance_rank', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching all vouchers:', error);
+        return;
+      }
+
+      setAllVouchers((data as ChristmasVoucher[]) || []);
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  }, [currentYear]);
 
   // Generate vouchers for all employees based on performance
   const generateVouchers = async () => {
@@ -194,7 +219,8 @@ export const useChristmasVoucher = () => {
           performance_rank: rank,
           performance_score: perf.score,
           christmas_message: message,
-          year: currentYear
+          year: currentYear,
+          status: 'pending'
         });
       });
 
@@ -211,6 +237,7 @@ export const useChristmasVoucher = () => {
         } else {
           console.log('🎄 Vouchers generated successfully!');
           await fetchVoucher();
+          await fetchAllVouchers();
         }
       } else {
         console.log('🎄 No vouchers to insert - budget exhausted or no employees');
@@ -220,7 +247,7 @@ export const useChristmasVoucher = () => {
     }
   };
 
-  // Claim the voucher
+  // Claim the voucher (user action)
   const claimVoucher = async () => {
     if (!voucher || voucher.claimed_at) return;
 
@@ -228,7 +255,10 @@ export const useChristmasVoucher = () => {
     try {
       const { error } = await supabase
         .from('christmas_vouchers')
-        .update({ claimed_at: new Date().toISOString() })
+        .update({ 
+          claimed_at: new Date().toISOString(),
+          status: 'claimed'
+        })
         .eq('id', voucher.id);
 
       if (error) {
@@ -236,11 +266,70 @@ export const useChristmasVoucher = () => {
         return;
       }
 
-      setVoucher({ ...voucher, claimed_at: new Date().toISOString() });
+      setVoucher({ ...voucher, claimed_at: new Date().toISOString(), status: 'claimed' });
+      await fetchAllVouchers();
     } catch (err) {
       console.error('Error:', err);
     } finally {
       setClaiming(false);
+    }
+  };
+
+  // Complete the voucher (admin action) - mark as paid/completed and send SMS
+  const completeVoucher = async (voucherId: string, completedBy: string): Promise<boolean> => {
+    try {
+      // Find the voucher
+      const targetVoucher = allVouchers.find(v => v.id === voucherId);
+      if (!targetVoucher) {
+        console.error('Voucher not found');
+        return false;
+      }
+
+      // Update the voucher status
+      const { error } = await supabase
+        .from('christmas_vouchers')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          completed_by: completedBy
+        })
+        .eq('id', voucherId);
+
+      if (error) {
+        console.error('Error completing voucher:', error);
+        return false;
+      }
+
+      // Get employee phone number
+      const { data: employeeData } = await supabase
+        .from('employees')
+        .select('phone')
+        .eq('email', targetVoucher.employee_email)
+        .maybeSingle();
+
+      // Send SMS notification
+      if (employeeData?.phone) {
+        const smsMessage = `Great Pearl Coffee: Merry Christmas ${targetVoucher.employee_name}! 🎄 Your Christmas voucher (${targetVoucher.voucher_code}) of UGX ${targetVoucher.voucher_amount.toLocaleString()} has been approved and paid. Thank you for your dedication! 🎁`;
+        
+        const smsResult = await smsService.sendSMS(employeeData.phone, smsMessage);
+        
+        if (smsResult.success) {
+          console.log('✅ Christmas voucher SMS sent successfully to:', employeeData.phone);
+        } else {
+          console.error('⚠️ Christmas voucher SMS failed:', smsResult.error);
+        }
+      } else {
+        console.log('⚠️ No phone number found for employee:', targetVoucher.employee_email);
+      }
+
+      // Refresh the vouchers list
+      await fetchAllVouchers();
+      await fetchVoucher();
+      
+      return true;
+    } catch (err) {
+      console.error('Error completing voucher:', err);
+      return false;
     }
   };
 
@@ -252,15 +341,19 @@ export const useChristmasVoucher = () => {
   useEffect(() => {
     if (employee?.role === 'Administrator' || employee?.role === 'Super Admin') {
       generateVouchers();
+      fetchAllVouchers();
     }
   }, [employee?.role]);
 
   return {
     voucher,
+    allVouchers,
     loading,
     claiming,
     claimVoucher,
+    completeVoucher,
     generateVouchers,
-    fetchVoucher
+    fetchVoucher,
+    fetchAllVouchers
   };
 };

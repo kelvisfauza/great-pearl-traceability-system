@@ -276,7 +276,7 @@ const ChristmasVoucherModal: React.FC<ChristmasVoucherModalProps> = ({
           
           <div class="company-header">
             <img 
-              src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
+              src="/lovable-uploads/great-pearl-coffee-logo.png" 
               alt="Great Pearl Coffee Factory Logo" 
               class="company-logo"
             />
