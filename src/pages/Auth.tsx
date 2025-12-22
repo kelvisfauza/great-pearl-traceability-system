@@ -13,6 +13,7 @@ import BiometricVerification from '@/components/BiometricVerification';
 import { supabase } from '@/integrations/supabase/client';
 import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
+import { ChristmasOverlay } from '@/components/ChristmasOverlay';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -262,17 +263,32 @@ const Auth = () => {
   }
 
 
+  // Check if Christmas period (until Jan 1, 2026)
+  const isChristmasPeriod = new Date() < new Date('2026-01-01');
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4 relative overflow-hidden">
+      {isChristmasPeriod && <ChristmasOverlay />}
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-6">
+          {isChristmasPeriod && (
+            <div className="mb-4 p-3 bg-gradient-to-r from-red-500 to-green-600 rounded-lg text-white animate-fade-in">
+              <p className="text-lg font-bold flex items-center justify-center gap-2">
+                🎄 Merry Christmas & Happy New Year! 🎅
+              </p>
+              <p className="text-sm opacity-90">Wishing you joy & prosperity</p>
+            </div>
+          )}
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-white rounded-full shadow-lg">
+            <div className="p-3 bg-white rounded-full shadow-lg relative">
               <img 
                 src="/lovable-uploads/9f15463b-c534-4804-9515-89f049ba9422.png" 
                 alt="Great Pearl Coffee Factory" 
                 className="h-16 w-16 object-contain"
               />
+              {isChristmasPeriod && (
+                <span className="absolute -top-2 -right-2 text-2xl animate-bounce">🎁</span>
+              )}
             </div>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
