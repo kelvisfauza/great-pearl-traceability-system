@@ -333,6 +333,46 @@ export const useChristmasVoucher = () => {
     }
   };
 
+  // Resend SMS to all completed vouchers
+  const resendAllCompletedSMS = async (): Promise<{ sent: number; failed: number }> => {
+    const completedVouchers = allVouchers.filter(v => v.status === 'completed');
+    let sent = 0;
+    let failed = 0;
+
+    for (const voucher of completedVouchers) {
+      try {
+        // Get employee phone number
+        const { data: employeeData } = await supabase
+          .from('employees')
+          .select('phone')
+          .eq('email', voucher.employee_email)
+          .maybeSingle();
+
+        if (employeeData?.phone) {
+          const smsMessage = `Great Pearl Coffee: Merry Christmas ${voucher.employee_name}! 🎄 Your Christmas voucher (${voucher.voucher_code}) of UGX ${voucher.voucher_amount.toLocaleString()} has been approved and paid. Thank you for your dedication! 🎁`;
+          
+          const smsResult = await smsService.sendSMS(employeeData.phone, smsMessage);
+          
+          if (smsResult.success) {
+            console.log('✅ Christmas SMS resent to:', voucher.employee_name, employeeData.phone);
+            sent++;
+          } else {
+            console.error('⚠️ Failed to resend SMS to:', voucher.employee_name, smsResult.error);
+            failed++;
+          }
+        } else {
+          console.log('⚠️ No phone for:', voucher.employee_name);
+          failed++;
+        }
+      } catch (err) {
+        console.error('Error resending SMS to:', voucher.employee_name, err);
+        failed++;
+      }
+    }
+
+    return { sent, failed };
+  };
+
   useEffect(() => {
     fetchVoucher();
   }, [fetchVoucher]);
@@ -352,6 +392,7 @@ export const useChristmasVoucher = () => {
     claiming,
     claimVoucher,
     completeVoucher,
+    resendAllCompletedSMS,
     generateVouchers,
     fetchVoucher,
     fetchAllVouchers
