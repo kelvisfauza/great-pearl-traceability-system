@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input';
 import { useChristmasVoucher, ChristmasVoucher } from '@/hooks/useChristmasVoucher';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Gift, CheckCircle, Clock, Search, Phone, User, Trophy, Loader2 } from 'lucide-react';
+import { Gift, CheckCircle, Clock, Search, Phone, User, Trophy, Loader2, Send } from 'lucide-react';
 
 const ChristmasVoucherManager: React.FC = () => {
-  const { allVouchers, completeVoucher } = useChristmasVoucher();
+  const { allVouchers, completeVoucher, resendAllCompletedSMS } = useChristmasVoucher();
   const { employee } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +17,7 @@ const ChristmasVoucherManager: React.FC = () => {
   const [completedSearchTerm, setCompletedSearchTerm] = useState('');
   const [showAllCompleted, setShowAllCompleted] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [resendingAll, setResendingAll] = useState(false);
 
   const pendingVouchers = allVouchers.filter(v => v.status === 'pending');
   const claimedVouchers = allVouchers.filter(v => v.status === 'claimed');
@@ -68,6 +69,25 @@ const ChristmasVoucherManager: React.FC = () => {
       }
     } finally {
       setCompletingId(null);
+    }
+  };
+
+  const handleResendAllSMS = async () => {
+    setResendingAll(true);
+    try {
+      const result = await resendAllCompletedSMS();
+      toast({
+        title: "SMS Resent! 📱",
+        description: `Sent ${result.sent} SMS messages. ${result.failed > 0 ? `${result.failed} failed.` : ''}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to resend SMS messages.",
+        variant: "destructive",
+      });
+    } finally {
+      setResendingAll(false);
     }
   };
 
@@ -313,16 +333,35 @@ const ChristmasVoucherManager: React.FC = () => {
               <CheckCircle className="h-5 w-5 text-green-600" />
               Completed Vouchers
             </CardTitle>
-            {filteredCompletedVouchers.length > 10 && completedSearchTerm.trim() === '' && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAllCompleted((v) => !v)}
-              >
-                {showAllCompleted ? 'Show less' : 'Show all'}
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {completedVouchers.length > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendAllSMS}
+                  disabled={resendingAll}
+                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                >
+                  {resendingAll ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Resend All SMS
+                </Button>
+              )}
+              {filteredCompletedVouchers.length > 10 && completedSearchTerm.trim() === '' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllCompleted((v) => !v)}
+                >
+                  {showAllCompleted ? 'Show less' : 'Show all'}
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="relative mt-2">
