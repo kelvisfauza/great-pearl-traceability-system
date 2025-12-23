@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Briefcase, Settings, Clock } from "lucide-react";
+import { User, Briefcase, Settings, Clock, Send } from "lucide-react";
+import SalaryPaymentMessageDialog from "./SalaryPaymentMessageDialog";
 
 interface EmployeeDetailsModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
     status: "Active"
   });
   const [isEditing, setIsEditing] = useState(false);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
   const { toast } = useToast();
 
   const departments = ["Operations", "Quality Control", "Production", "Administration", "Finance", "Sales & Marketing", "HR", "Milling"];
@@ -291,6 +293,17 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
               <Label>Join Date</Label>
               <p className="p-2 bg-gray-50 rounded">{new Date(employee.join_date).toLocaleDateString()}</p>
             </div>
+
+            <div className="pt-4 border-t">
+              <Button 
+                onClick={() => setShowMessageDialog(true)}
+                className="w-full"
+                variant="outline"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Send Salary Payment Message
+              </Button>
+            </div>
           </TabsContent>
           
           <TabsContent value="permissions" className="space-y-4">
@@ -347,6 +360,13 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }: EmployeeDetailsModa
             </div>
           </TabsContent>
         </Tabs>
+
+        <SalaryPaymentMessageDialog
+          isOpen={showMessageDialog}
+          onClose={() => setShowMessageDialog(false)}
+          employeeName={employee.name}
+          employeePhone={employee.phone || ""}
+        />
       </DialogContent>
     </Dialog>
   );
