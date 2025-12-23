@@ -7,12 +7,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useUnifiedEmployees } from '@/hooks/useUnifiedEmployees';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserX, UserCheck, Shield } from 'lucide-react';
+import { Search, UserX, UserCheck, Shield, Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import SalaryPaymentMessageDialog from '@/components/hr/SalaryPaymentMessageDialog';
 
 const AccountStatusManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [updating, setUpdating] = useState<string | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
   const { employees, loading } = useUnifiedEmployees();
   const { toast } = useToast();
   const { isAdmin } = useAuth();
@@ -118,7 +121,20 @@ const AccountStatusManager = () => {
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedEmployee(employee);
+                    setShowMessageDialog(true);
+                  }}
+                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                >
+                  <Send className="h-4 w-4 mr-1" />
+                  Message
+                </Button>
+                
                 <Badge variant={employee.disabled ? "destructive" : "default"}>
                   {employee.disabled ? "Disabled" : "Active"}
                 </Badge>
@@ -198,6 +214,16 @@ const AccountStatusManager = () => {
             </div>
           )}
         </div>
+
+        <SalaryPaymentMessageDialog
+          isOpen={showMessageDialog}
+          onClose={() => {
+            setShowMessageDialog(false);
+            setSelectedEmployee(null);
+          }}
+          employeeName={selectedEmployee?.name || ''}
+          employeePhone={selectedEmployee?.phone || ''}
+        />
       </CardContent>
     </Card>
   );
