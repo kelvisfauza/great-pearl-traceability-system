@@ -88,9 +88,10 @@ const AdminDashboard = () => {
             onClick={async () => {
               setSendingChristmasSMS(true);
               try {
-                const { data, error } = await supabase.functions.invoke('send-christmas-sms', {
+              const { data, error } = await supabase.functions.invoke('send-christmas-sms', {
                   body: {
-                    target: 'suppliers',
+                    target: 'both',
+                    staffMessage: "Merry Christmas from Great Pearl Coffee! Thank you for your hard work and dedication this year. Wishing you joy and blessings this festive season. Happy New Year 2026!",
                     supplierMessage: "Merry Christmas from Great Pearl Coffee! Thank you for your partnership this year. Wishing you a blessed festive season and prosperous 2026!"
                   }
                 });
