@@ -80,7 +80,7 @@ serve(async (req) => {
       const { data: employees } = await supabase
         .from('employees')
         .select('name, phone')
-        .eq('status', 'active')
+        .ilike('status', 'active')
         .not('phone', 'is', null);
 
       if (employees) {
