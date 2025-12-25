@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, BarChart3, Settings, Calendar, Archive, Gift } from 'lucide-react';
+import { Shield, CheckCircle, AlertTriangle, DollarSign, Users, TrendingUp, BarChart3, Settings, Calendar, Archive, Gift, Send } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import RoleAssignmentManager from './RoleAssignmentManager';
 import PermissionOverview from './PermissionOverview';
 import UserPermissionsList from './UserPermissionsList';
@@ -28,8 +29,10 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [cashModalOpen, setCashModalOpen] = useState(false);
   const [moneyRequestsCount, setMoneyRequestsCount] = useState(0);
+  const [sendingChristmasSMS, setSendingChristmasSMS] = useState(false);
   const { requests, loading: requestsLoading } = useUnifiedApprovalRequests();
   const { onlineCount, loading: presenceLoading } = usePresenceList();
+  const { toast } = useToast();
 
   console.log('🚀 AdminDashboard - activeTab:', activeTab);
   console.log('🚀 AdminDashboard component loaded');
@@ -80,14 +83,50 @@ const AdminDashboard = () => {
             <p className="text-xs sm:text-base text-muted-foreground">System oversight, analytics, and critical operations</p>
           </div>
         </div>
-        <Button 
-          onClick={() => setCashModalOpen(true)} 
-          size="default"
-          className="flex items-center gap-2 shadow-lg hover:shadow-xl transition-all text-sm sm:text-base"
-        >
-          <DollarSign className="h-4 w-4" />
-          Finance Cash
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={async () => {
+              setSendingChristmasSMS(true);
+              try {
+                const { data, error } = await supabase.functions.invoke('send-christmas-sms', {
+                  body: {
+                    target: 'suppliers',
+                    supplierMessage: "Merry Christmas from Great Pearl Coffee! Thank you for your partnership this year. Wishing you a blessed festive season and prosperous 2026!"
+                  }
+                });
+                
+                if (error) throw error;
+                
+                toast({
+                  title: "🎄 Christmas SMS Sent!",
+                  description: data?.message || "Messages sent to suppliers",
+                });
+              } catch (err: any) {
+                toast({
+                  title: "Failed to send",
+                  description: err.message,
+                  variant: "destructive"
+                });
+              } finally {
+                setSendingChristmasSMS(false);
+              }
+            }}
+            disabled={sendingChristmasSMS}
+            size="default"
+            className="flex items-center gap-2 shadow-lg hover:shadow-xl transition-all text-sm sm:text-base bg-gradient-to-r from-red-600 to-green-600 hover:from-red-700 hover:to-green-700"
+          >
+            <Gift className="h-4 w-4" />
+            {sendingChristmasSMS ? "Sending..." : "🎄 Xmas SMS"}
+          </Button>
+          <Button 
+            onClick={() => setCashModalOpen(true)} 
+            size="default"
+            className="flex items-center gap-2 shadow-lg hover:shadow-xl transition-all text-sm sm:text-base"
+          >
+            <DollarSign className="h-4 w-4" />
+            Finance Cash
+          </Button>
+        </div>
       </div>
 
       <CashManagementModal open={cashModalOpen} onOpenChange={setCashModalOpen} />
