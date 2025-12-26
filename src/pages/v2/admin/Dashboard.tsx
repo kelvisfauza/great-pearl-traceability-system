@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
+import StoreRealTimeTracker from "@/components/v2/admin/StoreRealTimeTracker";
 import { Shield, Users, Settings, BarChart3, Package, FlaskConical, Warehouse, ShoppingCart, TrendingUp, FileText, Activity } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,6 +83,9 @@ const AdminDashboard = () => {
                 <p className="text-muted-foreground">{employee?.role} • Full System Access</p>
               </CardHeader>
             </Card>
+
+            {/* Store Real-Time Tracking */}
+            <StoreRealTimeTracker />
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
