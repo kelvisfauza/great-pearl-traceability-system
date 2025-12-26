@@ -33,12 +33,23 @@ import EURDocumentationPage from "./pages/EUDRDocumentation";
 import Suppliers from "./pages/Suppliers";
 
 // V2 System Pages
-import V2Index from "./pages/v2/Index";
+import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
 import V2CoffeeReceipts from "./pages/v2/store/CoffeeReceipts";
 import V2PendingLots from "./pages/v2/quality/PendingLots";
 import V2AssessLot from "./pages/v2/quality/AssessLot";
 import V2InventoryIndex from "./pages/v2/inventory/Index";
 import V2SalesIndex from "./pages/v2/sales/Index";
+import V2AdminDashboard from "./pages/v2/admin/Dashboard";
+import V2FinanceDashboard from "./pages/v2/finance/Dashboard";
+import V2HRDashboard from "./pages/v2/hr/Dashboard";
+import V2FieldOpsDashboard from "./pages/v2/field-operations/Dashboard";
+import V2AnalyticsDashboard from "./pages/v2/analytics/Dashboard";
+import V2EUDRDashboard from "./pages/v2/eudr/Dashboard";
+import V2LogisticsDashboard from "./pages/v2/logistics/Dashboard";
+import V2ProcessingDashboard from "./pages/v2/processing/Dashboard";
+import V2MillingDashboard from "./pages/v2/milling/Dashboard";
+import V2ProcurementDashboard from "./pages/v2/procurement/Dashboard";
+import V2ITDashboard from "./pages/v2/it/Dashboard";
 
 import FinanceReport from "./pages/reports/FinanceReport";
 import DayBookReport from "./pages/reports/DayBookReport";
@@ -102,37 +113,24 @@ const App: React.ComponentType = () => {
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 
-                {/* V2 System Routes - Admin Only */}
-                <Route path="/v2" element={
-                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
-                    <V2Index />
-                  </ProtectedRoute>
-                } />
-                <Route path="/v2/store" element={
-                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
-                    <V2CoffeeReceipts />
-                  </ProtectedRoute>
-                } />
-                <Route path="/v2/quality" element={
-                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
-                    <V2PendingLots />
-                  </ProtectedRoute>
-                } />
-                <Route path="/v2/quality/assess/:id" element={
-                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
-                    <V2AssessLot />
-                  </ProtectedRoute>
-                } />
-                <Route path="/v2/inventory" element={
-                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
-                    <V2InventoryIndex />
-                  </ProtectedRoute>
-                } />
-                <Route path="/v2/sales" element={
-                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
-                    <V2SalesIndex />
-                  </ProtectedRoute>
-                } />
+                {/* V2 System Routes - Department-based access */}
+                <Route path="/v2" element={<ProtectedRoute><V2DepartmentRouter /></ProtectedRoute>} />
+                <Route path="/v2/admin" element={<ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}><V2AdminDashboard /></ProtectedRoute>} />
+                <Route path="/v2/store" element={<ProtectedRoute requiredPermissions={["Store Management"]}><V2CoffeeReceipts /></ProtectedRoute>} />
+                <Route path="/v2/quality" element={<ProtectedRoute requiredPermissions={["Quality Control"]}><V2PendingLots /></ProtectedRoute>} />
+                <Route path="/v2/quality/assess/:id" element={<ProtectedRoute requiredPermissions={["Quality Control"]}><V2AssessLot /></ProtectedRoute>} />
+                <Route path="/v2/inventory" element={<ProtectedRoute requiredPermissions={["Inventory", "Store Management"]}><V2InventoryIndex /></ProtectedRoute>} />
+                <Route path="/v2/sales" element={<ProtectedRoute requiredPermissions={["Sales Marketing"]}><V2SalesIndex /></ProtectedRoute>} />
+                <Route path="/v2/finance" element={<ProtectedRoute requiredPermissions={["Finance"]}><V2FinanceDashboard /></ProtectedRoute>} />
+                <Route path="/v2/hr" element={<ProtectedRoute requiredPermissions={["Human Resources"]}><V2HRDashboard /></ProtectedRoute>} />
+                <Route path="/v2/field-operations" element={<ProtectedRoute requiredPermissions={["Field Operations"]}><V2FieldOpsDashboard /></ProtectedRoute>} />
+                <Route path="/v2/analytics" element={<ProtectedRoute requiredPermissions={["Data Analysis"]}><V2AnalyticsDashboard /></ProtectedRoute>} />
+                <Route path="/v2/eudr" element={<ProtectedRoute requiredPermissions={["EUDR Documentation", "Store Management"]}><V2EUDRDashboard /></ProtectedRoute>} />
+                <Route path="/v2/logistics" element={<ProtectedRoute requiredPermissions={["Logistics"]}><V2LogisticsDashboard /></ProtectedRoute>} />
+                <Route path="/v2/processing" element={<ProtectedRoute requiredPermissions={["Processing"]}><V2ProcessingDashboard /></ProtectedRoute>} />
+                <Route path="/v2/milling" element={<ProtectedRoute requiredPermissions={["Milling"]}><V2MillingDashboard /></ProtectedRoute>} />
+                <Route path="/v2/procurement" element={<ProtectedRoute requiredPermissions={["Procurement"]}><V2ProcurementDashboard /></ProtectedRoute>} />
+                <Route path="/v2/it" element={<ProtectedRoute requiredPermissions={["IT Management"]}><V2ITDashboard /></ProtectedRoute>} />
                 
                 {/* V1 System Routes */}
                 <Route path="/" element={
