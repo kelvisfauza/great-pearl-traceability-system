@@ -23,7 +23,8 @@ const CoffeeReceiptsTable = () => {
       const { data, error } = await supabase
         .from('coffee_records')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10);
       
       if (error) throw error;
       return data;
