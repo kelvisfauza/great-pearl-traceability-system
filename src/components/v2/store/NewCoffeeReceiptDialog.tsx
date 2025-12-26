@@ -33,14 +33,21 @@ interface ReceiptForm {
   date: string;
   kilograms: number;
   bags: number;
-  batch_number: string;
 }
+
+// Generate batch number: GPC-YYYYMMDD-XXX
+const generateBatchNumber = () => {
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+  const random = Math.floor(Math.random() * 900) + 100; // 100-999
+  return `GPC-${dateStr}-${random}`;
+};
 
 const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogProps) => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { register, handleSubmit, reset, setValue, watch } = useForm<ReceiptForm>({
+  const { register, handleSubmit, reset, setValue } = useForm<ReceiptForm>({
     defaultValues: {
       date: new Date().toISOString().split('T')[0]
     }
@@ -61,6 +68,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
   const createReceipt = useMutation({
     mutationFn: async (data: ReceiptForm) => {
       const supplier = suppliers?.find(s => s.id === data.supplier_id);
+      const batchNumber = generateBatchNumber();
       
       const { error } = await supabase
         .from('coffee_records')
@@ -71,7 +79,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
           date: data.date,
           kilograms: data.kilograms,
           bags: data.bags,
-          batch_number: data.batch_number,
+          batch_number: batchNumber,
           status: 'PENDING',
           created_by: employee?.email || ''
         });
@@ -169,14 +177,6 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="batch_number">Batch Number *</Label>
-            <Input
-              id="batch_number"
-              {...register('batch_number', { required: true })}
-              placeholder="e.g., BATCH-2024-001"
-            />
-          </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button
