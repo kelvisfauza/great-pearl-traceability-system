@@ -69,10 +69,13 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
     mutationFn: async (data: ReceiptForm) => {
       const supplier = suppliers?.find(s => s.id === data.supplier_id);
       const batchNumber = generateBatchNumber();
+      const recordId = crypto.randomUUID();
       
-      const { error } = await supabase
+      // 1. Insert coffee record
+      const { error: coffeeError } = await supabase
         .from('coffee_records')
         .insert({
+          id: recordId,
           supplier_id: data.supplier_id,
           supplier_name: supplier?.name || '',
           coffee_type: data.coffee_type,
@@ -84,7 +87,26 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
           created_by: employee?.email || ''
         });
       
-      if (error) throw error;
+      if (coffeeError) throw coffeeError;
+
+      // 2. Insert finance_coffee_lots (same as V1)
+      const { error: financeError } = await supabase
+        .from('finance_coffee_lots')
+        .insert({
+          coffee_record_id: recordId,
+          supplier_id: data.supplier_id,
+          quantity_kg: data.kilograms,
+          unit_price_ugx: 0,
+          total_amount_ugx: 0,
+          quality_json: { bags: data.bags, coffee_type: data.coffee_type },
+          assessed_by: employee?.email || 'Store Department',
+          finance_status: 'READY_FOR_FINANCE'
+        });
+
+      if (financeError) {
+        console.error('Finance lot creation error:', financeError);
+        // Don't fail the whole operation if finance lot fails
+      }
     },
     onSuccess: () => {
       toast({
