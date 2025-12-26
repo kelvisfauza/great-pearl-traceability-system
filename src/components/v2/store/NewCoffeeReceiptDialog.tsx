@@ -80,7 +80,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
           kilograms: data.kilograms,
           bags: data.bags,
           batch_number: batchNumber,
-          status: 'PENDING',
+          status: 'pending',
           created_by: employee?.email || ''
         });
       
