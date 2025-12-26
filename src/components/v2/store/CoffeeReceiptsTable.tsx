@@ -9,10 +9,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, Package, User, Scale, Layers } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const CoffeeReceiptsTable = () => {
+  const isMobile = useIsMobile();
+  
   const { data: receipts, isLoading } = useQuery({
     queryKey: ['v2-coffee-receipts'],
     queryFn: async () => {
@@ -34,7 +38,7 @@ const CoffeeReceiptsTable = () => {
       'PAID': 'outline',
       'SOLD': 'outline'
     };
-    return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
+    return <Badge variant={variants[status] || 'default'} className="text-xs">{status}</Badge>;
   };
 
   if (isLoading) {
@@ -53,8 +57,57 @@ const CoffeeReceiptsTable = () => {
     );
   }
 
+  // Mobile Card View
+  if (isMobile) {
+    return (
+      <div className="space-y-3">
+        {receipts.map((receipt) => (
+          <Card key={receipt.id} className="overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div>
+                  <p className="font-mono text-sm font-semibold">{receipt.batch_number}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(receipt.date), 'PP')}
+                  </p>
+                </div>
+                {getStatusBadge(receipt.status)}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="truncate">{receipt.supplier_name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{receipt.coffee_type}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Scale className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{receipt.kilograms} kg</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{receipt.bags} bags</span>
+                </div>
+              </div>
+              
+              {receipt.created_by && (
+                <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+                  Received by: {receipt.created_by}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  // Desktop Table View
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
