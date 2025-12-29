@@ -65,6 +65,7 @@ import ComparisonReport from "./pages/reports/ComparisonReport";
 import SystemSettings from "./pages/admin/SystemSettings";
 import UserDailyReports from "./pages/UserDailyReports";
 import { DailyReportReminder } from "./components/reports/DailyReportReminder";
+import { MonthlyReportReminder } from "./components/reports/MonthlyReportReminder";
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 import { OvertimeNotification } from "./components/OvertimeNotification";
 import RoleNotificationHandler from "./components/RoleNotificationHandler";
@@ -107,6 +108,7 @@ const App: React.ComponentType = () => {
               {/* Global notifications and reminders */}
               <OvertimeNotification />
               <DailyReportReminder />
+              <MonthlyReportReminder />
               <ChristmasGiftBox />
               {/* <RoleNotificationHandler /> - Disabled due to performance issues */}
               

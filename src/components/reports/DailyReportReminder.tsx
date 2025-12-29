@@ -16,6 +16,10 @@ export const DailyReportReminder = () => {
   const [loading, setLoading] = useState(true);
   const [todayReportSubmitted, setTodayReportSubmitted] = useState(false);
 
+  // Only Data Analysts get daily report reminders, others get monthly
+  const isDataAnalyst = employee?.department?.toLowerCase().includes('data') || 
+                        employee?.position?.toLowerCase().includes('analyst');
+
   const getTodayDate = () => format(new Date(), 'yyyy-MM-dd');
   const getYesterdayDate = () => format(subDays(new Date(), 1), 'yyyy-MM-dd');
 
@@ -58,7 +62,8 @@ export const DailyReportReminder = () => {
   }, [employee]);
 
   const checkAndShowReminders = useCallback(async () => {
-    if (!employee) {
+    // Only show daily reminders for Data Analysts
+    if (!employee || !isDataAnalyst) {
       setLoading(false);
       return;
     }
@@ -193,7 +198,8 @@ export const DailyReportReminder = () => {
     checkAndShowReminders();
   };
 
-  if (loading || !employee) return null;
+  // Don't render for non-Data Analysts (they use monthly reports)
+  if (loading || !employee || !isDataAnalyst) return null;
 
   // Don't render anything if today's report is submitted (extra safety check)
   if (todayReportSubmitted && !showMissedReportPrompt && !showForm) return null;

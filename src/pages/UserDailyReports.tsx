@@ -11,10 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DailyReportForm } from '@/components/reports/DailyReportForm';
+import { MonthlyReportForm } from '@/components/reports/MonthlyReportForm';
 import { StaffReportsPrint } from '@/components/reports/StaffReportsPrint';
-import { FileText, Plus, Search, Calendar, User, Building2, Clock, Eye, Printer, Filter } from 'lucide-react';
+import { FileText, Plus, Search, Calendar, User, Building2, Clock, Eye, Printer, Filter, CalendarDays } from 'lucide-react';
 import { format, parseISO, subDays, startOfMonth, endOfMonth } from 'date-fns';
-import { getQuestionsForDepartment } from '@/config/departmentReportQuestions';
+import { getQuestionsForDepartment, monthlyReportQuestions } from '@/config/departmentReportQuestions';
 
 interface DailyReport {
   id: string;
@@ -36,6 +37,7 @@ const UserDailyReports = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewReportForm, setShowNewReportForm] = useState(false);
+  const [showMonthlyReportForm, setShowMonthlyReportForm] = useState(false);
   const [selectedReport, setSelectedReport] = useState<DailyReport | null>(null);
   const [activeTab, setActiveTab] = useState('my-reports');
   
@@ -45,6 +47,10 @@ const UserDailyReports = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [employees, setEmployees] = useState<{id: string, name: string}[]>([]);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
+
+  // Check if user is Data Analyst (they use daily reports)
+  const isDataAnalyst = employee?.department?.toLowerCase().includes('data') || 
+                        employee?.position?.toLowerCase().includes('analyst');
 
   const fetchMyReports = async () => {
     if (!employee) return;
@@ -197,8 +203,20 @@ const UserDailyReports = () => {
   };
 
   return (
-    <Layout title="User Daily Reports" subtitle="View and manage daily activity reports">
+    <Layout title="My Reports" subtitle={isDataAnalyst ? "View and manage daily activity reports" : "View and manage monthly activity reports"}>
       <div className="space-y-6">
+        {/* Info Banner for non-Data Analysts */}
+        {!isDataAnalyst && (
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              <p className="text-sm">
+                <strong>Monthly Reports:</strong> You submit reports at the end of each month. A reminder will appear in the last 3 days of the month.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative flex-1 max-w-md">
@@ -210,10 +228,19 @@ const UserDailyReports = () => {
               className="pl-10"
             />
           </div>
-          <Button onClick={() => setShowNewReportForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Report
-          </Button>
+          <div className="flex gap-2">
+            {isDataAnalyst ? (
+              <Button onClick={() => setShowNewReportForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Daily Report
+              </Button>
+            ) : (
+              <Button onClick={() => setShowMonthlyReportForm(true)}>
+                <CalendarDays className="h-4 w-4 mr-2" />
+                New Monthly Report
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -311,10 +338,20 @@ const UserDailyReports = () => {
           )}
         </Tabs>
 
-        {/* Report Form */}
+        {/* Daily Report Form (for Data Analysts) */}
         <DailyReportForm
           open={showNewReportForm}
           onOpenChange={setShowNewReportForm}
+          onSuccess={() => {
+            fetchMyReports();
+            fetchAllReports();
+          }}
+        />
+
+        {/* Monthly Report Form (for other users) */}
+        <MonthlyReportForm
+          open={showMonthlyReportForm}
+          onOpenChange={setShowMonthlyReportForm}
           onSuccess={() => {
             fetchMyReports();
             fetchAllReports();
