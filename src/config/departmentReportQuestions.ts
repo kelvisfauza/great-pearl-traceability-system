@@ -588,3 +588,116 @@ export const getQuestionsForDepartment = (department: string): ReportQuestion[] 
   // Return default questions if no match found
   return departmentQuestions['Default'];
 };
+
+// Monthly report questions (end of month summary)
+export const monthlyReportQuestions: ReportQuestion[] = [
+  { 
+    id: 'monthly_overall_performance', 
+    label: 'How would you rate your overall performance this month?', 
+    type: 'select', 
+    options: ['Excellent', 'Good', 'Average', 'Below Average', 'Needs Improvement'],
+    required: true 
+  },
+  { 
+    id: 'monthly_goals_achieved', 
+    label: 'Goals/Targets Achieved This Month', 
+    type: 'textarea', 
+    required: true,
+    placeholder: 'List the main goals or targets you achieved this month'
+  },
+  { 
+    id: 'monthly_goals_missed', 
+    label: 'Goals/Targets Not Achieved & Reasons', 
+    type: 'textarea', 
+    placeholder: 'List any goals you did not achieve and explain why'
+  },
+  { 
+    id: 'monthly_key_accomplishments', 
+    label: 'Key Accomplishments This Month', 
+    type: 'textarea', 
+    required: true,
+    placeholder: 'What are you most proud of this month?'
+  },
+  { 
+    id: 'monthly_challenges', 
+    label: 'Major Challenges Faced This Month (Select all that apply)', 
+    type: 'multiselect', 
+    options: [
+      'Heavy workload',
+      'Resource constraints',
+      'Team coordination issues',
+      'Technical problems',
+      'External factors (suppliers/customers)',
+      'Process inefficiencies',
+      'Training gaps',
+      'Communication barriers',
+      'Time management',
+      'Personal challenges',
+      'No major challenges'
+    ]
+  },
+  { 
+    id: 'monthly_challenges_details', 
+    label: 'Details on Monthly Challenges', 
+    type: 'textarea', 
+    placeholder: 'Provide more details about the challenges you faced'
+  },
+  { 
+    id: 'monthly_lessons_learned', 
+    label: 'Key Lessons Learned This Month', 
+    type: 'textarea', 
+    placeholder: 'What important lessons did you learn?'
+  },
+  { 
+    id: 'monthly_skills_developed', 
+    label: 'Skills Developed or Improved', 
+    type: 'textarea', 
+    placeholder: 'What new skills did you gain or improve?'
+  },
+  { 
+    id: 'monthly_collaboration', 
+    label: 'Team Collaboration Rating', 
+    type: 'select', 
+    options: ['Excellent', 'Good', 'Average', 'Needs Improvement'],
+    required: true
+  },
+  { 
+    id: 'monthly_support_received', 
+    label: 'Was the support from management adequate?', 
+    type: 'select', 
+    options: ['Very Satisfied', 'Satisfied', 'Neutral', 'Unsatisfied', 'Very Unsatisfied'],
+    required: true
+  },
+  { 
+    id: 'monthly_recommendations', 
+    label: 'Recommendations for Next Month', 
+    type: 'textarea', 
+    placeholder: 'Suggestions to improve processes, efficiency, or team performance'
+  },
+  { 
+    id: 'monthly_next_goals', 
+    label: 'Goals/Priorities for Next Month', 
+    type: 'textarea', 
+    required: true,
+    placeholder: 'What are your main goals for the coming month?'
+  },
+  { 
+    id: 'monthly_training_needs', 
+    label: 'Training or Development Needs', 
+    type: 'textarea', 
+    placeholder: 'Any training or development you need for next month?'
+  },
+  { 
+    id: 'monthly_overall_satisfaction', 
+    label: 'Overall Job Satisfaction This Month', 
+    type: 'select', 
+    options: ['Very Satisfied', 'Satisfied', 'Neutral', 'Unsatisfied', 'Very Unsatisfied'],
+    required: true
+  },
+  { 
+    id: 'monthly_additional_comments', 
+    label: 'Additional Comments or Feedback', 
+    type: 'textarea', 
+    placeholder: 'Any other feedback you would like to share'
+  },
+];
