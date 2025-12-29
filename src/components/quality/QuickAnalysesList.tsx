@@ -80,9 +80,12 @@ const QuickAnalysesList = () => {
 
   const handlePrintClick = (analysis: QuickAnalysis) => {
     setSelectedAnalysis(analysis);
-    setTimeout(() => {
-      handlePrint();
-    }, 100);
+    // Use requestAnimationFrame to ensure DOM is updated before printing
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        handlePrint();
+      });
+    });
   };
 
   const handleDelete = async (id: string) => {

@@ -366,14 +366,16 @@ const QualityPriceCalculator = () => {
       setSupplierName('');
       
       toast({
-        title: 'Saved',
-        description: 'Analysis saved successfully. You can now print it.'
+        title: 'Saved & Printing...',
+        description: 'Analysis saved. Opening print preview...'
       });
 
-      // Auto-trigger print after save
-      setTimeout(() => {
-        handlePrint();
-      }, 100);
+      // Use requestAnimationFrame to ensure DOM is updated before printing
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          handlePrint();
+        });
+      });
 
     } catch (err) {
       console.error('Error saving analysis:', err);
