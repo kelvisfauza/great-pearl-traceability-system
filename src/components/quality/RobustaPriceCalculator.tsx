@@ -299,13 +299,16 @@ const RobustaPriceCalculator = () => {
       setSupplierName('');
 
       toast({
-        title: 'Saved',
-        description: 'Robusta analysis saved successfully. Printing...'
+        title: 'Saved & Printing...',
+        description: 'Robusta analysis saved. Opening print preview...'
       });
 
-      setTimeout(() => {
-        handlePrint();
-      }, 100);
+      // Use requestAnimationFrame to ensure DOM is updated before printing
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          handlePrint();
+        });
+      });
 
     } catch (err) {
       console.error('Error saving analysis:', err);
