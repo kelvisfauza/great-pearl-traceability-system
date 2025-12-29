@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Printer, Trash2, RefreshCw } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Loader2, Printer, Trash2, RefreshCw, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -40,6 +41,7 @@ const QuickAnalysesList = () => {
   const [analyses, setAnalyses] = useState<QuickAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnalysis, setSelectedAnalysis] = useState<QuickAnalysis | null>(null);
+  const [viewAnalysis, setViewAnalysis] = useState<QuickAnalysis | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   const fetchAnalyses = async () => {
@@ -187,6 +189,13 @@ const QuickAnalysesList = () => {
                         <Button 
                           size="sm" 
                           variant="outline"
+                          onClick={() => setViewAnalysis(analysis)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
                           onClick={() => handlePrintClick(analysis)}
                         >
                           <Printer className="h-4 w-4" />
@@ -207,6 +216,123 @@ const QuickAnalysesList = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* View Analysis Dialog */}
+      <Dialog open={!!viewAnalysis} onOpenChange={() => setViewAnalysis(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Analysis Details - {viewAnalysis?.supplier_name}</DialogTitle>
+          </DialogHeader>
+          {viewAnalysis && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Date</p>
+                  <p className="font-medium">{format(new Date(viewAnalysis.created_at), 'dd MMM yyyy HH:mm')}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Coffee Type</p>
+                  <Badge variant="outline" className="uppercase">{viewAnalysis.coffee_type}</Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Reference Price</p>
+                  <p className="font-medium">UGX {fmt(viewAnalysis.ref_price)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <Badge variant={viewAnalysis.is_rejected ? 'destructive' : 'default'}>
+                    {viewAnalysis.is_rejected ? 'Rejected' : 'Accepted'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-3">Quality Parameters</h4>
+                <div className="grid grid-cols-3 gap-3 text-sm">
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">Moisture</p>
+                    <p className="font-medium">{viewAnalysis.moisture}%</p>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">GP1</p>
+                    <p className="font-medium">{viewAnalysis.gp1}%</p>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">GP2</p>
+                    <p className="font-medium">{viewAnalysis.gp2}%</p>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">Less 12</p>
+                    <p className="font-medium">{viewAnalysis.less12}%</p>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">Pods</p>
+                    <p className="font-medium">{viewAnalysis.pods}%</p>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">Husks</p>
+                    <p className="font-medium">{viewAnalysis.husks}%</p>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">Stones</p>
+                    <p className="font-medium">{viewAnalysis.stones}%</p>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">Discretion</p>
+                    <p className="font-medium">{viewAnalysis.discretion}%</p>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">FM</p>
+                    <p className="font-medium">{viewAnalysis.fm}%</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-3">Calculated Results</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">Actual OTT</p>
+                    <p className="font-medium">{viewAnalysis.actual_ott}%</p>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">Clean D14</p>
+                    <p className="font-medium">{viewAnalysis.clean_d14}%</p>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">Outturn</p>
+                    <p className="font-medium">{viewAnalysis.outturn}%</p>
+                  </div>
+                  <div className="p-2 bg-muted rounded">
+                    <p className="text-muted-foreground">Outturn Price</p>
+                    <p className="font-medium">UGX {fmt(viewAnalysis.outturn_price)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <p className="text-sm text-muted-foreground">Final Price</p>
+                  <p className={`text-2xl font-bold ${viewAnalysis.is_rejected ? 'text-destructive' : 'text-primary'}`}>
+                    {viewAnalysis.is_rejected ? 'REJECTED' : `UGX ${fmt(viewAnalysis.final_price)}`}
+                  </p>
+                </div>
+              </div>
+
+              {viewAnalysis.quality_note && (
+                <div className="border-t pt-4">
+                  <p className="text-sm text-muted-foreground">Quality Notes</p>
+                  <p className="mt-1">{viewAnalysis.quality_note}</p>
+                </div>
+              )}
+
+              <div className="text-xs text-muted-foreground pt-2">
+                Analyzed by: {viewAnalysis.created_by}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Hidden print component */}
       <div className="hidden">
