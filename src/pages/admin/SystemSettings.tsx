@@ -2,7 +2,8 @@ import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FirebaseMigrationTool from "@/components/admin/FirebaseMigrationTool";
 import SuperAdminCreator from "@/components/admin/SuperAdminCreator";
-import { Database, Settings, Shield } from "lucide-react";
+import MessagingSettings from "@/components/admin/MessagingSettings";
+import { Database, Settings, Shield, MessageSquare } from "lucide-react";
 
 const SystemSettings = () => {
   return (
@@ -10,8 +11,12 @@ const SystemSettings = () => {
       title="System Settings"
       subtitle="Configure system-wide settings and perform administrative tasks"
     >
-      <Tabs defaultValue="migration" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="messaging" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="messaging" className="gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Messaging
+          </TabsTrigger>
           <TabsTrigger value="migration" className="gap-2">
             <Database className="h-4 w-4" />
             Data Migration
@@ -25,6 +30,10 @@ const SystemSettings = () => {
             Security
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="messaging" className="space-y-4">
+          <MessagingSettings />
+        </TabsContent>
 
         <TabsContent value="migration" className="space-y-4">
           <FirebaseMigrationTool />
