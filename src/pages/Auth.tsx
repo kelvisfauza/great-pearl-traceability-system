@@ -14,7 +14,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
 import { ChristmasOverlay } from '@/components/ChristmasOverlay';
-import { Fireworks } from '@/components/Fireworks';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -269,7 +268,6 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4 relative overflow-hidden">
-      <Fireworks />
       {isChristmasPeriod && <ChristmasOverlay />}
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-6">
