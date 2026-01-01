@@ -10,14 +10,22 @@ import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import AssignedRoleNotification from '@/components/AssignedRoleNotification';
 import NotificationWidget from '@/components/notifications/NotificationWidget';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
-import { useRoleBasedData } from '@/hooks/useRoleBasedData';
-import { Coffee, TrendingUp, Bell, Activity, Settings, BarChart3, ClipboardCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  Coffee, 
+  TrendingUp, 
+  Bell, 
+  Activity, 
+  Settings, 
+  BarChart3,
+  Calendar,
+  Users,
+  Package,
+  ArrowUpRight
+} from 'lucide-react';
 
 const Index = () => {
   const { employee } = useAuth();
-  const roleData = useRoleBasedData();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   if (!employee) {
@@ -33,143 +41,159 @@ const Index = () => {
     );
   }
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const currentDate = new Date().toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+
   return (
-    <DashboardLayout title="Dashboard" subtitle="Welcome back" showMessageButton={false}>
+    <DashboardLayout title="Dashboard" subtitle="Overview of your workspace" showMessageButton={false}>
       <div className="space-y-6 pb-6">
         {/* Role Notification */}
         <AssignedRoleNotification />
 
-        {/* Welcome Section */}
-        <div className="card-modern p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Coffee className="w-6 h-6 text-primary" />
+        {/* Welcome Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+              {getGreeting()}, {employee?.name?.split(' ')[0]}
+            </h1>
+            <p className="text-muted-foreground flex items-center gap-2 mt-1">
+              <Calendar className="h-4 w-4" />
+              {currentDate}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden md:block">
+              <p className="text-sm font-medium text-foreground">{employee?.position}</p>
+              <p className="text-xs text-muted-foreground">{employee?.department}</p>
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">
-                Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {employee?.name?.split(' ')[0]}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              </p>
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Users className="w-5 h-5 text-primary" />
             </div>
           </div>
         </div>
+
+        {/* Stats Cards */}
+        <DashboardStats />
 
         {/* Admin Dashboard Section */}
         {(employee.role === 'Administrator' || employee.role === 'Super Admin') && (
-          <section className="space-y-4">
-            <div className="section-header">
-              <div className="section-icon">
-                <Settings className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="section-title">Administration Center</h3>
-                <p className="section-subtitle">System oversight and user management</p>
-              </div>
-            </div>
-            <div className="card-modern overflow-hidden">
-              <AdminDashboard />
-            </div>
-          </section>
-        )}
-
-        {/* Stats Section */}
-        <section>
-          <DashboardStats />
-        </section>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Quick Actions - 2 columns */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="section-header">
-              <div className="section-icon">
-                <TrendingUp className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="section-title">Quick Operations</h3>
-            </div>
-            <div className="card-modern p-5">
-              <QuickActions />
-            </div>
-          </div>
-          
-          {/* Recent Activity - 1 column */}
-          <div className="hidden lg:block space-y-4">
-            <div className="section-header">
-              <div className="section-icon">
-                <Activity className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="section-title">Recent Activity</h3>
-            </div>
-            <RecentActivity />
-          </div>
-        </div>
-
-        {/* Approvals Quick Link */}
-        {roleData?.canApproveRequests && (
-          <section className="card-modern p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
-                  <ClipboardCheck className="h-5 w-5 text-primary" />
+                  <Settings className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground">Pending Approvals</h3>
-                  <p className="text-sm text-muted-foreground">Review and process pending requests</p>
+                  <CardTitle className="text-lg">Administration Center</CardTitle>
+                  <p className="text-sm text-muted-foreground">System oversight and management</p>
                 </div>
               </div>
-              <Button asChild>
-                <Link to="/approvals">View Approvals</Link>
-              </Button>
-            </div>
-          </section>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <AdminDashboard />
+            </CardContent>
+          </Card>
         )}
 
-        {/* Bottom Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Performance */}
-          <div className="space-y-4">
-            <div className="section-header">
-              <div className="section-icon">
-                <BarChart3 className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="section-title">Performance</h3>
-            </div>
-            <div className="card-modern p-5">
-              <PerformanceOverview />
-            </div>
-          </div>
+        {/* Main Grid - 3 columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Notifications */}
-          <div className="space-y-4">
-            <div className="section-header">
-              <div className="section-icon">
-                <Bell className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="section-title">Notifications</h3>
-            </div>
-            <div className="card-modern p-5">
-              <NotificationWidget onViewAll={() => setIsNotificationOpen(true)} />
-            </div>
-          </div>
-
-          {/* EUDR Compliance */}
-          {(employee.department === 'Store' || employee.role === 'Administrator') && (
-            <div className="space-y-4">
-              <div className="section-header">
-                <div className="p-2 bg-success/10 rounded-lg">
-                  <Coffee className="h-5 w-5 text-success" />
+          {/* Quick Actions Card */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-lg">Quick Actions</CardTitle>
                 </div>
-                <h3 className="section-title">EUDR Compliance</h3>
+                <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
               </div>
-              <div className="card-modern p-5">
+            </CardHeader>
+            <CardContent>
+              <QuickActions />
+            </CardContent>
+          </Card>
+
+          {/* Activity Card */}
+          <Card className="hidden lg:flex lg:flex-col">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Activity className="h-5 w-5 text-primary" />
+                </div>
+                <CardTitle className="text-lg">Recent Activity</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <RecentActivity />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Secondary Grid - 3 columns */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          
+          {/* Performance Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-chart-1/10 rounded-lg">
+                  <BarChart3 className="h-5 w-5 text-chart-1" />
+                </div>
+                <CardTitle className="text-lg">Performance</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <PerformanceOverview />
+            </CardContent>
+          </Card>
+
+          {/* Notifications Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-warning/10 rounded-lg">
+                  <Bell className="h-5 w-5 text-warning" />
+                </div>
+                <CardTitle className="text-lg">Notifications</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <NotificationWidget onViewAll={() => setIsNotificationOpen(true)} />
+            </CardContent>
+          </Card>
+
+          {/* EUDR Compliance Card */}
+          {(employee.department === 'Store' || employee.role === 'Administrator') && (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-success/10 rounded-lg">
+                    <Package className="h-5 w-5 text-success" />
+                  </div>
+                  <CardTitle className="text-lg">EUDR Compliance</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
                 <EUDRSummaryCard />
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
         </div>
-        
+
         {/* Notification Panel */}
         <NotificationPanel 
           isOpen={isNotificationOpen}
