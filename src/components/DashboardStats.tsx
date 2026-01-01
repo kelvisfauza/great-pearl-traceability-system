@@ -17,8 +17,21 @@ const DashboardStats = () => {
     coffeeData: { totalKgs: 0, totalBags: 0, totalBatches: 0 },
     financeData: { totalRevenue: 0, totalExpenses: 0 },
     supplierCount: 0,
-    inventoryData: { totalBags: 0, totalKgs: 0 }
+    inventoryData: { totalBags: 0, totalKgs: 0 },
+    // Previous month data for percentage calculations
+    prevMonth: {
+      coffeeKgs: 0,
+      coffeeBatches: 0,
+      revenue: 0,
+      suppliers: 0
+    }
   });
+
+  // Calculate month-over-month percentage change
+  const calcPercentChange = (current: number, previous: number): number => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100);
+  };
 
   useEffect(() => {
     const fetchRealData = async () => {
@@ -30,40 +43,69 @@ const DashboardStats = () => {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
         
-        // Fetch coffee records for current month only
-        const { data: coffeeRecords, error: coffeeError } = await supabase
+        // Get previous month date range
+        const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+        const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
+        
+        // Fetch coffee records for current month
+        const { data: coffeeRecords } = await supabase
           .from('coffee_records')
           .select('*')
           .gte('created_at', startOfMonth)
-          .lte('created_at', endOfMonth)
-          .order('created_at', { ascending: false });
+          .lte('created_at', endOfMonth);
 
-        let totalKgs = 0;
-        let totalBags = 0;
+        // Fetch coffee records for previous month
+        const { data: prevCoffeeRecords } = await supabase
+          .from('coffee_records')
+          .select('*')
+          .gte('created_at', startOfPrevMonth)
+          .lte('created_at', endOfPrevMonth);
+
+        let totalKgs = 0, totalBags = 0, prevKgs = 0;
         const batches = new Set();
+        const prevBatches = new Set();
         
-        if (coffeeRecords && coffeeRecords.length > 0) {
+        if (coffeeRecords) {
           coffeeRecords.forEach((record) => {
             totalKgs += Number(record.kilograms) || 0;
             totalBags += Number(record.bags) || 0;
-            if (record.batch_number) {
-              batches.add(record.batch_number);
-            }
+            if (record.batch_number) batches.add(record.batch_number);
+          });
+        }
+        
+        if (prevCoffeeRecords) {
+          prevCoffeeRecords.forEach((record) => {
+            prevKgs += Number(record.kilograms) || 0;
+            if (record.batch_number) prevBatches.add(record.batch_number);
           });
         }
 
-        // Fetch finance cash transactions for current month
+        // Fetch finance transactions for current month
         const { data: transactions } = await supabase
           .from('finance_cash_transactions')
           .select('*')
           .gte('created_at', startOfMonth)
           .lte('created_at', endOfMonth);
         
-        let totalRevenue = 0;
+        // Fetch finance transactions for previous month
+        const { data: prevTransactions } = await supabase
+          .from('finance_cash_transactions')
+          .select('*')
+          .gte('created_at', startOfPrevMonth)
+          .lte('created_at', endOfPrevMonth);
+        
+        let totalRevenue = 0, prevRevenue = 0;
         if (transactions) {
           transactions.forEach((txn) => {
             if (txn.transaction_type === 'cash_in' || txn.transaction_type === 'revenue') {
               totalRevenue += Number(txn.amount) || 0;
+            }
+          });
+        }
+        if (prevTransactions) {
+          prevTransactions.forEach((txn) => {
+            if (txn.transaction_type === 'cash_in' || txn.transaction_type === 'revenue') {
+              prevRevenue += Number(txn.amount) || 0;
             }
           });
         }
@@ -82,42 +124,40 @@ const DashboardStats = () => {
           });
         }
 
-        // Fetch new suppliers registered this month
+        // Fetch new suppliers for current month
         const { data: suppliers } = await supabase
           .from('suppliers')
           .select('id')
           .gte('created_at', startOfMonth)
           .lte('created_at', endOfMonth);
         
+        // Fetch new suppliers for previous month
+        const { data: prevSuppliers } = await supabase
+          .from('suppliers')
+          .select('id')
+          .gte('created_at', startOfPrevMonth)
+          .lte('created_at', endOfPrevMonth);
+        
         const supplierCount = suppliers?.length || 0;
-
-        // Use coffee records as inventory data
-        let inventoryBags = totalBags;
-        let inventoryKgs = totalKgs;
+        const prevSupplierCount = prevSuppliers?.length || 0;
 
         setRealTimeData({
-          coffeeData: { 
-            totalKgs, 
-            totalBags, 
-            totalBatches: batches.size 
-          },
-          financeData: { 
-            totalRevenue, 
-            totalExpenses 
-          },
-          supplierCount,
-          inventoryData: {
-            totalBags: inventoryBags,
-            totalKgs: inventoryKgs
-          }
-        });
-
-        console.log('Monthly dashboard data updated:', {
-          month: now.toLocaleString('default', { month: 'long' }),
           coffeeData: { totalKgs, totalBags, totalBatches: batches.size },
           financeData: { totalRevenue, totalExpenses },
           supplierCount,
-          inventoryData: { totalBags: inventoryBags, totalKgs: inventoryKgs }
+          inventoryData: { totalBags, totalKgs },
+          prevMonth: {
+            coffeeKgs: prevKgs,
+            coffeeBatches: prevBatches.size,
+            revenue: prevRevenue,
+            suppliers: prevSupplierCount
+          }
+        });
+
+        console.log('Monthly dashboard data with comparisons:', {
+          month: now.toLocaleString('default', { month: 'long' }),
+          current: { totalKgs, totalBatches: batches.size, totalRevenue, supplierCount },
+          previous: { prevKgs, prevBatches: prevBatches.size, prevRevenue, prevSupplierCount }
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -129,6 +169,12 @@ const DashboardStats = () => {
 
   // Different stats based on role
   const getStatsForRole = () => {
+    // Calculate actual percentages
+    const inventoryPercent = calcPercentChange(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs);
+    const batchesPercent = calcPercentChange(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches);
+    const revenuePercent = calcPercentChange(realTimeData.financeData.totalRevenue, realTimeData.prevMonth.revenue);
+    const suppliersPercent = calcPercentChange(realTimeData.supplierCount, realTimeData.prevMonth.suppliers);
+    
     // Store Manager sees inventory-focused stats
     if (hasPermission("Store Management")) {
       return [
@@ -140,7 +186,8 @@ const DashboardStats = () => {
           color: "text-green-600",
           bgColor: "bg-green-50",
           borderColor: "border-green-200",
-          trend: "positive"
+          trend: inventoryPercent >= 0 ? "positive" : "negative",
+          percent: Math.min(Math.abs(inventoryPercent), 100)
         },
         {
           title: "Monthly Batches",
@@ -150,7 +197,8 @@ const DashboardStats = () => {
           color: "text-blue-600",
           bgColor: "bg-blue-50",
           borderColor: "border-blue-200",
-          trend: "stable"
+          trend: batchesPercent >= 0 ? "positive" : "negative",
+          percent: Math.min(Math.abs(batchesPercent), 100)
         },
         {
           title: "New Suppliers",
@@ -160,7 +208,8 @@ const DashboardStats = () => {
           color: "text-purple-600",
           bgColor: "bg-purple-50",
           borderColor: "border-purple-200",
-          trend: "positive"
+          trend: suppliersPercent >= 0 ? "positive" : "negative",
+          percent: Math.min(Math.abs(suppliersPercent), 100)
         },
         {
           title: "Your Role",
@@ -170,7 +219,8 @@ const DashboardStats = () => {
           color: "text-amber-600",
           bgColor: "bg-amber-50",
           borderColor: "border-amber-200",
-          trend: "stable"
+          trend: "stable",
+          percent: 100
         }
       ];
     }
@@ -187,22 +237,24 @@ const DashboardStats = () => {
         {
           title: "Monthly Revenue",
           value: `UGX ${(realTimeData.financeData.totalRevenue / 1000000).toFixed(1)}M`,
-          change: "this month",
+          change: `${revenuePercent >= 0 ? '+' : ''}${revenuePercent}% vs last month`,
           icon: DollarSign,
           color: "text-green-600",
           bgColor: "bg-green-50",
           borderColor: "border-green-200",
-          trend: "positive"
+          trend: revenuePercent >= 0 ? "positive" : "negative",
+          percent: Math.min(Math.abs(revenuePercent), 100)
         },
         {
           title: "Monthly Coffee",
           value: `${(realTimeData.coffeeData.totalKgs / 1000).toFixed(1)}K kg`,
-          change: `${realTimeData.coffeeData.totalBatches} batches this month`,
+          change: `${inventoryPercent >= 0 ? '+' : ''}${inventoryPercent}% vs last month`,
           icon: Coffee,
           color: "text-blue-600",
           bgColor: "bg-blue-50",
           borderColor: "border-blue-200",
-          trend: "positive"
+          trend: inventoryPercent >= 0 ? "positive" : "negative",
+          percent: Math.min(Math.abs(inventoryPercent), 100)
         },
         {
           title: "Pending Approvals",
@@ -212,7 +264,8 @@ const DashboardStats = () => {
           color: pendingApprovals > 0 ? "text-red-600" : "text-green-600",
           bgColor: pendingApprovals > 0 ? "bg-red-50" : "bg-green-50",
           borderColor: pendingApprovals > 0 ? "border-red-200" : "border-green-200",
-          trend: pendingApprovals > 0 ? "attention" : "positive"
+          trend: pendingApprovals > 0 ? "attention" : "positive",
+          percent: pendingApprovals > 0 ? Math.min(pendingApprovals * 10, 100) : 100
         },
         {
           title: "Active Staff",
@@ -222,7 +275,8 @@ const DashboardStats = () => {
           color: "text-purple-600",
           bgColor: "bg-purple-50",
           borderColor: "border-purple-200",
-          trend: "stable"
+          trend: "stable",
+          percent: 85
         }
       ];
     }
@@ -232,22 +286,24 @@ const DashboardStats = () => {
       {
         title: "Monthly Batches",
         value: realTimeData.coffeeData.totalBatches.toString(),
-        change: "this month",
+        change: `${batchesPercent >= 0 ? '+' : ''}${batchesPercent}% vs last month`,
         icon: Coffee,
         color: "text-green-600",
         bgColor: "bg-green-50",
         borderColor: "border-green-200",
-        trend: "stable"
+        trend: batchesPercent >= 0 ? "positive" : "negative",
+        percent: Math.min(Math.abs(batchesPercent), 100)
       },
       {
         title: "Monthly Inventory",
         value: `${realTimeData.coffeeData.totalBags} bags`,
-        change: `${(realTimeData.coffeeData.totalKgs / 1000).toFixed(1)}K kg this month`,
+        change: `${inventoryPercent >= 0 ? '+' : ''}${inventoryPercent}% vs last month`,
         icon: Package,
         color: "text-blue-600",
         bgColor: "bg-blue-50",
         borderColor: "border-blue-200",
-        trend: "stable"
+        trend: inventoryPercent >= 0 ? "positive" : "negative",
+        percent: Math.min(Math.abs(inventoryPercent), 100)
       },
       {
         title: "Department",
@@ -257,17 +313,19 @@ const DashboardStats = () => {
         color: "text-purple-600",
         bgColor: "bg-purple-50",
         borderColor: "border-purple-200",
-        trend: "stable"
+        trend: "stable",
+        percent: 100
       },
       {
         title: "New Suppliers",
         value: realTimeData.supplierCount.toString(),
-        change: "this month",
+        change: `${suppliersPercent >= 0 ? '+' : ''}${suppliersPercent}% vs last month`,
         icon: Building,
         color: "text-amber-600",
         bgColor: "bg-amber-50",
         borderColor: "border-amber-200",
-        trend: "positive"
+        trend: suppliersPercent >= 0 ? "positive" : "negative",
+        percent: Math.min(Math.abs(suppliersPercent), 100)
       }
     ];
   };
@@ -314,13 +372,13 @@ const DashboardStats = () => {
                       stroke="currentColor"
                       strokeWidth="4"
                       fill="none"
-                      strokeDasharray={`${stat.trend === 'positive' ? 75 : stat.trend === 'attention' ? 45 : 60} 175.93`}
-                      className={stat.trend === 'positive' ? 'text-green-500' : stat.trend === 'attention' ? 'text-red-500' : 'text-blue-500'}
+                      strokeDasharray={`${(stat.percent / 100) * 175.93} 175.93`}
+                      className={stat.trend === 'positive' ? 'text-green-500' : stat.trend === 'negative' ? 'text-red-500' : stat.trend === 'attention' ? 'text-orange-500' : 'text-blue-500'}
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`text-xs font-semibold ${stat.trend === 'positive' ? 'text-green-600' : stat.trend === 'attention' ? 'text-red-600' : 'text-blue-600'}`}>
-                      {stat.trend === 'positive' ? '75%' : stat.trend === 'attention' ? '45%' : '60%'}
+                    <span className={`text-xs font-semibold ${stat.trend === 'positive' ? 'text-green-600' : stat.trend === 'negative' ? 'text-red-600' : stat.trend === 'attention' ? 'text-orange-600' : 'text-blue-600'}`}>
+                      {stat.percent}%
                     </span>
                   </div>
                 </div>
@@ -329,8 +387,8 @@ const DashboardStats = () => {
               <div className="sm:hidden mt-2">
                 <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                   <div 
-                    className={`h-full rounded-full ${stat.trend === 'positive' ? 'bg-green-500' : stat.trend === 'attention' ? 'bg-red-500' : 'bg-blue-500'}`}
-                    style={{ width: stat.trend === 'positive' ? '75%' : stat.trend === 'attention' ? '45%' : '60%' }}
+                    className={`h-full rounded-full ${stat.trend === 'positive' ? 'bg-green-500' : stat.trend === 'negative' ? 'bg-red-500' : stat.trend === 'attention' ? 'bg-orange-500' : 'bg-blue-500'}`}
+                    style={{ width: `${stat.percent}%` }}
                   />
                 </div>
               </div>
