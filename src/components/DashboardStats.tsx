@@ -23,12 +23,19 @@ const DashboardStats = () => {
   useEffect(() => {
     const fetchRealData = async () => {
       try {
-        console.log('Fetching real-time dashboard data from Supabase...');
+        console.log('Fetching monthly dashboard data from Supabase...');
         
-        // Fetch coffee records from Supabase
+        // Get current month date range
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+        
+        // Fetch coffee records for current month only
         const { data: coffeeRecords, error: coffeeError } = await supabase
           .from('coffee_records')
           .select('*')
+          .gte('created_at', startOfMonth)
+          .lte('created_at', endOfMonth)
           .order('created_at', { ascending: false });
 
         let totalKgs = 0;
@@ -45,10 +52,12 @@ const DashboardStats = () => {
           });
         }
 
-        // Fetch finance cash transactions from Supabase
+        // Fetch finance cash transactions for current month
         const { data: transactions } = await supabase
           .from('finance_cash_transactions')
-          .select('*');
+          .select('*')
+          .gte('created_at', startOfMonth)
+          .lte('created_at', endOfMonth);
         
         let totalRevenue = 0;
         if (transactions) {
@@ -59,10 +68,12 @@ const DashboardStats = () => {
           });
         }
 
-        // Fetch expenses from Supabase
+        // Fetch expenses for current month
         const { data: expenses } = await supabase
           .from('finance_expenses')
-          .select('*');
+          .select('*')
+          .gte('created_at', startOfMonth)
+          .lte('created_at', endOfMonth);
         
         let totalExpenses = 0;
         if (expenses) {
@@ -71,10 +82,12 @@ const DashboardStats = () => {
           });
         }
 
-        // Fetch suppliers count from Supabase
+        // Fetch new suppliers registered this month
         const { data: suppliers } = await supabase
           .from('suppliers')
-          .select('id');
+          .select('id')
+          .gte('created_at', startOfMonth)
+          .lte('created_at', endOfMonth);
         
         const supplierCount = suppliers?.length || 0;
 
@@ -99,7 +112,8 @@ const DashboardStats = () => {
           }
         });
 
-        console.log('Dashboard data updated:', {
+        console.log('Monthly dashboard data updated:', {
+          month: now.toLocaleString('default', { month: 'long' }),
           coffeeData: { totalKgs, totalBags, totalBatches: batches.size },
           financeData: { totalRevenue, totalExpenses },
           supplierCount,
@@ -119,9 +133,9 @@ const DashboardStats = () => {
     if (hasPermission("Store Management")) {
       return [
         {
-          title: "Coffee Inventory",
+          title: "Monthly Inventory",
           value: `${(realTimeData.inventoryData.totalKgs / 1000).toFixed(1)}K kg`,
-          change: `${realTimeData.inventoryData.totalBags} bags stored`,
+          change: `${realTimeData.inventoryData.totalBags} bags this month`,
           icon: Coffee,
           color: "text-green-600",
           bgColor: "bg-green-50",
@@ -129,9 +143,9 @@ const DashboardStats = () => {
           trend: "positive"
         },
         {
-          title: "Active Batches",
+          title: "Monthly Batches",
           value: realTimeData.coffeeData.totalBatches.toString(),
-          change: "processing & stored",
+          change: "processed this month",
           icon: Package,
           color: "text-blue-600",
           bgColor: "bg-blue-50",
@@ -139,9 +153,9 @@ const DashboardStats = () => {
           trend: "stable"
         },
         {
-          title: "Suppliers",
+          title: "New Suppliers",
           value: realTimeData.supplierCount.toString(),
-          change: "registered partners",
+          change: "registered this month",
           icon: Building,
           color: "text-purple-600",
           bgColor: "bg-purple-50",
@@ -171,9 +185,9 @@ const DashboardStats = () => {
       
       return [
         {
-          title: "Total Revenue",
+          title: "Monthly Revenue",
           value: `UGX ${(realTimeData.financeData.totalRevenue / 1000000).toFixed(1)}M`,
-          change: "from transactions",
+          change: "this month",
           icon: DollarSign,
           color: "text-green-600",
           bgColor: "bg-green-50",
@@ -181,9 +195,9 @@ const DashboardStats = () => {
           trend: "positive"
         },
         {
-          title: "Coffee Processed",
+          title: "Monthly Coffee",
           value: `${(realTimeData.coffeeData.totalKgs / 1000).toFixed(1)}K kg`,
-          change: `${realTimeData.coffeeData.totalBatches} batches total`,
+          change: `${realTimeData.coffeeData.totalBatches} batches this month`,
           icon: Coffee,
           color: "text-blue-600",
           bgColor: "bg-blue-50",
@@ -216,9 +230,9 @@ const DashboardStats = () => {
     // Default stats for other roles
     return [
       {
-        title: "Coffee Batches",
+        title: "Monthly Batches",
         value: realTimeData.coffeeData.totalBatches.toString(),
-        change: "in system",
+        change: "this month",
         icon: Coffee,
         color: "text-green-600",
         bgColor: "bg-green-50",
@@ -226,9 +240,9 @@ const DashboardStats = () => {
         trend: "stable"
       },
       {
-        title: "Inventory",
+        title: "Monthly Inventory",
         value: `${realTimeData.coffeeData.totalBags} bags`,
-        change: `${(realTimeData.coffeeData.totalKgs / 1000).toFixed(1)}K kg total`,
+        change: `${(realTimeData.coffeeData.totalKgs / 1000).toFixed(1)}K kg this month`,
         icon: Package,
         color: "text-blue-600",
         bgColor: "bg-blue-50",
@@ -246,9 +260,9 @@ const DashboardStats = () => {
         trend: "stable"
       },
       {
-        title: "Suppliers",
+        title: "New Suppliers",
         value: realTimeData.supplierCount.toString(),
-        change: "active partners",
+        change: "this month",
         icon: Building,
         color: "text-amber-600",
         bgColor: "bg-amber-50",
