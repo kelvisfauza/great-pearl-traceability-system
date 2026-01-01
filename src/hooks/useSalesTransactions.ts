@@ -51,10 +51,28 @@ export const useSalesTransactions = () => {
     try {
       console.log(`🔍 Checking inventory for: "${coffeeType}"`);
       
-      // Get coffee records from Supabase with matching coffee type
+      // First, check new inventory_batches system
+      const { data: batches, error: batchError } = await supabase
+        .from('inventory_batches')
+        .select('remaining_kilograms, coffee_type')
+        .ilike('coffee_type', `%${coffeeType}%`)
+        .gt('remaining_kilograms', 0)
+        .in('status', ['filling', 'active', 'selling']);
+      
+      if (!batchError && batches && batches.length > 0) {
+        const totalFromBatches = batches.reduce((sum, b) => sum + Number(b.remaining_kilograms), 0);
+        console.log(`📦 From new batch system: ${totalFromBatches} kg available`);
+        return {
+          available: Math.max(0, totalFromBatches),
+          sufficient: totalFromBatches >= weightNeeded
+        };
+      }
+
+      // Fallback: Calculate from coffee_records with status 'inventory' minus sales
       const { data: coffeeRecords, error: recordsError } = await supabase
         .from('coffee_records')
         .select('id, kilograms, batch_number, created_at')
+        .eq('status', 'inventory')
         .ilike('coffee_type', `%${coffeeType}%`);
       
       if (recordsError) {
@@ -62,17 +80,16 @@ export const useSalesTransactions = () => {
         return { available: 0, sufficient: false };
       }
       
-      console.log(`📦 Total matching records: ${coffeeRecords?.length || 0}`);
+      console.log(`📦 Inventory records: ${coffeeRecords?.length || 0}`);
       
-      // Calculate total delivered
-      let totalDelivered = 0;
+      // Calculate total in inventory
+      let totalInInventory = 0;
       const matchedRecordIds: string[] = [];
       
       coffeeRecords?.forEach(record => {
         const kilograms = Number(record.kilograms) || 0;
         if (kilograms > 0) {
-          console.log(`   ✅ Record: ${record.id} = ${kilograms} kg`);
-          totalDelivered += kilograms;
+          totalInInventory += kilograms;
           matchedRecordIds.push(record.id);
         }
       });
@@ -87,15 +104,28 @@ export const useSalesTransactions = () => {
         
         if (!error && salesTracking) {
           totalSold = salesTracking.reduce((sum, s) => sum + Number(s.quantity_kg), 0);
-          console.log(`📦 Total sold: ${totalSold} kg`);
+          console.log(`📦 Total sold from tracking: ${totalSold} kg`);
         }
       }
 
-      // Calculate available = delivered - sold
-      const totalAvailable = totalDelivered - totalSold;
+      // Also check sales_transactions that may not be tracked
+      const { data: allSales, error: salesError } = await supabase
+        .from('sales_transactions')
+        .select('weight')
+        .ilike('coffee_type', `%${coffeeType}%`);
+      
+      if (!salesError && allSales) {
+        const totalFromSalesTable = allSales.reduce((sum, s) => sum + Number(s.weight || 0), 0);
+        // Use the larger of the two to be conservative
+        totalSold = Math.max(totalSold, totalFromSalesTable);
+        console.log(`📦 Total from sales_transactions: ${totalFromSalesTable} kg`);
+      }
+
+      // Calculate available = inventory - sold
+      const totalAvailable = totalInInventory - totalSold;
       
       console.log(`📊 Summary for "${coffeeType}":`);
-      console.log(`   - Total delivered: ${totalDelivered} kg`);
+      console.log(`   - Total in inventory: ${totalInInventory} kg`);
       console.log(`   - Total sold: ${totalSold} kg`);
       console.log(`   - Available: ${totalAvailable} kg`);
 
