@@ -6,9 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Package, Archive, Search, Filter } from "lucide-react";
 import { useInventoryBatches } from "@/hooks/useInventoryBatches";
 import BatchCard from "./BatchCard";
+import MigrationButton from "./MigrationButton";
 
 const InventoryBatchView = () => {
-  const { batches, loading, getSummary } = useInventoryBatches();
+  const { batches, loading, getSummary, fetchBatches } = useInventoryBatches();
   const [searchTerm, setSearchTerm] = useState("");
   const [coffeeTypeFilter, setCoffeeTypeFilter] = useState<string>("all");
   
@@ -43,6 +44,20 @@ const InventoryBatchView = () => {
 
   return (
     <div className="space-y-6">
+      {/* Migration Button - Show when no batches */}
+      {!loading && batches.length === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="py-8 text-center">
+            <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Inventory Batches Yet</h3>
+            <p className="text-muted-foreground mb-4">
+              Import your existing coffee inventory records to create 20,000kg batches
+            </p>
+            <MigrationButton onMigrationComplete={fetchBatches} />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
