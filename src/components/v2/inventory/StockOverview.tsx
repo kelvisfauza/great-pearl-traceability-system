@@ -51,6 +51,8 @@ const StockOverview = () => {
         return 'secondary';
       case 'depleted':
         return 'destructive';
+      case 'sold_out':
+        return 'outline';
       default:
         return 'outline';
     }
