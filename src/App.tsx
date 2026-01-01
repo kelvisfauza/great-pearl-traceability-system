@@ -31,6 +31,7 @@ import Expenses from "./pages/Expenses";
 import MyExpenses from "./pages/MyExpenses";
 import EURDocumentationPage from "./pages/EUDRDocumentation";
 import Suppliers from "./pages/Suppliers";
+import Approvals from "./pages/Approvals";
 
 // V2 System Pages
 import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
@@ -138,6 +139,11 @@ const App: React.ComponentType = () => {
                 <Route path="/" element={
                   <ProtectedRoute>
                     <Index />
+                  </ProtectedRoute>
+                } />
+                <Route path="/approvals" element={
+                  <ProtectedRoute>
+                    <Approvals />
                   </ProtectedRoute>
                 } />
                 <Route path="/procurement" element={

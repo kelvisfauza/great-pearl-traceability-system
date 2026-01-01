@@ -19,9 +19,11 @@ import {
   FileCheck,
   ChevronDown,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  CheckSquare
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRoleBasedData } from "@/hooks/useRoleBasedData";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -39,6 +41,7 @@ interface AppSidebarProps {
 const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
   const location = useLocation();
   const { signOut, employee, hasPermission, isAdmin } = useAuth();
+  const roleData = useRoleBasedData();
   const [openSections, setOpenSections] = useState<string[]>(["Operations", "Management", "System"]);
 
   const navigationItems = [
@@ -57,6 +60,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
     {
       title: "Management",
       items: [
+        { name: "Approvals", icon: CheckSquare, path: "/approvals", permission: null, requiresApprovalRole: true },
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
         { name: "My Expenses", icon: DollarSign, path: "/my-expenses", permission: null },
@@ -86,8 +90,14 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
     
     return navigationItems.map(section => ({
       ...section,
-      items: section.items.filter(item => {
+      items: section.items.filter((item: any) => {
+        // Check for approval role requirement
+        if (item.requiresApprovalRole) {
+          return roleData?.canApproveRequests;
+        }
+        // If no permission required, show to everyone
         if (!item.permission) return true;
+        // If user is admin, show everything
         if (isAdmin()) return true;
         return hasPermission(item.permission);
       })
