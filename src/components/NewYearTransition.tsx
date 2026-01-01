@@ -8,15 +8,15 @@ export const NewYearTransition: React.FC<NewYearTransitionProps> = ({ onComplete
   const [phase, setPhase] = useState<'old' | 'transition' | 'new' | 'done'>('old');
 
   useEffect(() => {
-    // Phase 1: Show 2025 (1s)
-    const timer1 = setTimeout(() => setPhase('transition'), 1000);
-    // Phase 2: Transition effect (1s)
-    const timer2 = setTimeout(() => setPhase('new'), 2000);
-    // Phase 3: Show 2026 (1.5s) then complete
+    // Phase 1: Show 2025 (1.5s)
+    const timer1 = setTimeout(() => setPhase('transition'), 1500);
+    // Phase 2: Transition effect (1.5s)
+    const timer2 = setTimeout(() => setPhase('new'), 3000);
+    // Phase 3: Show 2026 (2s) then complete - total 5s
     const timer3 = setTimeout(() => {
       setPhase('done');
       onComplete?.();
-    }, 3500);
+    }, 5000);
 
     return () => {
       clearTimeout(timer1);

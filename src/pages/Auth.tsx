@@ -149,7 +149,14 @@ const Auth = () => {
       } else {
         // Regular user or preview environment - show New Year transition then system selection
         console.log('✅ Login complete, showing New Year transition...');
-        setShowNewYearTransition(true);
+        // Only show New Year transition from Jan 1-5, 2026
+        const now = new Date();
+        const isNewYearPeriod = now >= new Date('2026-01-01') && now <= new Date('2026-01-05T23:59:59');
+        if (isNewYearPeriod) {
+          setShowNewYearTransition(true);
+        } else {
+          setShowSystemSelection(true);
+        }
         setLoading(false);
       }
     } catch (error: any) {
