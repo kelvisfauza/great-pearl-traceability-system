@@ -62,9 +62,6 @@ const Index = () => {
         {/* Role Notification */}
         <AssignedRoleNotification />
 
-        {/* Buying Prices - Top of Dashboard for All Users */}
-        <BuyingRecommendationsCard />
-
         {/* Welcome Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -86,6 +83,9 @@ const Index = () => {
             </div>
           </div>
         </div>
+
+        {/* Buying Prices - Below Greeting for All Users */}
+        <BuyingRecommendationsCard />
 
         {/* Stats Cards */}
         <DashboardStats />
