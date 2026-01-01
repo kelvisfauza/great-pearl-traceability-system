@@ -10,7 +10,7 @@ import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import AssignedRoleNotification from '@/components/AssignedRoleNotification';
 import NotificationWidget from '@/components/notifications/NotificationWidget';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
-import PriceTicker from '@/components/PriceTicker';
+import BuyingRecommendationsCard from '@/components/admin/BuyingRecommendationsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Coffee, 
@@ -63,7 +63,7 @@ const Index = () => {
         <AssignedRoleNotification />
 
         {/* Buying Prices - Top of Dashboard for All Users */}
-        <PriceTicker />
+        <BuyingRecommendationsCard />
 
         {/* Welcome Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
