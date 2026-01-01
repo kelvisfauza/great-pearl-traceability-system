@@ -18,6 +18,7 @@ const MigrationButton = ({ onMigrationComplete }: MigrationButtonProps) => {
     message: string;
     batchesCreated: number;
     recordsProcessed: number;
+    totalKgMigrated: number;
   } | null>(null);
   const { toast } = useToast();
 
@@ -65,10 +66,11 @@ const MigrationButton = ({ onMigrationComplete }: MigrationButtonProps) => {
               <AlertDescription>
                 {result.message}
                 {result.success && result.batchesCreated > 0 && (
-                  <div className="mt-2 text-sm">
-                    <p>• Batches created: {result.batchesCreated}</p>
-                    <p>• Records processed: {result.recordsProcessed}</p>
-                  </div>
+                <div className="mt-2 text-sm">
+                  <p>• Batches created: {result.batchesCreated}</p>
+                  <p>• Records processed: {result.recordsProcessed}</p>
+                  <p>• Total migrated: {result.totalKgMigrated.toLocaleString()} kg</p>
+                </div>
                 )}
               </AlertDescription>
             </Alert>
