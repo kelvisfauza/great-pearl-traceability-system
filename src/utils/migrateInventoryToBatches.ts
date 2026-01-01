@@ -1,13 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 
-interface CoffeeRecord {
+interface CoffeeRecordWithRemaining {
   id: string;
   coffee_type: string;
-  kilograms: number;
+  original_kg: number;
+  remaining_kg: number;
   supplier_name: string;
   date: string;
   batch_number: string;
-  created_at: string;
 }
 
 export const migrateInventoryToBatches = async (): Promise<{
@@ -15,6 +15,7 @@ export const migrateInventoryToBatches = async (): Promise<{
   message: string;
   batchesCreated: number;
   recordsProcessed: number;
+  totalKgMigrated: number;
 }> => {
   try {
     // Check if migration has already been done
@@ -28,11 +29,13 @@ export const migrateInventoryToBatches = async (): Promise<{
         success: true,
         message: 'Migration already completed - batches exist',
         batchesCreated: 0,
-        recordsProcessed: 0
+        recordsProcessed: 0,
+        totalKgMigrated: 0
       };
     }
 
-    // Fetch all inventory coffee records ordered by date (FIFO)
+    // Fetch inventory records with remaining stock after sales deduction
+    // Using raw SQL via RPC would be ideal, but we'll do it in steps
     const { data: coffeeRecords, error: fetchError } = await supabase
       .from('coffee_records')
       .select('id, coffee_type, kilograms, supplier_name, date, batch_number, created_at')
@@ -46,13 +49,56 @@ export const migrateInventoryToBatches = async (): Promise<{
         success: true,
         message: 'No inventory records to migrate',
         batchesCreated: 0,
-        recordsProcessed: 0
+        recordsProcessed: 0,
+        totalKgMigrated: 0
+      };
+    }
+
+    // Fetch all sales tracking to calculate remaining
+    const { data: salesTracking, error: salesError } = await supabase
+      .from('sales_inventory_tracking')
+      .select('coffee_record_id, quantity_kg');
+
+    if (salesError) throw salesError;
+
+    // Calculate sold quantities per coffee record
+    const soldByRecord: Record<string, number> = {};
+    for (const sale of salesTracking || []) {
+      if (sale.coffee_record_id) {
+        soldByRecord[sale.coffee_record_id] = (soldByRecord[sale.coffee_record_id] || 0) + sale.quantity_kg;
+      }
+    }
+
+    // Calculate remaining for each record
+    const recordsWithRemaining: CoffeeRecordWithRemaining[] = coffeeRecords
+      .map(record => {
+        const sold = soldByRecord[record.id] || 0;
+        const remaining = record.kilograms - sold;
+        return {
+          id: record.id,
+          coffee_type: record.coffee_type,
+          original_kg: record.kilograms,
+          remaining_kg: remaining,
+          supplier_name: record.supplier_name,
+          date: record.date,
+          batch_number: record.batch_number
+        };
+      })
+      .filter(record => record.remaining_kg > 1); // Only records with actual stock remaining (>1kg to avoid floating point issues)
+
+    if (recordsWithRemaining.length === 0) {
+      return {
+        success: true,
+        message: 'No remaining stock to migrate - all inventory has been sold',
+        batchesCreated: 0,
+        recordsProcessed: 0,
+        totalKgMigrated: 0
       };
     }
 
     // Group by coffee type (normalize case)
-    const groupedByType: Record<string, CoffeeRecord[]> = {};
-    for (const record of coffeeRecords) {
+    const groupedByType: Record<string, CoffeeRecordWithRemaining[]> = {};
+    for (const record of recordsWithRemaining) {
       const normalizedType = record.coffee_type.toLowerCase();
       const displayType = normalizedType.charAt(0).toUpperCase() + normalizedType.slice(1);
       if (!groupedByType[displayType]) {
@@ -63,6 +109,7 @@ export const migrateInventoryToBatches = async (): Promise<{
 
     let batchesCreated = 0;
     let recordsProcessed = 0;
+    let totalKgMigrated = 0;
 
     // Process each coffee type
     for (const [coffeeType, records] of Object.entries(groupedByType)) {
@@ -98,13 +145,13 @@ export const migrateInventoryToBatches = async (): Promise<{
           batchesCreated++;
         }
 
-        // Add record to current batch
+        // Add record to current batch (using remaining kg, not original)
         const { error: sourceError } = await supabase
           .from('inventory_batch_sources')
           .insert({
             batch_id: currentBatchId,
             coffee_record_id: record.id,
-            kilograms: record.kilograms,
+            kilograms: record.remaining_kg, // Use remaining, not original
             supplier_name: record.supplier_name,
             purchase_date: record.date
           });
@@ -114,7 +161,8 @@ export const migrateInventoryToBatches = async (): Promise<{
           continue;
         }
 
-        currentBatchKg += record.kilograms;
+        currentBatchKg += record.remaining_kg;
+        totalKgMigrated += record.remaining_kg;
         recordsProcessed++;
 
         // Update batch totals
@@ -139,9 +187,10 @@ export const migrateInventoryToBatches = async (): Promise<{
 
     return {
       success: true,
-      message: `Successfully migrated ${recordsProcessed} records into ${batchesCreated} batches`,
+      message: `Migrated ${totalKgMigrated.toLocaleString()} kg from ${recordsProcessed} records into ${batchesCreated} batch(es)`,
       batchesCreated,
-      recordsProcessed
+      recordsProcessed,
+      totalKgMigrated
     };
   } catch (error: any) {
     console.error('Migration error:', error);
@@ -149,7 +198,8 @@ export const migrateInventoryToBatches = async (): Promise<{
       success: false,
       message: error.message || 'Migration failed',
       batchesCreated: 0,
-      recordsProcessed: 0
+      recordsProcessed: 0,
+      totalKgMigrated: 0
     };
   }
 };
