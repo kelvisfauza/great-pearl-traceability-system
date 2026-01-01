@@ -29,7 +29,7 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [cashModalOpen, setCashModalOpen] = useState(false);
   const [moneyRequestsCount, setMoneyRequestsCount] = useState(0);
-  const [sendingChristmasSMS, setSendingChristmasSMS] = useState(false);
+  
   const { requests, loading: requestsLoading } = useUnifiedApprovalRequests();
   const { onlineCount, loading: presenceLoading } = usePresenceList();
   const { toast } = useToast();
@@ -84,41 +84,6 @@ const AdminDashboard = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button 
-            onClick={async () => {
-              setSendingChristmasSMS(true);
-              try {
-              const { data, error } = await supabase.functions.invoke('send-christmas-sms', {
-                  body: {
-                    target: 'both',
-                    staffMessage: "Merry Christmas from Great Pearl Coffee! Thank you for your hard work and dedication this year. Wishing you joy and blessings this festive season. Happy New Year 2026!",
-                    supplierMessage: "Merry Christmas from Great Pearl Coffee! Thank you for your partnership this year. Wishing you a blessed festive season and prosperous 2026!"
-                  }
-                });
-                
-                if (error) throw error;
-                
-                toast({
-                  title: "🎄 Christmas SMS Sent!",
-                  description: data?.message || "Messages sent to suppliers",
-                });
-              } catch (err: any) {
-                toast({
-                  title: "Failed to send",
-                  description: err.message,
-                  variant: "destructive"
-                });
-              } finally {
-                setSendingChristmasSMS(false);
-              }
-            }}
-            disabled={sendingChristmasSMS}
-            size="default"
-            className="flex items-center gap-2 shadow-lg hover:shadow-xl transition-all text-sm sm:text-base bg-gradient-to-r from-red-600 to-green-600 hover:from-red-700 hover:to-green-700"
-          >
-            <Gift className="h-4 w-4" />
-            {sendingChristmasSMS ? "Sending..." : "🎄 Xmas SMS"}
-          </Button>
           <Button 
             onClick={() => setCashModalOpen(true)} 
             size="default"
