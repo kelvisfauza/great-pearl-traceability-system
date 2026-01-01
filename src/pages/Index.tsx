@@ -5,14 +5,15 @@ import DashboardStats from '@/components/DashboardStats';
 import QuickActions from '@/components/QuickActions';
 import RecentActivity from '@/components/RecentActivity';
 import PerformanceOverview from '@/components/PerformanceOverview';
-import ApprovalCenter from '@/components/ApprovalCenter';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import AssignedRoleNotification from '@/components/AssignedRoleNotification';
 import NotificationWidget from '@/components/notifications/NotificationWidget';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
-import { Coffee, TrendingUp, Shield, Bell, Activity, Settings, BarChart3 } from 'lucide-react';
+import { Coffee, TrendingUp, Bell, Activity, Settings, BarChart3, ClipboardCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const { employee } = useAuth();
@@ -105,20 +106,22 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Approval Center */}
+        {/* Approvals Quick Link */}
         {roleData?.canApproveRequests && (
-          <section className="space-y-4">
-            <div className="section-header">
-              <div className="p-2 bg-destructive/10 rounded-lg">
-                <Shield className="h-5 w-5 text-destructive" />
+          <section className="card-modern p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <ClipboardCheck className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Pending Approvals</h3>
+                  <p className="text-sm text-muted-foreground">Review and process pending requests</p>
+                </div>
               </div>
-              <div>
-                <h3 className="section-title">Approval Management</h3>
-                <p className="section-subtitle">Review and process pending requests</p>
-              </div>
-            </div>
-            <div className="card-modern p-5">
-              <ApprovalCenter />
+              <Button asChild>
+                <Link to="/approvals">View Approvals</Link>
+              </Button>
             </div>
           </section>
         )}
