@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
 import { ChristmasOverlay } from '@/components/ChristmasOverlay';
+import { NewYearTransition } from '@/components/NewYearTransition';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -22,6 +23,7 @@ const Auth = () => {
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [showBiometric, setShowBiometric] = useState(false);
+  const [showNewYearTransition, setShowNewYearTransition] = useState(false);
   const [showSystemSelection, setShowSystemSelection] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -145,9 +147,9 @@ const Auth = () => {
         setShowBiometric(true);
         setLoading(false);
       } else {
-        // Regular user or preview environment - show system selection
-        console.log('✅ Login complete, showing system selection...');
-        setShowSystemSelection(true);
+        // Regular user or preview environment - show New Year transition then system selection
+        console.log('✅ Login complete, showing New Year transition...');
+        setShowNewYearTransition(true);
         setLoading(false);
       }
     } catch (error: any) {
@@ -177,6 +179,11 @@ const Auth = () => {
 
   const handleBiometricComplete = () => {
     setShowBiometric(false);
+    setShowNewYearTransition(true);
+  };
+
+  const handleNewYearComplete = () => {
+    setShowNewYearTransition(false);
     setShowSystemSelection(true);
   };
 
@@ -194,6 +201,11 @@ const Auth = () => {
     setLoading(false);
   };
 
+
+  // Show New Year transition animation
+  if (showNewYearTransition) {
+    return <NewYearTransition onComplete={handleNewYearComplete} />;
+  }
 
   // Show biometric verification screen for admins
   if (showBiometric) {
