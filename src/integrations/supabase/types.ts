@@ -2446,6 +2446,131 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_batch_sales: {
+        Row: {
+          batch_id: string
+          created_at: string
+          customer_name: string | null
+          id: string
+          kilograms_deducted: number
+          sale_date: string
+          sale_transaction_id: string | null
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          kilograms_deducted: number
+          sale_date?: string
+          sale_transaction_id?: string | null
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          kilograms_deducted?: number
+          sale_date?: string
+          sale_transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_batch_sales_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_batch_sales_sale_transaction_id_fkey"
+            columns: ["sale_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "sales_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_batch_sources: {
+        Row: {
+          batch_id: string
+          coffee_record_id: string
+          created_at: string
+          id: string
+          kilograms: number
+          purchase_date: string
+          supplier_name: string
+        }
+        Insert: {
+          batch_id: string
+          coffee_record_id: string
+          created_at?: string
+          id?: string
+          kilograms: number
+          purchase_date: string
+          supplier_name: string
+        }
+        Update: {
+          batch_id?: string
+          coffee_record_id?: string
+          created_at?: string
+          id?: string
+          kilograms?: number
+          purchase_date?: string
+          supplier_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_batch_sources_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_batches: {
+        Row: {
+          batch_code: string
+          batch_date: string
+          coffee_type: string
+          created_at: string
+          id: string
+          remaining_kilograms: number
+          sold_out_at: string | null
+          status: string
+          target_capacity: number
+          total_kilograms: number
+          updated_at: string
+        }
+        Insert: {
+          batch_code: string
+          batch_date?: string
+          coffee_type: string
+          created_at?: string
+          id?: string
+          remaining_kilograms?: number
+          sold_out_at?: string | null
+          status?: string
+          target_capacity?: number
+          total_kilograms?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_code?: string
+          batch_date?: string
+          coffee_type?: string
+          created_at?: string
+          id?: string
+          remaining_kilograms?: number
+          sold_out_at?: string | null
+          status?: string
+          target_capacity?: number
+          total_kilograms?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory_items: {
         Row: {
           batch_numbers: string[] | null
