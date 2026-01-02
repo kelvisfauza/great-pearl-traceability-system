@@ -2496,6 +2496,10 @@ export type Database = {
           batch_id: string
           coffee_record_id: string
           created_at: string
+          eudr_batch_id: string | null
+          eudr_document_id: string | null
+          eudr_traced: boolean | null
+          eudr_traced_at: string | null
           id: string
           kilograms: number
           purchase_date: string
@@ -2505,6 +2509,10 @@ export type Database = {
           batch_id: string
           coffee_record_id: string
           created_at?: string
+          eudr_batch_id?: string | null
+          eudr_document_id?: string | null
+          eudr_traced?: boolean | null
+          eudr_traced_at?: string | null
           id?: string
           kilograms: number
           purchase_date: string
@@ -2514,6 +2522,10 @@ export type Database = {
           batch_id?: string
           coffee_record_id?: string
           created_at?: string
+          eudr_batch_id?: string | null
+          eudr_document_id?: string | null
+          eudr_traced?: boolean | null
+          eudr_traced_at?: string | null
           id?: string
           kilograms?: number
           purchase_date?: string
@@ -2525,6 +2537,20 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "inventory_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_batch_sources_eudr_batch_id_fkey"
+            columns: ["eudr_batch_id"]
+            isOneToOne: false
+            referencedRelation: "eudr_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_batch_sources_eudr_document_id_fkey"
+            columns: ["eudr_document_id"]
+            isOneToOne: false
+            referencedRelation: "eudr_documents"
             referencedColumns: ["id"]
           },
         ]
