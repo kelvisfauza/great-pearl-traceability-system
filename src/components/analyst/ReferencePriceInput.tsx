@@ -132,19 +132,26 @@ const ReferencePriceInput: React.FC = () => {
       }
 
       const staffList = employees?.filter(e => e.phone) || [];
+      
+      // Add additional recipient (external contact)
+      const additionalRecipients = [
+        { phone: '0772272455', name: 'External Contact' }
+      ];
+      
+      const allRecipients = [...staffList.map(e => ({ phone: e.phone!, name: e.name })), ...additionalRecipients];
       const date = new Date().toLocaleDateString('en-GB');
       
       // Staff message (shorter, internal)
       const staffMessage = `GPC Price Update - ${date}\n\nArabica: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg (${prices.arabicaOutturn}% outturn)\nRobusta: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg (${prices.robustaOutturn}% outturn)\n\nUse these prices for today's purchases.`;
 
-      console.log(`📱 Sending price update SMS to ${staffList.length} staff members (throttled)`);
+      console.log(`📱 Sending price update SMS to ${allRecipients.length} recipients (${staffList.length} staff + ${additionalRecipients.length} external) (throttled)`);
       
-      // Send staff SMS with 500ms delay between each to avoid overwhelming YoolaSMS
+      // Send SMS with 500ms delay between each to avoid overwhelming YoolaSMS
       const staffResults = [];
-      for (let i = 0; i < staffList.length; i++) {
-        const employee = staffList[i];
+      for (let i = 0; i < allRecipients.length; i++) {
+        const recipient = allRecipients[i];
         const result = await sendSmsWithDelay(
-          { phone: employee.phone!, name: employee.name },
+          { phone: recipient.phone, name: recipient.name },
           staffMessage,
           'staff_price_update',
           i === 0 ? 0 : 500 // No delay for first, 500ms for rest
