@@ -10,7 +10,7 @@ import UserPermissionsList from './UserPermissionsList';
 import QuickPermissionAssignment from './QuickPermissionAssignment';
 import CashManagementModal from './CashManagementModal';
 import TopSuppliersChart from './TopSuppliersChart';
-import InventoryOverviewChart from './InventoryOverviewChart';
+
 import BuyingRecommendationsCard from './BuyingRecommendationsCard';
 import { DataArchiveManager } from './DataArchiveManager';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -188,9 +188,8 @@ const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <TopSuppliersChart />
-            <InventoryOverviewChart />
           </div>
         </TabsContent>
 
