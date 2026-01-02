@@ -185,8 +185,8 @@ const RecentActivity = () => {
   };
 
   return (
-    <Card className="bg-gradient-to-br from-white/95 via-slate-50/90 to-indigo-50/60 dark:from-slate-800/95 dark:via-slate-700/90 dark:to-slate-800/80 backdrop-blur-xl border border-slate-200/50 dark:border-slate-600/40 hover:border-indigo-300/50 dark:hover:border-indigo-700/40 transition-all duration-500 hover:shadow-2xl h-fit group">
-      <CardHeader className="pb-6">
+    <Card className="bg-gradient-to-br from-white/95 via-slate-50/90 to-indigo-50/60 dark:from-slate-800/95 dark:via-slate-700/90 dark:to-slate-800/80 backdrop-blur-xl border border-slate-200/50 dark:border-slate-600/40 hover:border-indigo-300/50 dark:hover:border-indigo-700/40 transition-all duration-500 hover:shadow-2xl min-h-[400px] group">
+      <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
           <div className="p-2 rounded-lg bg-gradient-to-br from-secondary/80 to-secondary/60 text-secondary-foreground group-hover:scale-105 transition-transform duration-300 backdrop-blur-sm">
             <Clock className="h-5 w-5" />
