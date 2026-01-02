@@ -10,6 +10,7 @@ import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import AssignedRoleNotification from '@/components/AssignedRoleNotification';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import BuyingRecommendationsCard from '@/components/admin/BuyingRecommendationsCard';
+import StoreRealTimeTracker from '@/components/v2/admin/StoreRealTimeTracker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Coffee, 
@@ -85,6 +86,9 @@ const Index = () => {
 
         {/* Buying Prices - Below Greeting for All Users */}
         <BuyingRecommendationsCard />
+
+        {/* Store Real-Time Tracking */}
+        <StoreRealTimeTracker />
 
         {/* Stats Cards */}
         <DashboardStats />
