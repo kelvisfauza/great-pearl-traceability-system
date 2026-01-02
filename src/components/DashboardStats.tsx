@@ -33,6 +33,14 @@ const DashboardStats = () => {
     return Math.round(((current - previous) / previous) * 100);
   };
 
+  // Determine trend based on actual values - when both are 0, show stable/neutral
+  const getTrend = (current: number, previous: number, percentChange: number): "positive" | "negative" | "stable" => {
+    if (current === 0 && previous === 0) return "stable";
+    if (percentChange > 0) return "positive";
+    if (percentChange < 0) return "negative";
+    return "stable";
+  };
+
   useEffect(() => {
     const fetchRealData = async () => {
       try {
@@ -186,8 +194,8 @@ const DashboardStats = () => {
           color: "text-green-600",
           bgColor: "bg-green-50",
           borderColor: "border-green-200",
-          trend: inventoryPercent >= 0 ? "positive" : "negative",
-          percent: Math.min(Math.abs(inventoryPercent), 100)
+          trend: getTrend(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent),
+          percent: realTimeData.inventoryData.totalKgs === 0 && realTimeData.prevMonth.coffeeKgs === 0 ? 0 : Math.min(Math.abs(inventoryPercent), 100)
         },
         {
           title: "Monthly Batches",
@@ -197,8 +205,8 @@ const DashboardStats = () => {
           color: "text-blue-600",
           bgColor: "bg-blue-50",
           borderColor: "border-blue-200",
-          trend: batchesPercent >= 0 ? "positive" : "negative",
-          percent: Math.min(Math.abs(batchesPercent), 100)
+          trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent),
+          percent: realTimeData.coffeeData.totalBatches === 0 && realTimeData.prevMonth.coffeeBatches === 0 ? 0 : Math.min(Math.abs(batchesPercent), 100)
         },
         {
           title: "New Suppliers",
@@ -208,8 +216,8 @@ const DashboardStats = () => {
           color: "text-purple-600",
           bgColor: "bg-purple-50",
           borderColor: "border-purple-200",
-          trend: suppliersPercent >= 0 ? "positive" : "negative",
-          percent: Math.min(Math.abs(suppliersPercent), 100)
+          trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent),
+          percent: realTimeData.supplierCount === 0 && realTimeData.prevMonth.suppliers === 0 ? 0 : Math.min(Math.abs(suppliersPercent), 100)
         },
         {
           title: "Your Role",
@@ -242,8 +250,8 @@ const DashboardStats = () => {
           color: "text-green-600",
           bgColor: "bg-green-50",
           borderColor: "border-green-200",
-          trend: revenuePercent >= 0 ? "positive" : "negative",
-          percent: Math.min(Math.abs(revenuePercent), 100)
+          trend: getTrend(realTimeData.financeData.totalRevenue, realTimeData.prevMonth.revenue, revenuePercent),
+          percent: realTimeData.financeData.totalRevenue === 0 && realTimeData.prevMonth.revenue === 0 ? 0 : Math.min(Math.abs(revenuePercent), 100)
         },
         {
           title: "Monthly Coffee",
@@ -253,8 +261,8 @@ const DashboardStats = () => {
           color: "text-blue-600",
           bgColor: "bg-blue-50",
           borderColor: "border-blue-200",
-          trend: inventoryPercent >= 0 ? "positive" : "negative",
-          percent: Math.min(Math.abs(inventoryPercent), 100)
+          trend: getTrend(realTimeData.coffeeData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent),
+          percent: realTimeData.coffeeData.totalKgs === 0 && realTimeData.prevMonth.coffeeKgs === 0 ? 0 : Math.min(Math.abs(inventoryPercent), 100)
         },
         {
           title: "Pending Approvals",
@@ -264,8 +272,8 @@ const DashboardStats = () => {
           color: pendingApprovals > 0 ? "text-red-600" : "text-green-600",
           bgColor: pendingApprovals > 0 ? "bg-red-50" : "bg-green-50",
           borderColor: pendingApprovals > 0 ? "border-red-200" : "border-green-200",
-          trend: pendingApprovals > 0 ? "attention" : "positive",
-          percent: pendingApprovals > 0 ? Math.min(pendingApprovals * 10, 100) : 100
+          trend: pendingApprovals > 0 ? "attention" : "stable",
+          percent: pendingApprovals > 0 ? Math.min(pendingApprovals * 10, 100) : 0
         },
         {
           title: "Active Staff",
@@ -291,8 +299,8 @@ const DashboardStats = () => {
         color: "text-green-600",
         bgColor: "bg-green-50",
         borderColor: "border-green-200",
-        trend: batchesPercent >= 0 ? "positive" : "negative",
-        percent: Math.min(Math.abs(batchesPercent), 100)
+        trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent),
+        percent: realTimeData.coffeeData.totalBatches === 0 && realTimeData.prevMonth.coffeeBatches === 0 ? 0 : Math.min(Math.abs(batchesPercent), 100)
       },
       {
         title: "Monthly Inventory",
@@ -302,8 +310,8 @@ const DashboardStats = () => {
         color: "text-blue-600",
         bgColor: "bg-blue-50",
         borderColor: "border-blue-200",
-        trend: inventoryPercent >= 0 ? "positive" : "negative",
-        percent: Math.min(Math.abs(inventoryPercent), 100)
+        trend: getTrend(realTimeData.coffeeData.totalBags, realTimeData.prevMonth.coffeeKgs, inventoryPercent),
+        percent: realTimeData.coffeeData.totalBags === 0 && realTimeData.prevMonth.coffeeKgs === 0 ? 0 : Math.min(Math.abs(inventoryPercent), 100)
       },
       {
         title: "Department",
@@ -324,8 +332,8 @@ const DashboardStats = () => {
         color: "text-amber-600",
         bgColor: "bg-amber-50",
         borderColor: "border-amber-200",
-        trend: suppliersPercent >= 0 ? "positive" : "negative",
-        percent: Math.min(Math.abs(suppliersPercent), 100)
+        trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent),
+        percent: realTimeData.supplierCount === 0 && realTimeData.prevMonth.suppliers === 0 ? 0 : Math.min(Math.abs(suppliersPercent), 100)
       }
     ];
   };
