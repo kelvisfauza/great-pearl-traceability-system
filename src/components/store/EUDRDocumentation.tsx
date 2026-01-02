@@ -9,11 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2, Pencil } from 'lucide-react';
+import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2, Pencil, Link2 } from 'lucide-react';
 import { useEUDRDocumentation } from '@/hooks/useEUDRDocumentation';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import EUDRReportPrint from './EUDRReportPrint';
+import EUDRInventoryLinking from './EUDRInventoryLinking';
 import { supabase } from '@/integrations/supabase/client';
 
 const EUDRDocumentation = () => {
@@ -567,8 +568,12 @@ const EUDRDocumentation = () => {
       </div>
 
       {/* Batch Management Tabs */}
-      <Tabs defaultValue="batches" className="w-full">
-        <TabsList>
+      <Tabs defaultValue="inventory-linking" className="w-full">
+        <TabsList className="flex-wrap">
+          <TabsTrigger value="inventory-linking">
+            <Link2 className="h-4 w-4 mr-2" />
+            Trace Inventory
+          </TabsTrigger>
           <TabsTrigger value="batches">
             <Layers className="h-4 w-4 mr-2" />
             Batch Management
@@ -586,6 +591,10 @@ const EUDRDocumentation = () => {
             Reports
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="inventory-linking" className="space-y-4">
+          <EUDRInventoryLinking />
+        </TabsContent>
 
         <TabsContent value="batches" className="space-y-4">
           <Card>
