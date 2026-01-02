@@ -195,46 +195,37 @@ const RecentActivity = () => {
         </CardTitle>
         <CardDescription className="text-sm md:text-base">Latest activities you can view</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
+      <CardContent className="pt-0">
+        <div className="space-y-1">
           {recentActivities.length > 0 ? (
             recentActivities.map((activity, index) => (
               <div 
                 key={activity.id} 
-                className="group/item flex items-start space-x-4 p-4 rounded-xl border border-border/30 bg-gradient-to-r from-background/80 to-muted/10 hover:border-primary/40 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm animate-slide-up"
-                style={{ animationDelay: `${index * 100}ms` }}
+                className="group/item flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/50 transition-all duration-200 animate-slide-up"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                <div className="flex-shrink-0 p-2 rounded-lg bg-muted/30 group-hover/item:bg-primary/10 group-hover/item:scale-105 transition-all duration-300 backdrop-blur-sm">
-                  <activity.icon className="h-5 w-5 text-muted-foreground group-hover/item:text-primary transition-colors duration-300" />
-                </div>
-                <div className="flex-1 min-w-0 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-foreground truncate group-hover/item:text-primary transition-colors duration-300">
-                      {activity.title}
-                    </p>
-                    <Badge 
-                      variant={getStatusColor(activity.status)} 
-                      className="ml-2 group-hover/item:scale-105 transition-transform duration-300 text-xs"
-                    >
-                      {activity.status}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {activity.description}
-                  </p>
-                  <p className="text-xs text-muted-foreground/80">
-                    {activity.time}
-                  </p>
-                </div>
+                <activity.icon className="h-4 w-4 flex-shrink-0 text-muted-foreground group-hover/item:text-primary transition-colors" />
+                <span className="text-sm font-medium text-foreground truncate max-w-[140px]">
+                  {activity.title}
+                </span>
+                <span className="text-xs text-muted-foreground truncate flex-1 hidden sm:block">
+                  {activity.description}
+                </span>
+                <Badge 
+                  variant={getStatusColor(activity.status)} 
+                  className="text-[10px] px-1.5 py-0 h-5 flex-shrink-0"
+                >
+                  {activity.status}
+                </Badge>
+                <span className="text-xs text-muted-foreground/70 flex-shrink-0 w-20 text-right">
+                  {activity.time}
+                </span>
               </div>
             ))
           ) : (
-            <div className="text-center py-12 animate-fade-in">
-              <div className="p-4 rounded-full bg-gradient-to-br from-muted/30 to-muted/50 w-fit mx-auto mb-4 backdrop-blur-sm">
-                <Shield className="h-12 w-12 text-muted-foreground" />
-              </div>
-              <p className="text-base font-medium text-muted-foreground">No activities available for your role</p>
-              <p className="text-sm text-muted-foreground/80 mt-2">Check back later for updates</p>
+            <div className="text-center py-8">
+              <Shield className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No activities available</p>
             </div>
           )}
         </div>
