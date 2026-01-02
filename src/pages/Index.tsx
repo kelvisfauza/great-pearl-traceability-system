@@ -8,14 +8,13 @@ import PerformanceOverview from '@/components/PerformanceOverview';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import AssignedRoleNotification from '@/components/AssignedRoleNotification';
-import NotificationWidget from '@/components/notifications/NotificationWidget';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import BuyingRecommendationsCard from '@/components/admin/BuyingRecommendationsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Coffee, 
   TrendingUp, 
-  Bell, 
+   
   Activity, 
   Settings, 
   BarChart3,
@@ -165,20 +164,6 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          {/* Notifications Card */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-warning/10 rounded-lg">
-                  <Bell className="h-5 w-5 text-warning" />
-                </div>
-                <CardTitle className="text-lg">Notifications</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <NotificationWidget onViewAll={() => setIsNotificationOpen(true)} />
-            </CardContent>
-          </Card>
 
           {/* EUDR Compliance Card */}
           {(employee.department === 'Store' || employee.role === 'Administrator') && (
