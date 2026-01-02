@@ -27,14 +27,24 @@ const DashboardStats = () => {
     }
   });
 
-  // Calculate month-over-month percentage change
+  // Calculate month-over-month percentage change (used in the subtitle text)
   const calcPercentChange = (current: number, previous: number): number => {
     if (previous === 0) return current > 0 ? 100 : 0;
     return Math.round(((current - previous) / previous) * 100);
   };
 
+  // Visual progress vs last month (0-100). Prevents showing a full ring when the current value is 0.
+  const calcProgressFromPrevious = (current: number, previous: number): number => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return Math.max(0, Math.min(Math.round((current / previous) * 100), 100));
+  };
+
   // Determine trend based on actual values - when both are 0, show stable/neutral
-  const getTrend = (current: number, previous: number, percentChange: number): "positive" | "negative" | "stable" => {
+  const getTrend = (
+    current: number,
+    previous: number,
+    percentChange: number
+  ): "positive" | "negative" | "stable" => {
     if (current === 0 && previous === 0) return "stable";
     if (percentChange > 0) return "positive";
     if (percentChange < 0) return "negative";
@@ -177,11 +187,17 @@ const DashboardStats = () => {
 
   // Different stats based on role
   const getStatsForRole = () => {
-    // Calculate actual percentages
+    // % change (for the subtitle text)
     const inventoryPercent = calcPercentChange(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs);
     const batchesPercent = calcPercentChange(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches);
     const revenuePercent = calcPercentChange(realTimeData.financeData.totalRevenue, realTimeData.prevMonth.revenue);
     const suppliersPercent = calcPercentChange(realTimeData.supplierCount, realTimeData.prevMonth.suppliers);
+
+    // Visual progress ring (0-100)
+    const inventoryProgress = calcProgressFromPrevious(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs);
+    const batchesProgress = calcProgressFromPrevious(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches);
+    const revenueProgress = calcProgressFromPrevious(realTimeData.financeData.totalRevenue, realTimeData.prevMonth.revenue);
+    const suppliersProgress = calcProgressFromPrevious(realTimeData.supplierCount, realTimeData.prevMonth.suppliers);
     
     // Store Manager sees inventory-focused stats
     if (hasPermission("Store Management")) {
@@ -195,7 +211,7 @@ const DashboardStats = () => {
           bgColor: "bg-green-50",
           borderColor: "border-green-200",
           trend: getTrend(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent),
-          percent: realTimeData.inventoryData.totalKgs === 0 && realTimeData.prevMonth.coffeeKgs === 0 ? 0 : Math.min(Math.abs(inventoryPercent), 100)
+          percent: inventoryProgress
         },
         {
           title: "Monthly Batches",
@@ -206,7 +222,7 @@ const DashboardStats = () => {
           bgColor: "bg-blue-50",
           borderColor: "border-blue-200",
           trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent),
-          percent: realTimeData.coffeeData.totalBatches === 0 && realTimeData.prevMonth.coffeeBatches === 0 ? 0 : Math.min(Math.abs(batchesPercent), 100)
+          percent: batchesProgress
         },
         {
           title: "New Suppliers",
@@ -217,7 +233,7 @@ const DashboardStats = () => {
           bgColor: "bg-purple-50",
           borderColor: "border-purple-200",
           trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent),
-          percent: realTimeData.supplierCount === 0 && realTimeData.prevMonth.suppliers === 0 ? 0 : Math.min(Math.abs(suppliersPercent), 100)
+          percent: suppliersProgress
         },
         {
           title: "Your Role",
@@ -251,7 +267,7 @@ const DashboardStats = () => {
           bgColor: "bg-green-50",
           borderColor: "border-green-200",
           trend: getTrend(realTimeData.financeData.totalRevenue, realTimeData.prevMonth.revenue, revenuePercent),
-          percent: realTimeData.financeData.totalRevenue === 0 && realTimeData.prevMonth.revenue === 0 ? 0 : Math.min(Math.abs(revenuePercent), 100)
+          percent: revenueProgress
         },
         {
           title: "Monthly Coffee",
@@ -262,7 +278,7 @@ const DashboardStats = () => {
           bgColor: "bg-blue-50",
           borderColor: "border-blue-200",
           trend: getTrend(realTimeData.coffeeData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent),
-          percent: realTimeData.coffeeData.totalKgs === 0 && realTimeData.prevMonth.coffeeKgs === 0 ? 0 : Math.min(Math.abs(inventoryPercent), 100)
+          percent: inventoryProgress
         },
         {
           title: "Pending Approvals",
@@ -300,7 +316,7 @@ const DashboardStats = () => {
         bgColor: "bg-green-50",
         borderColor: "border-green-200",
         trend: getTrend(realTimeData.coffeeData.totalBatches, realTimeData.prevMonth.coffeeBatches, batchesPercent),
-        percent: realTimeData.coffeeData.totalBatches === 0 && realTimeData.prevMonth.coffeeBatches === 0 ? 0 : Math.min(Math.abs(batchesPercent), 100)
+        percent: batchesProgress
       },
       {
         title: "Monthly Inventory",
@@ -310,8 +326,8 @@ const DashboardStats = () => {
         color: "text-blue-600",
         bgColor: "bg-blue-50",
         borderColor: "border-blue-200",
-        trend: getTrend(realTimeData.coffeeData.totalBags, realTimeData.prevMonth.coffeeKgs, inventoryPercent),
-        percent: realTimeData.coffeeData.totalBags === 0 && realTimeData.prevMonth.coffeeKgs === 0 ? 0 : Math.min(Math.abs(inventoryPercent), 100)
+        trend: getTrend(realTimeData.inventoryData.totalKgs, realTimeData.prevMonth.coffeeKgs, inventoryPercent),
+        percent: inventoryProgress
       },
       {
         title: "Department",
@@ -333,7 +349,7 @@ const DashboardStats = () => {
         bgColor: "bg-amber-50",
         borderColor: "border-amber-200",
         trend: getTrend(realTimeData.supplierCount, realTimeData.prevMonth.suppliers, suppliersPercent),
-        percent: realTimeData.supplierCount === 0 && realTimeData.prevMonth.suppliers === 0 ? 0 : Math.min(Math.abs(suppliersPercent), 100)
+        percent: suppliersProgress
       }
     ];
   };
@@ -381,21 +397,19 @@ const DashboardStats = () => {
                       strokeWidth="4"
                       fill="none"
                       strokeDasharray={`${(stat.percent / 100) * 175.93} 175.93`}
-                      className={stat.trend === 'positive' ? 'text-green-500' : stat.trend === 'negative' ? 'text-red-500' : stat.trend === 'attention' ? 'text-orange-500' : 'text-blue-500'}
+                      className={stat.color}
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`text-xs font-semibold ${stat.trend === 'positive' ? 'text-green-600' : stat.trend === 'negative' ? 'text-red-600' : stat.trend === 'attention' ? 'text-orange-600' : 'text-blue-600'}`}>
-                      {stat.percent}%
-                    </span>
+                    <span className={`text-xs font-semibold ${stat.color}`}>{stat.percent}%</span>
                   </div>
                 </div>
               </div>
               {/* Simple progress bar for mobile */}
               <div className="sm:hidden mt-2">
                 <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full ${stat.trend === 'positive' ? 'bg-green-500' : stat.trend === 'negative' ? 'bg-red-500' : stat.trend === 'attention' ? 'bg-orange-500' : 'bg-blue-500'}`}
+                  <div
+                    className={`h-full rounded-full ${stat.color.replace('text-', 'bg-')}`}
                     style={{ width: `${stat.percent}%` }}
                   />
                 </div>
