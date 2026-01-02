@@ -11,7 +11,7 @@ import QuickPermissionAssignment from './QuickPermissionAssignment';
 import CashManagementModal from './CashManagementModal';
 import TopSuppliersChart from './TopSuppliersChart';
 
-import BuyingRecommendationsCard from './BuyingRecommendationsCard';
+
 import { DataArchiveManager } from './DataArchiveManager';
 import { usePresenceList } from '@/hooks/usePresenceList';
 import ActiveUsers from '@/components/it/ActiveUsers';
@@ -176,9 +176,6 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
-
-          {/* Buying Recommendations */}
-          <BuyingRecommendationsCard />
 
           {/* System Overview */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
