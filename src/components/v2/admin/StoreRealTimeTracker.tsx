@@ -55,6 +55,11 @@ const StoreRealTimeTracker = () => {
   useEffect(() => {
     fetchStats();
 
+    // Auto-refresh every minute
+    const refreshInterval = setInterval(() => {
+      fetchStats();
+    }, 60000); // 60 seconds
+
     // Set up real-time subscription
     const channel = supabase
       .channel('store-realtime-tracker')
@@ -74,6 +79,7 @@ const StoreRealTimeTracker = () => {
       });
 
     return () => {
+      clearInterval(refreshInterval);
       supabase.removeChannel(channel);
     };
   }, []);
