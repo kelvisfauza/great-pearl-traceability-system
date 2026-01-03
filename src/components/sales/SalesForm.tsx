@@ -13,7 +13,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useSalesTransactions } from '@/hooks/useSalesTransactions';
 import DeliveryNoteModal from './DeliveryNoteModal';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
+interface Customer {
+  id: string;
+  name: string;
+}
 interface SalesFormData {
   date: Date;
   customer: string;
@@ -46,10 +51,26 @@ const SalesForm = () => {
   const [availableInventory, setAvailableInventory] = useState<number>(0);
   const [checkingInventory, setCheckingInventory] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   
   const { toast } = useToast();
   const { createTransaction, uploadGRNFile, checkInventoryAvailability } = useSalesTransactions();
 
+  // Fetch customers from database
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('id, name')
+        .eq('status', 'Active')
+        .order('name');
+      
+      if (!error && data) {
+        setCustomers(data);
+      }
+    };
+    fetchCustomers();
+  }, []);
   // Check inventory when coffee type changes
   useEffect(() => {
     if (formData.coffeeType) {
@@ -62,16 +83,6 @@ const SalesForm = () => {
       setAvailableInventory(0);
     }
   }, [formData.coffeeType]);
-
-  const customers = [
-    'Starbucks Uganda',
-    'Java House',
-    'Good African Coffee',
-    'Volcafe Uganda',
-    'Kyagalanyi Coffee',
-    'Export Client A',
-    'Export Client B'
-  ];
 
   const coffeeTypes = [
     'Arabica',
@@ -239,7 +250,7 @@ const SalesForm = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map(customer => (
-                    <SelectItem key={customer} value={customer}>{customer}</SelectItem>
+                    <SelectItem key={customer.id} value={customer.name}>{customer.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
