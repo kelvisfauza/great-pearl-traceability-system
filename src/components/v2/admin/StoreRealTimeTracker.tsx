@@ -11,6 +11,8 @@ interface DayStats {
   purchases: number;
   kilograms: number;
   receipts: number;
+  robustaKg: number;
+  arabicaKg: number;
 }
 
 interface StoreStats {
@@ -18,6 +20,10 @@ interface StoreStats {
   todayKilograms: number;
   totalStoreStock: number;
   newReceiptsCount: number;
+  robustaKg: number;
+  arabicaKg: number;
+  totalRobusta: number;
+  totalArabica: number;
 }
 
 const StoreRealTimeTracker = () => {
@@ -26,6 +32,10 @@ const StoreRealTimeTracker = () => {
     todayKilograms: 0,
     totalStoreStock: 0,
     newReceiptsCount: 0,
+    robustaKg: 0,
+    arabicaKg: 0,
+    totalRobusta: 0,
+    totalArabica: 0,
   });
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isLive, setIsLive] = useState(false);
@@ -34,6 +44,12 @@ const StoreRealTimeTracker = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  const isRobusta = (coffeeType: string) => 
+    coffeeType?.toLowerCase().includes('robusta');
+  
+  const isArabica = (coffeeType: string) => 
+    coffeeType?.toLowerCase().includes('arabica');
+
   const fetchStats = async () => {
     const today = format(new Date(), 'yyyy-MM-dd');
     
@@ -41,12 +57,12 @@ const StoreRealTimeTracker = () => {
       // Today's purchases - filter by date field which stores the purchase date
       supabase
         .from('coffee_records')
-        .select('kilograms, bags')
+        .select('kilograms, bags, coffee_type')
         .eq('date', today),
       // All pending/available stock
       supabase
         .from('coffee_records')
-        .select('kilograms')
+        .select('kilograms, coffee_type')
         .in('status', ['pending', 'quality_review', 'pricing', 'inventory']),
     ]);
 
@@ -54,11 +70,27 @@ const StoreRealTimeTracker = () => {
     const todayCount = todayRecords.data?.length || 0;
     const totalStock = allRecords.data?.reduce((sum, r) => sum + (r.kilograms || 0), 0) || 0;
 
+    // Calculate Robusta and Arabica for today
+    const todayRobusta = todayRecords.data?.reduce((sum, r) => 
+      isRobusta(r.coffee_type) ? sum + (r.kilograms || 0) : sum, 0) || 0;
+    const todayArabica = todayRecords.data?.reduce((sum, r) => 
+      isArabica(r.coffee_type) ? sum + (r.kilograms || 0) : sum, 0) || 0;
+
+    // Calculate total Robusta and Arabica in stock
+    const totalRobusta = allRecords.data?.reduce((sum, r) => 
+      isRobusta(r.coffee_type) ? sum + (r.kilograms || 0) : sum, 0) || 0;
+    const totalArabica = allRecords.data?.reduce((sum, r) => 
+      isArabica(r.coffee_type) ? sum + (r.kilograms || 0) : sum, 0) || 0;
+
     setStats({
       todayPurchases: todayCount,
       todayKilograms: Math.round(todayKg),
       totalStoreStock: Math.round(totalStock),
       newReceiptsCount: todayCount,
+      robustaKg: Math.round(todayRobusta),
+      arabicaKg: Math.round(todayArabica),
+      totalRobusta: Math.round(totalRobusta),
+      totalArabica: Math.round(totalArabica),
     });
     setLastUpdate(new Date());
   };
@@ -69,17 +101,23 @@ const StoreRealTimeTracker = () => {
     
     const { data } = await supabase
       .from('coffee_records')
-      .select('kilograms, bags')
+      .select('kilograms, bags, coffee_type')
       .eq('date', dateStr);
 
     const kg = data?.reduce((sum, r) => sum + (r.kilograms || 0), 0) || 0;
     const count = data?.length || 0;
+    const robustaKg = data?.reduce((sum, r) => 
+      isRobusta(r.coffee_type) ? sum + (r.kilograms || 0) : sum, 0) || 0;
+    const arabicaKg = data?.reduce((sum, r) => 
+      isArabica(r.coffee_type) ? sum + (r.kilograms || 0) : sum, 0) || 0;
 
     setHistoryData([{
       date,
       purchases: count,
       kilograms: Math.round(kg),
       receipts: count,
+      robustaKg: Math.round(robustaKg),
+      arabicaKg: Math.round(arabicaKg),
     }]);
     setLoadingHistory(false);
   };
@@ -95,17 +133,23 @@ const StoreRealTimeTracker = () => {
       
       const { data } = await supabase
         .from('coffee_records')
-        .select('kilograms, bags')
+        .select('kilograms, bags, coffee_type')
         .eq('date', dateStr);
 
       const kg = data?.reduce((sum, r) => sum + (r.kilograms || 0), 0) || 0;
       const count = data?.length || 0;
+      const robustaKg = data?.reduce((sum, r) => 
+        isRobusta(r.coffee_type) ? sum + (r.kilograms || 0) : sum, 0) || 0;
+      const arabicaKg = data?.reduce((sum, r) => 
+        isArabica(r.coffee_type) ? sum + (r.kilograms || 0) : sum, 0) || 0;
 
       days.push({
         date,
         purchases: count,
         kilograms: Math.round(kg),
         receipts: count,
+        robustaKg: Math.round(robustaKg),
+        arabicaKg: Math.round(arabicaKg),
       });
     }
     
@@ -177,7 +221,7 @@ const StoreRealTimeTracker = () => {
     {
       label: "Today's Volume",
       value: `${stats.todayKilograms.toLocaleString()} kg`,
-      subtitle: "coffee purchased today",
+      subtitle: `Robusta: ${stats.robustaKg.toLocaleString()} kg • Arabica: ${stats.arabicaKg.toLocaleString()} kg`,
       icon: TrendingUp,
       color: "text-green-500",
       bgColor: "bg-green-500/10",
@@ -185,7 +229,7 @@ const StoreRealTimeTracker = () => {
     {
       label: "Total Store Stock",
       value: `${stats.totalStoreStock.toLocaleString()} kg`,
-      subtitle: "available for processing",
+      subtitle: `Robusta: ${stats.totalRobusta.toLocaleString()} kg • Arabica: ${stats.totalArabica.toLocaleString()} kg`,
       icon: Warehouse,
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
@@ -284,7 +328,9 @@ const StoreRealTimeTracker = () => {
                       <tr>
                         <th className="text-left p-3 font-medium">Date</th>
                         <th className="text-center p-3 font-medium">Receipts</th>
-                        <th className="text-right p-3 font-medium">Volume (kg)</th>
+                        <th className="text-right p-3 font-medium">Robusta</th>
+                        <th className="text-right p-3 font-medium">Arabica</th>
+                        <th className="text-right p-3 font-medium">Total</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -315,6 +361,12 @@ const StoreRealTimeTracker = () => {
                               {day.receipts}
                             </Badge>
                           </td>
+                          <td className="p-3 text-right text-amber-600 font-medium">
+                            {day.robustaKg.toLocaleString()} kg
+                          </td>
+                          <td className="p-3 text-right text-emerald-600 font-medium">
+                            {day.arabicaKg.toLocaleString()} kg
+                          </td>
                           <td className="p-3 text-right font-semibold">
                             {day.kilograms.toLocaleString()} kg
                           </td>
@@ -326,6 +378,12 @@ const StoreRealTimeTracker = () => {
                         <td className="p-3 font-semibold">Week Total</td>
                         <td className="p-3 text-center font-semibold">
                           {historyData.reduce((sum, d) => sum + d.receipts, 0)}
+                        </td>
+                        <td className="p-3 text-right font-bold text-amber-600">
+                          {historyData.reduce((sum, d) => sum + d.robustaKg, 0).toLocaleString()} kg
+                        </td>
+                        <td className="p-3 text-right font-bold text-emerald-600">
+                          {historyData.reduce((sum, d) => sum + d.arabicaKg, 0).toLocaleString()} kg
                         </td>
                         <td className="p-3 text-right font-bold text-primary">
                           {historyData.reduce((sum, d) => sum + d.kilograms, 0).toLocaleString()} kg
