@@ -7,11 +7,11 @@ import { Shield, ClipboardCheck } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
 const Approvals = () => {
-  const { employee } = useAuth();
+  const { employee, isAdmin } = useAuth();
   const roleData = useRoleBasedData();
 
-  // Redirect if user doesn't have approval permissions
-  if (!roleData?.canApproveRequests) {
+  // Redirect if user is not an admin
+  if (!isAdmin()) {
     return <Navigate to="/" replace />;
   }
 
