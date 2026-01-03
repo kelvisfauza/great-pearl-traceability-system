@@ -134,8 +134,7 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
               <h3 style={{ fontSize: '10px', fontWeight: '600', color: '#0d3d1f', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>From (Seller)</h3>
               <p style={{ fontWeight: '600', margin: '0 0 4px 0', fontSize: '13px' }}>Great Pearl Coffee Factory</p>
               <p style={{ margin: '0', color: '#666', fontSize: '11px', lineHeight: '1.4' }}>
-                Kasese, Uganda<br />
-                UCDA Licensed Exporter
+                Kasese, Uganda
               </p>
             </div>
             <div style={{ padding: '14px 16px' }}>
