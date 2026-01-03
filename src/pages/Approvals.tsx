@@ -1,6 +1,7 @@
 import React from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ApprovalCenter from '@/components/ApprovalCenter';
+import ApprovedRequestsHistory from '@/components/admin/ApprovedRequestsHistory';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Shield, ClipboardCheck } from 'lucide-react';
@@ -35,9 +36,17 @@ const Approvals = () => {
           </div>
         </div>
 
-        {/* Approval Center */}
-        <div className="card-modern p-5">
-          <ApprovalCenter />
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Approval Center - Takes 2 columns */}
+          <div className="lg:col-span-2 card-modern p-5">
+            <ApprovalCenter />
+          </div>
+
+          {/* Approval History - Takes 1 column */}
+          <div className="lg:col-span-1">
+            <ApprovedRequestsHistory />
+          </div>
         </div>
       </div>
     </DashboardLayout>
