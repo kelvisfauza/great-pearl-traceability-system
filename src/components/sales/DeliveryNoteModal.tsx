@@ -87,15 +87,15 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Printer className="h-5 w-5" />
             Delivery Note
           </DialogTitle>
         </DialogHeader>
         
-        <div className="delivery-note-content space-y-6 p-6 bg-white text-black" id="delivery-note">
+        <div className="delivery-note-content space-y-4 p-4 bg-white text-black overflow-y-auto flex-1" id="delivery-note">
           <StandardPrintHeader
             title="Coffee Delivery Note"
             documentNumber={`DN-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 1000)}`}
@@ -170,7 +170,7 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-4">
+        <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
