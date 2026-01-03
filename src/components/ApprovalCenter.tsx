@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,8 @@ import { DynamicDetailedView } from './workflow/DynamicDetailedView';
 import { AuditPrintModal } from './workflow/AuditPrintModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
+const POLLING_INTERVAL = 10000; // 10 seconds
+
 const ApprovalCenter = () => {
   const { requests, loading, updateRequestStatus, fetchRequests } = useUnifiedApprovalRequests();
   const { recommendations, loading: recommendationsLoading } = useProcurementRecommendations();
@@ -24,6 +26,18 @@ const ApprovalCenter = () => {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [workflowDataForPrint, setWorkflowDataForPrint] = useState<any>(null);
   const { toast } = useToast();
+
+  // Auto-refresh pending requests in background to prevent double approvals
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Only refresh if not currently processing an action
+      if (!processingId) {
+        fetchRequests();
+      }
+    }, POLLING_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [fetchRequests, processingId]);
 
   const handleApproval = async (request: UnifiedApprovalRequest) => {
     setProcessingId(request.id);
