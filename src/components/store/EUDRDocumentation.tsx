@@ -394,7 +394,6 @@ const EUDRDocumentation = () => {
                     <SelectContent>
                       <SelectItem value="arabica">Arabica</SelectItem>
                       <SelectItem value="robusta">Robusta</SelectItem>
-                      <SelectItem value="mixed">Mixed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -547,7 +546,6 @@ const EUDRDocumentation = () => {
                   <SelectContent>
                     <SelectItem value="arabica">Arabica Only</SelectItem>
                     <SelectItem value="robusta">Robusta Only</SelectItem>
-                    <SelectItem value="mixed">Mixed Only</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
