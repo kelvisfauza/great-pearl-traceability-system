@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Package, Archive, Search, Filter } from "lucide-react";
+import { Loader2, Package, Archive, Search, Filter, Coffee } from "lucide-react";
 import { useInventoryBatches } from "@/hooks/useInventoryBatches";
 import BatchCard from "./BatchCard";
 import MigrationButton from "./MigrationButton";
+
+const isRobusta = (type: string) => type?.toLowerCase().includes('robusta');
+const isArabica = (type: string) => type?.toLowerCase().includes('arabica');
 
 const InventoryBatchView = () => {
   const { batches, loading, getSummary, fetchBatches } = useInventoryBatches();
@@ -17,6 +20,14 @@ const InventoryBatchView = () => {
   
   const activeBatches = batches.filter(b => b.status !== 'sold_out');
   const soldOutBatches = batches.filter(b => b.status === 'sold_out');
+
+  // Calculate Robusta and Arabica totals
+  const robustaKg = activeBatches
+    .filter(b => isRobusta(b.coffee_type))
+    .reduce((sum, b) => sum + (b.remaining_kilograms || 0), 0);
+  const arabicaKg = activeBatches
+    .filter(b => isArabica(b.coffee_type))
+    .reduce((sum, b) => sum + (b.remaining_kilograms || 0), 0);
 
   // Get unique coffee types for filter
   const coffeeTypes = [...new Set(batches.map(b => b.coffee_type))];
@@ -59,7 +70,7 @@ const InventoryBatchView = () => {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
@@ -93,6 +104,34 @@ const InventoryBatchView = () => {
             <div>
               <p className="text-2xl font-bold">{summary.totalRemaining.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">Total kg Available</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <Coffee className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{robustaKg.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Robusta kg</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <Coffee className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{arabicaKg.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Arabica kg</p>
+              </div>
             </div>
           </CardContent>
         </Card>
