@@ -86,15 +86,8 @@ export const useErrorReporting = () => {
   const [errors, setErrors] = useState<SystemError[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Make notifications optional to avoid dependency issues
-  let createAnnouncement: any = null;
-  try {
-    const notifications = useNotifications();
-    createAnnouncement = notifications.createAnnouncement;
-  } catch (error) {
-    console.log('Notifications not available, continuing without notifications');
-  }
-  
+  // Always call hooks unconditionally at the top level
+  const { createAnnouncement } = useNotifications();
   const { toast } = useToast();
 
   const getRecommendation = (errorType: string, errorMessage: string): string => {
@@ -181,34 +174,6 @@ export const useErrorReporting = () => {
       // Error reporting to IT department is disabled
       console.log('Error logged (IT reporting disabled):', errorData);
 
-      // Commented out: Database logging
-      // const docRef = await addDoc(collection(db, 'system_errors'), errorData);
-      // console.log('Error reported with ID:', docRef.id);
-
-      // Commented out: IT department notifications
-      // if (severity === 'high' || severity === 'critical') {
-      //   if (createAnnouncement) {
-      //     await createAnnouncement(
-      //       `${severity.toUpperCase()} System Error Reported`,
-      //       `${title}: ${description}`,
-      //       'System',
-      //       ['IT Management'],
-      //       severity === 'critical' ? 'High' : 'Medium'
-      //     );
-      //   }
-      // }
-
-      // Commented out: User notifications for errors
-      // if (severity === 'high' || severity === 'critical') {
-      //   toast({
-      //     title: "System Error Reported",
-      //     description: "IT department has been notified and will investigate.",
-      //     variant: "destructive"
-      //   });
-      // }
-
-      // Skip fetching errors since we're not logging them
-      // await fetchErrors();
       return 'error-logging-disabled';
     } catch (error) {
       console.error('Failed to report error:', error);
