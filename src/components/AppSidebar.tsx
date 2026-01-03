@@ -63,7 +63,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
     {
       title: "Management",
       items: [
-        { name: "Approvals", icon: CheckSquare, path: "/approvals", permission: null, requiresApprovalRole: true },
+        { name: "Approvals", icon: CheckSquare, path: "/approvals", permission: null, requiresAdmin: true },
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
         { name: "My Expenses", icon: DollarSign, path: "/my-expenses", permission: null },
@@ -94,9 +94,9 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
     return navigationItems.map(section => ({
       ...section,
       items: section.items.filter((item: any) => {
-        // Check for approval role requirement
-        if (item.requiresApprovalRole) {
-          return roleData?.canApproveRequests;
+        // Check for admin requirement
+        if (item.requiresAdmin) {
+          return isAdmin();
         }
         // If no permission required, show to everyone
         if (!item.permission) return true;
