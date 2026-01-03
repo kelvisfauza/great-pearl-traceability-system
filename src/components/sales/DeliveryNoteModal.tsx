@@ -25,7 +25,7 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
   const handlePrint = () => {
     const printContent = document.getElementById('delivery-note');
     if (printContent) {
-      const printWindow = window.open('', '_blank');
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
       if (printWindow) {
         printWindow.document.write(`
           <html>
@@ -39,9 +39,48 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
           </html>
         `);
         printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
+        
+        // Wait for content to load before printing
+        printWindow.onload = () => {
+          printWindow.focus();
+          printWindow.print();
+        };
+        
+        // Fallback for browsers where onload doesn't fire
+        setTimeout(() => {
+          printWindow.focus();
+          printWindow.print();
+        }, 250);
+      } else {
+        // Fallback: use iframe for printing if popup blocked
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'absolute';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        document.body.appendChild(iframe);
+        
+        const iframeDoc = iframe.contentWindow?.document;
+        if (iframeDoc) {
+          iframeDoc.write(`
+            <html>
+              <head>
+                <title>Delivery Note</title>
+                <style>${getStandardPrintStyles()}</style>
+              </head>
+              <body>
+                ${printContent.innerHTML}
+              </body>
+            </html>
+          `);
+          iframeDoc.close();
+          
+          setTimeout(() => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            document.body.removeChild(iframe);
+          }, 250);
+        }
       }
     }
   };
