@@ -9,8 +9,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Loader2, Coffee } from "lucide-react";
 import { format } from "date-fns";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface InventorySummary {
   id: string;
@@ -22,6 +23,9 @@ interface InventorySummary {
   batch_count: number;
   last_updated: string;
 }
+
+const isRobusta = (type: string) => type?.toLowerCase().includes('robusta');
+const isArabica = (type: string) => type?.toLowerCase().includes('arabica');
 
 const StockOverview = () => {
   const { data: inventorySummary, isLoading } = useQuery({
@@ -131,34 +135,92 @@ const StockOverview = () => {
     }
   };
 
+  // Calculate totals by coffee category
+  const availableItems = inventorySummary.filter(i => i.status === 'available');
+  const robustaKg = availableItems
+    .filter(i => isRobusta(i.coffee_type))
+    .reduce((sum, i) => sum + i.total_kilograms, 0);
+  const arabicaKg = availableItems
+    .filter(i => isArabica(i.coffee_type))
+    .reduce((sum, i) => sum + i.total_kilograms, 0);
+  const totalKg = availableItems.reduce((sum, i) => sum + i.total_kilograms, 0);
+
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Coffee Type</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Total Kilograms</TableHead>
-            <TableHead className="text-right">Batches</TableHead>
-            <TableHead>Last Updated</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {inventorySummary.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium">{item.coffee_type}</TableCell>
-              <TableCell>
-                <Badge variant={getStatusColor(item.status)}>
-                  {item.status === 'sold_out' ? 'SOLD OUT' : item.status.toUpperCase()}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-right">{item.total_kilograms.toLocaleString()}</TableCell>
-              <TableCell className="text-right">{item.batch_count}</TableCell>
-              <TableCell>{format(new Date(item.last_updated), 'PP')}</TableCell>
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-orange-500/10">
+                <Coffee className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalKg.toLocaleString()} kg</p>
+                <p className="text-xs text-muted-foreground">Total Available Stock</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <Coffee className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{robustaKg.toLocaleString()} kg</p>
+                <p className="text-xs text-muted-foreground">Robusta Stock</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <Coffee className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{arabicaKg.toLocaleString()} kg</p>
+                <p className="text-xs text-muted-foreground">Arabica Stock</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Inventory Table */}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Coffee Type</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Total Kilograms</TableHead>
+              <TableHead className="text-right">Batches</TableHead>
+              <TableHead>Last Updated</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {inventorySummary.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="font-medium">{item.coffee_type}</TableCell>
+                <TableCell>
+                  <Badge variant={getStatusColor(item.status)}>
+                    {item.status === 'sold_out' ? 'SOLD OUT' : item.status.toUpperCase()}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">{item.total_kilograms.toLocaleString()}</TableCell>
+                <TableCell className="text-right">{item.batch_count}</TableCell>
+                <TableCell>{format(new Date(item.last_updated), 'PP')}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

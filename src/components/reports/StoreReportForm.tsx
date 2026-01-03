@@ -250,7 +250,6 @@ const StoreReportForm = () => {
                 <SelectContent>
                   <SelectItem value="Arabica">Arabica</SelectItem>
                   <SelectItem value="Robusta">Robusta</SelectItem>
-                  <SelectItem value="Mixed">Mixed</SelectItem>
                 </SelectContent>
               </Select>
             </div>

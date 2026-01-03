@@ -1341,7 +1341,6 @@ const Store = () => {
                     <SelectContent>
                       <SelectItem value="arabica">Arabica</SelectItem>
                       <SelectItem value="robusta">Robusta</SelectItem>
-                      <SelectItem value="mixed">Mixed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1457,7 +1456,6 @@ const Store = () => {
                     <SelectContent>
                       <SelectItem value="arabica">Arabica</SelectItem>
                       <SelectItem value="robusta">Robusta</SelectItem>
-                      <SelectItem value="mixed">Mixed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
