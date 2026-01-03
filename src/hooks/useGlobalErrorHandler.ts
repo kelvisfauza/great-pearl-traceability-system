@@ -2,17 +2,9 @@ import { useErrorReporting } from '@/hooks/useErrorReporting';
 
 // Global error handler for catching and reporting all application errors
 export const useGlobalErrorHandler = () => {
-  // Make error reporting optional to avoid auth dependency issues
-  let reportError: any = null;
-  try {
-    const errorReporting = useErrorReporting();
-    reportError = errorReporting.reportError;
-  } catch (error) {
-    // If auth context is not available, create a fallback reporter
-    reportError = (title: string, message: string) => {
-      console.error('Error (no auth context):', { title, message });
-    };
-  }
+  // Always call the hook unconditionally
+  const errorReporting = useErrorReporting();
+  const reportError = errorReporting.reportError;
 
   // Initialize global error handlers
   const initializeErrorHandlers = () => {
