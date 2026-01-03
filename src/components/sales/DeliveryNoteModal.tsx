@@ -109,9 +109,9 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
                 <h3 className="font-semibold text-lg mb-2">From:</h3>
                 <div className="space-y-1">
                   <p className="font-medium">Great Pearl Coffee Factory</p>
-                  <p>Specialty Coffee Processing & Export</p>
+                  <p>Delivering coffee from the heart of Rwenzori.</p>
                   <p>+256781121639 / +256778536681</p>
-                  <p>greatpearlcoffee@gmail.com</p>
+                  <p>info@greatpearlcoffee.com</p>
                 </div>
               </div>
               
