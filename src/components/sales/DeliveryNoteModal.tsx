@@ -95,78 +95,121 @@ const DeliveryNoteModal: React.FC<DeliveryNoteModalProps> = ({ open, onClose, sa
           </DialogTitle>
         </DialogHeader>
         
-        <div className="delivery-note-content space-y-4 p-4 bg-white text-black overflow-y-auto flex-1" id="delivery-note">
-          <StandardPrintHeader
-            title="Coffee Delivery Note"
-            documentNumber={`DN-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 1000)}`}
-            additionalInfo={`Delivery Date: ${format(saleData.date, 'dd/MM/yyyy')}`}
-          />
-
-          {/* Customer Info */}
-          <div className="content-section">
-            <div className="grid grid-cols-2 gap-8">
-              <div>
-                <h3 className="font-semibold text-lg mb-2">From:</h3>
-                <div className="space-y-1">
-                  <p className="font-medium">Great Pearl Coffee Factory</p>
-                  <p>Delivering coffee from the heart of Rwenzori.</p>
-                  <p>+256781121639 / +256778536681</p>
-                  <p>info@greatpearlcoffee.com</p>
+        <div className="delivery-note-content bg-white text-black overflow-y-auto flex-1 text-sm" id="delivery-note">
+          {/* Modern Header */}
+          <div style={{ backgroundColor: '#0d3d1f', padding: '16px', marginBottom: '0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <img 
+                  src="/lovable-uploads/great-pearl-coffee-logo.png" 
+                  alt="Great Pearl Coffee" 
+                  style={{ height: '50px', width: 'auto' }}
+                />
+                <div style={{ color: 'white' }}>
+                  <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0' }}>GREAT PEARL COFFEE FACTORY</h1>
+                  <p style={{ fontSize: '11px', margin: '2px 0 0 0', opacity: '0.9' }}>Delivering coffee from the heart of Rwenzori</p>
                 </div>
               </div>
-              
-              <div>
-                <h3 className="font-semibold text-lg mb-2">To:</h3>
-                <div className="space-y-1">
-                  <p className="font-medium">{saleData.customer}</p>
-                  <p>Customer Address</p>
-                  <p>Delivery Date: {format(saleData.date, 'dd/MM/yyyy')}</p>
-                </div>
+              <div style={{ textAlign: 'right', color: 'white', fontSize: '11px' }}>
+                <p style={{ margin: '0' }}>+256781121639 / +256778536681</p>
+                <p style={{ margin: '2px 0 0 0' }}>info@greatpearlcoffee.com</p>
               </div>
             </div>
           </div>
 
-          {/* Delivery Details */}
-          <div className="content-section border rounded-lg p-4">
-            <h3 className="section-title">Delivery Details</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p><span className="font-medium">Coffee Type:</span> {saleData.coffeeType}</p>
-                <p><span className="font-medium">Weight:</span> {saleData.weight} kg</p>
-                {saleData.moisture && <p><span className="font-medium">Moisture Content:</span> {saleData.moisture}%</p>}
-              </div>
-              <div>
-                <p><span className="font-medium">Truck Details:</span> {saleData.truckDetails}</p>
-                <p><span className="font-medium">Driver:</span> {saleData.driverDetails}</p>
-              </div>
+          {/* Document Title Bar */}
+          <div style={{ backgroundColor: '#f8f9fa', padding: '12px 16px', borderBottom: '2px solid #0d3d1f', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0', color: '#0d3d1f', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Delivery Note
+            </h2>
+            <div style={{ textAlign: 'right', fontSize: '11px', color: '#666' }}>
+              <p style={{ margin: '0', fontWeight: '600' }}>DN-{format(new Date(), 'yyyyMMdd')}-{Math.floor(Math.random() * 1000).toString().padStart(3, '0')}</p>
+              <p style={{ margin: '2px 0 0 0' }}>Date: {format(saleData.date, 'dd/MM/yyyy')}</p>
             </div>
           </div>
 
-          {/* Quality Information */}
-          <div className="content-section border rounded-lg p-4">
-            <h3 className="section-title">Quality Information</h3>
-            <p>Coffee delivered as per agreed specifications and quality standards.</p>
-            {saleData.moisture && <p>Moisture content: {saleData.moisture}%</p>}
+          {/* From / To Section */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', borderBottom: '1px solid #e5e7eb' }}>
+            <div style={{ padding: '14px 16px', borderRight: '1px solid #e5e7eb' }}>
+              <h3 style={{ fontSize: '10px', fontWeight: '600', color: '#0d3d1f', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>From (Seller)</h3>
+              <p style={{ fontWeight: '600', margin: '0 0 4px 0', fontSize: '13px' }}>Great Pearl Coffee Factory</p>
+              <p style={{ margin: '0', color: '#666', fontSize: '11px', lineHeight: '1.4' }}>
+                Kasese, Uganda<br />
+                UCDA Licensed Exporter
+              </p>
+            </div>
+            <div style={{ padding: '14px 16px' }}>
+              <h3 style={{ fontSize: '10px', fontWeight: '600', color: '#0d3d1f', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>To (Buyer)</h3>
+              <p style={{ fontWeight: '600', margin: '0 0 4px 0', fontSize: '13px' }}>{saleData.customer || 'N/A'}</p>
+              <p style={{ margin: '0', color: '#666', fontSize: '11px' }}>Delivery Date: {format(saleData.date, 'dd/MM/yyyy')}</p>
+            </div>
+          </div>
+
+          {/* Product Details Table */}
+          <div style={{ padding: '14px 16px' }}>
+            <h3 style={{ fontSize: '10px', fontWeight: '600', color: '#0d3d1f', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.5px' }}>Product Details</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#0d3d1f', color: 'white' }}>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: '600' }}>Description</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600' }}>Quantity (Kg)</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: '600' }}>Moisture %</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                  <td style={{ padding: '10px', fontWeight: '500' }}>{saleData.coffeeType || 'N/A'}</td>
+                  <td style={{ padding: '10px', textAlign: 'center', fontWeight: '600', fontSize: '14px' }}>{saleData.weight?.toLocaleString() || '0'}</td>
+                  <td style={{ padding: '10px', textAlign: 'center' }}>{saleData.moisture || '-'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Transport Details */}
+          <div style={{ padding: '0 16px 14px 16px' }}>
+            <h3 style={{ fontSize: '10px', fontWeight: '600', color: '#0d3d1f', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.5px' }}>Transport Information</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '6px' }}>
+              <div>
+                <p style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Vehicle Registration</p>
+                <p style={{ fontWeight: '600', margin: '0', fontSize: '12px' }}>{saleData.truckDetails || 'N/A'}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Driver Name</p>
+                <p style={{ fontWeight: '600', margin: '0', fontSize: '12px' }}>{saleData.driverDetails || 'N/A'}</p>
+              </div>
+            </div>
           </div>
 
           {/* Signatures */}
-          <div className="signatures">
-            <div>
-              <p>Delivered By</p>
-              <div className="signature-line"></div>
-              <p>Signature & Date</p>
-            </div>
-            <div>
-              <p>Received By</p>
-              <div className="signature-line"></div>
-              <p>Signature & Date</p>
+          <div style={{ padding: '14px 16px', borderTop: '1px solid #e5e7eb' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '10px', color: '#666', marginBottom: '30px' }}>Dispatched By</p>
+                <div style={{ borderTop: '1px solid #333', width: '80%', margin: '0 auto' }}></div>
+                <p style={{ fontSize: '9px', color: '#666', marginTop: '4px' }}>Name / Sign / Date</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '10px', color: '#666', marginBottom: '30px' }}>Driver</p>
+                <div style={{ borderTop: '1px solid #333', width: '80%', margin: '0 auto' }}></div>
+                <p style={{ fontSize: '9px', color: '#666', marginTop: '4px' }}>Name / Sign / Date</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '10px', color: '#666', marginBottom: '30px' }}>Received By</p>
+                <div style={{ borderTop: '1px solid #333', width: '80%', margin: '0 auto' }}></div>
+                <p style={{ fontSize: '9px', color: '#666', marginTop: '4px' }}>Name / Sign / Date</p>
+              </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="footer">
-            <p>This delivery note serves as proof of delivery and should be retained for records.</p>
-            <p>Generated by Great Pearl Coffee Factory Management System</p>
+          <div style={{ backgroundColor: '#f8f9fa', padding: '10px 16px', borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
+            <p style={{ fontSize: '9px', color: '#666', margin: '0' }}>
+              This document confirms the dispatch of goods as described above. Please retain for your records.
+            </p>
+            <p style={{ fontSize: '8px', color: '#999', margin: '4px 0 0 0' }}>
+              Great Pearl Coffee Factory | www.greatpearlcoffee.com | UCDA Licensed
+            </p>
           </div>
         </div>
 
