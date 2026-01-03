@@ -33,9 +33,9 @@ const StandardPrintHeader: React.FC<StandardPrintHeaderProps> = ({
       
       {/* Company Contact Info - Centered */}
       <div className="company-details text-sm text-gray-600 space-y-1 mb-4 text-center">
-        <p>Specialty Coffee Processing & Export</p>
+        <p>Delivering coffee from the heart of Rwenzori.</p>
         <p>+256781121639 / +256778536681</p>
-        <p>www.greatpearlcoffee.com | greatpearlcoffee@gmail.com</p>
+        <p>www.greatpearlcoffee.com | info@greatpearlcoffee.com</p>
         <p>Uganda Coffee Development Authority Licensed</p>
       </div>
       
