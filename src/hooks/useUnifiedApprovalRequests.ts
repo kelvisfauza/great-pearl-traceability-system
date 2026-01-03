@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,7 +39,7 @@ export const useUnifiedApprovalRequests = () => {
   const { createAnnouncement } = useNotifications();
   const { reportDatabaseError, reportWorkflowError } = useGlobalErrorHandler();
 
-  const fetchAllRequests = async () => {
+  const fetchAllRequests = useCallback(async () => {
     try {
       setLoading(true);
       console.log('Fetching all approval requests...');
@@ -215,7 +215,7 @@ export const useUnifiedApprovalRequests = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [reportDatabaseError]);
 
   const updateRequestStatus = async (
     request: UnifiedApprovalRequest,
