@@ -39,14 +39,54 @@ const NewSaleForm = () => {
 
   const fetchAvailableInventory = async () => {
     try {
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .select('*')
-        .gt('total_kilograms', 0)
-        .eq('status', 'available');
+      // Fetch from coffee_records with statuses that indicate available inventory
+      const { data: coffeeRecords, error: coffeeError } = await supabase
+        .from('coffee_records')
+        .select('id, coffee_type, kilograms, batch_number')
+        .neq('status', 'rejected')
+        .neq('status', 'pending')
+        .gt('kilograms', 0);
 
-      if (error) throw error;
-      setInventory(data || []);
+      if (coffeeError) throw coffeeError;
+
+      // Get sales tracking to calculate what's been sold
+      const { data: salesTracking } = await supabase
+        .from('sales_inventory_tracking')
+        .select('coffee_record_id, quantity_kg');
+
+      // Calculate sold quantities per record
+      const soldByRecord: Record<string, number> = {};
+      salesTracking?.forEach(sale => {
+        soldByRecord[sale.coffee_record_id] = (soldByRecord[sale.coffee_record_id] || 0) + Number(sale.quantity_kg);
+      });
+
+      // Group by coffee type (case-insensitive) and calculate available quantities
+      const inventoryByType: Record<string, { total: number; ids: string[] }> = {};
+      
+      coffeeRecords?.forEach(record => {
+        const coffeeType = (record.coffee_type || '').toLowerCase();
+        const originalKg = Number(record.kilograms) || 0;
+        const soldKg = soldByRecord[record.id] || 0;
+        const availableKg = originalKg - soldKg;
+        
+        if (availableKg > 0) {
+          if (!inventoryByType[coffeeType]) {
+            inventoryByType[coffeeType] = { total: 0, ids: [] };
+          }
+          inventoryByType[coffeeType].total += availableKg;
+          inventoryByType[coffeeType].ids.push(record.id);
+        }
+      });
+
+      // Transform to inventory items format with proper capitalization
+      const inventoryItems: InventoryItem[] = Object.entries(inventoryByType).map(([type, data]) => ({
+        id: data.ids[0], // Use first ID as reference
+        coffee_type: type.charAt(0).toUpperCase() + type.slice(1), // Capitalize first letter
+        total_kilograms: Math.round(data.total),
+        location: 'Store 1'
+      }));
+
+      setInventory(inventoryItems);
     } catch (error) {
       console.error('Error fetching inventory:', error);
     }
