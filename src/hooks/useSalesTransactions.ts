@@ -68,13 +68,13 @@ export const useSalesTransactions = () => {
         };
       }
 
-      // Fallback: Calculate from coffee_records with status 'inventory' minus sales
+      // Fallback: Calculate from coffee_records (exclude rejected) minus sales
       const { data: coffeeRecords, error: recordsError } = await supabase
         .from('coffee_records')
         .select('id, kilograms, batch_number, created_at')
-        .eq('status', 'inventory')
+        .neq('status', 'rejected')
+        .gt('kilograms', 0)
         .ilike('coffee_type', `%${coffeeType}%`);
-      
       if (recordsError) {
         console.error('Error fetching coffee records:', recordsError);
         return { available: 0, sufficient: false };
