@@ -24,7 +24,9 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoleBasedData } from "@/hooks/useRoleBasedData";
+import { useUnifiedApprovalRequests } from "@/hooks/useUnifiedApprovalRequests";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import {
@@ -42,6 +44,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
   const location = useLocation();
   const { signOut, employee, hasPermission, isAdmin } = useAuth();
   const roleData = useRoleBasedData();
+  const { requests: pendingApprovals } = useUnifiedApprovalRequests();
   const [openSections, setOpenSections] = useState<string[]>(["Operations", "Management", "System"]);
 
   const navigationItems = [
@@ -172,6 +175,8 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             <CollapsibleContent className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = location.pathname === item.path;
+                const isApprovals = item.name === "Approvals";
+                const approvalCount = pendingApprovals?.length || 0;
                 return (
                   <Link
                     key={item.path}
@@ -186,7 +191,16 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
                     title={isCollapsed ? item.name : undefined}
                   >
                     <item.icon className="h-4 w-4 flex-shrink-0" />
-                    {!isCollapsed && <span>{item.name}</span>}
+                    {!isCollapsed && (
+                      <span className="flex-1 flex items-center justify-between">
+                        {item.name}
+                        {isApprovals && approvalCount > 0 && (
+                          <Badge variant="destructive" className="ml-2 h-5 min-w-5 px-1.5 text-xs">
+                            {approvalCount > 99 ? '99+' : approvalCount}
+                          </Badge>
+                        )}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -195,12 +209,14 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
             {/* Show icons only when collapsed */}
             {isCollapsed && section.items.map((item) => {
               const isActive = location.pathname === item.path;
+              const isApprovals = item.name === "Approvals";
+              const approvalCount = pendingApprovals?.length || 0;
               return (
                 <Link
                   key={item.path}
                   to={item.path}
                   className={cn(
-                    "flex items-center justify-center p-2.5 rounded-lg transition-all my-0.5",
+                    "flex items-center justify-center p-2.5 rounded-lg transition-all my-0.5 relative",
                     isActive 
                       ? "bg-primary text-primary-foreground" 
                       : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
@@ -208,6 +224,11 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
                   title={item.name}
                 >
                   <item.icon className="h-4 w-4" />
+                  {isApprovals && approvalCount > 0 && (
+                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px]">
+                      {approvalCount > 99 ? '99+' : approvalCount}
+                    </Badge>
+                  )}
                 </Link>
               );
             })}
