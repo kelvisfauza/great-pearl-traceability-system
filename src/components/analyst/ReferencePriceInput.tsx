@@ -133,9 +133,10 @@ const ReferencePriceInput: React.FC = () => {
 
       const staffList = employees?.filter(e => e.phone) || [];
       
-      // Add additional recipient (external contact)
+      // Add additional recipients (external contacts)
       const additionalRecipients = [
-        { phone: '0772272455', name: 'External Contact' }
+        { phone: '0772272455', name: 'External Contact' },
+        { phone: '0777510755', name: 'External Contact 2' }
       ];
       
       const allRecipients = [...staffList.map(e => ({ phone: e.phone!, name: e.name })), ...additionalRecipients];
