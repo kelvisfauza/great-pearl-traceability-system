@@ -33,12 +33,12 @@ const ApprovalCenter = () => {
       // Only refresh if not currently processing an action
       if (!processingId) {
         // Silent background refresh - don't show loading state
-        fetchRequests();
+        fetchRequests(true);
       }
     }, POLLING_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [processingId]);
+  }, [processingId, fetchRequests]);
 
   const handleApproval = async (request: UnifiedApprovalRequest) => {
     setProcessingId(request.id);
