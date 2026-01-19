@@ -39,9 +39,11 @@ export const useUnifiedApprovalRequests = () => {
   const { createAnnouncement } = useNotifications();
   const { reportDatabaseError, reportWorkflowError } = useGlobalErrorHandler();
 
-  const fetchAllRequests = useCallback(async () => {
+  const fetchAllRequests = useCallback(async (silent: boolean = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       console.log('Fetching all approval requests...');
       
       const allRequests: UnifiedApprovalRequest[] = [];
@@ -213,7 +215,9 @@ export const useUnifiedApprovalRequests = () => {
       console.error('Error fetching unified approval requests:', error);
       setRequests([]);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [reportDatabaseError]);
 
