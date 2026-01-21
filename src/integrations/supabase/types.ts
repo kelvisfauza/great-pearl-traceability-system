@@ -2780,6 +2780,138 @@ export type Database = {
         }
         Relationships: []
       }
+      market_intelligence_reports: {
+        Row: {
+          analyst_name: string
+          approved_at: string | null
+          buyer_aggressiveness: string | null
+          buyer_demand_level: string | null
+          closing_price: number | null
+          coffee_type: string
+          compliance_risks: string | null
+          created_at: string
+          factory_intake_volume: number | null
+          global_supply_trend: string | null
+          highest_price: number | null
+          id: string
+          key_market_drivers: string[] | null
+          lowest_price: number | null
+          market_direction: string
+          market_momentum: string | null
+          market_reference: string
+          market_risks: string | null
+          medium_term_outlook: string | null
+          monthly_comparison: string | null
+          narrative_summary: string | null
+          opening_price: number | null
+          operational_risks: string | null
+          outlook_supporting_reasons: string | null
+          prepared_by: string
+          price_change_percent: number | null
+          price_movement_interpretation: string | null
+          recommended_action: string | null
+          recommended_price_range_max: number | null
+          recommended_price_range_min: number | null
+          regional_supply_trend: string | null
+          report_date: string
+          reporting_period: string
+          reviewed_by: string | null
+          risk_level: string | null
+          selling_pressure: string | null
+          short_term_outlook: string | null
+          updated_at: string
+          volume_strategy: string | null
+          weekly_comparison: string | null
+          yesterday_comparison: string | null
+        }
+        Insert: {
+          analyst_name: string
+          approved_at?: string | null
+          buyer_aggressiveness?: string | null
+          buyer_demand_level?: string | null
+          closing_price?: number | null
+          coffee_type: string
+          compliance_risks?: string | null
+          created_at?: string
+          factory_intake_volume?: number | null
+          global_supply_trend?: string | null
+          highest_price?: number | null
+          id?: string
+          key_market_drivers?: string[] | null
+          lowest_price?: number | null
+          market_direction?: string
+          market_momentum?: string | null
+          market_reference?: string
+          market_risks?: string | null
+          medium_term_outlook?: string | null
+          monthly_comparison?: string | null
+          narrative_summary?: string | null
+          opening_price?: number | null
+          operational_risks?: string | null
+          outlook_supporting_reasons?: string | null
+          prepared_by: string
+          price_change_percent?: number | null
+          price_movement_interpretation?: string | null
+          recommended_action?: string | null
+          recommended_price_range_max?: number | null
+          recommended_price_range_min?: number | null
+          regional_supply_trend?: string | null
+          report_date: string
+          reporting_period?: string
+          reviewed_by?: string | null
+          risk_level?: string | null
+          selling_pressure?: string | null
+          short_term_outlook?: string | null
+          updated_at?: string
+          volume_strategy?: string | null
+          weekly_comparison?: string | null
+          yesterday_comparison?: string | null
+        }
+        Update: {
+          analyst_name?: string
+          approved_at?: string | null
+          buyer_aggressiveness?: string | null
+          buyer_demand_level?: string | null
+          closing_price?: number | null
+          coffee_type?: string
+          compliance_risks?: string | null
+          created_at?: string
+          factory_intake_volume?: number | null
+          global_supply_trend?: string | null
+          highest_price?: number | null
+          id?: string
+          key_market_drivers?: string[] | null
+          lowest_price?: number | null
+          market_direction?: string
+          market_momentum?: string | null
+          market_reference?: string
+          market_risks?: string | null
+          medium_term_outlook?: string | null
+          monthly_comparison?: string | null
+          narrative_summary?: string | null
+          opening_price?: number | null
+          operational_risks?: string | null
+          outlook_supporting_reasons?: string | null
+          prepared_by?: string
+          price_change_percent?: number | null
+          price_movement_interpretation?: string | null
+          recommended_action?: string | null
+          recommended_price_range_max?: number | null
+          recommended_price_range_min?: number | null
+          regional_supply_trend?: string | null
+          report_date?: string
+          reporting_period?: string
+          reviewed_by?: string | null
+          risk_level?: string | null
+          selling_pressure?: string | null
+          short_term_outlook?: string | null
+          updated_at?: string
+          volume_strategy?: string | null
+          weekly_comparison?: string | null
+          yesterday_comparison?: string | null
+        }
+        Relationships: []
+      }
       market_prices: {
         Row: {
           arabica_buying_price: number | null

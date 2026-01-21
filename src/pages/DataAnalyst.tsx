@@ -11,6 +11,7 @@ import PriceOverview from '@/components/analyst/PriceOverview';
 import PriceTrendsChart from '@/components/analyst/PriceTrendsChart';
 import DailyMarketReport from '@/components/analyst/DailyMarketReport';
 import AnalystDailyReminders from '@/components/analyst/AnalystDailyReminders';
+import MarketIntelligencePanel from '@/components/analyst/MarketIntelligencePanel';
 
 const DataAnalyst = () => {
   const [activeTab, setActiveTab] = useState('price-overview');
@@ -20,7 +21,7 @@ const DataAnalyst = () => {
       {/* Daily reminders for data analyst */}
       <AnalystDailyReminders 
         onNavigateToSetPrices={() => setActiveTab('set-prices')}
-        onNavigateToDailyReports={() => setActiveTab('daily-reports')}
+        onNavigateToDailyReports={() => setActiveTab('market-intel')}
       />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
@@ -28,6 +29,7 @@ const DataAnalyst = () => {
           <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 bg-muted/50 p-1 rounded-xl gap-1">
             <TabsTrigger value="price-overview" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Overview</TabsTrigger>
             <TabsTrigger value="set-prices" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Set Prices</TabsTrigger>
+            <TabsTrigger value="market-intel" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Market Intel</TabsTrigger>
             <TabsTrigger value="price-trends" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Trends</TabsTrigger>
             <TabsTrigger value="market-monitor" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Market</TabsTrigger>
             <TabsTrigger value="daily-reports" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Reports</TabsTrigger>
@@ -42,6 +44,10 @@ const DataAnalyst = () => {
 
         <TabsContent value="set-prices">
           <ReferencePriceInput />
+        </TabsContent>
+
+        <TabsContent value="market-intel">
+          <MarketIntelligencePanel />
         </TabsContent>
 
         <TabsContent value="price-trends">
