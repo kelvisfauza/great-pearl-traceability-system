@@ -5,7 +5,7 @@ const Inventory = () => {
   return (
     <Layout 
       title="Inventory Management" 
-      subtitle="Track 20,000kg batches with FIFO sales tracking"
+      subtitle="Track 5,000kg batches with FIFO sales tracking"
     >
       <InventoryBatchView />
     </Layout>

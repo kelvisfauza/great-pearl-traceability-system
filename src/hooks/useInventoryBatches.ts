@@ -110,7 +110,7 @@ export const useInventoryBatches = () => {
       .eq('coffee_type', coffeeType)
       .eq('batch_date', today)
       .in('status', ['filling', 'active'])
-      .lt('total_kilograms', 20000)
+      .lt('total_kilograms', 5000)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
@@ -168,7 +168,7 @@ export const useInventoryBatches = () => {
 
       // Update batch totals
       const newTotal = batch.total_kilograms + kilograms;
-      const newStatus = newTotal >= 20000 ? 'active' : 'filling';
+      const newStatus = newTotal >= 5000 ? 'active' : 'filling';
 
       const { error: updateError } = await supabase
         .from('inventory_batches')
