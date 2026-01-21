@@ -61,6 +61,9 @@ export interface MarketIntelligenceReport {
   reviewed_by?: string;
   approved_at?: string;
   
+  // Screenshot
+  market_screenshot_url?: string;
+  
   created_at?: string;
   updated_at?: string;
 }
