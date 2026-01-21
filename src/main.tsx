@@ -32,7 +32,13 @@ if (!rootElement) {
   throw new Error("Root element not found");
 }
 
-const root = createRoot(rootElement);
+// Prevent multiple root creation during HMR
+let root = (window as any).__REACT_ROOT__;
+if (!root) {
+  root = createRoot(rootElement);
+  (window as any).__REACT_ROOT__ = root;
+}
+
 root.render(
   <AppWithErrorHandling />
 );
