@@ -119,7 +119,7 @@ export const migrateInventoryToBatches = async (): Promise<{
 
       for (const record of records) {
         // Check if we need a new batch
-        if (!currentBatchId || currentBatchKg >= 20000) {
+        if (!currentBatchId || currentBatchKg >= 5000) {
           // Create new batch
           const batchCode = `${coffeeType.substring(0, 3).toUpperCase()}-LEGACY-${String(batchNumber).padStart(3, '0')}`;
           
@@ -128,7 +128,7 @@ export const migrateInventoryToBatches = async (): Promise<{
             .insert({
               batch_code: batchCode,
               coffee_type: coffeeType,
-              target_capacity: 20000,
+              target_capacity: 5000,
               total_kilograms: 0,
               remaining_kilograms: 0,
               status: 'filling',
@@ -171,7 +171,7 @@ export const migrateInventoryToBatches = async (): Promise<{
           .update({
             total_kilograms: currentBatchKg,
             remaining_kilograms: currentBatchKg,
-            status: currentBatchKg >= 20000 ? 'active' : 'filling'
+            status: currentBatchKg >= 5000 ? 'active' : 'filling'
           })
           .eq('id', currentBatchId);
       }
