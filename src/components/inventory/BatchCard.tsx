@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Package, TrendingDown, Users, Calendar } from "lucide-react";
+import { ChevronDown, Package, TrendingDown, Users, Calendar, CheckCircle2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { BatchWithDetails } from "@/hooks/useInventoryBatches";
 import { useState } from "react";
@@ -15,14 +15,35 @@ const BatchCard = ({ batch }: BatchCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
   
   const percentRemaining = (batch.remaining_kilograms / batch.target_capacity) * 100;
-  const percentSold = ((batch.total_kilograms - batch.remaining_kilograms) / batch.total_kilograms) * 100;
+  const percentSold = batch.total_kilograms > 0 
+    ? ((batch.total_kilograms - batch.remaining_kilograms) / batch.total_kilograms) * 100 
+    : 0;
+  const soldKg = batch.total_kilograms - batch.remaining_kilograms;
+  const isDepleted = batch.remaining_kilograms === 0 || batch.status === 'sold_out';
+  const isLowStock = percentRemaining < 20 && !isDepleted;
 
   const getStatusBadge = () => {
+    if (isDepleted) {
+      return (
+        <Badge variant="secondary" className="bg-red-500/20 text-red-400 border-red-500/30 gap-1">
+          <CheckCircle2 className="h-3 w-3" />
+          Depleted
+        </Badge>
+      );
+    }
+    if (isLowStock) {
+      return (
+        <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 gap-1">
+          <AlertCircle className="h-3 w-3" />
+          Low Stock
+        </Badge>
+      );
+    }
     switch (batch.status) {
       case 'filling':
-        return <Badge variant="secondary" className="bg-blue-500/20 text-blue-400 border-blue-500/30">Filling</Badge>;
+        return <Badge variant="secondary" className="bg-blue-500/20 text-blue-400 border-blue-500/30">Filling ({batch.total_kilograms.toLocaleString()}/5,000 kg)</Badge>;
       case 'active':
-        return <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30">Active</Badge>;
+        return <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30">Available</Badge>;
       case 'selling':
         return <Badge variant="secondary" className="bg-orange-500/20 text-orange-400 border-orange-500/30">Selling</Badge>;
       case 'sold_out':
@@ -34,12 +55,15 @@ const BatchCard = ({ batch }: BatchCardProps) => {
 
   const getCoffeeTypeBadge = () => {
     const isArabica = batch.coffee_type.toLowerCase().includes('arabica');
+    const isRobusta = batch.coffee_type.toLowerCase().includes('robusta');
     return (
       <Badge 
         variant="outline" 
         className={isArabica 
           ? "bg-amber-500/10 text-amber-400 border-amber-500/30" 
-          : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+          : isRobusta
+          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+          : "bg-purple-500/10 text-purple-400 border-purple-500/30"
         }
       >
         {batch.coffee_type}
@@ -48,14 +72,22 @@ const BatchCard = ({ batch }: BatchCardProps) => {
   };
 
   return (
-    <Card className={`transition-all duration-200 ${batch.status === 'sold_out' ? 'opacity-60' : ''}`}>
+    <Card className={`transition-all duration-200 ${isDepleted ? 'opacity-60 border-red-500/30' : isLowStock ? 'border-yellow-500/30' : ''}`}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${batch.status === 'sold_out' ? 'bg-muted' : 'bg-primary/10'}`}>
-                  <Package className={`h-5 w-5 ${batch.status === 'sold_out' ? 'text-muted-foreground' : 'text-primary'}`} />
+                <div className={`p-2 rounded-lg ${
+                  isDepleted ? 'bg-red-500/10' : 
+                  isLowStock ? 'bg-yellow-500/10' : 
+                  'bg-primary/10'
+                }`}>
+                  <Package className={`h-5 w-5 ${
+                    isDepleted ? 'text-red-400' : 
+                    isLowStock ? 'text-yellow-400' : 
+                    'text-primary'
+                  }`} />
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold">{batch.batch_code}</CardTitle>
@@ -68,26 +100,54 @@ const BatchCard = ({ batch }: BatchCardProps) => {
               
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className="text-lg font-bold">
-                    {batch.remaining_kilograms.toLocaleString()} kg
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    of {batch.target_capacity.toLocaleString()} kg capacity
-                  </p>
+                  <div className="flex items-center gap-2 justify-end">
+                    <p className={`text-lg font-bold ${isDepleted ? 'text-red-400' : isLowStock ? 'text-yellow-400' : 'text-green-400'}`}>
+                      {batch.remaining_kilograms.toLocaleString()} kg
+                    </p>
+                    <span className="text-muted-foreground text-sm">remaining</span>
+                  </div>
+                  {soldKg > 0 && (
+                    <p className="text-xs text-red-400">
+                      {soldKg.toLocaleString()} kg sold
+                    </p>
+                  )}
                 </div>
                 <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
               </div>
             </div>
             
-            <div className="mt-3">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Remaining: {percentRemaining.toFixed(1)}%</span>
-                <span>Sold: {percentSold.toFixed(1)}%</span>
+            <div className="mt-3 space-y-2">
+              {/* Remaining bar (green) */}
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-green-400">Remaining: {batch.remaining_kilograms.toLocaleString()} kg ({percentRemaining.toFixed(0)}%)</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all ${
+                      isDepleted ? 'bg-red-500' : 
+                      isLowStock ? 'bg-yellow-500' : 
+                      'bg-green-500'
+                    }`}
+                    style={{ width: `${Math.max(percentRemaining, 0)}%` }}
+                  />
+                </div>
               </div>
-              <Progress 
-                value={percentRemaining} 
-                className="h-2"
-              />
+              
+              {/* Sold bar (red) - only show if something was sold */}
+              {soldKg > 0 && (
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-red-400">Sold: {soldKg.toLocaleString()} kg ({percentSold.toFixed(0)}%)</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-red-500 transition-all"
+                      style={{ width: `${Math.max(percentSold, 0)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </CardHeader>
         </CollapsibleTrigger>
