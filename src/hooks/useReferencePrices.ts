@@ -44,16 +44,23 @@ export const useReferencePrices = () => {
   const fetchPrices = useCallback(async () => {
     try {
       setLoading(true);
+
+      // If auth isn't initialized yet, RLS may return 0 rows; we'll refetch on SIGNED_IN.
+      const { data: { session } } = await supabase.auth.getSession();
+
       const { data, error } = await supabase
         .from('market_prices')
         .select('*')
         .eq('price_type', 'reference_prices')
-        .single();
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching reference prices:', error);
         return;
       }
+
+      // When not signed in yet, market_prices is not readable (RLS), so data can be null.
+      if (!session && !data) return;
       
       if (data) {
         setPrices({
@@ -114,7 +121,7 @@ export const useReferencePrices = () => {
         .from('market_prices')
         .select('id')
         .eq('price_type', 'reference_prices')
-        .single();
+        .maybeSingle();
       
       console.log('💾 Existing record:', existing, 'Select error:', selectError);
       
@@ -167,6 +174,12 @@ export const useReferencePrices = () => {
   useEffect(() => {
     fetchPrices();
 
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        fetchPrices();
+      }
+    });
+
     const channel = supabase
       .channel('market_prices_changes')
       .on(
@@ -204,6 +217,7 @@ export const useReferencePrices = () => {
 
     return () => {
       supabase.removeChannel(channel);
+      authSubscription.unsubscribe();
     };
   }, [fetchPrices]);
 
