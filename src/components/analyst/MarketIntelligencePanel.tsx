@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, Coffee, TrendingUp, TrendingDown, Minus, CheckCircle, 
-  Clock, AlertTriangle, Eye, Plus, History, BarChart3
+  Clock, AlertTriangle, Eye, Plus, History, BarChart3, Image
 } from 'lucide-react';
 import { useMarketIntelligenceReports, MarketIntelligenceReport } from '@/hooks/useMarketIntelligenceReports';
 import MarketIntelligenceForm from './MarketIntelligenceForm';
@@ -224,6 +224,24 @@ const MarketIntelligencePanel: React.FC = () => {
           <div>
             <h4 className="font-semibold mb-2">Market Summary</h4>
             <p className="text-muted-foreground">{report.narrative_summary}</p>
+          </div>
+        )}
+
+        {report.market_screenshot_url && (
+          <div>
+            <h4 className="font-semibold mb-2 flex items-center gap-2">
+              <Image className="h-4 w-4" />
+              Market Overview Screenshot
+            </h4>
+            <div className="border rounded-lg overflow-hidden bg-muted/50">
+              <img 
+                src={report.market_screenshot_url} 
+                alt="Market overview screenshot" 
+                className="w-full max-h-96 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => window.open(report.market_screenshot_url, '_blank')}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Click to view full size</p>
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,10 +10,12 @@ import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { 
   TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, 
-  FileText, BarChart3, Target, Shield, Send, X, Plus
+  FileText, BarChart3, Target, Shield, Send, X, Plus, Upload, Image, Trash2
 } from 'lucide-react';
 import { MarketIntelligenceReport, getDefaultReport } from '@/hooks/useMarketIntelligenceReports';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface MarketIntelligenceFormProps {
   coffeeType: 'robusta' | 'drugar';
@@ -42,13 +44,19 @@ const MarketIntelligenceForm: React.FC<MarketIntelligenceFormProps> = ({
   onCancel
 }) => {
   const { employee } = useAuth();
+  const { toast } = useToast();
   const analystName = employee?.name || 'Unknown Analyst';
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [report, setReport] = useState<MarketIntelligenceReport>(
     existingReport || getDefaultReport(coffeeType, analystName)
   );
   const [submitting, setSubmitting] = useState(false);
   const [customDriver, setCustomDriver] = useState('');
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(
+    existingReport?.market_screenshot_url || null
+  );
 
   const updateField = <K extends keyof MarketIntelligenceReport>(
     field: K, 
@@ -71,6 +79,75 @@ const MarketIntelligenceForm: React.FC<MarketIntelligenceFormProps> = ({
       updateField('key_market_drivers', [...report.key_market_drivers, customDriver.trim()]);
       setCustomDriver('');
     }
+  };
+
+  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (PNG, JPG, etc.)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setUploadingScreenshot(true);
+
+    try {
+      const timestamp = Date.now();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${coffeeType}-${report.report_date}-${timestamp}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('market-screenshots')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('market-screenshots')
+        .getPublicUrl(filePath);
+
+      setScreenshotPreview(publicUrl);
+      updateField('market_screenshot_url', publicUrl);
+
+      toast({
+        title: "Screenshot uploaded",
+        description: "Market overview screenshot attached successfully",
+      });
+    } catch (error) {
+      console.error('Error uploading screenshot:', error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload screenshot. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingScreenshot(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveScreenshot = () => {
+    setScreenshotPreview(null);
+    updateField('market_screenshot_url', undefined);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -236,6 +313,76 @@ const MarketIntelligenceForm: React.FC<MarketIntelligenceFormProps> = ({
                   onChange={(e) => updateField('narrative_summary', e.target.value)}
                   rows={4}
                 />
+              </div>
+
+              {/* Market Screenshot Upload */}
+              <Separator className="my-4" />
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <Image className="h-4 w-4" />
+                  Market Overview Screenshot
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Attach a screenshot of the market chart or trading platform for reference
+                </p>
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleScreenshotUpload}
+                  className="hidden"
+                />
+
+                {screenshotPreview ? (
+                  <div className="space-y-3">
+                    <div className="relative rounded-lg overflow-hidden border bg-muted">
+                      <img 
+                        src={screenshotPreview} 
+                        alt="Market overview" 
+                        className="w-full max-h-64 object-contain"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={handleRemoveScreenshot}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Replace Screenshot
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingScreenshot}
+                    className="w-full h-24 border-dashed"
+                  >
+                    {uploadingScreenshot ? (
+                      <span className="flex items-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        Uploading...
+                      </span>
+                    ) : (
+                      <span className="flex flex-col items-center gap-2">
+                        <Upload className="h-6 w-6" />
+                        <span>Click to upload market screenshot</span>
+                      </span>
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           </AccordionContent>

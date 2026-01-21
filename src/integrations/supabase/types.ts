@@ -2800,6 +2800,7 @@ export type Database = {
           market_momentum: string | null
           market_reference: string
           market_risks: string | null
+          market_screenshot_url: string | null
           medium_term_outlook: string | null
           monthly_comparison: string | null
           narrative_summary: string | null
@@ -2843,6 +2844,7 @@ export type Database = {
           market_momentum?: string | null
           market_reference?: string
           market_risks?: string | null
+          market_screenshot_url?: string | null
           medium_term_outlook?: string | null
           monthly_comparison?: string | null
           narrative_summary?: string | null
@@ -2886,6 +2888,7 @@ export type Database = {
           market_momentum?: string | null
           market_reference?: string
           market_risks?: string | null
+          market_screenshot_url?: string | null
           medium_term_outlook?: string | null
           monthly_comparison?: string | null
           narrative_summary?: string | null
