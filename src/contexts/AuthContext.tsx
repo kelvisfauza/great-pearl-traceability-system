@@ -243,6 +243,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error('No user returned from authentication');
       }
 
+      // Check if the employee account is disabled BEFORE allowing login
+      const { data: employeeData, error: empError } = await supabase
+        .from('employees')
+        .select('disabled, status, name')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+
+      if (empError) {
+        console.error('Error checking employee status:', empError);
+      }
+
+      // Block login if account is disabled or status is not active
+      if (employeeData?.disabled === true || 
+          (employeeData?.status && employeeData.status.toLowerCase() !== 'active')) {
+        // Sign out immediately since we already authenticated
+        await supabase.auth.signOut();
+        
+        await securityService.logFailedLogin(
+          normalizedEmail,
+          'Account is disabled or inactive'
+        );
+        
+        toast({
+          title: "Account Disabled",
+          description: "Your account has been disabled. Please contact an administrator.",
+          variant: "destructive"
+        });
+        
+        throw new Error('Account is disabled');
+      }
+
       // Successful login - could log this as well for audit trail
       console.log('✅ Successful login for:', normalizedEmail);
 
