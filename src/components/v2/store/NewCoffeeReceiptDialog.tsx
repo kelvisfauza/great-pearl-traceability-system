@@ -71,7 +71,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
       const batchNumber = generateBatchNumber();
       const recordId = crypto.randomUUID();
       
-      // 1. Insert coffee record
+      // 1. Insert coffee record - set to 'inventory' for immediate availability
       const { error: coffeeError } = await supabase
         .from('coffee_records')
         .insert({
@@ -83,7 +83,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
           kilograms: data.kilograms,
           bags: data.bags,
           batch_number: batchNumber,
-          status: 'pending',
+          status: 'inventory',
           created_by: employee?.email || ''
         });
       
