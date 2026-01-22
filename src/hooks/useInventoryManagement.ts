@@ -29,10 +29,11 @@ export const useInventoryManagement = () => {
     try {
       setLoading(true);
       
-      // Fetch coffee_records from Supabase (original deliveries)
+      // Fetch coffee_records from Supabase - only those in inventory (passed quality assessment)
       const { data: coffeeRecords, error: coffeeError } = await supabase
         .from('coffee_records')
         .select('*')
+        .eq('status', 'inventory')
         .order('created_at', { ascending: false });
 
       if (coffeeError) {
