@@ -413,6 +413,25 @@ export const useQualityControl = () => {
         console.log(`✅ Coffee record status updated to "${newStatus}" in Supabase`);
       }
 
+      // V1 Inventory page (/inventory) reads from inventory_batches, not coffee_records directly.
+      // So when a lot is approved into inventory, also add it into the FIFO batch system.
+      if (!isRejected && newStatus === 'inventory') {
+        try {
+          const { addCoffeeRecordToBatches } = await import('@/utils/syncInventoryToBatches');
+          await addCoffeeRecordToBatches({
+            id: coffeeRecordId,
+            coffee_type: coffeeRecord.coffee_type,
+            kilograms: Number(coffeeRecord.kilograms || 0),
+            supplier_name: coffeeRecord.supplier_name,
+            date: coffeeRecord.date
+          });
+          console.log('✅ Added approved lot to inventory batch system');
+        } catch (batchError) {
+          console.error('Failed to add approved lot to inventory batch system:', batchError);
+          // Don't fail the approval flow if batch sync fails
+        }
+      }
+
       
       // Only create payment record and send notifications if NOT rejected
       if (!isRejected) {
