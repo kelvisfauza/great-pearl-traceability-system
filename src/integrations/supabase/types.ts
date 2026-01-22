@@ -1438,6 +1438,8 @@ export type Database = {
           created_at: string
           department: string
           disabled: boolean | null
+          disabled_at: string | null
+          disabled_reason: string | null
           email: string
           emergency_contact: string | null
           employee_id: string | null
@@ -1464,6 +1466,8 @@ export type Database = {
           created_at?: string
           department: string
           disabled?: boolean | null
+          disabled_at?: string | null
+          disabled_reason?: string | null
           email: string
           emergency_contact?: string | null
           employee_id?: string | null
@@ -1490,6 +1494,8 @@ export type Database = {
           created_at?: string
           department?: string
           disabled?: boolean | null
+          disabled_at?: string | null
+          disabled_reason?: string | null
           email?: string
           emergency_contact?: string | null
           employee_id?: string | null
