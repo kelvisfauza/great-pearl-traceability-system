@@ -354,7 +354,7 @@ export const useQualityControl = () => {
         reject_outturn_price: Boolean(assessment.reject_outturn_price),
         reject_final: isRejected,
         suggested_price: isRejected ? 0 : finalPrice, // Rejected batches have 0 price
-        status: isRejected ? 'rejected' : 'submitted_to_finance', // Rejected batches go to rejected status
+        status: isRejected ? 'rejected' : 'approved', // V2: approved status for inventory
         comments: assessment.comments || null,
         date_assessed: assessment.date_assessed || new Date().toISOString().split('T')[0],
         assessed_by: assessment.assessed_by // This should now contain the actual user's name from the form
@@ -394,7 +394,8 @@ export const useQualityControl = () => {
       console.log('Quality assessment saved successfully:', newAssessment);
       
       // Determine the new status based on rejection
-      const newStatus = isRejected ? 'rejected' : 'submitted_to_finance';
+      // V2 workflow: approved goes directly to inventory (Finance removed)
+      const newStatus = isRejected ? 'rejected' : 'inventory';
       
       // Update coffee_records status in Supabase
       console.log(`Updating coffee record status to "${newStatus}" in Supabase...`);
