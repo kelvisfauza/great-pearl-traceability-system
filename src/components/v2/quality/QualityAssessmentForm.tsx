@@ -76,10 +76,10 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
 
       if (assessError) throw assessError;
 
-      // 2. Update coffee_records status
+      // 2. Update coffee_records status - go directly to inventory (Finance removed from V2)
       const { error: updateError } = await supabase
         .from('coffee_records')
-        .update({ status: 'APPROVED_FOR_FINANCE' })
+        .update({ status: 'inventory' })
         .eq('id', lot.id);
 
       if (updateError) throw updateError;
@@ -115,7 +115,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Lot approved and sent to finance"
+        description: "Lot approved and added to inventory"
       });
       queryClient.invalidateQueries({ queryKey: ['v2-pending-quality'] });
       navigate('/v2/quality');
