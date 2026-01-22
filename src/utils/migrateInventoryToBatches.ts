@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { syncInventoryToBatchesSince } from "@/utils/syncInventoryToBatches";
 
 interface CoffeeRecordWithRemaining {
   id: string;
@@ -18,19 +19,25 @@ export const migrateInventoryToBatches = async (): Promise<{
   totalKgMigrated: number;
 }> => {
   try {
-    // Check if migration has already been done
+    // If batches already exist, we still need to sync any NEW/UNLINKED inventory records
+    // (the /inventory page reads inventory_batches, not coffee_records directly).
     const { data: existingBatches, error: checkError } = await supabase
-      .from('inventory_batches')
-      .select('id')
+      .from("inventory_batches")
+      .select("id")
       .limit(1);
 
+    if (checkError) throw checkError;
+
     if (existingBatches && existingBatches.length > 0) {
+      const sync = await syncInventoryToBatchesSince("1970-01-01T00:00:00.000Z");
       return {
         success: true,
-        message: 'Migration already completed - batches exist',
+        message: sync.added > 0
+          ? `Synced ${sync.totalKg.toLocaleString()} kg from ${sync.added} record(s) into existing batches`
+          : "Inventory batches already up to date",
         batchesCreated: 0,
-        recordsProcessed: 0,
-        totalKgMigrated: 0
+        recordsProcessed: sync.processed,
+        totalKgMigrated: sync.totalKg,
       };
     }
 
