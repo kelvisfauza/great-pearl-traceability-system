@@ -83,7 +83,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
           kilograms: data.kilograms,
           bags: data.bags,
           batch_number: batchNumber,
-          status: 'inventory',
+          status: 'pending', // Pending quality assessment before inventory
           created_by: employee?.email || ''
         });
       
