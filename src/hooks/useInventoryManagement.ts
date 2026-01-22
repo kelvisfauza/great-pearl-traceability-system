@@ -80,35 +80,40 @@ export const useInventoryManagement = () => {
         
         console.log('✅ Available inventory (after sales):', transformedInventory.length, 'items');
         setInventoryItems(transformedInventory);
+        
+        // Calculate total occupancy from AVAILABLE quantities only
+        const totalAvailableKg = transformedInventory.reduce((sum, item) => sum + item.totalKilograms, 0);
+        console.log('📊 Total available kilograms (original - sold):', totalAvailableKg);
+
+        // Create or update storage locations
+        const defaultStorageLocations: StorageLocation[] = [
+          {
+            id: '1',
+            name: 'Store 1',
+            capacity: 30000,
+            currentOccupancy: totalAvailableKg,
+            occupancyPercentage: Math.round((totalAvailableKg / 30000) * 100)
+          },
+          {
+            id: '2',
+            name: 'Store 2',
+            capacity: 40000,
+            currentOccupancy: 0,
+            occupancyPercentage: 0
+          }
+        ];
+        
+        setStorageLocations(defaultStorageLocations);
       } else {
         console.log('No coffee records found in Supabase');
         setInventoryItems([]);
+        
+        // Set empty storage locations when no records
+        setStorageLocations([
+          { id: '1', name: 'Store 1', capacity: 30000, currentOccupancy: 0, occupancyPercentage: 0 },
+          { id: '2', name: 'Store 2', capacity: 40000, currentOccupancy: 0, occupancyPercentage: 0 }
+        ]);
       }
-
-      // Calculate total occupancy from AVAILABLE quantities only
-      const totalAvailableKg = inventoryItems.reduce((sum, item) => sum + item.totalKilograms, 0);
-
-      console.log('📊 Total available kilograms (original - sold):', totalAvailableKg);
-
-      // Create or update storage locations
-      const defaultStorageLocations: StorageLocation[] = [
-        {
-          id: '1',
-          name: 'Store 1',
-          capacity: 30000,
-          currentOccupancy: totalAvailableKg,
-          occupancyPercentage: Math.round((totalAvailableKg / 30000) * 100)
-        },
-        {
-          id: '2',
-          name: 'Store 2',
-          capacity: 40000,
-          currentOccupancy: 0,
-          occupancyPercentage: 0
-        }
-      ];
-      
-      setStorageLocations(defaultStorageLocations);
       
     } catch (error) {
       console.error('Error fetching inventory data from Supabase:', error);
