@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useUnifiedEmployees } from '@/hooks/useUnifiedEmployees';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Search, UserX, UserCheck, Shield, Send } from 'lucide-react';
+import { Search, UserX, UserCheck, Shield, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import SalaryPaymentMessageDialog from '@/components/hr/SalaryPaymentMessageDialog';
 
@@ -16,7 +19,10 @@ const AccountStatusManager = () => {
   const [updating, setUpdating] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [showMessageDialog, setShowMessageDialog] = useState(false);
-  const { employees, loading } = useUnifiedEmployees();
+  const [showDisableDialog, setShowDisableDialog] = useState(false);
+  const [disableReason, setDisableReason] = useState('');
+  const [employeeToDisable, setEmployeeToDisable] = useState<any>(null);
+  const { employees, loading, refetch } = useUnifiedEmployees();
   const { toast } = useToast();
   const { isAdmin } = useAuth();
 
@@ -38,13 +44,59 @@ const AccountStatusManager = () => {
     employee.position.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleToggleAccountStatus = async (employee: any, disable: boolean) => {
+  const sendSuspensionSMS = async (employee: any, reason: string) => {
+    if (!employee.phone) {
+      console.warn('No phone number for employee:', employee.name);
+      return;
+    }
+
+    try {
+      const message = `Dear ${employee.name}, your account at Great Pearl Coffee has been suspended. Reason: ${reason}. Contact management for details.`;
+      
+      const { error } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: employee.phone,
+          message
+        }
+      });
+
+      if (error) {
+        console.error('Failed to send suspension SMS:', error);
+        toast({
+          title: "SMS Failed",
+          description: "Account was disabled but SMS notification failed to send.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "SMS Sent",
+          description: `Suspension notification sent to ${employee.name}.`
+        });
+      }
+    } catch (error) {
+      console.error('Error sending suspension SMS:', error);
+    }
+  };
+
+  const handleToggleAccountStatus = async (employee: any, disable: boolean, reason?: string) => {
     setUpdating(employee.id);
     try {
-      // Update in Supabase
+      // Update in Supabase with reason if disabling
+      const updateData: { disabled: boolean; disabled_reason?: string; disabled_at?: string } = { 
+        disabled: disable 
+      };
+      
+      if (disable && reason) {
+        updateData.disabled_reason = reason;
+        updateData.disabled_at = new Date().toISOString();
+      } else if (!disable) {
+        updateData.disabled_reason = null as any;
+        updateData.disabled_at = null as any;
+      }
+
       const { error } = await supabase
         .from('employees')
-        .update({ disabled: disable })
+        .update(updateData)
         .eq('email', employee.email);
 
       if (error) throw error;
@@ -57,11 +109,19 @@ const AccountStatusManager = () => {
         console.warn('Failed to sync to Firebase:', firebaseError);
       }
 
+      // Send SMS notification when disabling
+      if (disable && reason) {
+        await sendSuspensionSMS(employee, reason);
+      }
+
       toast({
         title: disable ? "Account Disabled" : "Account Enabled",
         description: `${employee.name}'s account has been ${disable ? 'disabled' : 'enabled'}.`,
         variant: disable ? "destructive" : "default"
       });
+
+      // Refresh employee list
+      refetch();
 
     } catch (error) {
       console.error('Error updating account status:', error);
@@ -72,7 +132,16 @@ const AccountStatusManager = () => {
       });
     } finally {
       setUpdating(null);
+      setShowDisableDialog(false);
+      setDisableReason('');
+      setEmployeeToDisable(null);
     }
+  };
+
+  const openDisableDialog = (employee: any) => {
+    setEmployeeToDisable(employee);
+    setDisableReason('');
+    setShowDisableDialog(true);
   };
 
   if (loading) {
@@ -117,6 +186,11 @@ const AccountStatusManager = () => {
                     <p className="font-medium">{employee.name}</p>
                     <p className="text-sm text-muted-foreground">{employee.email}</p>
                     <p className="text-xs text-muted-foreground">{employee.position} • {employee.department}</p>
+                    {employee.disabled && (employee as any).disabled_reason && (
+                      <p className="text-xs text-destructive mt-1">
+                        Reason: {(employee as any).disabled_reason}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -171,37 +245,15 @@ const AccountStatusManager = () => {
                     </AlertDialogContent>
                   </AlertDialog>
                 ) : (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
-                        disabled={updating === employee.id}
-                      >
-                        <UserX className="h-4 w-4 mr-2" />
-                        Disable
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Disable Account</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to disable {employee.name}'s account? 
-                          They will not be able to log in to the system until re-enabled.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={() => handleToggleAccountStatus(employee, true)}
-                          disabled={updating === employee.id}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Disable Account
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button 
+                    size="sm" 
+                    variant="destructive"
+                    disabled={updating === employee.id}
+                    onClick={() => openDisableDialog(employee)}
+                  >
+                    <UserX className="h-4 w-4 mr-2" />
+                    Disable
+                  </Button>
                 )}
               </div>
             </div>
@@ -214,6 +266,57 @@ const AccountStatusManager = () => {
             </div>
           )}
         </div>
+
+        {/* Disable Account Dialog with Reason */}
+        <Dialog open={showDisableDialog} onOpenChange={setShowDisableDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Disable Account</DialogTitle>
+              <DialogDescription>
+                Disable {employeeToDisable?.name}'s account. They will receive an SMS notification about the suspension.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="reason">Reason for suspension *</Label>
+                <Textarea
+                  id="reason"
+                  placeholder="Enter the reason for disabling this account..."
+                  value={disableReason}
+                  onChange={(e) => setDisableReason(e.target.value)}
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  This reason will be sent to the user via SMS.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDisableDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => handleToggleAccountStatus(employeeToDisable, true, disableReason)}
+                disabled={!disableReason.trim() || updating === employeeToDisable?.id}
+              >
+                {updating === employeeToDisable?.id ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Disabling...
+                  </>
+                ) : (
+                  <>
+                    <UserX className="h-4 w-4 mr-2" />
+                    Disable Account
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <SalaryPaymentMessageDialog
           isOpen={showMessageDialog}
