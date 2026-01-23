@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 
 export interface ConsoleLog {
   id: string;
@@ -17,61 +16,73 @@ export interface ConsoleLog {
   created_at: string;
 }
 
-// Global flag to prevent multiple initializations
-let isConsoleMonitorInitialized = false;
-let originalConsole: {
-  log: typeof console.log;
-  warn: typeof console.warn;
-  error: typeof console.error;
-  info: typeof console.info;
-  debug: typeof console.debug;
-} | null = null;
+// Global singleton to manage console capture and user context
+class ConsoleCaptureSingleton {
+  private static instance: ConsoleCaptureSingleton;
+  private isInitialized = false;
+  private userContext: { id?: string; name?: string; department?: string; email?: string } = {};
+  private batchQueue: any[] = [];
+  private batchTimeout: NodeJS.Timeout | null = null;
+  private originalConsole: {
+    log: typeof console.log;
+    warn: typeof console.warn;
+    error: typeof console.error;
+    info: typeof console.info;
+    debug: typeof console.debug;
+  } | null = null;
 
-export const useSupabaseConsoleMonitor = () => {
-  const [logs, setLogs] = useState<ConsoleLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { employee, user } = useAuth();
-  const batchQueue = useRef<any[]>([]);
-  const batchTimeout = useRef<NodeJS.Timeout | null>(null);
+  private constructor() {}
 
-  // Batch insert logs to reduce database calls
-  const flushLogBatch = useCallback(async () => {
-    if (batchQueue.current.length === 0) return;
+  static getInstance(): ConsoleCaptureSingleton {
+    if (!ConsoleCaptureSingleton.instance) {
+      ConsoleCaptureSingleton.instance = new ConsoleCaptureSingleton();
+    }
+    return ConsoleCaptureSingleton.instance;
+  }
+
+  setUserContext(context: { id?: string; name?: string; department?: string; email?: string }) {
+    this.userContext = context;
+  }
+
+  private async flushBatch() {
+    if (this.batchQueue.length === 0) return;
     
-    const logsToInsert = [...batchQueue.current];
-    batchQueue.current = [];
+    const logsToInsert = [...this.batchQueue];
+    this.batchQueue = [];
     
     try {
       await supabase.from('system_console_logs').insert(logsToInsert);
     } catch (err) {
       // Silently fail to avoid infinite loops
     }
-  }, []);
+  }
 
-  const queueLog = useCallback((logData: any) => {
-    batchQueue.current.push(logData);
+  private queueLog(logData: any) {
+    // Always use latest user context
+    logData.user_id = this.userContext.id || logData.user_id;
+    logData.user_name = this.userContext.name || logData.user_name;
+    logData.user_department = this.userContext.department || logData.user_department;
     
-    // Flush after 2 seconds or when batch reaches 10 items
-    if (batchQueue.current.length >= 10) {
-      if (batchTimeout.current) clearTimeout(batchTimeout.current);
-      flushLogBatch();
-    } else if (!batchTimeout.current) {
-      batchTimeout.current = setTimeout(() => {
-        flushLogBatch();
-        batchTimeout.current = null;
-      }, 2000);
-    }
-  }, [flushLogBatch]);
-
-  const initializeConsoleCapture = useCallback(() => {
-    if (isConsoleMonitorInitialized) {
-      return;
-    }
-
-    isConsoleMonitorInitialized = true;
+    this.batchQueue.push(logData);
     
+    // Flush after 3 seconds or when batch reaches 10 items
+    if (this.batchQueue.length >= 10) {
+      if (this.batchTimeout) clearTimeout(this.batchTimeout);
+      this.flushBatch();
+    } else if (!this.batchTimeout) {
+      this.batchTimeout = setTimeout(() => {
+        this.flushBatch();
+        this.batchTimeout = null;
+      }, 3000);
+    }
+  }
+
+  initialize() {
+    if (this.isInitialized) return;
+    this.isInitialized = true;
+
     // Store original console methods
-    originalConsole = {
+    this.originalConsole = {
       log: console.log.bind(console),
       warn: console.warn.bind(console),
       error: console.error.bind(console),
@@ -80,7 +91,6 @@ export const useSupabaseConsoleMonitor = () => {
     };
 
     const captureLog = (level: ConsoleLog['level'], args: any[]) => {
-      // Don't capture our own logs or Supabase internal logs
       const message = args.map(arg => {
         try {
           return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
@@ -89,87 +99,95 @@ export const useSupabaseConsoleMonitor = () => {
         }
       }).join(' ');
 
-      // Skip internal logs
+      // Skip internal logs to prevent loops
       if (message.includes('[Supabase]') || 
           message.includes('system_console_logs') ||
-          message.includes('system_errors')) {
+          message.includes('system_errors') ||
+          message.includes('postgres_changes')) {
         return;
       }
 
       const logData = {
         level,
-        message: message.substring(0, 5000), // Limit message length
+        message: message.substring(0, 5000),
         source: 'browser',
-        user_id: user?.id || employee?.id,
-        user_name: employee?.name,
-        user_department: employee?.department,
+        user_id: this.userContext.id,
+        user_name: this.userContext.name,
+        user_department: this.userContext.department,
         url: window.location.href,
         user_agent: navigator.userAgent.substring(0, 500)
       };
 
-      queueLog(logData);
+      this.queueLog(logData);
     };
 
     // Override console methods
     console.log = (...args) => {
-      originalConsole?.log(...args);
+      this.originalConsole?.log(...args);
       captureLog('log', args);
     };
 
     console.warn = (...args) => {
-      originalConsole?.warn(...args);
+      this.originalConsole?.warn(...args);
       captureLog('warn', args);
     };
 
     console.error = (...args) => {
-      originalConsole?.error(...args);
+      this.originalConsole?.error(...args);
       captureLog('error', args);
     };
 
     console.info = (...args) => {
-      originalConsole?.info(...args);
+      this.originalConsole?.info(...args);
       captureLog('info', args);
     };
 
     console.debug = (...args) => {
-      originalConsole?.debug(...args);
+      this.originalConsole?.debug(...args);
       captureLog('debug', args);
     };
 
     // Capture unhandled errors
     window.addEventListener('error', (event) => {
-      const logData = {
-        level: 'error' as const,
+      this.queueLog({
+        level: 'error',
         message: `Unhandled Error: ${event.message}`,
         source: 'window.onerror',
         stack_trace: event.error?.stack,
-        user_id: user?.id || employee?.id,
-        user_name: employee?.name,
-        user_department: employee?.department,
         url: window.location.href,
         user_agent: navigator.userAgent.substring(0, 500),
         metadata: { filename: event.filename, lineno: event.lineno, colno: event.colno }
-      };
-      queueLog(logData);
+      });
     });
 
     // Capture unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
-      const logData = {
-        level: 'error' as const,
+      this.queueLog({
+        level: 'error',
         message: `Unhandled Promise Rejection: ${event.reason}`,
         source: 'unhandledrejection',
         stack_trace: event.reason?.stack,
-        user_id: user?.id || employee?.id,
-        user_name: employee?.name,
-        user_department: employee?.department,
         url: window.location.href,
         user_agent: navigator.userAgent.substring(0, 500)
-      };
-      queueLog(logData);
+      });
     });
+  }
+}
 
-  }, [user, employee, queueLog]);
+// Export singleton for use in other components
+export const consoleCapture = ConsoleCaptureSingleton.getInstance();
+
+export const useSupabaseConsoleMonitor = () => {
+  const [logs, setLogs] = useState<ConsoleLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const initializeConsoleCapture = useCallback(() => {
+    consoleCapture.initialize();
+  }, []);
+
+  const setUserContext = useCallback((context: { id?: string; name?: string; department?: string; email?: string }) => {
+    consoleCapture.setUserContext(context);
+  }, []);
 
   const fetchLogs = useCallback(async (
     levelFilter?: string,
@@ -249,9 +267,7 @@ export const useSupabaseConsoleMonitor = () => {
 
       if (error) throw error;
 
-      // Refresh logs
       await fetchLogs();
-
       return true;
     } catch (err) {
       console.error('Failed to clear old logs:', err);
@@ -264,10 +280,14 @@ export const useSupabaseConsoleMonitor = () => {
     fetchLogs();
 
     const channel = supabase
-      .channel('console-logs-changes')
+      .channel('console-logs-realtime')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'system_console_logs' },
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'system_console_logs' 
+        },
         (payload) => {
           setLogs(prev => [payload.new as ConsoleLog, ...prev.slice(0, 199)]);
         }
@@ -276,13 +296,8 @@ export const useSupabaseConsoleMonitor = () => {
 
     return () => {
       supabase.removeChannel(channel);
-      // Flush any remaining logs on unmount
-      if (batchTimeout.current) {
-        clearTimeout(batchTimeout.current);
-        flushLogBatch();
-      }
     };
-  }, [fetchLogs, flushLogBatch]);
+  }, [fetchLogs]);
 
   return {
     logs,
@@ -290,6 +305,7 @@ export const useSupabaseConsoleMonitor = () => {
     fetchLogs,
     getLogStats,
     clearOldLogs,
-    initializeConsoleCapture
+    initializeConsoleCapture,
+    setUserContext
   };
 };

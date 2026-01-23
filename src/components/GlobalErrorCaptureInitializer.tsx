@@ -1,33 +1,34 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { globalErrorCapture } from '@/services/globalErrorCapture';
-import { useSupabaseConsoleMonitor } from '@/hooks/useSupabaseConsoleMonitor';
+import { consoleCapture } from '@/hooks/useSupabaseConsoleMonitor';
 
 const GlobalErrorCaptureInitializer = () => {
   const { employee, user } = useAuth();
-  const { initializeConsoleCapture } = useSupabaseConsoleMonitor();
 
+  // Initialize global error and console capture once
   useEffect(() => {
-    // Initialize global error capture
     globalErrorCapture.initialize();
+    consoleCapture.initialize();
   }, []);
 
+  // Update user context whenever auth changes
   useEffect(() => {
-    // Update user context when auth changes
-    if (employee || user) {
-      globalErrorCapture.setUserContext({
-        id: user?.id || employee?.id,
-        email: user?.email || employee?.email,
-        name: employee?.name,
-        department: employee?.department
-      });
+    if (employee) {
+      const context = {
+        id: user?.id || employee.id,
+        email: user?.email || employee.email,
+        name: employee.name,
+        department: employee.department
+      };
+      
+      // Update both services with user context
+      globalErrorCapture.setUserContext(context);
+      consoleCapture.setUserContext(context);
+      
+      console.info(`Console monitoring active for: ${employee.name} (${employee.department})`);
     }
   }, [employee, user]);
-
-  useEffect(() => {
-    // Initialize console capture
-    initializeConsoleCapture();
-  }, [initializeConsoleCapture]);
 
   return null;
 };
