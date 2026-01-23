@@ -2,15 +2,81 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
-import { Users, UserPlus, Calendar, ClipboardList, Award, Clock, FileText, TrendingUp } from "lucide-react";
+import { Users, Calendar, Award, Clock, MessageSquare, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const HRDashboard = () => {
   const { employee } = useAuth();
+  const { toast } = useToast();
+  const [sendingSalaryNotice, setSendingSalaryNotice] = useState(false);
+
+  const handleSendSalaryNotice = async () => {
+    setSendingSalaryNotice(true);
+    try {
+      // Get all active employees with phone numbers
+      const { data: employees, error } = await supabase
+        .from('employees')
+        .select('id, name, phone, email, department')
+        .eq('status', 'Active')
+        .not('phone', 'is', null);
+
+      if (error) throw error;
+
+      const currentMonth = format(new Date(), 'MMMM yyyy');
+      const message = `Dear Team, due to underperformance this month, we will only be paying 50% of salaries for ${currentMonth}. We appreciate your understanding and commitment. - Management`;
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const emp of employees || []) {
+        if (!emp.phone) continue;
+        
+        try {
+          const { error: smsError } = await supabase.functions.invoke('send-sms', {
+            body: {
+              phone: emp.phone,
+              message,
+              userName: emp.name,
+              messageType: 'salary_notice',
+              department: emp.department,
+              recipientEmail: emp.email
+            }
+          });
+
+          if (smsError) {
+            failCount++;
+          } else {
+            successCount++;
+          }
+          
+          // Small delay between messages to avoid overwhelming the API
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch {
+          failCount++;
+        }
+      }
+
+      toast({
+        title: "Salary Notice Sent",
+        description: `Successfully sent to ${successCount} employees${failCount > 0 ? `, ${failCount} failed` : ''}`,
+      });
+    } catch (error: any) {
+      console.error('Failed to send salary notice:', error);
+      toast({
+        title: "Failed to Send",
+        description: error.message || "Could not send salary notice",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingSalaryNotice(false);
+    }
+  };
 
   const { data: stats } = useQuery({
     queryKey: ["hr-v2-stats"],
@@ -113,6 +179,38 @@ const HRDashboard = () => {
                 );
               })}
             </div>
+
+            {/* Salary Notice Action */}
+            <Card className="border-2 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+                  <MessageSquare className="h-5 w-5" />
+                  Salary Announcement
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Send SMS to all employees about 50% salary payment due to underperformance
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={handleSendSalaryNotice}
+                  disabled={sendingSalaryNotice}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  {sendingSalaryNotice ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending to all employees...
+                    </>
+                  ) : (
+                    <>
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Send 50% Salary Notice
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
 
             <Card className="border-2">
               <CardHeader>
