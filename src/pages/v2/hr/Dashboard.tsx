@@ -2,86 +2,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
-import { Users, Calendar, Award, Clock, MessageSquare, Loader2 } from "lucide-react";
+import { Users, Calendar, Award, Clock, MessageSquare } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import SalaryAnnouncementDialog from "@/components/v2/hr/SalaryAnnouncementDialog";
 
 const HRDashboard = () => {
   const { employee } = useAuth();
-  const { toast } = useToast();
-  const [sendingSalaryNotice, setSendingSalaryNotice] = useState(false);
-
-  const handleSendSalaryNotice = async () => {
-    setSendingSalaryNotice(true);
-    try {
-      // Get all active employees with phone numbers and salary
-      const { data: employees, error } = await supabase
-        .from('employees')
-        .select('id, name, phone, email, department, salary')
-        .eq('status', 'Active')
-        .not('phone', 'is', null);
-
-      if (error) throw error;
-
-      const currentMonth = format(new Date(), 'MMMM yyyy');
-
-      let successCount = 0;
-      let failCount = 0;
-
-      for (const emp of employees || []) {
-        if (!emp.phone) continue;
-        
-        // Calculate 50% of salary
-        const halfSalary = Math.round((emp.salary || 0) / 2);
-        const formattedAmount = halfSalary.toLocaleString();
-        
-        const message = `Dear ${emp.name}, due to underperformance this month (${currentMonth}), you will receive UGX ${formattedAmount} (50% of your salary). We appreciate your understanding. - Management`;
-        
-        try {
-          const { error: smsError } = await supabase.functions.invoke('send-sms', {
-            body: {
-              phone: emp.phone,
-              message,
-              userName: emp.name,
-              messageType: 'salary_notice',
-              department: emp.department,
-              recipientEmail: emp.email
-            }
-          });
-
-          if (smsError) {
-            failCount++;
-          } else {
-            successCount++;
-          }
-          
-          // Small delay between messages to avoid overwhelming the API
-          await new Promise(resolve => setTimeout(resolve, 300));
-        } catch {
-          failCount++;
-        }
-      }
-
-      toast({
-        title: "Salary Notice Sent",
-        description: `Successfully sent to ${successCount} employees${failCount > 0 ? `, ${failCount} failed` : ''}`,
-      });
-    } catch (error: any) {
-      console.error('Failed to send salary notice:', error);
-      toast({
-        title: "Failed to Send",
-        description: error.message || "Could not send salary notice",
-        variant: "destructive"
-      });
-    } finally {
-      setSendingSalaryNotice(false);
-    }
-  };
 
   const { data: stats } = useQuery({
     queryKey: ["hr-v2-stats"],
@@ -193,27 +123,11 @@ const HRDashboard = () => {
                   Salary Announcement
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Send SMS to all employees about 50% salary payment due to underperformance
+                  Send personalized salary SMS to selected employees with custom percentage
                 </p>
               </CardHeader>
               <CardContent>
-                <Button 
-                  onClick={handleSendSalaryNotice}
-                  disabled={sendingSalaryNotice}
-                  className="bg-orange-600 hover:bg-orange-700 text-white"
-                >
-                  {sendingSalaryNotice ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Sending to all employees...
-                    </>
-                  ) : (
-                    <>
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Send 50% Salary Notice
-                    </>
-                  )}
-                </Button>
+                <SalaryAnnouncementDialog />
               </CardContent>
             </Card>
 
