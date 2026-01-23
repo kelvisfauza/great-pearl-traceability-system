@@ -6,15 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Shield, 
   Search, 
   KeyRound, 
-  Edit, 
   Loader2,
   CheckCircle,
-  XCircle
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -34,6 +33,9 @@ import {
 } from '@/types/granularPermissions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Employee {
   id: string;
@@ -47,6 +49,7 @@ interface Employee {
 }
 
 export function ITPermissionManager() {
+  const { employee: currentUser } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,6 +60,8 @@ export function ITPermissionManager() {
   const [selectedRole, setSelectedRole] = useState<string>('User');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [justification, setJustification] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -93,27 +98,55 @@ export function ITPermissionManager() {
     setPasswordDialogOpen(true);
   };
 
-  const handleSavePermissions = async () => {
-    if (!selectedEmployee) return;
+  const handleSubmitPermissionRequest = async () => {
+    if (!selectedEmployee || !currentUser) return;
 
+    if (!justification.trim()) {
+      toast.error('Please provide a justification for this permission change');
+      return;
+    }
+
+    setSubmitting(true);
     try {
+      // Create an approval request for the permission change
       const { error } = await supabase
-        .from('employees')
-        .update({
-          permissions: selectedPermissions,
-          role: selectedRole,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedEmployee.id);
+        .from('approval_requests')
+        .insert({
+          type: 'permission_change',
+          title: `Permission Change Request: ${selectedEmployee.name}`,
+          description: `IT requests permission changes for ${selectedEmployee.name} (${selectedEmployee.email}).\n\nJustification: ${justification}`,
+          amount: 0,
+          department: 'IT',
+          priority: 'medium',
+          status: 'pending',
+          daterequested: new Date().toISOString(),
+          requestedby: currentUser.name,
+          requestedby_name: currentUser.name,
+          requestedby_position: currentUser.position || 'IT Staff',
+          details: {
+            employee_id: selectedEmployee.id,
+            employee_name: selectedEmployee.name,
+            employee_email: selectedEmployee.email,
+            current_role: selectedEmployee.role,
+            current_permissions: selectedEmployee.permissions,
+            requested_role: selectedRole,
+            requested_permissions: selectedPermissions,
+            justification: justification
+          }
+        });
 
       if (error) throw error;
 
-      toast.success('Permissions updated successfully');
+      toast.success('Permission change request submitted for admin approval', {
+        description: 'An administrator will review and approve or reject this request.'
+      });
       setPermissionDialogOpen(false);
-      fetchEmployees();
+      setJustification('');
     } catch (error) {
-      console.error('Error updating permissions:', error);
-      toast.error('Failed to update permissions');
+      console.error('Error submitting permission request:', error);
+      toast.error('Failed to submit permission request');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -205,9 +238,15 @@ export function ITPermissionManager() {
           IT Permission & Password Manager
         </CardTitle>
         <CardDescription>
-          Manage user permissions and reset passwords
+          Request permission changes (requires admin approval) and reset passwords
         </CardDescription>
       </CardHeader>
+      <Alert className="mx-6 mb-4">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          Permission changes require admin approval before activation. Password resets are immediate.
+        </AlertDescription>
+      </Alert>
       <CardContent>
         <div className="space-y-4">
           <div className="relative">
@@ -267,13 +306,16 @@ export function ITPermissionManager() {
           </ScrollArea>
         </div>
 
-        {/* Permission Management Dialog */}
+        {/* Permission Change Request Dialog */}
         <Dialog open={permissionDialogOpen} onOpenChange={setPermissionDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[80vh]">
             <DialogHeader>
-              <DialogTitle>Manage Permissions - {selectedEmployee?.name}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-amber-500" />
+                Request Permission Changes - {selectedEmployee?.name}
+              </DialogTitle>
               <DialogDescription>
-                Assign role and granular permissions for {selectedEmployee?.email}
+                Configure permissions for {selectedEmployee?.email}. Changes require admin approval.
               </DialogDescription>
             </DialogHeader>
             
@@ -325,14 +367,43 @@ export function ITPermissionManager() {
                 </div>
               </ScrollArea>
 
-              <div className="flex gap-2">
-                <Button onClick={handleSavePermissions} className="flex-1">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Save Permissions
-                </Button>
-                <Button variant="outline" onClick={() => setPermissionDialogOpen(false)}>
-                  Cancel
-                </Button>
+              <div className="space-y-3 border-t pt-4">
+                <div>
+                  <Label htmlFor="justification">Justification for Change *</Label>
+                  <Textarea
+                    id="justification"
+                    value={justification}
+                    onChange={(e) => setJustification(e.target.value)}
+                    placeholder="Explain why this permission change is needed..."
+                    className="mt-1"
+                    rows={3}
+                  />
+                </div>
+                
+                <Alert>
+                  <Clock className="h-4 w-4" />
+                  <AlertDescription>
+                    This request will be sent to administrators for approval. Changes will only take effect after approval.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleSubmitPermissionRequest} 
+                    className="flex-1"
+                    disabled={submitting || !justification.trim()}
+                  >
+                    {submitting ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Submit for Approval
+                  </Button>
+                  <Button variant="outline" onClick={() => setPermissionDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
               </div>
             </div>
           </DialogContent>
