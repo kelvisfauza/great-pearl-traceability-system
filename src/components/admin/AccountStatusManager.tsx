@@ -78,6 +78,40 @@ const AccountStatusManager = () => {
     }
   };
 
+  const sendEnablementSMS = async (employee: any) => {
+    if (!employee.phone) {
+      console.warn('No phone number for employee:', employee.name);
+      return;
+    }
+
+    try {
+      const message = `Dear ${employee.name}, your account at Great Pearl Coffee has been enabled successfully. You can now log in at www.greatpearlcoffeesystem.site`;
+      
+      const { error } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: employee.phone,
+          message
+        }
+      });
+
+      if (error) {
+        console.error('Failed to send enablement SMS:', error);
+        toast({
+          title: "SMS Failed",
+          description: "Account was enabled but SMS notification failed to send.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "SMS Sent",
+          description: `Enablement notification sent to ${employee.name}.`
+        });
+      }
+    } catch (error) {
+      console.error('Error sending enablement SMS:', error);
+    }
+  };
+
   const handleToggleAccountStatus = async (employee: any, disable: boolean, reason?: string) => {
     setUpdating(employee.id);
     try {
@@ -112,6 +146,11 @@ const AccountStatusManager = () => {
       // Send SMS notification when disabling
       if (disable && reason) {
         await sendSuspensionSMS(employee, reason);
+      }
+
+      // Send SMS notification when enabling
+      if (!disable) {
+        await sendEnablementSMS(employee);
       }
 
       toast({
