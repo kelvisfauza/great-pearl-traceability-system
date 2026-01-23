@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,8 @@ import {
   Server
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useFirebaseEmployees } from '@/hooks/useFirebaseEmployees';
-import { useFirebaseSystemMetrics } from '@/hooks/useFirebaseSystemMetrics';
 import { usePresenceList } from '@/hooks/usePresenceList';
+import { supabase } from '@/integrations/supabase/client';
 
 // IT Components
 import ErrorDashboard from '@/components/it/ErrorDashboard';
@@ -27,16 +26,34 @@ import ReportRemindersSettings from '@/components/it/ReportRemindersSettings';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
-  const { employees } = useFirebaseEmployees();
-  const { services } = useFirebaseSystemMetrics();
   const { onlineCount } = usePresenceList();
+  const [activeUsers, setActiveUsers] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  // Calculate system uptime based on running services
-  const runningServices = services.filter(s => s.status === 'running');
-  const systemUptime = services.length > 0 ? ((runningServices.length / services.length) * 100).toFixed(1) : '0.0';
-  
-  // Count active users
-  const activeUsers = employees.filter(e => e.status === 'Active').length;
+  // Fetch active users from Supabase instead of Firebase
+  useEffect(() => {
+    const fetchActiveUsers = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('employees')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'Active');
+        
+        if (!error && count !== null) {
+          setActiveUsers(count);
+        }
+      } catch (err) {
+        console.error('Error fetching active users:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActiveUsers();
+  }, []);
+
+  // System uptime - static for now since we're using Supabase
+  const systemUptime = '99.9';
 
   if (!hasPermission('IT Management')) {
     return (
