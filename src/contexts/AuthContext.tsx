@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Set up real-time subscription for employee changes
+  // Set up real-time subscription for employee changes - INCLUDING account status
   useEffect(() => {
     if (!user?.email) return;
 
@@ -90,9 +90,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           table: 'employees',
           filter: `email=eq.${user.email}`
         },
-        (payload) => {
-          console.log('🔔 Employee data changed, refreshing...', payload);
+        async (payload) => {
+          console.log('🔔 Employee data changed, checking status...', payload);
           const newData = payload.new as any;
+          
+          // CRITICAL: Check if account was disabled - force logout immediately
+          if (newData.disabled === true || 
+              (newData.status && newData.status.toLowerCase() !== 'active')) {
+            console.log('🚫 Account disabled/deactivated, forcing logout');
+            
+            toast({
+              title: "Account Suspended",
+              description: "Your account has been suspended. Please contact an administrator.",
+              variant: "destructive",
+              duration: 10000
+            });
+            
+            // Force sign out after a brief delay to show the toast
+            setTimeout(async () => {
+              await supabase.auth.signOut();
+              setUser(null);
+              setSession(null);
+              setEmployee(null);
+            }, 1500);
+            
+            return;
+          }
           
           // Show toast notification about permission changes
           if (newData.permissions && employee?.permissions) {
@@ -111,6 +134,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
           }
           
+          // Check for role changes
+          if (newData.role && employee?.role && newData.role !== employee.role) {
+            toast({
+              title: "Role Changed",
+              description: `Your role has been updated to ${newData.role}`,
+            });
+          }
+          
           refreshEmployeeData();
         }
       )
@@ -120,7 +151,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('🔌 Unsubscribing from employee changes');
       supabase.removeChannel(channel);
     };
-  }, [user?.email, employee?.permissions]);
+  }, [user?.email, employee?.permissions, employee?.role]);
 
   const fetchEmployeeData = async (userId?: string, userEmail?: string): Promise<Employee | null> => {
     const targetUserId = userId || user?.id;
