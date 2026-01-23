@@ -73,6 +73,7 @@ import RoleNotificationHandler from "./components/RoleNotificationHandler";
 import ChristmasGiftBox from "./components/christmas/ChristmasGiftBox";
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import GlobalErrorCaptureInitializer from './components/GlobalErrorCaptureInitializer';
 
 // Disabled: Error Handler was causing infinite loops and performance issues
 // const ErrorHandlerInitializer = () => {
@@ -98,7 +99,7 @@ const App: React.ComponentType = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        {/* <ErrorHandlerInitializer /> */}
+        <GlobalErrorCaptureInitializer />
         <InactivityTimerInitializer />
         <GlobalActivityTracker />
         <PriceProvider>

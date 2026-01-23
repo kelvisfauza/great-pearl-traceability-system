@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useErrorReporting, SystemError } from '@/hooks/useErrorReporting';
+import { useSupabaseErrorReporting, SystemError } from '@/hooks/useSupabaseErrorReporting';
 import { useToast } from '@/hooks/use-toast';
 import { AutoFixSystem } from './AutoFixSystem';
 import { ITAuthorizationPanel } from './ITAuthorizationPanel';
+import SystemConsoleMonitor from './SystemConsoleMonitor';
 import { 
   AlertTriangle, 
   CheckCircle, 
-  Eye, 
   RefreshCw,
   Database,
   Wifi,
@@ -20,7 +20,8 @@ import {
   Settings,
   FileX,
   Zap,
-  Monitor
+  Monitor,
+  Trash2
 } from 'lucide-react';
 
 interface ErrorCardProps {
@@ -68,7 +69,7 @@ const ErrorCard: React.FC<ErrorCardProps> = ({ error, onStatusUpdate }) => {
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              {getTypeIcon(error.errorType)}
+              {getTypeIcon(error.error_type)}
               <CardTitle className="text-lg">{error.title}</CardTitle>
               <Badge variant={getSeverityColor(error.severity)}>
                 {error.severity}
@@ -85,7 +86,7 @@ const ErrorCard: React.FC<ErrorCardProps> = ({ error, onStatusUpdate }) => {
         <div className="space-y-3">
           <div className="text-sm text-muted-foreground">
             <span className="font-medium">Component:</span> {error.component} • 
-            <span className="font-medium"> Time:</span> {new Date(error.timestamp).toLocaleString()}
+            <span className="font-medium"> Time:</span> {new Date(error.created_at).toLocaleString()}
           </div>
           
           <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded border-l-4 border-blue-500">
@@ -123,7 +124,7 @@ const ErrorCard: React.FC<ErrorCardProps> = ({ error, onStatusUpdate }) => {
 };
 
 const ErrorDashboard = () => {
-  const { errors, loading, updateErrorStatus, fetchErrors } = useErrorReporting();
+  const { errors, loading, updateErrorStatus, fetchErrors, deleteError } = useSupabaseErrorReporting();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -135,7 +136,7 @@ const ErrorDashboard = () => {
                          error.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSeverity = filterSeverity === 'all' || error.severity === filterSeverity;
     const matchesStatus = filterStatus === 'all' || error.status === filterStatus;
-    const matchesType = filterType === 'all' || error.errorType === filterType;
+    const matchesType = filterType === 'all' || error.error_type === filterType;
     
     return matchesSearch && matchesSeverity && matchesStatus && matchesType;
   });
@@ -331,17 +332,7 @@ const ErrorDashboard = () => {
         </TabsContent>
 
         <TabsContent value="monitoring" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Monitoring</CardTitle>
-              <CardDescription>Real-time system health and performance monitoring</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Advanced monitoring dashboard coming soon...
-              </div>
-            </CardContent>
-          </Card>
+          <SystemConsoleMonitor />
         </TabsContent>
       </Tabs>
     </div>
