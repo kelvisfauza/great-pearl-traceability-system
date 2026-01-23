@@ -19,23 +19,28 @@ const HRDashboard = () => {
   const handleSendSalaryNotice = async () => {
     setSendingSalaryNotice(true);
     try {
-      // Get all active employees with phone numbers
+      // Get all active employees with phone numbers and salary
       const { data: employees, error } = await supabase
         .from('employees')
-        .select('id, name, phone, email, department')
+        .select('id, name, phone, email, department, salary')
         .eq('status', 'Active')
         .not('phone', 'is', null);
 
       if (error) throw error;
 
       const currentMonth = format(new Date(), 'MMMM yyyy');
-      const message = `Dear Team, due to underperformance this month, we will only be paying 50% of salaries for ${currentMonth}. We appreciate your understanding and commitment. - Management`;
 
       let successCount = 0;
       let failCount = 0;
 
       for (const emp of employees || []) {
         if (!emp.phone) continue;
+        
+        // Calculate 50% of salary
+        const halfSalary = Math.round((emp.salary || 0) / 2);
+        const formattedAmount = halfSalary.toLocaleString();
+        
+        const message = `Dear ${emp.name}, due to underperformance this month (${currentMonth}), you will receive UGX ${formattedAmount} (50% of your salary). We appreciate your understanding. - Management`;
         
         try {
           const { error: smsError } = await supabase.functions.invoke('send-sms', {
