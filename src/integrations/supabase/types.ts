@@ -5212,6 +5212,114 @@ export type Database = {
         }
         Relationships: []
       }
+      system_console_logs: {
+        Row: {
+          created_at: string
+          id: string
+          level: string
+          message: string
+          metadata: Json | null
+          source: string | null
+          stack_trace: string | null
+          url: string | null
+          user_agent: string | null
+          user_department: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level: string
+          message: string
+          metadata?: Json | null
+          source?: string | null
+          stack_trace?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_department?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json | null
+          source?: string | null
+          stack_trace?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_department?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      system_errors: {
+        Row: {
+          component: string
+          created_at: string
+          description: string
+          error_type: string
+          id: string
+          metadata: Json | null
+          recommendation: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          stack_trace: string | null
+          status: string
+          title: string
+          updated_at: string
+          url: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          component: string
+          created_at?: string
+          description: string
+          error_type: string
+          id?: string
+          metadata?: Json | null
+          recommendation?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity: string
+          stack_trace?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          url?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          component?: string
+          created_at?: string
+          description?: string
+          error_type?: string
+          id?: string
+          metadata?: Json | null
+          recommendation?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          stack_trace?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          url?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           created_at: string

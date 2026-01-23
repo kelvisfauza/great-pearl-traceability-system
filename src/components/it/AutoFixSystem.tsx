@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { SystemError } from '@/hooks/useErrorReporting';
+import { SystemError } from '@/hooks/useSupabaseErrorReporting';
 import { 
   Play, 
   Pause, 
@@ -35,7 +35,7 @@ export const AutoFixSystem: React.FC<AutoFixSystemProps> = ({ errors, onErrorUpd
   const criticalErrors = errors.filter(e => e.severity === 'critical' && e.status === 'open');
   const highErrors = errors.filter(e => e.severity === 'high' && e.status === 'open');
   const autoFixableErrors = errors.filter(e => 
-    ['database', 'network', 'authentication'].includes(e.errorType) && 
+    ['database', 'network', 'authentication'].includes(e.error_type) && 
     e.status === 'open'
   );
 
@@ -82,7 +82,7 @@ export const AutoFixSystem: React.FC<AutoFixSystemProps> = ({ errors, onErrorUpd
       ]
     };
 
-    const steps = fixStrategies[error.errorType as keyof typeof fixStrategies] || [
+    const steps = fixStrategies[error.error_type as keyof typeof fixStrategies] || [
       'Analyzing error...',
       'Applying generic fixes...',
       'Testing solution...',
