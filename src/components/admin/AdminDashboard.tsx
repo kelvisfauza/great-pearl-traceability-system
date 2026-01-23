@@ -10,7 +10,7 @@ import UserPermissionsList from './UserPermissionsList';
 import QuickPermissionAssignment from './QuickPermissionAssignment';
 import CashManagementModal from './CashManagementModal';
 import TopSuppliersChart from './TopSuppliersChart';
-
+import { PermissionChangeApprovals } from './PermissionChangeApprovals';
 
 import { DataArchiveManager } from './DataArchiveManager';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -190,6 +190,9 @@ const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="permissions" className="space-y-6">
+          {/* IT Permission Change Requests */}
+          <PermissionChangeApprovals />
+          
           <Card className="border-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
