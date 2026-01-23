@@ -277,7 +277,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Check if the employee account is disabled BEFORE allowing login
       const { data: employeeData, error: empError } = await supabase
         .from('employees')
-        .select('disabled, status, name')
+        .select('disabled, status, name, department, role')
         .eq('email', normalizedEmail)
         .maybeSingle();
 
@@ -308,6 +308,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Successful login - could log this as well for audit trail
       console.log('✅ Successful login for:', normalizedEmail);
 
+      // Write an explicit auth event to system_console_logs so IT can always see logins
+      // (console/error capture alone won't show a login if the user doesn't trigger any console output).
+      try {
+        await supabase.from('system_console_logs').insert({
+          level: 'info',
+          source: 'auth',
+          message: `AUTH: LOGIN_SUCCESS ${normalizedEmail}`,
+          user_id: data.user.id,
+          user_name: employeeData?.name || (data.user.user_metadata as any)?.name || normalizedEmail,
+          user_department: employeeData?.department || 'Unknown',
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent.substring(0, 500) : undefined,
+          metadata: {
+            event: 'LOGIN_SUCCESS',
+            email: normalizedEmail,
+            role: employeeData?.role || null
+          }
+        });
+      } catch {
+        // Never block login on monitoring failures
+      }
+
       return {};
     } catch (error: any) {
       console.error('Login error:', error);
@@ -325,6 +347,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: error.message || "An error occurred during login",
         variant: "destructive"
       });
+
+      // Best-effort: record failed logins for IT visibility (no secrets, no password)
+      try {
+        const normalizedEmail = email.toLowerCase().trim();
+        await supabase.from('system_console_logs').insert({
+          level: 'warn',
+          source: 'auth',
+          message: `AUTH: LOGIN_FAILED ${normalizedEmail} - ${String(error.message || 'Unknown error').substring(0, 250)}`,
+          user_id: undefined,
+          user_name: normalizedEmail,
+          user_department: 'Unknown',
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent.substring(0, 500) : undefined,
+          metadata: {
+            event: 'LOGIN_FAILED',
+            email: normalizedEmail
+          }
+        });
+      } catch {
+        // ignore
+      }
+
       throw error;
     } finally {
       setLoading(false);
