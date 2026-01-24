@@ -119,7 +119,6 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
               </div>
               <div>
                 <p><strong>Coffee Type:</strong> {coffeeType}</p>
-                <p><strong>Quality Assessment:</strong> {qualityAssessment}</p>
                 <p><strong>Number of Bags:</strong> {numberOfBags}</p>
                 <p><strong>Total Kgs:</strong> {totalKgs.toLocaleString()} kg</p>
               </div>
