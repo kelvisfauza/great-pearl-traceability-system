@@ -573,6 +573,31 @@ const QualityControl = () => {
       
       await updateStoreRecord(selectedRecord.id, { status: 'assessed' });
       
+      // Prepare and show GRN for printing after successful assessment
+      const grnInfo = {
+        grnNumber: `GRN-${selectedRecord.batch_number || `BATCH-${Date.now()}`}`,
+        supplierName: selectedRecord.supplier_name || 'Unknown Supplier',
+        coffeeType: selectedRecord.coffee_type || 'Unknown Coffee Type',
+        qualityAssessment: `Moisture: ${assessment.moisture}%, Group 1: ${assessment.group1_defects}%, Group 2: ${assessment.group2_defects}%`,
+        numberOfBags: selectedRecord.bags || 0,
+        totalKgs: selectedRecord.kilograms || 0,
+        unitPrice: finalPrice,
+        assessedBy: employee?.name || employee?.email || 'Quality Controller',
+        createdAt: new Date().toISOString(),
+        moisture: assessment.moisture,
+        group1_defects: assessment.group1_defects,
+        group2_defects: assessment.group2_defects,
+        below12: assessment.below12,
+        pods: assessment.pods,
+        husks: assessment.husks,
+        stones: assessment.stones
+      };
+      
+      setGrnPrintModal({
+        open: true,
+        grnData: grnInfo
+      });
+      
       setSelectedRecord(null);
       setEditingAssessmentId(null);
       setAssessmentForm({
@@ -603,10 +628,8 @@ const QualityControl = () => {
       toast({
         title: editingAssessmentId ? "Assessment Updated ✓" : "Assessment Saved ✓",
         description: editingAssessmentId 
-          ? "Quality assessment updated successfully. Finance department notified."
-          : (selectedRecord.isModification 
-            ? "Quality reassessment completed and sent to Finance department for payment."
-            : "Quality assessment saved successfully and sent to Finance department for payment processing.")
+          ? "Quality assessment updated. Print GRN now."
+          : "Quality assessment saved. Print GRN now."
       });
       
     } catch (error) {
