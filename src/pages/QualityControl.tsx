@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -661,8 +662,42 @@ const QualityControl = () => {
   };
 
 
-  const handlePrintGRN = (assessment: any) => {
-    const storeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
+  const handlePrintGRN = async (assessment: any) => {
+    // First try to find in local storeRecords
+    let storeRecord = storeRecords.find(record => record.id === assessment.store_record_id);
+    
+    // If not found locally (e.g., record status changed), fetch from database
+    if (!storeRecord) {
+      try {
+        const { data, error } = await supabase
+          .from('coffee_records')
+          .select('*')
+          .eq('id', assessment.store_record_id)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('Error fetching coffee record:', error);
+        }
+        
+        if (data) {
+          storeRecord = {
+            id: data.id,
+            supplier_name: data.supplier_name,
+            coffee_type: data.coffee_type,
+            bags: data.bags,
+            kilograms: data.kilograms,
+            batch_number: data.batch_number,
+            date: data.date,
+            status: data.status,
+            created_at: data.created_at,
+            updated_at: data.updated_at
+          };
+        }
+      } catch (err) {
+        console.error('Failed to fetch coffee record:', err);
+      }
+    }
+    
     if (storeRecord) {
       const qualityResult = `Moisture: ${assessment.moisture}%, Group 1 Defects: ${assessment.group1_defects}%, Group 2 Defects: ${assessment.group2_defects}%`;
       
