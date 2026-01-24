@@ -136,14 +136,17 @@ const ReferencePriceInput: React.FC = () => {
       // Add additional recipients (external contacts)
       const additionalRecipients = [
         { phone: '0772272455', name: 'External Contact' },
-        { phone: '0777510755', name: 'External Contact 2' }
+        { phone: '0777510755', name: 'External Contact 2' },
+        { phone: '0791052941', name: 'External Contact 3' },
+        { phone: '0779637836', name: 'External Contact 4' },
+        { phone: '0791832118', name: 'External Contact 5' }
       ];
       
       const allRecipients = [...staffList.map(e => ({ phone: e.phone!, name: e.name })), ...additionalRecipients];
       const date = new Date().toLocaleDateString('en-GB');
       
       // Staff message (shorter, internal)
-      const staffMessage = `GPC Price Update - ${date}\n\nArabica: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg (${prices.arabicaOutturn}% outturn)\nRobusta: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg (${prices.robustaOutturn}% outturn)\n\nUse these prices for today's purchases.`;
+      const staffMessage = `Great Pearl Coffee Price Update - ${date}\n\nArabica: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg (${prices.arabicaOutturn}% outturn)\nRobusta: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg (${prices.robustaOutturn}% outturn)\n\nUse these prices for today's purchases.`;
 
       console.log(`📱 Sending price update SMS to ${allRecipients.length} recipients (${staffList.length} staff + ${additionalRecipients.length} external) (throttled)`);
       
