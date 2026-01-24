@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Printer } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import GRNPrintModal from "@/components/quality/GRNPrintModal";
 
 interface QualityAssessmentFormProps {
   lot: any;
@@ -35,6 +36,8 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isRejecting, setIsRejecting] = useState(false);
+  const [showGRNModal, setShowGRNModal] = useState(false);
+  const [grnData, setGrnData] = useState<any>(null);
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm<AssessmentForm>({
     defaultValues: {
@@ -112,13 +115,34 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
 
       if (financeError) throw financeError;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Prepare GRN data for printing
+      const grnInfo = {
+        grnNumber: `GRN-${lot.batch_number}`,
+        supplierName: lot.supplier_name,
+        coffeeType: lot.coffee_type,
+        qualityAssessment: 'Approved',
+        numberOfBags: lot.bags,
+        totalKgs: variables.quantity_kg,
+        unitPrice: variables.unit_price_ugx,
+        assessedBy: employee?.email || 'Quality Controller',
+        createdAt: new Date().toISOString(),
+        moisture: variables.moisture_content,
+        group1_defects: variables.group1_percentage,
+        group2_defects: variables.group2_percentage,
+        pods: variables.pods_percentage,
+        husks: variables.husks_percentage,
+        stones: variables.fm_percentage
+      };
+      
+      setGrnData(grnInfo);
+      setShowGRNModal(true);
+      
       toast({
         title: "Success",
-        description: "Lot approved and added to inventory"
+        description: "Lot approved and added to inventory. Print GRN now."
       });
       queryClient.invalidateQueries({ queryKey: ['v2-pending-quality'] });
-      navigate('/v2/quality');
     },
     onError: (error: any) => {
       toast({
@@ -327,6 +351,16 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           Approve & Send to Finance
         </Button>
       </div>
+
+      {/* GRN Print Modal */}
+      <GRNPrintModal
+        open={showGRNModal}
+        onClose={() => {
+          setShowGRNModal(false);
+          navigate('/v2/quality');
+        }}
+        grnData={grnData}
+      />
     </form>
   );
 };
