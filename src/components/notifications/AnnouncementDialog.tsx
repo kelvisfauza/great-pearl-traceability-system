@@ -95,13 +95,21 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
 
       // Send the announcement via edge function if SMS is requested
       if (sendSms && announcement) {
+        console.log('📤 Calling send-company-announcement edge function with ID:', announcement.id);
         const { error: sendError } = await supabase.functions.invoke('send-company-announcement', {
           body: { announcementId: announcement.id }
         });
         
         if (sendError) {
-          console.error('SMS sending failed:', sendError);
+          console.error('❌ SMS sending failed:', sendError);
+          toast({
+            title: "SMS Sending Failed",
+            description: `Could not send SMS: ${sendError.message || 'Unknown error'}`,
+            variant: "destructive"
+          });
           // Continue with regular notification even if SMS fails
+        } else {
+          console.log('✅ SMS edge function called successfully');
         }
       }
       
