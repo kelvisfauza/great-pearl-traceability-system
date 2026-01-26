@@ -456,7 +456,8 @@ export const useUnifiedApprovalRequests = () => {
       }
 
       // Remove from local state
-      setRequests(prev => prev.filter(req => req.id !== request.id));
+      // Refetch to ensure UI is in sync with database
+      await fetchAllRequests(true);
       
       return true;
     } catch (error) {
