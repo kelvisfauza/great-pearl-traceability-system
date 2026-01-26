@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, CheckCircle, DollarSign, Users, TrendingUp, BarChart3, Settings, Archive } from 'lucide-react';
+import { Shield, CheckCircle, DollarSign, Users, TrendingUp, BarChart3, Settings, Archive, Coffee } from 'lucide-react';
 import RoleAssignmentManager from './RoleAssignmentManager';
 import PermissionOverview from './PermissionOverview';
 import UserPermissionsList from './UserPermissionsList';
@@ -11,6 +11,7 @@ import QuickPermissionAssignment from './QuickPermissionAssignment';
 import CashManagementModal from './CashManagementModal';
 import TopSuppliersChart from './TopSuppliersChart';
 import { PermissionChangeApprovals } from './PermissionChangeApprovals';
+import PriceApprovalPanel from './PriceApprovalPanel';
 
 import { DataArchiveManager } from './DataArchiveManager';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -52,10 +53,14 @@ const AdminDashboard = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 sm:grid sm:grid-cols-4 bg-muted/50 p-1 rounded-xl gap-1">
+          <TabsList className="inline-flex w-auto min-w-full sm:min-w-0 sm:grid sm:grid-cols-5 bg-muted/50 p-1 rounded-xl gap-1">
             <TabsTrigger value="overview" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
               <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Overview
+            </TabsTrigger>
+            <TabsTrigger value="prices" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
+              <Coffee className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Prices
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-md text-xs sm:text-sm">
               <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -181,6 +186,10 @@ const AdminDashboard = () => {
           <div className="grid grid-cols-1 gap-6">
             <PermissionOverview />
           </div>
+        </TabsContent>
+
+        <TabsContent value="prices" className="space-y-6">
+          <PriceApprovalPanel />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">
