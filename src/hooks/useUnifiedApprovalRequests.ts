@@ -263,8 +263,8 @@ export const useUnifiedApprovalRequests = () => {
         }
 
         // Only handle deletions/edits for non-financial requests
-        // Financial requests will be handled after Finance approval
-        if (status === 'Approved' && !['Money Request', 'Salary Payment', 'Requisition', 'Expense'].includes(request.type)) {
+        // Financial requests and salary advances will be handled after Finance approval
+        if (status === 'Approved' && !['Money Request', 'Salary Payment', 'Requisition', 'Expense', 'Salary Advance', 'Salary Request'].includes(request.requestType)) {
           // Handle deletion requests
           if (request.type === 'deletion' && request.details?.table_name && request.details?.record_id) {
             try {

@@ -83,6 +83,80 @@ export const useFinanceApprovals = () => {
     };
   }, []);
 
+  /**
+   * Activates a salary advance after Finance approval
+   */
+  const activateSalaryAdvance = async (request: FinanceApprovalRequest) => {
+    try {
+      // Parse the details
+      const details = typeof request.details === 'string' 
+        ? JSON.parse(request.details) 
+        : request.details;
+
+      if (details?.advance_type !== 'salary_advance') {
+        console.log('Not a salary advance request, skipping activation');
+        return false;
+      }
+
+      // Create the actual salary advance record
+      const { data: advance, error: advanceError } = await supabase
+        .from('employee_salary_advances')
+        .insert({
+          employee_email: details.employee_email,
+          employee_name: details.employee_name,
+          original_amount: details.advance_amount,
+          remaining_balance: details.advance_amount,
+          minimum_payment: details.minimum_payment,
+          reason: details.reason,
+          created_by: request.requestedby,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (advanceError) {
+        console.error('Failed to create salary advance:', advanceError);
+        return false;
+      }
+
+      console.log('✅ Salary advance activated:', advance.id);
+
+      // Send SMS notification to the employee who receives the advance
+      try {
+        const { data: advanceEmployee } = await supabase
+          .from('employees')
+          .select('phone, name')
+          .eq('email', details.employee_email)
+          .single();
+
+        if (advanceEmployee?.phone) {
+          const message = `Dear ${advanceEmployee.name}, your salary advance of UGX ${details.advance_amount.toLocaleString()} has been APPROVED and DISBURSED. Minimum monthly payment: UGX ${details.minimum_payment.toLocaleString()}. This will be deducted from your future salary requests. Great Pearl Coffee.`;
+
+          await supabase.functions.invoke('send-sms', {
+            body: {
+              phone: advanceEmployee.phone,
+              message: message,
+              userName: advanceEmployee.name,
+              messageType: 'approval',
+              triggeredBy: 'Salary Advance System',
+              department: 'HR',
+              recipientEmail: details.employee_email
+            }
+          });
+
+          console.log('✅ SMS notification sent to advance recipient:', advanceEmployee.name);
+        }
+      } catch (smsError) {
+        console.error('SMS notification error for advance recipient (non-blocking):', smsError);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error activating salary advance:', error);
+      return false;
+    }
+  };
+
   const handleFinanceApproval = async (
     requestId: string,
     approve: boolean,
@@ -90,6 +164,8 @@ export const useFinanceApprovals = () => {
     rejectionComments?: string
   ) => {
     try {
+      const request = requests.find(r => r.id === requestId);
+      
       const updateData: any = {
         finance_approved: approve,
         finance_approved_by: employee?.name || employee?.email || 'Finance',
@@ -116,26 +192,30 @@ export const useFinanceApprovals = () => {
 
       if (error) throw error;
 
-      // Send SMS notification to requester
+      // If approved and it's a salary advance, activate it
+      if (approve && request?.type === 'Salary Advance') {
+        await activateSalaryAdvance(data);
+      }
+
+      // Send SMS notification to requester (the HR who submitted the advance request)
       try {
-        const request = data;
         const { data: requesterEmployee } = await supabase
           .from('employees')
           .select('phone, name')
-          .eq('email', request.requestedby)
+          .eq('email', data.requestedby)
           .single();
 
         if (requesterEmployee?.phone) {
           const message = approve
-            ? `Your ${request.type} request for UGX ${request.amount.toLocaleString()} has been APPROVED by Finance. You will receive payment shortly.`
-            : `Your ${request.type} request for UGX ${request.amount.toLocaleString()} has been REJECTED by Finance. Reason: ${rejectionReason}`;
+            ? `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been APPROVED by Finance.${data.type === 'Salary Advance' ? ' The employee has been notified and the advance is now active.' : ' You will receive payment shortly.'}`
+            : `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been REJECTED by Finance. Reason: ${rejectionReason}`;
 
           await sendApprovalRequestSMS(
             requesterEmployee.name,
             requesterEmployee.phone,
-            request.amount,
+            data.amount,
             employee?.name || 'Finance',
-            request.type
+            data.type
           );
         }
       } catch (smsError) {
@@ -144,7 +224,7 @@ export const useFinanceApprovals = () => {
 
       toast({
         title: approve ? "Request Approved" : "Request Rejected",
-        description: `Request has been ${approve ? 'approved' : 'rejected'} successfully`
+        description: `Request has been ${approve ? 'approved' : 'rejected'} successfully${approve && request?.type === 'Salary Advance' ? '. Salary advance has been activated.' : ''}`
       });
 
       await fetchRequests();
