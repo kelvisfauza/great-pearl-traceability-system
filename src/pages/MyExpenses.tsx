@@ -14,8 +14,10 @@ import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, 
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useAttendance } from '@/hooks/useAttendance';
+import { useSalaryAdvances, SalaryAdvance } from '@/hooks/useSalaryAdvances';
 import Layout from '@/components/Layout';
 import PaymentVoucher from '@/components/expenses/PaymentVoucher';
+import SalaryAdvanceDeduction from '@/components/expenses/SalaryAdvanceDeduction';
 
 interface ExpenseRequest {
   id: string;
@@ -35,12 +37,15 @@ interface ExpenseRequest {
 const MyExpenses = () => {
   const { employee, user } = useAuth();
   const { getCurrentWeekAllowance, deductFromAllowance } = useAttendance();
+  const { fetchEmployeeAdvance, createAdvancePayment } = useSalaryAdvances();
   const [activeTab, setActiveTab] = useState('requisitions');
   const [loading, setLoading] = useState(false);
   const [myRequests, setMyRequests] = useState<ExpenseRequest[]>([]);
   const [fetchingRequests, setFetchingRequests] = useState(true);
   const [weeklyAllowance, setWeeklyAllowance] = useState<any>(null);
   const [selectedVoucherRequest, setSelectedVoucherRequest] = useState<ExpenseRequest | null>(null);
+  const [employeeAdvance, setEmployeeAdvance] = useState<SalaryAdvance | null>(null);
+  const [advanceDeduction, setAdvanceDeduction] = useState('');
 
   const isFullyApproved = (request: ExpenseRequest) => {
     return request.status === 'Approved' || 
@@ -110,6 +115,21 @@ const MyExpenses = () => {
     };
     fetchAllowance();
   }, [activeTab, user?.id]);
+
+  // Fetch employee's active salary advance when opening salary tab
+  useEffect(() => {
+    const fetchAdvance = async () => {
+      if (activeTab === 'salary' && employee?.email) {
+        const advance = await fetchEmployeeAdvance(employee.email);
+        setEmployeeAdvance(advance);
+        if (advance) {
+          // Set default deduction to minimum payment
+          setAdvanceDeduction(advance.minimum_payment.toString());
+        }
+      }
+    };
+    fetchAdvance();
+  }, [activeTab, employee?.email, fetchEmployeeAdvance]);
 
   // Submit Cash Requisition
   const handleRequisitionSubmit = async (e: React.FormEvent) => {
@@ -276,15 +296,53 @@ const MyExpenses = () => {
       return;
     }
 
+    // Validate advance deduction if employee has an active advance
+    const deduction = parseFloat(advanceDeduction) || 0;
+    if (employeeAdvance) {
+      if (deduction < employeeAdvance.minimum_payment) {
+        toast({
+          title: "Invalid Deduction",
+          description: `Minimum payment towards your advance is ${employeeAdvance.minimum_payment.toLocaleString()} UGX`,
+          variant: "destructive"
+        });
+        return;
+      }
+      if (deduction > parseFloat(salaryForm.amount)) {
+        toast({
+          title: "Invalid Deduction",
+          description: "Deduction cannot exceed your salary amount",
+          variant: "destructive"
+        });
+        return;
+      }
+      if (deduction > employeeAdvance.remaining_balance) {
+        toast({
+          title: "Invalid Deduction",
+          description: `Deduction cannot exceed remaining balance (${employeeAdvance.remaining_balance.toLocaleString()} UGX)`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      const { error } = await supabase
+      const salaryAmount = parseFloat(salaryForm.amount);
+      const netAmount = employeeAdvance ? salaryAmount - deduction : salaryAmount;
+
+      // Create the salary request with advance deduction info in description
+      let requestDescription = salaryForm.reason;
+      if (employeeAdvance && deduction > 0) {
+        requestDescription += `\n\n--- ADVANCE DEDUCTION ---\nGross Salary: ${salaryAmount.toLocaleString()} UGX\nAdvance Payment: ${deduction.toLocaleString()} UGX\nNet Salary: ${netAmount.toLocaleString()} UGX\nRemaining Advance Balance: ${(employeeAdvance.remaining_balance - deduction).toLocaleString()} UGX`;
+      }
+
+      const { data: requestData, error } = await supabase
         .from('approval_requests')
         .insert({
           type: 'Salary Request',
-          title: `${salaryForm.requestType} Salary Request - ${employee.name}`,
-          description: salaryForm.reason,
-          amount: parseFloat(salaryForm.amount),
+          title: `${salaryForm.requestType} Salary Request - ${employee.name}${employeeAdvance ? ' (With Advance Deduction)' : ''}`,
+          description: requestDescription,
+          amount: netAmount, // Store net amount after deduction
           requestedby: employee.email,
           requestedby_name: employee.name,
           requestedby_position: employee.position,
@@ -292,18 +350,47 @@ const MyExpenses = () => {
           daterequested: new Date().toISOString().split('T')[0],
           priority: 'High',
           status: 'Pending',
-          approval_stage: 'pending'
-        });
+          approval_stage: 'pending',
+          details: employeeAdvance ? JSON.stringify({
+            gross_salary: salaryAmount,
+            advance_deduction: deduction,
+            net_salary: netAmount,
+            advance_id: employeeAdvance.id,
+            advance_remaining_before: employeeAdvance.remaining_balance,
+            advance_remaining_after: employeeAdvance.remaining_balance - deduction
+          }) : null
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
+      // Create advance payment record if applicable
+      if (employeeAdvance && deduction > 0 && requestData) {
+        await createAdvancePayment(
+          employeeAdvance.id,
+          employee.email,
+          deduction,
+          requestData.id
+        );
+      }
+
       toast({
         title: "Success",
-        description: "Salary request submitted successfully"
+        description: employeeAdvance 
+          ? `Salary request submitted with ${deduction.toLocaleString()} UGX advance deduction`
+          : "Salary request submitted successfully"
       });
 
       setSalaryForm({ requestType: '', amount: '', reason: '' });
+      setAdvanceDeduction('');
       fetchMyRequests();
+      
+      // Refresh advance data
+      if (employee.email) {
+        const updatedAdvance = await fetchEmployeeAdvance(employee.email);
+        setEmployeeAdvance(updatedAdvance);
+      }
     } catch (error) {
       console.error('Error submitting salary request:', error);
       toast({
@@ -782,6 +869,16 @@ const MyExpenses = () => {
                     </p>
                   </div>
 
+                  {/* Salary Advance Deduction Section */}
+                  {employeeAdvance && salaryForm.amount && (
+                    <SalaryAdvanceDeduction
+                      advance={employeeAdvance}
+                      deductionAmount={advanceDeduction}
+                      onDeductionChange={setAdvanceDeduction}
+                      salaryAmount={parseFloat(salaryForm.amount) || 0}
+                    />
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="sal-reason">Reason</Label>
                     <Textarea
@@ -795,7 +892,7 @@ const MyExpenses = () => {
                   </div>
 
                   <Button type="submit" disabled={loading} className="w-full">
-                    {loading ? 'Submitting...' : 'Submit Salary Request'}
+                    {loading ? 'Submitting...' : employeeAdvance ? 'Submit Salary Request (With Advance Deduction)' : 'Submit Salary Request'}
                   </Button>
                 </form>
               </CardContent>
