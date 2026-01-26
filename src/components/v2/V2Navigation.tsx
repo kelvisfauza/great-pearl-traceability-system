@@ -18,7 +18,8 @@ import {
   ShoppingBag,
   Monitor,
   Shield,
-  Home
+  Home,
+  CreditCard
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -84,6 +85,7 @@ const DEPARTMENT_NAV_CONFIG: Record<string, {
       section: "HR Operations",
       items: [
         { icon: Users, label: "HR Dashboard", path: "/v2/hr", permission: "Human Resources" },
+        { icon: CreditCard, label: "Salary Advances", path: "/v2/hr/salary-advances", permission: "Human Resources" },
       ]
     }
   ],
