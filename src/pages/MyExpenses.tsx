@@ -18,6 +18,7 @@ import { useSalaryAdvances, SalaryAdvance } from '@/hooks/useSalaryAdvances';
 import Layout from '@/components/Layout';
 import PaymentVoucher from '@/components/expenses/PaymentVoucher';
 import SalaryAdvanceDeduction from '@/components/expenses/SalaryAdvanceDeduction';
+import SalaryAdvanceReceipt from '@/components/expenses/SalaryAdvanceReceipt';
 
 interface ExpenseRequest {
   id: string;
@@ -46,6 +47,8 @@ const MyExpenses = () => {
   const [selectedVoucherRequest, setSelectedVoucherRequest] = useState<ExpenseRequest | null>(null);
   const [employeeAdvance, setEmployeeAdvance] = useState<SalaryAdvance | null>(null);
   const [advanceDeduction, setAdvanceDeduction] = useState('');
+  const [showAdvanceReceipt, setShowAdvanceReceipt] = useState(false);
+  const [advanceReceiptDetails, setAdvanceReceiptDetails] = useState<any>(null);
 
   const isFullyApproved = (request: ExpenseRequest) => {
     return request.status === 'Approved' || 
@@ -891,9 +894,34 @@ const MyExpenses = () => {
                     />
                   </div>
 
-                  <Button type="submit" disabled={loading} className="w-full">
-                    {loading ? 'Submitting...' : employeeAdvance ? 'Submit Salary Request (With Advance Deduction)' : 'Submit Salary Request'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="submit" disabled={loading} className="flex-1">
+                      {loading ? 'Submitting...' : employeeAdvance ? 'Submit Salary Request (With Advance Deduction)' : 'Submit Salary Request'}
+                    </Button>
+                    
+                    {employeeAdvance && salaryForm.amount && salaryForm.reason && (
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => {
+                          const deduction = parseFloat(advanceDeduction) || employeeAdvance.minimum_payment;
+                          const grossSalary = parseFloat(salaryForm.amount) || 0;
+                          setAdvanceReceiptDetails({
+                            requestType: salaryForm.requestType,
+                            grossSalary,
+                            deductionAmount: deduction,
+                            netSalary: grossSalary - deduction,
+                            reason: salaryForm.reason
+                          });
+                          setShowAdvanceReceipt(true);
+                        }}
+                        className="gap-2"
+                      >
+                        <Printer className="h-4 w-4" />
+                        Preview Receipt
+                      </Button>
+                    )}
+                  </div>
                 </form>
               </CardContent>
             </Card>
@@ -969,6 +997,19 @@ const MyExpenses = () => {
             request={selectedVoucherRequest}
             employeeName={employee?.name || ''}
             employeeDepartment={employee?.department || ''}
+          />
+        )}
+
+        {/* Salary Advance Receipt Dialog */}
+        {showAdvanceReceipt && employeeAdvance && (
+          <SalaryAdvanceReceipt
+            isOpen={showAdvanceReceipt}
+            onClose={() => setShowAdvanceReceipt(false)}
+            advance={employeeAdvance}
+            requestDetails={advanceReceiptDetails}
+            employeeName={employee?.name || ''}
+            employeeDepartment={employee?.department || ''}
+            employeePosition={employee?.position}
           />
         )}
       </div>
