@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
 import StoreRealTimeTracker from "@/components/v2/admin/StoreRealTimeTracker";
+import PriceApprovalPanel from "@/components/admin/PriceApprovalPanel";
 import { Shield, Users, Settings, BarChart3, Package, FlaskConical, Warehouse, ShoppingCart, TrendingUp, FileText, Activity } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,6 +84,9 @@ const AdminDashboard = () => {
                 <p className="text-muted-foreground">{employee?.role} • Full System Access</p>
               </CardHeader>
             </Card>
+
+            {/* Price Approval Requests - Admin Only */}
+            <PriceApprovalPanel />
 
             {/* Store Real-Time Tracking */}
             <StoreRealTimeTracker />

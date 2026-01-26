@@ -6,8 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useReferencePrices } from '@/hooks/useReferencePrices';
+import { usePriceApprovals, PriceApprovalRequest } from '@/hooks/usePriceApprovals';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Coffee, Send, Globe, RefreshCw } from 'lucide-react';
+import { Loader2, Coffee, Send, Globe, RefreshCw, Clock } from 'lucide-react';
+import PendingPriceApproval from './PendingPriceApproval';
 
 interface ReferencePrices {
   iceArabica: number;
@@ -28,7 +31,15 @@ interface ReferencePrices {
 
 const ReferencePriceInput: React.FC = () => {
   const { toast } = useToast();
+  const { employee } = useAuth();
   const { prices: currentPrices, loading: hookLoading, savePrices } = useReferencePrices();
+  const { 
+    myPendingRequest, 
+    myRejectedRequests, 
+    submitForApproval, 
+    dismissRejection,
+    fetchMyRequests 
+  } = usePriceApprovals();
   
   const [prices, setPrices] = useState<ReferencePrices>({
     iceArabica: 185.50,
@@ -50,6 +61,12 @@ const ReferencePriceInput: React.FC = () => {
   const [testLoading, setTestLoading] = useState(false);
   const [fetchingICE, setFetchingICE] = useState(false);
   const [sendNotification, setSendNotification] = useState(false);
+
+  useEffect(() => {
+    if (employee?.email) {
+      fetchMyRequests(employee.email);
+    }
+  }, [employee?.email, fetchMyRequests]);
 
   useEffect(() => {
     setPrices({
@@ -78,145 +95,63 @@ const ReferencePriceInput: React.FC = () => {
     }));
   };
 
-  const handleSave = async () => {
-    try {
-      setLoading(true);
-      await savePrices(prices);
-
-      // Helper function to send SMS with delay (throttled)
-      const sendSmsWithDelay = async (
-        recipient: { phone: string; name: string },
-        message: string,
-        messageType: string,
-        delayMs: number
-      ) => {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        try {
-          const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
-            },
-            body: JSON.stringify({
-              phone: recipient.phone,
-              message: message,
-              userName: recipient.name,
-              messageType: messageType,
-              triggeredBy: 'Data Analyst',
-              department: 'Analyst'
-            })
-          });
-          const result = await response.json();
-          if (!response.ok) {
-            console.error(`❌ Failed to send SMS to ${recipient.name}:`, result);
-            return { success: false, name: recipient.name };
-          }
-          console.log(`✅ SMS sent to ${recipient.name}`);
-          return { success: true, name: recipient.name };
-        } catch (error) {
-          console.error(`❌ Error sending SMS to ${recipient.name}:`, error);
-          return { success: false, name: recipient.name };
-        }
-      };
-
-      // Always send price update to all staff (throttled - 500ms between each)
-      const { data: employees, error: employeesError } = await supabase
-        .from('employees')
-        .select('id, name, phone, email')
-        .eq('status', 'Active')
-        .not('phone', 'is', null);
-
-      if (employeesError) {
-        console.error('Error fetching employees:', employeesError);
-      }
-
-      const staffList = employees?.filter(e => e.phone) || [];
-      
-      // Add additional recipients (external contacts)
-      const additionalRecipients = [
-        { phone: '0772272455', name: 'External Contact' },
-        { phone: '0777510755', name: 'External Contact 2' },
-        { phone: '0791052941', name: 'External Contact 3' },
-        { phone: '0779637836', name: 'External Contact 4' },
-        { phone: '0791832118', name: 'External Contact 5' }
-      ];
-      
-      const allRecipients = [...staffList.map(e => ({ phone: e.phone!, name: e.name })), ...additionalRecipients];
-      const date = new Date().toLocaleDateString('en-GB');
-      
-      // Staff message (shorter, internal)
-      const staffMessage = `Great Pearl Coffee Price Update - ${date}\n\nArabica: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg (${prices.arabicaOutturn}% outturn)\nRobusta: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg (${prices.robustaOutturn}% outturn)\n\nUse these prices for today's purchases.`;
-
-      console.log(`📱 Sending price update SMS to ${allRecipients.length} recipients (${staffList.length} staff + ${additionalRecipients.length} external) (throttled)`);
-      
-      // Send SMS with 500ms delay between each to avoid overwhelming YoolaSMS
-      const staffResults = [];
-      for (let i = 0; i < allRecipients.length; i++) {
-        const recipient = allRecipients[i];
-        const result = await sendSmsWithDelay(
-          { phone: recipient.phone, name: recipient.name },
-          staffMessage,
-          'staff_price_update',
-          i === 0 ? 0 : 500 // No delay for first, 500ms for rest
-        );
-        staffResults.push(result);
-      }
-      
-      const staffSuccessCount = staffResults.filter(r => r.success).length;
-
-      // Optionally also send to suppliers if checkbox is enabled
-      if (sendNotification) {
-        const { data: suppliers, error: suppliersError } = await supabase
-          .from('suppliers')
-          .select('id, name, phone')
-          .not('phone', 'is', null);
-
-        if (suppliersError) {
-          console.error('Error fetching suppliers:', suppliersError);
-        }
-
-        const suppliersList = suppliers?.filter(s => s.phone) || [];
-        
-        // Supplier message (more detailed, external)
-        const supplierMessage = `Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256778536681`;
-
-        console.log(`📱 Sending SMS to ${suppliersList.length} suppliers (throttled)`);
-        
-        // Send supplier SMS with 500ms delay between each
-        const supplierResults = [];
-        for (let i = 0; i < suppliersList.length; i++) {
-          const supplier = suppliersList[i];
-          const result = await sendSmsWithDelay(
-            { phone: supplier.phone!, name: supplier.name },
-            supplierMessage,
-            'price_update',
-            500 // Always delay after staff messages
-          );
-          supplierResults.push(result);
-        }
-        
-        const supplierSuccessCount = supplierResults.filter(r => r.success).length;
-        
-        toast({
-          title: "Reference Prices Updated",
-          description: `Prices saved, SMS sent to ${staffSuccessCount}/${staffList.length} staff and ${supplierSuccessCount}/${suppliersList.length} suppliers`
-        });
-      } else {
-        toast({
-          title: "Reference Prices Updated",
-          description: `Prices saved and SMS sent to ${staffSuccessCount}/${staffList.length} staff members`
-        });
-      }
-    } catch (error) {
-      console.error('Error saving prices:', error);
+  const handleSubmitForApproval = async () => {
+    if (!employee) {
       toast({
-        title: "Error",
-        description: "Failed to save reference prices",
+        title: "Not Authenticated",
+        description: "You must be logged in to submit price updates",
         variant: "destructive"
       });
+      return;
+    }
+
+    if (myPendingRequest) {
+      toast({
+        title: "Pending Request Exists",
+        description: "You already have a price update pending approval. Please wait for admin review.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const success = await submitForApproval(
+        prices,
+        employee.name,
+        employee.email,
+        sendNotification
+      );
+
+      if (success) {
+        // Refresh my requests
+        await fetchMyRequests(employee.email);
+      }
+    } catch (error) {
+      console.error('Error submitting for approval:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUseSuggestedPrices = (request: PriceApprovalRequest) => {
+    if (request.suggested_arabica_price) {
+      setPrices(prev => ({ ...prev, arabicaBuyingPrice: request.suggested_arabica_price! }));
+    }
+    if (request.suggested_robusta_price) {
+      setPrices(prev => ({ ...prev, robustaBuyingPrice: request.suggested_robusta_price! }));
+    }
+    dismissRejection(request.id);
+    toast({
+      title: "Suggested Prices Applied",
+      description: "The admin's suggested prices have been applied. You can now submit for approval."
+    });
+  };
+
+  const handleDismissRejection = async (id: string) => {
+    await dismissRejection(id);
+    if (employee?.email) {
+      await fetchMyRequests(employee.email);
     }
   };
 
@@ -339,16 +274,25 @@ const ReferencePriceInput: React.FC = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Reference Price Management</CardTitle>
-        {currentPrices.lastUpdated && (
-          <p className="text-sm text-muted-foreground">
-            Last updated: {new Date(currentPrices.lastUpdated).toLocaleString()}
-          </p>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="space-y-6">
+      {/* Show pending and rejected requests */}
+      <PendingPriceApproval
+        myPendingRequest={myPendingRequest}
+        myRejectedRequests={myRejectedRequests}
+        onDismissRejection={handleDismissRejection}
+        onUseRejectedPrices={handleUseSuggestedPrices}
+      />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Reference Price Management</CardTitle>
+          {currentPrices.lastUpdated && (
+            <p className="text-sm text-muted-foreground">
+              Last updated: {new Date(currentPrices.lastUpdated).toLocaleString()}
+            </p>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-6">
         {/* Arabica Buying Parameters */}
         <div className="p-4 border rounded-lg bg-amber-50 dark:bg-amber-950/20">
           <div className="flex items-center gap-2 mb-3">
@@ -555,9 +499,18 @@ const ReferencePriceInput: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3 pt-4">
-          <Button onClick={handleSave} disabled={loading || hookLoading}>
+          <Button 
+            onClick={handleSubmitForApproval} 
+            disabled={loading || hookLoading || !!myPendingRequest}
+            className="bg-primary"
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {loading ? 'Saving...' : 'Save Reference Prices'}
+            {myPendingRequest ? (
+              <>
+                <Clock className="mr-2 h-4 w-4" />
+                Awaiting Approval
+              </>
+            ) : loading ? 'Submitting...' : 'Submit for Approval'}
           </Button>
           <Button variant="outline" onClick={handleReset}>
             Reset to Defaults
@@ -587,8 +540,9 @@ const ReferencePriceInput: React.FC = () => {
             {testLoading ? 'Sending...' : 'Test SMS (0707756445)'}
           </Button>
         </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
