@@ -1429,6 +1429,48 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_salary_advances: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          employee_email: string
+          employee_name: string
+          id: string
+          minimum_payment: number
+          original_amount: number
+          reason: string | null
+          remaining_balance: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          employee_email: string
+          employee_name: string
+          id?: string
+          minimum_payment?: number
+          original_amount: number
+          reason?: string | null
+          remaining_balance: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          employee_email?: string
+          employee_name?: string
+          id?: string
+          minimum_payment?: number
+          original_amount?: number
+          reason?: string | null
+          remaining_balance?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           address: string | null
@@ -4402,6 +4444,50 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      salary_advance_payments: {
+        Row: {
+          advance_id: string
+          amount_paid: number
+          approved_by: string | null
+          created_at: string
+          employee_email: string
+          id: string
+          payment_date: string
+          salary_request_id: string | null
+          status: string
+        }
+        Insert: {
+          advance_id: string
+          amount_paid: number
+          approved_by?: string | null
+          created_at?: string
+          employee_email: string
+          id?: string
+          payment_date?: string
+          salary_request_id?: string | null
+          status?: string
+        }
+        Update: {
+          advance_id?: string
+          amount_paid?: number
+          approved_by?: string | null
+          created_at?: string
+          employee_email?: string
+          id?: string
+          payment_date?: string
+          salary_request_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_advance_payments_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "employee_salary_advances"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       salary_payments: {
         Row: {
