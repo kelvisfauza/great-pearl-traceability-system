@@ -48,18 +48,17 @@ export const useUnifiedApprovalRequests = () => {
       
       const allRequests: UnifiedApprovalRequest[] = [];
 
-      // 1. Fetch Supabase approval requests
+      // 1. Fetch Supabase approval requests - ONLY pending for Admin approval
+      // Requests with 'Pending Finance' status should NOT appear here - they go to Finance portal
       try {
         const { data: supabaseRequests, error } = await supabase
           .from('approval_requests')
           .select('*')
-          // NOTE: statuses in this project are not consistent across time; keep this list aligned with DB values
+          // Only fetch requests pending Admin approval, NOT those already approved by Admin
           .in('status', [
             'Pending',
             'Pending Admin',
             'Pending Admin Approval',
-            'Pending Finance',
-            'Finance Approved - Awaiting Admin',
           ])
           .order('created_at', { ascending: false });
         
@@ -260,6 +259,45 @@ export const useUnifiedApprovalRequests = () => {
         if (error) {
           console.error('Supabase update error:', error);
           return false;
+        }
+
+        // Send SMS notification to the requester about admin approval/rejection
+        try {
+          const details = request.details || {};
+          const recipientEmail = details.employee_email || request.requestedBy;
+          
+          const { data: recipientEmployee } = await supabase
+            .from('employees')
+            .select('phone, name')
+            .eq('email', recipientEmail)
+            .single();
+
+          if (recipientEmployee?.phone) {
+            const adminName = employee?.name || 'Admin';
+            let message = '';
+            
+            if (status === 'Approved') {
+              message = `Dear ${recipientEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been approved by ${adminName}. Awaiting final Finance approval. Great Pearl Coffee.`;
+            } else {
+              message = `Dear ${recipientEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Great Pearl Coffee.`;
+            }
+
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: recipientEmployee.phone,
+                message: message,
+                userName: recipientEmployee.name,
+                messageType: status === 'Approved' ? 'admin_approval' : 'rejection',
+                triggeredBy: 'Admin Approval System',
+                requestId: request.id,
+                department: request.department,
+                recipientEmail: recipientEmail
+              }
+            });
+            console.log('✅ SMS notification sent to:', recipientEmployee.name);
+          }
+        } catch (smsError) {
+          console.error('SMS notification error (non-blocking):', smsError);
         }
 
         // Only handle deletions/edits for non-financial requests
