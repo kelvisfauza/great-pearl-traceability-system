@@ -3727,6 +3727,99 @@ export type Database = {
         }
         Relationships: []
       }
+      price_approval_requests: {
+        Row: {
+          arabica_buying_price: number
+          arabica_fm: number | null
+          arabica_moisture: number | null
+          arabica_outturn: number | null
+          created_at: string
+          drugar_local: number | null
+          exchange_rate: number | null
+          ice_arabica: number | null
+          id: string
+          notify_suppliers: boolean | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewed_by_email: string | null
+          robusta: number | null
+          robusta_buying_price: number
+          robusta_faq_local: number | null
+          robusta_fm: number | null
+          robusta_moisture: number | null
+          robusta_outturn: number | null
+          status: string
+          submitted_at: string
+          submitted_by: string
+          submitted_by_email: string
+          suggested_arabica_price: number | null
+          suggested_robusta_price: number | null
+          updated_at: string
+          wugar_local: number | null
+        }
+        Insert: {
+          arabica_buying_price: number
+          arabica_fm?: number | null
+          arabica_moisture?: number | null
+          arabica_outturn?: number | null
+          created_at?: string
+          drugar_local?: number | null
+          exchange_rate?: number | null
+          ice_arabica?: number | null
+          id?: string
+          notify_suppliers?: boolean | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_email?: string | null
+          robusta?: number | null
+          robusta_buying_price: number
+          robusta_faq_local?: number | null
+          robusta_fm?: number | null
+          robusta_moisture?: number | null
+          robusta_outturn?: number | null
+          status?: string
+          submitted_at?: string
+          submitted_by: string
+          submitted_by_email: string
+          suggested_arabica_price?: number | null
+          suggested_robusta_price?: number | null
+          updated_at?: string
+          wugar_local?: number | null
+        }
+        Update: {
+          arabica_buying_price?: number
+          arabica_fm?: number | null
+          arabica_moisture?: number | null
+          arabica_outturn?: number | null
+          created_at?: string
+          drugar_local?: number | null
+          exchange_rate?: number | null
+          ice_arabica?: number | null
+          id?: string
+          notify_suppliers?: boolean | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewed_by_email?: string | null
+          robusta?: number | null
+          robusta_buying_price?: number
+          robusta_faq_local?: number | null
+          robusta_fm?: number | null
+          robusta_moisture?: number | null
+          robusta_outturn?: number | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string
+          submitted_by_email?: string
+          suggested_arabica_price?: number | null
+          suggested_robusta_price?: number | null
+          updated_at?: string
+          wugar_local?: number | null
+        }
+        Relationships: []
+      }
       price_data: {
         Row: {
           created_at: string
