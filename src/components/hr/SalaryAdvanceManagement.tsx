@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSalaryAdvances, SalaryAdvance } from '@/hooks/useSalaryAdvances';
+import { useSalaryAdvanceApprovals } from '@/hooks/useSalaryAdvanceApprovals';
 import { toast } from '@/hooks/use-toast';
 import { 
   CreditCard, 
@@ -23,7 +24,8 @@ import {
   DollarSign,
   History,
   AlertTriangle,
-  Search
+  Search,
+  Send
 } from 'lucide-react';
 
 interface Employee {
@@ -37,7 +39,8 @@ interface Employee {
 
 const SalaryAdvanceManagement = () => {
   const { employee: currentUser } = useAuth();
-  const { advances, loading, fetchAllAdvances, createAdvance, fetchAdvancePayments } = useSalaryAdvances();
+  const { advances, loading, fetchAllAdvances, fetchAdvancePayments } = useSalaryAdvances();
+  const { loading: approvalLoading, createAdvanceApprovalRequest } = useSalaryAdvanceApprovals();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPaymentsModal, setShowPaymentsModal] = useState(false);
@@ -107,20 +110,29 @@ const SalaryAdvanceManagement = () => {
     }
 
     try {
-      await createAdvance(
-        selectedEmployee.email,
-        selectedEmployee.name,
+      // Create an approval request instead of directly creating the advance
+      // This will go through Admin (Denis) → Finance (Fauza) approval flow
+      await createAdvanceApprovalRequest({
+        employee_email: selectedEmployee.email,
+        employee_name: selectedEmployee.name,
+        department: selectedEmployee.department,
+        position: selectedEmployee.position,
         amount,
-        minPayment,
-        newAdvance.reason,
-        currentUser?.email || 'Admin'
-      );
+        minimum_payment: minPayment,
+        reason: newAdvance.reason,
+        requested_by: currentUser?.email || 'Admin',
+        requested_by_name: currentUser?.name || 'HR Administrator'
+      });
 
       setShowAddModal(false);
       setNewAdvance({ employeeEmail: '', amount: '', minimumPayment: '40000', reason: '' });
-      fetchAllAdvances();
+      
+      toast({
+        title: "Submitted for Approval",
+        description: `Salary advance for ${selectedEmployee.name} has been sent to Admin for approval.`
+      });
     } catch (error) {
-      console.error('Error creating advance:', error);
+      console.error('Error submitting advance for approval:', error);
     }
   };
 
@@ -358,10 +370,11 @@ const SalaryAdvanceManagement = () => {
           </DialogHeader>
 
           <div className="space-y-4">
-            <Alert className="border-orange-200 bg-orange-50">
-              <AlertTriangle className="h-4 w-4 text-orange-600" />
-              <AlertDescription className="text-xs text-orange-800">
-                When you award an advance, the employee will be required to make payments towards it whenever they request salary.
+            <Alert className="border-blue-200 bg-blue-50">
+              <Send className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-xs text-blue-800">
+                This advance will be submitted for Admin approval (Denis), then Finance approval (Fauza). 
+                Once fully approved, the employee will receive an SMS notification and the advance will be activated.
               </AlertDescription>
             </Alert>
 
@@ -425,8 +438,9 @@ const SalaryAdvanceManagement = () => {
             <Button variant="outline" onClick={() => setShowAddModal(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateAdvance}>
-              Award Advance
+            <Button onClick={handleCreateAdvance} disabled={approvalLoading} className="gap-2">
+              <Send className="h-4 w-4" />
+              {approvalLoading ? 'Submitting...' : 'Submit for Approval'}
             </Button>
           </DialogFooter>
         </DialogContent>
