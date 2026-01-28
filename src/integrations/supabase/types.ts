@@ -3780,6 +3780,7 @@ export type Database = {
           exchange_rate: number | null
           ice_arabica: number | null
           id: string
+          is_correction: boolean | null
           notify_suppliers: boolean | null
           rejection_reason: string | null
           reviewed_at: string | null
@@ -3810,6 +3811,7 @@ export type Database = {
           exchange_rate?: number | null
           ice_arabica?: number | null
           id?: string
+          is_correction?: boolean | null
           notify_suppliers?: boolean | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -3840,6 +3842,7 @@ export type Database = {
           exchange_rate?: number | null
           ice_arabica?: number | null
           id?: string
+          is_correction?: boolean | null
           notify_suppliers?: boolean | null
           rejection_reason?: string | null
           reviewed_at?: string | null

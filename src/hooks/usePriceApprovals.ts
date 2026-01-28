@@ -29,6 +29,7 @@ export interface PriceApprovalRequest {
   rejection_reason: string | null;
   suggested_arabica_price: number | null;
   suggested_robusta_price: number | null;
+  is_correction: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -86,6 +87,27 @@ export const usePriceApprovals = () => {
     }
   }, []);
 
+  // Check if prices have already been approved today (for correction detection)
+  const checkIfCorrectionNeeded = async (): Promise<boolean> => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Check if there's an approved price request for today
+      const { data: approvedToday } = await supabase
+        .from('price_approval_requests')
+        .select('id')
+        .eq('status', 'approved')
+        .gte('reviewed_at', `${today}T00:00:00`)
+        .lte('reviewed_at', `${today}T23:59:59`)
+        .limit(1);
+
+      return (approvedToday && approvedToday.length > 0);
+    } catch (error) {
+      console.error('Error checking for correction:', error);
+      return false;
+    }
+  };
+
   const submitForApproval = async (
     prices: {
       iceArabica: number;
@@ -108,6 +130,9 @@ export const usePriceApprovals = () => {
     notifySuppliers: boolean
   ) => {
     try {
+      // Auto-detect if this is a correction
+      const isCorrection = await checkIfCorrectionNeeded();
+      
       const { error } = await supabase
         .from('price_approval_requests')
         .insert({
@@ -128,14 +153,17 @@ export const usePriceApprovals = () => {
           robusta_fm: prices.robustaFm,
           robusta_buying_price: prices.robustaBuyingPrice,
           notify_suppliers: notifySuppliers,
+          is_correction: isCorrection,
           status: 'pending'
         });
 
       if (error) throw error;
       
       toast({
-        title: "Price Update Submitted",
-        description: "Your price update has been sent for admin approval."
+        title: isCorrection ? "Price Correction Submitted" : "Price Update Submitted",
+        description: isCorrection 
+          ? "Your price correction has been sent for admin approval."
+          : "Your price update has been sent for admin approval."
       });
 
       return true;

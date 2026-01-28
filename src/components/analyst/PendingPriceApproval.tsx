@@ -27,16 +27,21 @@ const PendingPriceApproval: React.FC<PendingPriceApprovalProps> = ({
     <div className="space-y-4 mb-6">
       {/* Pending Request */}
       {myPendingRequest && (
-        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+        <Card className={`${myPendingRequest.is_correction ? 'border-orange-300 bg-orange-50 dark:bg-orange-950/20' : 'border-amber-200 bg-amber-50 dark:bg-amber-950/20'}`}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2 text-amber-700">
+            <CardTitle className={`text-lg flex items-center gap-2 ${myPendingRequest.is_correction ? 'text-orange-700' : 'text-amber-700'}`}>
               <Clock className="h-5 w-5" />
-              Pending Approval
+              {myPendingRequest.is_correction ? 'Correction Pending Approval' : 'Pending Approval'}
+              {myPendingRequest.is_correction && (
+                <Badge variant="destructive" className="bg-orange-500 ml-2">
+                  CORRECTION
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-3">
-              Your price update is waiting for admin approval. Submitted{' '}
+              Your {myPendingRequest.is_correction ? 'price correction' : 'price update'} is waiting for admin approval. Submitted{' '}
               {formatDistanceToNow(new Date(myPendingRequest.submitted_at), { addSuffix: true })}.
             </p>
             <div className="grid grid-cols-2 gap-4">
@@ -65,7 +70,10 @@ const PendingPriceApproval: React.FC<PendingPriceApprovalProps> = ({
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="mt-3 bg-amber-100 text-amber-700 border-amber-300">
+            <Badge 
+              variant="outline" 
+              className={`mt-3 ${myPendingRequest.is_correction ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-amber-100 text-amber-700 border-amber-300'}`}
+            >
               Awaiting Admin Review
             </Badge>
           </CardContent>
