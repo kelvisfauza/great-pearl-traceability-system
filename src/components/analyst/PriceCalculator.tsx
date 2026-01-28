@@ -5,8 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Calculator, Coffee, TrendingUp, RefreshCw, Globe, ArrowRight } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Calculator, Coffee, TrendingUp, RefreshCw, Globe, ArrowRight, Save, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { usePriceCalculationHistory } from '@/hooks/usePriceCalculationHistory';
+import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
 
 interface PriceCalculation {
   icePrice: number;
@@ -19,7 +23,9 @@ const GPCF_MARGIN = 500; // Fixed margin of 500 UGX
 
 const PriceCalculator: React.FC = () => {
   const { toast } = useToast();
-  
+  const { user } = useAuth();
+  const { history, loading: historyLoading, saveBothCalculations, fetchHistory } = usePriceCalculationHistory();
+  const [saving, setSaving] = useState(false);
   // Robusta calculation ($/MT)
   const [robusta, setRobusta] = useState<PriceCalculation>({
     icePrice: 4147,
@@ -122,6 +128,40 @@ const PriceCalculator: React.FC = () => {
     });
   };
 
+  const handleSaveCalculations = async () => {
+    if (!user?.email) {
+      toast({
+        title: "Not Authenticated",
+        description: "Please log in to save calculations",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await saveBothCalculations(
+        {
+          icePrice: robusta.icePrice,
+          multiplier: robusta.multiplier,
+          marketPrice: robusta.marketPrice,
+          gpcfPrice: robusta.gpcfPrice
+        },
+        {
+          icePrice: arabica.icePrice,
+          multiplier: arabica.multiplier,
+          marketPrice: arabica.marketPrice,
+          gpcfPrice: arabica.gpcfPrice
+        },
+        user.email
+      );
+    } catch (error) {
+      // Error already handled in hook
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -151,6 +191,14 @@ const PriceCalculator: React.FC = () => {
           <Button variant="ghost" onClick={handleResetDefaults}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Reset
+          </Button>
+          <Button onClick={handleSaveCalculations} disabled={saving}>
+            {saving ? (
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {saving ? 'Saving...' : 'Save Calculations'}
           </Button>
         </div>
       </div>
@@ -326,6 +374,80 @@ const PriceCalculator: React.FC = () => {
               </span>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Calculation History */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5 text-muted-foreground" />
+            Calculation History
+            <Badge variant="outline" className="ml-2">Last 30 days</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : history.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No calculations saved yet. Calculate prices and click "Save Calculations" to track history.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date & Time</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">ICE Price</TableHead>
+                    <TableHead className="text-right">Multiplier</TableHead>
+                    <TableHead className="text-right">Market Price</TableHead>
+                    <TableHead className="text-right">GPCF Price</TableHead>
+                    <TableHead>Calculated By</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.map((calc) => (
+                    <TableRow key={calc.id}>
+                      <TableCell className="font-mono text-sm">
+                        {format(new Date(calc.calculated_at), 'dd MMM yyyy HH:mm')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline" 
+                          className={calc.coffee_type === 'robusta' 
+                            ? 'border-emerald-500 text-emerald-700 dark:text-emerald-400' 
+                            : 'border-amber-500 text-amber-700 dark:text-amber-400'
+                          }
+                        >
+                          {calc.coffee_type.charAt(0).toUpperCase() + calc.coffee_type.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {calc.ice_price.toLocaleString()}
+                        <span className="text-xs text-muted-foreground ml-1">
+                          {calc.coffee_type === 'robusta' ? '$/MT' : '¢/lb'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">{calc.multiplier}</TableCell>
+                      <TableCell className="text-right font-mono">
+                        UGX {calc.market_price.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-semibold">
+                        UGX {calc.gpcf_price.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {calc.calculated_by}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
