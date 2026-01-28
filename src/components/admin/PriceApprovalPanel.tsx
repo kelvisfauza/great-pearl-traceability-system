@@ -73,8 +73,10 @@ const PriceApprovalPanel: React.FC = () => {
         await sendPriceNotifications(request);
 
         toast({
-          title: "Prices Updated & Notifications Sent",
-          description: "The new prices are now active and SMS has been sent to staff."
+          title: request.is_correction ? "Price Correction Approved" : "Prices Updated & Notifications Sent",
+          description: request.is_correction 
+            ? "The corrected prices are now active and CORRECTION SMS has been sent."
+            : "The new prices are now active and SMS has been sent to staff."
         });
 
         fetchPendingRequests();
@@ -105,7 +107,7 @@ const PriceApprovalPanel: React.FC = () => {
             body: JSON.stringify({
               phone,
               message,
-              messageType: 'price_update'
+              messageType: request.is_correction ? 'price_correction' : 'price_update'
             })
           });
           return response.ok;
@@ -134,7 +136,10 @@ const PriceApprovalPanel: React.FC = () => {
       ];
 
       const date = new Date().toLocaleDateString('en-GB');
-      const message = `Great Pearl Coffee Price Update - ${date}\n\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}% outturn)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}% outturn)\n\nUse these prices for today's purchases.`;
+      
+      // Format message with CORRECTION: prefix if it's a correction
+      const correctionPrefix = request.is_correction ? 'CORRECTION: ' : '';
+      const message = `${correctionPrefix}Great Pearl Coffee Price Update - ${date}\n\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}% outturn)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}% outturn)\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Use these prices for today's purchases.`;
 
       // Send to all recipients
       for (let i = 0; i < allPhones.length; i++) {
@@ -149,7 +154,7 @@ const PriceApprovalPanel: React.FC = () => {
           .not('phone', 'is', null);
 
         const supplierPhones = suppliers?.filter(s => s.phone).map(s => s.phone!) || [];
-        const supplierMessage = `Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${request.arabica_outturn}%\nPrice: UGX ${request.arabica_buying_price.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${request.robusta_outturn}%\nPrice: UGX ${request.robusta_buying_price.toLocaleString()}/kg\n\nDeliver your coffee now!`;
+        const supplierMessage = `${correctionPrefix}Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${request.arabica_outturn}%\nPrice: UGX ${request.arabica_buying_price.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${request.robusta_outturn}%\nPrice: UGX ${request.robusta_buying_price.toLocaleString()}/kg\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Deliver your coffee now!`;
 
         for (let i = 0; i < supplierPhones.length; i++) {
           await sendSmsWithDelay(supplierPhones[i], supplierMessage, 500);
@@ -243,9 +248,14 @@ const PriceApprovalPanel: React.FC = () => {
               >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{request.submitted_by}</span>
+                    {request.is_correction && (
+                      <Badge variant="destructive" className="bg-orange-500">
+                        CORRECTION
+                      </Badge>
+                    )}
                     {isSelfSubmitted && (
                       <Badge variant="outline" className="text-amber-600 border-amber-300">
                         <AlertTriangle className="h-3 w-3 mr-1" />
