@@ -159,8 +159,9 @@ const RobustaPriceCalculator = () => {
     const moistureDiff = moisture - TARGET_MOISTURE;
     const moistureDeductionPercent = moistureDiff > 0 ? moistureDiff : 0;
 
-    // Total deduction percentage (pods + husks + stones + moisture affect price)
-    const totalDeductionPercent = totalFM + moistureDeductionPercent;
+    // Total deduction percentage (less12 + pods + husks + stones + moisture affect price)
+    // Less 12 has equal deductions as pods (affects both outturn AND price)
+    const totalDeductionPercent = less12 + totalFM + moistureDeductionPercent;
 
     // Deduction per kg = refPrice × totalDeductionPercent / 100
     const deductionPerKg = (refPrice * totalDeductionPercent) / 100 + discretion;
