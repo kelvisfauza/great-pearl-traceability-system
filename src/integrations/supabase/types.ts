@@ -3865,6 +3865,42 @@ export type Database = {
         }
         Relationships: []
       }
+      price_calculation_history: {
+        Row: {
+          calculated_at: string
+          calculated_by: string
+          coffee_type: string
+          created_at: string
+          gpcf_price: number
+          ice_price: number
+          id: string
+          market_price: number
+          multiplier: number
+        }
+        Insert: {
+          calculated_at?: string
+          calculated_by: string
+          coffee_type: string
+          created_at?: string
+          gpcf_price: number
+          ice_price: number
+          id?: string
+          market_price: number
+          multiplier: number
+        }
+        Update: {
+          calculated_at?: string
+          calculated_by?: string
+          coffee_type?: string
+          created_at?: string
+          gpcf_price?: number
+          ice_price?: number
+          id?: string
+          market_price?: number
+          multiplier?: number
+        }
+        Relationships: []
+      }
       price_data: {
         Row: {
           created_at: string
@@ -6009,6 +6045,7 @@ export type Database = {
       }
       cleanup_expired_verification_codes: { Args: never; Returns: undefined }
       cleanup_inactive_sessions: { Args: never; Returns: undefined }
+      cleanup_old_price_calculations: { Args: never; Returns: undefined }
       create_timothy_auth_account: { Args: never; Returns: Json }
       fix_denis_auth_final: { Args: never; Returns: Json }
       get_available_to_request: { Args: { user_uuid: string }; Returns: number }
