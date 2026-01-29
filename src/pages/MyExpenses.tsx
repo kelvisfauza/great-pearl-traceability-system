@@ -224,10 +224,10 @@ const MyExpenses = () => {
         return;
       }
 
-      if (requestAmount > 15000) {
+      if (requestAmount > 20000) {
         toast({
           title: "Amount Exceeds Limit",
-          description: "Weekly lunch allowance is limited to 15,000 UGX per week.",
+          description: "Weekly lunch allowance is limited to 20,000 UGX per week.",
           variant: "destructive"
         });
         return;
@@ -639,7 +639,7 @@ const MyExpenses = () => {
                               <div className="space-y-2">
                                 <div className="font-semibold">Your Weekly Lunch Allowance</div>
                                 <div className="space-y-1">
-                                  <div>💰 Weekly Limit: <strong>15,000 UGX</strong></div>
+                                  <div>💰 Weekly Limit: <strong>20,000 UGX</strong></div>
                                   <div>✅ Available to Request: <strong className="text-green-700 text-base">{weeklyAllowance.balance_available?.toLocaleString()} UGX</strong></div>
                                   <div className="text-xs text-green-600">Already requested: {weeklyAllowance.amount_requested?.toLocaleString()} UGX</div>
                                   <div className="text-xs text-green-600 pt-1">⏰ Refreshes every Monday</div>
@@ -654,7 +654,7 @@ const MyExpenses = () => {
                               <div className="space-y-1">
                                 <div className="font-semibold">Weekly Lunch Allowance Policy:</div>
                                 <ul className="list-disc list-inside space-y-0.5 ml-1">
-                                  <li>Fixed allowance: <strong>15,000 UGX per week</strong></li>
+                                  <li>Fixed allowance: <strong>20,000 UGX per week</strong></li>
                                   <li>Coverage: <strong>Monday to Saturday</strong> (Sunday excluded)</li>
                                   <li>Auto-refreshes every <strong>Monday</strong></li>
                                   <li>Request full amount or in portions throughout the week</li>
