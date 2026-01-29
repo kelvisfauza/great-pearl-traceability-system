@@ -96,7 +96,7 @@ export const AttendanceManager = () => {
       <Alert>
         <Calendar className="h-4 w-4" />
         <AlertDescription>
-          <strong>Daily Allowance System:</strong> Each employee gets 2,500 UGX per day attended (15,000 UGX per 6-day week). 
+          <strong>Daily Allowance System:</strong> Each employee gets 3,333 UGX per day attended (20,000 UGX per 6-day week). 
           Mark attendance daily to calculate their eligible lunch/refreshment allowances automatically.
           <br />
           <strong>🔒 Lock Protection:</strong> Once marked, attendance is locked and cannot be changed by other admins to prevent manipulation.
