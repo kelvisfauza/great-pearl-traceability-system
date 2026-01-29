@@ -859,6 +859,112 @@ export type Database = {
         }
         Relationships: []
       }
+      coffee_booking_deliveries: {
+        Row: {
+          booking_id: string
+          coffee_record_id: string | null
+          created_at: string
+          created_by: string
+          delivered_kg: number
+          delivery_date: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          booking_id: string
+          coffee_record_id?: string | null
+          created_at?: string
+          created_by: string
+          delivered_kg: number
+          delivery_date?: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          booking_id?: string
+          coffee_record_id?: string | null
+          created_at?: string
+          created_by?: string
+          delivered_kg?: number
+          delivery_date?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coffee_booking_deliveries_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "coffee_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coffee_bookings: {
+        Row: {
+          booked_price_per_kg: number
+          booked_quantity_kg: number
+          booking_date: string
+          coffee_type: string
+          created_at: string
+          created_by: string
+          delivered_quantity_kg: number
+          expected_delivery_date: string | null
+          expiry_date: string
+          id: string
+          notes: string | null
+          remaining_quantity_kg: number | null
+          status: string
+          supplier_id: string | null
+          supplier_name: string
+          updated_at: string
+        }
+        Insert: {
+          booked_price_per_kg: number
+          booked_quantity_kg: number
+          booking_date?: string
+          coffee_type: string
+          created_at?: string
+          created_by: string
+          delivered_quantity_kg?: number
+          expected_delivery_date?: string | null
+          expiry_date: string
+          id?: string
+          notes?: string | null
+          remaining_quantity_kg?: number | null
+          status?: string
+          supplier_id?: string | null
+          supplier_name: string
+          updated_at?: string
+        }
+        Update: {
+          booked_price_per_kg?: number
+          booked_quantity_kg?: number
+          booking_date?: string
+          coffee_type?: string
+          created_at?: string
+          created_by?: string
+          delivered_quantity_kg?: number
+          expected_delivery_date?: string | null
+          expiry_date?: string
+          id?: string
+          notes?: string | null
+          remaining_quantity_kg?: number | null
+          status?: string
+          supplier_id?: string | null
+          supplier_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coffee_bookings_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coffee_records: {
         Row: {
           bags: number
@@ -6047,6 +6153,7 @@ export type Database = {
       cleanup_inactive_sessions: { Args: never; Returns: undefined }
       cleanup_old_price_calculations: { Args: never; Returns: undefined }
       create_timothy_auth_account: { Args: never; Returns: Json }
+      expire_old_bookings: { Args: never; Returns: undefined }
       fix_denis_auth_final: { Args: never; Returns: Json }
       get_available_to_request: { Args: { user_uuid: string }; Returns: number }
       get_available_to_request_safe: {
