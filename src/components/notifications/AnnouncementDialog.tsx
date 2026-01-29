@@ -113,16 +113,40 @@ export default function AnnouncementDialog({ trigger }: AnnouncementDialogProps)
         }
       }
       
-      // Send regular in-app notifications
+      // Send regular in-app notifications - create directly in notifications table
       console.log('Sending announcement to departments:', selectedDepartments);
-      await createAnnouncement(
-        title.trim(),
-        message.trim(),
-        employee.department,
-        selectedDepartments,
-        undefined,
-        priority
-      );
+      
+      // Get all employees from targeted departments
+      const { data: targetEmployees, error: empError } = await supabase
+        .from('employees')
+        .select('id, department')
+        .in('department', selectedDepartments)
+        .eq('status', 'Active');
+
+      if (empError) {
+        console.error('Error fetching target employees:', empError);
+      } else if (targetEmployees && targetEmployees.length > 0) {
+        // Create a notification for each targeted employee
+        const notifications = targetEmployees.map(emp => ({
+          type: 'announcement',
+          title: title.trim(),
+          message: message.trim(),
+          priority: priority.toLowerCase(),
+          target_user_id: emp.id,
+          target_department: emp.department,
+          is_read: false
+        }));
+
+        const { error: notifError } = await supabase
+          .from('notifications')
+          .insert(notifications);
+
+        if (notifError) {
+          console.error('Error creating notifications:', notifError);
+        } else {
+          console.log(`✅ Created ${notifications.length} in-app notifications`);
+        }
+      }
       
       toast({ 
         title: "Announcement sent", 
