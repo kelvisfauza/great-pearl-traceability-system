@@ -234,6 +234,30 @@ const MyExpenses = () => {
       }
     }
 
+    // Validation for Airtime requests - max 20,000 UGX
+    if (personalExpenseForm.expenseType === 'Airtime') {
+      if (requestAmount > 20000) {
+        toast({
+          title: "Amount Exceeds Limit",
+          description: "Airtime requests are limited to 20,000 UGX maximum.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    // Validation for Data requests - max 50,000 UGX
+    if (personalExpenseForm.expenseType === 'Data') {
+      if (requestAmount > 50000) {
+        toast({
+          title: "Amount Exceeds Limit",
+          description: "Data requests are limited to 50,000 UGX maximum.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       // For lunch allowance, deduct from weekly allowance first
@@ -623,7 +647,8 @@ const MyExpenses = () => {
                         <SelectItem value="Weekly Lunch Allowance">
                           🍽️ Weekly Lunch Allowance
                         </SelectItem>
-                        <SelectItem value="Airtime">📱 Airtime</SelectItem>
+                        <SelectItem value="Airtime">📱 Airtime (Max 20,000 UGX)</SelectItem>
+                        <SelectItem value="Data">📶 Data (Max 50,000 UGX)</SelectItem>
                         <SelectItem value="Transport">🚗 Transport</SelectItem>
                         <SelectItem value="Office Supplies">📋 Office Supplies</SelectItem>
                         <SelectItem value="Other">💼 Other Personal Expense</SelectItem>
