@@ -10,6 +10,7 @@ import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import AssignedRoleNotification from '@/components/AssignedRoleNotification';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import BuyingRecommendationsCard from '@/components/admin/BuyingRecommendationsCard';
+import CoffeeBookingsCard from '@/components/admin/CoffeeBookingsCard';
 import StoreRealTimeTracker from '@/components/v2/admin/StoreRealTimeTracker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -95,22 +96,27 @@ const Index = () => {
 
         {/* Admin Dashboard Section */}
         {(employee.role === 'Administrator' || employee.role === 'Super Admin') && (
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Settings className="h-5 w-5 text-primary" />
+          <>
+            {/* Coffee Bookings Card */}
+            <CoffeeBookingsCard />
+            
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Settings className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Administration Center</CardTitle>
+                    <p className="text-sm text-muted-foreground">System oversight and management</p>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-lg">Administration Center</CardTitle>
-                  <p className="text-sm text-muted-foreground">System oversight and management</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <AdminDashboard />
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <AdminDashboard />
+              </CardContent>
+            </Card>
+          </>
         )}
 
         {/* Main Grid - 3 columns */}
