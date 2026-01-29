@@ -19,6 +19,7 @@ interface QualityAssessmentFormProps {
 
 interface AssessmentForm {
   moisture_content: number;
+  robusta_in_arabica_percentage: number;
   group1_percentage: number;
   group2_percentage: number;
   pods_percentage: number;
@@ -43,6 +44,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
     defaultValues: {
       quantity_kg: lot.kilograms,
       moisture_content: 12,
+      robusta_in_arabica_percentage: 0,
       group1_percentage: 0,
       group2_percentage: 0,
       pods_percentage: 0,
@@ -51,6 +53,14 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       outturn_percentage: 62
     }
   });
+
+  // Watch values for auto-rejection logic
+  const robustaPercentage = watch('robusta_in_arabica_percentage');
+  const g1Percentage = watch('group1_percentage');
+  
+  // Auto-reject conditions: Robusta in Arabica > 3% OR G1 defects > 12%
+  const isArabica = lot.coffee_type?.toLowerCase().includes('arabica');
+  const shouldAutoReject = isArabica && (robustaPercentage > 3 || g1Percentage > 12);
 
   const approveAssessment = useMutation({
     mutationFn: async (data: AssessmentForm) => {
@@ -220,6 +230,19 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         </AlertDescription>
       </Alert>
 
+      {/* Auto-rejection warning for Arabica */}
+      {isArabica && shouldAutoReject && (
+        <Alert variant="destructive">
+          <XCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Auto-Rejection:</strong> This lot will be rejected because{' '}
+            {robustaPercentage > 3 && `Robusta in Arabica exceeds 3% (${robustaPercentage}%)`}
+            {robustaPercentage > 3 && g1Percentage > 12 && ' and '}
+            {g1Percentage > 12 && `G1 defects exceed 12% (${g1Percentage}%)`}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Quality Parameters */}
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -242,14 +265,41 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           />
         </div>
 
+        {/* Robusta in Arabica field - only for Arabica coffee */}
+        {isArabica && (
+          <div>
+            <Label htmlFor="robusta_in_arabica_percentage">
+              Robusta in Arabica (%) *
+              <span className="text-xs text-muted-foreground ml-1">(max 3%)</span>
+            </Label>
+            <Input
+              id="robusta_in_arabica_percentage"
+              type="number"
+              step="0.1"
+              className={robustaPercentage > 3 ? 'border-destructive' : ''}
+              {...register('robusta_in_arabica_percentage', { required: isArabica, min: 0, max: 100 })}
+            />
+            {robustaPercentage > 3 && (
+              <p className="text-xs text-destructive mt-1">Exceeds 3% limit - coffee will be rejected</p>
+            )}
+          </div>
+        )}
+
         <div>
-          <Label htmlFor="group1_percentage">Group 1 (%) *</Label>
+          <Label htmlFor="group1_percentage">
+            Group 1 (%) *
+            {isArabica && <span className="text-xs text-muted-foreground ml-1">(max 12%)</span>}
+          </Label>
           <Input
             id="group1_percentage"
             type="number"
             step="0.1"
+            className={isArabica && g1Percentage > 12 ? 'border-destructive' : ''}
             {...register('group1_percentage', { required: true, min: 0, max: 100 })}
           />
+          {isArabica && g1Percentage > 12 && (
+            <p className="text-xs text-destructive mt-1">Exceeds 12% limit - coffee will be rejected</p>
+          )}
         </div>
 
         <div>
@@ -344,7 +394,8 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         </Button>
         <Button
           type="submit"
-          disabled={approveAssessment.isPending || rejectLot.isPending}
+          disabled={approveAssessment.isPending || rejectLot.isPending || shouldAutoReject}
+          title={shouldAutoReject ? 'Cannot approve - quality thresholds exceeded' : ''}
         >
           {approveAssessment.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           <CheckCircle className="mr-2 h-4 w-4" />
