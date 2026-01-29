@@ -116,7 +116,7 @@ export const useAttendance = () => {
           .eq('id', employeeId)
           .single();
 
-        const WEEKLY_LUNCH_LIMIT = 15000;
+        const WEEKLY_LUNCH_LIMIT = 20000;
 
         const { data: newAllowance, error: insertError } = await supabase
           .from('weekly_allowances')

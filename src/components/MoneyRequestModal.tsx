@@ -94,7 +94,7 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
         }
 
         if (weeklyAllowance.balance_available < requestAmount) {
-          throw new Error(`Insufficient balance. You have ${weeklyAllowance.balance_available.toLocaleString()} UGX available this week (limit: 15,000 UGX).`);
+          throw new Error(`Insufficient balance. You have ${weeklyAllowance.balance_available.toLocaleString()} UGX available this week (limit: 20,000 UGX).`);
         }
 
         // Deduct from allowance
@@ -163,7 +163,7 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
                     <div className="space-y-2">
                       <div className="font-semibold text-green-900">Weekly Lunch Allowance (Mon-Sat)</div>
                       <div className="text-sm text-green-800 space-y-1">
-                        <div>💰 Weekly Limit: <strong>15,000 UGX</strong></div>
+                        <div>💰 Weekly Limit: <strong>20,000 UGX</strong></div>
                         <div>✅ Available to Request: <strong className="text-green-700 text-base">{weeklyAllowance.balance_available?.toLocaleString()} UGX</strong></div>
                         <div className="text-xs text-green-600 pt-1">Already requested this week: {weeklyAllowance.amount_requested?.toLocaleString()} UGX</div>
                       </div>
@@ -224,7 +224,7 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="lunch_refreshment">
-                  🍽️ Weekly Lunch Allowance (15,000 UGX/week)
+                  🍽️ Weekly Lunch Allowance (20,000 UGX/week)
                 </SelectItem>
                 <SelectItem value="advance">💰 Salary Advance (From monthly salary)</SelectItem>
                 <SelectItem value="bonus">🎁 Bonus Request</SelectItem>
@@ -240,7 +240,7 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
                   <div className="space-y-1">
                     <div className="font-semibold">Weekly Lunch Allowance Policy:</div>
                     <ul className="list-disc list-inside space-y-0.5 ml-1">
-                      <li>Fixed allowance: <strong>15,000 UGX per week</strong></li>
+                      <li>Fixed allowance: <strong>20,000 UGX per week</strong></li>
                       <li>Coverage: <strong>Monday to Saturday</strong> (Sunday excluded)</li>
                       <li>Auto-refreshes every <strong>Monday</strong></li>
                       <li>Request full amount or in portions throughout the week</li>
