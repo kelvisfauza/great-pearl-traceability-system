@@ -22,6 +22,7 @@ interface QualityMetrics {
   averageHusks: number;
   averageMoisture: number;
   averageBelow12: number;
+  averageRobustaInArabica: number;
   totalBatches: number;
   totalKilograms: number;
 }
@@ -72,6 +73,7 @@ const QualityReportsModal: React.FC<QualityReportsModalProps> = ({ open, onClose
           averageHusks: 0,
           averageMoisture: 0,
           averageBelow12: 0,
+          averageRobustaInArabica: 0,
           totalBatches: 0,
           totalKilograms: 0
         });
@@ -94,6 +96,7 @@ const QualityReportsModal: React.FC<QualityReportsModalProps> = ({ open, onClose
       const averageHusks = assessments.reduce((sum, assessment) => sum + (assessment.husks || 0), 0) / totalBatches;
       const averageMoisture = assessments.reduce((sum, assessment) => sum + (assessment.moisture || 0), 0) / totalBatches;
       const averageBelow12 = assessments.reduce((sum, assessment) => sum + (assessment.below12 || 0), 0) / totalBatches;
+      const averageRobustaInArabica = assessments.reduce((sum, assessment: any) => sum + (assessment.robusta_in_arabica || 0), 0) / totalBatches;
 
       setMetrics({
         averagePrice,
@@ -104,6 +107,7 @@ const QualityReportsModal: React.FC<QualityReportsModalProps> = ({ open, onClose
         averageHusks,
         averageMoisture,
         averageBelow12,
+        averageRobustaInArabica,
         totalBatches,
         totalKilograms
       });
@@ -205,6 +209,10 @@ const QualityReportsModal: React.FC<QualityReportsModalProps> = ({ open, onClose
             <tr style="border-bottom: 1px solid #ddd;">
               <td style="padding: 8px; font-weight: bold;">Average Below 12 Screen:</td>
               <td style="padding: 8px;">${metrics.averageBelow12.toFixed(1)}%</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #ddd;">
+              <td style="padding: 8px; font-weight: bold;">Average Robusta in Arabica:</td>
+              <td style="padding: 8px;">${metrics.averageRobustaInArabica.toFixed(1)}%</td>
             </tr>
           </table>
         </div>
@@ -352,7 +360,7 @@ const QualityReportsModal: React.FC<QualityReportsModalProps> = ({ open, onClose
                     <p className="text-xl font-bold">{metrics.averageStones.toFixed(1)}%</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="grid grid-cols-3 gap-4 mt-4">
                   <div className="text-center">
                     <p className="text-sm text-gray-600">Husks</p>
                     <p className="text-xl font-bold">{metrics.averageHusks.toFixed(1)}%</p>
@@ -360,6 +368,10 @@ const QualityReportsModal: React.FC<QualityReportsModalProps> = ({ open, onClose
                   <div className="text-center">
                     <p className="text-sm text-gray-600">Below 12 Screen</p>
                     <p className="text-xl font-bold">{metrics.averageBelow12.toFixed(1)}%</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Robusta in Arabica</p>
+                    <p className="text-xl font-bold">{metrics.averageRobustaInArabica.toFixed(1)}%</p>
                   </div>
                 </div>
               </CardContent>
