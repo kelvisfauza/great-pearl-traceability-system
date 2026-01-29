@@ -9,6 +9,7 @@ import { RefreshCw } from 'lucide-react';
 interface PriceCalculatorState {
   refPrice: string;
   moisture: string;
+  robustaInArabica: string;
   gp1: string;
   gp2: string;
   less12: string;
@@ -40,6 +41,7 @@ const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange, initialVal
   const [state, setState] = useState<PriceCalculatorState>({
     refPrice: initialValues?.refPrice || '',
     moisture: initialValues?.moisture || '',
+    robustaInArabica: initialValues?.robustaInArabica || '',
     gp1: initialValues?.gp1 || '',
     gp2: initialValues?.gp2 || '',
     less12: initialValues?.less12 || '',
@@ -75,6 +77,7 @@ const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange, initialVal
     // Parse all string values to numbers
     const refPrice = parseValue(state.refPrice);
     const moisture = parseValue(state.moisture);
+    const robustaInArabica = parseValue(state.robustaInArabica);
     const gp1 = parseValue(state.gp1);
     const gp2 = parseValue(state.gp2);
     const less12 = parseValue(state.less12);
@@ -83,20 +86,21 @@ const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange, initialVal
     const stones = parseValue(state.stones);
     const discretion = parseValue(state.discretion);
 
-    // Derived calculations
+    // Derived calculations - Robusta in Arabica affects actual outturn
     const fm = pods + husks + stones;
-    const actualOtt = 100 - (gp1 + gp2 + pods + husks + stones + less12);
+    const actualOtt = 100 - (gp1 + gp2 + pods + husks + stones + less12 + robustaInArabica);
 
-    // CLEAN (D14)
+    // CLEAN (D14) - Robusta in Arabica affects this
     const cleanD14 = 100
       - over(moisture, 14)
       - over(gp1, 4)
       - over(gp2, 10)
-      - over(less12, 1);
+      - over(less12, 1)
+      - robustaInArabica; // Robusta contamination reduces D14
 
-    // OUTTURN
+    // OUTTURN - Rejection if Robusta > 3% or GP1 > 12%
     let outturn: number | string;
-    if (less12 > 3) {
+    if (less12 > 3 || robustaInArabica > 3 || gp1 > 12) {
       outturn = 'REJECT';
     } else {
       outturn = 100
@@ -106,7 +110,8 @@ const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange, initialVal
         - (pods > 0 ? pods : 0)
         - (husks > 0 ? husks : 0)
         - (stones > 0 ? stones : 0)
-        - over(less12, 1);
+        - over(less12, 1)
+        - robustaInArabica; // Robusta contamination reduces outturn
     }
 
     // Common penalty components
@@ -116,46 +121,49 @@ const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange, initialVal
     const d14LowPenalty = (cleanD14 < 78) ? (78 - cleanD14) * 50 : 0;
     const d14HighBonus = (cleanD14 > 82) ? (cleanD14 - 82) * 50 : 0;
 
-    // OUTTURN PRICE
+    // OUTTURN PRICE - Added Robusta > 3% and GP1 > 12% rejection
     let outturnPrice: number | string | null = null;
-    const rejectOutturnPrice = (moisture > 16.5) || (gp1 > 10) || (gp2 > 25) || (less12 > 3) || (fm > 6);
+    const rejectOutturnPrice = (moisture > 16.5) || (gp1 > 12) || (gp2 > 25) || (less12 > 3) || (fm > 6) || (robustaInArabica > 3);
     
     if (refPrice <= 0 || isNaN(refPrice)) {
       outturnPrice = null;
     } else if (rejectOutturnPrice) {
       outturnPrice = 'REJECT';
     } else {
-      const premiumCondition = (gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1);
+      const premiumCondition = (gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && robustaInArabica === 0);
       const premiumBlock = Math.min((premiumCondition ? 2000 : 0) + d14HighBonus, 2000);
       const less12Penalty_OP = over(less12, 1) * 30;
-      outturnPrice = refPrice + premiumBlock - moistPenalty - gp1Penalty - gp2Penalty - d14LowPenalty + d14HighBonus - less12Penalty_OP + discretion;
+      const robustaPenalty = robustaInArabica * 100; // Penalty for Robusta contamination
+      outturnPrice = refPrice + premiumBlock - moistPenalty - gp1Penalty - gp2Penalty - d14LowPenalty + d14HighBonus - less12Penalty_OP - robustaPenalty + discretion;
     }
 
-    // FINAL PRICE
+    // FINAL PRICE - Added Robusta > 3% and GP1 > 12% rejection
     let finalPrice: number | string | null = null;
-    const rejectFinal = (moisture > 16.5) || (gp1 > 10) || (gp2 > 25) || (less12 > 3) || (fm > 6) || (pods > 6) || (husks > 6) || (stones > 6);
+    const rejectFinal = (moisture > 16.5) || (gp1 > 12) || (gp2 > 25) || (less12 > 3) || (fm > 6) || (pods > 6) || (husks > 6) || (stones > 6) || (robustaInArabica > 3);
     
     if (refPrice <= 0 || isNaN(refPrice)) {
       finalPrice = null;
     } else if (rejectFinal) {
       finalPrice = 'REJECT';
     } else {
-      const premiumConditionF = (gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && pods === 0 && husks === 0 && stones === 0);
+      const premiumConditionF = (gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && pods === 0 && husks === 0 && stones === 0 && robustaInArabica === 0);
       const premiumBlockF = Math.min((premiumConditionF ? 2000 : 0) + d14HighBonus, 2000);
       const fmPenalty = pods * 100 + husks * 150 + stones * 150;
       const less12Penalty_FP = over(less12, 1) * 40;
-      finalPrice = refPrice + premiumBlockF - moistPenalty - gp1Penalty - gp2Penalty - d14LowPenalty + d14HighBonus - fmPenalty - less12Penalty_FP + discretion;
+      const robustaPenalty = robustaInArabica * 100; // Penalty for Robusta contamination
+      finalPrice = refPrice + premiumBlockF - moistPenalty - gp1Penalty - gp2Penalty - d14LowPenalty + d14HighBonus - fmPenalty - less12Penalty_FP - robustaPenalty + discretion;
     }
 
-    // Quality Note
+    // Quality Note - Added Robusta and GP1 rejection messages
     let qualityNote = '';
-    if (moisture > 16.5) qualityNote = `Rejected: Moisture above tolerance by ${(moisture - 16.5).toFixed(1)}%`;
-    else if (gp1 > 10) qualityNote = `Rejected: GP1 defects above tolerance by ${(gp1 - 10).toFixed(1)}%`;
+    if (robustaInArabica > 3) qualityNote = `Rejected: Robusta in Arabica exceeds 3% (${robustaInArabica.toFixed(1)}%)`;
+    else if (gp1 > 12) qualityNote = `Rejected: GP1 defects exceed 12% (${gp1.toFixed(1)}%)`;
+    else if (moisture > 16.5) qualityNote = `Rejected: Moisture above tolerance by ${(moisture - 16.5).toFixed(1)}%`;
     else if (gp2 > 25) qualityNote = `Rejected: GP2 defects above tolerance by ${(gp2 - 25).toFixed(1)}%`;
     else if (less12 > 3) qualityNote = `Rejected: Less‑12 above tolerance by ${(less12 - 3).toFixed(1)}%`;
     else if (fm > 6) qualityNote = `Rejected: Foreign Matter above tolerance by ${(fm - 6).toFixed(1)}%`;
     else {
-      qualityNote = ((gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && pods === 0 && husks === 0 && stones === 0)
+      qualityNote = ((gp1 <= 1 && gp2 <= 5 && moisture <= 13 && cleanD14 >= 80 && less12 <= 1 && pods === 0 && husks === 0 && stones === 0 && robustaInArabica === 0)
         ? 'Bonus: Premium Price Applied'
         : 'Standard/Penalty Price Applied');
     }
@@ -198,6 +206,7 @@ const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange, initialVal
     setState({
       refPrice: '',
       moisture: '',
+      robustaInArabica: '',
       gp1: '',
       gp2: '',
       less12: '',
@@ -259,7 +268,28 @@ const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange, initialVal
                   />
                 </div>
                 <div>
-                  <Label htmlFor="gp1">GP 1 DEFECT (%)</Label>
+                  <Label htmlFor="robustaInArabica" className="flex items-center gap-1">
+                    Robusta in Arabica (%)
+                    <span className="text-xs text-muted-foreground">(max 3%)</span>
+                  </Label>
+                  <Input
+                    id="robustaInArabica"
+                    type="number"
+                    value={state.robustaInArabica}
+                    onChange={(e) => handleInputChange('robustaInArabica', e.target.value)}
+                    step="0.1"
+                    min="0"
+                    className={parseFloat(state.robustaInArabica) > 3 ? 'border-destructive' : ''}
+                  />
+                  {parseFloat(state.robustaInArabica) > 3 && (
+                    <p className="text-xs text-destructive mt-1">Exceeds 3% - coffee will be REJECTED</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="gp1" className="flex items-center gap-1">
+                    GP 1 DEFECT (%)
+                    <span className="text-xs text-muted-foreground">(max 12%)</span>
+                  </Label>
                   <Input
                     id="gp1"
                     type="number"
@@ -267,7 +297,11 @@ const ArabicaPriceCalculator = ({ onPriceChange, onCalculationChange, initialVal
                     onChange={(e) => handleInputChange('gp1', e.target.value)}
                     step="0.1"
                     min="0"
+                    className={parseFloat(state.gp1) > 12 ? 'border-destructive' : ''}
                   />
+                  {parseFloat(state.gp1) > 12 && (
+                    <p className="text-xs text-destructive mt-1">Exceeds 12% - coffee will be REJECTED</p>
+                  )}
                 </div>
 
                 <div>
