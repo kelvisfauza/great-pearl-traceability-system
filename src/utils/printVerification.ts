@@ -17,6 +17,9 @@ export const createPrintVerification = async (options: PrintVerificationOptions)
   const qrUrl = getVerificationQRUrl(code);
 
   try {
+    // Get current user for RLS policy compliance
+    const { data: { user } } = await supabase.auth.getUser();
+    
     await supabase.from('verifications').insert({
       code,
       type: options.type,
@@ -25,7 +28,8 @@ export const createPrintVerification = async (options: PrintVerificationOptions)
       issued_to_name: options.issued_to_name || 'System Generated',
       issued_at: new Date().toISOString(),
       reference_no: options.reference_no,
-      meta: options.meta || {}
+      meta: options.meta || {},
+      created_by: user?.id
     });
   } catch (error) {
     console.error('Error creating verification record:', error);

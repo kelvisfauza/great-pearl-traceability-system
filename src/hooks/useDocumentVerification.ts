@@ -51,6 +51,9 @@ export function useDocumentVerification() {
     try {
       const code = generateVerificationCode(data.type);
       
+      // Get current user for RLS policy compliance
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { error } = await supabase
         .from('verifications')
         .insert([{
@@ -66,6 +69,7 @@ export function useDocumentVerification() {
           issued_at: new Date().toISOString(),
           valid_until: data.valid_until,
           meta: (data.meta || {}) as unknown as Record<string, never>,
+          created_by: user?.id,
         }]);
 
       if (error) {
