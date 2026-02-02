@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Printer } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { getQuestionsForDepartment } from '@/config/departmentReportQuestions';
+import { createPrintVerification, getVerificationHtml, getVerificationStyles } from '@/utils/printVerification';
 
 interface DailyReport {
   id: string;
@@ -37,9 +38,17 @@ export const StaffReportsPrint = ({
 }: StaffReportsPrintProps) => {
   const printRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const content = printRef.current;
     if (!content) return;
+
+    // Create verification record
+    const { code, qrUrl } = await createPrintVerification({
+      type: 'report',
+      subtype: 'Staff Daily Reports',
+      reference_no: `STAFF-${startDate}-${endDate}`,
+      meta: { employeeName, reportsCount: reports.length }
+    });
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -66,11 +75,13 @@ export const StaffReportsPrint = ({
             .question-value { margin-top: 3px; }
             .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }
             .no-reports { text-align: center; padding: 40px; color: #666; }
+            ${getVerificationStyles()}
             @media print { .report-card { page-break-inside: avoid; } }
           </style>
         </head>
         <body>
           ${content.innerHTML}
+          ${getVerificationHtml(code, qrUrl)}
         </body>
       </html>
     `);

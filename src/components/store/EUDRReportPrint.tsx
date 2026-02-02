@@ -1,17 +1,6 @@
 import React from 'react';
 import StandardPrintHeader from '@/components/print/StandardPrintHeader';
-
-interface EUDRReportPrintProps {
-  reportType: string;
-  startDate: string;
-  endDate: string;
-  totalDocumented: number;
-  availableStock: number;
-  totalSold: number;
-  activeBatches: number;
-  documents: any[];
-  sales: any[];
-}
+import { getVerificationQRUrl } from '@/utils/verificationCode';
 
 interface EUDRReportPrintProps {
   reportType: string;
@@ -24,6 +13,7 @@ interface EUDRReportPrintProps {
   documents: any[];
   sales: any[];
   isPreview?: boolean;
+  verificationCode?: string;
 }
 
 const EUDRReportPrint: React.FC<EUDRReportPrintProps> = ({
@@ -36,7 +26,8 @@ const EUDRReportPrint: React.FC<EUDRReportPrintProps> = ({
   activeBatches,
   documents,
   sales,
-  isPreview = false
+  isPreview = false,
+  verificationCode
 }) => {
   if (isPreview) {
     // Clean preview version without print styles
@@ -200,6 +191,25 @@ const EUDRReportPrint: React.FC<EUDRReportPrintProps> = ({
           </div>
         )}
 
+        {/* Verification Section */}
+        {verificationCode && (
+          <div className="mt-6 pt-4 border-t border-dashed border-gray-400 flex items-center justify-center gap-6">
+            <div className="text-center">
+              <img 
+                src={getVerificationQRUrl(verificationCode, 80)} 
+                alt="Verification QR Code"
+                className="w-20 h-20 mx-auto"
+              />
+              <p className="text-xs text-gray-500 mt-1">Scan to verify</p>
+            </div>
+            <div className="text-left text-xs">
+              <p className="font-bold">Document Verification</p>
+              <p className="text-gray-600">Code: <strong className="text-green-700">{verificationCode}</strong></p>
+              <p className="text-gray-500">Verify at: {window.location.origin}/verify</p>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="mt-8 pt-4 border-t border-gray-300 text-xs text-gray-500 text-center">
           <p><strong>GREAT PEARL COFFEE FACTORY</strong> - EUDR Compliance Report</p>
@@ -246,6 +256,7 @@ const EUDRReportPrint: React.FC<EUDRReportPrintProps> = ({
           subtitle={`EU Deforestation Regulation Compliance Report - ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`}
           documentNumber={`EUDR-${reportType.toUpperCase()}-${new Date().toISOString().split('T')[0].replace(/-/g, '')}`}
           additionalInfo={`Report Period: ${startDate} to ${endDate}`}
+          verificationCode={verificationCode}
         />
         {/* Rest of print content similar to preview but with print-specific styling */}
       </div>
