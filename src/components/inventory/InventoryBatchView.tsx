@@ -7,6 +7,7 @@ import { Loader2, Package, Archive, Search, Filter, Coffee } from "lucide-react"
 import { useInventoryBatches } from "@/hooks/useInventoryBatches";
 import BatchCard from "./BatchCard";
 import MigrationButton from "./MigrationButton";
+import ResyncButton from "./ResyncButton";
 
 const isRobusta = (type: string) => type?.toLowerCase().includes('robusta');
 const isArabica = (type: string) => type?.toLowerCase().includes('arabica');
@@ -68,6 +69,15 @@ const InventoryBatchView = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Header with Sync Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Stock Overview</h2>
+          <p className="text-sm text-muted-foreground">Coffee currently in store, grouped into 5,000kg batches</p>
+        </div>
+        <ResyncButton onResyncComplete={fetchBatches} />
+      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
