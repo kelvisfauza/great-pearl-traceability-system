@@ -5863,6 +5863,36 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_audit_logs: {
+        Row: {
+          action: string
+          admin_email: string
+          admin_user: string | null
+          code: string
+          details: Json | null
+          id: string
+          timestamp: string | null
+        }
+        Insert: {
+          action: string
+          admin_email: string
+          admin_user?: string | null
+          code: string
+          details?: Json | null
+          id?: string
+          timestamp?: string | null
+        }
+        Update: {
+          action?: string
+          admin_email?: string
+          admin_user?: string | null
+          code?: string
+          details?: Json | null
+          id?: string
+          timestamp?: string | null
+        }
+        Relationships: []
+      }
       verification_codes: {
         Row: {
           attempts: number | null
@@ -5890,6 +5920,78 @@ export type Database = {
           expires_at?: string
           id?: string
           phone?: string
+        }
+        Relationships: []
+      }
+      verifications: {
+        Row: {
+          access_pin_hash: string | null
+          code: string
+          created_at: string | null
+          created_by: string | null
+          department: string | null
+          employee_no: string | null
+          file_url: string | null
+          id: string
+          issued_at: string
+          issued_to_name: string
+          meta: Json | null
+          photo_url: string | null
+          position: string | null
+          reference_no: string | null
+          revoked_reason: string | null
+          status: string
+          subtype: string
+          type: string
+          updated_at: string | null
+          valid_until: string | null
+          workstation: string | null
+        }
+        Insert: {
+          access_pin_hash?: string | null
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          department?: string | null
+          employee_no?: string | null
+          file_url?: string | null
+          id?: string
+          issued_at?: string
+          issued_to_name: string
+          meta?: Json | null
+          photo_url?: string | null
+          position?: string | null
+          reference_no?: string | null
+          revoked_reason?: string | null
+          status?: string
+          subtype: string
+          type: string
+          updated_at?: string | null
+          valid_until?: string | null
+          workstation?: string | null
+        }
+        Update: {
+          access_pin_hash?: string | null
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          department?: string | null
+          employee_no?: string | null
+          file_url?: string | null
+          id?: string
+          issued_at?: string
+          issued_to_name?: string
+          meta?: Json | null
+          photo_url?: string | null
+          position?: string | null
+          reference_no?: string | null
+          revoked_reason?: string | null
+          status?: string
+          subtype?: string
+          type?: string
+          updated_at?: string | null
+          valid_until?: string | null
+          workstation?: string | null
         }
         Relationships: []
       }

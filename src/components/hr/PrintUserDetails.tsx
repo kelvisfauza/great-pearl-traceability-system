@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Printer, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Employee } from "@/hooks/useSupabaseEmployees";
+import { useDocumentVerification } from "@/hooks/useDocumentVerification";
+import { getVerificationQRHtml } from "@/components/print/VerificationQRCode";
 
 interface PrintUserDetailsProps {
   employees: Employee[];
@@ -14,9 +15,11 @@ interface PrintUserDetailsProps {
 
 export default function PrintUserDetails({ employees }: PrintUserDetailsProps) {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [isPrinting, setIsPrinting] = useState(false);
   const { toast } = useToast();
+  const { createVerification } = useDocumentVerification();
 
-  const handlePrintUserDetails = () => {
+  const handlePrintUserDetails = async () => {
     if (!selectedEmployeeId) {
       toast({
         title: "Error",
@@ -36,6 +39,23 @@ export default function PrintUserDetails({ employees }: PrintUserDetailsProps) {
       return;
     }
 
+    setIsPrinting(true);
+
+    // Create verification record
+    const verificationCode = await createVerification({
+      type: 'document',
+      subtype: 'Employee Details Report',
+      issued_to_name: employee.name,
+      employee_no: employee.id,
+      department: employee.department,
+      position: employee.position,
+      meta: {
+        email: employee.email,
+        phone: employee.phone,
+        role: employee.role,
+      }
+    });
+
     // Create printable content
     const printContent = `
       <!DOCTYPE html>
@@ -53,6 +73,9 @@ export default function PrintUserDetails({ employees }: PrintUserDetailsProps) {
             .detail-value { flex: 1; }
             .divider { border-top: 2px solid #dee2e6; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #6c757d; }
+            .verification-qr { text-align: center; margin-top: 20px; padding: 15px; border-top: 1px dashed #ccc; }
+            .verification-qr img { width: 100px; height: 100px; }
+            .verification-code { font-family: monospace; font-size: 12px; font-weight: bold; color: #0d3d1f; }
           </style>
         </head>
         <body>
@@ -107,6 +130,8 @@ export default function PrintUserDetails({ employees }: PrintUserDetailsProps) {
           
           <div class="divider"></div>
           
+          ${verificationCode ? getVerificationQRHtml(verificationCode) : ''}
+          
           <div class="footer">
             <p>This document is confidential and intended for authorized personnel only.</p>
             <p>Great Pearl Coffee Management System - Employee Information</p>
@@ -135,6 +160,8 @@ export default function PrintUserDetails({ employees }: PrintUserDetailsProps) {
         variant: "destructive"
       });
     }
+
+    setIsPrinting(false);
   };
 
   return (
@@ -164,11 +191,11 @@ export default function PrintUserDetails({ employees }: PrintUserDetailsProps) {
 
         <Button 
           onClick={handlePrintUserDetails} 
-          disabled={!selectedEmployeeId}
+          disabled={!selectedEmployeeId || isPrinting}
           className="w-full"
         >
           <FileText className="h-4 w-4 mr-2" />
-          Print Employee Details
+          {isPrinting ? 'Preparing...' : 'Print Employee Details'}
         </Button>
       </CardContent>
     </Card>

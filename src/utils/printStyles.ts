@@ -163,4 +163,26 @@ export const getStandardPrintStyles = () => `
     background-color: #f1f3f4;
     font-weight: bold;
   }
+  
+  .verification-qr {
+    text-align: center;
+    margin-top: 20px;
+    padding: 15px;
+    border-top: 1px dashed #ccc;
+  }
+  
+  .verification-qr img {
+    width: 100px !important;
+    height: 100px !important;
+    max-width: 100px !important;
+    max-height: 100px !important;
+  }
+  
+  .verification-code {
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: bold;
+    color: #0d3d1f;
+    letter-spacing: 1px;
+  }
 `;
