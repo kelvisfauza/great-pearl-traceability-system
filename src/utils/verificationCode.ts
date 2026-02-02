@@ -1,6 +1,6 @@
 // Verification Code Generator Utility
 
-type DocumentType = 'document' | 'employee_id' | 'receipt' | 'report' | 'contract' | 'assessment';
+type DocumentType = 'document' | 'employee_id' | 'receipt' | 'report' | 'contract' | 'assessment' | 'grn';
 
 const TYPE_PREFIXES: Record<DocumentType, string> = {
   document: 'DOC',
@@ -8,7 +8,8 @@ const TYPE_PREFIXES: Record<DocumentType, string> = {
   receipt: 'RCP',
   report: 'RPT',
   contract: 'CNT',
-  assessment: 'QA'
+  assessment: 'QA',
+  grn: 'GRN'
 };
 
 /**

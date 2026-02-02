@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReactToPrint } from 'react-to-print';
 import RobustaPrint from './RobustaPrint';
+import { useDocumentVerification } from '@/hooks/useDocumentVerification';
 
 interface RobustaState {
   refPrice: string;
@@ -62,12 +63,14 @@ interface SavedRobustaAnalysis {
 const RobustaPriceCalculator = () => {
   const { toast } = useToast();
   const { employee } = useAuth();
+  const { createVerification } = useDocumentVerification();
   const [loadingPrices, setLoadingPrices] = useState(true);
   const [referencePrice, setReferencePrice] = useState<number>(0);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [supplierName, setSupplierName] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedAnalysis, setSavedAnalysis] = useState<SavedRobustaAnalysis | null>(null);
+  const [verificationCode, setVerificationCode] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   const TARGET_MOISTURE = 15; // Fixed target moisture
@@ -299,6 +302,20 @@ const RobustaPriceCalculator = () => {
       setSaveDialogOpen(false);
       setSupplierName('');
 
+      // Generate verification code for printing
+      const code = await createVerification({
+        type: 'assessment',
+        subtype: 'Robusta Quality Analysis',
+        issued_to_name: supplierName.trim(),
+        reference_no: data.id,
+        meta: {
+          coffeeType: 'robusta',
+          actualPrice: results.actualPricePerKg,
+          isRejected: results.isRejected
+        }
+      });
+      setVerificationCode(code);
+
       toast({
         title: 'Saved & Printing...',
         description: 'Robusta analysis saved. Opening print preview...'
@@ -405,7 +422,7 @@ const RobustaPriceCalculator = () => {
       {/* Hidden print component */}
       <div className="hidden">
         {savedAnalysis && (
-          <RobustaPrint ref={printRef} analysis={savedAnalysis} />
+          <RobustaPrint ref={printRef} analysis={savedAnalysis} verificationCode={verificationCode} />
         )}
       </div>
 

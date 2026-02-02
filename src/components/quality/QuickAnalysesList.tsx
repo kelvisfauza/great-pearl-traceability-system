@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useReactToPrint } from 'react-to-print';
 import QuickAnalysisPrint from './QuickAnalysisPrint';
+import { useDocumentVerification } from '@/hooks/useDocumentVerification';
 
 interface QuickAnalysis {
   id: string;
@@ -38,9 +39,11 @@ interface QuickAnalysis {
 
 const QuickAnalysesList = () => {
   const { toast } = useToast();
+  const { createVerification } = useDocumentVerification();
   const [analyses, setAnalyses] = useState<QuickAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnalysis, setSelectedAnalysis] = useState<QuickAnalysis | null>(null);
+  const [verificationCode, setVerificationCode] = useState<string | null>(null);
   const [viewAnalysis, setViewAnalysis] = useState<QuickAnalysis | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -78,8 +81,24 @@ const QuickAnalysesList = () => {
       : 'Quality-Analysis'
   });
 
-  const handlePrintClick = (analysis: QuickAnalysis) => {
+  const handlePrintClick = async (analysis: QuickAnalysis) => {
     setSelectedAnalysis(analysis);
+    
+    // Generate verification code
+    const code = await createVerification({
+      type: 'assessment',
+      subtype: 'Arabica Quality Analysis',
+      issued_to_name: analysis.supplier_name,
+      reference_no: analysis.id,
+      meta: {
+        coffeeType: analysis.coffee_type,
+        finalPrice: analysis.final_price,
+        outturn: analysis.outturn,
+        isRejected: analysis.is_rejected
+      }
+    });
+    setVerificationCode(code);
+    
     // Use requestAnimationFrame to ensure DOM is updated before printing
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -340,7 +359,7 @@ const QuickAnalysesList = () => {
       {/* Hidden print component */}
       <div className="hidden">
         {selectedAnalysis && (
-          <QuickAnalysisPrint ref={printRef} analysis={selectedAnalysis} />
+          <QuickAnalysisPrint ref={printRef} analysis={selectedAnalysis} verificationCode={verificationCode} />
         )}
       </div>
     </>

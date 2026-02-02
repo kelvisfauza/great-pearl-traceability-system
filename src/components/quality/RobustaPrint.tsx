@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import { getVerificationQRUrl } from '@/utils/verificationCode';
 
 interface RobustaAnalysis {
   id: string;
@@ -26,9 +27,10 @@ interface RobustaAnalysis {
 
 interface RobustaPrintProps {
   analysis: RobustaAnalysis;
+  verificationCode?: string | null;
 }
 
-const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }, ref) => {
+const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis, verificationCode }, ref) => {
   const fmt = (n: number) => n?.toLocaleString('en-UG', { maximumFractionDigits: 1 }) || '0';
   const fmtCurrency = (n: number) => n?.toLocaleString('en-UG', { maximumFractionDigits: 0 }) || '0';
 
@@ -263,8 +265,32 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis }
         </div>
       </div>
 
+      {/* Verification QR Code */}
+      {verificationCode && (
+        <div style={{ 
+          marginTop: '15px', 
+          paddingTop: '10px', 
+          borderTop: '1px dashed #e5e7eb', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          gap: '15px' 
+        }}>
+          <div style={{ textAlign: 'left' }}>
+            <p style={{ margin: 0, fontSize: '8px', color: '#666', textTransform: 'uppercase', fontWeight: 'bold' }}>Document Verification</p>
+            <p style={{ margin: '2px 0', fontSize: '11px', fontFamily: 'monospace', fontWeight: 'bold', color: '#166534' }}>{verificationCode}</p>
+            <p style={{ margin: 0, fontSize: '7px', color: '#999' }}>Scan QR to verify authenticity</p>
+          </div>
+          <img 
+            src={getVerificationQRUrl(verificationCode, 70)} 
+            alt="Verification QR"
+            style={{ width: '70px', height: '70px', border: '1px solid #e5e7eb', padding: '3px', background: 'white' }}
+          />
+        </div>
+      )}
+
       {/* Footer */}
-      <div style={{ marginTop: '20px', paddingTop: '8px', borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
+      <div style={{ marginTop: '15px', paddingTop: '8px', borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
         <p style={{ margin: 0, fontSize: '7px', color: '#9ca3af' }}>
           This is a computer-generated document. Analysis ID: {analysis.id}
         </p>

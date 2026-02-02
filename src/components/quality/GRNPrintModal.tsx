@@ -1,10 +1,10 @@
-
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StandardPrintHeader from '@/components/print/StandardPrintHeader';
 import { getStandardPrintStyles } from '@/utils/printStyles';
+import { useDocumentVerification } from '@/hooks/useDocumentVerification';
 
 interface GRNPrintModalProps {
   open: boolean;
@@ -31,6 +31,36 @@ interface GRNPrintModalProps {
 
 const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData }) => {
   const printRef = useRef<HTMLDivElement>(null);
+  const { createVerification } = useDocumentVerification();
+  const [verificationCode, setVerificationCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const generateVerification = async () => {
+      if (open && grnData && !verificationCode) {
+        const code = await createVerification({
+          type: 'document',
+          subtype: 'Goods Received Note (GRN)',
+          issued_to_name: grnData.supplierName,
+          reference_no: grnData.grnNumber,
+          meta: {
+            coffeeType: grnData.coffeeType,
+            totalKgs: grnData.totalKgs,
+            unitPrice: grnData.unitPrice,
+            assessedBy: grnData.assessedBy
+          }
+        });
+        setVerificationCode(code);
+      }
+    };
+    generateVerification();
+  }, [open, grnData]);
+
+  // Reset verification code when modal closes
+  useEffect(() => {
+    if (!open) {
+      setVerificationCode(null);
+    }
+  }, [open]);
 
   if (!grnData) return null;
 
@@ -107,6 +137,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
             title="Goods Received Note (GRN)"
             documentNumber={grnNumber}
             additionalInfo={`Assessed By: ${assessedBy}`}
+            verificationCode={verificationCode || undefined}
           />
 
           <div className="content-section space-y-4 text-sm">

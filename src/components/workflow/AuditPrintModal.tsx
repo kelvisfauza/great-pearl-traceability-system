@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Printer, X } from 'lucide-react';
+import { useDocumentVerification } from '@/hooks/useDocumentVerification';
+import { getVerificationQRUrl } from '@/utils/verificationCode';
 
 interface AuditPrintModalProps {
   open: boolean;
@@ -19,6 +21,35 @@ export const AuditPrintModal: React.FC<AuditPrintModalProps> = ({
   workflowData,
   requestId
 }) => {
+  const { createVerification } = useDocumentVerification();
+  const [verificationCode, setVerificationCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const generateVerification = async () => {
+      if (open && workflowData && !verificationCode) {
+        const code = await createVerification({
+          type: 'report',
+          subtype: 'Payment Approval Audit Trail',
+          issued_to_name: workflowData.supplier?.name || 'Unknown',
+          reference_no: requestId,
+          meta: {
+            batchNumber: workflowData.coffee?.batchNumber,
+            totalAmount: workflowData.coffee?.totalAmount,
+            paymentMethod: workflowData.finance?.paymentMethod
+          }
+        });
+        setVerificationCode(code);
+      }
+    };
+    generateVerification();
+  }, [open, workflowData, requestId]);
+
+  useEffect(() => {
+    if (!open) {
+      setVerificationCode(null);
+    }
+  }, [open]);
+
   const handlePrint = () => {
     window.print();
   };
@@ -51,6 +82,22 @@ export const AuditPrintModal: React.FC<AuditPrintModalProps> = ({
             <h1 className="text-2xl font-bold">PAYMENT APPROVAL AUDIT TRAIL</h1>
             <p className="text-sm text-gray-600">Request ID: {requestId}</p>
             <p className="text-sm text-gray-600">Generated: {new Date().toLocaleString()}</p>
+            {verificationCode && (
+              <div className="mt-3 pt-3 border-t border-dashed border-gray-400 flex items-center justify-center gap-4">
+                <div className="text-left">
+                  <p className="text-xs text-gray-500 uppercase font-semibold">Document Verification</p>
+                  <p className="text-sm font-mono font-bold text-green-700">{verificationCode}</p>
+                  <p className="text-xs text-gray-400">Scan QR to verify authenticity</p>
+                </div>
+                <div className="border border-gray-300 p-1 bg-white rounded">
+                  <img 
+                    src={getVerificationQRUrl(verificationCode, 80)} 
+                    alt="Verification QR Code"
+                    className="w-20 h-20"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {workflowData && (
