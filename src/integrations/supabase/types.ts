@@ -1711,6 +1711,81 @@ export type Database = {
           },
         ]
       }
+      eudr_dispatch_reports: {
+        Row: {
+          attachment_name: string | null
+          attachment_url: string | null
+          bags_deducted: number | null
+          buyer_quality_remarks: string | null
+          buyer_verification: Json
+          coffee_type: string
+          created_at: string
+          created_by: string
+          created_by_name: string
+          deduction_reasons: string[] | null
+          destination_buyer: string
+          dispatch_date: string
+          dispatch_location: string
+          dispatch_supervisor: string
+          id: string
+          quality_checked_by_buyer: boolean | null
+          remarks: string | null
+          status: string
+          total_deducted_weight: number | null
+          trucks: Json
+          updated_at: string
+          vehicle_registrations: string | null
+        }
+        Insert: {
+          attachment_name?: string | null
+          attachment_url?: string | null
+          bags_deducted?: number | null
+          buyer_quality_remarks?: string | null
+          buyer_verification?: Json
+          coffee_type: string
+          created_at?: string
+          created_by: string
+          created_by_name: string
+          deduction_reasons?: string[] | null
+          destination_buyer: string
+          dispatch_date: string
+          dispatch_location: string
+          dispatch_supervisor: string
+          id?: string
+          quality_checked_by_buyer?: boolean | null
+          remarks?: string | null
+          status?: string
+          total_deducted_weight?: number | null
+          trucks?: Json
+          updated_at?: string
+          vehicle_registrations?: string | null
+        }
+        Update: {
+          attachment_name?: string | null
+          attachment_url?: string | null
+          bags_deducted?: number | null
+          buyer_quality_remarks?: string | null
+          buyer_verification?: Json
+          coffee_type?: string
+          created_at?: string
+          created_by?: string
+          created_by_name?: string
+          deduction_reasons?: string[] | null
+          destination_buyer?: string
+          dispatch_date?: string
+          dispatch_location?: string
+          dispatch_supervisor?: string
+          id?: string
+          quality_checked_by_buyer?: boolean | null
+          remarks?: string | null
+          status?: string
+          total_deducted_weight?: number | null
+          trucks?: Json
+          updated_at?: string
+          vehicle_registrations?: string | null
+        }
+        Relationships: []
+      }
       eudr_documents: {
         Row: {
           available_kilograms: number

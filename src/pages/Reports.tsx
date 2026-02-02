@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight, ClipboardList } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight, ClipboardList, Truck } from "lucide-react";
 import KeyMetrics from "@/components/reports/KeyMetrics";
 import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
 
@@ -99,6 +99,13 @@ const Reports = () => {
       icon: MapPin,
       path: "/reports/field-operations",
       color: "text-emerald-600"
+    });
+    reportCards.push({
+      title: "EUDR Dispatch Reports",
+      description: "Dispatch comparison and buyer verification",
+      icon: Truck,
+      path: "/reports/eudr-dispatch",
+      color: "text-lime-600"
     });
   }
 

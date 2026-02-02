@@ -9,12 +9,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2, Pencil, Link2 } from 'lucide-react';
+import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock, Layers, BarChart3, Calendar, Printer, Download, Eye, Trash2, Pencil, Link2, Truck } from 'lucide-react';
 import { useEUDRDocumentation } from '@/hooks/useEUDRDocumentation';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import EUDRReportPrint from './EUDRReportPrint';
 import EUDRInventoryLinking from './EUDRInventoryLinking';
+import EUDRDispatchComparisonForm from './EUDRDispatchComparisonForm';
+import EUDRDispatchReportsList from './EUDRDispatchReportsList';
+import { useEUDRDispatchReports } from '@/hooks/useEUDRDispatchReports';
 import { supabase } from '@/integrations/supabase/client';
 import { createPrintVerification } from '@/utils/printVerification';
 
@@ -37,6 +40,8 @@ const EUDRDocumentation = () => {
     getSalesForBatch,
     getAvailableBatches
   } = useEUDRDocumentation();
+
+  const { reports: dispatchReports, fetchReports: refetchDispatchReports, loading: dispatchLoading } = useEUDRDispatchReports();
 
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
@@ -590,6 +595,10 @@ const EUDRDocumentation = () => {
             <BarChart3 className="h-4 w-4 mr-2" />
             Reports
           </TabsTrigger>
+          <TabsTrigger value="dispatch-comparison">
+            <Truck className="h-4 w-4 mr-2" />
+            Dispatch Comparison
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="inventory-linking" className="space-y-4">
@@ -1097,6 +1106,38 @@ const EUDRDocumentation = () => {
                   </CardContent>
                 </Card>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="dispatch-comparison" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Truck className="h-5 w-5" />
+                Dispatch Comparison Reporting
+              </CardTitle>
+              <CardDescription>
+                Compare dispatch and buyer weighing for EUDR compliance tracking
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="new-report">
+                <TabsList>
+                  <TabsTrigger value="new-report">New Report</TabsTrigger>
+                  <TabsTrigger value="recent-reports">Recent Reports</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="new-report" className="mt-4">
+                  <EUDRDispatchComparisonForm 
+                    onSuccess={() => refetchDispatchReports()}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="recent-reports" className="mt-4">
+                  <EUDRDispatchReportsList reports={dispatchReports} />
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </TabsContent>
