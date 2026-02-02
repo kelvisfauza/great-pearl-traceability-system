@@ -1,4 +1,5 @@
 import React from 'react';
+import { getVerificationQRUrl } from '@/utils/verificationCode';
 
 interface StandardPrintHeaderProps {
   title: string;
@@ -6,6 +7,7 @@ interface StandardPrintHeaderProps {
   documentNumber?: string;
   includeDate?: boolean;
   additionalInfo?: string;
+  verificationCode?: string;
 }
 
 const StandardPrintHeader: React.FC<StandardPrintHeaderProps> = ({
@@ -13,7 +15,8 @@ const StandardPrintHeader: React.FC<StandardPrintHeaderProps> = ({
   subtitle,
   documentNumber,
   includeDate = true,
-  additionalInfo
+  additionalInfo,
+  verificationCode
 }) => {
   return (
     <div className="print-header text-center border-b-2 border-gray-800 pb-4 mb-6">
@@ -61,6 +64,26 @@ const StandardPrintHeader: React.FC<StandardPrintHeaderProps> = ({
           <p>{additionalInfo}</p>
         )}
       </div>
+
+      {/* Verification QR Code */}
+      {verificationCode && (
+        <div className="verification-section mt-4 pt-3 border-t border-dashed border-gray-400">
+          <div className="flex items-center justify-center gap-4">
+            <div className="text-left">
+              <p className="text-xs text-gray-500 uppercase font-semibold">Document Verification</p>
+              <p className="text-sm font-mono font-bold text-green-700">{verificationCode}</p>
+              <p className="text-xs text-gray-400">Scan QR to verify authenticity</p>
+            </div>
+            <div className="border border-gray-300 p-1 bg-white rounded">
+              <img 
+                src={getVerificationQRUrl(verificationCode, 80)} 
+                alt="Verification QR Code"
+                className="w-20 h-20"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

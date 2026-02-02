@@ -4,6 +4,9 @@ import { Printer, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import StandardPrintHeader from "@/components/print/StandardPrintHeader";
 import { getStandardPrintStyles } from "@/utils/printStyles";
+import { useDocumentVerification } from "@/hooks/useDocumentVerification";
+import { getVerificationQRHtml } from "@/components/print/VerificationQRCode";
+import { useState, useEffect } from "react";
 
 interface ReceiptPrintModalProps {
   isOpen: boolean;
@@ -14,6 +17,35 @@ interface ReceiptPrintModalProps {
 
 const ReceiptPrintModal = ({ isOpen, onClose, payment, formatCurrency }: ReceiptPrintModalProps) => {
   const { employee } = useAuth();
+  const { createVerification, isCreating } = useDocumentVerification();
+  const [verificationCode, setVerificationCode] = useState<string | null>(null);
+  
+  // Create verification when modal opens
+  useEffect(() => {
+    if (isOpen && payment && !verificationCode) {
+      createVerification({
+        type: 'receipt',
+        subtype: 'Payment Receipt',
+        issued_to_name: payment.supplier || 'Unknown',
+        department: 'Finance',
+        reference_no: payment.id,
+        meta: {
+          amount: payment.amount,
+          method: payment.method,
+          batch_number: payment.batch_number,
+        }
+      }).then(code => {
+        if (code) setVerificationCode(code);
+      });
+    }
+  }, [isOpen, payment]);
+
+  // Reset verification code when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setVerificationCode(null);
+    }
+  }, [isOpen]);
   
   if (!payment) return null;
 
@@ -30,6 +62,7 @@ const ReceiptPrintModal = ({ isOpen, onClose, payment, formatCurrency }: Receipt
             </head>
             <body>
               ${printContent.innerHTML}
+              ${verificationCode ? getVerificationQRHtml(verificationCode) : ''}
             </body>
           </html>
         `);
@@ -53,6 +86,7 @@ const ReceiptPrintModal = ({ isOpen, onClose, payment, formatCurrency }: Receipt
           </head>
           <body>
             ${printContent}
+            ${verificationCode ? getVerificationQRHtml(verificationCode) : ''}
           </body>
         </html>
       `], { type: 'text/html' });
@@ -81,6 +115,7 @@ const ReceiptPrintModal = ({ isOpen, onClose, payment, formatCurrency }: Receipt
               title="Payment Receipt"
               documentNumber={payment.id}
               additionalInfo={`Time: ${new Date().toLocaleTimeString()}`}
+              verificationCode={verificationCode || undefined}
             />
 
             <div className="content-section receipt-details">
@@ -145,13 +180,13 @@ const ReceiptPrintModal = ({ isOpen, onClose, payment, formatCurrency }: Receipt
           </div>
 
           <div className="flex gap-4 justify-end no-print">
-            <Button variant="outline" onClick={handleDownload}>
+            <Button variant="outline" onClick={handleDownload} disabled={isCreating}>
               <Download className="h-4 w-4 mr-2" />
               Download
             </Button>
-            <Button onClick={handlePrint}>
+            <Button onClick={handlePrint} disabled={isCreating}>
               <Printer className="h-4 w-4 mr-2" />
-              Print
+              {isCreating ? 'Preparing...' : 'Print'}
             </Button>
           </div>
         </div>

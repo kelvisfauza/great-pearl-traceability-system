@@ -32,6 +32,7 @@ import MyExpenses from "./pages/MyExpenses";
 import EURDocumentationPage from "./pages/EUDRDocumentation";
 import Suppliers from "./pages/Suppliers";
 import Approvals from "./pages/Approvals";
+import Verify from "./pages/Verify";
 
 // V2 System Pages
 import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
@@ -117,6 +118,10 @@ const App: React.ComponentType = () => {
               
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                
+                {/* Public verification route - no auth required */}
+                <Route path="/verify" element={<Verify />} />
+                <Route path="/verify/:code" element={<Verify />} />
                 
                 {/* V2 System Routes - Department-based access */}
                 <Route path="/v2" element={<ProtectedRoute><V2DepartmentRouter /></ProtectedRoute>} />

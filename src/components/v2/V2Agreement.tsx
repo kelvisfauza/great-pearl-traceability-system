@@ -1,16 +1,73 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Printer, FileText } from "lucide-react";
-import { useRef } from "react";
-import { useReactToPrint } from "react-to-print";
+import { useRef, useState } from "react";
+import { useDocumentVerification } from "@/hooks/useDocumentVerification";
+import { getVerificationQRHtml } from "@/components/print/VerificationQRCode";
 
 const V2Agreement = () => {
   const printRef = useRef<HTMLDivElement>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const { createVerification } = useDocumentVerification();
 
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: "Sales Agreement",
-  });
+  const handlePrint = async () => {
+    setIsPrinting(true);
+    
+    // Create verification record for this contract
+    const verificationCode = await createVerification({
+      type: 'contract',
+      subtype: 'Sales Agreement',
+      issued_to_name: 'Mugisha Moses / Mughuda Happy',
+      reference_no: 'UGH-828U-SA-' + new Date().getTime(),
+      meta: {
+        vehicle_type: 'Tricycle',
+        registration: 'UGH 828U',
+        total_price: 8000000,
+      }
+    });
+
+    if (printRef.current) {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Sales Agreement</title>
+              <style>
+                body { 
+                  font-family: Arial, sans-serif; 
+                  padding: 40px; 
+                  max-width: 800px; 
+                  margin: 0 auto;
+                  line-height: 1.6;
+                }
+                h2 { text-align: center; margin-bottom: 20px; }
+                .section { margin-bottom: 15px; }
+                .section-title { font-weight: bold; margin-bottom: 5px; }
+                .indent { padding-left: 20px; }
+                .signatures { margin-top: 40px; display: flex; justify-content: space-between; }
+                .signature-block { width: 45%; }
+                .signature-line { border-top: 1px solid #000; margin-top: 40px; padding-top: 5px; }
+                ul { margin: 10px 0; padding-left: 30px; }
+                .verification-qr { text-align: center; margin-top: 30px; padding: 15px; border-top: 1px dashed #ccc; }
+                .verification-qr img { width: 100px; height: 100px; }
+              </style>
+            </head>
+            <body>
+              ${printRef.current.innerHTML}
+              ${verificationCode ? getVerificationQRHtml(verificationCode) : ''}
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      }
+    }
+    
+    setIsPrinting(false);
+  };
 
   return (
     <Card>
@@ -23,11 +80,12 @@ const V2Agreement = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handlePrint()}
+            onClick={handlePrint}
+            disabled={isPrinting}
             className="print:hidden"
           >
             <Printer className="mr-2 h-4 w-4" />
-            Print
+            {isPrinting ? 'Preparing...' : 'Print'}
           </Button>
         </CardTitle>
       </CardHeader>
