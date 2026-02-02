@@ -1,5 +1,6 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import { getVerificationQRUrl } from '@/utils/verificationCode';
 
 interface QuickAnalysisData {
   id: string;
@@ -28,10 +29,11 @@ interface QuickAnalysisData {
 
 interface QuickAnalysisPrintProps {
   analysis: QuickAnalysisData;
+  verificationCode?: string | null;
 }
 
 const QuickAnalysisPrint = forwardRef<HTMLDivElement, QuickAnalysisPrintProps>(
-  ({ analysis }, ref) => {
+  ({ analysis, verificationCode }, ref) => {
     const fmt = (n: number) => n?.toLocaleString('en-UG', { maximumFractionDigits: 0 }) || '—';
     const pct = (n: number) => n?.toFixed(1) + '%' || '—';
 
@@ -177,6 +179,24 @@ const QuickAnalysisPrint = forwardRef<HTMLDivElement, QuickAnalysisPrintProps>(
             <p className="text-xs text-gray-600">Date: ________________</p>
           </div>
         </div>
+
+        {/* Verification QR Code */}
+        {verificationCode && (
+          <div className="absolute bottom-20 left-4 right-4 flex items-center justify-center gap-4 border-t border-dashed border-gray-400 pt-3">
+            <div className="text-left">
+              <p className="text-xs text-gray-500 uppercase font-semibold">Document Verification</p>
+              <p className="text-sm font-mono font-bold text-green-700">{verificationCode}</p>
+              <p className="text-xs text-gray-400">Scan QR to verify authenticity</p>
+            </div>
+            <div className="border border-gray-300 p-1 bg-white rounded">
+              <img 
+                src={getVerificationQRUrl(verificationCode, 70)} 
+                alt="Verification QR Code"
+                className="w-[70px] h-[70px]"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="absolute bottom-4 left-4 right-4 text-center text-xs text-gray-500 border-t pt-2">

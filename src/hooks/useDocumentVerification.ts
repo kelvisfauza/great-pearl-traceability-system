@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateVerificationCode } from '@/utils/verificationCode';
 import { useToast } from '@/hooks/use-toast';
 
-type DocumentType = 'document' | 'employee_id' | 'receipt' | 'report' | 'contract' | 'assessment';
+type DocumentType = 'document' | 'employee_id' | 'receipt' | 'report' | 'contract' | 'assessment' | 'grn';
 
 interface VerificationData {
   type: DocumentType;

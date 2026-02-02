@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { FileText, Download, Calendar, Filter, Printer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useDocumentVerification } from '@/hooks/useDocumentVerification';
+import { getVerificationQRUrl, generateVerificationCode } from '@/utils/verificationCode';
 
 interface QualityAssessmentReportsProps {
   assessments: any[];
@@ -17,6 +19,7 @@ interface QualityAssessmentReportsProps {
 
 const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps) => {
   const { toast } = useToast();
+  const { createVerification } = useDocumentVerification();
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
@@ -108,6 +111,25 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    // Create verification record for this report
+    const verificationCode = await createVerification({
+      type: 'report',
+      subtype: `Quality Assessment Report - ${filters.reportType}`,
+      issued_to_name: 'Great Pearl Coffee Factory',
+      reference_no: `QAR-${Date.now()}`,
+      meta: {
+        reportType: filters.reportType,
+        totalAssessments: data.length,
+        dateRange: filters.startDate && filters.endDate 
+          ? `${filters.startDate} to ${filters.endDate}` 
+          : 'All Dates',
+        supplier: filters.supplier || 'All',
+        coffeeType: filters.coffeeType || 'All'
+      }
+    });
+
+    const qrCodeUrl = verificationCode ? getVerificationQRUrl(verificationCode, 100) : '';
+
     const reportTitle = `Quality Assessment Report - ${filters.reportType.charAt(0).toUpperCase() + filters.reportType.slice(1)}`;
     const dateRange = filters.startDate && filters.endDate 
       ? `${filters.startDate} to ${filters.endDate}`
@@ -141,6 +163,9 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
           .reject { color: #e11d48; font-weight: bold; }
           .accept { color: #16a34a; font-weight: bold; }
           .calculation-details { background: #f8f9fa; padding: 10px; margin: 5px 0; border-radius: 3px; }
+          .verification-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; gap: 15px; }
+          .verification-section .qr-code { width: 80px; height: 80px; border: 1px solid #ddd; padding: 4px; background: white; }
+          .verification-section .code-text { font-family: monospace; font-weight: bold; color: #166534; font-size: 14px; }
           @media print { 
             body { margin: 20px; } 
             .no-print { display: none; }
@@ -156,6 +181,16 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
           <p><strong>Period:</strong> ${dateRange}</p>
           <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
           <p><strong>Total Assessments:</strong> ${data.length}</p>
+          ${verificationCode ? `
+          <div class="verification-section">
+            <div style="text-align: left;">
+              <p style="margin: 0; font-size: 10px; color: #666; text-transform: uppercase; font-weight: bold;">Document Verification</p>
+              <p class="code-text" style="margin: 2px 0;">${verificationCode}</p>
+              <p style="margin: 0; font-size: 9px; color: #999;">Scan QR to verify authenticity</p>
+            </div>
+            <img src="${qrCodeUrl}" alt="Verification QR" class="qr-code" />
+          </div>
+          ` : ''}
         </div>
 
         <div class="filters">

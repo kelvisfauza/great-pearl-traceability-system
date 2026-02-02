@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useReactToPrint } from 'react-to-print';
 import QuickAnalysisPrint from './QuickAnalysisPrint';
 import RobustaPriceCalculator from './RobustaPriceCalculator';
+import { useDocumentVerification } from '@/hooks/useDocumentVerification';
 
 interface PriceCalculatorState {
   refPrice: string;
@@ -74,6 +75,7 @@ interface SavedAnalysis {
 const QualityPriceCalculator = () => {
   const { toast } = useToast();
   const { employee } = useAuth();
+  const { createVerification } = useDocumentVerification();
   const [coffeeType, setCoffeeType] = useState<'arabica' | 'robusta'>('arabica');
   const [loadingPrices, setLoadingPrices] = useState(true);
   const [referencePrices, setReferencePrices] = useState<ReferencePrices | null>(null);
@@ -81,6 +83,7 @@ const QualityPriceCalculator = () => {
   const [supplierName, setSupplierName] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedAnalysis, setSavedAnalysis] = useState<SavedAnalysis | null>(null);
+  const [verificationCode, setVerificationCode] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   
   const [state, setState] = useState<PriceCalculatorState>({
@@ -379,6 +382,20 @@ const QualityPriceCalculator = () => {
       setSaveDialogOpen(false);
       setSupplierName('');
       
+      // Generate verification code for printing
+      const code = await createVerification({
+        type: 'assessment',
+        subtype: 'Arabica Quality Analysis',
+        issued_to_name: supplierName.trim(),
+        reference_no: data.id,
+        meta: {
+          coffeeType: coffeeType,
+          finalPrice: finalPriceNum,
+          isRejected: isRejected
+        }
+      });
+      setVerificationCode(code);
+      
       toast({
         title: 'Saved & Printing...',
         description: 'Analysis saved. Opening print preview...'
@@ -514,7 +531,7 @@ const QualityPriceCalculator = () => {
       {/* Hidden print component */}
       <div className="hidden">
         {savedAnalysis && (
-          <QuickAnalysisPrint ref={printRef} analysis={savedAnalysis} />
+          <QuickAnalysisPrint ref={printRef} analysis={savedAnalysis} verificationCode={verificationCode} />
         )}
       </div>
 

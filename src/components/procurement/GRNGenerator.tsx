@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useStoreManagement } from '@/hooks/useStoreManagement';
 import { useToast } from '@/hooks/use-toast';
+import { useDocumentVerification } from '@/hooks/useDocumentVerification';
+import { generateVerificationCode, getVerificationQRUrl } from '@/utils/verificationCode';
 
 interface GRNGeneratorProps {
   open: boolean;
@@ -16,10 +17,27 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
   const { storeRecords, loading } = useStoreManagement();
   const [selectedRecord, setSelectedRecord] = useState<string>('');
   const { toast } = useToast();
+  const { createVerification } = useDocumentVerification();
 
-  const handleGenerateGRN = () => {
+  const handleGenerateGRN = async () => {
     const record = storeRecords.find(r => r.id === selectedRecord);
     if (!record) return;
+
+    // Create verification record
+    const verificationCode = await createVerification({
+      type: 'document',
+      subtype: 'Goods Received Note (GRN)',
+      issued_to_name: record.supplierName,
+      reference_no: `GRN-${record.batchNumber}`,
+      meta: {
+        coffeeType: record.coffeeType,
+        bags: record.bags,
+        kilograms: record.kilograms,
+        batchNumber: record.batchNumber
+      }
+    });
+
+    const qrCodeUrl = verificationCode ? getVerificationQRUrl(verificationCode, 100) : '';
 
     const grnContent = `
       <div style="padding: 20px; font-family: Arial, sans-serif;">
@@ -70,6 +88,19 @@ const GRNGenerator: React.FC<GRNGeneratorProps> = ({ open, onClose }) => {
             </div>
           </div>
         </div>
+
+        ${verificationCode ? `
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc; text-align: center;">
+          <p style="font-size: 10px; color: #666; margin-bottom: 5px;">Document Verification</p>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+            <div style="text-align: left;">
+              <p style="font-size: 12px; font-weight: bold; color: #166534; font-family: monospace;">${verificationCode}</p>
+              <p style="font-size: 9px; color: #999;">Scan QR to verify authenticity</p>
+            </div>
+            <img src="${qrCodeUrl}" alt="Verification QR" style="width: 80px; height: 80px; border: 1px solid #ddd; padding: 4px; background: white;" />
+          </div>
+        </div>
+        ` : ''}
       </div>
     `;
 
