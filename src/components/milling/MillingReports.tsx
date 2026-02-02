@@ -9,6 +9,7 @@ import { FileText, Download, TrendingUp, TrendingDown, DollarSign, Package2, Use
 import { useMillingData } from '@/hooks/useMillingData';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import StandardPrintHeader from '@/components/print/StandardPrintHeader';
+import { createPrintVerification, getVerificationHtml, getVerificationStyles } from '@/utils/printVerification';
 
 const MillingReports = () => {
   const { getReportData, stats, customers, transactions, cashTransactions, expenses } = useMillingData();
@@ -198,8 +199,16 @@ ${reportData.cashTransactions.map((p: any) =>
   };
 
   // Print month report
-  const printMonthReport = () => {
+  const printMonthReport = async () => {
     if (!monthReportData) return;
+
+    // Create verification record
+    const { code, qrUrl } = await createPrintVerification({
+      type: 'report',
+      subtype: 'Milling Monthly Report',
+      reference_no: `MILL-MONTH-${monthReportData.monthName.replace(' ', '-')}`,
+      meta: { monthName: monthReportData.monthName }
+    });
 
     const debtAnalysis = customerDebtAnalysis();
     const totalDebt = customers.reduce((sum, customer) => sum + customer.current_balance, 0);
@@ -677,6 +686,8 @@ ${reportData.cashTransactions.map((p: any) =>
               </tr>
             </table>
           </div>
+
+          ${getVerificationHtml(code, qrUrl)}
         </body>
       </html>
     `;

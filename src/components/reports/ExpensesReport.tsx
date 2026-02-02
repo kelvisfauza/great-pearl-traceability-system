@@ -14,6 +14,7 @@ import { useMoneyRequests } from '@/hooks/useMoneyRequests';
 import StandardPrintHeader from '@/components/print/StandardPrintHeader';
 import { useReactToPrint } from 'react-to-print';
 import { format, subMonths } from 'date-fns';
+import { createPrintVerification, getVerificationHtml } from '@/utils/printVerification';
 
 export const ExpensesReport = () => {
   const { expenseRequests, loading } = useEnhancedExpenseManagement();
@@ -351,8 +352,16 @@ export const ExpensesReport = () => {
     setMonthReportData(data);
   };
 
-  const printMonthReport = () => {
+  const printMonthReport = async () => {
     if (!monthReportData) return;
+
+    // Create verification record
+    const { code, qrUrl } = await createPrintVerification({
+      type: 'report',
+      subtype: 'Monthly Expenses Report',
+      reference_no: `EXP-${monthReportData.monthName.replace(' ', '-')}`,
+      meta: { monthName: monthReportData.monthName, grandTotal: monthReportData.summary.grandTotal }
+    });
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -545,6 +554,8 @@ export const ExpensesReport = () => {
           <div class="grand-total">
             Grand Total: UGX ${monthReportData.summary.grandTotal.toLocaleString()}
           </div>
+
+          ${getVerificationHtml(code, qrUrl)}
 
           <script>
             window.onload = function() {

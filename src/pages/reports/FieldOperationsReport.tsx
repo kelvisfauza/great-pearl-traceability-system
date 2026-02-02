@@ -6,13 +6,22 @@ import { useNavigate } from "react-router-dom";
 import { useFieldOperationsData } from "@/hooks/useFieldOperationsData";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { createPrintVerification, getVerificationHtml, getVerificationStyles } from '@/utils/printVerification';
 
 const FieldOperationsReport = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { farmers, purchases, dailyReports, facilitationRequests, attendanceLogs, loading } = useFieldOperationsData();
 
-  const printReport = () => {
+  const printReport = async () => {
+    // Create verification record
+    const { code, qrUrl } = await createPrintVerification({
+      type: 'report',
+      subtype: 'Field Operations Report',
+      reference_no: `FIELD-${format(new Date(), 'yyyyMMdd')}`,
+      meta: { farmersCount: farmers.length, purchasesCount: purchases.length }
+    });
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       toast({
@@ -234,6 +243,8 @@ const FieldOperationsReport = () => {
               </tbody>
             </table>
           </div>
+
+          ${getVerificationHtml(code, qrUrl)}
 
           <script>
             window.onload = function() {

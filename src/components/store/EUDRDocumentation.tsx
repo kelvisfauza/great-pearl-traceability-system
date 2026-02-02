@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import EUDRReportPrint from './EUDRReportPrint';
 import EUDRInventoryLinking from './EUDRInventoryLinking';
 import { supabase } from '@/integrations/supabase/client';
+import { createPrintVerification } from '@/utils/printVerification';
 
 const EUDRDocumentation = () => {
   const { hasPermission } = useAuth();
@@ -50,6 +51,7 @@ const EUDRDocumentation = () => {
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [verificationCode, setVerificationCode] = useState<string>('');
 
   const [newDocument, setNewDocument] = useState({
     coffee_type: '',
@@ -953,7 +955,16 @@ const EUDRDocumentation = () => {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => setShowPrintPreview(true)}
+                      onClick={async () => {
+                        const { code } = await createPrintVerification({
+                          type: 'report',
+                          subtype: 'EUDR Compliance Report',
+                          reference_no: `EUDR-${reportType.toUpperCase()}-${new Date().toISOString().split('T')[0].replace(/-/g, '')}`,
+                          meta: { reportType, startDate: reportStartDate, endDate: reportEndDate }
+                        });
+                        setVerificationCode(code);
+                        setShowPrintPreview(true);
+                      }}
                     >
                       <Eye className="h-4 w-4 mr-2" />
                       Preview & Print Report
@@ -1102,6 +1113,7 @@ const EUDRDocumentation = () => {
         activeBatches={getAvailableBatches().length}
         documents={eudrDocuments}
         sales={eudrSales}
+        verificationCode={verificationCode}
       />
 
       {/* Edit Sale Modal */}
@@ -1457,6 +1469,7 @@ const EUDRDocumentation = () => {
                 documents={eudrDocuments}
                 sales={eudrSales}
                 isPreview={true}
+                verificationCode={verificationCode}
               />
             </div>
           </div>

@@ -10,6 +10,7 @@ import { CalendarIcon, Filter, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useMillingData } from '@/hooks/useMillingData';
+import { createPrintVerification, getVerificationHtml, getVerificationStyles } from '@/utils/printVerification';
 
 interface MillingPrintReportModalProps {
   open: boolean;
@@ -19,6 +20,8 @@ interface MillingPrintReportModalProps {
 const MillingPrintReportModal: React.FC<MillingPrintReportModalProps> = ({ open, onClose }) => {
   const { customers, transactions, cashTransactions, stats } = useMillingData();
   const printRef = useRef<HTMLDivElement>(null);
+  const [verificationCode, setVerificationCode] = useState<string>('');
+  const [verificationQrUrl, setVerificationQrUrl] = useState<string>('');
   
   // Filter states
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -61,8 +64,19 @@ const MillingPrintReportModal: React.FC<MillingPrintReportModalProps> = ({ open,
     };
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!printRef.current) return;
+
+    // Create verification record
+    const { code, qrUrl } = await createPrintVerification({
+      type: 'report',
+      subtype: 'Milling Department Report',
+      reference_no: `MILL-${format(new Date(), 'yyyyMMdd')}`,
+      meta: { reportType, selectedCustomer }
+    });
+    setVerificationCode(code);
+    setVerificationQrUrl(qrUrl);
+
     const content = printRef.current.innerHTML;
     const printWindow = window.open('', '', 'width=900,height=1200');
     if (!printWindow) return;
@@ -92,6 +106,7 @@ const MillingPrintReportModal: React.FC<MillingPrintReportModalProps> = ({ open,
             .text-center { text-align: center; }
             .separator { border-top: 2px solid #000; margin: 20px 0; }
             .footer { margin-top: 40px; font-size: 11px; color: #666; text-align: center; }
+            ${getVerificationStyles()}
             @media print {
               body { -webkit-print-color-adjust: exact; }
               .no-print { display: none; }
@@ -100,6 +115,7 @@ const MillingPrintReportModal: React.FC<MillingPrintReportModalProps> = ({ open,
         </head>
         <body>
           ${content}
+          ${getVerificationHtml(code, qrUrl)}
           <script>
             window.onload = function() {
               window.print();

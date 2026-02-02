@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Calendar, FileText, Printer, Download, Store, Calculator } from 'lucide-react';
 import { useStoreReports } from '@/hooks/useStoreReports';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, parseISO } from 'date-fns';
+import { createPrintVerification, getVerificationHtml, getVerificationStyles } from '@/utils/printVerification';
 
 interface StoreReportData {
   dateRange: {
@@ -176,7 +177,15 @@ const StorePrintReportGenerator = () => {
     }
   };
 
-  const printReport = () => {
+  const printReport = async () => {
+    // Create verification record
+    const { code, qrUrl } = await createPrintVerification({
+      type: 'report',
+      subtype: 'Store Operations Report',
+      reference_no: `STORE-${dateFrom}-${dateTo}`,
+      meta: { dateFrom, dateTo, reportType }
+    });
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
@@ -519,6 +528,8 @@ const StorePrintReportGenerator = () => {
                 </tbody>
               </table>
             </div>
+
+            ${getVerificationHtml(code, qrUrl)}
 
             <div class="footer">
               <p>Store Report generated on ${format(new Date(), 'MMMM dd, yyyy HH:mm')}</p>

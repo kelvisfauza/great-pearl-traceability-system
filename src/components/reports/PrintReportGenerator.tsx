@@ -11,6 +11,7 @@ import { useCompletedTransactions } from '@/hooks/useCompletedTransactions';
 import { useExpenseManagement } from '@/hooks/useExpenseManagement';
 import { useMillingData } from '@/hooks/useMillingData';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, parseISO } from 'date-fns';
+import { createPrintVerification, getVerificationHtml, getVerificationStyles } from '@/utils/printVerification';
 
 interface ReportData {
   dateRange: {
@@ -174,7 +175,15 @@ const PrintReportGenerator = () => {
     }
   };
 
-  const printReport = () => {
+  const printReport = async () => {
+    // Create verification record
+    const { code, qrUrl } = await createPrintVerification({
+      type: 'report',
+      subtype: 'Business Report',
+      reference_no: `BIZ-${dateFrom}-${dateTo}`,
+      meta: { dateFrom, dateTo, reportType }
+    });
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
@@ -514,6 +523,8 @@ const PrintReportGenerator = () => {
                 </tbody>
               </table>
             </div>
+
+            ${getVerificationHtml(code, qrUrl)}
 
             <div class="footer">
               <p>Report generated on ${format(new Date(), 'MMMM dd, yyyy HH:mm')}</p>

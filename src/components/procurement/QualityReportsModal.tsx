@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Package, AlertTriangle, CheckCircle } from 'lucide-react';
+import { createPrintVerification, getVerificationHtml } from '@/utils/printVerification';
 
 interface QualityReportsModalProps {
   open: boolean;
@@ -156,8 +157,16 @@ const QualityReportsModal: React.FC<QualityReportsModalProps> = ({ open, onClose
     }
   };
 
-  const handlePrintReport = () => {
+  const handlePrintReport = async () => {
     if (!metrics) return;
+
+    // Create verification record
+    const { code, qrUrl } = await createPrintVerification({
+      type: 'report',
+      subtype: 'Quality Report',
+      reference_no: `QA-RPT-${new Date().toISOString().split('T')[0]}`,
+      meta: { totalBatches: metrics.totalBatches, totalKilograms: metrics.totalKilograms }
+    });
 
     const reportContent = `
       <div style="padding: 20px; font-family: Arial, sans-serif;">
@@ -255,6 +264,7 @@ const QualityReportsModal: React.FC<QualityReportsModalProps> = ({ open, onClose
           </head>
           <body>
             ${reportContent}
+            ${getVerificationHtml(code, qrUrl)}
             <script>
               window.onload = function() {
                 window.print();
