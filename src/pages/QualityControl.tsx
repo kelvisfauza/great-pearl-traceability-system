@@ -97,15 +97,41 @@ const QualityControl = () => {
 
   // Auto-scroll to highlighted record
   useEffect(() => {
-    if (highlightConfig.id) {
-      setTimeout(() => {
-        const element = document.getElementById(`row-${highlightConfig.id}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 500);
+    if (highlightConfig.id || highlightConfig.searchTerm) {
+      // Try multiple times to ensure the element is rendered
+      const attemptScroll = (attempts = 0) => {
+        if (attempts > 5) return;
+        
+        setTimeout(() => {
+          // Try by ID first
+          let element = document.getElementById(`row-${highlightConfig.id}`);
+          
+          // If not found by ID, search by batch number in searchTerm
+          if (!element && highlightConfig.searchTerm) {
+            const rows = document.querySelectorAll('[id^="row-"]');
+            rows.forEach((row) => {
+              const batchCell = row.querySelector('td:first-child');
+              if (batchCell?.textContent?.includes(highlightConfig.searchTerm || '')) {
+                element = row as HTMLElement;
+              }
+            });
+          }
+          
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Add highlight class if found by search term
+            if (!highlightConfig.id && highlightConfig.searchTerm) {
+              element.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'bg-primary/10', 'animate-pulse-highlight');
+            }
+          } else {
+            attemptScroll(attempts + 1);
+          }
+        }, 300 * (attempts + 1));
+      };
+      
+      attemptScroll();
     }
-  }, [highlightConfig.id, activeTab]);
+  }, [highlightConfig.id, highlightConfig.searchTerm, activeTab]);
 
   const [assessmentForm, setAssessmentForm] = useState({
     // Quality parameters from calculator
@@ -976,7 +1002,7 @@ const QualityControl = () => {
                           key={record.id}
                           id={`row-${record.id}`}
                           className={cn(
-                            isHighlighted(record.id) && "ring-2 ring-primary ring-offset-2 bg-primary/10 animate-pulse-highlight"
+                            isHighlighted(record.id, record.batch_number) && "ring-2 ring-primary ring-offset-2 bg-primary/10 animate-pulse-highlight"
                           )}
                         >
                           <TableCell className="font-medium">{record.batch_number}</TableCell>
@@ -1138,7 +1164,7 @@ const QualityControl = () => {
                           key={assessment.id}
                           id={`row-${assessment.id}`}
                           className={cn(
-                            isHighlighted(assessment.id) && "ring-2 ring-primary ring-offset-2 bg-primary/10 animate-pulse-highlight"
+                            isHighlighted(assessment.id, assessment.batch_number) && "ring-2 ring-primary ring-offset-2 bg-primary/10 animate-pulse-highlight"
                           )}
                         >
                           <TableCell className="font-medium">{assessment.batch_number}</TableCell>
