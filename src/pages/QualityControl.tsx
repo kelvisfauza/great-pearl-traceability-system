@@ -36,11 +36,14 @@ import { usePrices } from "@/contexts/PriceContext";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoleBasedAccess } from "@/hooks/useRoleBasedAccess";
+import { useSearchHighlight } from "@/hooks/useSearchHighlight";
 import GRNPrintModal from "@/components/quality/GRNPrintModal";
 import ArabicaPriceCalculator from "@/components/milling/ArabicaPriceCalculator";
 import QualityPriceCalculator from "@/components/quality/QualityPriceCalculator";
 import QuickAnalysesList from "@/components/quality/QuickAnalysesList";
 import QualityAssessmentReports from "@/components/quality/QualityAssessmentReports";
+import { cn } from "@/lib/utils";
+
 const QualityControl = () => {
   const {
     storeRecords,
@@ -68,10 +71,42 @@ const QualityControl = () => {
   const { toast } = useToast();
   const { hasPermission, employee } = useAuth();
   const access = useRoleBasedAccess();
+  const { highlightConfig, isHighlighted } = useSearchHighlight();
   const readOnly = !access.canManageQuality;
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [activeTab, setActiveTab] = useState("pending");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Switch to correct tab when searching for a record
+  useEffect(() => {
+    if (highlightConfig.id && highlightConfig.type) {
+      // If searching for quality assessment, switch to assessments tab
+      if (highlightConfig.type === 'quality') {
+        setActiveTab('assessments');
+      } else if (highlightConfig.type === 'batch') {
+        // Check if it's pending or assessed
+        const inPending = pendingRecords.some(r => r.id === highlightConfig.id);
+        if (inPending) {
+          setActiveTab('pending');
+        } else {
+          setActiveTab('assessments');
+        }
+      }
+    }
+  }, [highlightConfig.id, highlightConfig.type, pendingRecords]);
+
+  // Auto-scroll to highlighted record
+  useEffect(() => {
+    if (highlightConfig.id) {
+      setTimeout(() => {
+        const element = document.getElementById(`row-${highlightConfig.id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+    }
+  }, [highlightConfig.id, activeTab]);
+
   const [assessmentForm, setAssessmentForm] = useState({
     // Quality parameters from calculator
     moisture: '',
@@ -937,7 +972,13 @@ const QualityControl = () => {
                     </TableHeader>
                     <TableBody>
                       {filteredPendingRecords.map((record) => (
-                        <TableRow key={record.id}>
+                        <TableRow 
+                          key={record.id}
+                          id={`row-${record.id}`}
+                          className={cn(
+                            isHighlighted(record.id) && "ring-2 ring-primary ring-offset-2 bg-primary/10 animate-pulse-highlight"
+                          )}
+                        >
                           <TableCell className="font-medium">{record.batch_number}</TableCell>
                           <TableCell>
                             <div className="space-y-0.5">
@@ -1093,7 +1134,13 @@ const QualityControl = () => {
                     </TableHeader>
                     <TableBody>
                       {filteredAssessments.map((assessment) => (
-                        <TableRow key={assessment.id}>
+                        <TableRow 
+                          key={assessment.id}
+                          id={`row-${assessment.id}`}
+                          className={cn(
+                            isHighlighted(assessment.id) && "ring-2 ring-primary ring-offset-2 bg-primary/10 animate-pulse-highlight"
+                          )}
+                        >
                           <TableCell className="font-medium">{assessment.batch_number}</TableCell>
                           <TableCell>
                             <div className="space-y-0.5">

@@ -316,3 +316,23 @@
 .animate-fall {
   animation: fall linear infinite;
 }
+
+/* Search highlight pulse animation */
+@keyframes highlightPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+    background-color: hsl(var(--primary) / 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px hsl(var(--primary) / 0);
+    background-color: hsl(var(--primary) / 0.15);
+  }
+}
+
+.animate-pulse-highlight {
+  animation: highlightPulse 1.5s ease-in-out 3;
+}
+
+.animate-highlight-pulse {
+  animation: highlightPulse 1s ease-in-out 3;
+}
