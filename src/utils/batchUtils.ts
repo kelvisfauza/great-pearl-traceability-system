@@ -166,11 +166,17 @@ export const migrateBatchNumbersToNewFormat = async (): Promise<{migrated: numbe
   let failed = 0;
 
   try {
+    // Helper to check if batch number is already in new format (11 digits: YYYYMMDD + 3)
+    const isNewFormat = (batchNumber: string): boolean => {
+      return /^\d{11}$/.test(batchNumber);
+    };
+
     // Get all coffee_records with batch numbers that don't match the new format
     const { data: coffeeRecords, error: coffeeError } = await supabase
       .from('coffee_records')
       .select('id, batch_number, created_at, date')
-      .not('batch_number', 'is', null);
+      .not('batch_number', 'is', null)
+      .order('created_at', { ascending: true });
     
     if (coffeeError) {
       details.push(`Error fetching coffee_records: ${coffeeError.message}`);
@@ -181,7 +187,8 @@ export const migrateBatchNumbersToNewFormat = async (): Promise<{migrated: numbe
     const { data: storeRecords, error: storeError } = await supabase
       .from('store_records')
       .select('id, batch_number, created_at, transaction_date')
-      .not('batch_number', 'is', null);
+      .not('batch_number', 'is', null)
+      .order('created_at', { ascending: true });
 
     if (storeError) {
       details.push(`Error fetching store_records: ${storeError.message}`);
@@ -191,16 +198,23 @@ export const migrateBatchNumbersToNewFormat = async (): Promise<{migrated: numbe
     // Track sequence numbers per date to avoid duplicates
     const sequenceByDate: Record<string, number> = {};
 
+    // First, scan existing new-format batch numbers to get starting sequences
+    [...(coffeeRecords || []), ...(storeRecords || [])].forEach(record => {
+      const bn = record.batch_number;
+      if (bn && isNewFormat(bn)) {
+        const datePrefix = bn.substring(0, 8);
+        const seq = parseInt(bn.substring(8), 10);
+        if (!isNaN(seq)) {
+          sequenceByDate[datePrefix] = Math.max(sequenceByDate[datePrefix] || 0, seq);
+        }
+      }
+    });
+
     // Helper to get next sequence for a date
     const getNextSequence = (dateStr: string): string => {
       const datePrefix = dateStr.replace(/-/g, '');
       sequenceByDate[datePrefix] = (sequenceByDate[datePrefix] || 0) + 1;
       return `${datePrefix}${sequenceByDate[datePrefix].toString().padStart(3, '0')}`;
-    };
-
-    // Helper to check if batch number is already in new format
-    const isNewFormat = (batchNumber: string): boolean => {
-      return /^\d{11}$/.test(batchNumber); // YYYYMMDD + 3 digits = 11 chars
     };
 
     // Migrate coffee_records
