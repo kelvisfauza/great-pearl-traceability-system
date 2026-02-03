@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, FileText, User, Package, DollarSign, ClipboardCheck, TrendingUp, History, Trash2, Clock } from 'lucide-react';
+import { Search, X, FileText, User, Package, DollarSign, ClipboardCheck, TrendingUp, History, Trash2, Clock, Sparkles, Lightbulb, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useGlobalSearch, SearchResult } from '@/hooks/useGlobalSearch';
+import { useAISearch, AISearchResult, AISearchSuggestion } from '@/hooks/useAISearch';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface SearchHistory {
   id: string;
@@ -23,7 +24,7 @@ const GlobalSearch = () => {
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
-  const { results, loading } = useGlobalSearch(searchTerm);
+  const { results, suggestions, loading, usingFallback } = useAISearch(searchTerm);
 
   // Load search history when modal opens
   useEffect(() => {
@@ -67,7 +68,6 @@ const GlobalSearch = () => {
       }]);
     } catch (error) {
       console.error('Error saving search history:', error);
-      // Don't throw - search history is non-critical
     }
   };
 
@@ -121,7 +121,7 @@ const GlobalSearch = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const getResultIcon = (type: SearchResult['type']) => {
+  const getResultIcon = (type: AISearchResult['type']) => {
     switch (type) {
       case 'supplier':
         return <User className="h-4 w-4" />;
@@ -147,7 +147,7 @@ const GlobalSearch = () => {
     }
   };
 
-  const getResultColor = (type: SearchResult['type']) => {
+  const getResultColor = (type: AISearchResult['type']) => {
     switch (type) {
       case 'supplier':
         return 'text-blue-500';
@@ -173,10 +173,19 @@ const GlobalSearch = () => {
     }
   };
 
-  const handleResultClick = (result: SearchResult) => {
+  const handleResultClick = (result: AISearchResult) => {
     navigate(result.navigateTo);
     setIsOpen(false);
     setSearchTerm('');
+  };
+
+  const handleSuggestionClick = (suggestion: AISearchSuggestion) => {
+    if (suggestion.action.startsWith('/')) {
+      navigate(suggestion.action);
+      setIsOpen(false);
+    } else {
+      setSearchTerm(suggestion.action);
+    }
   };
 
   return (
@@ -185,9 +194,10 @@ const GlobalSearch = () => {
         onClick={() => setIsOpen(true)}
         variant="ghost"
         size="sm"
-        className="relative hover-scale transition-all duration-200 hover:bg-primary/10"
+        className="relative hover-scale transition-all duration-200 hover:bg-primary/10 gap-2"
       >
         <Search className="h-5 w-5 text-muted-foreground" />
+        <Sparkles className="h-3 w-3 text-primary absolute -top-0.5 -right-0.5" />
       </Button>
 
       {isOpen && (
@@ -199,14 +209,17 @@ const GlobalSearch = () => {
           
           {/* Search Modal */}
           <div ref={modalRef} className="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 px-4">
-            <div className="bg-card border border-border rounded-lg shadow-2xl">
+            <div className="bg-card border border-border rounded-lg shadow-2xl overflow-hidden">
               {/* Search Input */}
               <div className="flex items-center gap-2 p-4 border-b border-border">
-                <Search className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-center gap-1">
+                  <Search className="h-5 w-5 text-muted-foreground" />
+                  <Sparkles className="h-3 w-3 text-primary" />
+                </div>
                 <Input
                   ref={inputRef}
                   type="text"
-                  placeholder="Search suppliers, batches, employees, payment slips, overtime... (Ctrl+K)"
+                  placeholder="AI-powered search across all departments... (Ctrl+K)"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -222,11 +235,24 @@ const GlobalSearch = () => {
                 )}
               </div>
 
+              {/* AI Badge */}
+              {searchTerm && (
+                <div className="px-4 py-2 bg-primary/5 border-b border-border flex items-center gap-2">
+                  <Zap className="h-3 w-3 text-primary" />
+                  <span className="text-xs text-muted-foreground">
+                    {loading ? 'AI is searching...' : usingFallback ? 'Using quick search' : 'AI-enhanced results'}
+                  </span>
+                </div>
+              )}
+
               {/* Results */}
               <ScrollArea className="max-h-96">
                 {loading && (
                   <div className="p-8 text-center text-muted-foreground">
-                    Searching...
+                    <div className="flex items-center justify-center gap-2">
+                      <Sparkles className="h-5 w-5 animate-pulse text-primary" />
+                      <span>AI is searching across all departments...</span>
+                    </div>
                   </div>
                 )}
 
@@ -238,6 +264,28 @@ const GlobalSearch = () => {
 
                 {!loading && results.length > 0 && (
                   <div className="p-2">
+                    {/* AI Suggestions */}
+                    {suggestions.length > 0 && (
+                      <div className="mb-3 px-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+                          <span className="text-xs font-medium text-muted-foreground">AI Suggestions</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {suggestions.map((suggestion, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleSuggestionClick(suggestion)}
+                              className="text-xs px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+                            >
+                              {suggestion.text}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Search Results */}
                     {results.map((result) => (
                       <button
                         key={`${result.type}-${result.id}`}
@@ -253,9 +301,12 @@ const GlobalSearch = () => {
                               {result.title}
                             </div>
                             {(result.department || result.module) && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">
                                 {result.module || result.department}
-                              </span>
+                              </Badge>
+                            )}
+                            {result.relevance && result.relevance >= 80 && (
+                              <Sparkles className="h-3 w-3 text-primary shrink-0" />
                             )}
                           </div>
                           <div className="text-xs text-muted-foreground truncate">
@@ -318,12 +369,15 @@ const GlobalSearch = () => {
 
                 {!searchTerm && searchHistory.length === 0 && (
                   <div className="p-8 text-center text-muted-foreground">
-                    <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">
-                      Start typing to search across the entire system
-                    </p>
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <Sparkles className="h-10 w-10 text-primary/50" />
+                    </div>
+                    <p className="text-sm font-medium">AI-Powered Search</p>
                     <p className="text-xs mt-2 opacity-70">
-                      Search for suppliers, batches, employees, transactions, and more
+                      Search across suppliers, batches, employees, payments, EUDR docs and more
+                    </p>
+                    <p className="text-xs mt-1 opacity-50">
+                      Results are filtered based on your permissions
                     </p>
                   </div>
                 )}
