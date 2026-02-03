@@ -4,6 +4,7 @@ import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
+import { formatSupplierDisplay, type SupplierRef } from '@/utils/supplierDisplay';
 
 interface CoffeePayment {
   id: string;
@@ -78,6 +79,21 @@ export const usePendingCoffeePayments = () => {
       }
       
       console.log('📦 Found coffee records:', coffeeRecords.length);
+
+      // Resolve supplier codes/names from suppliers table (avoid legacy supplier_name values like "(SUP...)" )
+      const supplierIds = Array.from(
+        new Set((coffeeRecords || []).map((r: any) => r.supplier_id).filter(Boolean))
+      ) as string[];
+      const suppliersById = new Map<string, SupplierRef>();
+      if (supplierIds.length > 0) {
+        const { data: suppliersData } = await supabase
+          .from('suppliers')
+          .select('id, name, code')
+          .in('id', supplierIds);
+        (suppliersData || []).forEach((s: any) => {
+          suppliersById.set(s.id, { id: s.id, name: s.name, code: s.code });
+        });
+      }
       
       // Get batch numbers to check for payments
       const batchNumbers = coffeeRecords.map(r => r.batch_number).filter(Boolean);
@@ -143,12 +159,19 @@ export const usePendingCoffeePayments = () => {
         const totalAmount = quantity * pricePerKg;
         const assessedBy = isPricedByQuality ? qualityAssessment.assessedBy : 'Store Department';
         
+        const supplierRef = record.supplier_id ? suppliersById.get(record.supplier_id) : null;
+        const supplierDisplay = formatSupplierDisplay({
+          supplier: supplierRef,
+          fallbackName: record.supplier_name || 'Unknown Supplier',
+          includeCode: true,
+        });
+
         payments.push({
           id: record.id,
           batchNumber: record.batch_number || 'Unknown',
-          supplier: record.supplier_name || 'Unknown Supplier',
+          supplier: supplierDisplay.displayName,
           supplierId: record.supplier_id || '',
-          supplierCode: '', // Not in Supabase schema
+          supplierCode: supplierDisplay.code,
           assessedBy,
           quantity,
           pricePerKg,

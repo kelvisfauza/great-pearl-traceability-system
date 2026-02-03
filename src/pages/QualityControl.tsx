@@ -159,10 +159,11 @@ const QualityControl = () => {
     const searchLower = pendingSearch.toLowerCase().trim();
     return pendingRecords.filter(record => {
       const supplierMatch = record.supplier_name?.toLowerCase().includes(searchLower);
+      const supplierCodeMatch = (record as any).supplier_code?.toLowerCase().includes(searchLower);
       const batchMatch = record.batch_number?.toLowerCase().includes(searchLower);
       const kgsMatch = record.kilograms?.toString().includes(searchLower);
       
-      return supplierMatch || batchMatch || kgsMatch;
+      return supplierMatch || supplierCodeMatch || batchMatch || kgsMatch;
     });
   }, [pendingRecords, pendingSearch]);
 
@@ -938,7 +939,14 @@ const QualityControl = () => {
                       {filteredPendingRecords.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell className="font-medium">{record.batch_number}</TableCell>
-                          <TableCell>{record.supplier_name}</TableCell>
+                          <TableCell>
+                            <div className="space-y-0.5">
+                              <div className="font-medium">{record.supplier_name}</div>
+                              {(record as any).supplier_code && (
+                                <div className="text-xs text-muted-foreground">{(record as any).supplier_code}</div>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline">{record.coffee_type}</Badge>
                           </TableCell>
@@ -1087,7 +1095,14 @@ const QualityControl = () => {
                       {filteredAssessments.map((assessment) => (
                         <TableRow key={assessment.id}>
                           <TableCell className="font-medium">{assessment.batch_number}</TableCell>
-                          <TableCell>{assessment.supplier_name || 'Unknown'}</TableCell>
+                          <TableCell>
+                            <div className="space-y-0.5">
+                              <div className="font-medium">{assessment.supplier_name || 'Unknown'}</div>
+                              {(assessment as any).supplier_code && (
+                                <div className="text-xs text-muted-foreground">{(assessment as any).supplier_code}</div>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Droplets className="h-4 w-4 text-blue-500" />
@@ -1164,7 +1179,7 @@ const QualityControl = () => {
                     {editingAssessmentId ? 'Edit' : 'Price'} Assessment - {selectedRecord.batch_number}
                   </CardTitle>
                   <CardDescription>
-                    Supplier: {selectedRecord.supplier_name} | Coffee Type: {selectedRecord.coffee_type} | Weight: {selectedRecord.kilograms} kg
+                    Supplier: {selectedRecord.supplier_name}{(selectedRecord as any).supplier_code ? ` (${(selectedRecord as any).supplier_code})` : ''} | Coffee Type: {selectedRecord.coffee_type} | Weight: {selectedRecord.kilograms} kg
                     {editingAssessmentId && (
                       <Badge variant="outline" className="ml-2">Editing Existing Assessment</Badge>
                     )}

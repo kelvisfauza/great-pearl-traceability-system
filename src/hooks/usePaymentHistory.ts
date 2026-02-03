@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { formatSupplierDisplay, type SupplierRef } from '@/utils/supplierDisplay';
 
 export interface PaymentRecord {
   id: string;
@@ -40,7 +41,38 @@ export const usePaymentHistory = () => {
         return;
       }
 
-      // Fetch coffee records from Firebase to get batch details
+      const batchNumbers = Array.from(
+        new Set((paymentsData || []).map(p => p.batch_number).filter(Boolean))
+      ) as string[];
+
+      // Fetch matching coffee_records from Supabase (preferred source)
+      const coffeeSupabaseMap = new Map<string, any>();
+      if (batchNumbers.length > 0) {
+        const { data: coffeeRows } = await supabase
+          .from('coffee_records')
+          .select('batch_number, kilograms, supplier_id, supplier_name')
+          .in('batch_number', batchNumbers);
+        (coffeeRows || []).forEach(r => {
+          if (r.batch_number) coffeeSupabaseMap.set(r.batch_number, r);
+        });
+      }
+
+      // Resolve supplier info from suppliers table for display
+      const supplierIds = Array.from(
+        new Set(Array.from(coffeeSupabaseMap.values()).map((r: any) => r.supplier_id).filter(Boolean))
+      ) as string[];
+      const suppliersById = new Map<string, SupplierRef>();
+      if (supplierIds.length > 0) {
+        const { data: suppliersData } = await supabase
+          .from('suppliers')
+          .select('id, name, code')
+          .in('id', supplierIds);
+        (suppliersData || []).forEach((s: any) => {
+          suppliersById.set(s.id, { id: s.id, name: s.name, code: s.code });
+        });
+      }
+
+      // Fetch coffee records from Firebase as a fallback (legacy)
       const coffeeSnapshot = await getDocs(collection(db, 'coffee_records'));
       const coffeeMap = new Map();
       
@@ -81,7 +113,7 @@ export const usePaymentHistory = () => {
 
       // Process each batch
       batchPayments.forEach((payments, batchNumber) => {
-        const coffeeData = coffeeMap.get(batchNumber);
+        const coffeeData = coffeeSupabaseMap.get(batchNumber) || coffeeMap.get(batchNumber);
         const qualityPrice = qualityMap.get(batchNumber);
         
         if (coffeeData) {
@@ -98,10 +130,20 @@ export const usePaymentHistory = () => {
 
           // Use the most recent payment for display
           const latestPayment = payments[0];
+
+          const supplierRef = coffeeData.supplier_id ? suppliersById.get(coffeeData.supplier_id) : null;
+          const supplierDisplay = formatSupplierDisplay({
+            supplier: supplierRef,
+            fallbackName:
+              latestPayment.supplier ||
+              (coffeeData as any).supplier_name ||
+              (coffeeData as any).supplier,
+            includeCode: true,
+          });
           
           records.push({
             id: latestPayment.id,
-            supplier: latestPayment.supplier || coffeeData.supplier,
+            supplier: supplierDisplay.displayName,
             batchNumber,
             totalAmount,
             paidAmount,
