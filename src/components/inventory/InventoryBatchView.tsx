@@ -74,7 +74,7 @@ const InventoryBatchView = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Stock Overview</h2>
-          <p className="text-sm text-muted-foreground">Coffee currently in store, grouped into 5,000kg batches</p>
+          <p className="text-sm text-muted-foreground">Coffee currently in store, grouped into 5-ton (5,000kg) batches</p>
         </div>
         <ResyncButton onResyncComplete={fetchBatches} />
       </div>
