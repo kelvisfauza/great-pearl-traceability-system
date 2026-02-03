@@ -188,6 +188,15 @@ export const migrateBatchNumbersToNewFormat = async (): Promise<{migrated: numbe
       return { migrated, failed, details };
     }
 
+    console.log('Migration: Found', coffeeRecords?.length || 0, 'coffee records');
+    
+    // Count how many need migration
+    const needsMigration = (coffeeRecords || []).filter(r => r.batch_number && !isNewFormat(r.batch_number));
+    console.log('Migration: Records needing migration:', needsMigration.length);
+    if (needsMigration.length > 0) {
+      console.log('Migration: Sample old formats:', needsMigration.slice(0, 5).map(r => r.batch_number));
+    }
+
     // Get all store_records with batch numbers
     const { data: storeRecords, error: storeError } = await supabase
       .from('store_records')
@@ -199,6 +208,8 @@ export const migrateBatchNumbersToNewFormat = async (): Promise<{migrated: numbe
       details.push(`Error fetching store_records: ${storeError.message}`);
       return { migrated, failed, details };
     }
+    
+    console.log('Migration: Found', storeRecords?.length || 0, 'store records');
 
     // Track sequence numbers per date to avoid duplicates
     const sequenceByDate: Record<string, number> = {};
