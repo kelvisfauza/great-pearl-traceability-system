@@ -252,11 +252,18 @@ const Navigation = () => {
       )}
       
       <div className={`p-3 xs:p-4 border-b border-gray-200 ${isChristmasPeriod ? 'pt-8' : ''}`}>
-        <h2 className="font-semibold text-base xs:text-lg text-gray-800 truncate flex items-center gap-2">
-          {isChristmasPeriod && <span>🎅</span>}
-          Coffee ERP
-          {isChristmasPeriod && <span>🎁</span>}
-        </h2>
+        <div className="flex items-center gap-2">
+          <img 
+            src="/lovable-uploads/great-pearl-coffee-logo.png" 
+            alt="Great Pearl Coffee" 
+            className="w-8 h-8 rounded-lg object-contain"
+          />
+          <h2 className="font-semibold text-base xs:text-lg text-gray-800 truncate flex items-center gap-2">
+            {isChristmasPeriod && <span>🎅</span>}
+            Great Pearl Coffee
+            {isChristmasPeriod && <span>🎁</span>}
+          </h2>
+        </div>
       </div>
       
       <div className="flex-1 p-2 xs:p-3">

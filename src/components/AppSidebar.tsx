@@ -134,13 +134,21 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
     >
       {/* Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
-        {!isCollapsed && (
+        {!isCollapsed ? (
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Coffee className="w-4 h-4 text-primary" />
-            </div>
-            <span className="font-semibold text-sidebar-foreground">Coffee ERP</span>
+            <img 
+              src="/lovable-uploads/great-pearl-coffee-logo.png" 
+              alt="Great Pearl Coffee" 
+              className="w-8 h-8 rounded-lg object-contain"
+            />
+            <span className="font-semibold text-sidebar-foreground text-sm">Great Pearl Coffee</span>
           </div>
+        ) : (
+          <img 
+            src="/lovable-uploads/great-pearl-coffee-logo.png" 
+            alt="Great Pearl Coffee" 
+            className="w-8 h-8 rounded-lg object-contain mx-auto"
+          />
         )}
         <Button
           variant="ghost"
