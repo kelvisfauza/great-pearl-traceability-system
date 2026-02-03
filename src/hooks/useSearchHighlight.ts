@@ -46,9 +46,15 @@ export const useSearchHighlight = () => {
     setSearchParams(newParams, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const isHighlighted = useCallback((recordId: string) => {
-    return highlightConfig.id === recordId;
-  }, [highlightConfig.id]);
+  const isHighlighted = useCallback((recordId: string, batchNumber?: string) => {
+    // Match by ID
+    if (highlightConfig.id === recordId) return true;
+    // Match by batch number in search term
+    if (highlightConfig.searchTerm && batchNumber) {
+      return batchNumber.toLowerCase().includes(highlightConfig.searchTerm.toLowerCase());
+    }
+    return false;
+  }, [highlightConfig.id, highlightConfig.searchTerm]);
 
   const matchesSearch = useCallback((text: string) => {
     if (!highlightConfig.searchTerm) return false;
