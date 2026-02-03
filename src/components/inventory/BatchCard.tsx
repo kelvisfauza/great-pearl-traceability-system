@@ -4,15 +4,65 @@ import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, Package, TrendingDown, Users, Calendar, CheckCircle2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
-import { BatchWithDetails } from "@/hooks/useInventoryBatches";
-import { useState } from "react";
-
+import { BatchWithDetails, BatchSource } from "@/hooks/useInventoryBatches";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { formatSupplierDisplay, SupplierRef } from "@/utils/supplierDisplay";
 interface BatchCardProps {
   batch: BatchWithDetails;
 }
 
 const BatchCard = ({ batch }: BatchCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [supplierMap, setSupplierMap] = useState<Record<string, SupplierRef>>({});
+  
+  // Fetch supplier codes for sources
+  useEffect(() => {
+    const fetchSupplierCodes = async () => {
+      if (batch.sources.length === 0) return;
+      
+      // Get coffee record IDs to look up supplier_ids
+      const recordIds = batch.sources.map(s => s.coffee_record_id);
+      
+      const { data: records } = await supabase
+        .from('coffee_records')
+        .select('id, supplier_id')
+        .in('id', recordIds);
+      
+      if (!records || records.length === 0) return;
+      
+      const supplierIds = records.map(r => r.supplier_id).filter(Boolean);
+      if (supplierIds.length === 0) return;
+      
+      const { data: suppliers } = await supabase
+        .from('suppliers')
+        .select('id, name, code')
+        .in('id', supplierIds);
+      
+      if (!suppliers) return;
+      
+      // Create lookup: coffee_record_id -> supplier
+      const recordToSupplier: Record<string, SupplierRef> = {};
+      for (const record of records) {
+        if (record.supplier_id) {
+          const supplier = suppliers.find(s => s.id === record.supplier_id);
+          if (supplier) {
+            recordToSupplier[record.id] = { id: supplier.id, name: supplier.name, code: supplier.code || '' };
+          }
+        }
+      }
+      setSupplierMap(recordToSupplier);
+    };
+    
+    if (isOpen) {
+      fetchSupplierCodes();
+    }
+  }, [isOpen, batch.sources]);
+  
+  const getSupplierDisplay = (source: BatchSource) => {
+    const supplier = supplierMap[source.coffee_record_id];
+    return formatSupplierDisplay({ supplier, fallbackName: source.supplier_name });
+  };
   
   const percentRemaining = (batch.remaining_kilograms / batch.target_capacity) * 100;
   const percentSold = batch.total_kilograms > 0 
@@ -187,22 +237,25 @@ const BatchCard = ({ batch }: BatchCardProps) => {
                   Source Purchases ({batch.sources.length})
                 </h4>
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {batch.sources.map((source) => (
-                    <div 
-                      key={source.id} 
-                      className="flex items-center justify-between p-2 bg-muted/20 rounded text-sm"
-                    >
-                      <div>
-                        <p className="font-medium">{source.supplier_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(source.purchase_date), 'PP')}
-                        </p>
+                  {batch.sources.map((source) => {
+                    const display = getSupplierDisplay(source);
+                    return (
+                      <div 
+                        key={source.id} 
+                        className="flex items-center justify-between p-2 bg-muted/20 rounded text-sm"
+                      >
+                        <div>
+                          <p className="font-medium">{display.displayName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(source.purchase_date), 'PP')}
+                          </p>
+                        </div>
+                        <span className="font-semibold text-green-500">
+                          +{source.kilograms.toLocaleString()} kg
+                        </span>
                       </div>
-                      <span className="font-semibold text-green-500">
-                        +{source.kilograms.toLocaleString()} kg
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -102,31 +102,50 @@ export const useInventoryBatches = () => {
   // Create or get today's batch for a coffee type
   const getOrCreateBatch = async (coffeeType: string): Promise<InventoryBatch | null> => {
     const today = new Date().toISOString().split('T')[0];
+    // Normalize coffee type to title case for consistent matching
+    const normalizedType = coffeeType.charAt(0).toUpperCase() + coffeeType.slice(1).toLowerCase();
     
-    // Check for existing filling batch for this coffee type and date
+    // Check for existing filling batch for this coffee type (case-insensitive, any date with capacity)
     const { data: existingBatchData, error: fetchError } = await supabase
       .from('inventory_batches')
       .select('*')
-      .eq('coffee_type', coffeeType)
-      .eq('batch_date', today)
+      .ilike('coffee_type', normalizedType)
       .in('status', ['filling', 'active'])
       .lt('total_kilograms', 5000)
+      .order('batch_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (existingBatchData) {
       return { ...existingBatchData, status: existingBatchData.status as BatchStatus } as InventoryBatch;
     }
 
-    // Create new batch
-    const batchCode = `${coffeeType.substring(0, 3).toUpperCase()}-${today.replace(/-/g, '')}-${Date.now().toString().slice(-3)}`;
+    // Create new batch with sequential numbering
+    const prefix = normalizedType.substring(0, 3).toUpperCase();
+    
+    // Get next batch number
+    const { data: existingBatches } = await supabase
+      .from('inventory_batches')
+      .select('batch_code')
+      .like('batch_code', `${prefix}-B%`);
+    
+    let maxNum = 0;
+    for (const row of existingBatches || []) {
+      const match = String(row.batch_code || '').match(/-B(\d+)$/);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (!isNaN(n)) maxNum = Math.max(maxNum, n);
+      }
+    }
+    
+    const batchCode = `${prefix}-B${String(maxNum + 1).padStart(3, '0')}`;
     
     const { data: newBatchData, error: createError } = await supabase
       .from('inventory_batches')
       .insert({
         batch_code: batchCode,
-        coffee_type: coffeeType,
+        coffee_type: normalizedType,
         batch_date: today,
         status: 'filling'
       })

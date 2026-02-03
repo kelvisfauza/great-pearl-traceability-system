@@ -38,10 +38,13 @@ const getNextBatchNumber = async (prefix: string): Promise<number> => {
 };
 
 const getOrCreateOpenBatch = async (coffeeType: string, batchDate: string) => {
+  // Normalize coffee type to title case for consistent matching
+  const normalizedType = coffeeType.charAt(0).toUpperCase() + coffeeType.slice(1).toLowerCase();
+  
   const { data: existing, error: existingError } = await supabase
     .from("inventory_batches")
     .select("*")
-    .eq("coffee_type", coffeeType)
+    .ilike("coffee_type", normalizedType)
     .in("status", ["filling", "active"])
     .lt("total_kilograms", BATCH_CAPACITY_KG)
     .order("batch_date", { ascending: false })
@@ -52,7 +55,7 @@ const getOrCreateOpenBatch = async (coffeeType: string, batchDate: string) => {
   if (existingError) throw existingError;
   if (existing) return existing;
 
-  const prefix = getBatchPrefix(coffeeType);
+  const prefix = getBatchPrefix(normalizedType);
   const nextNumber = await getNextBatchNumber(prefix);
   const batchCode = `${prefix}-B${String(nextNumber).padStart(3, "0")}`;
 
@@ -60,7 +63,7 @@ const getOrCreateOpenBatch = async (coffeeType: string, batchDate: string) => {
     .from("inventory_batches")
     .insert({
       batch_code: batchCode,
-      coffee_type: coffeeType,
+      coffee_type: normalizedType,
       batch_date: batchDate,
       status: "filling",
     })
