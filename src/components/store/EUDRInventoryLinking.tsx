@@ -13,12 +13,14 @@ import { CheckCircle, Search, Link2, Package, Calendar, Filter, RefreshCw } from
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { formatSupplierDisplay, SupplierRef } from '@/utils/supplierDisplay';
 
 interface InventorySource {
   id: string;
   batch_id: string;
   coffee_record_id: string;
   supplier_name: string;
+  supplier_id?: string;
   kilograms: number;
   purchase_date: string;
   eudr_traced: boolean;
@@ -29,6 +31,7 @@ interface InventorySource {
 
 const EUDRInventoryLinking = () => {
   const [sources, setSources] = useState<InventorySource[]>([]);
+  const [suppliers, setSuppliers] = useState<Record<string, SupplierRef>>({});
   const [loading, setLoading] = useState(true);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,6 +40,24 @@ const EUDRInventoryLinking = () => {
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linking, setLinking] = useState(false);
   const [documentNotes, setDocumentNotes] = useState('');
+
+  const fetchSuppliers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('id, name, code');
+      
+      if (error) throw error;
+      
+      const supplierMap: Record<string, SupplierRef> = {};
+      (data || []).forEach(s => {
+        supplierMap[s.id] = { id: s.id, name: s.name, code: s.code || '' };
+      });
+      setSuppliers(supplierMap);
+    } catch (error) {
+      console.error('Error fetching suppliers:', error);
+    }
+  };
 
   const fetchSources = async () => {
     setLoading(true);
@@ -56,7 +77,13 @@ const EUDRInventoryLinking = () => {
     }
   };
 
+  const getSupplierDisplay = (source: InventorySource) => {
+    const supplier = source.supplier_id ? suppliers[source.supplier_id] : null;
+    return formatSupplierDisplay({ supplier, fallbackName: source.supplier_name });
+  };
+
   useEffect(() => {
+    fetchSuppliers();
     fetchSources();
 
     // Real-time subscription
@@ -77,12 +104,15 @@ const EUDRInventoryLinking = () => {
   const getFilteredSources = () => {
     let filtered = sources;
 
-    // Search filter
+    // Search filter - also search supplier codes
     if (searchTerm) {
-      filtered = filtered.filter(s => 
-        s.supplier_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.coffee_record_id.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(s => {
+        const display = getSupplierDisplay(s).displayName.toLowerCase();
+        return display.includes(term) ||
+               s.supplier_name.toLowerCase().includes(term) ||
+               s.coffee_record_id.toLowerCase().includes(term);
+      });
     }
 
     // Traced filter
@@ -376,7 +406,7 @@ const EUDRInventoryLinking = () => {
                       <TableCell className="font-mono text-xs">
                         {source.coffee_record_id.substring(0, 12)}...
                       </TableCell>
-                      <TableCell className="font-medium">{source.supplier_name}</TableCell>
+                      <TableCell className="font-medium">{getSupplierDisplay(source).displayName}</TableCell>
                       <TableCell>{format(new Date(source.purchase_date), 'MMM dd, yyyy')}</TableCell>
                       <TableCell className="text-right font-medium">
                         {source.kilograms.toLocaleString()}kg
