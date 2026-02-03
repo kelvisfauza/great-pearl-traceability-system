@@ -148,11 +148,21 @@ export const useSuppliers = () => {
     try {
       console.log('Adding supplier to Supabase (new suppliers go to Supabase only):', supplierData);
       
+      // Generate sequential supplier code like GPC 00001
+      const existingCodes = suppliers
+        .map(s => s.code)
+        .filter(c => c.startsWith('GPC '))
+        .map(c => parseInt(c.replace('GPC ', ''), 10))
+        .filter(n => !isNaN(n));
+      
+      const nextNumber = existingCodes.length > 0 ? Math.max(...existingCodes) + 1 : 1;
+      const newCode = `GPC ${nextNumber.toString().padStart(5, '0')}`;
+      
       const supplierToAdd = {
         name: supplierData.name.trim(),
         origin: supplierData.origin,
         phone: supplierData.phone || null,
-        code: `SUP${Date.now()}`,
+        code: newCode,
         opening_balance: supplierData.opening_balance || 0,
         date_registered: new Date().toISOString().split('T')[0]
       };
