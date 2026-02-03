@@ -6,6 +6,7 @@ import MessagingSettings from "@/components/admin/MessagingSettings";
 import { Database, Settings, Shield, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MigrateSupplierCodesButton } from "@/components/suppliers/MigrateSupplierCodesButton";
+import { MigrateBatchNumbersButton } from "@/components/admin/MigrateBatchNumbersButton";
 
 const SystemSettings = () => {
   return (
@@ -47,6 +48,18 @@ const SystemSettings = () => {
             </CardHeader>
             <CardContent>
               <MigrateSupplierCodesButton />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Batch Number Migration</CardTitle>
+              <CardDescription>
+                Convert all batch numbers to the new format (YYYYMMDD001). 
+                Sequence resets daily: 20250203001, 20250203002, etc.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MigrateBatchNumbersButton />
             </CardContent>
           </Card>
           <FirebaseMigrationTool />

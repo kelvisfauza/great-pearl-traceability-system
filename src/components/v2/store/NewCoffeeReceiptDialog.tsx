@@ -35,13 +35,8 @@ interface ReceiptForm {
   bags: number;
 }
 
-// Generate batch number: GPC-YYYYMMDD-XXX
-const generateBatchNumber = () => {
-  const now = new Date();
-  const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
-  const random = Math.floor(Math.random() * 900) + 100; // 100-999
-  return `GPC-${dateStr}-${random}`;
-};
+// Import batch number generator from utils for consistent format
+import { generateBatchNumber } from '@/utils/batchUtils';
 
 const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogProps) => {
   const { employee } = useAuth();
@@ -68,13 +63,13 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
   const createReceipt = useMutation({
     mutationFn: async (data: ReceiptForm) => {
       const supplier = suppliers?.find(s => s.id === data.supplier_id);
-      const batchNumber = generateBatchNumber();
+      const batchNumber = await generateBatchNumber(data.date);
       const recordId = crypto.randomUUID();
       
       // 1. Insert coffee record - set to 'inventory' for immediate availability
       const { error: coffeeError } = await supabase
         .from('coffee_records')
-        .insert({
+        .insert([{
           id: recordId,
           supplier_id: data.supplier_id,
           supplier_name: supplier?.name || '',
@@ -85,7 +80,7 @@ const NewCoffeeReceiptDialog = ({ open, onOpenChange }: NewCoffeeReceiptDialogPr
           batch_number: batchNumber,
           status: 'pending', // Pending quality assessment before inventory
           created_by: employee?.email || ''
-        });
+        }]);
       
       if (coffeeError) throw coffeeError;
 
