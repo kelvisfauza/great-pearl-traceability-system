@@ -167,11 +167,16 @@ export const migrateBatchNumbersToNewFormat = async (): Promise<{migrated: numbe
 
   try {
     // Helper to check if batch number is already in new format (11 digits: YYYYMMDD + 3)
+    // Must be exactly 11 digits and start with valid year (20XX)
     const isNewFormat = (batchNumber: string): boolean => {
-      return /^\d{11}$/.test(batchNumber);
+      if (!/^\d{11}$/.test(batchNumber)) return false;
+      const year = parseInt(batchNumber.substring(0, 4), 10);
+      const month = parseInt(batchNumber.substring(4, 6), 10);
+      const day = parseInt(batchNumber.substring(6, 8), 10);
+      return year >= 2020 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31;
     };
 
-    // Get all coffee_records with batch numbers that don't match the new format
+    // Get all coffee_records with batch numbers
     const { data: coffeeRecords, error: coffeeError } = await supabase
       .from('coffee_records')
       .select('id, batch_number, created_at, date')
@@ -198,7 +203,7 @@ export const migrateBatchNumbersToNewFormat = async (): Promise<{migrated: numbe
     // Track sequence numbers per date to avoid duplicates
     const sequenceByDate: Record<string, number> = {};
 
-    // First, scan existing new-format batch numbers to get starting sequences
+    // First, scan ALL records to find existing new-format batch numbers and their sequences
     [...(coffeeRecords || []), ...(storeRecords || [])].forEach(record => {
       const bn = record.batch_number;
       if (bn && isNewFormat(bn)) {
@@ -217,10 +222,10 @@ export const migrateBatchNumbersToNewFormat = async (): Promise<{migrated: numbe
       return `${datePrefix}${sequenceByDate[datePrefix].toString().padStart(3, '0')}`;
     };
 
-    // Migrate coffee_records
+    // Migrate coffee_records that are NOT in new format
     for (const record of coffeeRecords || []) {
       if (!record.batch_number || isNewFormat(record.batch_number)) {
-        continue; // Skip if already in new format
+        continue; // Skip if null or already in new format
       }
 
       const recordDate = record.date || record.created_at?.split('T')[0] || new Date().toISOString().split('T')[0];
@@ -233,17 +238,17 @@ export const migrateBatchNumbersToNewFormat = async (): Promise<{migrated: numbe
 
       if (updateError) {
         failed++;
-        details.push(`Failed to update coffee_record ${record.id}: ${updateError.message}`);
+        details.push(`Failed coffee_record ${record.id}: ${updateError.message}`);
       } else {
         migrated++;
-        details.push(`coffee_records: ${record.batch_number} → ${newBatchNumber}`);
+        details.push(`coffee: ${record.batch_number} → ${newBatchNumber}`);
       }
     }
 
-    // Migrate store_records
+    // Migrate store_records that are NOT in new format
     for (const record of storeRecords || []) {
       if (!record.batch_number || isNewFormat(record.batch_number)) {
-        continue; // Skip if already in new format
+        continue; // Skip if null or already in new format
       }
 
       const recordDate = record.transaction_date || record.created_at?.split('T')[0] || new Date().toISOString().split('T')[0];
@@ -256,10 +261,10 @@ export const migrateBatchNumbersToNewFormat = async (): Promise<{migrated: numbe
 
       if (updateError) {
         failed++;
-        details.push(`Failed to update store_record ${record.id}: ${updateError.message}`);
+        details.push(`Failed store_record ${record.id}: ${updateError.message}`);
       } else {
         migrated++;
-        details.push(`store_records: ${record.batch_number} → ${newBatchNumber}`);
+        details.push(`store: ${record.batch_number} → ${newBatchNumber}`);
       }
     }
 
