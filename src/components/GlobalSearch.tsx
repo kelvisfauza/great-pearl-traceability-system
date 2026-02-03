@@ -8,6 +8,7 @@ import { useAISearch, AISearchResult, AISearchSuggestion } from '@/hooks/useAISe
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { buildHighlightUrl } from '@/hooks/useSearchHighlight';
 
 interface SearchHistory {
   id: string;
@@ -174,7 +175,10 @@ const GlobalSearch = () => {
   };
 
   const handleResultClick = (result: AISearchResult) => {
-    navigate(result.navigateTo);
+    // Build URL with highlight parameters
+    const basePath = result.navigateTo.split('?')[0];
+    const highlightUrl = buildHighlightUrl(basePath, result.id, result.type, searchTerm);
+    navigate(highlightUrl);
     setIsOpen(false);
     setSearchTerm('');
   };
