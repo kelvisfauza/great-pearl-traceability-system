@@ -28,6 +28,7 @@ import { useSuppliers } from "@/hooks/useSuppliers";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { EditSupplierModal } from "@/components/suppliers/EditSupplierModal";
+import { MigrateSupplierCodesButton } from "@/components/suppliers/MigrateSupplierCodesButton";
 import { useAuth } from "@/contexts/AuthContext";
 import StandardPrintHeader from "@/components/print/StandardPrintHeader";
 import { useReactToPrint } from "react-to-print";
@@ -47,7 +48,7 @@ interface SupplierTransaction {
 }
 
 const Suppliers = () => {
-  const { suppliers, loading: suppliersLoading, updateSupplier } = useSuppliers();
+  const { suppliers, loading: suppliersLoading, updateSupplier, refetchSuppliers } = useSuppliers();
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const printRef = useRef<HTMLDivElement>(null);
@@ -518,6 +519,7 @@ const Suppliers = () => {
           <div className="flex gap-2">
             {!selectedSupplier && isAdmin() && suppliers.length > 0 && (
               <>
+                <MigrateSupplierCodesButton onComplete={refetchSuppliers} />
                 <FixPendingPaymentsButton />
                 <Button variant="outline" onClick={handlePrintSuppliersList}>
                   <Printer className="h-4 w-4 mr-2" />
