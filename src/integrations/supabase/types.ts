@@ -5428,6 +5428,7 @@ export type Database = {
           created_at: string
           gross_payable_ugx: number
           id: string
+          is_duplicate: boolean | null
           lot_id: string | null
           method: Database["public"]["Enums"]["payment_method"]
           notes: string | null
@@ -5446,6 +5447,7 @@ export type Database = {
           created_at?: string
           gross_payable_ugx: number
           id?: string
+          is_duplicate?: boolean | null
           lot_id?: string | null
           method: Database["public"]["Enums"]["payment_method"]
           notes?: string | null
@@ -5464,6 +5466,7 @@ export type Database = {
           created_at?: string
           gross_payable_ugx?: number
           id?: string
+          is_duplicate?: boolean | null
           lot_id?: string | null
           method?: Database["public"]["Enums"]["payment_method"]
           notes?: string | null
