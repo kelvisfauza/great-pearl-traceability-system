@@ -6330,6 +6330,19 @@ export type Database = {
       cleanup_inactive_sessions: { Args: never; Returns: undefined }
       cleanup_old_price_calculations: { Args: never; Returns: undefined }
       create_timothy_auth_account: { Args: never; Returns: Json }
+      deduct_from_inventory_batches: {
+        Args: {
+          p_coffee_type: string
+          p_customer?: string
+          p_quantity_kg: number
+          p_sale_id?: string
+        }
+        Returns: {
+          batch_code: string
+          batch_id: string
+          deducted_kg: number
+        }[]
+      }
       expire_old_bookings: { Args: never; Returns: undefined }
       fix_denis_auth_final: { Args: never; Returns: Json }
       get_available_to_request: { Args: { user_uuid: string }; Returns: number }

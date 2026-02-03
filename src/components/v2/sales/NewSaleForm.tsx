@@ -141,21 +141,27 @@ const NewSaleForm = () => {
         moisture: formData.moisture || ''
       };
 
-      const { error } = await supabase
+      const { data: insertedSale, error } = await supabase
         .from('sales_transactions')
-        .insert(saleData);
+        .insert(saleData)
+        .select('id')
+        .single();
 
       if (error) throw error;
 
-      // Record inventory movement if there's inventory to track
-      if (selectedInventory) {
-        await supabase.from('inventory_movements').insert({
-          coffee_record_id: selectedInventory.id,
-          movement_type: 'SALE',
-          quantity_kg: -parseFloat(formData.weight),
-          created_by: employee?.email || 'system',
-          notes: `Sale to ${formData.customer}`
+      // Deduct from V2 inventory batches using FIFO
+      const { data: deductions, error: deductError } = await supabase
+        .rpc('deduct_from_inventory_batches', {
+          p_coffee_type: formData.coffee_type,
+          p_quantity_kg: parseFloat(formData.weight),
+          p_sale_id: insertedSale?.id || null,
+          p_customer: formData.customer
         });
+
+      if (deductError) {
+        console.error('Error deducting from inventory batches:', deductError);
+      } else {
+        console.log('Inventory batch deductions:', deductions);
       }
 
       // Store sale data for delivery note
