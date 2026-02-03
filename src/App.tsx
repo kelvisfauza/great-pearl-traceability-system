@@ -322,7 +322,7 @@ const App: React.ComponentType = () => {
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/system-settings" element={
-                  <ProtectedRoute requiredRoles={['Super Admin']}>
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <SystemSettings />
                   </ProtectedRoute>
                 } />
