@@ -52,14 +52,16 @@ export const useInventoryBatches = () => {
     try {
       setLoading(true);
       
-      // Fetch all batches
+      // Fetch all batches including sold_out
       const { data: batchData, error: batchError } = await supabase
         .from('inventory_batches')
         .select('*')
-        .order('batch_date', { ascending: false })
-        .order('created_at', { ascending: false });
+        .order('status', { ascending: true }) // filling, active, selling, sold_out
+        .order('batch_code', { ascending: true });
 
       if (batchError) throw batchError;
+      
+      console.log('Fetched batches:', batchData?.length, 'sold_out:', batchData?.filter(b => b.status === 'sold_out').length);
 
       // Fetch sources and sales for each batch
       const batchesWithDetails: BatchWithDetails[] = await Promise.all(
