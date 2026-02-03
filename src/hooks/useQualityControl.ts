@@ -4,13 +4,16 @@ import { useToast } from '@/hooks/use-toast';
 import { useSupplierContracts } from './useSupplierContracts';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useGlobalErrorHandler } from '@/hooks/useGlobalErrorHandler';
+import { formatSupplierDisplay, type SupplierRef } from '@/utils/supplierDisplay';
 
 export interface StoreRecord {
   id: string;
   date: string;
   kilograms: number;
   bags: number;
+  supplier_id?: string | null;
   supplier_name: string;
+  supplier_code?: string;
   coffee_type: string;
   batch_number: string;
   status: string;
@@ -46,6 +49,8 @@ export interface QualityAssessment {
   created_at: string;
   updated_at: string;
   supplier_name?: string;
+  supplier_id?: string | null;
+  supplier_code?: string;
   coffee_type?: string;
   kilograms?: number;
 }
@@ -89,9 +94,41 @@ export const useQualityControl = () => {
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      console.log('Loaded coffee records (deduplicated):', coffeeData.length, 'records (from', allRecords?.length || 0, 'total)');
-      setStoreRecords(coffeeData || []);
-      return coffeeData;
+      // Resolve supplier display from suppliers table (prevents showing legacy codes in supplier_name)
+      const supplierIds = Array.from(
+        new Set((coffeeData || []).map((r: any) => r.supplier_id).filter(Boolean))
+      ) as string[];
+
+      const suppliersById = new Map<string, SupplierRef>();
+      if (supplierIds.length > 0) {
+        const { data: suppliersData } = await supabase
+          .from('suppliers')
+          .select('id, name, code')
+          .in('id', supplierIds);
+
+        (suppliersData || []).forEach((s: any) => {
+          suppliersById.set(s.id, { id: s.id, name: s.name, code: s.code });
+        });
+      }
+
+      const normalizedCoffeeData = (coffeeData || []).map((record: any) => {
+        const supplier = record.supplier_id ? suppliersById.get(record.supplier_id) : null;
+        const { displayName, code } = formatSupplierDisplay({
+          supplier,
+          fallbackName: record.supplier_name,
+          includeCode: false,
+        });
+
+        return {
+          ...record,
+          supplier_name: displayName,
+          supplier_code: code,
+        } as StoreRecord;
+      });
+
+      console.log('Loaded coffee records (deduplicated):', normalizedCoffeeData.length, 'records (from', allRecords?.length || 0, 'total)');
+      setStoreRecords(normalizedCoffeeData);
+      return normalizedCoffeeData;
     } catch (error) {
       console.error('Error loading store records:', error);
       setStoreRecords([]);
@@ -137,15 +174,41 @@ export const useQualityControl = () => {
           coffeeRecords = Array.from(uniqueRecords.values());
         }
 
+        // Resolve suppliers for these coffee records
+        const supplierIds = Array.from(
+          new Set((coffeeRecords || []).map(r => r.supplier_id).filter(Boolean))
+        ) as string[];
+
+        const suppliersById = new Map<string, SupplierRef>();
+        if (supplierIds.length > 0) {
+          const { data: suppliersData } = await supabase
+            .from('suppliers')
+            .select('id, name, code')
+            .in('id', supplierIds);
+          (suppliersData || []).forEach((s: any) => {
+            suppliersById.set(s.id, { id: s.id, name: s.name, code: s.code });
+          });
+        }
+
         enrichedSupabaseData = supabaseQualityData.map(assessment => {
           // Try to find by store_record_id first, then fall back to batch_number
           let coffeeRecord = coffeeRecords?.find(record => record.id === assessment.store_record_id);
           if (!coffeeRecord && assessment.batch_number) {
             coffeeRecord = coffeeRecords?.find(record => record.batch_number === assessment.batch_number);
           }
+
+          const supplier = coffeeRecord?.supplier_id ? suppliersById.get(coffeeRecord.supplier_id) : null;
+          const { displayName, code } = formatSupplierDisplay({
+            supplier,
+            fallbackName: coffeeRecord?.supplier_name,
+            includeCode: false,
+          });
+
           return {
             ...assessment,
-            supplier_name: coffeeRecord?.supplier_name || 'Unknown',
+            supplier_name: displayName,
+            supplier_id: coffeeRecord?.supplier_id || null,
+            supplier_code: code,
             coffee_type: coffeeRecord?.coffee_type || 'Unknown',
             kilograms: coffeeRecord?.kilograms || 0,
             batch_number: coffeeRecord?.batch_number || assessment.batch_number
@@ -287,6 +350,7 @@ export const useQualityControl = () => {
           date: coffeeRecord.date,
           kilograms: Number(coffeeRecord.kilograms) || 0,
           bags: Number(coffeeRecord.bags) || 0,
+          supplier_id: (coffeeRecord as any).supplier_id || null,
           supplier_name: coffeeRecord.supplier_name || 'Unknown',
           coffee_type: coffeeRecord.coffee_type || 'Unknown',
           batch_number: coffeeRecord.batch_number || '',
