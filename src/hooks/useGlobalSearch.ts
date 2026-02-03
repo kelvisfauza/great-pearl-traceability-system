@@ -192,18 +192,20 @@ export const useGlobalSearch = (searchTerm: string) => {
           }
         }
 
-        // Search EUDR Documentation
+        // Search EUDR Documentation - always search by batch number, not just when "eudr" is in the search term
         const canAccessEUDR = hasPermission && (hasPermission('Store Management') || employee?.permissions?.includes('*'));
         if (canAccessEUDR) {
-          // Fuzzy match for EUDR
-          if ('eudr'.includes(lowerSearch) || lowerSearch.includes('eud') || lowerSearch.includes('documentation')) {
-            const { data: eudrDocs } = await supabase
+          try {
+            const { data: eudrDocs, error: eudrError } = await supabase
               .from('eudr_documents')
               .select('*')
               .ilike('batch_number', `%${searchTerm}%`)
-              .limit(5);
+              .limit(10);
 
-            if (eudrDocs) {
+            if (eudrError) {
+              console.error('EUDR documents search error:', eudrError);
+            } else if (eudrDocs && eudrDocs.length > 0) {
+              console.log('🔍 Found EUDR docs:', eudrDocs.length);
               eudrDocs.forEach(doc => {
                 searchResults.push({
                   id: doc.id,
@@ -217,6 +219,8 @@ export const useGlobalSearch = (searchTerm: string) => {
                 });
               });
             }
+          } catch (err) {
+            console.error('EUDR search exception:', err);
           }
         }
 
