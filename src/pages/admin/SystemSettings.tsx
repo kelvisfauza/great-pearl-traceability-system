@@ -4,6 +4,8 @@ import FirebaseMigrationTool from "@/components/admin/FirebaseMigrationTool";
 import SuperAdminCreator from "@/components/admin/SuperAdminCreator";
 import MessagingSettings from "@/components/admin/MessagingSettings";
 import { Database, Settings, Shield, MessageSquare } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MigrateSupplierCodesButton } from "@/components/suppliers/MigrateSupplierCodesButton";
 
 const SystemSettings = () => {
   return (
@@ -36,6 +38,17 @@ const SystemSettings = () => {
         </TabsContent>
 
         <TabsContent value="migration" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Supplier Code Migration</CardTitle>
+              <CardDescription>
+                Update all supplier codes to the new sequential format (GPC 00001, GPC 00002, etc.)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MigrateSupplierCodesButton />
+            </CardContent>
+          </Card>
           <FirebaseMigrationTool />
         </TabsContent>
 
