@@ -651,6 +651,7 @@ const MyExpenses = () => {
                         <SelectItem value="Data">📶 Data (Max 50,000 UGX)</SelectItem>
                         <SelectItem value="Transport">🚗 Transport</SelectItem>
                         <SelectItem value="Office Supplies">📋 Office Supplies</SelectItem>
+                        <SelectItem value="Per Diem">🗓️ Per Diem</SelectItem>
                         <SelectItem value="Other">💼 Other Personal Expense</SelectItem>
                       </SelectContent>
                     </Select>
