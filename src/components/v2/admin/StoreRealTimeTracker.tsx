@@ -53,22 +53,24 @@ const StoreRealTimeTracker = () => {
   const fetchStats = async () => {
     const today = format(new Date(), 'yyyy-MM-dd');
     
-    const [todayRecords, allRecords] = await Promise.all([
+    const [todayRecords, inventoryBatches] = await Promise.all([
       // Today's purchases - filter by date field which stores the purchase date
       supabase
         .from('coffee_records')
         .select('kilograms, bags, coffee_type')
         .eq('date', today),
-      // All pending/available stock
+      // Available stock from inventory batches (after sales deductions)
       supabase
-        .from('coffee_records')
-        .select('kilograms, coffee_type')
-        .in('status', ['pending', 'quality_review', 'pricing', 'inventory']),
+        .from('inventory_batches')
+        .select('remaining_kilograms, coffee_type')
+        .neq('status', 'sold_out'),
     ]);
 
     const todayKg = todayRecords.data?.reduce((sum, r) => sum + (r.kilograms || 0), 0) || 0;
     const todayCount = todayRecords.data?.length || 0;
-    const totalStock = allRecords.data?.reduce((sum, r) => sum + (r.kilograms || 0), 0) || 0;
+    
+    // Total stock from inventory batches (remaining after sales)
+    const totalStock = inventoryBatches.data?.reduce((sum, b) => sum + (b.remaining_kilograms || 0), 0) || 0;
 
     // Calculate Robusta and Arabica for today
     const todayRobusta = todayRecords.data?.reduce((sum, r) => 
@@ -76,11 +78,11 @@ const StoreRealTimeTracker = () => {
     const todayArabica = todayRecords.data?.reduce((sum, r) => 
       isArabica(r.coffee_type) ? sum + (r.kilograms || 0) : sum, 0) || 0;
 
-    // Calculate total Robusta and Arabica in stock
-    const totalRobusta = allRecords.data?.reduce((sum, r) => 
-      isRobusta(r.coffee_type) ? sum + (r.kilograms || 0) : sum, 0) || 0;
-    const totalArabica = allRecords.data?.reduce((sum, r) => 
-      isArabica(r.coffee_type) ? sum + (r.kilograms || 0) : sum, 0) || 0;
+    // Calculate total Robusta and Arabica from inventory batches
+    const totalRobusta = inventoryBatches.data?.reduce((sum, b) => 
+      isRobusta(b.coffee_type) ? sum + (b.remaining_kilograms || 0) : sum, 0) || 0;
+    const totalArabica = inventoryBatches.data?.reduce((sum, b) => 
+      isArabica(b.coffee_type) ? sum + (b.remaining_kilograms || 0) : sum, 0) || 0;
 
     setStats({
       todayPurchases: todayCount,
