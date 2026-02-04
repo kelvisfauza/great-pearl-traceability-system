@@ -18,11 +18,13 @@ interface ReferencePrices {
   robustaMoisture: number;
   robustaFm: number;
   robustaBuyingPrice: number;
+  // Sorted price
+  sortedPrice: number;
   lastUpdated?: string;
 }
 
 export const useReferencePrices = () => {
-  const [prices, setPrices] = useState<ReferencePrices>({
+const [prices, setPrices] = useState<ReferencePrices>({
     iceArabica: 185.50,
     robusta: 2450,
     exchangeRate: 3750,
@@ -36,7 +38,8 @@ export const useReferencePrices = () => {
     robustaOutturn: 80,
     robustaMoisture: 13,
     robustaFm: 3,
-    robustaBuyingPrice: 7800
+    robustaBuyingPrice: 7800,
+    sortedPrice: 0
   });
   const [loading, setLoading] = useState(false);
 
@@ -62,7 +65,7 @@ export const useReferencePrices = () => {
       // When not signed in yet, market_prices is not readable (RLS), so data can be null.
       if (!session && !data) return;
       
-      if (data) {
+if (data) {
         setPrices({
           iceArabica: data.ice_arabica || 185.50,
           robusta: data.robusta || 2450,
@@ -78,6 +81,7 @@ export const useReferencePrices = () => {
           robustaMoisture: data.robusta_moisture || 13,
           robustaFm: data.robusta_fm || 3,
           robustaBuyingPrice: data.robusta_buying_price || 7800,
+          sortedPrice: data.sorted_price || 0,
           lastUpdated: data.last_updated
         });
       }
@@ -95,7 +99,7 @@ export const useReferencePrices = () => {
       
       console.log('💾 Starting save prices operation...');
       
-      const priceData = {
+const priceData = {
         ice_arabica: newPrices.iceArabica,
         robusta: newPrices.robusta,
         exchange_rate: newPrices.exchangeRate,
@@ -110,6 +114,7 @@ export const useReferencePrices = () => {
         robusta_moisture: newPrices.robustaMoisture,
         robusta_fm: newPrices.robustaFm,
         robusta_buying_price: newPrices.robustaBuyingPrice,
+        sorted_price: newPrices.sortedPrice,
         last_updated: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -193,7 +198,7 @@ export const useReferencePrices = () => {
         (payload) => {
           if (payload.new) {
             const data = payload.new as any;
-            setPrices({
+setPrices({
               iceArabica: data.ice_arabica || 185.50,
               robusta: data.robusta || 2450,
               exchangeRate: data.exchange_rate || 3750,
@@ -208,6 +213,7 @@ export const useReferencePrices = () => {
               robustaMoisture: data.robusta_moisture || 13,
               robustaFm: data.robusta_fm || 3,
               robustaBuyingPrice: data.robusta_buying_price || 7800,
+              sortedPrice: data.sorted_price || 0,
               lastUpdated: data.last_updated
             });
           }

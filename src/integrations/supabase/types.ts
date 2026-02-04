@@ -3163,6 +3163,7 @@ export type Database = {
           robusta_fm: number | null
           robusta_moisture: number | null
           robusta_outturn: number | null
+          sorted_price: number | null
           updated_at: string | null
           wugar_local: number
         }
@@ -3184,6 +3185,7 @@ export type Database = {
           robusta_fm?: number | null
           robusta_moisture?: number | null
           robusta_outturn?: number | null
+          sorted_price?: number | null
           updated_at?: string | null
           wugar_local?: number
         }
@@ -3205,6 +3207,7 @@ export type Database = {
           robusta_fm?: number | null
           robusta_moisture?: number | null
           robusta_outturn?: number | null
+          sorted_price?: number | null
           updated_at?: string | null
           wugar_local?: number
         }
@@ -3973,6 +3976,7 @@ export type Database = {
           robusta_fm: number | null
           robusta_moisture: number | null
           robusta_outturn: number | null
+          sorted_price: number | null
           status: string
           submitted_at: string
           submitted_by: string
@@ -4004,6 +4008,7 @@ export type Database = {
           robusta_fm?: number | null
           robusta_moisture?: number | null
           robusta_outturn?: number | null
+          sorted_price?: number | null
           status?: string
           submitted_at?: string
           submitted_by: string
@@ -4035,6 +4040,7 @@ export type Database = {
           robusta_fm?: number | null
           robusta_moisture?: number | null
           robusta_outturn?: number | null
+          sorted_price?: number | null
           status?: string
           submitted_at?: string
           submitted_by?: string
@@ -4164,6 +4170,7 @@ export type Database = {
           robusta_international: number | null
           robusta_moisture: number | null
           robusta_outturn: number | null
+          sorted_price: number | null
           wugar_local: number | null
         }
         Insert: {
@@ -4184,6 +4191,7 @@ export type Database = {
           robusta_international?: number | null
           robusta_moisture?: number | null
           robusta_outturn?: number | null
+          sorted_price?: number | null
           wugar_local?: number | null
         }
         Update: {
@@ -4204,6 +4212,7 @@ export type Database = {
           robusta_international?: number | null
           robusta_moisture?: number | null
           robusta_outturn?: number | null
+          sorted_price?: number | null
           wugar_local?: number | null
         }
         Relationships: []
