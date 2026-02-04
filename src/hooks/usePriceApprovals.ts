@@ -21,6 +21,7 @@ export interface PriceApprovalRequest {
   robusta_moisture: number | null;
   robusta_fm: number | null;
   robusta_buying_price: number;
+  sorted_price: number | null;
   notify_suppliers: boolean;
   status: 'pending' | 'approved' | 'rejected';
   reviewed_by: string | null;
@@ -108,7 +109,7 @@ export const usePriceApprovals = () => {
     }
   };
 
-  const submitForApproval = async (
+const submitForApproval = async (
     prices: {
       iceArabica: number;
       robusta: number;
@@ -124,6 +125,7 @@ export const usePriceApprovals = () => {
       robustaMoisture: number;
       robustaFm: number;
       robustaBuyingPrice: number;
+      sortedPrice: number;
     },
     submittedBy: string,
     submittedByEmail: string,
@@ -133,7 +135,7 @@ export const usePriceApprovals = () => {
       // Auto-detect if this is a correction
       const isCorrection = await checkIfCorrectionNeeded();
       
-      const { error } = await supabase
+const { error } = await supabase
         .from('price_approval_requests')
         .insert({
           submitted_by: submittedBy,
@@ -152,6 +154,7 @@ export const usePriceApprovals = () => {
           robusta_moisture: prices.robustaMoisture,
           robusta_fm: prices.robustaFm,
           robusta_buying_price: prices.robustaBuyingPrice,
+          sorted_price: prices.sortedPrice,
           notify_suppliers: notifySuppliers,
           is_correction: isCorrection,
           status: 'pending'

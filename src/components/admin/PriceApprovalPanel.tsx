@@ -52,7 +52,7 @@ const PriceApprovalPanel: React.FC = () => {
       
       if (result) {
         // Now update the actual prices
-        await savePrices({
+await savePrices({
           iceArabica: request.ice_arabica || currentPrices.iceArabica,
           robusta: request.robusta || currentPrices.robusta,
           exchangeRate: request.exchange_rate || currentPrices.exchangeRate,
@@ -66,7 +66,8 @@ const PriceApprovalPanel: React.FC = () => {
           robustaOutturn: request.robusta_outturn || currentPrices.robustaOutturn,
           robustaMoisture: request.robusta_moisture || currentPrices.robustaMoisture,
           robustaFm: request.robusta_fm || currentPrices.robustaFm,
-          robustaBuyingPrice: request.robusta_buying_price
+          robustaBuyingPrice: request.robusta_buying_price,
+          sortedPrice: request.sorted_price || currentPrices.sortedPrice
         });
 
         // Send SMS notifications (same logic as before)
@@ -139,7 +140,7 @@ const PriceApprovalPanel: React.FC = () => {
       
       // Format message with CORRECTION: prefix if it's a correction
       const correctionPrefix = request.is_correction ? 'CORRECTION: ' : '';
-      const message = `${correctionPrefix}Great Pearl Coffee Price Update - ${date}\n\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}% outturn)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}% outturn)\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Use these prices for today's purchases.`;
+      const message = `${correctionPrefix}Great Pearl Coffee Price Update - ${date}\n\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}% outturn)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}% outturn)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Use these prices for today's purchases.`;
 
       // Send to all recipients
       for (let i = 0; i < allPhones.length; i++) {
@@ -154,7 +155,7 @@ const PriceApprovalPanel: React.FC = () => {
           .not('phone', 'is', null);
 
         const supplierPhones = suppliers?.filter(s => s.phone).map(s => s.phone!) || [];
-        const supplierMessage = `${correctionPrefix}Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${request.arabica_outturn}%\nPrice: UGX ${request.arabica_buying_price.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${request.robusta_outturn}%\nPrice: UGX ${request.robusta_buying_price.toLocaleString()}/kg\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Deliver your coffee now!`;
+        const supplierMessage = `${correctionPrefix}Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${request.arabica_outturn}%\nPrice: UGX ${request.arabica_buying_price.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${request.robusta_outturn}%\nPrice: UGX ${request.robusta_buying_price.toLocaleString()}/kg\n\n☕ SORTED: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Deliver your coffee now!`;
 
         for (let i = 0; i < supplierPhones.length; i++) {
           await sendSmsWithDelay(supplierPhones[i], supplierMessage, 500);
@@ -269,8 +270,8 @@ const PriceApprovalPanel: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Prices */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
+{/* Prices */}
+                <div className="grid grid-cols-3 gap-4 mb-4">
                   <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
                     <div className="flex items-center gap-2 mb-1">
                       <Coffee className="h-4 w-4 text-amber-700" />
@@ -313,6 +314,24 @@ const PriceApprovalPanel: React.FC = () => {
                         <span className={request.robusta_buying_price > currentPrices.robustaBuyingPrice ? 'text-green-600 ml-1' : 'text-red-600 ml-1'}>
                           ({request.robusta_buying_price > currentPrices.robustaBuyingPrice ? '+' : ''}
                           {((request.robusta_buying_price - currentPrices.robustaBuyingPrice) / currentPrices.robustaBuyingPrice * 100).toFixed(1)}%)
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                  <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Coffee className="h-4 w-4 text-purple-700" />
+                      <span className="text-sm font-medium">Sorted</span>
+                    </div>
+                    <p className="text-xl font-bold">
+                      UGX {(request.sorted_price || 0).toLocaleString()}/kg
+                    </p>
+                    {currentPrices.sortedPrice !== (request.sorted_price || 0) && currentPrices.sortedPrice > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Current: UGX {currentPrices.sortedPrice.toLocaleString()}/kg
+                        <span className={(request.sorted_price || 0) > currentPrices.sortedPrice ? 'text-green-600 ml-1' : 'text-red-600 ml-1'}>
+                          ({(request.sorted_price || 0) > currentPrices.sortedPrice ? '+' : ''}
+                          {(((request.sorted_price || 0) - currentPrices.sortedPrice) / currentPrices.sortedPrice * 100).toFixed(1)}%)
                         </span>
                       </p>
                     )}

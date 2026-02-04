@@ -27,6 +27,7 @@ interface ReferencePrices {
   robustaMoisture: number;
   robustaFm: number;
   robustaBuyingPrice: number;
+  sortedPrice: number;
 }
 
 const ReferencePriceInput: React.FC = () => {
@@ -41,7 +42,7 @@ const ReferencePriceInput: React.FC = () => {
     fetchMyRequests 
   } = usePriceApprovals();
   
-  const [prices, setPrices] = useState<ReferencePrices>({
+const [prices, setPrices] = useState<ReferencePrices>({
     iceArabica: 185.50,
     robusta: 2450,
     exchangeRate: 3750,
@@ -55,7 +56,8 @@ const ReferencePriceInput: React.FC = () => {
     robustaOutturn: 80,
     robustaMoisture: 13,
     robustaFm: 3,
-    robustaBuyingPrice: 7800
+    robustaBuyingPrice: 7800,
+    sortedPrice: 0
   });
   const [loading, setLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
@@ -69,7 +71,7 @@ const ReferencePriceInput: React.FC = () => {
   }, [employee?.email, fetchMyRequests]);
 
   useEffect(() => {
-    setPrices({
+setPrices({
       iceArabica: currentPrices.iceArabica,
       robusta: currentPrices.robusta,
       exchangeRate: currentPrices.exchangeRate,
@@ -83,7 +85,8 @@ const ReferencePriceInput: React.FC = () => {
       robustaOutturn: currentPrices.robustaOutturn,
       robustaMoisture: currentPrices.robustaMoisture,
       robustaFm: currentPrices.robustaFm,
-      robustaBuyingPrice: currentPrices.robustaBuyingPrice
+      robustaBuyingPrice: currentPrices.robustaBuyingPrice,
+      sortedPrice: currentPrices.sortedPrice
     });
   }, [currentPrices]);
 
@@ -155,7 +158,7 @@ const ReferencePriceInput: React.FC = () => {
     }
   };
 
-  const handleReset = () => {
+const handleReset = () => {
     setPrices({
       iceArabica: 185.50,
       robusta: 2450,
@@ -170,15 +173,16 @@ const ReferencePriceInput: React.FC = () => {
       robustaOutturn: 80,
       robustaMoisture: 13,
       robustaFm: 3,
-      robustaBuyingPrice: 7800
+      robustaBuyingPrice: 7800,
+      sortedPrice: 0
     });
   };
 
-  const handleTestSMS = async (phoneNumber: string) => {
+const handleTestSMS = async (phoneNumber: string) => {
     try {
       setTestLoading(true);
       const date = new Date().toLocaleDateString('en-GB');
-      const message = `Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256778536681`;
+      const message = `Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${prices.arabicaOutturn}%\nMoisture: ${prices.arabicaMoisture}%\nFM: ${prices.arabicaFm}%\nPrice: UGX ${prices.arabicaBuyingPrice.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${prices.robustaOutturn}%\nMoisture: ${prices.robustaMoisture}%\nFM: ${prices.robustaFm}%\nPrice: UGX ${prices.robustaBuyingPrice.toLocaleString()}/kg\n\n☕ SORTED: UGX ${prices.sortedPrice.toLocaleString()}/kg\n\nDeliver your coffee now!\n📞 Contact: +256778536681`;
 
       console.log(`📱 Sending test SMS to ${phoneNumber}`);
       console.log('Message:', message);
@@ -388,6 +392,26 @@ const ReferencePriceInput: React.FC = () => {
                 step="50"
                 value={prices.robustaBuyingPrice}
                 onChange={(e) => handleInputChange('robustaBuyingPrice', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Sorted Price */}
+        <div className="p-4 border rounded-lg bg-purple-50 dark:bg-purple-950/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Coffee className="h-5 w-5 text-purple-700" />
+            <h3 className="text-lg font-semibold text-purple-700">Sorted Coffee Price</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="sortedPrice">Sorted Price (UGX/kg)</Label>
+              <Input
+                id="sortedPrice"
+                type="number"
+                step="50"
+                value={prices.sortedPrice}
+                onChange={(e) => handleInputChange('sortedPrice', e.target.value)}
               />
             </div>
           </div>
