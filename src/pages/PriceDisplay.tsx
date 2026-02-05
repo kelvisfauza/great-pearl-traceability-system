@@ -1,12 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useReferencePrices } from '@/hooks/useReferencePrices';
-import { Coffee, RefreshCw } from 'lucide-react';
+import { Coffee, RefreshCw, Maximize2 } from 'lucide-react';
 import { format } from 'date-fns';
+import MinimizedPrices from '@/components/display/MinimizedPrices';
+import TopSuppliersSlide from '@/components/display/TopSuppliersSlide';
+import TopBuyersSlide from '@/components/display/TopBuyersSlide';
+import SupplierStatsSlide from '@/components/display/SupplierStatsSlide';
+import TraceabilitySlide from '@/components/display/TraceabilitySlide';
+import MillingSlide from '@/components/display/MillingSlide';
+
+const SLIDES = ['suppliers', 'buyers', 'stats', 'traceability', 'milling'] as const;
+type SlideType = typeof SLIDES[number];
 
 const PriceDisplay = () => {
   const { prices, loading, fetchPrices } = useReferencePrices();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
+  const [showFullPrices, setShowFullPrices] = useState(true);
+  const [currentSlide, setCurrentSlide] = useState<SlideType | null>(null);
+  const [slideIndex, setSlideIndex] = useState(0);
 
   // Keep screen awake
   useEffect(() => {
@@ -15,47 +27,60 @@ const PriceDisplay = () => {
         if ('wakeLock' in navigator) {
           const lock = await navigator.wakeLock.request('screen');
           setWakeLock(lock);
-          console.log('Wake Lock activated - screen will stay on');
         }
       } catch (err) {
-        console.log('Wake Lock not supported or failed:', err);
+        console.log('Wake Lock failed:', err);
       }
     };
 
     requestWakeLock();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') requestWakeLock();
+    });
 
-    // Re-acquire wake lock if page becomes visible again
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        requestWakeLock();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      if (wakeLock) {
-        wakeLock.release();
-      }
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => { wakeLock?.release(); };
   }, []);
 
-  // Update clock every second
+  // Update clock
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-refresh prices every 30 seconds
+  // Auto-refresh prices
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchPrices();
-    }, 30000);
+    const interval = setInterval(fetchPrices, 30000);
     return () => clearInterval(interval);
   }, [fetchPrices]);
+
+  // Slideshow logic - starts after 10 seconds on price view
+  useEffect(() => {
+    if (!showFullPrices) {
+      // Rotate slides every 8 seconds
+      const interval = setInterval(() => {
+        setSlideIndex(prev => (prev + 1) % SLIDES.length);
+      }, 8000);
+      return () => clearInterval(interval);
+    } else {
+      // After 10 seconds on prices, start slideshow
+      const timeout = setTimeout(() => {
+        setShowFullPrices(false);
+        setSlideIndex(0);
+      }, 10000);
+      return () => clearTimeout(timeout);
+    }
+  }, [showFullPrices]);
+
+  useEffect(() => {
+    if (!showFullPrices) {
+      setCurrentSlide(SLIDES[slideIndex]);
+    }
+  }, [slideIndex, showFullPrices]);
+
+  const handleMaximize = useCallback(() => {
+    setShowFullPrices(true);
+    setCurrentSlide(null);
+  }, []);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-UG', {
@@ -74,6 +99,60 @@ const PriceDisplay = () => {
     );
   }
 
+  const renderSlide = () => {
+    switch (currentSlide) {
+      case 'suppliers': return <TopSuppliersSlide />;
+      case 'buyers': return <TopBuyersSlide />;
+      case 'stats': return <SupplierStatsSlide />;
+      case 'traceability': return <TraceabilitySlide />;
+      case 'milling': return <MillingSlide />;
+      default: return null;
+    }
+  };
+
+  // Slideshow view
+  if (!showFullPrices) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white">
+        <MinimizedPrices 
+          prices={prices} 
+          currentTime={currentTime} 
+          onMaximize={handleMaximize} 
+        />
+
+        {/* Slide Content */}
+        <div className="min-h-screen flex flex-col">
+          <div className="flex-1 flex items-center justify-center">
+            {renderSlide()}
+          </div>
+
+          {/* Slide Indicators & Maximize Button */}
+          <div className="pb-6 flex flex-col items-center gap-4">
+            <div className="flex gap-2">
+              {SLIDES.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSlideIndex(i)}
+                  className={`w-3 h-3 rounded-full transition-all ${
+                    i === slideIndex ? 'bg-white w-8' : 'bg-white/30'
+                  }`}
+                />
+              ))}
+            </div>
+            <button
+              onClick={handleMaximize}
+              className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-colors"
+            >
+              <Maximize2 className="h-5 w-5" />
+              Show Full Price Display
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Full Prices View
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white p-8 flex flex-col">
       {/* Header */}
@@ -91,12 +170,8 @@ const PriceDisplay = () => {
 
       {/* Date and Time */}
       <div className="text-center mb-12">
-        <p className="text-4xl font-light">
-          {format(currentTime, 'EEEE, MMMM d, yyyy')}
-        </p>
-        <p className="text-6xl font-bold mt-2 font-mono">
-          {format(currentTime, 'HH:mm:ss')}
-        </p>
+        <p className="text-4xl font-light">{format(currentTime, 'EEEE, MMMM d, yyyy')}</p>
+        <p className="text-6xl font-bold mt-2 font-mono">{format(currentTime, 'HH:mm:ss')}</p>
       </div>
 
       {/* Price Cards */}
@@ -114,25 +189,14 @@ const PriceDisplay = () => {
           </div>
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-7xl font-bold text-amber-100">
-                {formatCurrency(prices.arabicaBuyingPrice)}
-              </p>
+              <p className="text-7xl font-bold text-amber-100">{formatCurrency(prices.arabicaBuyingPrice)}</p>
               <p className="text-2xl text-amber-300 mt-2">UGX / KG</p>
             </div>
           </div>
           <div className="mt-6 grid grid-cols-3 gap-4 text-center border-t border-amber-500/30 pt-6">
-            <div>
-              <p className="text-amber-400 text-sm">Outturn</p>
-              <p className="text-2xl font-semibold">{prices.arabicaOutturn}%</p>
-            </div>
-            <div>
-              <p className="text-amber-400 text-sm">Moisture</p>
-              <p className="text-2xl font-semibold">{prices.arabicaMoisture}%</p>
-            </div>
-            <div>
-              <p className="text-amber-400 text-sm">FM</p>
-              <p className="text-2xl font-semibold">{prices.arabicaFm}%</p>
-            </div>
+            <div><p className="text-amber-400 text-sm">Outturn</p><p className="text-2xl font-semibold">{prices.arabicaOutturn}%</p></div>
+            <div><p className="text-amber-400 text-sm">Moisture</p><p className="text-2xl font-semibold">{prices.arabicaMoisture}%</p></div>
+            <div><p className="text-amber-400 text-sm">FM</p><p className="text-2xl font-semibold">{prices.arabicaFm}%</p></div>
           </div>
         </div>
 
@@ -149,29 +213,18 @@ const PriceDisplay = () => {
           </div>
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-7xl font-bold text-emerald-100">
-                {formatCurrency(prices.robustaBuyingPrice)}
-              </p>
+              <p className="text-7xl font-bold text-emerald-100">{formatCurrency(prices.robustaBuyingPrice)}</p>
               <p className="text-2xl text-emerald-300 mt-2">UGX / KG</p>
             </div>
           </div>
           <div className="mt-6 grid grid-cols-3 gap-4 text-center border-t border-emerald-500/30 pt-6">
-            <div>
-              <p className="text-emerald-400 text-sm">Outturn</p>
-              <p className="text-2xl font-semibold">{prices.robustaOutturn}%</p>
-            </div>
-            <div>
-              <p className="text-emerald-400 text-sm">Moisture</p>
-              <p className="text-2xl font-semibold">{prices.robustaMoisture}%</p>
-            </div>
-            <div>
-              <p className="text-emerald-400 text-sm">FM</p>
-              <p className="text-2xl font-semibold">{prices.robustaFm}%</p>
-            </div>
+            <div><p className="text-emerald-400 text-sm">Outturn</p><p className="text-2xl font-semibold">{prices.robustaOutturn}%</p></div>
+            <div><p className="text-emerald-400 text-sm">Moisture</p><p className="text-2xl font-semibold">{prices.robustaMoisture}%</p></div>
+            <div><p className="text-emerald-400 text-sm">FM</p><p className="text-2xl font-semibold">{prices.robustaFm}%</p></div>
           </div>
         </div>
 
-        {/* Sorted Coffee */}
+        {/* Sorted */}
         <div className="bg-gradient-to-br from-purple-600/30 to-purple-900/30 backdrop-blur-sm rounded-3xl p-8 border-2 border-purple-500/50 flex flex-col">
           <div className="flex items-center gap-4 mb-6">
             <div className="p-4 bg-purple-500/30 rounded-2xl">
@@ -184,9 +237,7 @@ const PriceDisplay = () => {
           </div>
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-7xl font-bold text-purple-100">
-                {formatCurrency(prices.sortedPrice || 0)}
-              </p>
+              <p className="text-7xl font-bold text-purple-100">{formatCurrency(prices.sortedPrice || 0)}</p>
               <p className="text-2xl text-purple-300 mt-2">UGX / KG</p>
             </div>
           </div>
