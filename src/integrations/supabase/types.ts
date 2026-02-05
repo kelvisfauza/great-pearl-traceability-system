@@ -6433,6 +6433,16 @@ export type Database = {
       is_manager_or_above: { Args: never; Returns: boolean }
       is_supervisor_or_above: { Args: never; Returns: boolean }
       is_user_role: { Args: never; Returns: boolean }
+      log_audit_action: {
+        Args: {
+          p_action: string
+          p_reason?: string
+          p_record_data?: Json
+          p_record_id: string
+          p_table_name: string
+        }
+        Returns: string
+      }
       migrate_approved_assessments_to_finance: { Args: never; Returns: number }
       migrate_batch_numbers_to_new_format: { Args: never; Returns: Json }
       process_daily_salary_credits: { Args: never; Returns: Json }

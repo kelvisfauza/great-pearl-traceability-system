@@ -25,16 +25,14 @@ class SecurityService {
 
   async logSecurityEvent(event: SecurityEvent) {
     try {
-      // Log to Supabase audit_logs
+      // Log to Supabase audit_logs via secure RPC
       if (event.user_email) {
-        const { error } = await supabase.from('audit_logs').insert({
-          action: event.type,
-          table_name: 'security_events',
-          record_id: event.user_id || event.user_email,
-          reason: event.details,
-          performed_by: event.user_email,
-          department: 'Security',
-          record_data: {
+        const { error } = await supabase.rpc('log_audit_action', {
+          p_action: event.type,
+          p_table_name: 'security_events',
+          p_record_id: event.user_id || event.user_email,
+          p_reason: event.details,
+          p_record_data: {
             severity: event.severity,
             ip_address: event.ip_address,
             ...(event.metadata || {}),
