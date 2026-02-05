@@ -17,8 +17,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { 
   Coffee, Calendar, Package, Truck, XCircle, Loader2, 
-  CheckCircle, Clock, AlertTriangle, Archive
+  CheckCircle, Clock, AlertTriangle, Archive, Phone, Send
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +47,34 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [closeReason, setCloseReason] = useState('');
+  const [sendingCloseSms, setSendingCloseSms] = useState(false);
+
+  const sendClosureSMS = async () => {
+    if (!booking.supplier_phone) return;
+    
+    setSendingCloseSms(true);
+    
+    const message = `Great Pearl Coffee - Booking Closed
+
+Dear ${booking.supplier_name},
+
+Your booking has been closed:
+☕ Type: ${booking.coffee_type}
+✅ Delivered: ${booking.delivered_quantity_kg.toLocaleString()} kg
+${booking.remaining_quantity_kg > 0 ? `❌ Remaining written off: ${booking.remaining_quantity_kg.toLocaleString()} kg` : ''}
+
+Thank you for your business with Great Pearl Coffee.`;
+
+    try {
+      await supabase.functions.invoke('send-sms', {
+        body: { phone: booking.supplier_phone, message }
+      });
+    } catch (error) {
+      console.error('Failed to send closure SMS:', error);
+    }
+    
+    setSendingCloseSms(false);
+  };
 
   const booking = bookings.find(b => b.id === bookingId);
 
@@ -124,7 +153,13 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
 
   const handleClose = async () => {
     setLoading(true);
-    await closeBooking(bookingId, closeReason);
+    const success = await closeBooking(bookingId, closeReason);
+    
+    // Send SMS notification if supplier has phone
+    if (success && booking.supplier_phone) {
+      await sendClosureSMS();
+    }
+    
     setShowCloseConfirm(false);
     setCloseReason('');
     setLoading(false);
@@ -198,6 +233,14 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
               <div className="p-3 rounded-lg bg-muted/50">
                 <p className="text-xs text-muted-foreground mb-1">Notes</p>
                 <p className="text-sm">{booking.notes}</p>
+              </div>
+            )}
+
+            {/* Supplier Contact */}
+            {booking.supplier_phone && (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{booking.supplier_phone}</span>
               </div>
             )}
 
@@ -324,6 +367,12 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
                     onChange={(e) => setCloseReason(e.target.value)}
                   />
                 </div>
+                {booking.supplier_phone && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Send className="h-3 w-3" />
+                    A notification SMS will be sent to {booking.supplier_phone}
+                  </p>
+                )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

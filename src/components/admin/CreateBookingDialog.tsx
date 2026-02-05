@@ -16,12 +16,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useCoffeeBookings } from '@/hooks/useCoffeeBookings';
 import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Coffee, Calendar, DollarSign } from 'lucide-react';
+import { Loader2, Coffee, Calendar, DollarSign, Phone, MessageSquare } from 'lucide-react';
 import { addDays, format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface CreateBookingDialogProps {
   open: boolean;
@@ -33,6 +36,7 @@ const CreateBookingDialog = ({ open, onOpenChange }: CreateBookingDialogProps) =
   const { createBooking } = useCoffeeBookings();
   const { prices } = useReferencePrices();
   const { employee } = useAuth();
+  const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -42,7 +46,9 @@ const CreateBookingDialog = ({ open, onOpenChange }: CreateBookingDialogProps) =
     booked_price_per_kg: '',
     expected_delivery_date: '',
     expiry_days: '14',
-    notes: ''
+    notes: '',
+    supplier_phone: '',
+    send_sms: true
   });
 
   const selectedSupplier = suppliers.find(s => s.id === formData.supplier_id);
@@ -56,6 +62,48 @@ const CreateBookingDialog = ({ open, onOpenChange }: CreateBookingDialogProps) =
     }));
   };
 
+  const sendBookingSMS = async (phone: string, bookingData: {
+    supplier_name: string;
+    coffee_type: string;
+    quantity: number;
+    price: number;
+    expiry_date: string;
+  }) => {
+    const message = `Great Pearl Coffee - Booking Confirmed ✅
+
+Dear ${bookingData.supplier_name},
+
+We have secured a booking for your coffee:
+☕ Type: ${bookingData.coffee_type}
+📦 Quantity: ${bookingData.quantity.toLocaleString()} kg
+💰 Price: UGX ${bookingData.price.toLocaleString()}/kg
+📅 Valid until: ${bookingData.expiry_date}
+
+Please deliver to our store within the booking period.
+
+Thank you for partnering with Great Pearl Coffee!`;
+
+    try {
+      const { error } = await supabase.functions.invoke('send-sms', {
+        body: { phone, message }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "SMS Sent",
+        description: `Booking confirmation sent to ${phone}`
+      });
+    } catch (error) {
+      console.error('Failed to send booking SMS:', error);
+      toast({
+        title: "SMS Failed",
+        description: "Booking created but SMS notification failed",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -66,8 +114,9 @@ const CreateBookingDialog = ({ open, onOpenChange }: CreateBookingDialogProps) =
     setLoading(true);
     
     const expiryDate = addDays(new Date(), parseInt(formData.expiry_days));
+    const expiryDateFormatted = format(expiryDate, 'MMM dd, yyyy');
     
-    const success = await createBooking({
+    const result = await createBooking({
       supplier_id: formData.supplier_id,
       supplier_name: selectedSupplier?.name || '',
       coffee_type: formData.coffee_type as 'Arabica' | 'Robusta',
@@ -76,12 +125,22 @@ const CreateBookingDialog = ({ open, onOpenChange }: CreateBookingDialogProps) =
       expected_delivery_date: formData.expected_delivery_date || undefined,
       expiry_date: format(expiryDate, 'yyyy-MM-dd'),
       notes: formData.notes || undefined,
+      supplier_phone: formData.supplier_phone || undefined,
       created_by: employee?.name || 'Unknown'
     });
 
-    setLoading(false);
-
-    if (success) {
+    if (result.success) {
+      // Send SMS if phone provided and send_sms is checked
+      if (formData.supplier_phone && formData.send_sms) {
+        await sendBookingSMS(formData.supplier_phone, {
+          supplier_name: selectedSupplier?.name || '',
+          coffee_type: formData.coffee_type,
+          quantity: parseFloat(formData.booked_quantity_kg),
+          price: parseFloat(formData.booked_price_per_kg),
+          expiry_date: expiryDateFormatted
+        });
+      }
+      
       setFormData({
         supplier_id: '',
         coffee_type: '',
@@ -89,10 +148,14 @@ const CreateBookingDialog = ({ open, onOpenChange }: CreateBookingDialogProps) =
         booked_price_per_kg: '',
         expected_delivery_date: '',
         expiry_days: '14',
-        notes: ''
+        notes: '',
+        supplier_phone: '',
+        send_sms: true
       });
       onOpenChange(false);
     }
+    
+    setLoading(false);
   };
 
   return (
@@ -212,6 +275,40 @@ const CreateBookingDialog = ({ open, onOpenChange }: CreateBookingDialogProps) =
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
               rows={2}
             />
+          </div>
+
+          {/* SMS Notification Section */}
+          <div className="p-3 rounded-lg border bg-muted/30 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <MessageSquare className="h-4 w-4" />
+              SMS Notification
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <Phone className="h-3 w-3" />
+                Supplier Phone
+              </Label>
+              <Input
+                type="tel"
+                placeholder="e.g., 0772123456"
+                value={formData.supplier_phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, supplier_phone: e.target.value }))}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="send_sms" 
+                checked={formData.send_sms}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, send_sms: checked === true }))}
+                disabled={!formData.supplier_phone}
+              />
+              <label
+                htmlFor="send_sms"
+                className="text-sm text-muted-foreground cursor-pointer"
+              >
+                Send booking confirmation SMS to supplier
+              </label>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

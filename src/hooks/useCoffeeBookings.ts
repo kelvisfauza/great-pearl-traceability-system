@@ -15,8 +15,9 @@ export interface CoffeeBooking {
   expected_delivery_date: string | null;
   expiry_date: string;
   notes: string | null;
-  status: 'active' | 'partially_fulfilled' | 'fulfilled' | 'expired' | 'cancelled';
+  status: 'active' | 'partially_fulfilled' | 'fulfilled' | 'expired' | 'cancelled' | 'closed';
   closed_reason?: string | null;
+  supplier_phone?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -42,6 +43,7 @@ export interface CreateBookingData {
   expected_delivery_date?: string;
   expiry_date: string;
   notes?: string;
+  supplier_phone?: string;
   created_by: string;
 }
 
@@ -89,6 +91,7 @@ export const useCoffeeBookings = () => {
           expected_delivery_date: data.expected_delivery_date || null,
           expiry_date: data.expiry_date,
           notes: data.notes || null,
+          supplier_phone: data.supplier_phone || null,
           created_by: data.created_by
         });
 
@@ -100,7 +103,7 @@ export const useCoffeeBookings = () => {
       });
 
       await fetchBookings();
-      return true;
+      return { success: true, booking: data };
     } catch (error) {
       console.error('Error creating booking:', error);
       toast({
@@ -108,7 +111,7 @@ export const useCoffeeBookings = () => {
         description: "Failed to create coffee booking",
         variant: "destructive"
       });
-      return false;
+      return { success: false };
     }
   };
 
