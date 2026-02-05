@@ -11,6 +11,7 @@ import MillingSlide from '@/components/display/MillingSlide';
 import CoffeeMapSlide from '@/components/display/CoffeeMapSlide';
 import QualityProcessSlide from '@/components/display/QualityProcessSlide';
 import ContactSlide from '@/components/display/ContactSlide';
+import LiveTicker from '@/components/display/LiveTicker';
 
 const SLIDES = ['map', 'suppliers', 'buyers', 'stats', 'quality', 'traceability', 'milling', 'contact'] as const;
 type SlideType = typeof SLIDES[number];
@@ -150,7 +151,7 @@ const PriceDisplay = () => {
   // Slideshow view with TV-style sidebar
   if (!showFullPrices) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white overflow-hidden pb-16">
         {/* Minimized Prices Sidebar - TV Style */}
         <MinimizedPrices 
           prices={prices} 
@@ -159,13 +160,13 @@ const PriceDisplay = () => {
         />
 
         {/* Main Slide Content - Pushed right for sidebar */}
-        <div className="ml-80 min-h-screen flex flex-col">
+        <div className="ml-80 min-h-screen flex flex-col pb-16">
           <div className="flex-1 flex items-center justify-center p-8">
             {renderSlide()}
           </div>
 
           {/* Bottom Bar with Slide Indicators */}
-          <div className="pb-6 flex flex-col items-center gap-4">
+          <div className="pb-20 flex flex-col items-center gap-4">
             {/* Progress bar for current slide */}
             <div className="w-64 h-1 bg-white/20 rounded-full overflow-hidden">
               <div 
@@ -198,6 +199,9 @@ const PriceDisplay = () => {
             </div>
           </div>
         </div>
+
+        {/* Live Ticker at Bottom */}
+        <LiveTicker />
 
         {/* CSS for progress animation */}
         <style>{`
