@@ -84,19 +84,7 @@ const CreateBookingDialog = ({ open, onOpenChange }: CreateBookingDialogProps) =
     price: number;
     expiry_date: string;
   }) => {
-    const message = `Great Pearl Coffee - Booking Confirmed ✅
-
-Dear ${bookingData.supplier_name},
-
-We have secured a booking for your coffee:
-☕ Type: ${bookingData.coffee_type}
-📦 Quantity: ${bookingData.quantity.toLocaleString()} kg
-💰 Price: UGX ${bookingData.price.toLocaleString()}/kg
-📅 Valid until: ${bookingData.expiry_date}
-
-Please deliver to our store within the booking period.
-
-Thank you for partnering with Great Pearl Coffee!`;
+    const message = `Great Pearl Coffee: Booking confirmed. ${bookingData.coffee_type} ${bookingData.quantity.toLocaleString()}kg @ UGX ${bookingData.price.toLocaleString()}/kg. Valid until ${bookingData.expiry_date}.`;
 
     try {
       const { error } = await supabase.functions.invoke('send-sms', {
