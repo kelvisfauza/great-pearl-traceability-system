@@ -10,7 +10,7 @@ import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import AssignedRoleNotification from '@/components/AssignedRoleNotification';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import BuyingRecommendationsCard from '@/components/admin/BuyingRecommendationsCard';
-import CoffeeBookingsCard from '@/components/admin/CoffeeBookingsCard';
+import UpcomingBookingsWidget from '@/components/admin/UpcomingBookingsWidget';
 import StoreRealTimeTracker from '@/components/v2/admin/StoreRealTimeTracker';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -97,8 +97,8 @@ const Index = () => {
         {/* Admin Dashboard Section */}
         {(employee.role === 'Administrator' || employee.role === 'Super Admin') && (
           <>
-            {/* Coffee Bookings Card */}
-            <CoffeeBookingsCard />
+            {/* Upcoming Bookings Widget */}
+            <UpcomingBookingsWidget />
             
             <Card>
               <CardHeader className="pb-3">
