@@ -177,18 +177,14 @@ export const useStoreReports = () => {
         deletedFromSupabase = true;
         console.log('✅ Deleted from Supabase');
         
-        // Log the deletion
-        const auditData = {
-          action: 'delete',
-          table_name: 'store_reports',
-          record_id: reportId,
-          reason: reason,
-          performed_by: reportData?.input_by || 'Unknown',
-          department: 'Store',
-          record_data: reportData
-        };
-
-        await supabase.from('audit_logs').insert([auditData]);
+        // Log the deletion via secure RPC
+        await supabase.rpc('log_audit_action', {
+          p_action: 'delete',
+          p_table_name: 'store_reports',
+          p_record_id: reportId,
+          p_reason: reason,
+          p_record_data: reportData
+        });
       } catch (supabaseError: any) {
         console.log('Supabase deletion failed (might not exist there):', supabaseError.message);
       }
@@ -299,18 +295,14 @@ export const useStoreReports = () => {
         throw error;
       }
       
-      // Log the action
-      const auditData = {
-        action: 'edit',
-        table_name: 'store_reports',
-        record_id: reportId,
-        reason: reason || 'Report updated',
-        performed_by: cleanedData.input_by,
-        department: 'Store',
-        record_data: cleanedData
-      };
-
-      await supabase.from('audit_logs').insert([auditData]);
+      // Log the action via secure RPC
+      await supabase.rpc('log_audit_action', {
+        p_action: 'edit',
+        p_table_name: 'store_reports',
+        p_record_id: reportId,
+        p_reason: reason || 'Report updated',
+        p_record_data: cleanedData
+      });
       
       console.log('Supabase report updated successfully');
       
