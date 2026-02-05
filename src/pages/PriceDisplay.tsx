@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useReferencePrices } from '@/hooks/useReferencePrices';
+import { useDisplayData } from '@/hooks/useDisplayData';
 import { Coffee, RefreshCw, Minimize2 } from 'lucide-react';
 import { format } from 'date-fns';
 import MinimizedPrices from '@/components/display/MinimizedPrices';
@@ -21,6 +22,7 @@ const PRICE_DISPLAY_DURATION = 12000; // 12 seconds on full price view
 
 const PriceDisplay = () => {
   const { prices, loading, fetchPrices } = useReferencePrices();
+  const displayData = useDisplayData();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
   const [showFullPrices, setShowFullPrices] = useState(true);
@@ -137,12 +139,12 @@ const PriceDisplay = () => {
 
     switch (currentSlide) {
       case 'map': return <SlideWrapper><CoffeeMapSlide /></SlideWrapper>;
-      case 'suppliers': return <SlideWrapper><TopSuppliersSlide /></SlideWrapper>;
-      case 'buyers': return <SlideWrapper><TopBuyersSlide /></SlideWrapper>;
-      case 'stats': return <SlideWrapper><SupplierStatsSlide /></SlideWrapper>;
+      case 'suppliers': return <SlideWrapper><TopSuppliersSlide data={displayData.topSuppliers} /></SlideWrapper>;
+      case 'buyers': return <SlideWrapper><TopBuyersSlide data={displayData.topBuyers} /></SlideWrapper>;
+      case 'stats': return <SlideWrapper><SupplierStatsSlide totalSuppliers={displayData.totalSuppliers} totalKgs={displayData.totalKgs} avgPerSupplier={displayData.avgPerSupplier} topDistricts={displayData.topDistricts} /></SlideWrapper>;
       case 'quality': return <SlideWrapper><QualityProcessSlide /></SlideWrapper>;
-      case 'traceability': return <SlideWrapper><TraceabilitySlide /></SlideWrapper>;
-      case 'milling': return <SlideWrapper><MillingSlide /></SlideWrapper>;
+      case 'traceability': return <SlideWrapper><TraceabilitySlide tracedBatches={displayData.tracedBatches} eudrCompliant={displayData.eudrCompliant} totalDocs={displayData.totalDocs} /></SlideWrapper>;
+      case 'milling': return <SlideWrapper><MillingSlide totalProcessed={displayData.totalProcessed} dispatched={displayData.dispatched} /></SlideWrapper>;
       case 'contact': return <SlideWrapper><ContactSlide /></SlideWrapper>;
       default: return null;
     }
