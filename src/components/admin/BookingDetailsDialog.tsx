@@ -11,12 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 import { useCoffeeBookings, CoffeeBooking, BookingDelivery } from '@/hooks/useCoffeeBookings';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { 
   Coffee, Calendar, Package, Truck, XCircle, Loader2, 
-  CheckCircle, Clock, AlertTriangle
+  CheckCircle, Clock, AlertTriangle, Archive
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -36,13 +37,15 @@ interface BookingDetailsDialogProps {
 }
 
 const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsDialogProps) => {
-  const { bookings, recordDelivery, cancelBooking, getBookingDeliveries } = useCoffeeBookings();
+  const { bookings, recordDelivery, cancelBooking, closeBooking, getBookingDeliveries } = useCoffeeBookings();
   const { employee } = useAuth();
   
   const [deliveries, setDeliveries] = useState<BookingDelivery[]>([]);
   const [loading, setLoading] = useState(false);
   const [deliveryKg, setDeliveryKg] = useState('');
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [closeReason, setCloseReason] = useState('');
 
   const booking = bookings.find(b => b.id === bookingId);
 
@@ -72,6 +75,7 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
       case 'fulfilled': return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'expired': return <AlertTriangle className="h-4 w-4 text-red-500" />;
       case 'cancelled': return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'closed': return <Archive className="h-4 w-4 text-slate-500" />;
       default: return null;
     }
   };
@@ -82,7 +86,8 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
       partially_fulfilled: { variant: 'secondary', label: 'Partially Fulfilled' },
       fulfilled: { variant: 'outline', label: 'Fulfilled' },
       expired: { variant: 'destructive', label: 'Expired' },
-      cancelled: { variant: 'destructive', label: 'Cancelled' }
+      cancelled: { variant: 'destructive', label: 'Cancelled' },
+      closed: { variant: 'outline', label: 'Closed' }
     };
     const config = variants[status] || { variant: 'outline', label: status };
     return (
@@ -117,7 +122,17 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
     onOpenChange(false);
   };
 
+  const handleClose = async () => {
+    setLoading(true);
+    await closeBooking(bookingId, closeReason);
+    setShowCloseConfirm(false);
+    setCloseReason('');
+    setLoading(false);
+    onOpenChange(false);
+  };
+
   const canModify = booking.status === 'active' || booking.status === 'partially_fulfilled';
+  const canClose = booking.status === 'partially_fulfilled';
 
   return (
     <>
@@ -231,16 +246,28 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
 
             {/* Actions */}
             <div className="flex justify-between pt-2">
-              {canModify && (
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => setShowCancelConfirm(true)}
-                >
-                  <XCircle className="h-4 w-4 mr-1" />
-                  Cancel Booking
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {canClose && (
+                  <Button 
+                    variant="secondary" 
+                    size="sm"
+                    onClick={() => setShowCloseConfirm(true)}
+                  >
+                    <Archive className="h-4 w-4 mr-1" />
+                    Close Booking
+                  </Button>
+                )}
+                {canModify && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => setShowCancelConfirm(true)}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Cancel Booking
+                  </Button>
+                )}
+              </div>
               <Button variant="outline" onClick={() => onOpenChange(false)} className="ml-auto">
                 Close
               </Button>
@@ -264,6 +291,47 @@ const BookingDetailsDialog = ({ bookingId, open, onOpenChange }: BookingDetailsD
             <AlertDialogAction onClick={handleCancel} className="bg-destructive text-destructive-foreground">
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Yes, Cancel Booking
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close Booking?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  This will close the booking for {booking.supplier_name} with partial delivery.
+                </p>
+                <div className="p-3 rounded-lg bg-muted/50 text-sm">
+                  <div className="flex justify-between">
+                    <span>Delivered:</span>
+                    <span className="font-medium text-green-600">{booking.delivered_quantity_kg.toLocaleString()} kg</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Remaining (will be written off):</span>
+                    <span className="font-medium text-amber-600">{booking.remaining_quantity_kg.toLocaleString()} kg</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="closeReason">Reason for closing (optional)</Label>
+                  <Textarea
+                    id="closeReason"
+                    placeholder="e.g., Supplier unable to deliver remaining quantity"
+                    value={closeReason}
+                    onChange={(e) => setCloseReason(e.target.value)}
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Open</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClose} className="bg-secondary text-secondary-foreground hover:bg-secondary/80">
+              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Yes, Close Booking
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
