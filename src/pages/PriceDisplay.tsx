@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useReferencePrices } from '@/hooks/useReferencePrices';
-import { Coffee, RefreshCw, Maximize2 } from 'lucide-react';
+import { Coffee, RefreshCw, Minimize2 } from 'lucide-react';
 import { format } from 'date-fns';
 import MinimizedPrices from '@/components/display/MinimizedPrices';
 import TopSuppliersSlide from '@/components/display/TopSuppliersSlide';
@@ -8,17 +8,24 @@ import TopBuyersSlide from '@/components/display/TopBuyersSlide';
 import SupplierStatsSlide from '@/components/display/SupplierStatsSlide';
 import TraceabilitySlide from '@/components/display/TraceabilitySlide';
 import MillingSlide from '@/components/display/MillingSlide';
+import CoffeeMapSlide from '@/components/display/CoffeeMapSlide';
+import QualityProcessSlide from '@/components/display/QualityProcessSlide';
+import ContactSlide from '@/components/display/ContactSlide';
 
-const SLIDES = ['suppliers', 'buyers', 'stats', 'traceability', 'milling'] as const;
+const SLIDES = ['map', 'suppliers', 'buyers', 'stats', 'quality', 'traceability', 'milling', 'contact'] as const;
 type SlideType = typeof SLIDES[number];
+
+const SLIDE_DURATION = 10000; // 10 seconds per slide
+const PRICE_DISPLAY_DURATION = 12000; // 12 seconds on full price view
 
 const PriceDisplay = () => {
   const { prices, loading, fetchPrices } = useReferencePrices();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
   const [showFullPrices, setShowFullPrices] = useState(true);
-  const [currentSlide, setCurrentSlide] = useState<SlideType | null>(null);
+  const [currentSlide, setCurrentSlide] = useState<SlideType>('map');
   const [slideIndex, setSlideIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Keep screen awake
   useEffect(() => {
@@ -53,20 +60,28 @@ const PriceDisplay = () => {
     return () => clearInterval(interval);
   }, [fetchPrices]);
 
-  // Slideshow logic - starts after 10 seconds on price view
+  // Main slideshow logic
   useEffect(() => {
     if (!showFullPrices) {
-      // Rotate slides every 8 seconds
+      // Rotate slides
       const interval = setInterval(() => {
-        setSlideIndex(prev => (prev + 1) % SLIDES.length);
-      }, 8000);
+        setIsTransitioning(true);
+        setTimeout(() => {
+          setSlideIndex(prev => (prev + 1) % SLIDES.length);
+          setIsTransitioning(false);
+        }, 300);
+      }, SLIDE_DURATION);
       return () => clearInterval(interval);
     } else {
-      // After 10 seconds on prices, start slideshow
+      // After showing full prices, transition to slideshow
       const timeout = setTimeout(() => {
-        setShowFullPrices(false);
-        setSlideIndex(0);
-      }, 10000);
+        setIsTransitioning(true);
+        setTimeout(() => {
+          setShowFullPrices(false);
+          setSlideIndex(0);
+          setIsTransitioning(false);
+        }, 500);
+      }, PRICE_DISPLAY_DURATION);
       return () => clearTimeout(timeout);
     }
   }, [showFullPrices]);
@@ -78,8 +93,21 @@ const PriceDisplay = () => {
   }, [slideIndex, showFullPrices]);
 
   const handleMaximize = useCallback(() => {
-    setShowFullPrices(true);
-    setCurrentSlide(null);
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowFullPrices(true);
+      setCurrentSlide('map');
+      setIsTransitioning(false);
+    }, 300);
+  }, []);
+
+  const handleMinimize = useCallback(() => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowFullPrices(false);
+      setSlideIndex(0);
+      setIsTransitioning(false);
+    }, 300);
   }, []);
 
   const formatCurrency = (value: number) => {
@@ -100,61 +128,95 @@ const PriceDisplay = () => {
   }
 
   const renderSlide = () => {
+    const slideClass = `transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`;
+    
+    const SlideWrapper = ({ children }: { children: React.ReactNode }) => (
+      <div className={slideClass}>{children}</div>
+    );
+
     switch (currentSlide) {
-      case 'suppliers': return <TopSuppliersSlide />;
-      case 'buyers': return <TopBuyersSlide />;
-      case 'stats': return <SupplierStatsSlide />;
-      case 'traceability': return <TraceabilitySlide />;
-      case 'milling': return <MillingSlide />;
+      case 'map': return <SlideWrapper><CoffeeMapSlide /></SlideWrapper>;
+      case 'suppliers': return <SlideWrapper><TopSuppliersSlide /></SlideWrapper>;
+      case 'buyers': return <SlideWrapper><TopBuyersSlide /></SlideWrapper>;
+      case 'stats': return <SlideWrapper><SupplierStatsSlide /></SlideWrapper>;
+      case 'quality': return <SlideWrapper><QualityProcessSlide /></SlideWrapper>;
+      case 'traceability': return <SlideWrapper><TraceabilitySlide /></SlideWrapper>;
+      case 'milling': return <SlideWrapper><MillingSlide /></SlideWrapper>;
+      case 'contact': return <SlideWrapper><ContactSlide /></SlideWrapper>;
       default: return null;
     }
   };
 
-  // Slideshow view
+  // Slideshow view with TV-style sidebar
   if (!showFullPrices) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white">
+      <div className="min-h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white overflow-hidden">
+        {/* Minimized Prices Sidebar - TV Style */}
         <MinimizedPrices 
           prices={prices} 
           currentTime={currentTime} 
           onMaximize={handleMaximize} 
         />
 
-        {/* Slide Content */}
-        <div className="min-h-screen flex flex-col">
-          <div className="flex-1 flex items-center justify-center">
+        {/* Main Slide Content - Pushed right for sidebar */}
+        <div className="ml-80 min-h-screen flex flex-col">
+          <div className="flex-1 flex items-center justify-center p-8">
             {renderSlide()}
           </div>
 
-          {/* Slide Indicators & Maximize Button */}
+          {/* Bottom Bar with Slide Indicators */}
           <div className="pb-6 flex flex-col items-center gap-4">
+            {/* Progress bar for current slide */}
+            <div className="w-64 h-1 bg-white/20 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-green-400 rounded-full transition-all"
+                style={{ 
+                  animation: `progressBar ${SLIDE_DURATION}ms linear`,
+                  width: '100%'
+                }}
+                key={slideIndex}
+              />
+            </div>
+            
+            {/* Slide dots */}
             <div className="flex gap-2">
-              {SLIDES.map((_, i) => (
+              {SLIDES.map((slide, i) => (
                 <button
-                  key={i}
-                  onClick={() => setSlideIndex(i)}
-                  className={`w-3 h-3 rounded-full transition-all ${
-                    i === slideIndex ? 'bg-white w-8' : 'bg-white/30'
+                  key={slide}
+                  onClick={() => {
+                    setIsTransitioning(true);
+                    setTimeout(() => {
+                      setSlideIndex(i);
+                      setIsTransitioning(false);
+                    }, 300);
+                  }}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    i === slideIndex ? 'bg-green-400 w-8' : 'bg-white/30 w-2 hover:bg-white/50'
                   }`}
                 />
               ))}
             </div>
-            <button
-              onClick={handleMaximize}
-              className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-colors"
-            >
-              <Maximize2 className="h-5 w-5" />
-              Show Full Price Display
-            </button>
           </div>
         </div>
+
+        {/* CSS for progress animation */}
+        <style>{`
+          @keyframes progressBar {
+            from { width: 0%; }
+            to { width: 100%; }
+          }
+          @keyframes slideInFromLeft {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `}</style>
       </div>
     );
   }
 
   // Full Prices View
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white p-8 flex flex-col">
+    <div className={`min-h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white p-8 flex flex-col transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
       {/* Header */}
       <div className="text-center mb-8">
         <div className="flex items-center justify-center gap-4 mb-4">
@@ -247,8 +309,15 @@ const PriceDisplay = () => {
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer with Minimize Button */}
       <div className="mt-8 text-center">
+        <button
+          onClick={handleMinimize}
+          className="mb-4 px-6 py-3 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-all hover:scale-105 flex items-center gap-2 mx-auto"
+        >
+          <Minimize2 className="h-5 w-5" />
+          Start Slideshow
+        </button>
         <div className="flex items-center justify-center gap-4 text-white/60">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
