@@ -20,7 +20,8 @@ import {
   ChevronDown,
   PanelLeftClose,
   PanelLeft,
-  CheckSquare
+  CheckSquare,
+  BookMarked
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoleBasedData } from "@/hooks/useRoleBasedData";
@@ -64,6 +65,7 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
       title: "Management",
       items: [
         { name: "Approvals", icon: CheckSquare, path: "/approvals", permission: null, requiresAdmin: true },
+        { name: "Coffee Bookings", icon: BookMarked, path: "/coffee-bookings", permission: null, requiresAdmin: true },
         { name: "Suppliers", icon: UserCheck, path: "/suppliers", permission: null },
         { name: "Sales & Marketing", icon: TrendingUp, path: "/sales-marketing", permission: "Sales Marketing" },
         { name: "My Expenses", icon: DollarSign, path: "/my-expenses", permission: null },

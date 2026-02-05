@@ -33,6 +33,7 @@ import EURDocumentationPage from "./pages/EUDRDocumentation";
 import Suppliers from "./pages/Suppliers";
 import Approvals from "./pages/Approvals";
 import Verify from "./pages/Verify";
+import CoffeeBookings from "./pages/CoffeeBookings";
 
 // V2 System Pages
 import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
@@ -153,6 +154,11 @@ const App: React.ComponentType = () => {
                 <Route path="/approvals" element={
                   <ProtectedRoute>
                     <Approvals />
+                  </ProtectedRoute>
+                } />
+                <Route path="/coffee-bookings" element={
+                  <ProtectedRoute requiredRoles={["Administrator", "Super Admin"]}>
+                    <CoffeeBookings />
                   </ProtectedRoute>
                 } />
                 <Route path="/procurement" element={
