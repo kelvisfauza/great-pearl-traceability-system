@@ -19,7 +19,7 @@ export class BarchartService {
         .from('market_prices' as any)
         .select('*')
         .eq('price_type', 'reference_prices')
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       
