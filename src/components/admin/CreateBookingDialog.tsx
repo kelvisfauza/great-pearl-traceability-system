@@ -16,15 +16,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { useCoffeeBookings } from '@/hooks/useCoffeeBookings';
 import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Coffee, Calendar, DollarSign, Phone, MessageSquare } from 'lucide-react';
+import { Loader2, Coffee, Calendar, DollarSign, Phone, MessageSquare, ChevronsUpDown, Check, Search } from 'lucide-react';
 import { addDays, format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface CreateBookingDialogProps {
   open: boolean;
@@ -39,6 +53,7 @@ const CreateBookingDialog = ({ open, onOpenChange }: CreateBookingDialogProps) =
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
+  const [supplierOpen, setSupplierOpen] = useState(false);
   const [formData, setFormData] = useState({
     supplier_id: '',
     coffee_type: '' as 'Arabica' | 'Robusta' | '',
@@ -170,22 +185,59 @@ Thank you for partnering with Great Pearl Coffee!`;
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Supplier</Label>
-            <Select 
-              value={formData.supplier_id} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, supplier_id: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={suppliersLoading ? "Loading..." : "Select supplier"} />
-              </SelectTrigger>
-              <SelectContent>
-                {suppliers.map(supplier => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    {supplier.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="flex items-center gap-1">
+              <Search className="h-3 w-3" />
+              Supplier
+            </Label>
+            <Popover open={supplierOpen} onOpenChange={setSupplierOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={supplierOpen}
+                  className="w-full justify-between font-normal"
+                  disabled={suppliersLoading}
+                >
+                  {formData.supplier_id
+                    ? suppliers.find((s) => s.id === formData.supplier_id)?.name
+                    : suppliersLoading ? "Loading suppliers..." : "Search supplier..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[350px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search supplier by name..." />
+                  <CommandList>
+                    <CommandEmpty>No supplier found.</CommandEmpty>
+                    <CommandGroup className="max-h-[200px] overflow-y-auto">
+                      {suppliers.map((supplier) => (
+                        <CommandItem
+                          key={supplier.id}
+                          value={supplier.name}
+                          onSelect={() => {
+                            setFormData(prev => ({ ...prev, supplier_id: supplier.id }));
+                            setSupplierOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.supplier_id === supplier.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span>{supplier.name}</span>
+                            {(supplier as any).supplier_code && (
+                              <span className="text-xs text-muted-foreground">{(supplier as any).supplier_code}</span>
+                            )}
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-2">
