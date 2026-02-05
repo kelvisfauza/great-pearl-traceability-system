@@ -1,29 +1,12 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Shield, Leaf, Globe, FileCheck } from 'lucide-react';
 
-const TraceabilitySlide = () => {
-  const [stats, setStats] = useState({
-    tracedBatches: 0,
-    eudrCompliant: 0,
-    totalDocs: 0
-  });
+interface Props {
+  tracedBatches: number;
+  eudrCompliant: number;
+  totalDocs: number;
+}
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      const { data: batches } = await supabase.from('eudr_batches').select('id, status');
-      const { data: docs } = await supabase.from('eudr_documents').select('id');
-
-      setStats({
-        tracedBatches: batches?.length || 0,
-        eudrCompliant: batches?.filter(b => b.status === 'traced').length || 0,
-        totalDocs: docs?.length || 0
-      });
-    };
-
-    fetchStats();
-  }, []);
-
+const TraceabilitySlide = ({ tracedBatches, totalDocs }: Props) => {
   return (
     <div className="h-full flex flex-col items-center justify-center px-8 animate-fade-in">
       <div className="flex items-center gap-4 mb-8">
@@ -41,7 +24,7 @@ const TraceabilitySlide = () => {
           <div className="w-24 h-24 rounded-full bg-green-500/20 border-2 border-green-400 flex items-center justify-center mx-auto mb-4">
             <Leaf className="h-12 w-12 text-green-400" />
           </div>
-          <p className="text-4xl font-bold text-green-200">{stats.tracedBatches}</p>
+          <p className="text-4xl font-bold text-green-200">{tracedBatches}</p>
           <p className="text-green-300/80">Traced Batches</p>
         </div>
 
@@ -57,7 +40,7 @@ const TraceabilitySlide = () => {
           <div className="w-24 h-24 rounded-full bg-purple-500/20 border-2 border-purple-400 flex items-center justify-center mx-auto mb-4">
             <FileCheck className="h-12 w-12 text-purple-400" />
           </div>
-          <p className="text-4xl font-bold text-purple-200">{stats.totalDocs}</p>
+          <p className="text-4xl font-bold text-purple-200">{totalDocs}</p>
           <p className="text-purple-300/80">EUDR Documents</p>
         </div>
       </div>

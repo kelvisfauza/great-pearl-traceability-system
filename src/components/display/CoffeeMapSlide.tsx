@@ -1,74 +1,109 @@
 import { MapPin, Mountain } from 'lucide-react';
 
-const CoffeeMapSlide = () => {
-  const coffeeRegions = [
-    { name: 'Kasese', position: { top: '45%', left: '15%' }, highlight: true },
-    { name: 'Mbale', position: { top: '35%', left: '75%' } },
-    { name: 'Kapchorwa', position: { top: '28%', left: '78%' } },
-    { name: 'Bundibugyo', position: { top: '38%', left: '8%' } },
-    { name: 'Kabale', position: { top: '72%', left: '22%' } },
-    { name: 'Kisoro', position: { top: '75%', left: '12%' } },
-    { name: 'Bushenyi', position: { top: '60%', left: '25%' } },
-    { name: 'Nebbi', position: { top: '25%', left: '18%' } },
-  ];
+const coffeeRegions = [
+  { name: 'Kasese', x: 105, y: 260, highlight: true },
+  { name: 'Bundibugyo', x: 85, y: 215 },
+  { name: 'Mbale', x: 305, y: 195 },
+  { name: 'Kapchorwa', x: 325, y: 165 },
+  { name: 'Kabale', x: 135, y: 370 },
+  { name: 'Kisoro', x: 95, y: 370 },
+  { name: 'Bushenyi', x: 150, y: 310 },
+  { name: 'Nebbi', x: 110, y: 140 },
+  { name: 'Luwero', x: 230, y: 230 },
+  { name: 'Mukono', x: 260, y: 260 },
+];
 
+const CoffeeMapSlide = () => {
   return (
     <div className="h-full flex flex-col items-center justify-center px-8 animate-fade-in">
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-4">
         <Mountain className="h-12 w-12 text-green-400" />
         <h2 className="text-5xl font-bold text-white">Uganda's Coffee Heartland</h2>
       </div>
 
-      <p className="text-white/70 text-xl text-center max-w-3xl mb-8">
+      <p className="text-white/70 text-xl text-center max-w-3xl mb-6">
         Sourcing premium Arabica & Robusta from the fertile highlands of Western Uganda
       </p>
 
-      {/* Simplified Uganda Map */}
-      <div className="relative w-full max-w-4xl h-[400px]">
-        {/* Uganda outline - simplified SVG shape */}
+      <div className="relative w-full max-w-3xl h-[420px]">
         <svg viewBox="0 0 400 450" className="w-full h-full">
-          {/* Uganda shape */}
+          {/* More accurate Uganda outline */}
           <path
-            d="M50,80 L120,50 L200,40 L280,50 L350,80 L380,150 L370,220 L380,300 L350,380 L280,420 L200,430 L120,410 L60,350 L40,280 L50,200 L40,140 Z"
-            fill="rgba(34, 197, 94, 0.2)"
-            stroke="rgba(34, 197, 94, 0.6)"
-            strokeWidth="3"
+            d="M120,30 L160,25 L200,20 L240,25 L280,30 L310,35 L340,50 L355,80 
+               L360,110 L358,140 L355,170 L360,200 L365,230 L360,260 L355,290 
+               L345,320 L330,350 L310,370 L280,390 L250,405 L220,415 L190,420 
+               L160,415 L130,400 L105,380 L85,355 L75,325 L70,295 L68,265 
+               L65,235 L62,205 L60,175 L65,145 L75,115 L85,85 L95,60 Z"
+            fill="rgba(34, 197, 94, 0.15)"
+            stroke="rgba(34, 197, 94, 0.5)"
+            strokeWidth="2.5"
           />
-          {/* Lake Victoria */}
-          <ellipse cx="300" cy="350" rx="60" ry="50" fill="rgba(59, 130, 246, 0.3)" />
-          <text x="300" y="355" textAnchor="middle" fill="rgba(59, 130, 246, 0.8)" fontSize="12">Lake Victoria</text>
           
-          {/* Rwenzori Mountains */}
-          <path d="M60,180 L80,140 L100,180 L120,150 L140,190" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="3" />
-          <text x="100" y="210" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="10">Rwenzori Mts</text>
-        </svg>
+          {/* Lake Victoria */}
+          <path
+            d="M240,310 Q280,290 320,310 Q340,340 320,370 Q290,390 260,380 Q230,360 240,330 Z"
+            fill="rgba(59, 130, 246, 0.25)"
+            stroke="rgba(59, 130, 246, 0.4)"
+            strokeWidth="1.5"
+          />
+          <text x="280" y="345" textAnchor="middle" fill="rgba(59, 130, 246, 0.7)" fontSize="11" fontStyle="italic">L. Victoria</text>
+          
+          {/* Lake Albert */}
+          <path
+            d="M75,160 Q85,140 95,160 Q95,200 85,220 Q75,230 70,210 Q65,190 75,160 Z"
+            fill="rgba(59, 130, 246, 0.25)"
+            stroke="rgba(59, 130, 246, 0.4)"
+            strokeWidth="1.5"
+          />
+          <text x="82" y="195" textAnchor="middle" fill="rgba(59, 130, 246, 0.7)" fontSize="9" fontStyle="italic">L. Albert</text>
+          
+          {/* Rwenzori Mountains indicator */}
+          <path d="M90,240 L100,215 L110,235 L120,210 L130,240" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" strokeLinecap="round" />
+          <text x="110" y="255" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="9">Rwenzori Mts</text>
 
-        {/* Coffee Region Markers */}
-        {coffeeRegions.map((region, i) => (
-          <div
-            key={region.name}
-            className={`absolute flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 ${
-              region.highlight ? 'animate-pulse' : ''
-            }`}
-            style={{ top: region.position.top, left: region.position.left }}
-          >
-            <div className={`p-2 rounded-full ${region.highlight ? 'bg-amber-500' : 'bg-green-500/80'}`}>
-              <MapPin className={`h-5 w-5 ${region.highlight ? 'text-black' : 'text-white'}`} />
-            </div>
-            <span className={`mt-1 text-sm font-semibold ${region.highlight ? 'text-amber-400 text-lg' : 'text-white/80'}`}>
-              {region.name}
-            </span>
-            {region.highlight && (
-              <span className="text-amber-300 text-xs">Our HQ</span>
-            )}
-          </div>
-        ))}
+          {/* Kampala marker */}
+          <circle cx="230" cy="260" r="5" fill="rgba(255,255,255,0.8)" />
+          <text x="248" y="264" fill="rgba(255,255,255,0.8)" fontSize="12" fontWeight="bold">Kampala</text>
+
+          {/* Coffee region markers */}
+          {coffeeRegions.map((region) => (
+            <g key={region.name}>
+              <circle
+                cx={region.x}
+                cy={region.y}
+                r={region.highlight ? 10 : 6}
+                fill={region.highlight ? 'rgba(245, 158, 11, 0.9)' : 'rgba(34, 197, 94, 0.8)'}
+                stroke={region.highlight ? '#f59e0b' : '#22c55e'}
+                strokeWidth={region.highlight ? 3 : 1.5}
+              >
+                {region.highlight && (
+                  <animate attributeName="r" values="10;14;10" dur="2s" repeatCount="indefinite" />
+                )}
+              </circle>
+              <text
+                x={region.x}
+                y={region.y - (region.highlight ? 16 : 12)}
+                textAnchor="middle"
+                fill={region.highlight ? '#fbbf24' : 'rgba(255,255,255,0.8)'}
+                fontSize={region.highlight ? '13' : '10'}
+                fontWeight={region.highlight ? 'bold' : 'normal'}
+              >
+                {region.name}
+              </text>
+              {region.highlight && (
+                <text x={region.x} y={region.y + 22} textAnchor="middle" fill="#fbbf24" fontSize="9" fontWeight="bold">
+                  ★ HQ
+                </text>
+              )}
+            </g>
+          ))}
+        </svg>
       </div>
 
-      <div className="mt-6 flex items-center gap-8 text-white/60 text-lg">
+      <div className="flex items-center gap-8 text-white/60 text-lg">
         <span className="flex items-center gap-2">
           <div className="w-4 h-4 bg-amber-500 rounded-full"></div>
-          Headquarters
+          Great Pearl HQ – Kasese
         </span>
         <span className="flex items-center gap-2">
           <div className="w-4 h-4 bg-green-500 rounded-full"></div>
