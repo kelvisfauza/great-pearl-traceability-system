@@ -16,6 +16,7 @@ export interface CoffeeBooking {
   expiry_date: string;
   notes: string | null;
   status: 'active' | 'partially_fulfilled' | 'fulfilled' | 'expired' | 'cancelled';
+  closed_reason?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -138,6 +139,36 @@ export const useCoffeeBookings = () => {
     }
   };
 
+  const closeBooking = async (bookingId: string, reason?: string) => {
+    try {
+      const { error } = await supabase
+        .from('coffee_bookings')
+        .update({ 
+          status: 'closed',
+          notes: reason ? `Closed: ${reason}` : 'Booking closed with partial delivery'
+        })
+        .eq('id', bookingId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Booking closed successfully"
+      });
+
+      await fetchBookings();
+      return true;
+    } catch (error) {
+      console.error('Error closing booking:', error);
+      toast({
+        title: "Error",
+        description: "Failed to close booking",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   const recordDelivery = async (
     bookingId: string,
     deliveredKg: number,
@@ -211,6 +242,7 @@ export const useCoffeeBookings = () => {
     fetchBookings,
     createBooking,
     cancelBooking,
+    closeBooking,
     recordDelivery,
     getBookingDeliveries,
     getSupplierActiveBookings

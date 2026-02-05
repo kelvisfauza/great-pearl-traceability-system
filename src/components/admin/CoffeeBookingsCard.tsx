@@ -21,7 +21,8 @@ const CoffeeBookingsCard = () => {
       partially_fulfilled: { variant: 'secondary', label: 'Partial' },
       fulfilled: { variant: 'outline', label: 'Fulfilled' },
       expired: { variant: 'destructive', label: 'Expired' },
-      cancelled: { variant: 'destructive', label: 'Cancelled' }
+      cancelled: { variant: 'destructive', label: 'Cancelled' },
+      closed: { variant: 'outline', label: 'Closed' }
     };
     const config = variants[status] || { variant: 'outline', label: status };
     return <Badge variant={config.variant}>{config.label}</Badge>;
