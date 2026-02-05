@@ -34,6 +34,7 @@ import Suppliers from "./pages/Suppliers";
 import Approvals from "./pages/Approvals";
 import Verify from "./pages/Verify";
 import CoffeeBookings from "./pages/CoffeeBookings";
+import PriceDisplay from "./pages/PriceDisplay";
 
 // V2 System Pages
 import V2DepartmentRouter from "./components/v2/V2DepartmentRouter";
@@ -124,6 +125,9 @@ const App: React.ComponentType = () => {
                 {/* Public verification route - no auth required */}
                 <Route path="/verify" element={<Verify />} />
                 <Route path="/verify/:code" element={<Verify />} />
+                
+                {/* Public price display for monitors - no auth required */}
+                <Route path="/display" element={<PriceDisplay />} />
                 
                 {/* V2 System Routes - Department-based access */}
                 <Route path="/v2" element={<ProtectedRoute><V2DepartmentRouter /></ProtectedRoute>} />
