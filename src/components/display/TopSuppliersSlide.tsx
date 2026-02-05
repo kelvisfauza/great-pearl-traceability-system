@@ -34,6 +34,18 @@ const TopSuppliersSlide = () => {
 
   const COLORS = ['#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1'];
 
+  if (supplierData.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center px-8 animate-fade-in">
+        <div className="flex items-center gap-4 mb-8">
+          <TrendingUp className="h-12 w-12 text-amber-400" />
+          <h2 className="text-5xl font-bold text-white">Top Suppliers by Volume</h2>
+        </div>
+        <p className="text-white/60 text-2xl">Loading supplier data...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col items-center justify-center px-8 animate-fade-in">
       <div className="flex items-center gap-4 mb-8">

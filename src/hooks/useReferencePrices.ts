@@ -62,10 +62,8 @@ const [prices, setPrices] = useState<ReferencePrices>({
         return;
       }
 
-      // When not signed in yet, market_prices is not readable (RLS), so data can be null.
-      if (!session && !data) return;
-      
-if (data) {
+      // Data can be null if no reference prices exist yet - that's okay
+      if (data) {
         setPrices({
           iceArabica: data.ice_arabica || 185.50,
           robusta: data.robusta || 2450,

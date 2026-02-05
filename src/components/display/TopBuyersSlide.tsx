@@ -40,6 +40,18 @@ const TopBuyersSlide = () => {
     return num.toString();
   };
 
+  if (buyerData.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center px-8 animate-fade-in">
+        <div className="flex items-center gap-4 mb-8">
+          <Users className="h-12 w-12 text-emerald-400" />
+          <h2 className="text-5xl font-bold text-white">Our Trusted Buyers</h2>
+        </div>
+        <p className="text-white/60 text-2xl">Loading buyer data...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col items-center justify-center px-8 animate-fade-in">
       <div className="flex items-center gap-4 mb-8">
