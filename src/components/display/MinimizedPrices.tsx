@@ -1,3 +1,4 @@
+import { memo, useState, useEffect } from 'react';
 import { Coffee, Maximize2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -7,11 +8,17 @@ interface MinimizedPricesProps {
     robustaBuyingPrice: number;
     sortedPrice?: number;
   };
-  currentTime: Date;
   onMaximize: () => void;
 }
 
-const MinimizedPrices = ({ prices, currentTime, onMaximize }: MinimizedPricesProps) => {
+const MinimizedPrices = memo(({ prices, onMaximize }: MinimizedPricesProps) => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-UG', {
       minimumFractionDigits: 0,
@@ -21,7 +28,7 @@ const MinimizedPrices = ({ prices, currentTime, onMaximize }: MinimizedPricesPro
 
   return (
     <div 
-      className="fixed left-0 top-0 bottom-0 w-80 bg-gradient-to-b from-black/90 via-black/80 to-black/90 backdrop-blur-xl border-r border-white/10 z-50 flex flex-col animate-slide-in-right"
+      className="fixed left-0 top-0 bottom-0 w-80 bg-gradient-to-b from-black/90 via-black/80 to-black/90 backdrop-blur-xl border-r border-white/10 z-50 flex flex-col"
       style={{ animation: 'slideInFromLeft 0.5s ease-out forwards' }}
     >
       {/* Header with Logo */}
@@ -36,13 +43,12 @@ const MinimizedPrices = ({ prices, currentTime, onMaximize }: MinimizedPricesPro
 
       {/* Date & Time */}
       <div className="p-4 text-center border-b border-white/10 bg-white/5">
-        <p className="text-white/70 text-sm">{format(currentTime, 'EEEE, MMM d, yyyy')}</p>
-        <p className="text-white text-4xl font-mono font-bold">{format(currentTime, 'HH:mm:ss')}</p>
+        <p className="text-white/70 text-sm">{format(time, 'EEEE, MMM d, yyyy')}</p>
+        <p className="text-white text-4xl font-mono font-bold">{format(time, 'HH:mm:ss')}</p>
       </div>
 
       {/* Prices */}
       <div className="flex-1 p-4 space-y-4">
-        {/* Arabica */}
         <div className="bg-gradient-to-r from-amber-600/30 to-amber-900/20 rounded-xl p-4 border border-amber-500/30">
           <div className="flex items-center gap-3 mb-2">
             <Coffee className="h-6 w-6 text-amber-400" />
@@ -52,7 +58,6 @@ const MinimizedPrices = ({ prices, currentTime, onMaximize }: MinimizedPricesPro
           <p className="text-amber-300/70 text-sm">UGX/KG</p>
         </div>
 
-        {/* Robusta */}
         <div className="bg-gradient-to-r from-emerald-600/30 to-emerald-900/20 rounded-xl p-4 border border-emerald-500/30">
           <div className="flex items-center gap-3 mb-2">
             <Coffee className="h-6 w-6 text-emerald-400" />
@@ -62,7 +67,6 @@ const MinimizedPrices = ({ prices, currentTime, onMaximize }: MinimizedPricesPro
           <p className="text-emerald-300/70 text-sm">UGX/KG</p>
         </div>
 
-        {/* Sorted */}
         <div className="bg-gradient-to-r from-purple-600/30 to-purple-900/20 rounded-xl p-4 border border-purple-500/30">
           <div className="flex items-center gap-3 mb-2">
             <Coffee className="h-6 w-6 text-purple-400" />
@@ -79,7 +83,6 @@ const MinimizedPrices = ({ prices, currentTime, onMaximize }: MinimizedPricesPro
         <span>Live Prices</span>
       </div>
 
-      {/* Maximize Button */}
       <button
         onClick={onMaximize}
         className="m-4 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-white flex items-center justify-center gap-2 transition-all hover:scale-105"
@@ -89,6 +92,8 @@ const MinimizedPrices = ({ prices, currentTime, onMaximize }: MinimizedPricesPro
       </button>
     </div>
   );
-};
+});
+
+MinimizedPrices.displayName = 'MinimizedPrices';
 
 export default MinimizedPrices;
