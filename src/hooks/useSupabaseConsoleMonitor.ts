@@ -121,10 +121,11 @@ class ConsoleCaptureSingleton {
       this.queueLog(logData);
     };
 
-    // Override console methods
+    // Override console methods — only capture warn and error to prevent table bloat
+    // log, info, and debug are too noisy and cause the system_console_logs table to grow unboundedly
     console.log = (...args) => {
       this.originalConsole?.log(...args);
-      captureLog('log', args);
+      // NOT captured to database — too noisy
     };
 
     console.warn = (...args) => {
@@ -139,12 +140,12 @@ class ConsoleCaptureSingleton {
 
     console.info = (...args) => {
       this.originalConsole?.info(...args);
-      captureLog('info', args);
+      // NOT captured to database — too noisy
     };
 
     console.debug = (...args) => {
       this.originalConsole?.debug(...args);
-      captureLog('debug', args);
+      // NOT captured to database — too noisy
     };
 
     // Capture unhandled errors

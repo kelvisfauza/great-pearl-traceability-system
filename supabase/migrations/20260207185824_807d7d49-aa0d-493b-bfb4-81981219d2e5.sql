@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS idx_system_console_logs_created_at ON public.system_console_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_console_logs_level ON public.system_console_logs (level);
