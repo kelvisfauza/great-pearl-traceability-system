@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
@@ -10,6 +10,7 @@ interface TickerItem {
 
 const LiveTicker = () => {
   const [items, setItems] = useState<TickerItem[]>([]);
+  const prevItemsRef = useRef<string>('');
 
   const fetchTickerData = async () => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -51,12 +52,18 @@ const LiveTicker = () => {
       tickerItems.push({ id: 'w', text: '☕ Welcome to Great Pearl Coffee – Quality Coffee from the Rwenzori Mountains | Call: +256 393 001 626', type: 'info' });
     }
 
-    setItems(tickerItems);
+    // Only update state if data actually changed — prevents animation restart
+    const newKey = JSON.stringify(tickerItems.map(i => i.text));
+    if (newKey !== prevItemsRef.current) {
+      prevItemsRef.current = newKey;
+      setItems(tickerItems);
+    }
   };
 
   useEffect(() => {
     fetchTickerData();
-    const interval = setInterval(fetchTickerData, 30000);
+    // Poll every 2 minutes instead of 30s — ticker data doesn't change that fast
+    const interval = setInterval(fetchTickerData, 120000);
     const channel = supabase
       .channel('ticker-updates')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'coffee_records' }, () => fetchTickerData())
@@ -66,7 +73,7 @@ const LiveTicker = () => {
   }, []);
 
   const displayItems = [...items, ...items, ...items];
-  const animDuration = Math.max(30, items.length * 8);
+  const animDuration = Math.max(40, items.length * 10);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-amber-900 via-amber-800 to-amber-900 text-white py-3 overflow-hidden z-50 border-t-2 border-amber-500/50">

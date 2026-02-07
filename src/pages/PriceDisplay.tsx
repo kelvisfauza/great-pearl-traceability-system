@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef, memo } from 'react';
 import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { useDisplayData } from '@/hooks/useDisplayData';
 import { Coffee, RefreshCw, Minimize2 } from 'lucide-react';
@@ -17,18 +17,39 @@ import LiveTicker from '@/components/display/LiveTicker';
 const SLIDES = ['map', 'suppliers', 'buyers', 'stats', 'quality', 'traceability', 'milling', 'contact'] as const;
 type SlideType = typeof SLIDES[number];
 
-const SLIDE_DURATION = 10000; // 10 seconds per slide
-const PRICE_DISPLAY_DURATION = 12000; // 12 seconds on full price view
+const SLIDE_DURATION = 10000;
+const PRICE_DISPLAY_DURATION = 15000; // 15 seconds on full price view
+
+// Memoized clock component to avoid re-rendering the entire page every second
+const DigitalClock = memo(({ className }: { className?: string }) => {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return <span className={className}>{format(time, 'HH:mm:ss')}</span>;
+});
+DigitalClock.displayName = 'DigitalClock';
+
+const DateDisplay = memo(({ className }: { className?: string }) => {
+  const [date, setDate] = useState(new Date());
+  // Only update date once a minute
+  useEffect(() => {
+    const timer = setInterval(() => setDate(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+  return <span className={className}>{format(date, 'EEEE, MMMM d, yyyy')}</span>;
+});
+DateDisplay.displayName = 'DateDisplay';
 
 const PriceDisplay = () => {
   const { prices, loading, fetchPrices } = useReferencePrices();
   const displayData = useDisplayData();
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
   const [showFullPrices, setShowFullPrices] = useState(true);
-  const [currentSlide, setCurrentSlide] = useState<SlideType>('map');
   const [slideIndex, setSlideIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const slideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Keep screen awake
   useEffect(() => {
@@ -44,62 +65,68 @@ const PriceDisplay = () => {
     };
 
     requestWakeLock();
-    document.addEventListener('visibilitychange', () => {
+    const handleVisibility = () => {
       if (document.visibilityState === 'visible') requestWakeLock();
-    });
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
-    return () => { wakeLock?.release(); };
+    return () => {
+      wakeLock?.release();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
-  // Update clock
+  // Auto-refresh prices every 60s (not 30s — less aggressive)
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Auto-refresh prices
-  useEffect(() => {
-    const interval = setInterval(fetchPrices, 30000);
+    const interval = setInterval(fetchPrices, 60000);
     return () => clearInterval(interval);
   }, [fetchPrices]);
 
-  // Main slideshow logic
+  // Slideshow logic — single effect manages both modes
   useEffect(() => {
-    if (!showFullPrices) {
-      // Rotate slides
-      const interval = setInterval(() => {
-        setIsTransitioning(true);
-        setTimeout(() => {
-          setSlideIndex(prev => (prev + 1) % SLIDES.length);
-          setIsTransitioning(false);
-        }, 300);
-      }, SLIDE_DURATION);
-      return () => clearInterval(interval);
-    } else {
+    if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
+
+    if (showFullPrices) {
       // After showing full prices, transition to slideshow
-      const timeout = setTimeout(() => {
+      slideTimerRef.current = setTimeout(() => {
         setIsTransitioning(true);
         setTimeout(() => {
           setShowFullPrices(false);
           setSlideIndex(0);
           setIsTransitioning(false);
-        }, 500);
+        }, 400);
       }, PRICE_DISPLAY_DURATION);
-      return () => clearTimeout(timeout);
+    } else {
+      // Rotate slides
+      slideTimerRef.current = setTimeout(() => {
+        setIsTransitioning(true);
+        setTimeout(() => {
+          setSlideIndex(prev => {
+            const next = (prev + 1) % SLIDES.length;
+            // When we loop back to 0, show full prices again
+            if (next === 0) {
+              setShowFullPrices(true);
+              return 0;
+            }
+            return next;
+          });
+          setIsTransitioning(false);
+        }, 300);
+      }, SLIDE_DURATION);
     }
-  }, [showFullPrices]);
 
-  useEffect(() => {
-    if (!showFullPrices) {
-      setCurrentSlide(SLIDES[slideIndex]);
-    }
-  }, [slideIndex, showFullPrices]);
+    return () => {
+      if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
+    };
+  }, [showFullPrices, slideIndex]);
+
+  const currentSlide = SLIDES[slideIndex];
 
   const handleMaximize = useCallback(() => {
     setIsTransitioning(true);
     setTimeout(() => {
       setShowFullPrices(true);
-      setCurrentSlide('map');
+      setSlideIndex(0);
       setIsTransitioning(false);
     }, 300);
   }, []);
@@ -120,7 +147,7 @@ const PriceDisplay = () => {
     }).format(value);
   };
 
-  if (loading) {
+  if (loading && !displayData.loaded) {
     return (
       <div className="min-h-screen bg-[#0d3d1f] flex items-center justify-center">
         <div className="animate-spin">
@@ -154,25 +181,20 @@ const PriceDisplay = () => {
   if (!showFullPrices) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white overflow-hidden pb-16">
-        {/* Minimized Prices Sidebar - TV Style */}
         <MinimizedPrices 
           prices={prices} 
-          currentTime={currentTime} 
           onMaximize={handleMaximize} 
         />
 
-        {/* Main Slide Content - Pushed right for sidebar */}
         <div className="ml-80 min-h-screen flex flex-col pb-16">
           <div className="flex-1 flex items-center justify-center p-8">
             {renderSlide()}
           </div>
 
-          {/* Bottom Bar with Slide Indicators */}
           <div className="pb-20 flex flex-col items-center gap-4">
-            {/* Progress bar for current slide */}
             <div className="w-64 h-1 bg-white/20 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-green-400 rounded-full transition-all"
+                className="h-full bg-green-400 rounded-full"
                 style={{ 
                   animation: `progressBar ${SLIDE_DURATION}ms linear`,
                   width: '100%'
@@ -181,7 +203,6 @@ const PriceDisplay = () => {
               />
             </div>
             
-            {/* Slide dots */}
             <div className="flex gap-2">
               {SLIDES.map((slide, i) => (
                 <button
@@ -202,10 +223,8 @@ const PriceDisplay = () => {
           </div>
         </div>
 
-        {/* Live Ticker at Bottom */}
         <LiveTicker />
 
-        {/* CSS for progress animation */}
         <style>{`
           @keyframes progressBar {
             from { width: 0%; }
@@ -238,8 +257,10 @@ const PriceDisplay = () => {
 
       {/* Date and Time */}
       <div className="text-center mb-12">
-        <p className="text-4xl font-light">{format(currentTime, 'EEEE, MMMM d, yyyy')}</p>
-        <p className="text-6xl font-bold mt-2 font-mono">{format(currentTime, 'HH:mm:ss')}</p>
+        <DateDisplay className="text-4xl font-light" />
+        <div className="mt-2">
+          <DigitalClock className="text-6xl font-bold font-mono" />
+        </div>
       </div>
 
       {/* Price Cards */}
@@ -330,7 +351,7 @@ const PriceDisplay = () => {
             <span>Live Prices</span>
           </div>
           <span>•</span>
-          <span>Updates every 30 seconds</span>
+          <span>Updates every 60 seconds</span>
           {prices.lastUpdated && (
             <>
               <span>•</span>
