@@ -13,8 +13,9 @@ import CoffeeMapSlide from '@/components/display/CoffeeMapSlide';
 import QualityProcessSlide from '@/components/display/QualityProcessSlide';
 import ContactSlide from '@/components/display/ContactSlide';
 import LiveTicker from '@/components/display/LiveTicker';
+import DirectorateSlide from '@/components/display/DirectorateSlide';
 
-const SLIDES = ['map', 'suppliers', 'buyers', 'stats', 'quality', 'traceability', 'milling', 'contact'] as const;
+const SLIDES = ['map', 'directorate', 'suppliers', 'buyers', 'stats', 'quality', 'traceability', 'milling', 'contact'] as const;
 type SlideType = typeof SLIDES[number];
 
 const SLIDE_DURATION = 10000;
@@ -187,6 +188,7 @@ const PriceDisplay = () => {
 
     switch (currentSlide) {
       case 'map': return <SlideWrapper><CoffeeMapSlide /></SlideWrapper>;
+      case 'directorate': return <SlideWrapper><DirectorateSlide /></SlideWrapper>;
       case 'suppliers': return <SlideWrapper><TopSuppliersSlide data={displayData.topSuppliers} /></SlideWrapper>;
       case 'buyers': return <SlideWrapper><TopBuyersSlide data={displayData.topBuyers} /></SlideWrapper>;
       case 'stats': return <SlideWrapper><SupplierStatsSlide totalSuppliers={displayData.totalSuppliers} totalKgs={displayData.totalKgs} avgPerSupplier={displayData.avgPerSupplier} topDistricts={displayData.topDistricts} /></SlideWrapper>;
