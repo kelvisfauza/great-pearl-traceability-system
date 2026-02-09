@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef, memo } from 'react';
 import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { useDisplayData } from '@/hooks/useDisplayData';
-import { Coffee, RefreshCw, Minimize2 } from 'lucide-react';
+import { Coffee, RefreshCw, Minimize2, Maximize } from 'lucide-react';
 import { format } from 'date-fns';
 import MinimizedPrices from '@/components/display/MinimizedPrices';
 import TopSuppliersSlide from '@/components/display/TopSuppliersSlide';
@@ -49,7 +49,28 @@ const PriceDisplay = () => {
   const [showFullPrices, setShowFullPrices] = useState(true);
   const [slideIndex, setSlideIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const slideTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.log('Fullscreen failed:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
 
   // Keep screen awake
   useEffect(() => {
@@ -180,7 +201,15 @@ const PriceDisplay = () => {
   // Slideshow view with TV-style sidebar
   if (!showFullPrices) {
     return (
-      <div className="h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white overflow-hidden">
+      <div className="h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white overflow-hidden relative">
+        {/* Fullscreen button */}
+        <button
+          onClick={toggleFullscreen}
+          className="absolute top-4 right-4 z-50 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-all hover:scale-110"
+          title={isFullscreen ? 'Exit Fullscreen' : 'View Fullscreen'}
+        >
+          <Maximize className="h-5 w-5" />
+        </button>
         <MinimizedPrices 
           prices={prices} 
           onMaximize={handleMaximize} 
@@ -241,7 +270,15 @@ const PriceDisplay = () => {
 
   // Full Prices View
   return (
-    <div className={`h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white p-8 flex flex-col overflow-hidden transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+    <div className={`h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white p-8 flex flex-col overflow-hidden relative transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+      {/* Fullscreen button */}
+      <button
+        onClick={toggleFullscreen}
+        className="absolute top-4 right-4 z-50 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-all hover:scale-110"
+        title={isFullscreen ? 'Exit Fullscreen' : 'View Fullscreen'}
+      >
+        <Maximize className="h-5 w-5" />
+      </button>
       {/* Header */}
       <div className="text-center mb-8">
         <div className="flex items-center justify-center gap-4 mb-4">
