@@ -150,18 +150,36 @@ const NewSaleForm = () => {
       if (error) throw error;
 
       // Deduct from V2 inventory batches using FIFO
+      const saleId = insertedSale?.id;
+      if (!saleId) {
+        throw new Error('Sale was not created properly - no ID returned');
+      }
+
       const { data: deductions, error: deductError } = await supabase
         .rpc('deduct_from_inventory_batches', {
           p_coffee_type: formData.coffee_type,
           p_quantity_kg: parseFloat(formData.weight),
-          p_sale_id: insertedSale?.id || null,
+          p_sale_id: saleId,
           p_customer: formData.customer
         });
 
       if (deductError) {
-        console.error('Error deducting from inventory batches:', deductError);
+        console.error('❌ Inventory deduction failed:', deductError);
+        toast({
+          title: "Warning: Inventory Not Updated",
+          description: `Sale recorded but inventory was NOT deducted: ${deductError.message}. Please contact admin.`,
+          variant: "destructive"
+        });
+      } else if (!deductions || deductions.length === 0) {
+        console.warn('⚠️ No inventory batches were deducted - possibly no matching stock');
+        toast({
+          title: "Warning: No Stock Deducted",
+          description: "Sale recorded but no matching inventory batches found to deduct from.",
+          variant: "destructive"
+        });
       } else {
-        console.log('Inventory batch deductions:', deductions);
+        const totalDeducted = deductions.reduce((sum: number, d: any) => sum + Number(d.deducted_kg), 0);
+        console.log(`✅ Deducted ${totalDeducted}kg from ${deductions.length} batches:`, deductions);
       }
 
       // Store sale data for delivery note
