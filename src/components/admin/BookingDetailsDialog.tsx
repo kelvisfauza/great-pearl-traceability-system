@@ -127,7 +127,7 @@ Thank you for your business with Great Pearl Coffee.`;
     );
   };
 
-  const maxAllowedTotal = booking.booked_quantity_kg * 1.5;
+  const maxAllowedTotal = booking.booked_quantity_kg * 1.6;
   const maxDeliveryNow = maxAllowedTotal - booking.delivered_quantity_kg;
 
   const handleRecordDelivery = async () => {
