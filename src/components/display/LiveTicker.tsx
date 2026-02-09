@@ -72,8 +72,8 @@ const LiveTicker = () => {
     return () => { clearInterval(interval); supabase.removeChannel(channel); };
   }, []);
 
-  const displayItems = [...items, ...items, ...items];
-  const animDuration = Math.max(15, items.length * 4);
+  const displayItems = [...items, ...items, ...items, ...items];
+  const animDuration = Math.max(6, items.length * 1.5);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-amber-900 via-amber-800 to-amber-900 text-white py-3 overflow-hidden z-50 border-t-2 border-amber-500/50">
@@ -94,7 +94,7 @@ const LiveTicker = () => {
       <style>{`
         @keyframes ticker {
           0% { transform: translateX(0); }
-          100% { transform: translateX(-33.33%); }
+          100% { transform: translateX(-25%); }
         }
       `}</style>
     </div>

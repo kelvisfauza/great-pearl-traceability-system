@@ -180,13 +180,13 @@ const PriceDisplay = () => {
   // Slideshow view with TV-style sidebar
   if (!showFullPrices) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white overflow-hidden pb-16">
+      <div className="h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white overflow-hidden">
         <MinimizedPrices 
           prices={prices} 
           onMaximize={handleMaximize} 
         />
 
-        <div className="ml-80 min-h-screen flex flex-col pb-16">
+        <div className="ml-80 h-screen flex flex-col pb-14">
           <div className="flex-1 flex items-center justify-center p-8">
             {renderSlide()}
           </div>
@@ -241,7 +241,7 @@ const PriceDisplay = () => {
 
   // Full Prices View
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white p-8 flex flex-col transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+    <div className={`h-screen bg-gradient-to-br from-[#0d3d1f] via-[#1a5c35] to-[#0d3d1f] text-white p-8 flex flex-col overflow-hidden transition-all duration-500 ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
       {/* Header */}
       <div className="text-center mb-8">
         <div className="flex items-center justify-center gap-4 mb-4">
