@@ -35,18 +35,19 @@ const DirectorateSlide = () => {
       </div>
 
       {/* Main featured image */}
-      <div className="relative rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl mx-auto" style={{ maxHeight: '55vh' }}>
-        <img
-          src={current.src}
-          alt={current.caption}
-          className="w-full h-full object-cover transition-opacity duration-700"
-          style={{ maxHeight: '55vh' }}
-        />
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
-          <p className="text-2xl font-semibold text-white">{current.caption}</p>
-          <p className="text-white/60 text-sm">Great Pearl Coffee • Kasese, Uganda</p>
+        <div className="relative rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl mx-auto" style={{ maxHeight: '55vh' }}>
+          <img
+            key={activeIndex}
+            src={current.src}
+            alt={current.caption}
+            className="w-full object-contain bg-black/40"
+            style={{ maxHeight: '55vh', display: 'block', margin: '0 auto' }}
+          />
+          <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-6 py-3">
+            <p className="text-2xl font-semibold text-white">{current.caption}</p>
+            <p className="text-white/60 text-sm">Great Pearl Coffee • Kasese, Uganda</p>
+          </div>
         </div>
-      </div>
 
       {/* Thumbnail strip */}
       <div className="flex justify-center gap-2 mt-4">
