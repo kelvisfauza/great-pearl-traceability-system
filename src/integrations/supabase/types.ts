@@ -6325,6 +6325,14 @@ export type Database = {
     }
     Functions: {
       admin_delete_all_system_data: { Args: never; Returns: Json }
+      bulk_deduct_unprocessed_sales: {
+        Args: { p_coffee_type?: string }
+        Returns: {
+          sales_processed: number
+          sales_short: number
+          total_deducted: number
+        }[]
+      }
       calculate_daily_salary_credit: {
         Args: { employee_salary: number }
         Returns: number
