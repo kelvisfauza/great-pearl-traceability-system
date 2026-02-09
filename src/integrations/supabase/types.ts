@@ -6461,6 +6461,14 @@ export type Database = {
           request_type: string
         }[]
       }
+      sync_unlinked_coffee_to_batches: {
+        Args: { p_coffee_type?: string }
+        Returns: {
+          batches_created: number
+          records_linked: number
+          total_kg: number
+        }[]
+      }
       test_rls_auth_context: {
         Args: never
         Returns: {
