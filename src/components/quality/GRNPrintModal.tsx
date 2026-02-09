@@ -212,43 +212,42 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
 /** Compact print styles optimized for single-page A4 GRN */
 function getGRNPrintStyles(): string {
   return `
-    @page { margin: 10mm 12mm; size: A4; }
+    @page { margin: 8mm 10mm; size: A4; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; font-size: 11px; color: #333; line-height: 1.3; }
+    body { font-family: Arial, sans-serif; font-size: 10px; color: #333; line-height: 1.2; }
 
-    .grn-header { border-bottom: 2px solid #1a365d; padding-bottom: 6px; margin-bottom: 8px; }
-    .grn-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-    .grn-logo-section { display: flex; align-items: center; gap: 8px; }
-    .grn-logo-bg { background: #0d3d1f; padding: 4px 10px; border-radius: 4px; }
-    .grn-logo { height: 28px !important; width: auto !important; display: block !important; }
-    .grn-company-info { }
-    .grn-company-name { font-size: 14px; font-weight: bold; color: #1a365d; margin: 0; }
-    .grn-tagline { font-size: 8px; color: #666; margin: 0; }
-    .grn-contact { font-size: 8px; color: #666; margin: 0; }
+    .grn-header { border-bottom: 2px solid #1a365d; padding-bottom: 4px; margin-bottom: 6px; }
+    .grn-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+    .grn-logo-section { display: flex; align-items: center; gap: 6px; }
+    .grn-logo-bg { background: #0d3d1f; padding: 3px 8px; border-radius: 3px; }
+    .grn-logo { height: 24px !important; width: auto !important; display: block !important; }
+    .grn-company-name { font-size: 13px; font-weight: bold; color: #1a365d; margin: 0; }
+    .grn-tagline { font-size: 7px; color: #666; margin: 0; }
+    .grn-contact { font-size: 7px; color: #666; margin: 0; }
 
     .grn-qr-section { text-align: center; }
-    .grn-qr { width: 55px !important; height: 55px !important; display: block !important; }
-    .grn-verify-code { font-family: monospace; font-size: 8px; font-weight: bold; color: #0d3d1f; margin-top: 2px; }
+    .grn-qr { width: 48px !important; height: 48px !important; display: block !important; }
+    .grn-verify-code { font-family: monospace; font-size: 7px; font-weight: bold; color: #0d3d1f; margin-top: 1px; }
 
-    .grn-doc-title { text-align: center; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 4px 0; }
-    .grn-doc-meta { display: flex; justify-content: center; gap: 20px; font-size: 9px; color: #666; }
+    .grn-doc-title { text-align: center; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 3px 0; }
+    .grn-doc-meta { display: flex; justify-content: center; gap: 16px; font-size: 8px; color: #666; }
 
-    .grn-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 16px; margin: 8px 0; padding: 6px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; }
-    .grn-detail { font-size: 11px; padding: 2px 0; }
-    .grn-total { font-size: 12px; color: #1a365d; }
+    .grn-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; margin: 6px 0; padding: 4px 6px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 3px; }
+    .grn-detail { font-size: 10px; padding: 1px 0; }
+    .grn-total { font-size: 11px; color: #1a365d; }
 
-    .grn-quality-section { margin: 8px 0; }
-    .grn-section-title { font-size: 11px; font-weight: bold; padding: 3px 6px; background: #f0f4f8; border-left: 3px solid #1a365d; margin-bottom: 4px; }
-    .grn-quality-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-    .grn-quality-table th { background: #f0f4f8; border: 1px solid #d1d5db; padding: 3px 4px; text-align: center; font-weight: 600; font-size: 9px; }
-    .grn-quality-table td { border: 1px solid #d1d5db; padding: 3px 4px; text-align: center; }
+    .grn-quality-section { margin: 6px 0; }
+    .grn-section-title { font-size: 10px; font-weight: bold; padding: 2px 5px; background: #f0f4f8; border-left: 3px solid #1a365d; margin-bottom: 3px; }
+    .grn-quality-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+    .grn-quality-table th { background: #f0f4f8; border: 1px solid #d1d5db; padding: 2px 3px; text-align: center; font-weight: 600; font-size: 8px; }
+    .grn-quality-table td { border: 1px solid #d1d5db; padding: 2px 3px; text-align: center; }
 
-    .grn-signatures { display: flex; justify-content: space-between; margin-top: 20px; }
-    .grn-sig-block { text-align: center; flex: 1; margin: 0 8px; font-size: 10px; }
-    .grn-sig-line { border-top: 1px solid #000; margin: 25px auto 4px; width: 120px; }
-    .grn-sig-sub { font-size: 8px; color: #666; }
+    .grn-signatures { display: flex; justify-content: space-between; margin-top: 14px; }
+    .grn-sig-block { text-align: center; flex: 1; margin: 0 6px; font-size: 9px; }
+    .grn-sig-line { border-top: 1px solid #000; margin: 18px auto 3px; width: 100px; }
+    .grn-sig-sub { font-size: 7px; color: #666; }
 
-    .grn-footer { text-align: center; font-size: 8px; color: #888; border-top: 1px solid #ddd; padding-top: 6px; margin-top: 12px; }
+    .grn-footer { text-align: center; font-size: 7px; color: #888; border-top: 1px solid #ddd; padding-top: 4px; margin-top: 8px; }
 
     .no-print { display: none !important; }
     @media screen { body { padding: 15px; } }
