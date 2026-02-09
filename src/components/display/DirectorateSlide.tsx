@@ -18,7 +18,7 @@ const DirectorateSlide = () => {
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveIndex(prev => (prev + 1) % staffImages.length);
-    }, 3000);
+    }, 6000);
     return () => clearInterval(timer);
   }, []);
 
