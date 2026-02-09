@@ -127,11 +127,14 @@ Thank you for your business with Great Pearl Coffee.`;
     );
   };
 
+  const maxAllowedTotal = booking.booked_quantity_kg * 1.4;
+  const maxDeliveryNow = maxAllowedTotal - booking.delivered_quantity_kg;
+
   const handleRecordDelivery = async () => {
     if (!deliveryKg || parseFloat(deliveryKg) <= 0) return;
     
     const kg = parseFloat(deliveryKg);
-    if (kg > booking.remaining_quantity_kg) {
+    if (kg > maxDeliveryNow) {
       return;
     }
 
@@ -253,14 +256,14 @@ Thank you for your business with Great Pearl Coffee.`;
                 <div className="flex gap-2">
                   <Input
                     type="number"
-                    placeholder={`Max: ${booking.remaining_quantity_kg.toLocaleString()} kg`}
+                    placeholder={`Max: ${Math.max(0, maxDeliveryNow).toLocaleString()} kg`}
                     value={deliveryKg}
                     onChange={(e) => setDeliveryKg(e.target.value)}
-                    max={booking.remaining_quantity_kg}
+                    max={maxDeliveryNow}
                   />
                   <Button 
                     onClick={handleRecordDelivery}
-                    disabled={loading || !deliveryKg || parseFloat(deliveryKg) <= 0 || parseFloat(deliveryKg) > booking.remaining_quantity_kg}
+                    disabled={loading || !deliveryKg || parseFloat(deliveryKg) <= 0 || parseFloat(deliveryKg) > maxDeliveryNow}
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4 mr-1" />}
                     Record
