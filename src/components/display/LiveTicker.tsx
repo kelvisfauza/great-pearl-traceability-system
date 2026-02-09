@@ -73,7 +73,7 @@ const LiveTicker = () => {
   }, []);
 
   const displayItems = [...items, ...items, ...items];
-  const animDuration = Math.max(40, items.length * 10);
+  const animDuration = Math.max(15, items.length * 4);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-amber-900 via-amber-800 to-amber-900 text-white py-3 overflow-hidden z-50 border-t-2 border-amber-500/50">
