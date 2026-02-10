@@ -16,7 +16,8 @@ import {
   Coffee,
   ShoppingCart,
   Receipt,
-  Eye
+  Eye,
+  Monitor
 } from "lucide-react";
 import SupplierAdvanceModal from "@/components/finance/SupplierAdvanceModal";
 import IssueReceiptModal from "@/components/finance/IssueReceiptModal";
@@ -33,6 +34,14 @@ const QuickActions = () => {
   if (!employee) return null;
 
   const allActions = [
+    {
+      title: "Price Display",
+      description: "Open price monitor display",
+      icon: Monitor,
+      color: "bg-rose-600 hover:bg-rose-700",
+      action: () => window.open('/display', '_blank'),
+      access: access.canManageInventory || access.canViewSales
+    },
     {
       title: "Store Preview",
       description: "View recent transactions",
