@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const EUDRDispatchReportsPage = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
-  const { reports, loading } = useEUDRDispatchReports();
+  const { reports, loading, fetchReports } = useEUDRDispatchReports();
 
   // Only admins/managers can view all reports
   const canViewAll = hasPermission('Administrator') || hasPermission('Managing Director');
@@ -48,7 +48,7 @@ const EUDRDispatchReportsPage = () => {
           </div>
         </div>
 
-        <EUDRDispatchReportsList reports={reports} showAll={true} />
+        <EUDRDispatchReportsList reports={reports} showAll={true} onRefresh={fetchReports} />
       </div>
     </div>
   );

@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Download, FileText, Truck, Calendar } from 'lucide-react';
+import { Eye, Download, FileText, Truck, Calendar, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useAuth } from '@/contexts/AuthContext';
+import EditDispatchReportModal from './EditDispatchReportModal';
 
 interface TruckData {
   truck_number: string;
@@ -51,10 +53,14 @@ interface DispatchReport {
 interface EUDRDispatchReportsListProps {
   reports: DispatchReport[];
   showAll?: boolean;
+  onRefresh?: () => void;
 }
 
-const EUDRDispatchReportsList = ({ reports, showAll = false }: EUDRDispatchReportsListProps) => {
+const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDispatchReportsListProps) => {
   const displayReports = showAll ? reports : reports.slice(0, 5);
+  const { hasPermission } = useAuth();
+  const isAdmin = hasPermission('Administrator') || hasPermission('Managing Director');
+  const [editingReport, setEditingReport] = useState<DispatchReport | null>(null);
 
   if (reports.length === 0) {
     return (
@@ -125,39 +131,54 @@ const EUDRDispatchReportsList = ({ reports, showAll = false }: EUDRDispatchRepor
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{report.created_by_name}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>Dispatch Comparison Report Details</DialogTitle>
-                          </DialogHeader>
-                          <DispatchReportDetail report={report} />
-                        </DialogContent>
-                      </Dialog>
-                      
-                      {report.attachment_url && (
-                        <Button variant="ghost" size="sm" asChild>
-                          <a href={report.attachment_url} target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-};
+                     <div className="flex items-center gap-2">
+                       <Dialog>
+                         <DialogTrigger asChild>
+                           <Button variant="ghost" size="sm">
+                             <Eye className="h-4 w-4" />
+                           </Button>
+                         </DialogTrigger>
+                         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                           <DialogHeader>
+                             <DialogTitle>Dispatch Comparison Report Details</DialogTitle>
+                           </DialogHeader>
+                           <DispatchReportDetail report={report} />
+                         </DialogContent>
+                       </Dialog>
+                       
+                       {isAdmin && (
+                         <Button variant="ghost" size="sm" onClick={() => setEditingReport(report)}>
+                           <Pencil className="h-4 w-4" />
+                         </Button>
+                       )}
+
+                       {report.attachment_url && (
+                         <Button variant="ghost" size="sm" asChild>
+                           <a href={report.attachment_url} target="_blank" rel="noopener noreferrer">
+                             <Download className="h-4 w-4" />
+                           </a>
+                         </Button>
+                       )}
+                     </div>
+                   </TableCell>
+                 </TableRow>
+               );
+             })}
+           </TableBody>
+         </Table>
+
+         {editingReport && (
+           <EditDispatchReportModal
+             open={!!editingReport}
+             onClose={() => setEditingReport(null)}
+             report={editingReport}
+             onUpdated={() => onRefresh?.()}
+           />
+         )}
+       </CardContent>
+     </Card>
+   );
+ };
 
 const DispatchReportDetail = ({ report }: { report: DispatchReport }) => {
   const trucks = Array.isArray(report.trucks) ? report.trucks : [];
