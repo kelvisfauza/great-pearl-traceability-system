@@ -58,8 +58,8 @@ interface EUDRDispatchReportsListProps {
 
 const EUDRDispatchReportsList = ({ reports, showAll = false, onRefresh }: EUDRDispatchReportsListProps) => {
   const displayReports = showAll ? reports : reports.slice(0, 5);
-  const { hasPermission } = useAuth();
-  const isAdmin = hasPermission('Administrator') || hasPermission('Managing Director');
+  const { hasPermission, employee } = useAuth();
+  const isAdmin = hasPermission('Administrator') || hasPermission('Managing Director') || employee?.role === 'Administrator' || employee?.role === 'Managing Director';
   const [editingReport, setEditingReport] = useState<DispatchReport | null>(null);
 
   if (reports.length === 0) {
