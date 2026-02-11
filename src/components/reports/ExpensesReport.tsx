@@ -70,14 +70,14 @@ export const ExpensesReport = () => {
   const approvedSalaryRequests = [
     ...allExpenses.filter(req =>
       req.financeApprovedAt &&
-      (req.type === 'Employee Salary Request' || req.type === 'Salary Payment')
+      (req.type === 'Employee Salary Request' || req.type === 'Salary Payment' || req.type === 'Salary Request')
     ),
     ...approvedMoneyRequests
   ];
 
   const approvedRequisitions = allExpenses.filter(req =>
     req.financeApprovedAt &&
-    req.type === 'Requisition'
+    (req.type === 'Requisition' || req.type === 'Cash Requisition')
   );
 
   // Filter completed overtime awards
