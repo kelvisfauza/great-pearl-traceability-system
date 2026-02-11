@@ -164,13 +164,78 @@ serve(async (req) => {
             console.error('Failed to log SMS to database:', dbError);
           }
 
+          // Also send WhatsApp message via Infobip
+          let whatsappResult = null;
+          try {
+            const infobipApiKey = Deno.env.get('INFOBIP_API_KEY');
+            const infobipBaseUrl = Deno.env.get('INFOBIP_BASE_URL');
+            
+            if (infobipApiKey && infobipBaseUrl) {
+              // Format phone for Infobip (digits only, no +)
+              const waPhone = formattedPhone.replace('+', '');
+              
+              console.log('Also sending WhatsApp to:', waPhone);
+              
+              const waResponse = await fetch(`https://${infobipBaseUrl}/whatsapp/1/message/text`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `App ${infobipApiKey}`,
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                  from: "447860088970",
+                  to: waPhone,
+                  content: {
+                    text: message
+                  }
+                })
+              });
+              
+              const waText = await waResponse.text();
+              console.log('WhatsApp response:', waResponse.status, waText);
+              
+              try {
+                whatsappResult = JSON.parse(waText);
+              } catch {
+                whatsappResult = { raw: waText };
+              }
+
+              // Log WhatsApp message
+              try {
+                await supabase.from('sms_logs').insert({
+                  recipient_phone: waPhone,
+                  recipient_name: userName,
+                  recipient_email: recipientEmail,
+                  message_content: message,
+                  message_type: (messageType || 'general') + '_whatsapp',
+                  status: waResponse.ok ? 'sent' : 'failed',
+                  provider: 'WhatsApp-Infobip',
+                  provider_response: whatsappResult,
+                  credits_used: 1,
+                  department: department,
+                  triggered_by: triggeredBy || userId,
+                  request_id: requestId,
+                  failure_reason: waResponse.ok ? null : waText
+                });
+              } catch (dbErr) {
+                console.error('Failed to log WhatsApp:', dbErr);
+              }
+            } else {
+              console.log('Infobip not configured, skipping WhatsApp');
+            }
+          } catch (waError) {
+            console.error('WhatsApp send failed (non-blocking):', waError.message);
+          }
+
           return new Response(
             JSON.stringify({ 
               success: true, 
               message: 'SMS sent successfully',
               phone: formattedPhone,
               provider: 'YoolaSMS',
-              details: smsResult
+              details: smsResult,
+              whatsapp: whatsappResult ? { sent: true, details: whatsappResult } : { sent: false }
             }),
             { 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
