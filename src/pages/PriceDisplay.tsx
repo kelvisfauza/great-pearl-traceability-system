@@ -119,7 +119,8 @@ const PriceDisplay = () => {
         }, 400);
       }, PRICE_DISPLAY_DURATION);
     } else {
-      // Rotate slides
+      // Directorate slide gets extra time to show all staff images
+      const duration = SLIDES[slideIndex] === 'directorate' ? 96000 : SLIDE_DURATION;
       slideTimerRef.current = setTimeout(() => {
         setIsTransitioning(true);
         setTimeout(() => {
@@ -134,7 +135,7 @@ const PriceDisplay = () => {
           });
           setIsTransitioning(false);
         }, 300);
-      }, SLIDE_DURATION);
+      }, duration);
     }
 
     return () => {
