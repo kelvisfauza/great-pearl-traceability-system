@@ -9,9 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Loader2, CheckCircle, XCircle, Printer } from "lucide-react";
+import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import GRNPrintModal from "@/components/quality/GRNPrintModal";
 
 interface QualityAssessmentFormProps {
   lot: any;
@@ -37,8 +36,6 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isRejecting, setIsRejecting] = useState(false);
-  const [showGRNModal, setShowGRNModal] = useState(false);
-  const [grnData, setGrnData] = useState<any>(null);
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm<AssessmentForm>({
     defaultValues: {
@@ -62,13 +59,13 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   const isArabica = lot.coffee_type?.toLowerCase().includes('arabica');
   const shouldAutoReject = isArabica && (robustaPercentage > 3 || g1Percentage > 12);
 
-  const approveAssessment = useMutation({
+  const submitForPricing = useMutation({
     mutationFn: async (data: AssessmentForm) => {
-      // 1. Create quality assessment using existing table structure
+      // 1. Create quality assessment with status 'pending_admin_pricing'
       const { data: assessment, error: assessError } = await supabase
         .from('quality_assessments')
         .insert({
-          store_record_id: lot.id,  // Use store_record_id as it exists in the table
+          store_record_id: lot.id,
           batch_number: lot.batch_number,
           assessed_by: employee?.email || '',
           date_assessed: new Date().toISOString().split('T')[0],
@@ -80,79 +77,30 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           fm: data.fm_percentage,
           outturn: data.outturn_percentage,
           suggested_price: data.unit_price_ugx,
-          final_price: data.unit_price_ugx,
+          final_price: null,
           comments: data.comments,
-          status: 'approved'
+          status: 'pending_admin_pricing'
         })
         .select()
         .single();
 
       if (assessError) throw assessError;
 
-      // 2. Update coffee_records status - go directly to inventory (Finance removed from V2)
+      // 2. Update coffee_records status to awaiting pricing
       const { error: updateError } = await supabase
         .from('coffee_records')
-        .update({ status: 'inventory' })
+        .update({ status: 'AWAITING_PRICING' })
         .eq('id', lot.id);
 
       if (updateError) throw updateError;
-
-      // 3. Create finance_coffee_lots entry
-      const qualityJson = {
-        moisture_content: data.moisture_content,
-        group1_percentage: data.group1_percentage,
-        group2_percentage: data.group2_percentage,
-        pods_percentage: data.pods_percentage,
-        husks_percentage: data.husks_percentage,
-        fm_percentage: data.fm_percentage,
-        outturn_percentage: data.outturn_percentage,
-        comments: data.comments
-      };
-
-      const { error: financeError } = await supabase
-        .from('finance_coffee_lots')
-        .insert({
-          quality_assessment_id: assessment.id,
-          coffee_record_id: lot.id,
-          supplier_id: lot.supplier_id,
-          assessed_by: employee?.email || '',
-          assessed_at: new Date().toISOString(),
-          quality_json: qualityJson,
-          unit_price_ugx: data.unit_price_ugx,
-          quantity_kg: data.quantity_kg,
-          finance_status: 'READY_FOR_FINANCE'
-        });
-
-      if (financeError) throw financeError;
     },
-    onSuccess: (_, variables) => {
-      // Prepare GRN data for printing
-      const grnInfo = {
-        grnNumber: `GRN-${lot.batch_number}`,
-        supplierName: lot.supplier_name,
-        coffeeType: lot.coffee_type,
-        qualityAssessment: 'Approved',
-        numberOfBags: lot.bags,
-        totalKgs: variables.quantity_kg,
-        unitPrice: variables.unit_price_ugx,
-        assessedBy: employee?.email || 'Quality Controller',
-        createdAt: new Date().toISOString(),
-        moisture: variables.moisture_content,
-        group1_defects: variables.group1_percentage,
-        group2_defects: variables.group2_percentage,
-        pods: variables.pods_percentage,
-        husks: variables.husks_percentage,
-        stones: variables.fm_percentage
-      };
-      
-      setGrnData(grnInfo);
-      setShowGRNModal(true);
-      
+    onSuccess: () => {
       toast({
-        title: "Success",
-        description: "Lot approved and added to inventory. Print GRN now."
+        title: "Assessment Submitted",
+        description: "Quality assessment saved and sent to admin for final pricing."
       });
       queryClient.invalidateQueries({ queryKey: ['v2-pending-quality'] });
+      navigate('/v2/quality');
     },
     onError: (error: any) => {
       toast({
@@ -206,7 +154,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   });
 
   const onSubmit = (data: AssessmentForm) => {
-    approveAssessment.mutate(data);
+    submitForPricing.mutate(data);
   };
 
   const handleReject = () => {
@@ -386,7 +334,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
           type="button"
           variant="destructive"
           onClick={handleReject}
-          disabled={approveAssessment.isPending || rejectLot.isPending}
+          disabled={submitForPricing.isPending || rejectLot.isPending}
         >
           {rejectLot.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           <XCircle className="mr-2 h-4 w-4" />
@@ -394,24 +342,14 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         </Button>
         <Button
           type="submit"
-          disabled={approveAssessment.isPending || rejectLot.isPending || shouldAutoReject}
+          disabled={submitForPricing.isPending || rejectLot.isPending || shouldAutoReject}
           title={shouldAutoReject ? 'Cannot approve - quality thresholds exceeded' : ''}
         >
-          {approveAssessment.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {submitForPricing.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           <CheckCircle className="mr-2 h-4 w-4" />
-          Approve & Send to Finance
+          Submit for Admin Pricing
         </Button>
       </div>
-
-      {/* GRN Print Modal */}
-      <GRNPrintModal
-        open={showGRNModal}
-        onClose={() => {
-          setShowGRNModal(false);
-          navigate('/v2/quality');
-        }}
-        grnData={grnData}
-      />
     </form>
   );
 };
