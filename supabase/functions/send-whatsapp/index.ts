@@ -83,7 +83,7 @@ serve(async (req) => {
       // Send as free-form text message
       endpoint = `https://${infobipBaseUrl}/whatsapp/1/message/text`
       requestBody = {
-        from: "447491163443",
+        from: "447860088970",
         to: formattedPhone,
         content: {
           text: message
@@ -95,7 +95,7 @@ serve(async (req) => {
       requestBody = {
         messages: [
           {
-            from: "447491163443",
+            from: "447860088970",
             to: formattedPhone,
             content: {
               templateName: template,

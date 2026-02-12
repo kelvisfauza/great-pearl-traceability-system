@@ -6,6 +6,64 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
+async function sendInfobipSmsFallback(phone: string, message: string, supabase: any, meta: any) {
+  try {
+    const infobipApiKey = Deno.env.get('INFOBIP_API_KEY');
+    if (!infobipApiKey) {
+      console.error('INFOBIP_API_KEY not configured for SMS fallback');
+      return { success: false };
+    }
+
+    const response = await fetch('https://api.infobip.com/sms/2/text/advanced', {
+      method: 'POST',
+      headers: {
+        'Authorization': `App ${infobipApiKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        messages: [{
+          destinations: [{ to: phone.replace('+', '') }],
+          from: "447491163443",
+          text: message
+        }]
+      })
+    });
+
+    const responseText = await response.text();
+    console.log('Infobip SMS fallback response:', response.status, responseText);
+
+    let result: any = {};
+    try { result = JSON.parse(responseText); } catch { result = { raw: responseText }; }
+
+    // Log to sms_logs
+    try {
+      await supabase.from('sms_logs').insert({
+        recipient_phone: phone,
+        recipient_name: meta.userName,
+        recipient_email: meta.recipientEmail,
+        message_content: message,
+        message_type: meta.messageType || 'general',
+        status: response.ok ? 'sent' : 'failed',
+        provider: 'Infobip-SMS-Fallback',
+        provider_response: result,
+        credits_used: 1,
+        department: meta.department,
+        triggered_by: meta.triggeredBy,
+        request_id: meta.requestId,
+        failure_reason: response.ok ? null : responseText
+      });
+    } catch (dbErr) {
+      console.error('Failed to log Infobip fallback SMS:', dbErr);
+    }
+
+    return { success: response.ok, details: result };
+  } catch (err) {
+    console.error('Infobip SMS fallback error:', err.message);
+    return { success: false };
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -164,69 +222,7 @@ serve(async (req) => {
             console.error('Failed to log SMS to database:', dbError);
           }
 
-          // Also send WhatsApp message via Infobip
-          let whatsappResult = null;
-          try {
-            const infobipApiKey = Deno.env.get('INFOBIP_API_KEY');
-            const infobipBaseUrl = Deno.env.get('INFOBIP_BASE_URL');
-            
-            if (infobipApiKey && infobipBaseUrl) {
-              // Format phone for Infobip (digits only, no +)
-              const waPhone = formattedPhone.replace('+', '');
-              
-              console.log('Also sending WhatsApp to:', waPhone);
-              
-              const waResponse = await fetch(`https://${infobipBaseUrl}/whatsapp/1/message/text`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `App ${infobipApiKey}`,
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                  from: "447491163443",
-                  to: waPhone,
-                  content: {
-                    text: message
-                  }
-                })
-              });
-              
-              const waText = await waResponse.text();
-              console.log('WhatsApp response:', waResponse.status, waText);
-              
-              try {
-                whatsappResult = JSON.parse(waText);
-              } catch {
-                whatsappResult = { raw: waText };
-              }
-
-              // Log WhatsApp message
-              try {
-                await supabase.from('sms_logs').insert({
-                  recipient_phone: waPhone,
-                  recipient_name: userName,
-                  recipient_email: recipientEmail,
-                  message_content: message,
-                  message_type: (messageType || 'general') + '_whatsapp',
-                  status: waResponse.ok ? 'sent' : 'failed',
-                  provider: 'WhatsApp-Infobip',
-                  provider_response: whatsappResult,
-                  credits_used: 1,
-                  department: department,
-                  triggered_by: triggeredBy || userId,
-                  request_id: requestId,
-                  failure_reason: waResponse.ok ? null : waText
-                });
-              } catch (dbErr) {
-                console.error('Failed to log WhatsApp:', dbErr);
-              }
-            } else {
-              console.log('Infobip not configured, skipping WhatsApp');
-            }
-          } catch (waError) {
-            console.error('WhatsApp send failed (non-blocking):', waError.message);
-          }
+          // WhatsApp removed - now handled separately via send-whatsapp function
 
           return new Response(
             JSON.stringify({ 
@@ -234,8 +230,7 @@ serve(async (req) => {
               message: 'SMS sent successfully',
               phone: formattedPhone,
               provider: 'YoolaSMS',
-              details: smsResult,
-              whatsapp: whatsappResult ? { sent: true, details: whatsappResult } : { sent: false }
+              details: smsResult
             }),
             { 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -244,11 +239,29 @@ serve(async (req) => {
         } else {
           const errorText = await smsResponse.text();
           console.error('YoolaSMS API error:', errorText);
+          console.log('Attempting Infobip SMS fallback...');
           
+          // Fallback to Infobip SMS
+          const infobipResult = await sendInfobipSmsFallback(formattedPhone, message, supabase, {
+            userName, recipientEmail, messageType, department, triggeredBy: triggeredBy || userId, requestId
+          });
+          
+          if (infobipResult.success) {
+            return new Response(
+              JSON.stringify({ 
+                success: true, 
+                message: 'SMS sent via fallback (Infobip)',
+                phone: formattedPhone,
+                provider: 'Infobip-SMS',
+                details: infobipResult.details,
+                fallback: true
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          // Both providers failed
           try {
-            const nextRetry = new Date();
-            nextRetry.setMinutes(nextRetry.getMinutes() + 5);
-            
             await supabase.from('sms_logs').insert({
               recipient_phone: formattedPhone,
               recipient_name: userName,
@@ -257,26 +270,23 @@ serve(async (req) => {
               message_type: messageType || 'general',
               status: 'failed',
               provider: 'YoolaSMS',
-              failure_reason: errorText,
+              failure_reason: `YoolaSMS: ${errorText} | Infobip fallback also failed`,
               department: department,
               triggered_by: triggeredBy || userId,
-              request_id: requestId,
-              retry_count: 0,
-              next_retry_at: nextRetry.toISOString()
+              request_id: requestId
             });
           } catch (dbError) {
-            console.error('Failed to log failed SMS to database:', dbError);
+            console.error('Failed to log failed SMS:', dbError);
           }
           
           return new Response(
             JSON.stringify({ 
-              error: 'Failed to send SMS', 
+              error: 'Failed to send SMS via both providers', 
               details: errorText,
-              phone: formattedPhone,
-              provider: 'YoolaSMS'
+              phone: formattedPhone
             }),
             { 
-              status: smsResponse.status,
+              status: 500,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             }
           );
@@ -294,38 +304,33 @@ serve(async (req) => {
       }
     }
     
-    // All retries failed
-    console.error('All retry attempts failed:', lastError?.message);
+    // All YoolaSMS retries failed - try Infobip SMS fallback
+    console.error('All YoolaSMS retry attempts failed:', lastError?.message);
+    console.log('Attempting Infobip SMS fallback...');
     
-    try {
-      const nextRetry = new Date();
-      nextRetry.setMinutes(nextRetry.getMinutes() + 5);
-      
-      await supabase.from('sms_logs').insert({
-        recipient_phone: formattedPhone,
-        recipient_name: userName,
-        recipient_email: recipientEmail,
-        message_content: message,
-        message_type: messageType || 'general',
-        status: 'failed',
-        provider: 'YoolaSMS',
-        failure_reason: lastError?.message || 'Connection failed after retries',
-        department: department,
-        triggered_by: triggeredBy || userId,
-        request_id: requestId,
-        retry_count: 0,
-        next_retry_at: nextRetry.toISOString()
-      });
-    } catch (dbError) {
-      console.error('Failed to log SMS to database:', dbError);
+    const infobipResult = await sendInfobipSmsFallback(formattedPhone, message, supabase, {
+      userName, recipientEmail, messageType, department, triggeredBy: triggeredBy || userId, requestId
+    });
+    
+    if (infobipResult.success) {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'SMS sent via fallback (Infobip)',
+          phone: formattedPhone,
+          provider: 'Infobip-SMS',
+          details: infobipResult.details,
+          fallback: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
     return new Response(
       JSON.stringify({ 
-        error: 'SMS service unavailable', 
-        details: lastError?.message || 'Connection failed',
-        phone: formattedPhone,
-        queued_for_retry: true
+        error: 'SMS failed via both YoolaSMS and Infobip', 
+        details: lastError?.message || 'All providers failed',
+        phone: formattedPhone
       }),
       { 
         status: 500,
