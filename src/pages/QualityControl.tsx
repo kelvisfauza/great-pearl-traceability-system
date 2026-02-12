@@ -707,6 +707,82 @@ const QualityControl = () => {
     }
   };
 
+  const handleSubmitToAdmin = async () => {
+    if (isSubmitting || readOnly || !selectedRecord) return;
+
+    // Validate moisture
+    if (!assessmentForm.moisture || parseFloat(assessmentForm.moisture) <= 0) {
+      toast({ title: "Validation Error", description: "Please enter a valid moisture percentage.", variant: "destructive" });
+      return;
+    }
+
+    const manualPriceValue = parseFloat(assessmentForm.manual_price);
+    const calculatorPrice = assessmentForm.final_price || calculateSuggestedPrice();
+    const suggestedPrice = (manualPriceValue && manualPriceValue > 0) ? manualPriceValue : calculatorPrice;
+
+    setIsSubmitting(true);
+    try {
+      const assessmentData = {
+        store_record_id: selectedRecord.id,
+        batch_number: selectedRecord.batch_number || `BATCH-${Date.now()}`,
+        assessed_by: employee?.name || employee?.email || 'Quality Controller',
+        date_assessed: new Date().toISOString().split('T')[0],
+        moisture: parseFloat(assessmentForm.moisture) || 0,
+        group1_defects: parseFloat(assessmentForm.group1_defects) || 0,
+        group2_defects: parseFloat(assessmentForm.group2_defects) || 0,
+        below12: parseFloat(assessmentForm.below12) || 0,
+        pods: parseFloat(assessmentForm.pods) || 0,
+        husks: parseFloat(assessmentForm.husks) || 0,
+        stones: parseFloat(assessmentForm.stones) || 0,
+        fm: Number(assessmentForm.fm) || 0,
+        outturn: Number(assessmentForm.outturn) || 0,
+        suggested_price: suggestedPrice,
+        final_price: null,
+        comments: assessmentForm.comments || null,
+        status: 'pending_admin_pricing'
+      };
+
+      const { error: assessError } = await supabase
+        .from('quality_assessments')
+        .insert(assessmentData);
+
+      if (assessError) throw assessError;
+
+      const { error: updateError } = await supabase
+        .from('coffee_records')
+        .update({ status: 'AWAITING_PRICING', updated_at: new Date().toISOString() })
+        .eq('id', selectedRecord.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Submitted to Admin",
+        description: "Quality assessment saved and sent to admin for final pricing."
+      });
+
+      setSelectedRecord(null);
+      setEditingAssessmentId(null);
+      setAssessmentForm({
+        moisture: '', group1_defects: '', group2_defects: '', below12: '',
+        pods: '', husks: '', stones: '', discretion: '', ref_price: '',
+        fm: 0, actual_ott: 0, clean_d14: 0, outturn: 0, outturn_price: 0,
+        final_price: 0, quality_note: '', reject_outturn_price: false,
+        reject_final: false, manual_price: '', comments: '', use_manual_price: false
+      });
+      setActiveTab("pending");
+      await refreshData();
+    } catch (error) {
+      console.error('Error submitting to admin:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to submit to admin.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmitToFinance = async (assessmentId: string) => {
     if (readOnly) {
       toast({
@@ -1407,27 +1483,23 @@ const QualityControl = () => {
                   
                   <div className="flex gap-4">
                     <Button 
-                      onClick={handleSubmitAssessment} 
+                      onClick={handleSubmitToAdmin} 
                       className="flex-1"
                       disabled={
                         readOnly || 
                         isSubmitting ||
-                        (
-                          !(parseFloat(assessmentForm.manual_price) > 0) && 
-                          !assessmentForm.final_price && 
-                          !calculateSuggestedPrice()
-                        )
+                        !assessmentForm.moisture
                       }
                     >
                       {isSubmitting ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Saving Assessment...
+                          Submitting...
                         </>
                       ) : (
                         <>
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                          {editingAssessmentId ? 'Update Assessment' : 'Save Assessment & Send to Finance'}
+                          <Send className="h-4 w-4 mr-2" />
+                          Submit to Admin for Pricing
                         </>
                       )}
                     </Button>
