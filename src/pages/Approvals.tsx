@@ -2,6 +2,7 @@ import React from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ApprovalCenter from '@/components/ApprovalCenter';
 import ApprovedRequestsHistory from '@/components/admin/ApprovedRequestsHistory';
+import AdminQualityPricingReview from '@/components/admin/AdminQualityPricingReview';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleBasedData } from '@/hooks/useRoleBasedData';
 import { Shield, ClipboardCheck, DollarSign } from 'lucide-react';
@@ -61,6 +62,9 @@ const Approvals = () => {
             </div>
           </div>
         </div>
+
+        {/* Quality Assessments Pending Pricing */}
+        <AdminQualityPricingReview />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
