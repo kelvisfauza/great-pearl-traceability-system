@@ -88,16 +88,18 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
   };
 
   const qualityParameters = [
-    { parameter: 'Moisture Content', value: moisture, unit: '%', standard: '≤ 13%' },
-    { parameter: 'Group 1 Defects', value: group1_defects, unit: '%', standard: '≤ 5%' },
-    { parameter: 'Group 2 Defects', value: group2_defects, unit: '%', standard: '≤ 8%' },
-    { parameter: 'Below Screen 12', value: below12, unit: '%', standard: '≤ 5%' },
-    { parameter: 'Pods', value: pods, unit: '%', standard: '≤ 3%' },
-    { parameter: 'Husks', value: husks, unit: '%', standard: '≤ 2%' },
-    { parameter: 'Stones/Foreign Matter', value: stones, unit: '%', standard: '0%' },
+    { parameter: 'Moisture Content', value: moisture, unit: '%', standard: '≤ 14%' },
+    { parameter: 'Group 1 Defects', value: group1_defects, unit: '%', standard: '≤ 4%' },
+    { parameter: 'Group 2 Defects', value: group2_defects, unit: '%', standard: '≤ 17%' },
+    { parameter: 'Below Screen 12', value: below12, unit: '%', standard: '≤ 2%' },
+    { parameter: 'Total Foreign Matter', value: pods !== undefined && husks !== undefined && stones !== undefined ? pods + husks + stones : undefined, unit: '%', standard: '≤ 5%' },
+    { parameter: 'Pods', value: pods, unit: '%', standard: '—' },
+    { parameter: 'Husks', value: husks, unit: '%', standard: '—' },
+    { parameter: 'Stones/Foreign Matter', value: stones, unit: '%', standard: '—' },
   ];
 
   const getQualityStatus = (param: typeof qualityParameters[0]) => {
+    if (param.standard === '—') return '—';
     if (param.value === undefined || param.value === null) return 'N/A';
     const stdVal = parseFloat(param.standard.replace(/[≤%]/g, ''));
     return param.value <= stdVal ? 'PASS' : 'FAIL';
@@ -359,26 +361,22 @@ function getGRNPrintStyles(): string {
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       font-size: 11px;
-      color: #1a1a1a;
+      color: #000;
       line-height: 1.4;
     }
 
     /* ===== HEADER ===== */
-    .grn-header {
-      margin-bottom: 10px;
-    }
+    .grn-header { margin-bottom: 10px; }
     .grn-header-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding-bottom: 8px;
-      border-bottom: 3px double #1a365d;
+      border-bottom: 3px double #000;
     }
-    .grn-logo-block {
-      flex-shrink: 0;
-    }
+    .grn-logo-block { flex-shrink: 0; }
     .grn-logo-wrapper {
-      background: #0d3d1f;
+      background: #000;
       padding: 6px 12px;
       border-radius: 4px;
     }
@@ -395,47 +393,34 @@ function getGRNPrintStyles(): string {
     .grn-company-name {
       font-size: 16px;
       font-weight: 800;
-      color: #1a365d;
+      color: #000;
       letter-spacing: 1.5px;
       margin-bottom: 1px;
     }
     .grn-motto {
       font-size: 8px;
-      color: #4a5568;
+      color: #333;
       font-style: italic;
       margin-bottom: 2px;
     }
-    .grn-address {
-      font-size: 8px;
-      color: #4a5568;
-    }
-    .grn-contacts {
-      font-size: 8px;
-      color: #4a5568;
-    }
-    .grn-qr-block {
-      text-align: center;
-      flex-shrink: 0;
-    }
+    .grn-address { font-size: 8px; color: #333; }
+    .grn-contacts { font-size: 8px; color: #333; }
+    .grn-qr-block { text-align: center; flex-shrink: 0; }
     .grn-qr {
       width: 64px !important;
       height: 64px !important;
       display: block !important;
       margin: 0 auto;
     }
-    .grn-qr-label {
-      font-size: 6px;
-      color: #888;
-      margin-top: 2px;
-    }
+    .grn-qr-label { font-size: 6px; color: #555; margin-top: 2px; }
     .grn-qr-code {
       font-family: 'Courier New', monospace;
       font-size: 8px;
       font-weight: bold;
-      color: #0d3d1f;
+      color: #000;
     }
     .grn-title-bar {
-      background: #1a365d;
+      background: #000;
       color: #fff;
       text-align: center;
       padding: 6px 0;
@@ -451,55 +436,44 @@ function getGRNPrintStyles(): string {
     /* ===== DOCUMENT INFO ===== */
     .grn-doc-info {
       margin: 8px 0;
-      border: 1px solid #cbd5e0;
+      border: 1px solid #000;
       border-radius: 3px;
       overflow: hidden;
     }
-    .grn-info-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
+    .grn-info-table { width: 100%; border-collapse: collapse; }
     .grn-info-table td {
       padding: 4px 8px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #999;
       font-size: 10px;
+      color: #000;
     }
     .grn-info-label {
-      background: #f7fafc;
+      background: #eee;
       font-weight: 600;
-      color: #2d3748;
+      color: #000;
       width: 18%;
       white-space: nowrap;
     }
-    .grn-info-value {
-      color: #1a202c;
-      width: 32%;
-    }
+    .grn-info-value { color: #000; width: 32%; }
 
     /* ===== SECTIONS ===== */
-    .grn-section {
-      margin: 8px 0;
-    }
+    .grn-section { margin: 8px 0; }
     .grn-section-header {
-      background: #edf2f7;
-      border-left: 4px solid #1a365d;
+      background: #eee;
+      border-left: 4px solid #000;
       padding: 4px 10px;
       font-size: 10px;
       font-weight: 700;
-      color: #1a365d;
+      color: #000;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 4px;
     }
 
     /* ===== GOODS TABLE ===== */
-    .grn-goods-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 10px;
-    }
+    .grn-goods-table { width: 100%; border-collapse: collapse; font-size: 10px; }
     .grn-goods-table th {
-      background: #2d3748;
+      background: #000;
       color: #fff;
       padding: 5px 6px;
       text-align: left;
@@ -510,7 +484,8 @@ function getGRNPrintStyles(): string {
     }
     .grn-goods-table td {
       padding: 6px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #999;
+      color: #000;
     }
     .grn-th-no { width: 5%; text-align: center !important; }
     .grn-th-desc { width: 22%; }
@@ -523,68 +498,64 @@ function getGRNPrintStyles(): string {
     .grn-td-right { text-align: right; }
     .grn-td-bold { font-weight: 700; }
     .grn-total-row {
-      background: #f7fafc;
-      border-top: 2px solid #2d3748;
+      background: #eee;
+      border-top: 2px solid #000;
     }
-    .grn-grand-total {
-      font-size: 11px;
-      color: #1a365d;
-    }
+    .grn-grand-total { font-size: 11px; color: #000; }
     .grn-amount-words {
       margin-top: 4px;
       padding: 4px 8px;
-      background: #fffff0;
-      border: 1px dashed #d69e2e;
+      background: #fff;
+      border: 1px dashed #000;
       border-radius: 2px;
       font-size: 10px;
       font-style: italic;
-      color: #744210;
+      color: #000;
     }
 
     /* ===== QUALITY TABLE ===== */
     .grn-grade-banner {
       text-align: center;
       padding: 4px;
-      background: #f0fff4;
-      border: 1px solid #9ae6b4;
+      background: #eee;
+      border: 1px solid #000;
       border-radius: 3px;
       font-size: 11px;
-      color: #22543d;
+      color: #000;
       margin-bottom: 4px;
     }
-    .grn-quality-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 10px;
-    }
+    .grn-quality-table { width: 100%; border-collapse: collapse; font-size: 10px; }
     .grn-quality-table th {
-      background: #edf2f7;
-      border: 1px solid #cbd5e0;
+      background: #eee;
+      border: 1px solid #000;
       padding: 4px 8px;
       font-weight: 600;
       font-size: 9px;
       text-transform: uppercase;
+      color: #000;
     }
     .grn-quality-table td {
-      border: 1px solid #e2e8f0;
+      border: 1px solid #999;
       padding: 4px 8px;
+      color: #000;
     }
     .grn-qt-param { text-align: left; width: 40%; }
     .grn-qt-std { text-align: center; width: 20%; }
     .grn-qt-result { text-align: center; width: 20%; }
     .grn-qt-status { text-align: center; width: 20%; }
-    .grn-status-pass { color: #22543d; font-weight: 700; background: #f0fff4; }
-    .grn-status-fail { color: #c53030; font-weight: 700; background: #fff5f5; }
-    .grn-status-n\\/a { color: #718096; }
+    .grn-status-pass { font-weight: 700; }
+    .grn-status-fail { font-weight: 700; text-decoration: underline; }
+    .grn-status-n\\/a { color: #555; }
+    .grn-status-— { color: #555; }
 
     /* ===== REMARKS ===== */
     .grn-remarks-box {
-      border: 1px solid #e2e8f0;
+      border: 1px solid #999;
       padding: 6px 10px;
       min-height: 30px;
       border-radius: 2px;
       font-size: 10px;
-      color: #4a5568;
+      color: #000;
     }
 
     /* ===== SIGNATURES ===== */
@@ -597,27 +568,25 @@ function getGRNPrintStyles(): string {
     .grn-sig-col {
       flex: 1;
       text-align: center;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #999;
       border-radius: 3px;
       padding: 6px 4px 8px;
     }
     .grn-sig-role {
       font-size: 9px;
       font-weight: 700;
-      color: #1a365d;
+      color: #000;
       text-transform: uppercase;
       margin-bottom: 2px;
     }
-    .grn-sig-space {
-      height: 28px;
-    }
+    .grn-sig-space { height: 28px; }
     .grn-sig-line {
-      border-top: 1px solid #2d3748;
+      border-top: 1px solid #000;
       margin: 0 8px 4px;
     }
     .grn-sig-details {
       font-size: 8px;
-      color: #4a5568;
+      color: #333;
       text-align: left;
       padding: 1px 8px;
     }
@@ -626,11 +595,11 @@ function getGRNPrintStyles(): string {
     .grn-footer {
       display: flex;
       justify-content: space-between;
-      border-top: 2px solid #1a365d;
+      border-top: 2px solid #000;
       padding-top: 6px;
       margin-top: 10px;
       font-size: 7px;
-      color: #718096;
+      color: #555;
     }
     .grn-footer-left { text-align: left; }
     .grn-footer-right { text-align: right; }
