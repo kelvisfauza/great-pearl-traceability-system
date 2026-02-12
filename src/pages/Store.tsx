@@ -435,7 +435,7 @@ const Store = () => {
       qualityAssessment: qualityAssessment ? "Assessed" : "Pending Assessment",
       numberOfBags: record.bags,
       totalKgs: record.kilograms,
-      unitPrice: qualityAssessment?.suggested_price || 0,
+      unitPrice: qualityAssessment?.final_price || qualityAssessment?.suggested_price || 0,
       assessedBy: qualityAssessment?.assessed_by || "N/A",
       createdAt: record.date,
       moisture: qualityAssessment?.moisture,
@@ -455,7 +455,7 @@ const Store = () => {
     const printContent = filteredRecords.map((record: any) => {
       const qualityAssessment = qualityAssessments.find((qa: any) => qa.batch_number === record.batchNumber);
 
-      const unitPrice = qualityAssessment?.suggested_price || 0;
+      const unitPrice = qualityAssessment?.final_price || qualityAssessment?.suggested_price || 0;
       return {
         ...record,
         qualityAssessment,
@@ -877,10 +877,10 @@ const Store = () => {
                                 {Number(assessment.kilograms || 0).toLocaleString()}
                                 kg
                               </TableCell>
-                              <TableCell>UGX {assessment.suggested_price.toLocaleString()}/kg</TableCell>
+                              <TableCell>UGX {(assessment.final_price || assessment.suggested_price).toLocaleString()}/kg</TableCell>
                               <TableCell>
                                 <span className="font-semibold">
-                                  UGX {((assessment.kilograms || 0) * assessment.suggested_price).toLocaleString()}
+                                  UGX {((assessment.kilograms || 0) * (assessment.final_price || assessment.suggested_price)).toLocaleString()}
                                 </span>
                               </TableCell>
                               <TableCell>
@@ -900,7 +900,7 @@ const Store = () => {
                           <span className="text-lg">
                             UGX{" "}
                             {filteredAssessments
-                              .reduce((sum: number, a: any) => sum + (a.kilograms || 0) * a.suggested_price, 0)
+                              .reduce((sum: number, a: any) => sum + (a.kilograms || 0) * (a.final_price || a.suggested_price), 0)
                               .toLocaleString()}
                           </span>
                         </div>
@@ -930,7 +930,7 @@ const Store = () => {
                       {sortedDates.map((date) => {
                         const dayAssessments = groupedAssessments[date] || [];
                         const dayTotal = dayAssessments.reduce(
-                          (sum: number, a: any) => sum + (a.kilograms || 0) * a.suggested_price,
+                          (sum: number, a: any) => sum + (a.kilograms || 0) * (a.final_price || a.suggested_price),
                           0,
                         );
                         const dayKg = dayAssessments.reduce((sum: number, a: any) => sum + (a.kilograms || 0), 0);

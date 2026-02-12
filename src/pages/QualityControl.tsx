@@ -866,7 +866,7 @@ const QualityControl = () => {
           qualityAssessment: qualityResult,
           numberOfBags: storeRecord.bags || 0,
           totalKgs: storeRecord.kilograms || 0,
-          unitPrice: assessment.suggested_price || 0,
+          unitPrice: assessment.final_price || assessment.suggested_price || 0,
           assessedBy: assessment.assessed_by || 'Quality Controller',
           createdAt: assessment.date_assessed || new Date().toISOString(),
           moisture: assessment.moisture,
@@ -1283,7 +1283,7 @@ const QualityControl = () => {
                             </div>
                           </TableCell>
                           <TableCell className="font-bold text-green-600">
-                            UGX {assessment.suggested_price?.toLocaleString()}
+                            UGX {(assessment.final_price || assessment.suggested_price)?.toLocaleString()}
                           </TableCell>
                           <TableCell>{assessment.date_assessed}</TableCell>
                           <TableCell>{getStatusBadge(assessment.status)}</TableCell>
