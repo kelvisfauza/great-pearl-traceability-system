@@ -722,6 +722,20 @@ const QualityControl = () => {
 
     setIsSubmitting(true);
     try {
+      // Check for existing pending assessment to prevent duplicates
+      const { data: existing } = await supabase
+        .from('quality_assessments')
+        .select('id')
+        .eq('store_record_id', selectedRecord.id)
+        .eq('status', 'pending_admin_pricing')
+        .maybeSingle();
+
+      if (existing) {
+        toast({ title: "Already Submitted", description: "This lot already has a pending admin pricing assessment.", variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
+
       const assessmentData = {
         store_record_id: selectedRecord.id,
         batch_number: selectedRecord.batch_number || `BATCH-${Date.now()}`,
