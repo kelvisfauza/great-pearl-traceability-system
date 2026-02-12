@@ -184,7 +184,7 @@ serve(async (req) => {
                   'Accept': 'application/json'
                 },
                 body: JSON.stringify({
-                  from: "447860088970",
+                  from: "447491163443",
                   to: waPhone,
                   content: {
                     text: message
