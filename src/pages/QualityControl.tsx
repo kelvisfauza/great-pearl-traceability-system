@@ -1485,8 +1485,34 @@ const QualityControl = () => {
                     </div>
                   </div>
                   
-                  <div className="flex gap-4">
+                  <div className="flex gap-3 flex-wrap">
                     <Button 
+                      onClick={handleSubmitAssessment} 
+                      className="flex-1"
+                      disabled={
+                        readOnly || 
+                        isSubmitting ||
+                        (
+                          !(parseFloat(assessmentForm.manual_price) > 0) && 
+                          !assessmentForm.final_price && 
+                          !calculateSuggestedPrice()
+                        )
+                      }
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          {editingAssessmentId ? 'Update Assessment' : 'Save & Send to Finance'}
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="secondary"
                       onClick={handleSubmitToAdmin} 
                       className="flex-1"
                       disabled={
