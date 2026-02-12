@@ -737,14 +737,18 @@ const QualityControl = () => {
         fm: Number(assessmentForm.fm) || 0,
         outturn: Number(assessmentForm.outturn) || 0,
         suggested_price: suggestedPrice,
-        final_price: null,
+        final_price: 0,
         comments: assessmentForm.comments || null,
-        status: 'pending_admin_pricing'
+        status: 'pending_admin_pricing',
+        reject_outturn_price: false,
+        reject_final: false
       };
 
+      // Use SECURITY DEFINER RPC to bypass RLS
       const { error: assessError } = await supabase
-        .from('quality_assessments')
-        .insert(assessmentData);
+        .rpc('insert_quality_assessment', {
+          assessment_data: assessmentData
+        });
 
       if (assessError) throw assessError;
 
