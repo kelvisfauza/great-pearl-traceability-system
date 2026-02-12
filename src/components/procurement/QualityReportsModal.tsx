@@ -89,7 +89,7 @@ const QualityReportsModal: React.FC<QualityReportsModalProps> = ({ open, onClose
         return sum + (storeRecord?.kilograms || 0);
       }, 0);
 
-      const averagePrice = assessments.reduce((sum, assessment) => sum + (assessment.suggested_price || 0), 0) / totalBatches;
+      const averagePrice = assessments.reduce((sum, assessment) => sum + (assessment.final_price || assessment.suggested_price || 0), 0) / totalBatches;
       const averageGroup1Defects = assessments.reduce((sum, assessment) => sum + (assessment.group1_defects || 0), 0) / totalBatches;
       const averageGroup2Defects = assessments.reduce((sum, assessment) => sum + (assessment.group2_defects || 0), 0) / totalBatches;
       const averagePods = assessments.reduce((sum, assessment) => sum + (assessment.pods || 0), 0) / totalBatches;
@@ -128,7 +128,7 @@ const QualityReportsModal: React.FC<QualityReportsModalProps> = ({ open, onClose
       // Calculate metrics per coffee type
       const coffeeTypeMetricsData = Object.entries(coffeeTypeGroups).map(([coffeeType, typeAssessments]) => {
         const batchCount = typeAssessments.length;
-        const averagePrice = typeAssessments.reduce((sum, assessment) => sum + (assessment.suggested_price || 0), 0) / batchCount;
+        const averagePrice = typeAssessments.reduce((sum, assessment) => sum + (assessment.final_price || assessment.suggested_price || 0), 0) / batchCount;
         const totalKilograms = typeAssessments.reduce((sum, assessment) => {
           const storeRecord = assessment.store_record as any;
           return sum + (storeRecord?.kilograms || 0);
