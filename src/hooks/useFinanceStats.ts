@@ -29,7 +29,7 @@ const fetchStats = async (): Promise<FinanceStats> => {
   qualitySnapshot.docs.forEach(doc => {
     const data = doc.data();
     const kilograms = data.kilograms || 0;
-    const pricePerKg = data.suggested_price || 0;
+    const pricePerKg = data.final_price || data.suggested_price || 0;
     pendingCoffeeAmount += kilograms * pricePerKg;
   });
 
