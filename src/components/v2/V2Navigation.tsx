@@ -19,7 +19,8 @@ import {
   Monitor,
   Shield,
   Home,
-  CreditCard
+  CreditCard,
+  Clock
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -86,6 +87,7 @@ const DEPARTMENT_NAV_CONFIG: Record<string, {
       items: [
         { icon: Users, label: "HR Dashboard", path: "/v2/hr", permission: "Human Resources" },
         { icon: CreditCard, label: "Salary Advances", path: "/v2/hr/salary-advances", permission: "Human Resources" },
+        { icon: Clock, label: "Time Deductions", path: "/v2/hr/time-deductions", permission: "Human Resources" },
       ]
     }
   ],
