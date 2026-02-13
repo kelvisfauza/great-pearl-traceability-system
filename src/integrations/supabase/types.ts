@@ -5809,6 +5809,65 @@ export type Database = {
         }
         Relationships: []
       }
+      time_deductions: {
+        Row: {
+          created_at: string
+          created_by: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          employee_phone: string | null
+          hours_missed: number
+          id: string
+          month: string
+          rate_per_hour: number
+          reason: string | null
+          sms_sent: boolean | null
+          total_deduction: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          employee_phone?: string | null
+          hours_missed?: number
+          id?: string
+          month: string
+          rate_per_hour?: number
+          reason?: string | null
+          sms_sent?: boolean | null
+          total_deduction?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          employee_phone?: string | null
+          hours_missed?: number
+          id?: string
+          month?: string
+          rate_per_hour?: number
+          reason?: string | null
+          sms_sent?: boolean | null
+          total_deduction?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_deductions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_accounts: {
         Row: {
           created_at: string
