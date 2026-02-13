@@ -74,7 +74,14 @@ export const useMonthlySalaryTracking = (
       // Sum all payments from last month
       const paidLastMonth = lastMonthRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0;
       
-      // Get all salary advances (these create negative balances)
+      // Get active salary advances from employee_salary_advances table
+      const { data: activeAdvances } = await supabase
+        .from('employee_salary_advances')
+        .select('remaining_balance')
+        .eq('employee_email', employeeEmail)
+        .eq('status', 'active');
+
+      // Also check approval_requests and money_requests for this month's advances
       const { data: advanceRequests } = await supabase
         .from('approval_requests')
         .select('amount, status, created_at')
@@ -83,7 +90,6 @@ export const useMonthlySalaryTracking = (
         .eq('status', 'Approved')
         .gte('created_at', startOfMonth.toISOString());
 
-      // Also check money_requests table for advances
       const { data: moneyAdvances } = await supabase
         .from('money_requests')
         .select('amount, status, created_at')
@@ -92,8 +98,11 @@ export const useMonthlySalaryTracking = (
         .eq('status', 'approved')
         .gte('created_at', startOfMonth.toISOString());
 
-      const advancesOwed = (advanceRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0) +
+      // Use the larger of: active advance balances OR monthly advance requests
+      const activeAdvanceBalance = activeAdvances?.reduce((sum, adv) => sum + Number(adv.remaining_balance), 0) || 0;
+      const monthlyAdvanceRequests = (advanceRequests?.reduce((sum, req) => sum + Number(req.amount), 0) || 0) +
                            (moneyAdvances?.reduce((sum, req) => sum + Number(req.amount), 0) || 0);
+      const advancesOwed = Math.max(activeAdvanceBalance, monthlyAdvanceRequests);
       
       // Get overtime awards for THIS month that haven't been claimed
       const { data: overtimeAwards } = await supabase
