@@ -86,7 +86,7 @@ const JobApplicationsManager = () => {
 
   const sendSms = async (phone: string, message: string, name: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke("send-infobip-sms", {
+      const { data, error } = await supabase.functions.invoke("send-sms", {
         body: { phone, message, userName: name, messageType: "job_application" },
       });
       if (error) throw error;
