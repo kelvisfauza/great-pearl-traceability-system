@@ -653,7 +653,9 @@ const QualityControl = () => {
         below12: assessment.below12,
         pods: assessment.pods,
         husks: assessment.husks,
-        stones: assessment.stones
+        stones: assessment.stones,
+        outturn: Number(assessmentForm.outturn) || undefined,
+        calculatorComments: assessmentForm.quality_note || undefined
       };
       
       setGrnPrintModal({

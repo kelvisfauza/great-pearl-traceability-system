@@ -25,6 +25,8 @@ interface GRNPrintModalProps {
     pods?: number;
     husks?: number;
     stones?: number;
+    outturn?: number;
+    calculatorComments?: string;
   } | null;
 }
 
@@ -63,7 +65,8 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
   const {
     grnNumber, supplierName, coffeeType, numberOfBags,
     totalKgs, unitPrice, assessedBy, createdAt,
-    moisture, group1_defects, group2_defects, below12, pods, husks, stones
+    moisture, group1_defects, group2_defects, below12, pods, husks, stones,
+    outturn, calculatorComments
   } = grnData;
 
   const totalAmount = totalKgs * unitPrice;
@@ -98,14 +101,7 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
     { parameter: 'Stones/Foreign Matter', value: stones, unit: '%', standard: '—' },
   ];
 
-  const getQualityStatus = (param: typeof qualityParameters[0]) => {
-    if (param.standard === '—') return '—';
-    if (param.value === undefined || param.value === null) return 'N/A';
-    const stdVal = parseFloat(param.standard.replace(/[≤%]/g, ''));
-    return param.value <= stdVal ? 'PASS' : 'FAIL';
-  };
-
-  const overallGrade = grnData.qualityAssessment || 'Standard';
+  const totalFM = pods !== undefined && husks !== undefined && stones !== undefined ? pods + husks + stones : undefined;
 
   const handlePrint = () => {
     if (!printRef.current) return;
@@ -249,34 +245,36 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
           {/* ========== QUALITY ASSESSMENT ========== */}
           <div className="grn-section">
             <div className="grn-section-header">QUALITY ASSESSMENT REPORT</div>
-            <div className="grn-grade-banner">
-              Overall Grade: <strong>{overallGrade}</strong>
-            </div>
+            {outturn !== undefined && outturn !== null && (
+              <div className="grn-outturn-banner">
+                Outturn: <strong>{outturn}%</strong>
+              </div>
+            )}
             <table className="grn-quality-table">
               <thead>
                 <tr>
                   <th className="grn-qt-param">Parameter</th>
                   <th className="grn-qt-std">Standard</th>
                   <th className="grn-qt-result">Result</th>
-                  <th className="grn-qt-status">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {qualityParameters.map((p, i) => {
-                  const status = getQualityStatus(p);
-                  return (
-                    <tr key={i}>
-                      <td>{p.parameter}</td>
-                      <td className="grn-td-center">{p.standard}</td>
-                      <td className="grn-td-center">
-                        {p.value !== undefined && p.value !== null ? `${p.value}${p.unit}` : 'N/A'}
-                      </td>
-                      <td className={`grn-td-center grn-status-${status.toLowerCase()}`}>{status}</td>
-                    </tr>
-                  );
-                })}
+                {qualityParameters.map((p, i) => (
+                  <tr key={i}>
+                    <td>{p.parameter}</td>
+                    <td className="grn-td-center">{p.standard}</td>
+                    <td className="grn-td-center">
+                      {p.value !== undefined && p.value !== null ? `${p.value}${p.unit}` : 'N/A'}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
+            {calculatorComments && (
+              <div className="grn-calculator-comments">
+                <strong>Quality Notes:</strong> {calculatorComments}
+              </div>
+            )}
           </div>
 
           {/* ========== REMARKS ========== */}
@@ -359,10 +357,12 @@ function getGRNPrintStyles(): string {
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Segoe UI', Arial, sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       font-size: 11px;
       color: #000;
       line-height: 1.4;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     /* ===== HEADER ===== */
@@ -392,19 +392,19 @@ function getGRNPrintStyles(): string {
     }
     .grn-company-name {
       font-size: 16px;
-      font-weight: 800;
+      font-weight: 900;
       color: #000;
       letter-spacing: 1.5px;
       margin-bottom: 1px;
     }
     .grn-motto {
       font-size: 8px;
-      color: #333;
+      color: #000;
       font-style: italic;
       margin-bottom: 2px;
     }
-    .grn-address { font-size: 8px; color: #333; }
-    .grn-contacts { font-size: 8px; color: #333; }
+    .grn-address { font-size: 8px; color: #000; }
+    .grn-contacts { font-size: 8px; color: #000; }
     .grn-qr-block { text-align: center; flex-shrink: 0; }
     .grn-qr {
       width: 64px !important;
@@ -412,7 +412,7 @@ function getGRNPrintStyles(): string {
       display: block !important;
       margin: 0 auto;
     }
-    .grn-qr-label { font-size: 6px; color: #555; margin-top: 2px; }
+    .grn-qr-label { font-size: 6px; color: #000; margin-top: 2px; }
     .grn-qr-code {
       font-family: 'Courier New', monospace;
       font-size: 8px;
@@ -443,23 +443,24 @@ function getGRNPrintStyles(): string {
     .grn-info-table { width: 100%; border-collapse: collapse; }
     .grn-info-table td {
       padding: 4px 8px;
-      border: 1px solid #999;
+      border: 1px solid #000;
       font-size: 10px;
       color: #000;
+      font-weight: 500;
     }
     .grn-info-label {
-      background: #eee;
-      font-weight: 600;
+      background: #e8e8e8;
+      font-weight: 700;
       color: #000;
       width: 18%;
       white-space: nowrap;
     }
-    .grn-info-value { color: #000; width: 32%; }
+    .grn-info-value { color: #000; width: 32%; font-weight: 600; }
 
     /* ===== SECTIONS ===== */
     .grn-section { margin: 8px 0; }
     .grn-section-header {
-      background: #eee;
+      background: #e8e8e8;
       border-left: 4px solid #000;
       padding: 4px 10px;
       font-size: 10px;
@@ -477,15 +478,16 @@ function getGRNPrintStyles(): string {
       color: #fff;
       padding: 5px 6px;
       text-align: left;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 9px;
       text-transform: uppercase;
       letter-spacing: 0.3px;
     }
     .grn-goods-table td {
       padding: 6px;
-      border: 1px solid #999;
+      border: 1px solid #000;
       color: #000;
+      font-weight: 600;
     }
     .grn-th-no { width: 5%; text-align: center !important; }
     .grn-th-desc { width: 22%; }
@@ -496,12 +498,12 @@ function getGRNPrintStyles(): string {
     .grn-th-amount { width: 20%; text-align: right !important; }
     .grn-td-center { text-align: center; }
     .grn-td-right { text-align: right; }
-    .grn-td-bold { font-weight: 700; }
+    .grn-td-bold { font-weight: 800; }
     .grn-total-row {
-      background: #eee;
+      background: #e8e8e8;
       border-top: 2px solid #000;
     }
-    .grn-grand-total { font-size: 11px; color: #000; }
+    .grn-grand-total { font-size: 12px; color: #000; font-weight: 800; }
     .grn-amount-words {
       margin-top: 4px;
       padding: 4px 8px;
@@ -511,51 +513,64 @@ function getGRNPrintStyles(): string {
       font-size: 10px;
       font-style: italic;
       color: #000;
+      font-weight: 600;
+    }
+
+    /* ===== OUTTURN BANNER ===== */
+    .grn-outturn-banner {
+      text-align: center;
+      padding: 5px;
+      background: #e8e8e8;
+      border: 1px solid #000;
+      border-radius: 3px;
+      font-size: 12px;
+      color: #000;
+      font-weight: 600;
+      margin-bottom: 4px;
     }
 
     /* ===== QUALITY TABLE ===== */
-    .grn-grade-banner {
-      text-align: center;
-      padding: 4px;
-      background: #eee;
-      border: 1px solid #000;
-      border-radius: 3px;
-      font-size: 11px;
-      color: #000;
-      margin-bottom: 4px;
-    }
     .grn-quality-table { width: 100%; border-collapse: collapse; font-size: 10px; }
     .grn-quality-table th {
-      background: #eee;
+      background: #e8e8e8;
       border: 1px solid #000;
       padding: 4px 8px;
-      font-weight: 600;
+      font-weight: 700;
       font-size: 9px;
       text-transform: uppercase;
       color: #000;
     }
     .grn-quality-table td {
-      border: 1px solid #999;
+      border: 1px solid #000;
       padding: 4px 8px;
       color: #000;
+      font-weight: 500;
     }
-    .grn-qt-param { text-align: left; width: 40%; }
-    .grn-qt-std { text-align: center; width: 20%; }
-    .grn-qt-result { text-align: center; width: 20%; }
-    .grn-qt-status { text-align: center; width: 20%; }
-    .grn-status-pass { font-weight: 700; }
-    .grn-status-fail { font-weight: 700; text-decoration: underline; }
-    .grn-status-n\\/a { color: #555; }
-    .grn-status-— { color: #555; }
+    .grn-qt-param { text-align: left; width: 50%; }
+    .grn-qt-std { text-align: center; width: 25%; }
+    .grn-qt-result { text-align: center; width: 25%; }
+
+    /* ===== CALCULATOR COMMENTS ===== */
+    .grn-calculator-comments {
+      margin-top: 4px;
+      padding: 5px 10px;
+      background: #f5f5f5;
+      border: 1px solid #000;
+      border-radius: 2px;
+      font-size: 10px;
+      color: #000;
+      font-weight: 500;
+    }
 
     /* ===== REMARKS ===== */
     .grn-remarks-box {
-      border: 1px solid #999;
+      border: 1px solid #000;
       padding: 6px 10px;
       min-height: 30px;
       border-radius: 2px;
       font-size: 10px;
       color: #000;
+      font-weight: 500;
     }
 
     /* ===== SIGNATURES ===== */
@@ -568,7 +583,7 @@ function getGRNPrintStyles(): string {
     .grn-sig-col {
       flex: 1;
       text-align: center;
-      border: 1px solid #999;
+      border: 1px solid #000;
       border-radius: 3px;
       padding: 6px 4px 8px;
     }
@@ -586,9 +601,10 @@ function getGRNPrintStyles(): string {
     }
     .grn-sig-details {
       font-size: 8px;
-      color: #333;
+      color: #000;
       text-align: left;
       padding: 1px 8px;
+      font-weight: 500;
     }
 
     /* ===== FOOTER ===== */
@@ -599,7 +615,7 @@ function getGRNPrintStyles(): string {
       padding-top: 6px;
       margin-top: 10px;
       font-size: 7px;
-      color: #555;
+      color: #000;
     }
     .grn-footer-left { text-align: left; }
     .grn-footer-right { text-align: right; }
