@@ -85,15 +85,16 @@ serve(async (req) => {
   })
 
   const token = authHeader.replace('Bearer ', '')
-  const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token)
-  if (userError || !user) {
+  const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token)
+  if (claimsError || !claimsData?.claims) {
+    console.error('Auth validation failed:', claimsError?.message)
     return new Response(
       JSON.stringify({ error: 'Invalid authentication' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 
-  const userId = user.id
+  const userId = claimsData.claims.sub
   console.log('Authenticated user:', userId)
 
   // Use service role for DB operations
