@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogFooter 
 } from "@/components/ui/dialog";
-import { Check, X, Coffee, User, Clock, AlertTriangle } from 'lucide-react';
+import { Check, X, Coffee, User, Clock, AlertTriangle, Send, Loader2 } from 'lucide-react';
 import { PriceApprovalRequest, usePriceApprovals } from '@/hooks/usePriceApprovals';
 import { useReferencePrices } from '@/hooks/useReferencePrices';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,7 +32,61 @@ const PriceApprovalPanel: React.FC = () => {
   const [suggestedArabicaPrice, setSuggestedArabicaPrice] = useState<number | ''>('');
   const [suggestedRobustaPrice, setSuggestedRobustaPrice] = useState<number | ''>('');
   const [processing, setProcessing] = useState(false);
+  const [resending, setResending] = useState(false);
 
+  const handleResendCurrentPriceNotifications = async () => {
+    if (!employee) return;
+    setResending(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        toast({ title: "Error", description: "No active session", variant: "destructive" });
+        return;
+      }
+
+      const { data: employees } = await supabase
+        .from('employees')
+        .select('phone, name')
+        .eq('status', 'Active')
+        .not('phone', 'is', null);
+
+      const staffList = employees?.filter(e => e.phone) || [];
+      const additionalRecipients = [
+        '0772272455', '0777510755', '0791052941', '0779637836', '0791832118', '0778970844', '0777676992'
+      ];
+      const allPhones = [...staffList.map(e => e.phone!), ...additionalRecipients];
+
+      const date = new Date().toLocaleDateString('en-GB');
+      const message = `Great Pearl Coffee Price Update - ${date}\n\nArabica: UGX ${currentPrices.arabicaBuyingPrice.toLocaleString()}/kg (${currentPrices.arabicaOutturn}% outturn)\nRobusta: UGX ${currentPrices.robustaBuyingPrice.toLocaleString()}/kg (${currentPrices.robustaOutturn}% outturn)\nSorted: UGX ${(currentPrices.sortedPrice || 0).toLocaleString()}/kg\n\nUse these prices for today's purchases.`;
+
+      let sent = 0;
+      for (let i = 0; i < allPhones.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, i === 0 ? 0 : 500));
+        try {
+          const response = await fetch('https://pudfybkyfedeggmokhco.supabase.co/functions/v1/send-sms', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ phone: allPhones[i], message, messageType: 'price_update' })
+          });
+          if (response.ok) sent++;
+        } catch { /* continue */ }
+      }
+
+      toast({
+        title: "Price Notifications Sent",
+        description: `SMS sent to ${sent}/${allPhones.length} recipients`
+      });
+    } catch (error) {
+      console.error('Error resending notifications:', error);
+      toast({ title: "Error", description: "Failed to send notifications", variant: "destructive" });
+    } finally {
+      setResending(false);
+    }
+  };
   const handleApprove = async (request: PriceApprovalRequest) => {
     if (!employee) return;
 
@@ -91,6 +145,15 @@ await savePrices({
 
   const sendPriceNotifications = async (request: PriceApprovalRequest) => {
     try {
+      // Get user's actual session token
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      
+      if (!accessToken) {
+        console.error('No active session for sending SMS');
+        return;
+      }
+
       // Helper function to send SMS with delay
       const sendSmsWithDelay = async (
         phone: string,
@@ -103,7 +166,7 @@ await savePrices({
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1ZGZ5Ymt5ZmVkZWdnbW9raGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNDAxNjEsImV4cCI6MjA2NzkxNjE2MX0.RSK-BwEjyRMn9YM998_93-W9g8obmjnLXgOgTrIAZJk'
+              'Authorization': `Bearer ${accessToken}`
             },
             body: JSON.stringify({
               phone,
@@ -214,9 +277,24 @@ await savePrices({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground text-center py-8">
+          <p className="text-muted-foreground text-center py-4">
             No pending price approval requests
           </p>
+          <div className="flex justify-center pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResendCurrentPriceNotifications}
+              disabled={resending}
+            >
+              {resending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Resend Today's Price SMS
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
