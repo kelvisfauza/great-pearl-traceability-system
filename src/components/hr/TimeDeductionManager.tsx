@@ -94,6 +94,13 @@ const TimeDeductionManager = () => {
   const totalHoursDecimal = hours + (minutes / 60);
   const totalDeduction = Math.round(totalHoursDecimal * RATE_PER_HOUR);
 
+  // Sum existing deductions for this employee in the selected month
+  const existingDeductionsTotal = selectedEmployee
+    ? deductions
+        .filter(d => d.employee_id === selectedEmployee.id && d.month === form.month)
+        .reduce((sum, d) => sum + Number(d.total_deduction), 0)
+    : 0;
+
   const sendDeductionSMS = async (emp: any, hoursMissed: number, deductionAmount: number, month: string) => {
     try {
       const monthDate = new Date(month + '-01');
@@ -329,8 +336,14 @@ const TimeDeductionManager = () => {
                                   {' '}(Monthly: UGX {advances[selectedEmployee.email].monthly.toLocaleString()})
                                 </>
                               )}
+                              {existingDeductionsTotal > 0 && (
+                                <>
+                                  <br />
+                                  Previous deductions this month: UGX {existingDeductionsTotal.toLocaleString()}
+                                </>
+                              )}
                               <br />
-                              Net: UGX {((selectedEmployee.salary || 0) - totalDeduction - (advances[selectedEmployee.email]?.monthly || 0)).toLocaleString()}
+                              Net: UGX {((selectedEmployee.salary || 0) - totalDeduction - existingDeductionsTotal - (advances[selectedEmployee.email]?.monthly || 0)).toLocaleString()}
                             </span>
                           </>
                         )}
