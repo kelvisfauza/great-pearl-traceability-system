@@ -51,6 +51,7 @@ const TimeDeductionManager = () => {
     employeeId: '',
     month: filterMonth,
     hoursMissed: '',
+    minutesMissed: '',
     reason: ''
   });
 
@@ -86,7 +87,9 @@ const TimeDeductionManager = () => {
 
   const selectedEmployee = activeEmployees.find(e => e.id === form.employeeId);
   const hours = parseFloat(form.hoursMissed) || 0;
-  const totalDeduction = hours * RATE_PER_HOUR;
+  const minutes = parseFloat(form.minutesMissed) || 0;
+  const totalHoursDecimal = hours + (minutes / 60);
+  const totalDeduction = Math.round(totalHoursDecimal * RATE_PER_HOUR);
 
   const sendDeductionSMS = async (emp: any, hoursMissed: number, deductionAmount: number, month: string) => {
     try {
@@ -117,8 +120,9 @@ const TimeDeductionManager = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!employee || !selectedEmployee || hours <= 0) return;
+    if (!employee || !selectedEmployee || totalHoursDecimal <= 0) return;
 
+    const deductionLabel = minutes > 0 ? `${hours}h ${minutes}m` : `${hours} hours`;
     setSaving(true);
     try {
       const { data, error } = await supabase
@@ -129,7 +133,7 @@ const TimeDeductionManager = () => {
           employee_email: selectedEmployee.email,
           employee_phone: selectedEmployee.phone || null,
           month: form.month,
-          hours_missed: hours,
+          hours_missed: totalHoursDecimal,
           rate_per_hour: RATE_PER_HOUR,
           total_deduction: totalDeduction,
           reason: form.reason || null,
@@ -144,7 +148,7 @@ const TimeDeductionManager = () => {
       if (error) throw error;
 
       // Send SMS
-      const smsSent = await sendDeductionSMS(selectedEmployee, hours, totalDeduction, form.month);
+      const smsSent = await sendDeductionSMS(selectedEmployee, totalHoursDecimal, totalDeduction, form.month);
 
       if (smsSent && data) {
         await supabase
@@ -155,10 +159,10 @@ const TimeDeductionManager = () => {
 
       toast({
         title: "Deduction Recorded",
-        description: `${selectedEmployee.name}: ${hours} hours = UGX ${totalDeduction.toLocaleString()} deducted${smsSent ? '. SMS sent.' : '. SMS failed.'}`,
+        description: `${selectedEmployee.name}: ${deductionLabel} = UGX ${totalDeduction.toLocaleString()} deducted${smsSent ? '. SMS sent.' : '. SMS failed.'}`,
       });
 
-      setForm({ employeeId: '', month: filterMonth, hoursMissed: '', reason: '' });
+      setForm({ employeeId: '', month: filterMonth, hoursMissed: '', minutesMissed: '', reason: '' });
       setDialogOpen(false);
       fetchDeductions();
     } catch (error: any) {
@@ -276,25 +280,41 @@ const TimeDeductionManager = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Hours Missed</Label>
-                    <Input
-                      type="number"
-                      min="0.5"
-                      step="0.5"
-                      placeholder="e.g. 3"
-                      value={form.hoursMissed}
-                      onChange={(e) => setForm({ ...form, hoursMissed: e.target.value })}
-                      required
-                    />
+                    <Label>Time Missed</Label>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="Hours"
+                          value={form.hoursMissed}
+                          onChange={(e) => setForm({ ...form, hoursMissed: e.target.value })}
+                        />
+                        <span className="text-xs text-muted-foreground">Hours</span>
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="59"
+                          step="1"
+                          placeholder="Minutes"
+                          value={form.minutesMissed}
+                          onChange={(e) => setForm({ ...form, minutesMissed: e.target.value })}
+                        />
+                        <span className="text-xs text-muted-foreground">Minutes</span>
+                      </div>
+                    </div>
                   </div>
 
-                  {hours > 0 && (
+                  {totalHoursDecimal > 0 && (
                     <Alert className="border-destructive/50 bg-destructive/10">
                       <AlertTriangle className="h-4 w-4 text-destructive" />
                       <AlertDescription className="text-sm">
                         <strong>Deduction: UGX {totalDeduction.toLocaleString()}</strong>
                         <br />
-                        {hours} hours × UGX {RATE_PER_HOUR.toLocaleString()}/hr
+                        {hours > 0 && `${hours}h `}{minutes > 0 && `${minutes}m `}({totalHoursDecimal.toFixed(2)} hrs) × UGX {RATE_PER_HOUR.toLocaleString()}/hr
                         {selectedEmployee && (
                           <>
                             <br />
@@ -384,7 +404,13 @@ const TimeDeductionManager = () => {
                         <div className="text-xs text-muted-foreground">{d.employee_email}</div>
                       </TableCell>
                       <TableCell>{d.month}</TableCell>
-                      <TableCell className="font-medium">{d.hours_missed} hrs</TableCell>
+                      <TableCell className="font-medium">
+                        {(() => {
+                          const h = Math.floor(Number(d.hours_missed));
+                          const m = Math.round((Number(d.hours_missed) - h) * 60);
+                          return m > 0 ? `${h}h ${m}m` : `${h} hrs`;
+                        })()}
+                      </TableCell>
                       <TableCell className="font-semibold text-destructive">
                         UGX {Number(d.total_deduction).toLocaleString()}
                       </TableCell>
