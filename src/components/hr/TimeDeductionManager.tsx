@@ -37,7 +37,7 @@ const TimeDeductionManager = () => {
   const { employee } = useAuth();
   const { employees } = useUnifiedEmployees();
   const [deductions, setDeductions] = useState<TimeDeduction[]>([]);
-  const [advances, setAdvances] = useState<Record<string, number>>({});
+  const [advances, setAdvances] = useState<Record<string, { balance: number; monthly: number }>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -62,16 +62,19 @@ const TimeDeductionManager = () => {
       setLoading(true);
       const [deductionsRes, advancesRes] = await Promise.all([
         supabase.from('time_deductions').select('*').order('created_at', { ascending: false }),
-        supabase.from('employee_salary_advances').select('employee_email, remaining_balance').eq('status', 'active')
+        supabase.from('employee_salary_advances').select('employee_email, remaining_balance, minimum_payment').eq('status', 'active')
       ]);
 
       if (deductionsRes.error) throw deductionsRes.error;
       setDeductions((deductionsRes.data || []) as TimeDeduction[]);
 
       // Build a map of email -> advance balance
-      const advMap: Record<string, number> = {};
+      const advMap: Record<string, { balance: number; monthly: number }> = {};
       (advancesRes.data || []).forEach((a: any) => {
-        advMap[a.employee_email] = (advMap[a.employee_email] || 0) + Number(a.remaining_balance);
+        const email = a.employee_email;
+        if (!advMap[email]) advMap[email] = { balance: 0, monthly: 0 };
+        advMap[email].balance += Number(a.remaining_balance);
+        advMap[email].monthly += Number(a.minimum_payment);
       });
       setAdvances(advMap);
     } catch (error) {
@@ -319,12 +322,15 @@ const TimeDeductionManager = () => {
                           <>
                             <br />
                             <span className="text-xs">
-                              Salary: UGX {selectedEmployee.salary?.toLocaleString() || 'N/A'}
-                              {advances[selectedEmployee.email] > 0 && (
-                                <> | Advance Owed: UGX {advances[selectedEmployee.email].toLocaleString()}</>
+                             Salary: UGX {selectedEmployee.salary?.toLocaleString() || 'N/A'}
+                              {advances[selectedEmployee.email]?.balance > 0 && (
+                                <>
+                                  {' '}| Advance Balance: UGX {advances[selectedEmployee.email].balance.toLocaleString()}
+                                  {' '}(Monthly: UGX {advances[selectedEmployee.email].monthly.toLocaleString()})
+                                </>
                               )}
                               <br />
-                              Net: UGX {((selectedEmployee.salary || 0) - totalDeduction - (advances[selectedEmployee.email] || 0)).toLocaleString()}
+                              Net: UGX {((selectedEmployee.salary || 0) - totalDeduction - (advances[selectedEmployee.email]?.monthly || 0)).toLocaleString()}
                             </span>
                           </>
                         )}
