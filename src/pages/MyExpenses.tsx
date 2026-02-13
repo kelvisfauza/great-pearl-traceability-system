@@ -49,6 +49,7 @@ const MyExpenses = () => {
   const [advanceDeduction, setAdvanceDeduction] = useState('');
   const [showAdvanceReceipt, setShowAdvanceReceipt] = useState(false);
   const [advanceReceiptDetails, setAdvanceReceiptDetails] = useState<any>(null);
+  const [timeDeduction, setTimeDeduction] = useState<{ hours_missed: number; total_deduction: number; reason: string | null } | null>(null);
 
   const isFullyApproved = (request: ExpenseRequest) => {
     return request.status === 'Approved' || 
@@ -133,6 +134,24 @@ const MyExpenses = () => {
     };
     fetchAdvance();
   }, [activeTab, employee?.email, fetchEmployeeAdvance]);
+
+  // Fetch current month time deductions
+  useEffect(() => {
+    const fetchTimeDeduction = async () => {
+      if (activeTab === 'salary' && employee?.id) {
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const { data } = await supabase
+          .from('time_deductions')
+          .select('hours_missed, total_deduction, reason')
+          .eq('employee_id', employee.id)
+          .eq('month', currentMonth)
+          .maybeSingle();
+        setTimeDeduction(data as any);
+      }
+    };
+    fetchTimeDeduction();
+  }, [activeTab, employee?.id]);
 
   // Submit Cash Requisition
   const handleRequisitionSubmit = async (e: React.FormEvent) => {
@@ -826,9 +845,24 @@ const MyExpenses = () => {
                       <AlertDescription className="text-sm text-blue-800">
                         <div className="space-y-1">
                           <div className="font-semibold">Your Monthly Salary: {employee.salary.toLocaleString()} UGX</div>
+                          {timeDeduction && (
+                            <div className="text-xs text-red-700 font-medium">
+                              ⚠ Time Deduction: -{Number(timeDeduction.total_deduction).toLocaleString()} UGX ({timeDeduction.hours_missed} hrs missed)
+                              {timeDeduction.reason && <span> - {timeDeduction.reason}</span>}
+                            </div>
+                          )}
                           <div className="text-xs">
-                            • Mid-Month: {(employee.salary / 2).toLocaleString()} UGX (Half salary)<br/>
-                            • End of Month: {employee.salary.toLocaleString()} UGX (Full salary)
+                            {timeDeduction ? (
+                              <>
+                                • Mid-Month: {((employee.salary - Number(timeDeduction.total_deduction)) / 2).toLocaleString()} UGX (After deduction)<br/>
+                                • End of Month: {(employee.salary - Number(timeDeduction.total_deduction)).toLocaleString()} UGX (After deduction)
+                              </>
+                            ) : (
+                              <>
+                                • Mid-Month: {(employee.salary / 2).toLocaleString()} UGX (Half salary)<br/>
+                                • End of Month: {employee.salary.toLocaleString()} UGX (Full salary)
+                              </>
+                            )}
                           </div>
                         </div>
                       </AlertDescription>
@@ -840,14 +874,17 @@ const MyExpenses = () => {
                     <Select 
                       value={salaryForm.requestType} 
                       onValueChange={(value) => {
+                        const baseSalary = employee?.salary || 0;
+                        const deductionAmount = timeDeduction ? Number(timeDeduction.total_deduction) : 0;
+                        const adjustedSalary = baseSalary - deductionAmount;
                         const calculatedAmount = value === 'Mid-Month' 
-                          ? (employee?.salary ? employee.salary / 2 : 0)
-                          : (employee?.salary ? employee.salary : 0);
+                          ? adjustedSalary / 2
+                          : adjustedSalary;
                         
                         setSalaryForm({ 
                           ...salaryForm, 
                           requestType: value,
-                          amount: calculatedAmount.toString()
+                          amount: Math.max(0, calculatedAmount).toString()
                         });
                       }}
                     >
@@ -870,12 +907,13 @@ const MyExpenses = () => {
                         <AlertDescription className="text-xs text-green-800">
                           {salaryForm.requestType === 'Mid-Month' ? (
                             <div>
-                              <strong>Mid-Month Request:</strong> You will receive half of your monthly salary ({(employee?.salary ? employee.salary / 2 : 0).toLocaleString()} UGX). 
-                              The remaining half will be paid at the end of the month.
+                              <strong>Mid-Month Request:</strong> You will receive {salaryForm.amount ? Number(salaryForm.amount).toLocaleString() : 0} UGX.
+                              {timeDeduction && <span className="text-red-600"> (Includes {Number(timeDeduction.total_deduction).toLocaleString()} UGX time deduction)</span>}
                             </div>
                           ) : (
                             <div>
-                              <strong>End of Month Request:</strong> You will receive your full monthly salary ({employee?.salary?.toLocaleString()} UGX).
+                              <strong>End of Month Request:</strong> You will receive {salaryForm.amount ? Number(salaryForm.amount).toLocaleString() : 0} UGX.
+                              {timeDeduction && <span className="text-red-600"> (Includes {Number(timeDeduction.total_deduction).toLocaleString()} UGX time deduction for {timeDeduction.hours_missed} hrs missed)</span>}
                             </div>
                           )}
                         </AlertDescription>
