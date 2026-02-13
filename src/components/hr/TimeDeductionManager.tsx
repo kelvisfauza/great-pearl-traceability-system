@@ -37,6 +37,7 @@ const TimeDeductionManager = () => {
   const { employee } = useAuth();
   const { employees } = useUnifiedEmployees();
   const [deductions, setDeductions] = useState<TimeDeduction[]>([]);
+  const [advances, setAdvances] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -58,13 +59,20 @@ const TimeDeductionManager = () => {
   const fetchDeductions = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('time_deductions')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [deductionsRes, advancesRes] = await Promise.all([
+        supabase.from('time_deductions').select('*').order('created_at', { ascending: false }),
+        supabase.from('employee_salary_advances').select('employee_email, remaining_balance').eq('status', 'active')
+      ]);
 
-      if (error) throw error;
-      setDeductions((data || []) as TimeDeduction[]);
+      if (deductionsRes.error) throw deductionsRes.error;
+      setDeductions((deductionsRes.data || []) as TimeDeduction[]);
+
+      // Build a map of email -> advance balance
+      const advMap: Record<string, number> = {};
+      (advancesRes.data || []).forEach((a: any) => {
+        advMap[a.employee_email] = (advMap[a.employee_email] || 0) + Number(a.remaining_balance);
+      });
+      setAdvances(advMap);
     } catch (error) {
       console.error('Error fetching deductions:', error);
     } finally {
@@ -291,8 +299,12 @@ const TimeDeductionManager = () => {
                           <>
                             <br />
                             <span className="text-xs">
-                              Salary: UGX {selectedEmployee.salary?.toLocaleString() || 'N/A'} → 
-                              Net: UGX {((selectedEmployee.salary || 0) - totalDeduction).toLocaleString()}
+                              Salary: UGX {selectedEmployee.salary?.toLocaleString() || 'N/A'}
+                              {advances[selectedEmployee.email] > 0 && (
+                                <> | Advance Owed: UGX {advances[selectedEmployee.email].toLocaleString()}</>
+                              )}
+                              <br />
+                              Net: UGX {((selectedEmployee.salary || 0) - totalDeduction - (advances[selectedEmployee.email] || 0)).toLocaleString()}
                             </span>
                           </>
                         )}
