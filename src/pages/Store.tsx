@@ -445,6 +445,8 @@ const Store = () => {
       pods: qualityAssessment?.pods,
       husks: qualityAssessment?.husks,
       stones: qualityAssessment?.stones,
+      outturn: qualityAssessment?.outturn || undefined,
+      calculatorComments: qualityAssessment?.quality_note || undefined,
     };
 
     setSelectedGRNData(grnData);

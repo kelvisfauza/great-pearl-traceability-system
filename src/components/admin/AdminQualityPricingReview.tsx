@@ -192,7 +192,9 @@ const AdminQualityPricingReview = () => {
           group2_defects: selectedAssessment.group2_defects,
           pods: selectedAssessment.pods,
           husks: selectedAssessment.husks,
-          stones: selectedAssessment.fm
+          stones: selectedAssessment.fm,
+          outturn: selectedAssessment.outturn || undefined,
+          calculatorComments: selectedAssessment.comments || undefined
         };
         setGrnData(grnInfo);
         setShowGRNModal(true);
