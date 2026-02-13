@@ -4,6 +4,7 @@ import { Clock } from "lucide-react";
 import TimeDeductionManager from "@/components/hr/TimeDeductionManager";
 
 const TimeDeductionsPage = () => {
+  console.log('TimeDeductionsPage rendering');
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
