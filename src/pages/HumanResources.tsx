@@ -28,7 +28,7 @@ import AddEmployeeModal from '@/components/hr/AddEmployeeModal';
 import EmployeeDetailsModal from '@/components/hr/EmployeeDetailsModal';
 import EmployeeFilters from '@/components/hr/EmployeeFilters';
 import EmptyState from '@/components/hr/EmptyState';
-import RegistrationRequestsManager from '@/components/hr/RegistrationRequestsManager';
+import JobApplicationsManager from '@/components/hr/JobApplicationsManager';
 import PrintCredentialsDialog from '@/components/hr/PrintCredentialsDialog';
 import SalaryPaymentRequestsManager from '@/components/hr/SalaryPaymentRequestsManager';
 import MySalaryRequests from '@/components/MySalaryRequests';
@@ -196,7 +196,7 @@ const HumanResources = () => {
               <TabsTrigger value="account-status" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Account</TabsTrigger>
               <TabsTrigger value="create" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Create</TabsTrigger>
               <TabsTrigger value="print-details" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Print</TabsTrigger>
-              <TabsTrigger value="requests" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Requests</TabsTrigger>
+              <TabsTrigger value="job-applications" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Job Applications</TabsTrigger>
               <TabsTrigger value="payments" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Salary</TabsTrigger>
               <TabsTrigger value="my-salary" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">My Salary</TabsTrigger>
               <TabsTrigger value="overtime" className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-4">Overtime</TabsTrigger>
@@ -311,8 +311,8 @@ const HumanResources = () => {
             <PrintUserDetails employees={employees} />
           </TabsContent>
 
-          <TabsContent value="requests">
-            <RegistrationRequestsManager />
+          <TabsContent value="job-applications">
+            <JobApplicationsManager />
           </TabsContent>
           
           <TabsContent value="payments">

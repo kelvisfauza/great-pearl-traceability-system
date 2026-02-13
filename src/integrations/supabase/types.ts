@@ -2907,6 +2907,51 @@ export type Database = {
         }
         Relationships: []
       }
+      job_applications: {
+        Row: {
+          applicant_name: string
+          created_at: string
+          created_by: string
+          cv_filename: string | null
+          cv_url: string | null
+          id: string
+          job_applied_for: string
+          notes: string | null
+          phone: string
+          ref_code: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          applicant_name: string
+          created_at?: string
+          created_by: string
+          cv_filename?: string | null
+          cv_url?: string | null
+          id?: string
+          job_applied_for: string
+          notes?: string | null
+          phone: string
+          ref_code: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          applicant_name?: string
+          created_at?: string
+          created_by?: string
+          cv_filename?: string | null
+          cv_url?: string | null
+          id?: string
+          job_applied_for?: string
+          notes?: string | null
+          phone?: string
+          ref_code?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ledger_entries: {
         Row: {
           amount: number
