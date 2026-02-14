@@ -4301,6 +4301,60 @@ export type Database = {
         }
         Relationships: []
       }
+      public_holidays: {
+        Row: {
+          bg_gradient_from: string
+          bg_gradient_to: string
+          created_at: string
+          created_by: string | null
+          emoji: string
+          gradient_from: string
+          gradient_to: string
+          greeting_message: string
+          greeting_title: string
+          holiday_date: string
+          id: string
+          is_active: boolean
+          is_recurring: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          bg_gradient_from?: string
+          bg_gradient_to?: string
+          created_at?: string
+          created_by?: string | null
+          emoji?: string
+          gradient_from?: string
+          gradient_to?: string
+          greeting_message: string
+          greeting_title: string
+          holiday_date: string
+          id?: string
+          is_active?: boolean
+          is_recurring?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          bg_gradient_from?: string
+          bg_gradient_to?: string
+          created_at?: string
+          created_by?: string | null
+          emoji?: string
+          gradient_from?: string
+          gradient_to?: string
+          greeting_message?: string
+          greeting_title?: string
+          holiday_date?: string
+          id?: string
+          is_active?: boolean
+          is_recurring?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       purchase_orders: {
         Row: {
           coffee_type: string

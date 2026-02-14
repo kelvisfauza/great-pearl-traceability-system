@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserPresencePanel from '@/components/admin/UserPresencePanel';
 import AccountStatusManager from '@/components/admin/AccountStatusManager';
+import HolidayManager from '@/components/settings/HolidayManager';
 import { Database, ArrowRight } from 'lucide-react';
 
 const Settings = () => {
@@ -147,6 +148,7 @@ const Settings = () => {
                 </CardContent>
               </Card>
 
+              <HolidayManager />
               <Card>
                 <CardHeader>
                   <CardTitle>System Presence</CardTitle>
