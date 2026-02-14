@@ -13,8 +13,8 @@ import BiometricVerification from '@/components/BiometricVerification';
 import { supabase } from '@/integrations/supabase/client';
 import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
-import { ChristmasOverlay } from '@/components/ChristmasOverlay';
 import { NewYearTransition } from '@/components/NewYearTransition';
+import { Heart } from 'lucide-react';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -282,71 +282,86 @@ const Auth = () => {
   }
 
 
-  // Check if Christmas period (until Jan 1, 2026)
-  const isChristmasPeriod = new Date() < new Date('2026-01-01');
+  // Valentine's Day check (Feb 14)
+  const now = new Date();
+  const isValentines = now.getMonth() === 1 && now.getDate() === 14;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {isChristmasPeriod && <ChristmasOverlay />}
+    <div className={`min-h-screen flex items-center justify-center p-4 relative overflow-hidden ${
+      isValentines 
+        ? 'bg-gradient-to-br from-rose-50 via-pink-50 to-red-50' 
+        : 'bg-gradient-to-br from-green-50 to-amber-50'
+    }`}>
+      {/* Floating hearts background for Valentine's */}
+      {isValentines && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute animate-fall text-pink-300/40"
+              style={{
+                left: `${Math.random() * 100}%`,
+                animationDuration: `${6 + Math.random() * 8}s`,
+                animationDelay: `${Math.random() * 5}s`,
+                fontSize: `${14 + Math.random() * 24}px`,
+              }}
+            >
+              {['❤️', '💕', '💖', '🌹', '💗'][Math.floor(Math.random() * 5)]}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-6">
-          {isChristmasPeriod && (
-            <div className="mb-4 p-3 bg-gradient-to-r from-red-500 to-green-600 rounded-lg text-white animate-fade-in">
+          {isValentines && (
+            <div className="mb-4 p-3 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl text-white animate-fade-in shadow-lg">
               <p className="text-lg font-bold flex items-center justify-center gap-2">
-                🎄 Merry Christmas & Happy New Year! 🎅
+                💝 Happy Valentine's Day! 💝
               </p>
-              <p className="text-sm opacity-90">Wishing you joy & prosperity</p>
+              <p className="text-sm opacity-90">Brewing love, one cup at a time ☕</p>
             </div>
           )}
           <div className="flex justify-center mb-4">
-            <div className="p-4 bg-[#0d3d1f] rounded-2xl shadow-lg relative">
+            <div className={`p-4 bg-[#0d3d1f] rounded-2xl shadow-lg relative ${isValentines ? 'ring-2 ring-pink-300/50 ring-offset-2 ring-offset-rose-50' : ''}`}>
               <img 
                 src="/lovable-uploads/great-pearl-coffee-logo.png" 
                 alt="Great Pearl Coffee Factory" 
                 className="h-24 w-auto object-contain"
               />
-              {isChristmasPeriod && (
-                <span className="absolute -top-2 -right-2 text-2xl animate-bounce">🎁</span>
+              {isValentines && (
+                <span className="absolute -top-3 -right-3 text-2xl animate-bounce">💖</span>
               )}
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl font-bold text-foreground mb-2">
             Great Pearl Coffee Factory
           </h1>
-          <p className="text-gray-600">
-            Coffee Management System
+          <p className="text-muted-foreground">
+            {isValentines ? '☕ Where Coffee Meets Love' : 'Coffee Management System'}
           </p>
         </div>
 
-        <Card className={isChristmasPeriod ? "relative overflow-visible border-2 border-red-200 shadow-lg" : ""}>
-          {isChristmasPeriod && (
+        <Card className={isValentines ? "relative overflow-visible border-2 border-pink-200 shadow-xl shadow-pink-100/50" : ""}>
+          {isValentines && (
             <>
-              {/* Santa on top right of card */}
-              <div className="absolute -top-6 -right-4 text-4xl animate-bounce" style={{ animationDuration: '2s' }}>
-                🎅
+              <div className="absolute -top-5 -right-3 text-3xl animate-bounce" style={{ animationDuration: '2s' }}>
+                🌹
               </div>
-              {/* Holly on top left */}
-              <div className="absolute -top-3 -left-3 text-2xl">
-                🎄
-              </div>
-              {/* Candy canes decoration */}
-              <div className="absolute top-1/2 -left-4 text-xl transform -translate-y-1/2">
-                🍬
-              </div>
-              <div className="absolute top-1/2 -right-4 text-xl transform -translate-y-1/2">
-                🍭
+              <div className="absolute -top-4 -left-3 text-2xl animate-pulse">
+                💕
               </div>
             </>
           )}
           <CardHeader className="text-center">
             <CardTitle className="text-xl flex items-center justify-center gap-2">
-              {isChristmasPeriod && <span>🔔</span>}
+              {isValentines && <Heart className="h-5 w-5 text-rose-500 fill-rose-500 animate-pulse" />}
               Sign In
-              {isChristmasPeriod && <span>🔔</span>}
+              {isValentines && <Heart className="h-5 w-5 text-rose-500 fill-rose-500 animate-pulse" />}
             </CardTitle>
             <CardDescription>
-              {isChristmasPeriod 
-                ? "🎁 Ho Ho Ho! Enter your credentials 🎁" 
+              {isValentines 
+                ? "💌 Enter your credentials with love 💌" 
                 : "Enter your credentials to access your account"}
             </CardDescription>
           </CardHeader>
@@ -355,7 +370,7 @@ const Auth = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="flex items-center gap-2">
-                  {isChristmasPeriod && <span>⭐</span>}
+                  {isValentines && <Heart className="h-3 w-3 text-rose-400 fill-rose-400" />}
                   Email
                 </Label>
                 <div className="relative">
@@ -363,21 +378,18 @@ const Auth = () => {
                   <Input
                     id="email"
                     type="email"
-                    placeholder={isChristmasPeriod ? "🎄 Enter your email..." : "Enter your email"}
+                    placeholder={isValentines ? "💌 Enter your email..." : "Enter your email"}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={loading}
-                    className={`pl-10 ${isChristmasPeriod ? "border-green-300 focus:border-red-400 focus:ring-red-200" : ""}`}
+                    className={`pl-10 ${isValentines ? "border-pink-200 focus:border-rose-400 focus:ring-rose-200" : ""}`}
                   />
-                  {isChristmasPeriod && (
-                    <span className="absolute right-3 top-2.5 text-lg">🎅</span>
-                  )}
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password" className="flex items-center gap-2">
-                  {isChristmasPeriod && <span>🎁</span>}
+                  {isValentines && <Heart className="h-3 w-3 text-rose-400 fill-rose-400" />}
                   Password
                 </Label>
                 <div className="relative">
@@ -385,16 +397,13 @@ const Auth = () => {
                   <Input
                     id="password"
                     type="password"
-                    placeholder={isChristmasPeriod ? "🔐 Your secret gift code..." : "Enter your password"}
+                    placeholder={isValentines ? "🔐 Your secret love code..." : "Enter your password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading}
-                    className={`pl-10 ${isChristmasPeriod ? "border-red-300 focus:border-green-400 focus:ring-green-200" : ""}`}
+                    className={`pl-10 ${isValentines ? "border-pink-200 focus:border-rose-400 focus:ring-rose-200" : ""}`}
                   />
-                  {isChristmasPeriod && (
-                    <span className="absolute right-3 top-2.5 text-lg">🎄</span>
-                  )}
                 </div>
               </div>
               {error && (
@@ -417,7 +426,7 @@ const Auth = () => {
               
               <Button
                 type="submit"
-                className="w-full"
+                className={`w-full ${isValentines ? 'bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 shadow-lg shadow-pink-200/50' : ''}`}
                 disabled={loading}
               >
                 {loading ? (
