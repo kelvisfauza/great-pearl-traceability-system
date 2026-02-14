@@ -15,6 +15,7 @@ import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
 import { NewYearTransition } from '@/components/NewYearTransition';
 import { Heart } from 'lucide-react';
+import { useHolidayTheme } from '@/hooks/useHolidayTheme';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -282,31 +283,30 @@ const Auth = () => {
   }
 
 
-  // Valentine's Day check (Feb 14)
-  const now = new Date();
-  const isValentines = now.getMonth() === 1 && now.getDate() === 14;
+  const { data: holiday } = useHolidayTheme();
+  const isHoliday = !!holiday;
 
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 relative overflow-hidden ${
-      isValentines 
-        ? 'bg-gradient-to-br from-rose-50 via-pink-50 to-red-50' 
+      isHoliday 
+        ? `bg-gradient-to-br from-${holiday.bg_gradient_from} via-background to-${holiday.bg_gradient_to}` 
         : 'bg-gradient-to-br from-green-50 to-amber-50'
     }`}>
-      {/* Floating hearts background for Valentine's */}
-      {isValentines && (
+      {/* Floating emoji background for holidays */}
+      {isHoliday && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {Array.from({ length: 20 }).map((_, i) => (
+          {Array.from({ length: 15 }).map((_, i) => (
             <div
               key={i}
-              className="absolute animate-fall text-pink-300/40"
+              className="absolute animate-fall opacity-40"
               style={{
                 left: `${Math.random() * 100}%`,
                 animationDuration: `${6 + Math.random() * 8}s`,
                 animationDelay: `${Math.random() * 5}s`,
-                fontSize: `${14 + Math.random() * 24}px`,
+                fontSize: `${16 + Math.random() * 20}px`,
               }}
             >
-              {['❤️', '💕', '💖', '🌹', '💗'][Math.floor(Math.random() * 5)]}
+              {holiday.emoji}
             </div>
           ))}
         </div>
@@ -314,23 +314,23 @@ const Auth = () => {
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-6">
-          {isValentines && (
-            <div className="mb-4 p-3 bg-gradient-to-r from-rose-500 to-pink-500 rounded-xl text-white animate-fade-in shadow-lg">
+          {isHoliday && (
+            <div className={`mb-4 p-3 bg-gradient-to-r from-${holiday.gradient_from} to-${holiday.gradient_to} rounded-xl text-white animate-fade-in shadow-lg`}>
               <p className="text-lg font-bold flex items-center justify-center gap-2">
-                💝 Happy Valentine's Day! 💝
+                {holiday.greeting_title}
               </p>
-              <p className="text-sm opacity-90">Brewing love, one cup at a time ☕</p>
+              <p className="text-sm opacity-90">{holiday.greeting_message}</p>
             </div>
           )}
           <div className="flex justify-center mb-4">
-            <div className={`p-4 bg-[#0d3d1f] rounded-2xl shadow-lg relative ${isValentines ? 'ring-2 ring-pink-300/50 ring-offset-2 ring-offset-rose-50' : ''}`}>
+            <div className="p-4 bg-[#0d3d1f] rounded-2xl shadow-lg relative">
               <img 
                 src="/lovable-uploads/great-pearl-coffee-logo.png" 
                 alt="Great Pearl Coffee Factory" 
                 className="h-24 w-auto object-contain"
               />
-              {isValentines && (
-                <span className="absolute -top-3 -right-3 text-2xl animate-bounce">💖</span>
+              {isHoliday && (
+                <span className="absolute -top-3 -right-3 text-2xl animate-bounce">{holiday.emoji}</span>
               )}
             </div>
           </div>
@@ -338,30 +338,30 @@ const Auth = () => {
             Great Pearl Coffee Factory
           </h1>
           <p className="text-muted-foreground">
-            {isValentines ? '☕ Where Coffee Meets Love' : 'Coffee Management System'}
+            {isHoliday ? `${holiday.emoji} ${holiday.name}` : 'Coffee Management System'}
           </p>
         </div>
 
-        <Card className={isValentines ? "relative overflow-visible border-2 border-pink-200 shadow-xl shadow-pink-100/50" : ""}>
-          {isValentines && (
+        <Card className={isHoliday ? `relative overflow-visible border-2 border-${holiday.gradient_from.replace('500','200')} shadow-xl` : ""}>
+          {isHoliday && (
             <>
               <div className="absolute -top-5 -right-3 text-3xl animate-bounce" style={{ animationDuration: '2s' }}>
-                🌹
+                {holiday.emoji}
               </div>
               <div className="absolute -top-4 -left-3 text-2xl animate-pulse">
-                💕
+                {holiday.emoji}
               </div>
             </>
           )}
           <CardHeader className="text-center">
             <CardTitle className="text-xl flex items-center justify-center gap-2">
-              {isValentines && <Heart className="h-5 w-5 text-rose-500 fill-rose-500 animate-pulse" />}
+              {isHoliday && <span>{holiday.emoji}</span>}
               Sign In
-              {isValentines && <Heart className="h-5 w-5 text-rose-500 fill-rose-500 animate-pulse" />}
+              {isHoliday && <span>{holiday.emoji}</span>}
             </CardTitle>
             <CardDescription>
-              {isValentines 
-                ? "💌 Enter your credentials with love 💌" 
+              {isHoliday 
+                ? `${holiday.emoji} Enter your credentials ${holiday.emoji}` 
                 : "Enter your credentials to access your account"}
             </CardDescription>
           </CardHeader>
@@ -370,7 +370,7 @@ const Auth = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="flex items-center gap-2">
-                  {isValentines && <Heart className="h-3 w-3 text-rose-400 fill-rose-400" />}
+                  {isHoliday && <span className="text-sm">{holiday.emoji}</span>}
                   Email
                 </Label>
                 <div className="relative">
@@ -378,18 +378,18 @@ const Auth = () => {
                   <Input
                     id="email"
                     type="email"
-                    placeholder={isValentines ? "💌 Enter your email..." : "Enter your email"}
+                    placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={loading}
-                    className={`pl-10 ${isValentines ? "border-pink-200 focus:border-rose-400 focus:ring-rose-200" : ""}`}
+                    className="pl-10"
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password" className="flex items-center gap-2">
-                  {isValentines && <Heart className="h-3 w-3 text-rose-400 fill-rose-400" />}
+                  {isHoliday && <span className="text-sm">{holiday.emoji}</span>}
                   Password
                 </Label>
                 <div className="relative">
@@ -397,12 +397,12 @@ const Auth = () => {
                   <Input
                     id="password"
                     type="password"
-                    placeholder={isValentines ? "🔐 Your secret love code..." : "Enter your password"}
+                    placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading}
-                    className={`pl-10 ${isValentines ? "border-pink-200 focus:border-rose-400 focus:ring-rose-200" : ""}`}
+                    className="pl-10"
                   />
                 </div>
               </div>
@@ -426,7 +426,7 @@ const Auth = () => {
               
               <Button
                 type="submit"
-                className={`w-full ${isValentines ? 'bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 shadow-lg shadow-pink-200/50' : ''}`}
+                className={`w-full ${isHoliday ? `bg-gradient-to-r from-${holiday.gradient_from} to-${holiday.gradient_to} hover:opacity-90 shadow-lg` : ''}`}
                 disabled={loading}
               >
                 {loading ? (

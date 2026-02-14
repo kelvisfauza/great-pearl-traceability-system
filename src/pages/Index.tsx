@@ -12,6 +12,7 @@ import NotificationPanel from '@/components/notifications/NotificationPanel';
 import BuyingRecommendationsCard from '@/components/admin/BuyingRecommendationsCard';
 import UpcomingBookingsWidget from '@/components/admin/UpcomingBookingsWidget';
 import StoreRealTimeTracker from '@/components/v2/admin/StoreRealTimeTracker';
+import HolidayBanner from '@/components/HolidayBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Coffee, 
@@ -60,6 +61,9 @@ const Index = () => {
   return (
     <DashboardLayout title="Dashboard" subtitle="Overview of your workspace" showMessageButton={false}>
       <div className="space-y-6 pb-6">
+        {/* Holiday Banner */}
+        <HolidayBanner userName={employee?.name?.split(' ')[0]} />
+
         {/* Role Notification */}
         <AssignedRoleNotification />
 
