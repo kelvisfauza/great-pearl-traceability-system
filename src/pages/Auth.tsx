@@ -29,6 +29,8 @@ const Auth = () => {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { data: holiday } = useHolidayTheme();
+  const isHoliday = !!holiday;
 
   // Check for auto-login token
   React.useEffect(() => {
@@ -283,8 +285,6 @@ const Auth = () => {
   }
 
 
-  const { data: holiday } = useHolidayTheme();
-  const isHoliday = !!holiday;
 
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 relative overflow-hidden ${
