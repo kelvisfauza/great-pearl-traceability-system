@@ -77,26 +77,63 @@ serve(async (req) => {
         // Send SMS if requested and employee has phone number
         if (announcement.send_sms && employee.phone) {
           try {
-            const smsMessage = `${announcement.title}\n\n${announcement.message}\n\n- Great Pearl Coffee Management`;
+            const smsMessage = `${announcement.title}: ${announcement.message} - Great Pearl Coffee Management`;
             
-            // Use the existing send-sms function instead of direct API call
-            const { data: smsResult, error: smsError } = await supabase.functions.invoke('send-sms', {
-              body: {
-                phone: employee.phone,
-                message: smsMessage,
-                userName: employee.name,
-                messageType: 'announcement',
-                department: employee.department,
-                recipientEmail: employee.email,
-                triggeredBy: announcement.created_by
+            // Format phone number
+            let formattedPhone = employee.phone.toString().trim();
+            if (!formattedPhone.startsWith('+')) {
+              if (formattedPhone.startsWith('0')) {
+                formattedPhone = '+256' + formattedPhone.substring(1);
+              } else if (formattedPhone.startsWith('256')) {
+                formattedPhone = '+' + formattedPhone;
+              } else {
+                formattedPhone = '+256' + formattedPhone;
               }
-            });
+            }
 
-            if (!smsError && smsResult?.success) {
-              smsSuccessCount++;
-              console.log(`SMS sent successfully to ${employee.phone}`);
+            // Send SMS directly via YoolaSMS API (avoids auth issues with edge-to-edge calls)
+            const apiKey = Deno.env.get('YOOLA_SMS_API_KEY');
+            if (apiKey) {
+              const smsResponse = await fetch('https://yoolasms.com/api/v1/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: formattedPhone, message: smsMessage, api_key: apiKey })
+              });
+
+              if (smsResponse.ok) {
+                smsSuccessCount++;
+                console.log(`SMS sent successfully to ${formattedPhone}`);
+                
+                // Log to sms_logs
+                await supabase.from('sms_logs').insert({
+                  recipient_phone: formattedPhone,
+                  recipient_name: employee.name,
+                  recipient_email: employee.email,
+                  message_content: smsMessage,
+                  message_type: 'announcement',
+                  status: 'sent',
+                  provider: 'YoolaSMS',
+                  credits_used: 1,
+                  department: employee.department,
+                  triggered_by: announcement.created_by
+                });
+              } else {
+                const errText = await smsResponse.text();
+                console.error(`SMS failed for ${formattedPhone}:`, errText);
+                
+                await supabase.from('sms_logs').insert({
+                  recipient_phone: formattedPhone,
+                  recipient_name: employee.name,
+                  message_content: smsMessage,
+                  message_type: 'announcement',
+                  status: 'failed',
+                  provider: 'YoolaSMS',
+                  failure_reason: errText,
+                  triggered_by: announcement.created_by
+                });
+              }
             } else {
-              console.error(`SMS failed for ${employee.phone}:`, smsError?.message || 'Unknown error');
+              console.error('YOOLA_SMS_API_KEY not configured');
             }
           } catch (smsError) {
             console.error(`SMS error for ${employee.phone}:`, smsError);
