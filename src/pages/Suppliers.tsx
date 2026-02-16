@@ -142,11 +142,17 @@ const Suppliers = () => {
         }
       }
       
-      // Filter by supplier_name (supplier_id is null in all records)
+      // Filter by supplier_id first, then fallback to name matching
       const supabaseRecords = (allSupabaseCoffee || []).filter(record => {
-        // Match by current name or "Jelema" (old name for Jeremiah)
-        const matches = record.supplier_name === selectedSupplier?.name || 
-                       (selectedSupplier?.name === 'Jeremiah' && record.supplier_name === 'Jelema');
+        // Primary: match by supplier_id (most reliable)
+        if (record.supplier_id && record.supplier_id === supplierId) {
+          return true;
+        }
+        // Fallback: match by supplier_name (strip legacy suffixes like "(GPC 00373)")
+        const cleanRecordName = (record.supplier_name || '').replace(/\s*\((?:SUP\d+|GPC\s*\d+)\)\s*$/i, '').trim();
+        const matches = cleanRecordName === selectedSupplier?.name || 
+                       record.supplier_name === selectedSupplier?.name ||
+                       (selectedSupplier?.name === 'Jeremiah' && cleanRecordName === 'Jelema');
         return matches;
       });
       
