@@ -567,6 +567,26 @@ const QualityControl = () => {
 
     setIsSubmitting(true);
     try {
+      // Check for existing assessment to prevent duplicates (skip if editing)
+      if (!editingAssessmentId) {
+        const { data: existingAssessment } = await supabase
+          .from('quality_assessments')
+          .select('id, status')
+          .eq('store_record_id', selectedRecord.id)
+          .in('status', ['approved', 'pending_admin_pricing', 'submitted_to_finance', 'rejected'])
+          .maybeSingle();
+
+        if (existingAssessment) {
+          toast({
+            title: "Duplicate Assessment",
+            description: `This lot already has a quality assessment (status: ${existingAssessment.status}). Cannot submit another.`,
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       console.log(editingAssessmentId ? 'Updating quality assessment...' : 'Submitting quality assessment...');
       console.log('Selected record:', selectedRecord);
       console.log('Assessment form data:', assessmentForm);
