@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, Printer } from 'lucide-react';
+import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, Printer, Edit2, Undo2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useAttendance } from '@/hooks/useAttendance';
@@ -50,6 +51,10 @@ const MyExpenses = () => {
   const [showAdvanceReceipt, setShowAdvanceReceipt] = useState(false);
   const [advanceReceiptDetails, setAdvanceReceiptDetails] = useState<any>(null);
   const [timeDeduction, setTimeDeduction] = useState<{ hours_missed: number; total_deduction: number; reason: string | null } | null>(null);
+  const [editingRequest, setEditingRequest] = useState<ExpenseRequest | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', amount: '', description: '' });
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
 
   const isFullyApproved = (request: ExpenseRequest) => {
     return request.status === 'Approved' || 
@@ -455,6 +460,8 @@ const MyExpenses = () => {
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'rejected':
         return <XCircle className="h-4 w-4 text-red-600" />;
+      case 'withdrawn':
+        return <Undo2 className="h-4 w-4 text-muted-foreground" />;
       default:
         return <Clock className="h-4 w-4 text-yellow-600" />;
     }
@@ -466,6 +473,8 @@ const MyExpenses = () => {
         return 'bg-green-50 text-green-700 border-green-200';
       case 'rejected':
         return 'bg-red-50 text-red-700 border-red-200';
+      case 'withdrawn':
+        return 'bg-muted text-muted-foreground border-border';
       default:
         return 'bg-yellow-50 text-yellow-700 border-yellow-200';
     }
@@ -473,6 +482,7 @@ const MyExpenses = () => {
 
   const getApprovalStatus = (request: ExpenseRequest) => {
     if (request.status === 'Rejected') return 'Rejected';
+    if (request.status === 'Withdrawn') return 'Withdrawn';
     if (request.status === 'Approved') return 'Fully Approved';
     
     const financeApproved = !!request.finance_approved_at;
@@ -486,6 +496,65 @@ const MyExpenses = () => {
 
   const filterRequestsByType = (type: string) => {
     return myRequests.filter(req => req.type === type);
+  };
+
+  const canModifyOrWithdraw = (request: ExpenseRequest) => {
+    return !request.finance_approved_at && 
+           !request.admin_approved_at && 
+           request.status !== 'Rejected' && 
+           request.status !== 'Approved' && 
+           request.status !== 'Withdrawn';
+  };
+
+  const handleWithdraw = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .from('approval_requests')
+        .update({ status: 'Withdrawn' })
+        .eq('id', requestId);
+      if (error) throw error;
+      toast({ title: "Request Withdrawn", description: "Your request has been withdrawn successfully" });
+      setWithdrawingId(null);
+      fetchMyRequests();
+    } catch (error) {
+      console.error('Error withdrawing request:', error);
+      toast({ title: "Error", description: "Failed to withdraw request", variant: "destructive" });
+    }
+  };
+
+  const handleStartEdit = (request: ExpenseRequest) => {
+    setEditForm({
+      title: request.title,
+      amount: request.amount.toString(),
+      description: request.description
+    });
+    setEditingRequest(request);
+  };
+
+  const handleModifySubmit = async () => {
+    if (!editingRequest) return;
+    setEditLoading(true);
+    try {
+      const { error } = await supabase
+        .from('approval_requests')
+        .update({
+          title: editForm.title,
+          amount: parseFloat(editForm.amount),
+          description: editForm.description,
+          status: 'Pending',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingRequest.id);
+      if (error) throw error;
+      toast({ title: "Request Updated", description: "Your request has been updated and resubmitted for approval" });
+      setEditingRequest(null);
+      fetchMyRequests();
+    } catch (error) {
+      console.error('Error modifying request:', error);
+      toast({ title: "Error", description: "Failed to update request", variant: "destructive" });
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   if (!employee) {
@@ -623,6 +692,16 @@ const MyExpenses = () => {
                                   <Printer className="h-3 w-3" />
                                   Print Voucher
                                 </Button>
+                              )}
+                              {canModifyOrWithdraw(request) && (
+                                <div className="flex gap-1">
+                                  <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => handleStartEdit(request)}>
+                                    <Edit2 className="h-3 w-3" /> Modify
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="gap-1 text-xs text-destructive hover:text-destructive" onClick={() => setWithdrawingId(request.id)}>
+                                    <Undo2 className="h-3 w-3" /> Withdraw
+                                  </Button>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -809,6 +888,16 @@ const MyExpenses = () => {
                                   <Printer className="h-3 w-3" />
                                   Print Voucher
                                 </Button>
+                              )}
+                              {canModifyOrWithdraw(request) && (
+                                <div className="flex gap-1">
+                                  <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => handleStartEdit(request)}>
+                                    <Edit2 className="h-3 w-3" /> Modify
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="gap-1 text-xs text-destructive hover:text-destructive" onClick={() => setWithdrawingId(request.id)}>
+                                    <Undo2 className="h-3 w-3" /> Withdraw
+                                  </Button>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -1034,6 +1123,16 @@ const MyExpenses = () => {
                                   Print Voucher
                                 </Button>
                               )}
+                              {canModifyOrWithdraw(request) && (
+                                <div className="flex gap-1">
+                                  <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => handleStartEdit(request)}>
+                                    <Edit2 className="h-3 w-3" /> Modify
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="gap-1 text-xs text-destructive hover:text-destructive" onClick={() => setWithdrawingId(request.id)}>
+                                    <Undo2 className="h-3 w-3" /> Withdraw
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </div>
                           {request.rejection_reason && (
@@ -1076,6 +1175,67 @@ const MyExpenses = () => {
             employeePosition={employee?.position}
           />
         )}
+
+        {/* Withdraw Confirmation Dialog */}
+        <Dialog open={!!withdrawingId} onOpenChange={() => setWithdrawingId(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Withdraw Request</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to withdraw this request? It will be removed from the approvers' queue.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setWithdrawingId(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={() => withdrawingId && handleWithdraw(withdrawingId)}>
+                Withdraw Request
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modify Request Dialog */}
+        <Dialog open={!!editingRequest} onOpenChange={() => setEditingRequest(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Modify Request</DialogTitle>
+              <DialogDescription>
+                Update your request details. It will be resubmitted for approval.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Title</Label>
+                <Input
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Amount (UGX)</Label>
+                <Input
+                  type="number"
+                  value={editForm.amount}
+                  onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={4}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingRequest(null)}>Cancel</Button>
+              <Button onClick={handleModifySubmit} disabled={editLoading}>
+                {editLoading ? 'Updating...' : 'Update & Resubmit'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
