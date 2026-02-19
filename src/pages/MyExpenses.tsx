@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, Printer, Edit2, Undo2 } from 'lucide-react';
+import { DollarSign, ShoppingCart, Coffee, Wallet, Clock, CheckCircle, XCircle, AlertTriangle, AlertCircle, Printer, Edit2, Undo2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useAttendance } from '@/hooks/useAttendance';
@@ -20,6 +20,7 @@ import Layout from '@/components/Layout';
 import PaymentVoucher from '@/components/expenses/PaymentVoucher';
 import SalaryAdvanceDeduction from '@/components/expenses/SalaryAdvanceDeduction';
 import SalaryAdvanceReceipt from '@/components/expenses/SalaryAdvanceReceipt';
+import ApprovalProgressTracker from '@/components/expenses/ApprovalProgressTracker';
 
 interface ExpenseRequest {
   id: string;
@@ -30,7 +31,14 @@ interface ExpenseRequest {
   status: string;
   created_at: string;
   finance_approved_at?: string | null;
+  finance_approved_by?: string | null;
   admin_approved_at?: string | null;
+  admin_approved_by?: string | null;
+  admin_approved_1_at?: string | null;
+  admin_approved_1_by?: string | null;
+  admin_approved_2_at?: string | null;
+  admin_approved_2_by?: string | null;
+  requires_three_approvals?: boolean | null;
   rejection_reason?: string | null;
   requestedby_name?: string;
   department?: string;
@@ -188,7 +196,8 @@ const MyExpenses = () => {
           daterequested: new Date().toISOString().split('T')[0],
           priority: 'Medium',
           status: 'Pending',
-          approval_stage: 'pending'
+          approval_stage: 'pending',
+          requires_three_approvals: parseFloat(requisitionForm.amount) > 50000
         });
 
       if (error) throw error;
@@ -303,7 +312,8 @@ const MyExpenses = () => {
           daterequested: new Date().toISOString().split('T')[0],
           priority: 'Medium',
           status: 'Pending',
-          approval_stage: 'pending'
+          approval_stage: 'pending',
+          requires_three_approvals: requestAmount > 50000
         });
 
       if (error) throw error;
@@ -402,6 +412,7 @@ const MyExpenses = () => {
           priority: 'High',
           status: 'Pending',
           approval_stage: 'pending',
+          requires_three_approvals: netAmount > 50000,
           details: employeeAdvance ? JSON.stringify({
             gross_salary: salaryAmount,
             advance_deduction: deduction,
@@ -484,6 +495,13 @@ const MyExpenses = () => {
     if (request.status === 'Rejected') return 'Rejected';
     if (request.status === 'Withdrawn') return 'Withdrawn';
     if (request.status === 'Approved') return 'Fully Approved';
+    
+    if (request.requires_three_approvals) {
+      const count = [request.admin_approved_1_at, request.admin_approved_2_at, request.finance_approved_at].filter(Boolean).length;
+      if (count === 3) return 'Fully Approved';
+      if (count > 0) return `${count}/3 Approvals`;
+      return 'Pending - 3 Approvals Required';
+    }
     
     const financeApproved = !!request.finance_approved_at;
     const adminApproved = !!request.admin_approved_at;
@@ -628,6 +646,14 @@ const MyExpenses = () => {
                       onChange={(e) => setRequisitionForm({ ...requisitionForm, amount: e.target.value })}
                       required
                     />
+                    {parseFloat(requisitionForm.amount) > 50000 && (
+                      <Alert className="border-amber-200 bg-amber-50 mt-2">
+                        <ShieldCheck className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="text-xs text-amber-800">
+                          <strong>Enhanced Approval Required:</strong> Amounts above 50,000 UGX require <strong>3 approvals</strong> (2 Administrators + 1 Finance) before processing.
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -705,6 +731,16 @@ const MyExpenses = () => {
                               )}
                             </div>
                           </div>
+                          <ApprovalProgressTracker
+                            requiresThreeApprovals={!!request.requires_three_approvals}
+                            financeApprovedAt={request.finance_approved_at}
+                            adminApprovedAt={request.admin_approved_at}
+                            adminApproved1At={request.admin_approved_1_at}
+                            adminApproved1By={request.admin_approved_1_by}
+                            adminApproved2At={request.admin_approved_2_at}
+                            adminApproved2By={request.admin_approved_2_by}
+                            status={request.status}
+                          />
                           {request.rejection_reason && (
                             <Alert variant="destructive" className="mt-4">
                               <AlertDescription>
@@ -816,6 +852,14 @@ const MyExpenses = () => {
                      parseFloat(personalExpenseForm.amount) > weeklyAllowance.balance_available && (
                       <p className="text-xs text-destructive">Amount exceeds your available weekly allowance</p>
                     )}
+                    {parseFloat(personalExpenseForm.amount) > 50000 && (
+                      <Alert className="border-amber-200 bg-amber-50 mt-2">
+                        <ShieldCheck className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="text-xs text-amber-800">
+                          <strong>Enhanced Approval Required:</strong> Amounts above 50,000 UGX require <strong>3 approvals</strong> (2 Administrators + 1 Finance).
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -901,6 +945,16 @@ const MyExpenses = () => {
                               )}
                             </div>
                           </div>
+                          <ApprovalProgressTracker
+                            requiresThreeApprovals={!!request.requires_three_approvals}
+                            financeApprovedAt={request.finance_approved_at}
+                            adminApprovedAt={request.admin_approved_at}
+                            adminApproved1At={request.admin_approved_1_at}
+                            adminApproved1By={request.admin_approved_1_by}
+                            adminApproved2At={request.admin_approved_2_at}
+                            adminApproved2By={request.admin_approved_2_by}
+                            status={request.status}
+                          />
                           {request.rejection_reason && (
                             <Alert variant="destructive" className="mt-4">
                               <AlertDescription>
@@ -1023,6 +1077,14 @@ const MyExpenses = () => {
                     <p className="text-xs text-muted-foreground">
                       Amount is automatically calculated based on request type
                     </p>
+                    {parseFloat(salaryForm.amount) > 50000 && (
+                      <Alert className="border-amber-200 bg-amber-50 mt-2">
+                        <ShieldCheck className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="text-xs text-amber-800">
+                          <strong>Enhanced Approval Required:</strong> Amounts above 50,000 UGX require <strong>3 approvals</strong> (2 Administrators + 1 Finance).
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
 
                   {/* Salary Advance Deduction Section */}
@@ -1135,6 +1197,16 @@ const MyExpenses = () => {
                               )}
                             </div>
                           </div>
+                          <ApprovalProgressTracker
+                            requiresThreeApprovals={!!request.requires_three_approvals}
+                            financeApprovedAt={request.finance_approved_at}
+                            adminApprovedAt={request.admin_approved_at}
+                            adminApproved1At={request.admin_approved_1_at}
+                            adminApproved1By={request.admin_approved_1_by}
+                            adminApproved2At={request.admin_approved_2_at}
+                            adminApproved2By={request.admin_approved_2_by}
+                            status={request.status}
+                          />
                           {request.rejection_reason && (
                             <Alert variant="destructive" className="mt-4">
                               <AlertDescription>
