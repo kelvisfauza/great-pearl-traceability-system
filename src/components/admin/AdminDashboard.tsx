@@ -12,6 +12,7 @@ import CashManagementModal from './CashManagementModal';
 import TopSuppliersChart from './TopSuppliersChart';
 import { PermissionChangeApprovals } from './PermissionChangeApprovals';
 import PriceApprovalPanel from './PriceApprovalPanel';
+import AttendanceOverviewCard from './AttendanceOverviewCard';
 
 import { DataArchiveManager } from './DataArchiveManager';
 import { usePresenceList } from '@/hooks/usePresenceList';
@@ -181,6 +182,9 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Attendance Overview */}
+          <AttendanceOverviewCard />
 
           {/* System Overview */}
           <div className="grid grid-cols-1 gap-6">
