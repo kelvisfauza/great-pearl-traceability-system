@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, CheckCircle, Clock, Printer, DollarSign, Info } from 'lucide-react';
+import { Loader2, CheckCircle, Clock, Printer, DollarSign, Info, AlertTriangle, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface SalaryPayment {
@@ -33,9 +34,14 @@ const MySalaryPayments = () => {
   const [payments, setPayments] = useState<SalaryPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [printPayment, setPrintPayment] = useState<SalaryPayment | null>(null);
+  const [advanceInfo, setAdvanceInfo] = useState<{ remaining_balance: number; minimum_payment: number; original_amount: number } | null>(null);
+  const [timeDeductionInfo, setTimeDeductionInfo] = useState<{ hours_missed: number; total_deduction: number } | null>(null);
 
   useEffect(() => {
-    if (employee?.email) fetchMyPayments();
+    if (employee?.email) {
+      fetchMyPayments();
+      fetchDeductions();
+    }
   }, [employee?.email]);
 
   const fetchMyPayments = async () => {
@@ -47,6 +53,37 @@ const MySalaryPayments = () => {
       .order('created_at', { ascending: false });
     setPayments((data as SalaryPayment[]) || []);
     setLoading(false);
+  };
+
+  const fetchDeductions = async () => {
+    if (!employee) return;
+
+    // Fetch active salary advance
+    const { data: advances } = await supabase
+      .from('employee_salary_advances')
+      .select('remaining_balance, minimum_payment, original_amount')
+      .eq('employee_email', employee.email)
+      .eq('status', 'active')
+      .limit(1);
+
+    if (advances?.[0]) {
+      setAdvanceInfo(advances[0] as any);
+    }
+
+    // Fetch current month time deductions
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const { data: deductions } = await supabase
+      .from('time_deductions')
+      .select('hours_missed, total_deduction')
+      .eq('employee_id', employee.id)
+      .eq('month', currentMonth);
+
+    const totalHours = deductions?.reduce((sum, d) => sum + Number(d.hours_missed), 0) || 0;
+    const totalDeduction = deductions?.reduce((sum, d) => sum + Number(d.total_deduction), 0) || 0;
+    if (totalDeduction > 0) {
+      setTimeDeductionInfo({ hours_missed: totalHours, total_deduction: totalDeduction });
+    }
   };
 
   const currentMonth = format(new Date(), 'MMMM yyyy');
@@ -72,6 +109,76 @@ const MySalaryPayments = () => {
           <strong>Salary payments are now processed automatically by HR.</strong> You no longer need to submit salary requests. Check below for your payment status.
         </AlertDescription>
       </Alert>
+
+      {/* Active Deductions Summary */}
+      {(advanceInfo || timeDeductionInfo) && (
+        <Card className="border-2 border-amber-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              Active Deductions This Month
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {advanceInfo && (
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-100">
+                <CreditCard className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Salary Advance</p>
+                  <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
+                    <p>Original Amount: UGX {advanceInfo.original_amount.toLocaleString()}</p>
+                    <p>Remaining Balance: <span className="font-semibold text-amber-700">UGX {advanceInfo.remaining_balance.toLocaleString()}</span></p>
+                    <p>Monthly Installment: UGX {advanceInfo.minimum_payment.toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {timeDeductionInfo && (
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-100">
+                <Clock className="h-5 w-5 text-red-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Time Deduction</p>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    <p>{timeDeductionInfo.hours_missed} hours missed × 3,000 UGX/hr = <span className="font-semibold text-red-700">-UGX {timeDeductionInfo.total_deduction.toLocaleString()}</span></p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {employee?.salary && (
+              <>
+                <Separator />
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Gross Salary</span>
+                    <span>UGX {employee.salary.toLocaleString()}</span>
+                  </div>
+                  {advanceInfo && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Advance Installment</span>
+                      <span>-UGX {advanceInfo.minimum_payment.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {timeDeductionInfo && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Time Penalty</span>
+                      <span>-UGX {timeDeductionInfo.total_deduction.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold border-t pt-1">
+                    <span>Estimated Net Salary</span>
+                    <span className="text-primary">
+                      UGX {Math.max(0, employee.salary - (advanceInfo?.minimum_payment || 0) - (timeDeductionInfo?.total_deduction || 0)).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground italic">* Final amount may differ based on HR's applied deduction</p>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {currentMonthPayment ? (
         <Card className="border-2 border-primary/20">
