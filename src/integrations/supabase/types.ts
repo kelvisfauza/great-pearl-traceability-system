@@ -509,6 +509,75 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_time_records: {
+        Row: {
+          arrival_time: string | null
+          created_at: string
+          departure_time: string | null
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          is_late: boolean | null
+          is_overtime: boolean | null
+          late_minutes: number | null
+          notes: string | null
+          overtime_minutes: number | null
+          record_date: string
+          recorded_by: string
+          standard_end: string
+          standard_start: string
+          status: string
+          support_document_name: string | null
+          support_document_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          arrival_time?: string | null
+          created_at?: string
+          departure_time?: string | null
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          is_late?: boolean | null
+          is_overtime?: boolean | null
+          late_minutes?: number | null
+          notes?: string | null
+          overtime_minutes?: number | null
+          record_date?: string
+          recorded_by: string
+          standard_end?: string
+          standard_start?: string
+          status?: string
+          support_document_name?: string | null
+          support_document_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          arrival_time?: string | null
+          created_at?: string
+          departure_time?: string | null
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          is_late?: boolean | null
+          is_overtime?: boolean | null
+          late_minutes?: number | null
+          notes?: string | null
+          overtime_minutes?: number | null
+          record_date?: string
+          recorded_by?: string
+          standard_end?: string
+          standard_start?: string
+          status?: string
+          support_document_name?: string | null
+          support_document_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string

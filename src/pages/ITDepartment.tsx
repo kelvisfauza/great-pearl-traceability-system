@@ -23,6 +23,7 @@ import { ComprehensiveSMSManager } from '@/components/it/ComprehensiveSMSManager
 import { ITUserManagement } from '@/components/it/ITUserManagement';
 import { ITPermissionManager } from '@/components/it/ITPermissionManager';
 import ReportRemindersSettings from '@/components/it/ReportRemindersSettings';
+import AttendanceTimeManager from '@/components/it/AttendanceTimeManager';
 
 const ITDepartment = () => {
   const { hasPermission, employee } = useAuth();
@@ -143,9 +144,10 @@ const ITDepartment = () => {
         </div>
 
         <Tabs defaultValue="permissions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="user-management">Users</TabsTrigger>
+            <TabsTrigger value="attendance">Attendance</TabsTrigger>
             <TabsTrigger value="errors">Errors</TabsTrigger>
             <TabsTrigger value="sms">SMS</TabsTrigger>
             <TabsTrigger value="reminders">Reminders</TabsTrigger>
@@ -156,6 +158,10 @@ const ITDepartment = () => {
 
           <TabsContent value="permissions" className="space-y-4">
             <ITPermissionManager />
+          </TabsContent>
+
+          <TabsContent value="attendance" className="space-y-4">
+            <AttendanceTimeManager />
           </TabsContent>
 
           <TabsContent value="user-management" className="space-y-4">
