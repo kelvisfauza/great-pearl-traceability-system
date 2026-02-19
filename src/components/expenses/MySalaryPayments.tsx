@@ -12,7 +12,12 @@ import { format } from 'date-fns';
 interface SalaryPayment {
   id: string;
   employee_name: string;
+  gross_salary: number;
   salary_amount: number;
+  advance_deduction: number;
+  time_deduction: number;
+  time_deduction_hours: number;
+  net_salary: number;
   payment_month: string;
   payment_method: string;
   transaction_id: string | null;
@@ -61,7 +66,6 @@ const MySalaryPayments = () => {
 
   return (
     <div className="space-y-6">
-      {/* Current Month Status */}
       <Alert className="border-blue-200 bg-blue-50">
         <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800">
@@ -78,10 +82,26 @@ const MySalaryPayments = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Amount</p>
-                <p className="text-lg font-bold">UGX {Number(currentMonthPayment.salary_amount).toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Gross Salary</p>
+                <p className="text-lg font-bold">UGX {Number(currentMonthPayment.gross_salary || currentMonthPayment.salary_amount).toLocaleString()}</p>
+              </div>
+              {Number(currentMonthPayment.advance_deduction) > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Advance Deduction</p>
+                  <p className="font-medium text-red-600">-UGX {Number(currentMonthPayment.advance_deduction).toLocaleString()}</p>
+                </div>
+              )}
+              {Number(currentMonthPayment.time_deduction) > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Time Deduction ({currentMonthPayment.time_deduction_hours}hrs)</p>
+                  <p className="font-medium text-red-600">-UGX {Number(currentMonthPayment.time_deduction).toLocaleString()}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-muted-foreground">Net Salary</p>
+                <p className="text-lg font-bold text-primary">UGX {Number(currentMonthPayment.net_salary || currentMonthPayment.salary_amount).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Method</p>
@@ -97,11 +117,11 @@ const MySalaryPayments = () => {
                   )}
                 </Badge>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Transaction ID</p>
-                <p className="font-mono text-sm">{currentMonthPayment.transaction_id || 'Pending'}</p>
-              </div>
             </div>
+
+            {currentMonthPayment.transaction_id && (
+              <p className="text-xs font-mono text-muted-foreground">Transaction ID: {currentMonthPayment.transaction_id}</p>
+            )}
 
             {currentMonthPayment.status === 'completed' && (
               <Button variant="outline" className="gap-2" onClick={() => setPrintPayment(currentMonthPayment)}>
@@ -129,29 +149,36 @@ const MySalaryPayments = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {payments.map(payment => (
-                <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="space-y-1">
-                    <p className="font-medium">{payment.payment_month}</p>
-                    <p className="text-sm text-muted-foreground">
-                      UGX {Number(payment.salary_amount).toLocaleString()} • {payment.payment_method}
-                    </p>
-                    {payment.transaction_id && (
-                      <p className="text-xs font-mono text-muted-foreground">ID: {payment.transaction_id}</p>
-                    )}
+              {payments.map(payment => {
+                const totalDeductions = Number(payment.advance_deduction || 0) + Number(payment.time_deduction || 0);
+                return (
+                  <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div className="space-y-1">
+                      <p className="font-medium">{payment.payment_month}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Gross: UGX {Number(payment.gross_salary || payment.salary_amount).toLocaleString()}
+                        {totalDeductions > 0 && (
+                          <span className="text-red-600"> • Deductions: -UGX {totalDeductions.toLocaleString()}</span>
+                        )}
+                        <span className="font-semibold"> • Net: UGX {Number(payment.net_salary || payment.salary_amount).toLocaleString()}</span>
+                      </p>
+                      {payment.transaction_id && (
+                        <p className="text-xs font-mono text-muted-foreground">ID: {payment.transaction_id}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={payment.status === 'completed' ? 'default' : 'secondary'} className={payment.status === 'completed' ? 'bg-green-600' : 'bg-orange-500'}>
+                        {payment.status === 'completed' ? 'Paid' : 'Processing'}
+                      </Badge>
+                      {payment.status === 'completed' && (
+                        <Button size="sm" variant="ghost" onClick={() => setPrintPayment(payment)}>
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={payment.status === 'completed' ? 'default' : 'secondary'} className={payment.status === 'completed' ? 'bg-green-600' : 'bg-orange-500'}>
-                      {payment.status === 'completed' ? 'Paid' : 'Processing'}
-                    </Badge>
-                    {payment.status === 'completed' && (
-                      <Button size="sm" variant="ghost" onClick={() => setPrintPayment(payment)}>
-                        <Printer className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -186,10 +213,33 @@ const MySalaryPayments = () => {
                   <p className="text-muted-foreground">Payment Month</p>
                   <p className="font-medium">{printPayment.payment_month}</p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Amount</p>
-                  <p className="font-bold text-lg">UGX {Number(printPayment.salary_amount).toLocaleString()}</p>
+              </div>
+
+              {/* Salary Breakdown */}
+              <div className="border rounded-lg p-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Gross Salary</span>
+                  <span className="font-medium">UGX {Number(printPayment.gross_salary || printPayment.salary_amount).toLocaleString()}</span>
                 </div>
+                {Number(printPayment.advance_deduction) > 0 && (
+                  <div className="flex justify-between text-red-600">
+                    <span>Salary Advance Deduction</span>
+                    <span>-UGX {Number(printPayment.advance_deduction).toLocaleString()}</span>
+                  </div>
+                )}
+                {Number(printPayment.time_deduction) > 0 && (
+                  <div className="flex justify-between text-red-600">
+                    <span>Time Deduction ({printPayment.time_deduction_hours}hrs missed)</span>
+                    <span>-UGX {Number(printPayment.time_deduction).toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-lg border-t pt-2">
+                  <span>Net Salary Paid</span>
+                  <span>UGX {Number(printPayment.net_salary || printPayment.salary_amount).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground">Payment Method</p>
                   <p className="font-medium">{printPayment.payment_method}</p>
@@ -205,6 +255,7 @@ const MySalaryPayments = () => {
                   </p>
                 </div>
               </div>
+
               <div className="border-t pt-4 mt-4 grid grid-cols-2 gap-8">
                 <div className="text-center">
                   <div className="border-b border-dashed mb-1 h-8" />
