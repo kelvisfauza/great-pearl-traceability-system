@@ -8,7 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
+import { DelegateApprovalModal } from '@/components/approval/DelegateApprovalModal';
 import { useSMSNotifications } from '@/hooks/useSMSNotifications';
+import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
 
 interface MoneyRequest {
   id: string;
@@ -38,6 +40,8 @@ const MoneyRequestsManager = () => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const { sendApprovalRequestSMS } = useSMSNotifications();
+  const { checkMoneyRequestEligibility } = useSeparationOfDuties();
+  const [delegateModal, setDelegateModal] = useState<{ open: boolean; reason: string; requestId: string; amount: number }>({ open: false, reason: '', requestId: '', amount: 0 });
 
   const fetchRequests = async () => {
     try {
@@ -63,6 +67,14 @@ const MoneyRequestsManager = () => {
 
   const handleFinanceApproval = async (requestId: string, approve: boolean, rejectionReason?: string) => {
     try {
+      // POLICY: Check self-approval and SoD
+      const sodCheck = await checkMoneyRequestEligibility(requestId);
+      if (!sodCheck.canApprove) {
+        const req = requests.find(r => r.id === requestId);
+        setDelegateModal({ open: true, reason: sodCheck.reason || 'Approval blocked by policy', requestId, amount: req?.amount || 0 });
+        return;
+      }
+
       console.log('🔄 Finance Approval Handler:', { 
         requestId, 
         approve, 
@@ -372,6 +384,14 @@ const MoneyRequestsManager = () => {
         onConfirm={handleConfirmRejection}
         title="Reject Money Request"
         description="Please select a reason for rejecting this money request and provide any additional comments."
+      />
+      <DelegateApprovalModal
+        open={delegateModal.open}
+        onClose={() => setDelegateModal({ open: false, reason: '', requestId: '', amount: 0 })}
+        violationReason={delegateModal.reason}
+        requestId={delegateModal.requestId}
+        requestType="money_request"
+        requestAmount={delegateModal.amount}
       />
     </div>
   );

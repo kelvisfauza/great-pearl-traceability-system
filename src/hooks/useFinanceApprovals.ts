@@ -159,6 +159,10 @@ export const useFinanceApprovals = () => {
     }
   };
 
+  const checkEligibility = async (requestId: string) => {
+    return await checkExpenseRequestEligibility(requestId);
+  };
+
   const handleFinanceApproval = async (
     requestId: string,
     approve: boolean,
@@ -169,8 +173,8 @@ export const useFinanceApprovals = () => {
       // POLICY: Check self-approval and SoD before proceeding
       const sodCheck = await checkExpenseRequestEligibility(requestId);
       if (!sodCheck.canApprove) {
-        showSoDViolationWarning(sodCheck.reason || 'Approval blocked by policy');
-        return false;
+        // Return the check result so the component can show the delegation modal
+        return { blocked: true, reason: sodCheck.reason || 'Approval blocked by policy' };
       }
 
       const request = requests.find(r => r.id === requestId);
@@ -253,6 +257,7 @@ export const useFinanceApprovals = () => {
     requests,
     loading,
     handleFinanceApproval,
+    checkEligibility,
     refetch: fetchRequests
   };
 };

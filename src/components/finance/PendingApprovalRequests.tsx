@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useFinanceApprovals } from '@/hooks/useFinanceApprovals';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
+import { DelegateApprovalModal } from '@/components/approval/DelegateApprovalModal';
 import { useAuth } from '@/contexts/AuthContext';
 
 const PendingApprovalRequests = () => {
@@ -25,10 +26,15 @@ const PendingApprovalRequests = () => {
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
   const [requestToReject, setRequestToReject] = useState<string | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [delegateModal, setDelegateModal] = useState<{ open: boolean; reason: string; requestId: string; amount: number; title?: string }>({ open: false, reason: '', requestId: '', amount: 0 });
 
   const handleApprove = async (requestId: string) => {
     setProcessing(requestId);
-    const success = await handleFinanceApproval(requestId, true);
+    const result = await handleFinanceApproval(requestId, true);
+    if (result && typeof result === 'object' && 'blocked' in result) {
+      const req = requests.find(r => r.id === requestId);
+      setDelegateModal({ open: true, reason: result.reason, requestId, amount: req?.amount || 0, title: req?.title });
+    }
     setProcessing(null);
   };
 
@@ -289,6 +295,16 @@ const PendingApprovalRequests = () => {
         onConfirm={handleConfirmRejection}
         title="Reject Finance Approval"
         description="Please provide a reason for rejecting this request."
+      />
+      {/* Delegation Modal */}
+      <DelegateApprovalModal
+        open={delegateModal.open}
+        onClose={() => setDelegateModal({ open: false, reason: '', requestId: '', amount: 0 })}
+        violationReason={delegateModal.reason}
+        requestId={delegateModal.requestId}
+        requestType="expense_request"
+        requestAmount={delegateModal.amount}
+        requestTitle={delegateModal.title}
       />
     </>
   );
