@@ -11,6 +11,7 @@ import { RejectionModal } from './workflow/RejectionModal';
 import { WorkflowTracker } from './workflow/WorkflowTracker';
 import { DetailedWorkflowView } from './workflow/DetailedWorkflowView';
 import { AuditPrintModal } from './workflow/AuditPrintModal';
+import { DelegateApprovalModal } from './approval/DelegateApprovalModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const ApprovalRequests = () => {
@@ -25,11 +26,16 @@ const ApprovalRequests = () => {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [workflowDataForPrint, setWorkflowDataForPrint] = useState<any>(null);
   const { toast } = useToast();
+  const [delegateModal, setDelegateModal] = useState<{ open: boolean; reason: string; requestId: string; amount: number; title?: string }>({ open: false, reason: '', requestId: '', amount: 0 });
 
   const handleApproval = async (id: string) => {
     setProcessingId(id);
     try {
-      const success = await updateRequestStatus(id, 'Approved');
+      const result = await updateRequestStatus(id, 'Approved');
+      if (result && typeof result === 'object' && 'blocked' in result) {
+        const req = requests.find(r => r.id === id);
+        setDelegateModal({ open: true, reason: result.reason, requestId: id, amount: req?.amount || 0, title: req?.title });
+      }
     } catch (error) {
       console.error('Error processing approval:', error);
     } finally {
@@ -371,6 +377,15 @@ const ApprovalRequests = () => {
           requestId={selectedRequestId}
         />
       )}
+      <DelegateApprovalModal
+        open={delegateModal.open}
+        onClose={() => setDelegateModal({ open: false, reason: '', requestId: '', amount: 0 })}
+        violationReason={delegateModal.reason}
+        requestId={delegateModal.requestId}
+        requestType="expense_request"
+        requestAmount={delegateModal.amount}
+        requestTitle={delegateModal.title}
+      />
     </div>
   );
 };

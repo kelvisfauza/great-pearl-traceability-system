@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkflowTracking } from './useWorkflowTracking';
 import { useNotifications } from './useNotifications';
 import { useGlobalErrorHandler } from './useGlobalErrorHandler';
+import { useSeparationOfDuties } from './useSeparationOfDuties';
 
 export interface UnifiedApprovalRequest {
   id: string;
@@ -38,6 +39,7 @@ export const useUnifiedApprovalRequests = () => {
   const { trackWorkflowStep } = useWorkflowTracking();
   const { createAnnouncement } = useNotifications();
   const { reportDatabaseError, reportWorkflowError } = useGlobalErrorHandler();
+  const { checkExpenseRequestEligibility } = useSeparationOfDuties();
 
   const fetchAllRequests = useCallback(async (silent: boolean = false) => {
     try {
@@ -225,9 +227,17 @@ export const useUnifiedApprovalRequests = () => {
     status: 'Approved' | 'Rejected',
     rejectionReason?: string,
     rejectionComments?: string
-  ) => {
+  ): Promise<boolean | { blocked: true; reason: string }> => {
     try {
       console.log('Updating unified request status:', request.id, status);
+
+      // POLICY: Check self-approval and SoD for approvals on supabase requests
+      if (status === 'Approved' && request.source === 'supabase') {
+        const sodCheck = await checkExpenseRequestEligibility(request.id);
+        if (!sodCheck.canApprove) {
+          return { blocked: true, reason: sodCheck.reason || 'Approval blocked by policy' };
+        }
+      }
 
       if (request.source === 'supabase') {
         // Handle Supabase approval requests
