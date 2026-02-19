@@ -15,9 +15,11 @@ import {
 } from 'lucide-react';
 import { useFinanceApprovals } from '@/hooks/useFinanceApprovals';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PendingApprovalRequests = () => {
   const { requests, loading, handleFinanceApproval } = useFinanceApprovals();
+  const { employee } = useAuth();
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [rejectionModalOpen, setRejectionModalOpen] = useState(false);
@@ -26,7 +28,7 @@ const PendingApprovalRequests = () => {
 
   const handleApprove = async (requestId: string) => {
     setProcessing(requestId);
-    await handleFinanceApproval(requestId, true);
+    const success = await handleFinanceApproval(requestId, true);
     setProcessing(null);
   };
 

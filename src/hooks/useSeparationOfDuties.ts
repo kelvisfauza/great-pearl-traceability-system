@@ -12,6 +12,7 @@ export const useSeparationOfDuties = () => {
 
   /**
    * Check if current user has already approved this money request at any previous stage
+   * Also prevents users from approving their own requests
    */
   const checkMoneyRequestEligibility = async (
     requestId: string
@@ -23,13 +24,23 @@ export const useSeparationOfDuties = () => {
     try {
       const { data, error } = await supabase
         .from('money_requests')
-        .select('finance_approved_by, admin_approved_by')
+        .select('finance_approved_by, admin_approved_by, requested_by, user_id')
         .eq('id', requestId)
         .single();
 
       if (error) throw error;
 
       const currentUserName = employee.name || employee.email;
+      const currentUserEmail = employee.email;
+
+      // POLICY: Users cannot approve their own requests
+      if (data?.requested_by === currentUserEmail || data?.requested_by === currentUserName) {
+        return {
+          canApprove: false,
+          reason: 'You cannot approve your own request. Policy requires a different person to review and approve your submissions.'
+        };
+      }
+
       const approvers = [
         data?.finance_approved_by,
         data?.admin_approved_by
@@ -37,7 +48,7 @@ export const useSeparationOfDuties = () => {
 
       // Check if current user already approved at any stage
       const hasAlreadyApproved = approvers.some(
-        approver => approver === currentUserName || approver === employee.email
+        approver => approver === currentUserName || approver === currentUserEmail
       );
 
       if (hasAlreadyApproved) {
@@ -57,6 +68,7 @@ export const useSeparationOfDuties = () => {
 
   /**
    * Check if current user has already approved this expense request at any stage
+   * Also prevents users from approving their own requests
    */
   const checkExpenseRequestEligibility = async (
     requestId: string
@@ -68,13 +80,23 @@ export const useSeparationOfDuties = () => {
     try {
       const { data, error } = await supabase
         .from('approval_requests')
-        .select('finance_approved_by, admin_approved_by, admin_approved_1_by, admin_approved_2_by')
+        .select('finance_approved_by, admin_approved_by, admin_approved_1_by, admin_approved_2_by, requestedby, requestedby_name')
         .eq('id', requestId)
         .single();
 
       if (error) throw error;
 
       const currentUserName = employee.name || employee.email;
+      const currentUserEmail = employee.email;
+
+      // POLICY: Users cannot approve their own requests
+      if (data?.requestedby === currentUserEmail || data?.requestedby_name === currentUserName) {
+        return {
+          canApprove: false,
+          reason: 'You cannot approve your own request. Policy requires a different person to review and approve your submissions.'
+        };
+      }
+
       const approvers = [
         data?.finance_approved_by,
         data?.admin_approved_by,
@@ -84,7 +106,7 @@ export const useSeparationOfDuties = () => {
 
       // Check if current user already approved at any stage
       const hasAlreadyApproved = approvers.some(
-        approver => approver === currentUserName || approver === employee.email
+        approver => approver === currentUserName || approver === currentUserEmail
       );
 
       if (hasAlreadyApproved) {

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSMSNotifications } from '@/hooks/useSMSNotifications';
+import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
 
 interface FinanceApprovalRequest {
   id: string;
@@ -31,6 +32,7 @@ export const useFinanceApprovals = () => {
   const { toast } = useToast();
   const { employee } = useAuth();
   const { sendApprovalRequestSMS } = useSMSNotifications();
+  const { checkExpenseRequestEligibility, showSoDViolationWarning } = useSeparationOfDuties();
 
   const fetchRequests = async () => {
     try {
@@ -164,6 +166,13 @@ export const useFinanceApprovals = () => {
     rejectionComments?: string
   ) => {
     try {
+      // POLICY: Check self-approval and SoD before proceeding
+      const sodCheck = await checkExpenseRequestEligibility(requestId);
+      if (!sodCheck.canApprove) {
+        showSoDViolationWarning(sodCheck.reason || 'Approval blocked by policy');
+        return false;
+      }
+
       const request = requests.find(r => r.id === requestId);
       
       const updateData: any = {

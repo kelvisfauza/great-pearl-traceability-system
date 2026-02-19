@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { RejectionModal } from '@/components/workflow/RejectionModal';
+import { useSeparationOfDuties } from '@/hooks/useSeparationOfDuties';
 
 interface MoneyRequest {
   id: string;
@@ -32,6 +33,7 @@ const AdminMoneyRequestsManager = () => {
   const [requestToReject, setRequestToReject] = useState<string | null>(null);
   const { employee } = useAuth();
   const { toast } = useToast();
+  const { checkMoneyRequestEligibility, showSoDViolationWarning } = useSeparationOfDuties();
 
   const fetchRequests = async () => {
     try {
@@ -74,6 +76,13 @@ const AdminMoneyRequestsManager = () => {
 
   const handleAdminApproval = async (requestId: string, approve: boolean, rejectionReason?: string) => {
     try {
+      // POLICY: Check self-approval and SoD
+      const sodCheck = await checkMoneyRequestEligibility(requestId);
+      if (!sodCheck.canApprove) {
+        showSoDViolationWarning(sodCheck.reason || 'Approval blocked by policy');
+        return;
+      }
+
       const updateData: any = {
         admin_approved_by: employee?.name || 'Admin',
         admin_approved: approve,
