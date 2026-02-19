@@ -1649,6 +1649,69 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_salary_payments: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          employee_phone: string | null
+          id: string
+          notes: string | null
+          payment_method: string
+          payment_month: string
+          processed_by: string
+          processed_by_email: string
+          salary_amount: number
+          sms_sent: boolean | null
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          employee_phone?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_month: string
+          processed_by: string
+          processed_by_email: string
+          salary_amount?: number
+          sms_sent?: boolean | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          employee_phone?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          payment_month?: string
+          processed_by?: string
+          processed_by_email?: string
+          salary_amount?: number
+          sms_sent?: boolean | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           address: string | null

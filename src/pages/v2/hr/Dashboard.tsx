@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import SalaryAnnouncementDialog from "@/components/v2/hr/SalaryAnnouncementDialog";
+import ProcessPayrollDialog from "@/components/v2/hr/ProcessPayrollDialog";
 
 const HRDashboard = () => {
   const { employee } = useAuth();
@@ -116,6 +117,22 @@ const HRDashboard = () => {
                 );
               })}
             </div>
+
+            {/* Process Payroll Action */}
+            <Card className="border-2 border-green-200 bg-green-50/50 dark:bg-green-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                  <CreditCard className="h-5 w-5" />
+                  Process Employee Salary
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Select an employee, input salary amount, month and payment method. Mark as paid when complete.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <ProcessPayrollDialog />
+              </CardContent>
+            </Card>
 
             {/* Salary Notice Action */}
             <Card className="border-2 border-orange-200 bg-orange-50/50 dark:bg-orange-950/20">
