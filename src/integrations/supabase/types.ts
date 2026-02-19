@@ -1651,6 +1651,8 @@ export type Database = {
       }
       employee_salary_payments: {
         Row: {
+          advance_deduction: number
+          advance_id: string | null
           completed_at: string | null
           completed_by: string | null
           created_at: string
@@ -1658,7 +1660,9 @@ export type Database = {
           employee_id: string
           employee_name: string
           employee_phone: string | null
+          gross_salary: number
           id: string
+          net_salary: number
           notes: string | null
           payment_method: string
           payment_month: string
@@ -1667,10 +1671,14 @@ export type Database = {
           salary_amount: number
           sms_sent: boolean | null
           status: string
+          time_deduction: number
+          time_deduction_hours: number
           transaction_id: string | null
           updated_at: string
         }
         Insert: {
+          advance_deduction?: number
+          advance_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
@@ -1678,7 +1686,9 @@ export type Database = {
           employee_id: string
           employee_name: string
           employee_phone?: string | null
+          gross_salary?: number
           id?: string
+          net_salary?: number
           notes?: string | null
           payment_method?: string
           payment_month: string
@@ -1687,10 +1697,14 @@ export type Database = {
           salary_amount?: number
           sms_sent?: boolean | null
           status?: string
+          time_deduction?: number
+          time_deduction_hours?: number
           transaction_id?: string | null
           updated_at?: string
         }
         Update: {
+          advance_deduction?: number
+          advance_id?: string | null
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
@@ -1698,7 +1712,9 @@ export type Database = {
           employee_id?: string
           employee_name?: string
           employee_phone?: string | null
+          gross_salary?: number
           id?: string
+          net_salary?: number
           notes?: string | null
           payment_method?: string
           payment_month?: string
@@ -1707,6 +1723,8 @@ export type Database = {
           salary_amount?: number
           sms_sent?: boolean | null
           status?: string
+          time_deduction?: number
+          time_deduction_hours?: number
           transaction_id?: string | null
           updated_at?: string
         }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,10 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { DollarSign, UserCheck, CheckCircle, Loader2, Printer, Send } from 'lucide-react';
+import { DollarSign, CheckCircle, Loader2, Send, AlertTriangle, Info } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Employee {
@@ -30,7 +31,12 @@ interface SalaryPayment {
   employee_name: string;
   employee_email: string;
   employee_phone: string | null;
+  gross_salary: number;
   salary_amount: number;
+  advance_deduction: number;
+  time_deduction: number;
+  time_deduction_hours: number;
+  net_salary: number;
   payment_month: string;
   payment_method: string;
   transaction_id: string | null;
@@ -44,6 +50,19 @@ interface SalaryPayment {
   created_at: string;
 }
 
+interface AdvanceInfo {
+  id: string;
+  remaining_balance: number;
+  minimum_payment: number;
+  original_amount: number;
+}
+
+interface TimeDeductionInfo {
+  hours_missed: number;
+  total_deduction: number;
+  reason: string | null;
+}
+
 const ProcessPayrollDialog = () => {
   const { employee: currentUser } = useAuth();
   const { toast } = useToast();
@@ -53,8 +72,11 @@ const ProcessPayrollDialog = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [advanceInfo, setAdvanceInfo] = useState<AdvanceInfo | null>(null);
+  const [timeDeductionInfo, setTimeDeductionInfo] = useState<TimeDeductionInfo | null>(null);
   const [form, setForm] = useState({
     salaryAmount: '',
+    advanceDeduction: '',
     month: format(new Date(), 'MMMM yyyy'),
     paymentMethod: 'Bank Transfer',
     notes: '',
@@ -87,13 +109,53 @@ const ProcessPayrollDialog = () => {
     setLoading(false);
   };
 
-  const handleEmployeeSelect = (employeeId: string) => {
+  const handleEmployeeSelect = async (employeeId: string) => {
     const emp = employees.find(e => e.id === employeeId);
     setSelectedEmployee(emp || null);
-    if (emp) {
-      setForm(prev => ({ ...prev, salaryAmount: emp.salary.toString() }));
+    setAdvanceInfo(null);
+    setTimeDeductionInfo(null);
+
+    if (!emp) return;
+
+    // Fetch active salary advance
+    const { data: advances } = await supabase
+      .from('employee_salary_advances')
+      .select('id, remaining_balance, minimum_payment, original_amount')
+      .eq('employee_email', emp.email)
+      .eq('status', 'active')
+      .limit(1);
+
+    const advance = advances?.[0] || null;
+    setAdvanceInfo(advance as AdvanceInfo | null);
+
+    // Fetch current month time deductions
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const { data: deductions } = await supabase
+      .from('time_deductions')
+      .select('hours_missed, total_deduction, reason')
+      .eq('employee_id', emp.id)
+      .eq('month', currentMonth);
+
+    // Sum all deductions for the month
+    const totalHours = deductions?.reduce((sum, d) => sum + Number(d.hours_missed), 0) || 0;
+    const totalDeduction = deductions?.reduce((sum, d) => sum + Number(d.total_deduction), 0) || 0;
+
+    if (totalDeduction > 0) {
+      setTimeDeductionInfo({ hours_missed: totalHours, total_deduction: totalDeduction, reason: deductions?.[0]?.reason || null });
     }
+
+    setForm(prev => ({
+      ...prev,
+      salaryAmount: emp.salary.toString(),
+      advanceDeduction: advance ? advance.minimum_payment.toString() : '0',
+    }));
   };
+
+  const grossSalary = parseFloat(form.salaryAmount) || 0;
+  const advDeduction = parseFloat(form.advanceDeduction) || 0;
+  const timeDeduction = timeDeductionInfo?.total_deduction || 0;
+  const netSalary = Math.max(0, grossSalary - advDeduction - timeDeduction);
 
   const handleSubmit = async () => {
     if (!selectedEmployee || !form.salaryAmount || !form.month) {
@@ -110,7 +172,13 @@ const ProcessPayrollDialog = () => {
           employee_name: selectedEmployee.name,
           employee_email: selectedEmployee.email,
           employee_phone: selectedEmployee.phone,
-          salary_amount: parseFloat(form.salaryAmount),
+          gross_salary: grossSalary,
+          salary_amount: netSalary,
+          advance_deduction: advDeduction,
+          advance_id: advanceInfo?.id || null,
+          time_deduction: timeDeduction,
+          time_deduction_hours: timeDeductionInfo?.hours_missed || 0,
+          net_salary: netSalary,
           payment_month: form.month,
           payment_method: form.paymentMethod,
           processed_by: currentUser?.name || '',
@@ -121,9 +189,11 @@ const ProcessPayrollDialog = () => {
 
       if (error) throw error;
 
-      toast({ title: "Success", description: `Salary payment for ${selectedEmployee.name} initiated` });
+      toast({ title: "Success", description: `Salary payment for ${selectedEmployee.name} initiated. Net: UGX ${netSalary.toLocaleString()}` });
       setSelectedEmployee(null);
-      setForm({ salaryAmount: '', month: format(new Date(), 'MMMM yyyy'), paymentMethod: 'Bank Transfer', notes: '' });
+      setAdvanceInfo(null);
+      setTimeDeductionInfo(null);
+      setForm({ salaryAmount: '', advanceDeduction: '', month: format(new Date(), 'MMMM yyyy'), paymentMethod: 'Bank Transfer', notes: '' });
       fetchPayments();
     } catch (error) {
       console.error('Error processing payment:', error);
@@ -149,16 +219,35 @@ const ProcessPayrollDialog = () => {
 
       if (error) throw error;
 
+      // Update salary advance balance if there was a deduction
+      if (payment.advance_deduction > 0 && (payment as any).advance_id) {
+        try {
+          await supabase
+            .from('employee_salary_advances')
+            .update({
+              remaining_balance: Math.max(0, (advanceInfo?.remaining_balance || 0) - payment.advance_deduction),
+            })
+            .eq('id', (payment as any).advance_id);
+        } catch (err) {
+          console.error('Failed to update advance balance:', err);
+        }
+      }
+
       // Send SMS notification
       if (payment.employee_phone) {
         try {
-          const smsMessage = `Great Pearl Coffee: Your salary of UGX ${Number(payment.salary_amount).toLocaleString()} for ${payment.payment_month} has been successfully disbursed to your account. Transaction ID: ${txId}. Thank you.`;
-          
+          let smsMessage = `Great Pearl Coffee: Your salary for ${payment.payment_month} has been disbursed.\n\nGross: UGX ${Number(payment.gross_salary).toLocaleString()}`;
+          if (payment.advance_deduction > 0) {
+            smsMessage += `\nAdvance Deduction: -UGX ${Number(payment.advance_deduction).toLocaleString()}`;
+          }
+          if (payment.time_deduction > 0) {
+            smsMessage += `\nTime Deduction: -UGX ${Number(payment.time_deduction).toLocaleString()} (${payment.time_deduction_hours}hrs)`;
+          }
+          smsMessage += `\nNet Paid: UGX ${Number(payment.net_salary).toLocaleString()}`;
+          smsMessage += `\nTransaction ID: ${txId}`;
+
           await supabase.functions.invoke('send-sms', {
-            body: {
-              phone: payment.employee_phone,
-              message: smsMessage,
-            },
+            body: { phone: payment.employee_phone, message: smsMessage },
           });
 
           await supabase
@@ -170,9 +259,9 @@ const ProcessPayrollDialog = () => {
         }
       }
 
-      toast({ 
-        title: "Payment Completed", 
-        description: `${payment.employee_name}'s salary marked as paid. Transaction ID: ${txId}` 
+      toast({
+        title: "Payment Completed",
+        description: `${payment.employee_name}'s salary marked as paid. Transaction ID: ${txId}`
       });
       fetchPayments();
     } catch (error) {
@@ -196,7 +285,7 @@ const ProcessPayrollDialog = () => {
               Process Employee Salary Payment
             </DialogTitle>
             <DialogDescription>
-              Select an employee, enter salary details, and process payment
+              Select an employee, review deductions, and process payment
             </DialogDescription>
           </DialogHeader>
 
@@ -234,7 +323,7 @@ const ProcessPayrollDialog = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Salary Amount (UGX)</Label>
+                    <Label>Gross Salary (UGX)</Label>
                     <Input
                       type="number"
                       value={form.salaryAmount}
@@ -263,6 +352,79 @@ const ProcessPayrollDialog = () => {
                   </div>
                 </div>
 
+                {/* Deductions Section */}
+                {selectedEmployee && (advanceInfo || timeDeductionInfo) && (
+                  <div className="space-y-3 p-4 rounded-lg border border-amber-200 bg-amber-50/50">
+                    <h4 className="font-semibold text-sm flex items-center gap-2 text-amber-800">
+                      <AlertTriangle className="h-4 w-4" />
+                      Deductions
+                    </h4>
+
+                    {advanceInfo && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Salary Advance (Balance: UGX {advanceInfo.remaining_balance.toLocaleString()})
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Min: UGX {advanceInfo.minimum_payment.toLocaleString()}
+                          </span>
+                        </div>
+                        <Input
+                          type="number"
+                          value={form.advanceDeduction}
+                          onChange={e => setForm({ ...form, advanceDeduction: e.target.value })}
+                          placeholder="Advance deduction amount"
+                          min={0}
+                          max={advanceInfo.remaining_balance}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          HR decides how much to deduct (min recommended: UGX {advanceInfo.minimum_payment.toLocaleString()})
+                        </p>
+                      </div>
+                    )}
+
+                    {timeDeductionInfo && (
+                      <Alert className="border-red-200 bg-red-50">
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                        <AlertDescription className="text-sm text-red-800">
+                          <strong>Time Deduction:</strong> {timeDeductionInfo.hours_missed} hrs missed → 
+                          <strong> -UGX {timeDeductionInfo.total_deduction.toLocaleString()}</strong>
+                          {timeDeductionInfo.reason && <span className="block text-xs mt-1">Reason: {timeDeductionInfo.reason}</span>}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                )}
+
+                {/* Net Salary Summary */}
+                {selectedEmployee && (
+                  <div className="p-4 rounded-lg border-2 border-primary/20 bg-primary/5">
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>Gross Salary</span>
+                        <span className="font-medium">UGX {grossSalary.toLocaleString()}</span>
+                      </div>
+                      {advDeduction > 0 && (
+                        <div className="flex justify-between text-red-600">
+                          <span>- Advance Deduction</span>
+                          <span>UGX {advDeduction.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {timeDeduction > 0 && (
+                        <div className="flex justify-between text-red-600">
+                          <span>- Time Deduction ({timeDeductionInfo?.hours_missed}hrs)</span>
+                          <span>UGX {timeDeduction.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                        <span>Net Salary</span>
+                        <span className="text-primary">UGX {netSalary.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label>Notes (Optional)</Label>
                   <Textarea
@@ -275,7 +437,7 @@ const ProcessPayrollDialog = () => {
 
                 <Button onClick={handleSubmit} disabled={submitting || !selectedEmployee} className="w-full gap-2">
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  {submitting ? 'Processing...' : 'Process Salary Payment'}
+                  {submitting ? 'Processing...' : `Process Payment — UGX ${netSalary.toLocaleString()}`}
                 </Button>
               </CardContent>
             </Card>
@@ -299,41 +461,48 @@ const ProcessPayrollDialog = () => {
                         <TableRow>
                           <TableHead>Employee</TableHead>
                           <TableHead>Month</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Method</TableHead>
+                          <TableHead>Gross</TableHead>
+                          <TableHead>Deductions</TableHead>
+                          <TableHead>Net Paid</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead>Transaction ID</TableHead>
                           <TableHead>Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {payments.map(payment => (
-                          <TableRow key={payment.id}>
-                            <TableCell className="font-medium">{payment.employee_name}</TableCell>
-                            <TableCell>{payment.payment_month}</TableCell>
-                            <TableCell>UGX {Number(payment.salary_amount).toLocaleString()}</TableCell>
-                            <TableCell>{payment.payment_method}</TableCell>
-                            <TableCell>
-                              <Badge variant={payment.status === 'completed' ? 'default' : 'secondary'} className={payment.status === 'completed' ? 'bg-green-600' : 'bg-orange-500'}>
-                                {payment.status === 'completed' ? 'Paid' : 'Processing'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-mono text-xs">{payment.transaction_id || '-'}</TableCell>
-                            <TableCell>
-                              {payment.status === 'processing' && (
-                                <Button size="sm" variant="outline" className="gap-1" onClick={() => handleMarkComplete(payment)}>
-                                  <CheckCircle className="h-3 w-3" />
-                                  Mark Paid
-                                </Button>
-                              )}
-                              {payment.status === 'completed' && payment.sms_sent && (
-                                <span className="text-xs text-green-600 flex items-center gap-1">
-                                  <CheckCircle className="h-3 w-3" /> SMS Sent
-                                </span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {payments.map(payment => {
+                          const totalDeductions = Number(payment.advance_deduction || 0) + Number(payment.time_deduction || 0);
+                          return (
+                            <TableRow key={payment.id}>
+                              <TableCell className="font-medium">{payment.employee_name}</TableCell>
+                              <TableCell>{payment.payment_month}</TableCell>
+                              <TableCell>UGX {Number(payment.gross_salary || payment.salary_amount).toLocaleString()}</TableCell>
+                              <TableCell>
+                                {totalDeductions > 0 ? (
+                                  <span className="text-red-600 text-sm">-UGX {totalDeductions.toLocaleString()}</span>
+                                ) : '-'}
+                              </TableCell>
+                              <TableCell className="font-semibold">UGX {Number(payment.net_salary || payment.salary_amount).toLocaleString()}</TableCell>
+                              <TableCell>
+                                <Badge variant={payment.status === 'completed' ? 'default' : 'secondary'} className={payment.status === 'completed' ? 'bg-green-600' : 'bg-orange-500'}>
+                                  {payment.status === 'completed' ? 'Paid' : 'Processing'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {payment.status === 'processing' && (
+                                  <Button size="sm" variant="outline" className="gap-1" onClick={() => handleMarkComplete(payment)}>
+                                    <CheckCircle className="h-3 w-3" />
+                                    Mark Paid
+                                  </Button>
+                                )}
+                                {payment.status === 'completed' && payment.sms_sent && (
+                                  <span className="text-xs text-green-600 flex items-center gap-1">
+                                    <CheckCircle className="h-3 w-3" /> SMS Sent
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
