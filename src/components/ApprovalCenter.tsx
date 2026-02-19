@@ -10,6 +10,7 @@ import { RejectionModal } from './workflow/RejectionModal';
 import { WorkflowTracker } from './workflow/WorkflowTracker';
 import { DynamicDetailedView } from './workflow/DynamicDetailedView';
 import { AuditPrintModal } from './workflow/AuditPrintModal';
+import { DelegateApprovalModal } from './approval/DelegateApprovalModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const POLLING_INTERVAL = 10000; // 10 seconds
@@ -26,6 +27,7 @@ const ApprovalCenter = () => {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [workflowDataForPrint, setWorkflowDataForPrint] = useState<any>(null);
   const { toast } = useToast();
+  const [delegateModal, setDelegateModal] = useState<{ open: boolean; reason: string; requestId: string; amount: number; title?: string }>({ open: false, reason: '', requestId: '', amount: 0 });
 
   // Auto-refresh pending requests in background to prevent double approvals
   useEffect(() => {
@@ -43,7 +45,11 @@ const ApprovalCenter = () => {
   const handleApproval = async (request: UnifiedApprovalRequest) => {
     setProcessingId(request.id);
     try {
-      const success = await updateRequestStatus(request, 'Approved');
+      const result = await updateRequestStatus(request, 'Approved');
+      if (result && typeof result === 'object' && 'blocked' in result) {
+        const amt = typeof request.amount === 'number' ? request.amount : parseFloat(String(request.amount)) || 0;
+        setDelegateModal({ open: true, reason: result.reason, requestId: request.id, amount: amt, title: request.title });
+      }
     } catch (error) {
       console.error('Error processing approval:', error);
     } finally {
@@ -420,6 +426,15 @@ const ApprovalCenter = () => {
           requestId={selectedRequest.id}
         />
       )}
+      <DelegateApprovalModal
+        open={delegateModal.open}
+        onClose={() => setDelegateModal({ open: false, reason: '', requestId: '', amount: 0 })}
+        violationReason={delegateModal.reason}
+        requestId={delegateModal.requestId}
+        requestType="expense_request"
+        requestAmount={delegateModal.amount}
+        requestTitle={delegateModal.title}
+      />
     </div>
   );
 };

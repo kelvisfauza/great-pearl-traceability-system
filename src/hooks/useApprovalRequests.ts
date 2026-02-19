@@ -5,6 +5,8 @@ import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkflowTracking } from './useWorkflowTracking';
 import { useNotifications } from './useNotifications';
+import { useSeparationOfDuties } from './useSeparationOfDuties';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 export interface ApprovalRequest {
@@ -76,6 +78,8 @@ export const useApprovalRequests = () => {
   const [loading, setLoading] = useState(true);
   const { trackWorkflowStep } = useWorkflowTracking();
   const { createAnnouncement } = useNotifications();
+  const { checkExpenseRequestEligibility } = useSeparationOfDuties();
+  const { employee } = useAuth();
 
 // Function to send expense approval notification
 const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
@@ -205,8 +209,16 @@ const sendExpenseApprovalNotification = async (request: ApprovalRequest) => {
     rejectionComments?: string,
     approvalType?: 'admin' | 'admin1' | 'admin2',
     approverName?: string
-  ) => {
+  ): Promise<boolean | { blocked: true; reason: string }> => {
     try {
+      // POLICY: Check self-approval and SoD for approvals
+      if (status === 'Approved') {
+        const sodCheck = await checkExpenseRequestEligibility(id);
+        if (!sodCheck.canApprove) {
+          return { blocked: true, reason: sodCheck.reason || 'Approval blocked by policy' };
+        }
+      }
+
       console.log('🔄 [ADMIN APPROVAL] Updating approval request:', { id, status, approvalType, approverName });
       
       const request = requests.find(req => req.id === id);
