@@ -320,7 +320,9 @@ const JobApplicationsManager = () => {
                         variant="outline"
                         onClick={() => {
                           setSelectedApp(app);
-                          setNewStatus(app.status);
+                          const currentIdx = STATUSES.indexOf(app.status as typeof STATUSES[number]);
+                          const nextStatus = currentIdx < STATUSES.length - 1 ? STATUSES[currentIdx + 1] : app.status;
+                          setNewStatus(nextStatus);
                           setStatusNote(app.notes || "");
                           setShowUpdateDialog(true);
                         }}
@@ -362,7 +364,16 @@ const JobApplicationsManager = () => {
                 <Select value={newStatus} onValueChange={setNewStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {STATUSES.map((s) => {
+                      const currentIndex = STATUSES.indexOf(selectedApp.status as typeof STATUSES[number]);
+                      const optionIndex = STATUSES.indexOf(s);
+                      const isDisabled = optionIndex <= currentIndex;
+                      return (
+                        <SelectItem key={s} value={s} disabled={isDisabled}>
+                          {s}{isDisabled && optionIndex < currentIndex ? " ✓" : ""}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
