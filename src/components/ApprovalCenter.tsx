@@ -339,6 +339,29 @@ const ApprovalCenter = () => {
                         </div>
                       </div>
 
+                      {/* 3-tier approval progress indicator */}
+                      {request.status === 'Pending Admin 2' && (
+                        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <span className="font-medium text-amber-800 dark:text-amber-200">
+                              Admin 1 approved ({request.details?.admin_approved_1_by || 'Admin'}) — Awaiting 2nd admin approval
+                            </span>
+                          </div>
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            High-value request ({formatAmount(request.amount)}) requires 2 admin approvals before Finance review.
+                          </p>
+                        </div>
+                      )}
+
+                      {Number(request.amount) > 50000 && request.status !== 'Pending Admin 2' && (
+                        <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                          <p className="text-xs text-blue-600 dark:text-blue-400">
+                            ⚡ 3-tier approval: This request needs 2 admin approvals + Finance approval
+                          </p>
+                        </div>
+                      )}
+
                       {request.batchNumber && (
                         <div className="mb-4 p-2 bg-muted rounded">
                           <p className="text-sm"><strong>Batch:</strong> {request.batchNumber}</p>
@@ -354,7 +377,8 @@ const ApprovalCenter = () => {
                           className="bg-green-600 hover:bg-green-700"
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
-                          Approve
+                          {request.status === 'Pending Admin 2' ? 'Approve (Admin 2)' : 
+                           Number(request.amount) > 50000 ? 'Approve (Admin 1)' : 'Approve'}
                         </Button>
                         <Button
                           onClick={() => handleRejection(request)}
