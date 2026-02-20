@@ -1664,6 +1664,7 @@ export type Database = {
           id: string
           net_salary: number
           notes: string | null
+          payment_label: string | null
           payment_method: string
           payment_month: string
           processed_by: string
@@ -1690,6 +1691,7 @@ export type Database = {
           id?: string
           net_salary?: number
           notes?: string | null
+          payment_label?: string | null
           payment_method?: string
           payment_month: string
           processed_by: string
@@ -1716,6 +1718,7 @@ export type Database = {
           id?: string
           net_salary?: number
           notes?: string | null
+          payment_label?: string | null
           payment_method?: string
           payment_month?: string
           processed_by?: string
@@ -6344,6 +6347,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          deducted_in_payment_id: string | null
           employee_email: string
           employee_id: string
           employee_name: string
@@ -6360,6 +6364,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          deducted_in_payment_id?: string | null
           employee_email: string
           employee_id: string
           employee_name: string
@@ -6376,6 +6381,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          deducted_in_payment_id?: string | null
           employee_email?: string
           employee_id?: string
           employee_name?: string
