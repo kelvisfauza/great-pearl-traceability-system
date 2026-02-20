@@ -138,16 +138,28 @@ const ProcessPayrollDialog = () => {
       setEmployeeBankDetails(bankData as any);
     }
 
-    // Fetch active salary advance
+    // Fetch active salary advances (all of them)
     const { data: advances } = await supabase
       .from('employee_salary_advances')
       .select('id, remaining_balance, minimum_payment, original_amount')
       .eq('employee_email', emp.email)
       .eq('status', 'active')
-      .limit(1);
+      .order('created_at', { ascending: false });
 
-    const advance = advances?.[0] || null;
-    setAdvanceInfo(advance as AdvanceInfo | null);
+    // Sum up all active advances
+    if (advances && advances.length > 0) {
+      const totalRemaining = advances.reduce((sum, a) => sum + Number(a.remaining_balance), 0);
+      const totalMinPayment = advances.reduce((sum, a) => sum + Number(a.minimum_payment), 0);
+      const totalOriginal = advances.reduce((sum, a) => sum + Number(a.original_amount), 0);
+      setAdvanceInfo({
+        id: advances[0].id, // primary advance ID for deduction tracking
+        remaining_balance: totalRemaining,
+        minimum_payment: totalMinPayment,
+        original_amount: totalOriginal,
+      });
+    } else {
+      setAdvanceInfo(null);
+    }
 
     // Fetch current month time deductions
     const now = new Date();
@@ -169,7 +181,7 @@ const ProcessPayrollDialog = () => {
     setForm(prev => ({
       ...prev,
       salaryAmount: emp.salary.toString(),
-      advanceDeduction: advance ? advance.minimum_payment.toString() : '0',
+      advanceDeduction: advanceInfo ? advanceInfo.minimum_payment.toString() : '0',
     }));
   };
 
