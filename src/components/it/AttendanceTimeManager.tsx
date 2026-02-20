@@ -49,6 +49,7 @@ interface RankingEntry {
 const AttendanceTimeManager = () => {
   const { employee } = useAuth();
   const { employees } = useSupabaseEmployees();
+  const [companyWorkers, setCompanyWorkers] = useState<{ id: string; name: string; email: string; department: string; status: string }[]>([]);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,11 +69,32 @@ const AttendanceTimeManager = () => {
 
   useEffect(() => {
     fetchRecords();
+    fetchCompanyWorkers();
   }, []);
 
   useEffect(() => {
     if (records.length > 0) computeRankings();
   }, [records, reportPeriod]);
+
+  const fetchCompanyWorkers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('company_employees')
+        .select('id, full_name, employee_id, department, status, phone')
+        .eq('status', 'Active')
+        .order('full_name');
+      if (error) throw error;
+      setCompanyWorkers((data || []).map(w => ({
+        id: `company_${w.id}`,
+        name: w.full_name,
+        email: w.employee_id,
+        department: w.department,
+        status: w.status,
+      })));
+    } catch (err: any) {
+      console.error('Failed to fetch company workers:', err);
+    }
+  };
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -97,17 +119,17 @@ const AttendanceTimeManager = () => {
       toast.error('Please select an employee');
       return;
     }
-    const emp = employees.find(e => e.id === selectedEmployee);
-    if (!emp) return;
+    const person = allAttendanceList.find(e => e.id === selectedEmployee);
+    if (!person) return;
 
     setSaving(true);
     try {
       const { error } = await supabase
         .from('attendance_time_records')
         .upsert({
-          employee_id: emp.id,
-          employee_name: emp.name,
-          employee_email: emp.email,
+          employee_id: person.id,
+          employee_name: person.name,
+          employee_email: person.email,
           record_date: recordDate,
           arrival_time: arrivalTime || null,
           departure_time: departureTime || null,
@@ -117,7 +139,7 @@ const AttendanceTimeManager = () => {
         } as any, { onConflict: 'employee_id,record_date' });
 
       if (error) throw error;
-      toast.success(`Attendance recorded for ${emp.name}`);
+      toast.success(`Attendance recorded for ${person.name}`);
       setSelectedEmployee('');
       setArrivalTime('');
       setDepartureTime('');
@@ -229,6 +251,10 @@ const AttendanceTimeManager = () => {
   };
 
   const activeEmployees = employees.filter(e => e.status === 'Active' && !e.is_training_account);
+  const allAttendanceList = [
+    ...activeEmployees.map(e => ({ id: e.id, name: e.name, email: e.email, department: e.department, isCompanyWorker: false })),
+    ...companyWorkers.map(w => ({ id: w.id, name: w.name, email: w.email, department: w.department, isCompanyWorker: true })),
+  ].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="space-y-6">
@@ -263,9 +289,9 @@ const AttendanceTimeManager = () => {
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
                     <SelectContent>
-                      {activeEmployees.map(emp => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.name} — {emp.department}
+                      {allAttendanceList.map(person => (
+                        <SelectItem key={person.id} value={person.id}>
+                          {person.name} — {person.department} {person.isCompanyWorker ? '(Company)' : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
