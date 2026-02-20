@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { DollarSign, CheckCircle, Loader2, Send, AlertTriangle, Info, Building } from 'lucide-react';
+import { DollarSign, CheckCircle, Loader2, Send, AlertTriangle, Info, Building, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface BankDetails {
@@ -291,6 +291,30 @@ const ProcessPayrollDialog = () => {
     }
   };
 
+  const handleCancelPayment = async (payment: SalaryPayment) => {
+    try {
+      const { error } = await supabase
+        .from('employee_salary_payments')
+        .update({
+          status: 'cancelled',
+          notes: `${payment.notes ? payment.notes + ' | ' : ''}Cancelled by ${currentUser?.name || 'HR'} on ${new Date().toLocaleDateString()}`,
+        })
+        .eq('id', payment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Payment Cancelled",
+        description: `Salary payment for ${payment.employee_name} has been cancelled.`,
+      });
+      fetchPayments();
+    } catch (error) {
+      console.error('Error cancelling payment:', error);
+      toast({ title: "Error", description: "Failed to cancel payment", variant: "destructive" });
+    }
+  };
+
+
   return (
     <>
       <Button onClick={() => setOpen(true)} className="gap-2">
@@ -559,16 +583,28 @@ const ProcessPayrollDialog = () => {
                               </TableCell>
                               <TableCell className="font-semibold">UGX {Number(payment.net_salary || payment.salary_amount).toLocaleString()}</TableCell>
                               <TableCell>
-                                <Badge variant={payment.status === 'completed' ? 'default' : 'secondary'} className={payment.status === 'completed' ? 'bg-green-600' : 'bg-orange-500'}>
-                                  {payment.status === 'completed' ? 'Paid' : 'Processing'}
+                                <Badge 
+                                  variant={payment.status === 'completed' ? 'default' : 'secondary'} 
+                                  className={
+                                    payment.status === 'completed' ? 'bg-green-600' : 
+                                    payment.status === 'cancelled' ? 'bg-red-600' : 'bg-orange-500'
+                                  }
+                                >
+                                  {payment.status === 'completed' ? 'Paid' : payment.status === 'cancelled' ? 'Cancelled' : 'Processing'}
                                 </Badge>
                               </TableCell>
                               <TableCell>
                                 {payment.status === 'processing' && (
-                                  <Button size="sm" variant="outline" className="gap-1" onClick={() => handleMarkComplete(payment)}>
-                                    <CheckCircle className="h-3 w-3" />
-                                    Mark Paid
-                                  </Button>
+                                  <div className="flex gap-1">
+                                    <Button size="sm" variant="outline" className="gap-1" onClick={() => handleMarkComplete(payment)}>
+                                      <CheckCircle className="h-3 w-3" />
+                                      Mark Paid
+                                    </Button>
+                                    <Button size="sm" variant="outline" className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => handleCancelPayment(payment)}>
+                                      <XCircle className="h-3 w-3" />
+                                      Cancel
+                                    </Button>
+                                  </div>
                                 )}
                                 {payment.status === 'completed' && payment.sms_sent && (
                                   <span className="text-xs text-green-600 flex items-center gap-1">
