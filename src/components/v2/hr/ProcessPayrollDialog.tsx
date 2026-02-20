@@ -83,6 +83,9 @@ const ProcessPayrollDialog = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [advanceInfo, setAdvanceInfo] = useState<AdvanceInfo | null>(null);
   const [timeDeductionInfo, setTimeDeductionInfo] = useState<TimeDeductionInfo | null>(null);
+  const [paymentType, setPaymentType] = useState<'full' | 'half'>('full');
+  const [alreadyPaidCurrentMonth, setAlreadyPaidCurrentMonth] = useState(false);
+  const [currentMonthPaymentInfo, setCurrentMonthPaymentInfo] = useState<{ count: number; totalPaid: number } | null>(null);
   const [form, setForm] = useState({
     salaryAmount: '',
     advanceDeduction: '',
@@ -119,14 +122,39 @@ const ProcessPayrollDialog = () => {
     setLoading(false);
   };
 
+  const getNextMonth = () => {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return format(next, 'MMMM yyyy');
+  };
+
   const handleEmployeeSelect = async (employeeId: string) => {
     const emp = employees.find(e => e.id === employeeId);
     setSelectedEmployee(emp || null);
     setAdvanceInfo(null);
     setTimeDeductionInfo(null);
     setEmployeeBankDetails(null);
+    setAlreadyPaidCurrentMonth(false);
+    setCurrentMonthPaymentInfo(null);
+    setPaymentType('full');
 
     if (!emp) return;
+
+    // Check if employee already has a completed/processing payment for current month
+    const currentMonth = format(new Date(), 'MMMM yyyy');
+    const { data: existingPayments } = await supabase
+      .from('employee_salary_payments')
+      .select('id, net_salary, gross_salary, status, payment_month')
+      .eq('employee_id', emp.id)
+      .eq('payment_month', currentMonth)
+      .in('status', ['completed', 'processing']);
+
+    const paidThisMonth = existingPayments && existingPayments.length > 0;
+    setAlreadyPaidCurrentMonth(!!paidThisMonth);
+    if (paidThisMonth) {
+      const totalPaid = existingPayments.reduce((sum, p) => sum + Number(p.net_salary || 0), 0);
+      setCurrentMonthPaymentInfo({ count: existingPayments.length, totalPaid });
+    }
 
     // Fetch bank details
     const { data: bankData } = await supabase
@@ -147,12 +175,14 @@ const ProcessPayrollDialog = () => {
       .order('created_at', { ascending: false });
 
     // Sum up all active advances
+    let advMinPayment = 0;
     if (advances && advances.length > 0) {
       const totalRemaining = advances.reduce((sum, a) => sum + Number(a.remaining_balance), 0);
       const totalMinPayment = advances.reduce((sum, a) => sum + Number(a.minimum_payment), 0);
       const totalOriginal = advances.reduce((sum, a) => sum + Number(a.original_amount), 0);
+      advMinPayment = totalMinPayment;
       setAdvanceInfo({
-        id: advances[0].id, // primary advance ID for deduction tracking
+        id: advances[0].id,
         remaining_balance: totalRemaining,
         minimum_payment: totalMinPayment,
         original_amount: totalOriginal,
@@ -163,14 +193,13 @@ const ProcessPayrollDialog = () => {
 
     // Fetch current month time deductions
     const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const { data: deductions } = await supabase
       .from('time_deductions')
       .select('hours_missed, total_deduction, reason')
       .eq('employee_id', emp.id)
-      .eq('month', currentMonth);
+      .eq('month', monthKey);
 
-    // Sum all deductions for the month
     const totalHours = deductions?.reduce((sum, d) => sum + Number(d.hours_missed), 0) || 0;
     const totalDeduction = deductions?.reduce((sum, d) => sum + Number(d.total_deduction), 0) || 0;
 
@@ -178,11 +207,22 @@ const ProcessPayrollDialog = () => {
       setTimeDeductionInfo({ hours_missed: totalHours, total_deduction: totalDeduction, reason: deductions?.[0]?.reason || null });
     }
 
+    const salaryAmount = emp.salary;
     setForm(prev => ({
       ...prev,
-      salaryAmount: emp.salary.toString(),
-      advanceDeduction: advanceInfo ? advanceInfo.minimum_payment.toString() : '0',
+      salaryAmount: salaryAmount.toString(),
+      advanceDeduction: advMinPayment > 0 ? advMinPayment.toString() : '0',
+      month: paidThisMonth ? getNextMonth() : currentMonth,
     }));
+  };
+
+  // Update salary amount when payment type changes
+  const handlePaymentTypeChange = (type: 'full' | 'half') => {
+    setPaymentType(type);
+    if (selectedEmployee) {
+      const amount = type === 'half' ? Math.round(selectedEmployee.salary / 2) : selectedEmployee.salary;
+      setForm(prev => ({ ...prev, salaryAmount: amount.toString() }));
+    }
   };
 
   const grossSalary = parseFloat(form.salaryAmount) || 0;
@@ -216,7 +256,7 @@ const ProcessPayrollDialog = () => {
           payment_method: form.paymentMethod,
           processed_by: currentUser?.name || '',
           processed_by_email: currentUser?.email || '',
-          notes: form.notes || null,
+          notes: `${paymentType === 'half' ? '[HALF SALARY] ' : '[FULL SALARY] '}${alreadyPaidCurrentMonth ? '[NEXT MONTH PAYMENT] ' : ''}${form.notes || ''}`.trim() || null,
           status: 'processing',
         });
 
@@ -226,6 +266,9 @@ const ProcessPayrollDialog = () => {
       setSelectedEmployee(null);
       setAdvanceInfo(null);
       setTimeDeductionInfo(null);
+      setAlreadyPaidCurrentMonth(false);
+      setCurrentMonthPaymentInfo(null);
+      setPaymentType('full');
       setForm({ salaryAmount: '', advanceDeduction: '', month: format(new Date(), 'MMMM yyyy'), paymentMethod: 'Bank Transfer', notes: '' });
       fetchPayments();
     } catch (error) {
@@ -380,6 +423,24 @@ const ProcessPayrollDialog = () => {
                   </div>
 
                   <div className="space-y-2">
+                    <Label>Payment Type</Label>
+                    <Select value={paymentType} onValueChange={(v: 'full' | 'half') => handlePaymentTypeChange(v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full">Full Salary</SelectItem>
+                        <SelectItem value="half">Half Salary</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {selectedEmployee && (
+                      <p className="text-xs text-muted-foreground">
+                        {paymentType === 'half' ? 'Half' : 'Full'}: UGX {(paymentType === 'half' ? Math.round(selectedEmployee.salary / 2) : selectedEmployee.salary).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
                     <Label>Gross Salary (UGX)</Label>
                     <Input
                       type="number"
@@ -408,6 +469,20 @@ const ProcessPayrollDialog = () => {
                     </Select>
                   </div>
                 </div>
+
+                {/* Already Paid Alert */}
+                {selectedEmployee && alreadyPaidCurrentMonth && currentMonthPaymentInfo && (
+                  <Alert className="border-blue-200 bg-blue-50">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-sm text-blue-800">
+                      <strong>{selectedEmployee.name}</strong> has already been paid for <strong>{format(new Date(), 'MMMM yyyy')}</strong> 
+                      ({currentMonthPaymentInfo.count} payment{currentMonthPaymentInfo.count > 1 ? 's' : ''}, 
+                      total: UGX {currentMonthPaymentInfo.totalPaid.toLocaleString()}).
+                      <br />
+                      <span className="font-semibold">This payment will be applied to {getNextMonth()}.</span> All deductions will also carry over to next month.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {/* Deductions Section */}
                 {selectedEmployee && (advanceInfo || timeDeductionInfo) && (

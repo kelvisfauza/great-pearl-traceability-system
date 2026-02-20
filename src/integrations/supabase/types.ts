@@ -2233,6 +2233,315 @@ export type Database = {
         }
         Relationships: []
       }
+      field_assessment_prices: {
+        Row: {
+          assessment_id: string | null
+          coffee_type: string
+          common_price_ugx: number | null
+          created_at: string | null
+          highest_price_ugx: number | null
+          id: string
+          lowest_price_ugx: number | null
+          notes: string | null
+          who_is_buying: string | null
+        }
+        Insert: {
+          assessment_id?: string | null
+          coffee_type: string
+          common_price_ugx?: number | null
+          created_at?: string | null
+          highest_price_ugx?: number | null
+          id?: string
+          lowest_price_ugx?: number | null
+          notes?: string | null
+          who_is_buying?: string | null
+        }
+        Update: {
+          assessment_id?: string | null
+          coffee_type?: string
+          common_price_ugx?: number | null
+          created_at?: string | null
+          highest_price_ugx?: number | null
+          id?: string
+          lowest_price_ugx?: number | null
+          notes?: string | null
+          who_is_buying?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_assessment_prices_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "field_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_assessment_suppliers: {
+        Row: {
+          assessment_id: string | null
+          created_at: string | null
+          estimated_kgs: number | null
+          expected_selling_date: string | null
+          id: string
+          phone: string | null
+          supplier_name: string
+          village: string | null
+        }
+        Insert: {
+          assessment_id?: string | null
+          created_at?: string | null
+          estimated_kgs?: number | null
+          expected_selling_date?: string | null
+          id?: string
+          phone?: string | null
+          supplier_name: string
+          village?: string | null
+        }
+        Update: {
+          assessment_id?: string | null
+          created_at?: string | null
+          estimated_kgs?: number | null
+          expected_selling_date?: string | null
+          id?: string
+          phone?: string | null
+          supplier_name?: string
+          village?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_assessment_suppliers_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "field_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_assessment_traders: {
+        Row: {
+          assessment_id: string | null
+          contact: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          trader_name: string
+        }
+        Insert: {
+          assessment_id?: string | null
+          contact?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          trader_name: string
+        }
+        Update: {
+          assessment_id?: string | null
+          contact?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          trader_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_assessment_traders_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "field_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_assessments: {
+        Row: {
+          area_village: string
+          coffee_on_trees_percent: number | null
+          coffee_variety: string | null
+          common_defects: string | null
+          competitor_names: string | null
+          competitor_price_advantage: string | null
+          competitors_active: boolean | null
+          contamination_risk: string | null
+          created_at: string | null
+          crop_condition: string | null
+          district: string | null
+          drying_method: string | null
+          end_time: string | null
+          estimated_harvest_potential_kg: number | null
+          expected_peak_harvest: string | null
+          farmer_action_advised: string | null
+          farmer_group_association: string | null
+          farmers_visited: number | null
+          farmers_willing_reason: string | null
+          farmers_willing_to_sell: string | null
+          gps_landmark: string | null
+          gps_latitude: number | null
+          gps_longitude: number | null
+          green_bean_available_kg: number | null
+          harvest_handling_method: string | null
+          harvest_ongoing: boolean | null
+          id: string
+          key_risks: string | null
+          market_behavior_notes: string | null
+          new_suppliers_identified: number | null
+          next_followup_date: string | null
+          opportunities: string | null
+          pest_disease_level: string | null
+          pest_disease_names: string | null
+          photo_references: string | null
+          photos_taken: boolean | null
+          prepared_by: string
+          prepared_by_signature: string | null
+          price_manipulation: boolean | null
+          price_movement: string | null
+          price_movement_reason: string | null
+          quality_recommendations: string | null
+          recommended_action: string | null
+          recommended_buying_price_ugx: number | null
+          reviewed_by_supervisor: string | null
+          sample_reference_code: string | null
+          sample_type_weight: string | null
+          samples_collected: boolean | null
+          soil_condition: string | null
+          soil_testing_locations: string | null
+          start_time: string | null
+          status: string | null
+          storage_method: string | null
+          sub_county: string | null
+          submitted_by: string | null
+          supervisor_signature: string | null
+          team_members: string
+          traders_active: boolean | null
+          updated_at: string | null
+          visit_date: string
+        }
+        Insert: {
+          area_village: string
+          coffee_on_trees_percent?: number | null
+          coffee_variety?: string | null
+          common_defects?: string | null
+          competitor_names?: string | null
+          competitor_price_advantage?: string | null
+          competitors_active?: boolean | null
+          contamination_risk?: string | null
+          created_at?: string | null
+          crop_condition?: string | null
+          district?: string | null
+          drying_method?: string | null
+          end_time?: string | null
+          estimated_harvest_potential_kg?: number | null
+          expected_peak_harvest?: string | null
+          farmer_action_advised?: string | null
+          farmer_group_association?: string | null
+          farmers_visited?: number | null
+          farmers_willing_reason?: string | null
+          farmers_willing_to_sell?: string | null
+          gps_landmark?: string | null
+          gps_latitude?: number | null
+          gps_longitude?: number | null
+          green_bean_available_kg?: number | null
+          harvest_handling_method?: string | null
+          harvest_ongoing?: boolean | null
+          id?: string
+          key_risks?: string | null
+          market_behavior_notes?: string | null
+          new_suppliers_identified?: number | null
+          next_followup_date?: string | null
+          opportunities?: string | null
+          pest_disease_level?: string | null
+          pest_disease_names?: string | null
+          photo_references?: string | null
+          photos_taken?: boolean | null
+          prepared_by: string
+          prepared_by_signature?: string | null
+          price_manipulation?: boolean | null
+          price_movement?: string | null
+          price_movement_reason?: string | null
+          quality_recommendations?: string | null
+          recommended_action?: string | null
+          recommended_buying_price_ugx?: number | null
+          reviewed_by_supervisor?: string | null
+          sample_reference_code?: string | null
+          sample_type_weight?: string | null
+          samples_collected?: boolean | null
+          soil_condition?: string | null
+          soil_testing_locations?: string | null
+          start_time?: string | null
+          status?: string | null
+          storage_method?: string | null
+          sub_county?: string | null
+          submitted_by?: string | null
+          supervisor_signature?: string | null
+          team_members: string
+          traders_active?: boolean | null
+          updated_at?: string | null
+          visit_date?: string
+        }
+        Update: {
+          area_village?: string
+          coffee_on_trees_percent?: number | null
+          coffee_variety?: string | null
+          common_defects?: string | null
+          competitor_names?: string | null
+          competitor_price_advantage?: string | null
+          competitors_active?: boolean | null
+          contamination_risk?: string | null
+          created_at?: string | null
+          crop_condition?: string | null
+          district?: string | null
+          drying_method?: string | null
+          end_time?: string | null
+          estimated_harvest_potential_kg?: number | null
+          expected_peak_harvest?: string | null
+          farmer_action_advised?: string | null
+          farmer_group_association?: string | null
+          farmers_visited?: number | null
+          farmers_willing_reason?: string | null
+          farmers_willing_to_sell?: string | null
+          gps_landmark?: string | null
+          gps_latitude?: number | null
+          gps_longitude?: number | null
+          green_bean_available_kg?: number | null
+          harvest_handling_method?: string | null
+          harvest_ongoing?: boolean | null
+          id?: string
+          key_risks?: string | null
+          market_behavior_notes?: string | null
+          new_suppliers_identified?: number | null
+          next_followup_date?: string | null
+          opportunities?: string | null
+          pest_disease_level?: string | null
+          pest_disease_names?: string | null
+          photo_references?: string | null
+          photos_taken?: boolean | null
+          prepared_by?: string
+          prepared_by_signature?: string | null
+          price_manipulation?: boolean | null
+          price_movement?: string | null
+          price_movement_reason?: string | null
+          quality_recommendations?: string | null
+          recommended_action?: string | null
+          recommended_buying_price_ugx?: number | null
+          reviewed_by_supervisor?: string | null
+          sample_reference_code?: string | null
+          sample_type_weight?: string | null
+          samples_collected?: boolean | null
+          soil_condition?: string | null
+          soil_testing_locations?: string | null
+          start_time?: string | null
+          status?: string | null
+          storage_method?: string | null
+          sub_county?: string | null
+          submitted_by?: string | null
+          supervisor_signature?: string | null
+          team_members?: string
+          traders_active?: boolean | null
+          updated_at?: string | null
+          visit_date?: string
+        }
+        Relationships: []
+      }
       field_attendance_logs: {
         Row: {
           check_in_gps_latitude: number | null
