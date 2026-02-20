@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, CheckCircle, Clock, Printer, DollarSign, Info, AlertTriangle, CreditCard } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, CheckCircle, Clock, Printer, DollarSign, Info, AlertTriangle, CreditCard, Building, Save, Edit, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface SalaryPayment {
@@ -29,20 +32,81 @@ interface SalaryPayment {
   created_at: string;
 }
 
+interface BankDetails {
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+  bank_phone: string;
+  bank_email: string;
+  alternative_bank: string;
+}
+
 const MySalaryPayments = () => {
   const { employee } = useAuth();
+  const { toast } = useToast();
   const [payments, setPayments] = useState<SalaryPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [printPayment, setPrintPayment] = useState<SalaryPayment | null>(null);
   const [advanceInfo, setAdvanceInfo] = useState<{ remaining_balance: number; minimum_payment: number; original_amount: number } | null>(null);
   const [timeDeductionInfo, setTimeDeductionInfo] = useState<{ hours_missed: number; total_deduction: number } | null>(null);
+  const [bankDetails, setBankDetails] = useState<BankDetails>({ bank_name: '', account_name: '', account_number: '', bank_phone: '', bank_email: '', alternative_bank: '' });
+  const [editingBank, setEditingBank] = useState(false);
+  const [savingBank, setSavingBank] = useState(false);
+  const [bankLoaded, setBankLoaded] = useState(false);
 
   useEffect(() => {
     if (employee?.email) {
       fetchMyPayments();
       fetchDeductions();
+      fetchBankDetails();
     }
   }, [employee?.email]);
+
+  const fetchBankDetails = async () => {
+    if (!employee?.authUserId) return;
+    const { data } = await supabase
+      .from('employees')
+      .select('bank_name, account_name, account_number, bank_phone, bank_email, alternative_bank')
+      .eq('auth_user_id', employee.authUserId)
+      .single();
+    if (data) {
+      setBankDetails({
+        bank_name: (data as any).bank_name || '',
+        account_name: (data as any).account_name || '',
+        account_number: (data as any).account_number || '',
+        bank_phone: (data as any).bank_phone || '',
+        bank_email: (data as any).bank_email || '',
+        alternative_bank: (data as any).alternative_bank || '',
+      });
+    }
+    setBankLoaded(true);
+  };
+
+  const handleSaveBankDetails = async () => {
+    if (!employee?.authUserId) return;
+    setSavingBank(true);
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({
+          bank_name: bankDetails.bank_name || null,
+          account_name: bankDetails.account_name || null,
+          account_number: bankDetails.account_number || null,
+          bank_phone: bankDetails.bank_phone || null,
+          bank_email: bankDetails.bank_email || null,
+          alternative_bank: bankDetails.alternative_bank || null,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('auth_user_id', employee.authUserId);
+      if (error) throw error;
+      toast({ title: 'Success', description: 'Bank details saved successfully!' });
+      setEditingBank(false);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to save bank details', variant: 'destructive' });
+    } finally {
+      setSavingBank(false);
+    }
+  };
 
   const fetchMyPayments = async () => {
     setLoading(true);
@@ -175,6 +239,97 @@ const MySalaryPayments = () => {
                   <p className="text-xs text-muted-foreground italic">* Final amount may differ based on HR's applied deduction</p>
                 </div>
               </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bank Details */}
+      {bankLoaded && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                My Bank Details
+              </CardTitle>
+              {!editingBank ? (
+                <Button size="sm" variant="outline" onClick={() => setEditingBank(true)} className="gap-1">
+                  <Edit className="h-3 w-3" />
+                  {bankDetails.bank_name ? 'Edit' : 'Add Bank Details'}
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSaveBankDetails} disabled={savingBank} className="gap-1">
+                    {savingBank ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                    Save
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setEditingBank(false); fetchBankDetails(); }} className="gap-1">
+                    <X className="h-3 w-3" /> Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {editingBank ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Bank Name</Label>
+                  <Input value={bankDetails.bank_name} onChange={e => setBankDetails(p => ({ ...p, bank_name: e.target.value }))} placeholder="e.g. Stanbic Bank" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Account Name</Label>
+                  <Input value={bankDetails.account_name} onChange={e => setBankDetails(p => ({ ...p, account_name: e.target.value }))} placeholder="Name on account" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Account Number</Label>
+                  <Input value={bankDetails.account_number} onChange={e => setBankDetails(p => ({ ...p, account_number: e.target.value }))} placeholder="Account number" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Phone Number</Label>
+                  <Input value={bankDetails.bank_phone} onChange={e => setBankDetails(p => ({ ...p, bank_phone: e.target.value }))} placeholder="e.g. 0770123456" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Email</Label>
+                  <Input value={bankDetails.bank_email} onChange={e => setBankDetails(p => ({ ...p, bank_email: e.target.value }))} placeholder="email@example.com" type="email" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Alternative Bank</Label>
+                  <Input value={bankDetails.alternative_bank} onChange={e => setBankDetails(p => ({ ...p, alternative_bank: e.target.value }))} placeholder="e.g. Centenary Bank" />
+                </div>
+              </div>
+            ) : bankDetails.bank_name ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground text-xs">Bank Name</p>
+                  <p className="font-medium">{bankDetails.bank_name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Account Name</p>
+                  <p className="font-medium">{bankDetails.account_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Account Number</p>
+                  <p className="font-medium">{bankDetails.account_number || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Phone</p>
+                  <p className="font-medium">{bankDetails.bank_phone || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Email</p>
+                  <p className="font-medium">{bankDetails.bank_email || '-'}</p>
+                </div>
+                {bankDetails.alternative_bank && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Alternative Bank</p>
+                    <p className="font-medium">{bankDetails.alternative_bank}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No bank details added yet. Click "Add Bank Details" to set up your payment information for HR.</p>
             )}
           </CardContent>
         </Card>
