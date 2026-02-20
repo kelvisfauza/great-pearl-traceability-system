@@ -12,8 +12,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { DollarSign, CheckCircle, Loader2, Send, AlertTriangle, Info } from 'lucide-react';
+import { DollarSign, CheckCircle, Loader2, Send, AlertTriangle, Info, Building } from 'lucide-react';
 import { format } from 'date-fns';
+
+interface BankDetails {
+  bank_name: string | null;
+  account_name: string | null;
+  account_number: string | null;
+  bank_phone: string | null;
+  bank_email: string | null;
+  alternative_bank: string | null;
+}
 
 interface Employee {
   id: string;
@@ -81,6 +90,7 @@ const ProcessPayrollDialog = () => {
     paymentMethod: 'Bank Transfer',
     notes: '',
   });
+  const [employeeBankDetails, setEmployeeBankDetails] = useState<BankDetails | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -114,8 +124,19 @@ const ProcessPayrollDialog = () => {
     setSelectedEmployee(emp || null);
     setAdvanceInfo(null);
     setTimeDeductionInfo(null);
+    setEmployeeBankDetails(null);
 
     if (!emp) return;
+
+    // Fetch bank details
+    const { data: bankData } = await supabase
+      .from('employees')
+      .select('bank_name, account_name, account_number, bank_phone, bank_email, alternative_bank')
+      .eq('id', emp.id)
+      .single();
+    if (bankData) {
+      setEmployeeBankDetails(bankData as any);
+    }
 
     // Fetch active salary advance
     const { data: advances } = await supabase
@@ -395,6 +416,61 @@ const ProcessPayrollDialog = () => {
                       </Alert>
                     )}
                   </div>
+                )}
+
+                {/* Employee Bank Details */}
+                {selectedEmployee && employeeBankDetails?.bank_name && (
+                  <div className="p-4 rounded-lg border border-border bg-muted/30">
+                    <h4 className="font-semibold text-sm flex items-center gap-2 mb-3">
+                      <Building className="h-4 w-4" />
+                      Employee Bank Details
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground text-xs">Bank</span>
+                        <p className="font-medium">{employeeBankDetails.bank_name}</p>
+                      </div>
+                      {employeeBankDetails.account_name && (
+                        <div>
+                          <span className="text-muted-foreground text-xs">Account Name</span>
+                          <p className="font-medium">{employeeBankDetails.account_name}</p>
+                        </div>
+                      )}
+                      {employeeBankDetails.account_number && (
+                        <div>
+                          <span className="text-muted-foreground text-xs">Account No.</span>
+                          <p className="font-medium">{employeeBankDetails.account_number}</p>
+                        </div>
+                      )}
+                      {employeeBankDetails.bank_phone && (
+                        <div>
+                          <span className="text-muted-foreground text-xs">Phone</span>
+                          <p className="font-medium">{employeeBankDetails.bank_phone}</p>
+                        </div>
+                      )}
+                      {employeeBankDetails.bank_email && (
+                        <div>
+                          <span className="text-muted-foreground text-xs">Email</span>
+                          <p className="font-medium">{employeeBankDetails.bank_email}</p>
+                        </div>
+                      )}
+                      {employeeBankDetails.alternative_bank && (
+                        <div>
+                          <span className="text-muted-foreground text-xs">Alt. Bank</span>
+                          <p className="font-medium">{employeeBankDetails.alternative_bank}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedEmployee && !employeeBankDetails?.bank_name && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      This employee has not added bank details yet. They can add them from My Expenses → Salary Requests.
+                    </AlertDescription>
+                  </Alert>
                 )}
 
                 {/* Net Salary Summary */}

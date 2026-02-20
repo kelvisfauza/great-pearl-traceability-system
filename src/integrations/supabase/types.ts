@@ -1732,9 +1732,15 @@ export type Database = {
       }
       employees: {
         Row: {
+          account_name: string | null
+          account_number: string | null
           address: string | null
+          alternative_bank: string | null
           auth_user_id: string | null
           avatar_url: string | null
+          bank_email: string | null
+          bank_name: string | null
+          bank_phone: string | null
           bypass_sms_verification: boolean | null
           created_at: string
           department: string
@@ -1760,9 +1766,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_name?: string | null
+          account_number?: string | null
           address?: string | null
+          alternative_bank?: string | null
           auth_user_id?: string | null
           avatar_url?: string | null
+          bank_email?: string | null
+          bank_name?: string | null
+          bank_phone?: string | null
           bypass_sms_verification?: boolean | null
           created_at?: string
           department: string
@@ -1788,9 +1800,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_name?: string | null
+          account_number?: string | null
           address?: string | null
+          alternative_bank?: string | null
           auth_user_id?: string | null
           avatar_url?: string | null
+          bank_email?: string | null
+          bank_name?: string | null
+          bank_phone?: string | null
           bypass_sms_verification?: boolean | null
           created_at?: string
           department?: string
