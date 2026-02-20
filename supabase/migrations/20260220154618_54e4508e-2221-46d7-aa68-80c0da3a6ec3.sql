@@ -1,0 +1,1 @@
+UPDATE public.employees SET phone = '0760587186' WHERE id = '22ffe09c-8f70-43c0-9fbb-f36a58a2127e';
