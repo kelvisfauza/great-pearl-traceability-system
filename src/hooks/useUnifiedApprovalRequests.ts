@@ -56,11 +56,12 @@ export const useUnifiedApprovalRequests = () => {
         const { data: supabaseRequests, error } = await supabase
           .from('approval_requests')
           .select('*')
-          // Only fetch requests pending Admin approval, NOT those already approved by Admin
+          // Fetch requests pending any Admin approval stage
           .in('status', [
             'Pending',
             'Pending Admin',
             'Pending Admin Approval',
+            'Pending Admin 2',
           ])
           .order('created_at', { ascending: false });
         
@@ -78,7 +79,12 @@ export const useUnifiedApprovalRequests = () => {
             dateRequested: req.daterequested,
             priority: req.priority,
             status: req.status,
-            details: req.details ? JSON.parse(JSON.stringify(req.details)) : undefined,
+            details: {
+              ...(req.details ? JSON.parse(JSON.stringify(req.details)) : {}),
+              admin_approved_1_by: req.admin_approved_1_by,
+              admin_approved_2_by: req.admin_approved_2_by,
+              requires_three_approvals: req.requires_three_approvals,
+            },
             createdAt: req.created_at,
             updatedAt: req.updated_at
           }));
@@ -240,18 +246,61 @@ export const useUnifiedApprovalRequests = () => {
       }
 
       if (request.source === 'supabase') {
-        // Handle Supabase approval requests
+        // First fetch the current request to check approval state and amount
+        const { data: currentReq, error: fetchError } = await supabase
+          .from('approval_requests')
+          .select('*')
+          .eq('id', request.id)
+          .single();
+
+        if (fetchError || !currentReq) {
+          console.error('Failed to fetch current request:', fetchError);
+          return false;
+        }
+
+        const requiresThreeApprovals = currentReq.amount > 50000;
+        const adminName = employee?.name || employee?.email || 'Admin';
         const updateData: any = {
-          admin_approved: status === 'Approved',
-          admin_approved_by: employee?.name || employee?.email || 'Admin',
-          admin_approved_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
 
         if (status === 'Approved') {
-          // Route to Finance for final approval
-          updateData.status = 'Pending Finance';
-          updateData.approval_stage = 'pending_finance';
+          if (requiresThreeApprovals) {
+            // 3-tier flow: need 2 admin approvals before finance
+            if (!currentReq.admin_approved_1) {
+              // First admin approval
+              updateData.admin_approved_1 = true;
+              updateData.admin_approved_1_at = new Date().toISOString();
+              updateData.admin_approved_1_by = adminName;
+              updateData.requires_three_approvals = true;
+              updateData.status = 'Pending Admin 2';
+              updateData.approval_stage = 'pending_admin_2';
+              console.log('✅ 3-tier: Admin 1 approved, waiting for Admin 2');
+            } else if (!currentReq.admin_approved_2) {
+              // Prevent same admin from approving twice
+              if (currentReq.admin_approved_1_by === adminName) {
+                return { blocked: true, reason: 'You already approved this request as Admin 1. A different administrator must provide the second approval.' };
+              }
+              // Second admin approval
+              updateData.admin_approved_2 = true;
+              updateData.admin_approved_2_at = new Date().toISOString();
+              updateData.admin_approved_2_by = adminName;
+              updateData.admin_approved = true;
+              updateData.admin_approved_by = adminName;
+              updateData.admin_approved_at = new Date().toISOString();
+              updateData.status = 'Pending Finance';
+              updateData.approval_stage = 'pending_finance';
+              console.log('✅ 3-tier: Admin 2 approved, moving to Finance');
+            }
+          } else {
+            // Standard 2-tier: single admin approval then finance
+            updateData.admin_approved = true;
+            updateData.admin_approved_by = adminName;
+            updateData.admin_approved_at = new Date().toISOString();
+            updateData.status = 'Pending Finance';
+            updateData.approval_stage = 'pending_finance';
+            console.log('✅ 2-tier: Admin approved, moving to Finance');
+          }
         } else {
           // Rejected by admin
           updateData.status = 'Rejected';
