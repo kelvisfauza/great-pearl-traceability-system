@@ -43,11 +43,13 @@ interface SalaryPayment {
   gross_salary: number;
   salary_amount: number;
   advance_deduction: number;
+  advance_id: string | null;
   time_deduction: number;
   time_deduction_hours: number;
   net_salary: number;
   payment_month: string;
   payment_method: string;
+  payment_label: string | null;
   transaction_id: string | null;
   status: string;
   processed_by: string;
@@ -83,8 +85,10 @@ const ProcessPayrollDialog = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [advanceInfo, setAdvanceInfo] = useState<AdvanceInfo | null>(null);
   const [timeDeductionInfo, setTimeDeductionInfo] = useState<TimeDeductionInfo | null>(null);
-  const [paymentType, setPaymentType] = useState<'full' | 'half'>('full');
+  const [paymentType, setPaymentType] = useState<'full' | 'half' | 'balance'>('full');
   const [alreadyPaidCurrentMonth, setAlreadyPaidCurrentMonth] = useState(false);
+  const [halfPayAlreadyPaid, setHalfPayAlreadyPaid] = useState(false);
+  const [halfPayInfo, setHalfPayInfo] = useState<{ netPaid: number; grossPaid: number; deductionsApplied: number } | null>(null);
   const [currentMonthPaymentInfo, setCurrentMonthPaymentInfo] = useState<{ count: number; totalPaid: number } | null>(null);
   const [form, setForm] = useState({
     salaryAmount: '',
@@ -136,6 +140,8 @@ const ProcessPayrollDialog = () => {
     setEmployeeBankDetails(null);
     setAlreadyPaidCurrentMonth(false);
     setCurrentMonthPaymentInfo(null);
+    setHalfPayAlreadyPaid(false);
+    setHalfPayInfo(null);
     setPaymentType('full');
 
     if (!emp) return;
@@ -144,16 +150,41 @@ const ProcessPayrollDialog = () => {
     const currentMonth = format(new Date(), 'MMMM yyyy');
     const { data: existingPayments } = await supabase
       .from('employee_salary_payments')
-      .select('id, net_salary, gross_salary, status, payment_month')
+      .select('id, net_salary, gross_salary, status, payment_month, payment_label, advance_deduction, time_deduction, notes')
       .eq('employee_id', emp.id)
       .eq('payment_month', currentMonth)
       .in('status', ['completed', 'processing']);
 
     const paidThisMonth = existingPayments && existingPayments.length > 0;
     setAlreadyPaidCurrentMonth(!!paidThisMonth);
-    if (paidThisMonth) {
+
+    // Check if half salary was already paid this month
+    const halfPayRecord = existingPayments?.find(p => 
+      p.payment_label === 'HALF SALARY' || (p.notes && typeof p.notes === 'string' && p.notes.includes('[HALF SALARY]'))
+    );
+    
+    if (halfPayRecord) {
+      setHalfPayAlreadyPaid(true);
+      const deductionsApplied = Number(halfPayRecord.advance_deduction || 0) + Number(halfPayRecord.time_deduction || 0);
+      setHalfPayInfo({
+        netPaid: Number(halfPayRecord.net_salary || 0),
+        grossPaid: Number(halfPayRecord.gross_salary || 0),
+        deductionsApplied,
+      });
+      // Auto-set to balance payment
+      setPaymentType('balance');
+      const balanceGross = Math.round(emp.salary / 2);
+      setForm(prev => ({
+        ...prev,
+        salaryAmount: balanceGross.toString(),
+        advanceDeduction: '0', // Deductions already applied on half pay
+        month: currentMonth,
+      }));
+    } else if (paidThisMonth) {
       const totalPaid = existingPayments.reduce((sum, p) => sum + Number(p.net_salary || 0), 0);
       setCurrentMonthPaymentInfo({ count: existingPayments.length, totalPaid });
+      // Roll to next month
+      setForm(prev => ({ ...prev, month: getNextMonth() }));
     }
 
     // Fetch bank details
@@ -191,37 +222,55 @@ const ProcessPayrollDialog = () => {
       setAdvanceInfo(null);
     }
 
-    // Fetch current month time deductions
+    // Fetch current month time deductions (only those not already deducted)
     const now = new Date();
     const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const { data: deductions } = await supabase
       .from('time_deductions')
-      .select('hours_missed, total_deduction, reason')
+      .select('hours_missed, total_deduction, reason, deducted_in_payment_id')
       .eq('employee_id', emp.id)
       .eq('month', monthKey);
 
-    const totalHours = deductions?.reduce((sum, d) => sum + Number(d.hours_missed), 0) || 0;
-    const totalDeduction = deductions?.reduce((sum, d) => sum + Number(d.total_deduction), 0) || 0;
+    // Only count deductions that haven't been cleared yet
+    const undeductedRecords = deductions?.filter(d => !d.deducted_in_payment_id) || [];
+    const totalHours = undeductedRecords.reduce((sum, d) => sum + Number(d.hours_missed), 0);
+    const totalDeduction = undeductedRecords.reduce((sum, d) => sum + Number(d.total_deduction), 0);
 
     if (totalDeduction > 0) {
-      setTimeDeductionInfo({ hours_missed: totalHours, total_deduction: totalDeduction, reason: deductions?.[0]?.reason || null });
+      setTimeDeductionInfo({ hours_missed: totalHours, total_deduction: totalDeduction, reason: undeductedRecords[0]?.reason || null });
+    }
+
+    // If balance payment (half pay already done with deductions), zero out deductions
+    if (halfPayRecord) {
+      // Deductions already cleared on half pay - no deductions for balance
+      setTimeDeductionInfo(null);
+      return; // form already set above
     }
 
     const salaryAmount = emp.salary;
     setForm(prev => ({
       ...prev,
-      salaryAmount: salaryAmount.toString(),
+      salaryAmount: paidThisMonth ? salaryAmount.toString() : salaryAmount.toString(),
       advanceDeduction: advMinPayment > 0 ? advMinPayment.toString() : '0',
       month: paidThisMonth ? getNextMonth() : currentMonth,
     }));
   };
 
   // Update salary amount when payment type changes
-  const handlePaymentTypeChange = (type: 'full' | 'half') => {
+  const handlePaymentTypeChange = (type: 'full' | 'half' | 'balance') => {
     setPaymentType(type);
     if (selectedEmployee) {
-      const amount = type === 'half' ? Math.round(selectedEmployee.salary / 2) : selectedEmployee.salary;
-      setForm(prev => ({ ...prev, salaryAmount: amount.toString() }));
+      if (type === 'half') {
+        const amount = Math.round(selectedEmployee.salary / 2);
+        setForm(prev => ({ ...prev, salaryAmount: amount.toString() }));
+      } else if (type === 'balance') {
+        const amount = Math.round(selectedEmployee.salary / 2);
+        setForm(prev => ({ ...prev, salaryAmount: amount.toString(), advanceDeduction: '0' }));
+        // No deductions on balance - already applied on half pay
+        setTimeDeductionInfo(null);
+      } else {
+        setForm(prev => ({ ...prev, salaryAmount: selectedEmployee.salary.toString() }));
+      }
     }
   };
 
@@ -256,7 +305,8 @@ const ProcessPayrollDialog = () => {
           payment_method: form.paymentMethod,
           processed_by: currentUser?.name || '',
           processed_by_email: currentUser?.email || '',
-          notes: `${paymentType === 'half' ? '[HALF SALARY] ' : '[FULL SALARY] '}${alreadyPaidCurrentMonth ? '[NEXT MONTH PAYMENT] ' : ''}${form.notes || ''}`.trim() || null,
+          notes: `${paymentType === 'half' ? '[HALF SALARY] ' : paymentType === 'balance' ? '[BALANCE SALARY] ' : '[FULL SALARY] '}${alreadyPaidCurrentMonth && paymentType !== 'balance' ? '[NEXT MONTH PAYMENT] ' : ''}${form.notes || ''}`.trim() || null,
+          payment_label: paymentType === 'half' ? 'HALF SALARY' : paymentType === 'balance' ? 'BALANCE SALARY' : 'FULL SALARY',
           status: 'processing',
         });
 
@@ -268,6 +318,8 @@ const ProcessPayrollDialog = () => {
       setTimeDeductionInfo(null);
       setAlreadyPaidCurrentMonth(false);
       setCurrentMonthPaymentInfo(null);
+      setHalfPayAlreadyPaid(false);
+      setHalfPayInfo(null);
       setPaymentType('full');
       setForm({ salaryAmount: '', advanceDeduction: '', month: format(new Date(), 'MMMM yyyy'), paymentMethod: 'Bank Transfer', notes: '' });
       fetchPayments();
@@ -295,24 +347,69 @@ const ProcessPayrollDialog = () => {
 
       if (error) throw error;
 
-      // Update salary advance balance if there was a deduction
-      if (payment.advance_deduction > 0 && (payment as any).advance_id) {
+      // Update salary advance balances if there was a deduction
+      if (payment.advance_deduction > 0 && payment.advance_id) {
         try {
-          await supabase
+          // Get all active advances for this employee
+          const { data: advances } = await supabase
             .from('employee_salary_advances')
-            .update({
-              remaining_balance: Math.max(0, (advanceInfo?.remaining_balance || 0) - payment.advance_deduction),
-            })
-            .eq('id', (payment as any).advance_id);
+            .select('id, remaining_balance, minimum_payment')
+            .eq('employee_email', payment.employee_email)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true });
+
+          if (advances && advances.length > 0) {
+            let remainingDeduction = payment.advance_deduction;
+            for (const adv of advances) {
+              if (remainingDeduction <= 0) break;
+              const deductFromThis = Math.min(remainingDeduction, Number(adv.remaining_balance));
+              const newBalance = Math.max(0, Number(adv.remaining_balance) - deductFromThis);
+              await supabase
+                .from('employee_salary_advances')
+                .update({
+                  remaining_balance: newBalance,
+                  status: newBalance <= 0 ? 'paid_off' : 'active',
+                })
+                .eq('id', adv.id);
+              remainingDeduction -= deductFromThis;
+            }
+          }
         } catch (err) {
           console.error('Failed to update advance balance:', err);
+        }
+      }
+
+      // Mark time deductions as cleared for this payment
+      if (payment.time_deduction > 0) {
+        try {
+          const now = new Date();
+          const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          
+          // Get employee_id from the payment's employee
+          const { data: empData } = await supabase
+            .from('employees')
+            .select('id')
+            .eq('email', payment.employee_email)
+            .single();
+
+          if (empData) {
+            await supabase
+              .from('time_deductions')
+              .update({ deducted_in_payment_id: payment.id })
+              .eq('employee_id', empData.id)
+              .eq('month', monthKey)
+              .is('deducted_in_payment_id', null);
+          }
+        } catch (err) {
+          console.error('Failed to clear time deductions:', err);
         }
       }
 
       // Send SMS notification
       if (payment.employee_phone) {
         try {
-          let smsMessage = `Great Pearl Coffee: Your salary for ${payment.payment_month} has been disbursed.\n\nGross: UGX ${Number(payment.gross_salary).toLocaleString()}`;
+          const payLabel = payment.payment_label ? ` (${payment.payment_label})` : '';
+          let smsMessage = `Great Pearl Coffee: Your salary${payLabel} for ${payment.payment_month} has been disbursed.\n\nGross: UGX ${Number(payment.gross_salary).toLocaleString()}`;
           if (payment.advance_deduction > 0) {
             smsMessage += `\nAdvance Deduction: -UGX ${Number(payment.advance_deduction).toLocaleString()}`;
           }
@@ -424,18 +521,24 @@ const ProcessPayrollDialog = () => {
 
                   <div className="space-y-2">
                     <Label>Payment Type</Label>
-                    <Select value={paymentType} onValueChange={(v: 'full' | 'half') => handlePaymentTypeChange(v)}>
+                    <Select value={paymentType} onValueChange={(v: 'full' | 'half' | 'balance') => handlePaymentTypeChange(v)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="full">Full Salary</SelectItem>
                         <SelectItem value="half">Half Salary</SelectItem>
+                        <SelectItem value="balance">Balance (Remaining Half)</SelectItem>
                       </SelectContent>
                     </Select>
                     {selectedEmployee && (
                       <p className="text-xs text-muted-foreground">
-                        {paymentType === 'half' ? 'Half' : 'Full'}: UGX {(paymentType === 'half' ? Math.round(selectedEmployee.salary / 2) : selectedEmployee.salary).toLocaleString()}
+                        {paymentType === 'half' ? 'Half' : paymentType === 'balance' ? 'Balance' : 'Full'}: UGX {(
+                          paymentType === 'half' || paymentType === 'balance' 
+                            ? Math.round(selectedEmployee.salary / 2) 
+                            : selectedEmployee.salary
+                        ).toLocaleString()}
+                        {paymentType === 'balance' && ' (No deductions — already applied on half pay)'}
                       </p>
                     )}
                   </div>
@@ -470,8 +573,23 @@ const ProcessPayrollDialog = () => {
                   </div>
                 </div>
 
-                {/* Already Paid Alert */}
-                {selectedEmployee && alreadyPaidCurrentMonth && currentMonthPaymentInfo && (
+                {/* Half Pay Already Paid - Balance Info */}
+                {selectedEmployee && halfPayAlreadyPaid && halfPayInfo && (
+                  <Alert className="border-green-200 bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-sm text-green-800">
+                      <strong>Half Salary Already Paid:</strong> {selectedEmployee.name} received <strong>UGX {halfPayInfo.netPaid.toLocaleString()}</strong> (half pay) for {format(new Date(), 'MMMM yyyy')}.
+                      {halfPayInfo.deductionsApplied > 0 && (
+                        <span> Deductions of <strong>UGX {halfPayInfo.deductionsApplied.toLocaleString()}</strong> were already applied.</span>
+                      )}
+                      <br />
+                      <span className="font-semibold">Balance remaining: UGX {Math.round(selectedEmployee.salary / 2).toLocaleString()} — No deductions will apply.</span>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Already Fully Paid Alert */}
+                {selectedEmployee && alreadyPaidCurrentMonth && !halfPayAlreadyPaid && currentMonthPaymentInfo && (
                   <Alert className="border-blue-200 bg-blue-50">
                     <Info className="h-4 w-4 text-blue-600" />
                     <AlertDescription className="text-sm text-blue-800">
@@ -660,7 +778,14 @@ const ProcessPayrollDialog = () => {
                           const totalDeductions = Number(payment.advance_deduction || 0) + Number(payment.time_deduction || 0);
                           return (
                             <TableRow key={payment.id}>
-                              <TableCell className="font-medium">{payment.employee_name}</TableCell>
+                              <TableCell className="font-medium">
+                                {payment.employee_name}
+                                {payment.payment_label && (
+                                  <Badge variant="outline" className="ml-2 text-xs">
+                                    {payment.payment_label}
+                                  </Badge>
+                                )}
+                              </TableCell>
                               <TableCell>{payment.payment_month}</TableCell>
                               <TableCell>UGX {Number(payment.gross_salary || payment.salary_amount).toLocaleString()}</TableCell>
                               <TableCell>
