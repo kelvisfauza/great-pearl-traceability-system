@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { EditSalesTransactionDialog } from "./EditSalesTransactionDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface SalesTransaction {
   id: string;
@@ -28,6 +29,7 @@ const SalesTransactionsList = () => {
   const [loading, setLoading] = useState(true);
   const [editTransaction, setEditTransaction] = useState<SalesTransaction | null>(null);
   const { isAdmin } = useAuth();
+  const { toast } = useToast();
   const userIsAdmin = isAdmin();
 
   useEffect(() => {
@@ -64,6 +66,22 @@ const SalesTransactionsList = () => {
   const handleEditSuccess = () => {
     setEditTransaction(null);
     fetchTransactions();
+  };
+
+  const handleDelete = async (transaction: SalesTransaction) => {
+    if (!window.confirm(`Are you sure you want to delete the sale to "${transaction.customer}"?`)) return;
+    try {
+      const { error } = await supabase
+        .from('sales_transactions')
+        .delete()
+        .eq('id', transaction.id);
+      if (error) throw error;
+      toast({ title: "Deleted", description: "Sales transaction deleted successfully" });
+      fetchTransactions();
+    } catch (error) {
+      console.error('Error deleting sales transaction:', error);
+      toast({ title: "Error", description: "Failed to delete sales transaction", variant: "destructive" });
+    }
   };
 
   if (loading) {
@@ -115,13 +133,23 @@ const SalesTransactionsList = () => {
               <TableCell>{getStatusBadge(transaction.status)}</TableCell>
               {userIsAdmin && (
                 <TableCell className="text-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditTransaction(transaction)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center justify-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditTransaction(transaction)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(transaction)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               )}
             </TableRow>
