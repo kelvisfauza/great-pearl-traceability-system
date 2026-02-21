@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
 import { toast } from 'sonner';
-import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Printer, Filter } from 'lucide-react';
+import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Printer, Filter, LogIn, LogOut } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { getStandardPrintStyles } from '@/utils/printStyles';
 
@@ -57,6 +57,7 @@ const AttendanceTimeManager = () => {
   const [uploading, setUploading] = useState(false);
 
   // Form state
+  const [entryMode, setEntryMode] = useState<'sign_in' | 'sign_out'>('sign_in');
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [recordDate, setRecordDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [arrivalTime, setArrivalTime] = useState('');
@@ -130,22 +131,81 @@ const AttendanceTimeManager = () => {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('attendance_time_records')
-        .upsert({
-          employee_id: person.id,
-          employee_name: person.name,
-          employee_email: person.email,
-          record_date: recordDate,
-          arrival_time: arrivalTime || null,
-          departure_time: departureTime || null,
-          status,
-          notes: notes || null,
-          recorded_by: employee?.email || 'IT',
-        } as any, { onConflict: 'employee_id,record_date' });
+      if (entryMode === 'sign_in') {
+        if (!arrivalTime) {
+          toast.error('Please enter arrival time');
+          setSaving(false);
+          return;
+        }
+        // Morning: create record with arrival time only
+        const { error } = await supabase
+          .from('attendance_time_records')
+          .upsert({
+            employee_id: person.id,
+            employee_name: person.name,
+            employee_email: person.email,
+            record_date: recordDate,
+            arrival_time: arrivalTime,
+            status: 'present',
+            notes: notes || null,
+            recorded_by: employee?.email || 'IT',
+          } as any, { onConflict: 'employee_id,record_date' });
 
-      if (error) throw error;
-      toast.success(`Attendance recorded for ${person.name}`);
+        if (error) throw error;
+        toast.success(`Sign-in recorded for ${person.name} at ${arrivalTime}`);
+      } else {
+        if (!departureTime) {
+          toast.error('Please enter departure time');
+          setSaving(false);
+          return;
+        }
+        // Evening: update existing record with departure time
+        // First check if a sign-in record exists
+        const { data: existing } = await supabase
+          .from('attendance_time_records')
+          .select('id, arrival_time')
+          .eq('employee_id', person.id)
+          .eq('record_date', recordDate)
+          .maybeSingle();
+
+        if (existing) {
+          // Update with departure time
+          const { error } = await supabase
+            .from('attendance_time_records')
+            .update({
+              departure_time: departureTime,
+              notes: notes || existing.arrival_time ? null : '[FLAGGED] Signed out without signing in - needs IT review',
+              recorded_by: employee?.email || 'IT',
+            } as any)
+            .eq('id', existing.id);
+
+          if (error) throw error;
+          
+          if (!existing.arrival_time) {
+            toast.warning(`Sign-out recorded for ${person.name} but NO sign-in found — flagged for review`);
+          } else {
+            toast.success(`Sign-out recorded for ${person.name} at ${departureTime}`);
+          }
+        } else {
+          // No sign-in record exists — create with departure only (flagged)
+          const { error } = await supabase
+            .from('attendance_time_records')
+            .upsert({
+              employee_id: person.id,
+              employee_name: person.name,
+              employee_email: person.email,
+              record_date: recordDate,
+              departure_time: departureTime,
+              status: 'present',
+              notes: '[FLAGGED] Signed out without signing in - needs IT review',
+              recorded_by: employee?.email || 'IT',
+            } as any, { onConflict: 'employee_id,record_date' });
+
+          if (error) throw error;
+          toast.warning(`Sign-out recorded for ${person.name} — NO sign-in found, flagged for review`);
+        }
+      }
+
       setSelectedEmployee('');
       setArrivalTime('');
       setDepartureTime('');
@@ -310,7 +370,7 @@ const AttendanceTimeManager = () => {
       <html><head><title>Attendance Records</title><style>${getStandardPrintStyles()}</style></head>
       <body>
         <div class="print-header">
-          <div class="company-name">KAJON Coffee Limited</div>
+          <div class="company-name">Great Pearl Coffee Limited</div>
           <div class="document-title">Attendance Records Report</div>
           <div class="document-info">Period: ${filterDateFrom} to ${filterDateTo}${filterEmployee ? ' | Employee: ' + filterEmployee : ''}</div>
           <div class="document-info">Generated: ${format(new Date(), 'dd MMM yyyy HH:mm')}</div>
@@ -348,6 +408,24 @@ const AttendanceTimeManager = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Sign In / Sign Out Mode Toggle */}
+              <div className="flex gap-2">
+                <Button
+                  variant={entryMode === 'sign_in' ? 'default' : 'outline'}
+                  onClick={() => setEntryMode('sign_in')}
+                  className="gap-2"
+                >
+                  <LogIn className="h-4 w-4" /> Morning Sign-In
+                </Button>
+                <Button
+                  variant={entryMode === 'sign_out' ? 'default' : 'outline'}
+                  onClick={() => setEntryMode('sign_out')}
+                  className="gap-2"
+                >
+                  <LogOut className="h-4 w-4" /> Evening Sign-Out
+                </Button>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Employee</Label>
@@ -356,11 +434,20 @@ const AttendanceTimeManager = () => {
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
                     <SelectContent>
-                      {allAttendanceList.map(person => (
-                        <SelectItem key={person.id} value={person.id}>
-                          {person.name} — {person.department} {person.isCompanyWorker ? '(Company)' : ''}
-                        </SelectItem>
-                      ))}
+                      {allAttendanceList.map(person => {
+                        // In sign-out mode, show indicator if already signed in
+                        const todayRecord = records.find(r => r.employee_id === person.id && r.record_date === recordDate);
+                        const signedIn = todayRecord?.arrival_time;
+                        const signedOut = todayRecord?.departure_time;
+                        return (
+                          <SelectItem key={person.id} value={person.id}>
+                            {person.name} — {person.department} {person.isCompanyWorker ? '(Company)' : ''}
+                            {entryMode === 'sign_in' && signedIn ? ' ✓ Signed in' : ''}
+                            {entryMode === 'sign_out' && signedOut ? ' ✓ Signed out' : ''}
+                            {entryMode === 'sign_out' && !signedIn ? ' ⚠ No sign-in' : ''}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -370,28 +457,19 @@ const AttendanceTimeManager = () => {
                   <Input type="date" value={recordDate} onChange={e => setRecordDate(e.target.value)} />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Arrival Time</Label>
-                  <Input type="time" value={arrivalTime} onChange={e => setArrivalTime(e.target.value)} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Departure Time</Label>
-                  <Input type="time" value={departureTime} onChange={e => setDepartureTime(e.target.value)} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="present">Present</SelectItem>
-                      <SelectItem value="absent">Absent</SelectItem>
-                      <SelectItem value="half_day">Half Day</SelectItem>
-                      <SelectItem value="leave">On Leave</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {entryMode === 'sign_in' ? (
+                  <div className="space-y-2">
+                    <Label>Arrival Time</Label>
+                    <Input type="time" value={arrivalTime} onChange={e => setArrivalTime(e.target.value)} />
+                    <p className="text-xs text-muted-foreground">Standard: 08:00 AM. After 08:00 is marked late.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Departure Time</Label>
+                    <Input type="time" value={departureTime} onChange={e => setDepartureTime(e.target.value)} />
+                    <p className="text-xs text-muted-foreground">Standard: 05:00 PM. System calculates overtime.</p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label>Notes</Label>
@@ -400,8 +478,9 @@ const AttendanceTimeManager = () => {
               </div>
 
               <div className="flex flex-wrap gap-3 pt-2">
-                <Button onClick={handleSubmit} disabled={saving}>
-                  {saving ? 'Saving...' : 'Save Attendance'}
+                <Button onClick={handleSubmit} disabled={saving} className="gap-2">
+                  {entryMode === 'sign_in' ? <LogIn className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
+                  {saving ? 'Saving...' : entryMode === 'sign_in' ? 'Record Sign-In' : 'Record Sign-Out'}
                 </Button>
 
                 <div className="relative">
@@ -417,6 +496,18 @@ const AttendanceTimeManager = () => {
                   />
                 </div>
               </div>
+
+              {/* Today's sign-in summary */}
+              {(() => {
+                const todayRecords = records.filter(r => r.record_date === recordDate);
+                const signedIn = todayRecords.filter(r => r.arrival_time).length;
+                const notSignedIn = allAttendanceList.length - signedIn;
+                return (
+                  <div className="p-3 rounded-lg border bg-muted/30 text-sm">
+                    <strong>Today ({recordDate}):</strong> {signedIn} signed in, {notSignedIn} not yet signed in, {todayRecords.filter(r => r.departure_time).length} signed out
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>

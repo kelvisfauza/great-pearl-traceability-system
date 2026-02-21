@@ -59,14 +59,14 @@ Deno.serve(async (req) => {
 
     if (reminder_type === 'sign_in') {
       // 8 AM - remind ALL employees to sign in
-      message = 'KAJON Coffee: Good morning. Please remember to sign in for attendance today. Thank you.'
+      message = 'Great Pearl Coffee: Good morning. Please remember to sign in for attendance today. Thank you.'
       recipients = [
         ...(employees || []).map(e => ({ phone: e.phone!, name: e.name })),
         ...(companyWorkers || []).filter(w => w.phone).map(w => ({ phone: w.phone!, name: w.full_name })),
       ]
     } else if (reminder_type === 'late_warning') {
       // 8:15 AM - only those who haven't signed in yet
-      message = 'KAJON Coffee: You have not signed in yet. You are now marked as late. Please sign in immediately.'
+      message = 'Great Pearl Coffee: You have not signed in yet. You are now marked as late. Please sign in immediately.'
       const allPeople = [
         ...(employees || []).map(e => ({ id: e.id, phone: e.phone!, name: e.name })),
         ...(companyWorkers || []).filter(w => w.phone).map(w => ({ id: `company_${w.id}`, phone: w.phone!, name: w.full_name })),
@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
       recipients = allPeople.filter(p => !signedInIds.has(p.id))
     } else if (reminder_type === 'sign_out') {
       // 5 PM - remind those who signed in but haven't signed out
-      message = 'KAJON Coffee: Work hours are over. Please remember to sign out before leaving. Thank you.'
+      message = 'Great Pearl Coffee: Work hours are over. Please remember to sign out before leaving. Thank you.'
       const allPeople = [
         ...(employees || []).map(e => ({ id: e.id, phone: e.phone!, name: e.name })),
         ...(companyWorkers || []).filter(w => w.phone).map(w => ({ id: `company_${w.id}`, phone: w.phone!, name: w.full_name })),
