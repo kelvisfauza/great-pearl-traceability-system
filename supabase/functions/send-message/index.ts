@@ -249,15 +249,19 @@ Deno.serve(async (req) => {
     }
 
     // Log the message
-    await supabase.from('message_logs').insert({
-      channel,
-      recipient: to,
-      message: message.substring(0, 500),
-      status: result.success ? 'sent' : 'failed',
-      error: result.error,
-      provider: channel === 'sms' ? (provider || settingsMap['sms_provider'] || 'yoola') : 
-                channel === 'email' ? 'sendgrid' : 'twilio'
-    }).catch(err => console.log('Failed to log message:', err))
+    try {
+      await supabase.from('message_logs').insert({
+        channel,
+        recipient: to,
+        message: message.substring(0, 500),
+        status: result.success ? 'sent' : 'failed',
+        error: result.error,
+        provider: channel === 'sms' ? (provider || settingsMap['sms_provider'] || 'yoola') : 
+                  channel === 'email' ? 'sendgrid' : 'twilio'
+      })
+    } catch (logErr) {
+      console.log('Failed to log message:', logErr)
+    }
 
     return new Response(
       JSON.stringify(result),
