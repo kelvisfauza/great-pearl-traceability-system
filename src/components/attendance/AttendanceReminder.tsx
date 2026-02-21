@@ -39,12 +39,7 @@ const AttendanceReminder = () => {
           description: 'Please sign in via the attendance system for proper records.',
           duration: 5000,
           icon: <Clock className="h-5 w-5 text-orange-500" />,
-          action: {
-            label: 'Sign In Now',
-            onClick: () => {
-              window.location.href = '/it';
-            },
-          },
+          position: 'top-center',
         });
       }
     };
