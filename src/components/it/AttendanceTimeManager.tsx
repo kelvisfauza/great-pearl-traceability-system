@@ -11,8 +11,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseEmployees } from '@/hooks/useSupabaseEmployees';
 import { toast } from 'sonner';
-import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
+import { Clock, Upload, Trophy, AlertTriangle, TrendingUp, TrendingDown, Calendar, FileSpreadsheet, Printer, Filter } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO } from 'date-fns';
+import { getStandardPrintStyles } from '@/utils/printStyles';
 
 interface AttendanceRecord {
   id: string;
@@ -66,6 +67,11 @@ const AttendanceTimeManager = () => {
   // Report filter
   const [reportPeriod, setReportPeriod] = useState('month');
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
+
+  // Records filter state
+  const [filterDateFrom, setFilterDateFrom] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [filterDateTo, setFilterDateTo] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [filterEmployee, setFilterEmployee] = useState('');
 
   useEffect(() => {
     fetchRecords();
@@ -256,6 +262,67 @@ const AttendanceTimeManager = () => {
     ...companyWorkers.map(w => ({ id: w.id, name: w.name, email: w.email, department: w.department, isCompanyWorker: true })),
   ].sort((a, b) => a.name.localeCompare(b.name));
 
+  const getGroupedFilteredRecords = (): Record<string, AttendanceRecord[]> => {
+    const filtered = records.filter(r => {
+      const inRange = r.record_date >= filterDateFrom && r.record_date <= filterDateTo;
+      const matchesEmployee = !filterEmployee || r.employee_name.toLowerCase().includes(filterEmployee.toLowerCase());
+      return inRange && matchesEmployee;
+    });
+    const grouped: Record<string, AttendanceRecord[]> = {};
+    filtered.forEach(r => {
+      if (!grouped[r.record_date]) grouped[r.record_date] = [];
+      grouped[r.record_date].push(r);
+    });
+    // Sort dates descending
+    const sorted: Record<string, AttendanceRecord[]> = {};
+    Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(k => { sorted[k] = grouped[k]; });
+    return sorted;
+  };
+
+  const handlePrintRecords = () => {
+    const grouped = getGroupedFilteredRecords();
+    const rows = Object.entries(grouped).map(([date, dayRecords]) => {
+      const dateFormatted = format(parseISO(date), 'EEEE, dd MMM yyyy');
+      const tableRows = dayRecords.map(r => `
+        <tr>
+          <td>${r.employee_name}</td>
+          <td>${r.arrival_time || '—'}</td>
+          <td>${r.departure_time || '—'}</td>
+          <td>${r.status}</td>
+          <td>${r.is_late ? r.late_minutes + ' min' : '—'}</td>
+          <td>${r.is_overtime ? r.overtime_minutes + ' min' : '—'}</td>
+        </tr>
+      `).join('');
+      return `
+        <div class="content-section">
+          <div class="section-title">${dateFormatted} — ${dayRecords.length} record(s)</div>
+          <table>
+            <thead><tr><th>Employee</th><th>Arrival</th><th>Departure</th><th>Status</th><th>Late</th><th>Overtime</th></tr></thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
+      `;
+    }).join('');
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html><head><title>Attendance Records</title><style>${getStandardPrintStyles()}</style></head>
+      <body>
+        <div class="print-header">
+          <div class="company-name">KAJON Coffee Limited</div>
+          <div class="document-title">Attendance Records Report</div>
+          <div class="document-info">Period: ${filterDateFrom} to ${filterDateTo}${filterEmployee ? ' | Employee: ' + filterEmployee : ''}</div>
+          <div class="document-info">Generated: ${format(new Date(), 'dd MMM yyyy HH:mm')}</div>
+        </div>
+        ${rows}
+        <div class="footer">This is a system-generated report.</div>
+      </body></html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="entry" className="space-y-4">
@@ -358,70 +425,90 @@ const AttendanceTimeManager = () => {
         <TabsContent value="records">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Attendance Records
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Attendance Records
+                </span>
+                <Button variant="outline" size="sm" className="gap-2" onClick={handlePrintRecords}>
+                  <Printer className="h-4 w-4" /> Print
+                </Button>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* Filters */}
+              <div className="flex flex-wrap items-end gap-3 p-3 rounded-lg border bg-muted/30">
+                <Filter className="h-4 w-4 text-muted-foreground mt-6" />
+                <div className="space-y-1">
+                  <Label className="text-xs">From</Label>
+                  <Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="w-40 h-9" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">To</Label>
+                  <Input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="w-40 h-9" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Employee</Label>
+                  <Input placeholder="Filter by name..." value={filterEmployee} onChange={e => setFilterEmployee(e.target.value)} className="w-48 h-9" />
+                </div>
+              </div>
+
               {loading ? (
                 <p className="text-muted-foreground">Loading...</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Employee</TableHead>
-                        <TableHead>Arrival</TableHead>
-                        <TableHead>Departure</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Late</TableHead>
-                        <TableHead>Overtime</TableHead>
-                        <TableHead>Document</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {records.slice(0, 100).map(r => (
-                        <TableRow key={r.id}>
-                          <TableCell className="font-medium">{r.record_date}</TableCell>
-                          <TableCell>{r.employee_name}</TableCell>
-                          <TableCell>{r.arrival_time || '—'}</TableCell>
-                          <TableCell>{r.departure_time || '—'}</TableCell>
-                          <TableCell>
-                            <Badge variant={r.status === 'present' ? 'default' : r.status === 'absent' ? 'destructive' : 'secondary'}>
-                              {r.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {r.is_late ? (
-                              <span className="text-destructive font-medium">{r.late_minutes}min</span>
-                            ) : '—'}
-                          </TableCell>
-                          <TableCell>
-                            {r.is_overtime ? (
-                              <span className="text-blue-600 font-medium">{r.overtime_minutes}min</span>
-                            ) : '—'}
-                          </TableCell>
-                          <TableCell>
-                            {r.support_document_name ? (
-                              <a href={r.support_document_url || '#'} target="_blank" rel="noreferrer" className="text-primary underline text-sm">
-                                <FileSpreadsheet className="h-4 w-4 inline mr-1" />
-                                {r.support_document_name}
-                              </a>
-                            ) : '—'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {records.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                            No attendance records yet. Start recording above.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                <div className="space-y-4">
+                  {Object.entries(getGroupedFilteredRecords()).map(([date, dayRecords]) => (
+                    <div key={date} className="border rounded-lg overflow-hidden">
+                      <div className="bg-muted px-4 py-2 font-semibold text-sm flex items-center justify-between">
+                        <span>{format(parseISO(date), 'EEEE, dd MMM yyyy')}</span>
+                        <Badge variant="secondary">{dayRecords.length} records</Badge>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Employee</TableHead>
+                            <TableHead>Arrival</TableHead>
+                            <TableHead>Departure</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Late</TableHead>
+                            <TableHead>Overtime</TableHead>
+                            <TableHead>Document</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {dayRecords.map(r => (
+                            <TableRow key={r.id}>
+                              <TableCell className="font-medium">{r.employee_name}</TableCell>
+                              <TableCell>{r.arrival_time || '—'}</TableCell>
+                              <TableCell>{r.departure_time || '—'}</TableCell>
+                              <TableCell>
+                                <Badge variant={r.status === 'present' ? 'default' : r.status === 'absent' ? 'destructive' : 'secondary'}>
+                                  {r.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {r.is_late ? <span className="text-destructive font-medium">{r.late_minutes}min</span> : '—'}
+                              </TableCell>
+                              <TableCell>
+                                {r.is_overtime ? <span className="text-blue-600 font-medium">{r.overtime_minutes}min</span> : '—'}
+                              </TableCell>
+                              <TableCell>
+                                {r.support_document_name ? (
+                                  <a href={r.support_document_url || '#'} target="_blank" rel="noreferrer" className="text-primary underline text-sm">
+                                    <FileSpreadsheet className="h-4 w-4 inline mr-1" />
+                                    {r.support_document_name}
+                                  </a>
+                                ) : '—'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+                  {Object.keys(getGroupedFilteredRecords()).length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">No records found for the selected filters.</p>
+                  )}
                 </div>
               )}
             </CardContent>
