@@ -515,6 +515,47 @@ const AttendanceTimeManager = () => {
           </Card>
         </TabsContent>
 
+        {/* FLAGGED RECORDS - Missing Sign-in */}
+        {(() => {
+          const flagged = records.filter(r => r.notes?.includes('[FLAGGED]') || (r.departure_time && !r.arrival_time));
+          if (flagged.length === 0) return null;
+          return (
+            <Card className="border-orange-200 bg-orange-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-orange-700">
+                  <AlertTriangle className="h-5 w-5" />
+                  Flagged Records — Missing Sign-in ({flagged.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-3">
+                  These employees signed out but never signed in. Please review and enter their arrival times.
+                </p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Departure</TableHead>
+                      <TableHead>Notes</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {flagged.map(r => (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-medium">{r.record_date}</TableCell>
+                        <TableCell>{r.employee_name}</TableCell>
+                        <TableCell>{r.departure_time || '—'}</TableCell>
+                        <TableCell className="text-orange-600 text-sm">{r.notes || 'No sign-in recorded'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* RANKINGS TAB */}
         <TabsContent value="rankings" className="space-y-4">
           <div className="flex items-center gap-4">

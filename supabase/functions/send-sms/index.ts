@@ -80,21 +80,29 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-  const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: authHeader } }
-  })
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-  const { data: { user }, error: userError } = await supabaseAuth.auth.getUser()
-  if (userError || !user) {
-    console.error('Auth validation failed:', userError?.message)
-    return new Response(
-      JSON.stringify({ error: 'Invalid authentication' }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+  // Allow service-role key calls (from other edge functions / cron jobs)
+  const token = authHeader.replace('Bearer ', '')
+  const isServiceRole = token === serviceRoleKey
+
+  let userId = 'system'
+  if (!isServiceRole) {
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    })
+
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser()
+    if (userError || !user) {
+      console.error('Auth validation failed:', userError?.message)
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    userId = user.id
   }
-
-  const userId = user.id
-  console.log('Authenticated user:', userId)
+  console.log('Authenticated:', isServiceRole ? 'service-role' : userId)
 
   // Use service role for DB operations
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || supabaseAnonKey
