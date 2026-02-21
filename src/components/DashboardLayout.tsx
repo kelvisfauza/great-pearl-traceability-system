@@ -16,6 +16,7 @@ import FeatureAnnouncementModal from "./FeatureAnnouncementModal";
 import TrainingTour from "./training/TrainingTour";
 import ForceEmailUpdate from "./auth/ForceEmailUpdate";
 import MobileNavigation from "./MobileNavigation";
+import AttendanceReminder from "./attendance/AttendanceReminder";
 import { Menu } from "lucide-react";
 import { Button } from "./ui/button";
 
@@ -145,6 +146,7 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
       
       <FeatureAnnouncementModal onOpenAnnouncement={handleOpenAnnouncement} />
       <TrainingTour />
+      <AttendanceReminder />
     </div>
   );
 };

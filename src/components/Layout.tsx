@@ -18,6 +18,7 @@ import FeatureAnnouncementModal from "./FeatureAnnouncementModal";
 import AnnouncementDialog from "./notifications/AnnouncementDialog";
 import TrainingTour from "./training/TrainingTour";
 import ForceEmailUpdate from "./auth/ForceEmailUpdate";
+import AttendanceReminder from "./attendance/AttendanceReminder";
 import { Menu } from "lucide-react";
 import { Button } from "./ui/button";
 
@@ -169,6 +170,7 @@ const Layout = ({ children, title, subtitle, showMessageButton = true }: LayoutP
       
       <FeatureAnnouncementModal onOpenAnnouncement={handleOpenAnnouncement} />
       <TrainingTour />
+      <AttendanceReminder />
     </div>
   );
 };
