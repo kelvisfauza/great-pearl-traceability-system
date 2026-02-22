@@ -13,6 +13,7 @@ import DailyMarketReport from '@/components/analyst/DailyMarketReport';
 import AnalystDailyReminders from '@/components/analyst/AnalystDailyReminders';
 import MarketIntelligencePanel from '@/components/analyst/MarketIntelligencePanel';
 import PriceCalculator from '@/components/analyst/PriceCalculator';
+import BulkAverageCalculator from '@/components/analyst/BulkAverageCalculator';
 
 const DataAnalyst = () => {
   const [activeTab, setActiveTab] = useState('price-overview');
@@ -73,6 +74,7 @@ const DataAnalyst = () => {
 
         <TabsContent value="procurement">
           <div className="space-y-6">
+            <BulkAverageCalculator />
             <ProcurementAdvisory />
             <PriceRecommendationPanel />
           </div>
