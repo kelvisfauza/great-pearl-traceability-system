@@ -791,8 +791,15 @@ const MyExpenses = () => {
                       </SelectContent>
                     </Select>
                     
-                    {personalExpenseForm.expenseType === 'Weekly Lunch Allowance' && (
+                     {personalExpenseForm.expenseType === 'Weekly Lunch Allowance' && (
                       <>
+                        <Alert className="border-orange-200 bg-orange-50 mt-2">
+                          <AlertCircle className="h-4 w-4 text-orange-600" />
+                          <AlertDescription className="text-xs text-orange-800">
+                            <div className="font-semibold">⚠️ Important Notice:</div>
+                            <p className="mt-1">Weekly lunch allowance will no longer be provided as food will now be prepared on-site. Lunch allowance requests will only be approved if the cooks have not prepared the food.</p>
+                          </AlertDescription>
+                        </Alert>
                         {weeklyAllowance ? (
                           <Alert className="border-green-200 bg-green-50 mt-2">
                             <Coffee className="h-4 w-4 text-green-600" />
