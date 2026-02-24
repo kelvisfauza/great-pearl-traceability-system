@@ -64,7 +64,7 @@ const ErrorCard: React.FC<ErrorCardProps> = ({ error, onStatusUpdate }) => {
   };
 
   return (
-    <Card key={error.id} className={error.severity === 'critical' ? 'border-red-500' : ''}>
+    <Card key={error.id} className={error.severity === 'critical' ? 'border-destructive' : error.severity === 'high' ? 'border-orange-500' : ''}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="space-y-2">
@@ -75,7 +75,6 @@ const ErrorCard: React.FC<ErrorCardProps> = ({ error, onStatusUpdate }) => {
                 {error.severity}
               </Badge>
             </div>
-            <CardDescription>{error.description}</CardDescription>
           </div>
           <Badge variant={error.status === 'resolved' ? 'default' : 'secondary'}>
             {error.status}
@@ -84,14 +83,33 @@ const ErrorCard: React.FC<ErrorCardProps> = ({ error, onStatusUpdate }) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          <div className="text-sm text-muted-foreground">
-            <span className="font-medium">Component:</span> {error.component} • 
-            <span className="font-medium"> Time:</span> {new Date(error.created_at).toLocaleString()}
+          {/* Clear error details */}
+          <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+            {error.description.split('\n').map((line, i) => (
+              <p key={i} className="text-sm">
+                {line.startsWith('What happened:') ? (
+                  <><span className="font-semibold text-destructive">What happened:</span> {line.replace('What happened: ', '')}</>
+                ) : line.startsWith('Action:') ? (
+                  <><span className="font-semibold">Action:</span> {line.replace('Action: ', '')}</>
+                ) : line.startsWith('Module:') ? (
+                  <><span className="font-semibold">Module:</span> {line.replace('Module: ', '')}</>
+                ) : (
+                  <span className="text-muted-foreground text-xs">{line}</span>
+                )}
+              </p>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span><span className="font-medium">Where:</span> {error.component}</span>
+            <span><span className="font-medium">Type:</span> {error.error_type}</span>
+            <span><span className="font-medium">Time:</span> {new Date(error.created_at).toLocaleString()}</span>
+            {error.user_email && <span><span className="font-medium">User:</span> {error.user_email}</span>}
           </div>
           
           <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded border-l-4 border-blue-500">
             <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
-              Fix Recommendation:
+              How to Fix:
             </p>
             <p className="text-sm text-blue-700 dark:text-blue-300 whitespace-pre-wrap">
               {error.recommendation}
