@@ -6966,6 +6966,10 @@ export type Database = {
     }
     Functions: {
       admin_delete_all_system_data: { Args: never; Returns: Json }
+      award_activity_reward: {
+        Args: { activity_name: string; user_uuid: string }
+        Returns: Json
+      }
       bulk_deduct_unprocessed_sales: {
         Args: { p_coffee_type?: string }
         Returns: {

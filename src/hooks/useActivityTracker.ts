@@ -32,18 +32,25 @@ export const useActivityTracker = () => {
         return;
       }
 
-      console.log('Activity recorded successfully, checking for reward...');
+      console.log('Activity recorded successfully, awarding loyalty reward...');
 
-      // Temporarily disable reward system until function is implemented
-      // const { data, error } = await supabase.rpc('award_activity_reward' as any, {
-      //   user_uuid: user.id,
-      //   activity_name: activityType
-      // });
+      // Award loyalty reward points
+      const { data, error } = await supabase.rpc('award_activity_reward' as any, {
+        user_uuid: user.id,
+        activity_name: activityType
+      });
 
-      // if (error) {
-      //   console.error('Error awarding activity reward:', error);
-      //   return;
-      // }
+      if (error) {
+        console.error('Error awarding activity reward:', error);
+      } else {
+        console.log('🎯 Loyalty reward result:', data);
+        if (data?.success && data?.reward_given > 0) {
+          toast({
+            title: "Loyalty Points Earned! 🎉",
+            description: `+UGX ${data.reward_given.toLocaleString()} | Monthly: UGX ${data.monthly_total.toLocaleString()}/50,000`,
+          });
+        }
+      }
 
       console.log('Activity tracked successfully for user:', user.email);
     } catch (error: any) {
