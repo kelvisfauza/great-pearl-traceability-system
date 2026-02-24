@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useActivityTracker } from "@/hooks/useActivityTracker";
 
 interface QualityAssessmentFormProps {
   lot: any;
@@ -35,6 +36,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { trackFormSubmission, trackTaskCompletion } = useActivityTracker();
   const [isRejecting, setIsRejecting] = useState(false);
   
   const { register, handleSubmit, watch, formState: { errors } } = useForm<AssessmentForm>({
@@ -95,6 +97,8 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
       if (updateError) throw updateError;
     },
     onSuccess: () => {
+      trackFormSubmission('quality_assessment');
+      trackTaskCompletion('quality assessment');
       toast({
         title: "Assessment Submitted",
         description: "Quality assessment saved and sent to admin for final pricing."
@@ -137,6 +141,7 @@ const QualityAssessmentForm = ({ lot }: QualityAssessmentFormProps) => {
         });
     },
     onSuccess: () => {
+      trackTaskCompletion('quality rejection');
       toast({
         title: "Lot Rejected",
         description: "Lot has been rejected and will not proceed to finance"
