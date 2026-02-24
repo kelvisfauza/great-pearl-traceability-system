@@ -3,8 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContext } from '@/contexts/AuthContext';
 
-const RAPID_VISIT_THRESHOLD = 4; // 4 rapid page changes
-const RAPID_VISIT_WINDOW_MS = 20000; // within 20 seconds
+const RAPID_VISIT_THRESHOLD = 4;
+const RAPID_VISIT_WINDOW_MS = 20000; // 20 seconds
 const LEGACY_STORAGE_KEY = 'fraud_nav_timestamps';
 const AUTH_ROUTES = ['/auth', '/login', '/signup', '/reset-password'];
 
