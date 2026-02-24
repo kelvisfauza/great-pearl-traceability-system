@@ -8,22 +8,36 @@ const RAPID_VISIT_WINDOW_MS = 15000; // within 15 seconds
 const LEGACY_STORAGE_KEY = 'fraud_nav_timestamps';
 const AUTH_ROUTES = ['/auth', '/login', '/signup', '/reset-password'];
 
+type NavigationVisit = {
+  path: string;
+  timestamp: number;
+};
+
 const getStorageKey = (userId: string) => `fraud_nav_timestamps:${userId}`;
 
-const readTimestamps = (userId: string): number[] => {
+const readVisits = (userId: string): NavigationVisit[] => {
   try {
     const raw = sessionStorage.getItem(getStorageKey(userId));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'number') : [];
+
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.filter(
+      (entry): entry is NavigationVisit =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        typeof (entry as NavigationVisit).path === 'string' &&
+        typeof (entry as NavigationVisit).timestamp === 'number'
+    );
   } catch {
     return [];
   }
 };
 
-const writeTimestamps = (userId: string, timestamps: number[]) => {
+const writeVisits = (userId: string, visits: NavigationVisit[]) => {
   try {
-    sessionStorage.setItem(getStorageKey(userId), JSON.stringify(timestamps));
+    sessionStorage.setItem(getStorageKey(userId), JSON.stringify(visits));
   } catch {
     // ignore storage failures
   }
@@ -46,13 +60,32 @@ export const useFraudDetection = (onFraudDetected: () => void) => {
 
   const triggerLock = useCallback(async () => {
     if (!user?.id || alreadyLocked.current) return;
-    alreadyLocked.current = true;
-
-    const unlockCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const userName = employee?.name || (user.user_metadata as any)?.name || user.email || 'User';
-    const userEmail = employee?.email || user.email || '';
 
     try {
+      const { data: existingLock, error: existingLockError } = await supabase
+        .from('user_fraud_locks')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_locked', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingLockError) {
+        console.error('Failed checking existing fraud lock:', existingLockError);
+      }
+
+      if (existingLock) {
+        onFraudDetected();
+        return;
+      }
+
+      alreadyLocked.current = true;
+
+      const unlockCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const userName = employee?.name || (user.user_metadata as any)?.name || user.email || 'User';
+      const userEmail = employee?.email || user.email || '';
+
       const { error: lockInsertError } = await supabase.from('user_fraud_locks').insert([
         {
           user_id: user.id,
@@ -112,23 +145,34 @@ export const useFraudDetection = (onFraudDetected: () => void) => {
     const onAuthRoute = AUTH_ROUTES.some((route) => currentPath.startsWith(route));
 
     if (onAuthRoute) {
-      writeTimestamps(user.id, []);
+      writeVisits(user.id, []);
       clearLegacyTimestamps();
       return;
     }
 
     const now = Date.now();
-    const timestamps = readTimestamps(user.id);
-    const updated = [...timestamps, now].filter((t) => now - t < RAPID_VISIT_WINDOW_MS);
-    writeTimestamps(user.id, updated);
+    const recentVisits = readVisits(user.id).filter((visit) => now - visit.timestamp < RAPID_VISIT_WINDOW_MS);
+    const lastVisit = recentVisits[recentVisits.length - 1];
+    const isRealPathChange = !lastVisit || lastVisit.path !== currentPath;
+
+    const updatedVisits = isRealPathChange
+      ? [...recentVisits, { path: currentPath, timestamp: now }]
+      : recentVisits;
+
+    writeVisits(user.id, updatedVisits);
+
+    if (!isRealPathChange) {
+      console.log('Fraud check skipped: same route refresh detected.');
+      return;
+    }
 
     console.log(
-      `Fraud check: ${updated.length} page changes in last ${RAPID_VISIT_WINDOW_MS / 1000}s (threshold: ${RAPID_VISIT_THRESHOLD})`
+      `Fraud check: ${updatedVisits.length} page changes in last ${RAPID_VISIT_WINDOW_MS / 1000}s (threshold: ${RAPID_VISIT_THRESHOLD})`
     );
 
-    if (updated.length >= RAPID_VISIT_THRESHOLD) {
+    if (updatedVisits.length >= RAPID_VISIT_THRESHOLD) {
       console.warn('Fraud detection: Rapid page browsing detected. Locking account.');
-      writeTimestamps(user.id, []); // reset burst immediately
+      writeVisits(user.id, []); // reset burst immediately
       triggerLock();
     }
   }, [location.pathname, user?.id, triggerLock]);
