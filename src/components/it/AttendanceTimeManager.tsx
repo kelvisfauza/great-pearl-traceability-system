@@ -467,7 +467,7 @@ const AttendanceTimeManager = () => {
                   <div className="space-y-2">
                     <Label>Departure Time</Label>
                     <Input type="time" value={departureTime} onChange={e => setDepartureTime(e.target.value)} />
-                    <p className="text-xs text-muted-foreground">Standard: 05:00 PM. System calculates overtime.</p>
+                    <p className="text-xs text-muted-foreground">Standard: 05:30 PM. System calculates overtime.</p>
                   </div>
                 )}
 

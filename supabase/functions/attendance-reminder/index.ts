@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
     )
 
     const { reminder_type } = await req.json()
-    // reminder_type: 'sign_in' (8AM), 'late_warning' (8:15AM), 'sign_out' (5PM)
+    // reminder_type: 'sign_in' (every 20min 8-9AM, only unsigned), 'late_warning' (after 9AM), 'sign_out' (5:30PM)
 
     const today = new Date().toISOString().split('T')[0]
 
@@ -57,28 +57,22 @@ Deno.serve(async (req) => {
     let message = ''
     let recipients: { phone: string; name: string }[] = []
 
+    const allPeople = [
+      ...(employees || []).map(e => ({ id: e.id, phone: e.phone!, name: e.name })),
+      ...(companyWorkers || []).filter(w => w.phone).map(w => ({ id: `company_${w.id}`, phone: w.phone!, name: w.full_name })),
+    ]
+
     if (reminder_type === 'sign_in') {
-      // 8 AM - remind ALL employees to sign in
-      message = 'Great Pearl Coffee: Good morning. Please remember to sign in for attendance today. Thank you.'
-      recipients = [
-        ...(employees || []).map(e => ({ phone: e.phone!, name: e.name })),
-        ...(companyWorkers || []).filter(w => w.phone).map(w => ({ phone: w.phone!, name: w.full_name })),
-      ]
+      // Every 20min from 8AM-9AM - ONLY those who haven't signed in yet
+      message = 'Great Pearl Coffee: You have not signed in for attendance today. Please sign in now. Thank you.'
+      recipients = allPeople.filter(p => !signedInIds.has(p.id))
     } else if (reminder_type === 'late_warning') {
-      // 8:15 AM - only those who haven't signed in yet
+      // After 9AM - only those who still haven't signed in
       message = 'Great Pearl Coffee: You have not signed in yet. You are now marked as late. Please sign in immediately.'
-      const allPeople = [
-        ...(employees || []).map(e => ({ id: e.id, phone: e.phone!, name: e.name })),
-        ...(companyWorkers || []).filter(w => w.phone).map(w => ({ id: `company_${w.id}`, phone: w.phone!, name: w.full_name })),
-      ]
       recipients = allPeople.filter(p => !signedInIds.has(p.id))
     } else if (reminder_type === 'sign_out') {
-      // 5 PM - remind those who signed in but haven't signed out
+      // 5:30 PM - remind those who signed in but haven't signed out
       message = 'Great Pearl Coffee: Work hours are over. Please remember to sign out before leaving. Thank you.'
-      const allPeople = [
-        ...(employees || []).map(e => ({ id: e.id, phone: e.phone!, name: e.name })),
-        ...(companyWorkers || []).filter(w => w.phone).map(w => ({ id: `company_${w.id}`, phone: w.phone!, name: w.full_name })),
-      ]
       recipients = allPeople.filter(p => signedInIds.has(p.id) && !signedOutIds.has(p.id))
     } else {
       return new Response(
