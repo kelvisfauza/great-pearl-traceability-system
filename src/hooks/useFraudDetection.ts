@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AuthContext } from '@/contexts/AuthContext';
 
 const RAPID_VISIT_THRESHOLD = 4; // 4 rapid page changes
-const RAPID_VISIT_WINDOW_MS = 15000; // within 15 seconds
+const RAPID_VISIT_WINDOW_MS = 20000; // within 20 seconds
 const LEGACY_STORAGE_KEY = 'fraud_nav_timestamps';
 const AUTH_ROUTES = ['/auth', '/login', '/signup', '/reset-password'];
 
@@ -138,6 +138,47 @@ export const useFraudDetection = (onFraudDetected: () => void) => {
     }
   }, [user, employee, onFraudDetected]);
 
+  const shouldLockWithAI = useCallback(
+    async (visits: NavigationVisit[]) => {
+      if (!user?.id) return false;
+
+      try {
+        const userName = employee?.name || (user.user_metadata as any)?.name || user.email || 'User';
+        const userEmail = employee?.email || user.email || '';
+
+        const { data, error } = await supabase.functions.invoke('assess-fraud-navigation', {
+          body: {
+            userId: user.id,
+            userName,
+            userEmail,
+            threshold: RAPID_VISIT_THRESHOLD,
+            windowMs: RAPID_VISIT_WINDOW_MS,
+            visits: visits.slice(-10),
+          },
+        });
+
+        if (error) {
+          console.error('AI fraud assessment failed:', error);
+          return false;
+        }
+
+        const shouldLock = Boolean(data?.shouldLock);
+
+        console.log('AI fraud decision:', {
+          shouldLock,
+          confidence: data?.confidence,
+          reason: data?.reason,
+        });
+
+        return shouldLock;
+      } catch (err) {
+        console.error('Error during AI fraud assessment:', err);
+        return false;
+      }
+    },
+    [user, employee]
+  );
+
   useEffect(() => {
     if (!user?.id) return;
 
@@ -171,9 +212,19 @@ export const useFraudDetection = (onFraudDetected: () => void) => {
     );
 
     if (updatedVisits.length >= RAPID_VISIT_THRESHOLD) {
-      console.warn('Fraud detection: Rapid page browsing detected. Locking account.');
-      writeVisits(user.id, []); // reset burst immediately
-      triggerLock();
+      console.warn('Rapid navigation threshold reached. Requesting AI fraud assessment.');
+      writeVisits(user.id, []); // reset burst immediately after reaching threshold
+
+      void (async () => {
+        const shouldLock = await shouldLockWithAI(updatedVisits);
+
+        if (shouldLock) {
+          console.warn('AI fraud detection confirmed suspicious behavior. Locking account.');
+          await triggerLock();
+        } else {
+          console.log('AI fraud detection marked activity as normal work. No lock applied.');
+        }
+      })();
     }
-  }, [location.pathname, user?.id, triggerLock]);
+  }, [location.pathname, user?.id, triggerLock, shouldLockWithAI]);
 };

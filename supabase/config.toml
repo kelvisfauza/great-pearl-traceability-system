@@ -173,6 +173,9 @@ verify_jwt = true
 [functions.ai-search]
 verify_jwt = true
 
+[functions.assess-fraud-navigation]
+verify_jwt = true
+
 [functions.send-whatsapp]
 verify_jwt = false
 
