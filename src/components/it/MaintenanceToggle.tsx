@@ -29,8 +29,7 @@ const MaintenanceToggle = () => {
   const [currentRecoveryKey, setCurrentRecoveryKey] = useState('');
   const [toggling, setToggling] = useState(false);
 
-  const publishedUrl = 'https://great-pearl-traceability-system.lovable.app';
-  const recoveryUrl = `${publishedUrl}/maintenance-recovery`;
+  const recoveryUrl = `${window.location.origin}/maintenance-recovery`;
 
   const handleToggle = () => {
     if (isActive) {

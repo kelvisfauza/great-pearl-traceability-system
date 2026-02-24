@@ -74,6 +74,8 @@ export const useMaintenanceMode = () => {
   }, [fetchStatus]);
 
   const deactivateWithKey = useCallback(async (key: string) => {
+    const normalizedInput = key.trim().toLowerCase();
+
     // Verify recovery key
     const { data: record } = await supabase
       .from('system_maintenance')
@@ -81,7 +83,8 @@ export const useMaintenanceMode = () => {
       .limit(1)
       .maybeSingle();
 
-    if (!record || (record as any).recovery_key !== key) {
+    const storedKey = ((record as any)?.recovery_key || '').trim().toLowerCase();
+    if (!record || !storedKey || storedKey !== normalizedInput) {
       throw new Error('Invalid recovery key');
     }
 
