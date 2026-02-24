@@ -11,25 +11,32 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
-  // --- Optional Authentication ---
+  // --- Required Authentication ---
   const authHeader = req.headers.get('Authorization')
-  let userId = 'anonymous'
-  
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized: Missing authentication' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-  
-  if (authHeader?.startsWith('Bearer ')) {
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    })
-    const token = authHeader.replace('Bearer ', '')
-    const { data: claimsData } = await supabaseAuth.auth.getClaims(token)
-    if (claimsData?.claims) {
-      userId = claimsData.claims.sub as string
-    }
+
+  const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  })
+  const token = authHeader.replace('Bearer ', '')
+  const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token)
+  if (claimsError || !claimsData?.claims) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized: Invalid token' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
-  
-  console.log('WhatsApp request from user:', userId)
+
+  const userId = claimsData.claims.sub as string
+  console.log('WhatsApp request from authenticated user:', userId)
 
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || supabaseAnonKey
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -57,7 +64,7 @@ serve(async (req) => {
       )
     }
 
-    // Format phone number - remove + for Infobip (they expect digits only)
+    // Format phone number
     let formattedPhone = phone.toString().trim()
     if (!formattedPhone.startsWith('+')) {
       if (formattedPhone.startsWith('0')) {
@@ -71,43 +78,31 @@ serve(async (req) => {
 
     console.log('Formatted phone for WhatsApp:', formattedPhone)
 
-    // Determine template and placeholders
     const template = templateName || 'test_whatsapp_template_en'
     const bodyPlaceholders = placeholders || [userName || 'User']
 
-    // If a free-text message is provided and no template, send as text message
     let requestBody: any
     let endpoint: string
 
     if (message && !templateName) {
-      // Send as free-form text message
       endpoint = `https://${infobipBaseUrl}/whatsapp/1/message/text`
       requestBody = {
         from: "447860088970",
         to: formattedPhone,
-        content: {
-          text: message
-        }
+        content: { text: message }
       }
     } else {
-      // Send as template message
       endpoint = `https://${infobipBaseUrl}/whatsapp/1/message/template`
       requestBody = {
-        messages: [
-          {
-            from: "447860088970",
-            to: formattedPhone,
-            content: {
-              templateName: template,
-              templateData: {
-                body: {
-                  placeholders: bodyPlaceholders
-                }
-              },
-              language: "en"
-            }
+        messages: [{
+          from: "447860088970",
+          to: formattedPhone,
+          content: {
+            templateName: template,
+            templateData: { body: { placeholders: bodyPlaceholders } },
+            language: "en"
           }
-        ]
+        }]
       }
     }
 
@@ -134,7 +129,7 @@ serve(async (req) => {
       result = { raw: responseText }
     }
 
-    // Log to sms_logs with provider=WhatsApp
+    // Log to sms_logs
     try {
       await supabase.from('sms_logs').insert({
         recipient_phone: formattedPhone,

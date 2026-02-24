@@ -111,8 +111,8 @@ const JobApplicationsManager = () => {
           .from("job-applications")
           .upload(path, cvFile);
         if (uploadError) throw uploadError;
-        const { data: urlData } = supabase.storage.from("job-applications").getPublicUrl(path);
-        cvUrl = urlData.publicUrl;
+        const { data: urlData } = await supabase.storage.from("job-applications").createSignedUrl(path, 86400);
+        cvUrl = urlData?.signedUrl || '';
         cvFilename = cvFile.name;
         setUploading(false);
       }

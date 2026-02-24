@@ -193,9 +193,10 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
+        const { data: signedUrlData } = await supabase.storage
           .from('dispatch-attachments')
-          .getPublicUrl(filePath);
+          .createSignedUrl(filePath, 86400);
+        const publicUrl = signedUrlData?.signedUrl || '';
 
         attachmentUrl = publicUrl;
         attachmentName = attachmentFile.name;
