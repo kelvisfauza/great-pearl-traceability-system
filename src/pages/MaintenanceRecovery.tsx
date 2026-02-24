@@ -3,24 +3,28 @@ import { useMaintenanceMode } from '@/hooks/useMaintenanceMode';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { KeyRound, CheckCircle, AlertCircle } from 'lucide-react';
 
 const MaintenanceRecovery = () => {
-  const [key, setKey] = useState('');
+  const [code, setCode] = useState('');
+  const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const { isActive, deactivateWithKey } = useMaintenanceMode();
 
   const handleRecover = async () => {
-    if (!key.trim()) return;
+    if (!code.trim() || !pin.trim()) {
+      toast({ title: 'Missing fields', description: 'Please enter both the recovery code and PIN.', variant: 'destructive' });
+      return;
+    }
     setLoading(true);
     try {
-      await deactivateWithKey(key.trim());
+      await deactivateWithKey(code.trim(), pin.trim());
       toast({ title: 'System Restored', description: 'Maintenance mode has been deactivated. All users can now access the system.' });
-      // Redirect to home after short delay
       setTimeout(() => { window.location.href = '/'; }, 1500);
     } catch {
-      toast({ title: 'Invalid Key', description: 'The recovery key is incorrect. Please try again.', variant: 'destructive' });
+      toast({ title: 'Invalid Credentials', description: 'The recovery code or PIN is incorrect. Please check the SMS sent to the authorized phone.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -49,23 +53,50 @@ const MaintenanceRecovery = () => {
             <KeyRound className="h-8 w-8 text-primary" />
           </div>
           <CardTitle>Maintenance Recovery</CardTitle>
-          <CardDescription>Enter the recovery key to bring the system back online</CardDescription>
+          <CardDescription>Enter the 10-digit recovery code and 4-digit PIN sent via SMS</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2 p-3 bg-amber-500/10 rounded-lg text-sm text-amber-700 dark:text-amber-400">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>The system is currently in maintenance mode</span>
           </div>
-          <Input
-            placeholder="Enter recovery key..."
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleRecover()}
-            className="font-mono"
-          />
-          <Button onClick={handleRecover} disabled={loading || !key.trim()} className="w-full">
+          
+          <div className="space-y-2">
+            <Label htmlFor="recovery-code">Recovery Code (10 digits)</Label>
+            <Input
+              id="recovery-code"
+              placeholder="Enter 10-digit recovery code..."
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              className="font-mono text-center text-lg tracking-widest"
+              maxLength={10}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="recovery-pin">PIN (4 digits)</Label>
+            <Input
+              id="recovery-pin"
+              placeholder="Enter 4-digit PIN..."
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              className="font-mono text-center text-lg tracking-widest"
+              maxLength={4}
+              type="password"
+            />
+          </div>
+
+          <Button 
+            onClick={handleRecover} 
+            disabled={loading || code.length !== 10 || pin.length !== 4} 
+            className="w-full"
+          >
             {loading ? 'Verifying...' : 'Restore System'}
           </Button>
+
+          <p className="text-xs text-muted-foreground text-center">
+            The recovery credentials were sent via SMS to the authorized administrator.
+          </p>
         </CardContent>
       </Card>
     </div>
