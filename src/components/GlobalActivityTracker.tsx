@@ -37,11 +37,21 @@ const ActivityTrackerInternal = () => {
       }
     };
 
-    const trackInputActivity = () => {
+    const trackInputActivity = (event: Event) => {
+      const target = event.target as HTMLElement;
+      // Only track real user input on actual form fields, not React re-renders
+      if (!target || !('tagName' in target)) return;
+      const tag = target.tagName.toUpperCase();
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') return;
+      // Ignore hidden/readonly fields
+      if ((target as HTMLInputElement).type === 'hidden' || (target as HTMLInputElement).readOnly) return;
+      // Must be user-initiated (isTrusted)
+      if (!event.isTrusted) return;
+
       if (inputDebounce.current) clearTimeout(inputDebounce.current);
       inputDebounce.current = setTimeout(() => {
         trackDataEntry();
-      }, 3000);
+      }, 30000); // 30s debounce - only reward sustained data entry
     };
 
     const trackClickActivity = (event: Event) => {
