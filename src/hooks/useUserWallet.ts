@@ -30,7 +30,7 @@ export const useUserWallet = () => {
   const { toast } = useToast();
 
   const fetchWalletData = async () => {
-    if (!user?.email || !employee) {
+    if (!user?.email) {
       setLoading(false);
       return;
     }
@@ -182,13 +182,9 @@ export const useUserWallet = () => {
   };
 
   useEffect(() => {
-    if (user && employee) {
+    if (user) {
       fetchWalletData();
-    } else if (user && !employee) {
-      // User exists but no employee profile - stop loading
-      setLoading(false);
-    } else if (!user) {
-      // No user - stop loading
+    } else {
       setLoading(false);
     }
   }, [user, employee]);
