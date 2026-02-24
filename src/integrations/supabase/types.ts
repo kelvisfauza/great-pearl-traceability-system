@@ -6465,6 +6465,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_fraud_locks: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_locked: boolean | null
+          locked_at: string | null
+          reason: string | null
+          unlock_code: string
+          unlocked_at: string | null
+          unlocked_by: string | null
+          user_email: string
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_locked?: boolean | null
+          locked_at?: string | null
+          reason?: string | null
+          unlock_code: string
+          unlocked_at?: string | null
+          unlocked_by?: string | null
+          user_email: string
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_locked?: boolean | null
+          locked_at?: string | null
+          reason?: string | null
+          unlock_code?: string
+          unlocked_at?: string | null
+          unlocked_by?: string | null
+          user_email?: string
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       user_presence: {
         Row: {
           last_seen: string
