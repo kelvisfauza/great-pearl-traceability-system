@@ -43,6 +43,15 @@ export const useMaintenanceMode = () => {
   }, [fetchStatus]);
 
   const toggleMaintenance = useCallback(async (activate: boolean, reason?: string, activatedBy?: string) => {
+    // First get the record id
+    const { data: record } = await supabase
+      .from('system_maintenance')
+      .select('id')
+      .limit(1)
+      .maybeSingle();
+
+    if (!record) throw new Error('No maintenance record found');
+
     const { data, error } = await supabase
       .from('system_maintenance')
       .update({
@@ -51,6 +60,7 @@ export const useMaintenanceMode = () => {
         activated_by: activate ? (activatedBy || 'Admin') : null,
         activated_at: activate ? new Date().toISOString() : null,
       } as any)
+      .eq('id', (record as any).id)
       .select('recovery_key')
       .single();
 
@@ -67,7 +77,7 @@ export const useMaintenanceMode = () => {
     // Verify recovery key
     const { data: record } = await supabase
       .from('system_maintenance')
-      .select('recovery_key, is_active')
+      .select('id, recovery_key, is_active')
       .limit(1)
       .maybeSingle();
 
@@ -82,7 +92,8 @@ export const useMaintenanceMode = () => {
         reason: null,
         activated_by: null,
         activated_at: null,
-      } as any);
+      } as any)
+      .eq('id', (record as any).id);
 
     if (error) throw error;
     await fetchStatus();
