@@ -1,4 +1,4 @@
-import { useEffect, useContext, useRef, useState } from 'react';
+import { useEffect, useContext, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AuthContext } from '@/contexts/AuthContext';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
@@ -70,7 +70,8 @@ const ActivityTrackerInternal = () => {
     };
   }, [trackDataEntry, trackFormSubmission, trackButtonClick]);
 
-  // Show fraud lock screen if locked
+  // Always render — never early-return before this point
+  // Show fraud lock screen as a portal-like overlay when locked
   if (lockData) {
     return (
       <FraudLockScreen
@@ -86,6 +87,9 @@ const ActivityTrackerInternal = () => {
 
 export const GlobalActivityTracker = () => {
   const authContext = useContext(AuthContext);
+
+  // Don't conditionally skip rendering — just render nothing visible
   if (!authContext) return null;
+
   return <ActivityTrackerInternal />;
 };
