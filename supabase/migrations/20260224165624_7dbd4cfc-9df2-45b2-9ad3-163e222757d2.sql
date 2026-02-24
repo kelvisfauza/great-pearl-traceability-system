@@ -1,0 +1,1 @@
+UPDATE public.user_fraud_locks SET is_locked = false, unlocked_at = now(), unlocked_by = 'admin_manual' WHERE user_id = '8b590bb1-6cda-47af-96e1-0c35d628a01c' AND is_locked = true;
