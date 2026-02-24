@@ -6321,7 +6321,10 @@ export type Database = {
           id: string
           is_active: boolean
           reason: string | null
-          recovery_key: string
+          recovery_key: string | null
+          recovery_phone: string | null
+          recovery_pin: string | null
+          recovery_sms_sent: boolean | null
           updated_at: string
         }
         Insert: {
@@ -6331,7 +6334,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           reason?: string | null
-          recovery_key?: string
+          recovery_key?: string | null
+          recovery_phone?: string | null
+          recovery_pin?: string | null
+          recovery_sms_sent?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -6341,7 +6347,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           reason?: string | null
-          recovery_key?: string
+          recovery_key?: string | null
+          recovery_phone?: string | null
+          recovery_pin?: string | null
+          recovery_sms_sent?: boolean | null
           updated_at?: string
         }
         Relationships: []
