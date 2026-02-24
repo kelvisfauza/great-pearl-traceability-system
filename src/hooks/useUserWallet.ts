@@ -150,6 +150,7 @@ export const useUserWallet = () => {
       // Generate request reference
       const requestRef = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
       
+      // Auto-complete: insert as 'completed' immediately
       const { error } = await supabase
         .from('withdrawal_requests')
         .insert([{
@@ -158,14 +159,35 @@ export const useUserWallet = () => {
           phone_number: phoneNumber,
           channel,
           request_ref: requestRef,
-          printed_at: new Date().toISOString()
+          printed_at: new Date().toISOString(),
+          status: 'completed',
+          processed_at: new Date().toISOString()
         }]);
 
       if (error) throw error;
+      
+      // Deduct from ledger immediately
+      const { error: ledgerError } = await supabase
+        .from('ledger_entries')
+        .insert([{
+          user_id: unifiedUserId,
+          entry_type: 'WITHDRAWAL',
+          amount: -amount,
+          reference: `WITHDRAWAL-${requestRef}`,
+          metadata: {
+            withdrawal_ref: requestRef,
+            phone_number: phoneNumber,
+            channel: channel
+          }
+        }]);
+      
+      if (ledgerError) {
+        console.error('Ledger deduction error:', ledgerError);
+      }
 
       toast({
-        title: "Withdrawal Request Created Successfully!",
-        description: `Reference: ${requestRef}. Take this reference to Finance for approval and payout.`,
+        title: "Withdrawal Completed!",
+        description: `Reference: ${requestRef}. Amount UGX ${amount.toLocaleString()} has been deducted from your loyalty balance.`,
         duration: 8000,
       });
 

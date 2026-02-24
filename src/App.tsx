@@ -48,6 +48,7 @@ import V2FinanceDashboard from "./pages/v2/finance/Dashboard";
 import V2HRDashboard from "./pages/v2/hr/Dashboard";
 import V2HRSalaryAdvances from "./pages/v2/hr/SalaryAdvances";
 import V2HRTimeDeductions from "./pages/v2/hr/TimeDeductions";
+import V2HRLoyaltyBalances from "./pages/v2/hr/LoyaltyBalances";
 import V2FieldOpsDashboard from "./pages/v2/field-operations/Dashboard";
 import V2AnalyticsDashboard from "./pages/v2/analytics/Dashboard";
 import V2EUDRDashboard from "./pages/v2/eudr/Dashboard";
@@ -142,6 +143,7 @@ const App: React.ComponentType = () => {
                 <Route path="/v2/hr" element={<ProtectedRoute requiredPermissions={["Human Resources"]}><V2HRDashboard /></ProtectedRoute>} />
                 <Route path="/v2/hr/salary-advances" element={<ProtectedRoute requiredPermissions={["Human Resources"]} requiredRoles={["Administrator", "Super Admin"]}><V2HRSalaryAdvances /></ProtectedRoute>} />
                 <Route path="/v2/hr/time-deductions" element={<ProtectedRoute requiredPermissions={["Human Resources"]} requiredRoles={["Administrator", "Super Admin"]}><V2HRTimeDeductions /></ProtectedRoute>} />
+                <Route path="/v2/hr/loyalty-balances" element={<ProtectedRoute requiredPermissions={["Human Resources"]}><V2HRLoyaltyBalances /></ProtectedRoute>} />
                 <Route path="/v2/field-operations" element={<ProtectedRoute requiredPermissions={["Field Operations"]}><V2FieldOpsDashboard /></ProtectedRoute>} />
                 <Route path="/v2/analytics" element={<ProtectedRoute requiredPermissions={["Data Analysis"]}><V2AnalyticsDashboard /></ProtectedRoute>} />
                 <Route path="/v2/eudr" element={<ProtectedRoute requiredPermissions={["EUDR Documentation", "Store Management"]}><V2EUDRDashboard /></ProtectedRoute>} />
