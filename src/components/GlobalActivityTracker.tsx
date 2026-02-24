@@ -1,7 +1,10 @@
-import { useEffect, useContext, useRef } from 'react';
+import { useEffect, useContext, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AuthContext } from '@/contexts/AuthContext';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
+import { useFraudDetection } from '@/hooks/useFraudDetection';
+import { useFraudLockCheck } from '@/hooks/useFraudLockCheck';
+import FraudLockScreen from './FraudLockScreen';
 
 const ActivityTrackerInternal = () => {
   const { trackDataEntry, trackFormSubmission, trackPageVisit, trackButtonClick } = useActivityTracker();
@@ -9,6 +12,12 @@ const ActivityTrackerInternal = () => {
   const lastTrackedPage = useRef('');
   const clickDebounce = useRef<NodeJS.Timeout | null>(null);
   const inputDebounce = useRef<NodeJS.Timeout | null>(null);
+  const { lockData, clearLock, triggerLock } = useFraudLockCheck();
+
+  // Fraud detection - triggers lock on rapid page browsing
+  useFraudDetection(() => {
+    triggerLock();
+  });
 
   // Track page visits across all departments
   useEffect(() => {
@@ -20,7 +29,6 @@ const ActivityTrackerInternal = () => {
   }, [location.pathname, trackPageVisit]);
 
   useEffect(() => {
-    // Track form submissions
     const trackFormSubmit = (event: Event) => {
       const form = event.target as HTMLFormElement;
       if (form.tagName === 'FORM') {
@@ -29,15 +37,13 @@ const ActivityTrackerInternal = () => {
       }
     };
 
-    // Track input interactions (data entry) - debounced
     const trackInputActivity = () => {
       if (inputDebounce.current) clearTimeout(inputDebounce.current);
       inputDebounce.current = setTimeout(() => {
         trackDataEntry();
-      }, 3000); // 3s debounce to avoid spam
+      }, 3000);
     };
 
-    // Track meaningful button clicks - debounced
     const trackClickActivity = (event: Event) => {
       const target = event.target as HTMLElement;
       const button = target.closest('button, [role="button"], a[href]');
@@ -45,7 +51,7 @@ const ActivityTrackerInternal = () => {
         if (clickDebounce.current) clearTimeout(clickDebounce.current);
         clickDebounce.current = setTimeout(() => {
           trackButtonClick();
-        }, 5000); // 5s debounce
+        }, 5000);
       }
     };
 
@@ -63,6 +69,17 @@ const ActivityTrackerInternal = () => {
       if (clickDebounce.current) clearTimeout(clickDebounce.current);
     };
   }, [trackDataEntry, trackFormSubmission, trackButtonClick]);
+
+  // Show fraud lock screen if locked
+  if (lockData) {
+    return (
+      <FraudLockScreen
+        lockId={lockData.id}
+        userName={lockData.user_name}
+        onUnlocked={clearLock}
+      />
+    );
+  }
 
   return null;
 };
