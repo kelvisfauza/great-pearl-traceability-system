@@ -77,6 +77,8 @@ import { MonthlyReportReminder } from "./components/reports/MonthlyReportReminde
 import { GlobalActivityTracker } from "./components/GlobalActivityTracker";
 import { OvertimeNotification } from "./components/OvertimeNotification";
 import RoleNotificationHandler from "./components/RoleNotificationHandler";
+import MaintenanceGuard from "./components/MaintenanceGuard";
+import MaintenanceRecovery from "./pages/MaintenanceRecovery";
 
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -113,6 +115,7 @@ const App: React.ComponentType = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <MaintenanceGuard>
               <GlobalActivityTracker />
               {/* Global notifications and reminders */}
               <OvertimeNotification />
@@ -130,6 +133,9 @@ const App: React.ComponentType = () => {
                 
                 {/* Public price display for monitors - no auth required */}
                 <Route path="/display" element={<PriceDisplay />} />
+                
+                {/* Maintenance recovery - accessible even during maintenance */}
+                <Route path="/maintenance-recovery" element={<MaintenanceRecovery />} />
                 
                 {/* V2 System Routes - Department-based access */}
                 <Route path="/v2" element={<ProtectedRoute><V2DepartmentRouter /></ProtectedRoute>} />
@@ -342,6 +348,7 @@ const App: React.ComponentType = () => {
                 } />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </MaintenanceGuard>
             </BrowserRouter>
           </TooltipProvider>
         </PriceProvider>

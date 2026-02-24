@@ -6313,6 +6313,39 @@ export type Database = {
         }
         Relationships: []
       }
+      system_maintenance: {
+        Row: {
+          activated_at: string | null
+          activated_by: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          reason: string | null
+          recovery_key: string
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          reason?: string | null
+          recovery_key?: string
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          reason?: string | null
+          recovery_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           created_at: string
