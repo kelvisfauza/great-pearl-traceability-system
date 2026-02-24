@@ -11,6 +11,7 @@ import { Plus, Trash2, Upload, FileText, Truck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
 
 interface TruckData {
   truck_number: string;
@@ -75,6 +76,7 @@ const deductionOptions = [
 
 const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const { employee } = useAuth();
+  const { trackFormSubmission, trackDocumentUpload } = useActivityTracker();
   const [submitting, setSubmitting] = useState(false);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<DispatchFormData>({
@@ -253,7 +255,8 @@ const EUDRDispatchComparisonForm = ({ onSuccess }: { onSuccess?: () => void }) =
         remarks: ''
       });
       setAttachmentFile(null);
-      
+      trackFormSubmission('eudr_dispatch_report');
+      trackDocumentUpload();
       onSuccess?.();
     } catch (error) {
       console.error('Error submitting dispatch report:', error);

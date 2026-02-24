@@ -13,6 +13,7 @@ import { FileText, Plus, DollarSign, Package, AlertTriangle, CheckCircle, Clock,
 import { useEUDRDocumentation } from '@/hooks/useEUDRDocumentation';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useActivityTracker } from '@/hooks/useActivityTracker';
 import EUDRReportPrint from './EUDRReportPrint';
 import EUDRInventoryLinking from './EUDRInventoryLinking';
 import EUDRDispatchComparisonForm from './EUDRDispatchComparisonForm';
@@ -23,6 +24,7 @@ import { createPrintVerification } from '@/utils/printVerification';
 
 const EUDRDocumentation = () => {
   const { hasPermission } = useAuth();
+  const { trackFormSubmission, trackReportGeneration, trackDocumentUpload } = useActivityTracker();
   const {
     eudrDocuments,
     eudrBatches,
@@ -238,6 +240,7 @@ const EUDRDocumentation = () => {
     setTimeout(() => {
       setGeneratingReport(false);
       toast.success(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} report generated successfully`);
+      trackReportGeneration();
     }, 1000);
   };
 
@@ -291,6 +294,7 @@ const EUDRDocumentation = () => {
     window.URL.revokeObjectURL(url);
     
     toast.success('Report exported to CSV successfully');
+    trackReportGeneration();
   };
 
   const handleDeleteBatch = async (batchId: string, batchIdentifier: string) => {
