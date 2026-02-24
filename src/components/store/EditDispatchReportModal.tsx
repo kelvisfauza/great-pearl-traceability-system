@@ -43,11 +43,11 @@ const EditDispatchReportModal = ({ open, onClose, report, onUpdated }: EditDispa
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      const { data: urlData } = await supabase.storage
         .from('dispatch-attachments')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 86400);
 
-      setAttachmentUrl(urlData.publicUrl);
+      setAttachmentUrl(urlData?.signedUrl || '');
       setAttachmentName(file.name);
 
       toast({ title: "File uploaded successfully" });

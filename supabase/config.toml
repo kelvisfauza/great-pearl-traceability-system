@@ -60,7 +60,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.bypass-sms-verification]
-verify_jwt = true
+verify_jwt = false
 
 [functions.calculate-metrics]
 verify_jwt = true
@@ -87,7 +87,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.create-training-user]
-verify_jwt = true
+verify_jwt = false
 
 [functions.create-user-account]
 verify_jwt = true
@@ -129,7 +129,7 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.process-withdrawal]
-verify_jwt = true
+verify_jwt = false
 
 [functions.resend-approval-sms]
 verify_jwt = true

@@ -86,10 +86,11 @@ export const ContractFileUpload = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      // Get signed URL (bucket is private)
+      const { data: signedUrlData } = await supabase.storage
         .from('contracts')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 86400);
+      const publicUrl = signedUrlData?.signedUrl || '';
 
       // Save to database
       const { error: dbError } = await supabase

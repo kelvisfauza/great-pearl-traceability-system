@@ -7,22 +7,41 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
+    // Require authentication
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ success: false, message: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    })
+    const token = authHeader.replace('Bearer ', '')
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token)
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ success: false, message: 'Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const userId = claimsData.claims.sub as string
+    console.log(`🔐 SMS Bypass request from authenticated user: ${userId}`)
+
+    const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {
+      auth: { autoRefreshToken: false, persistSession: false }
+    })
 
     const { email, action } = await req.json()
 
@@ -41,67 +60,28 @@ serve(async (req) => {
       console.log(`✅ User ${email} can bypass SMS verification`)
       
       if (action === 'verify_code') {
-        // For bypass users, always return success for verification
         return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'Verification bypassed for authorized user',
-            bypassed: true
-          }),
-          { 
-            headers: { 
-              ...corsHeaders, 
-              'Content-Type': 'application/json' 
-            } 
-          }
+          JSON.stringify({ success: true, message: 'Verification bypassed for authorized user', bypassed: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       } else if (action === 'send_code') {
-        // For bypass users, don't send SMS but return success
         return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'SMS sending bypassed for authorized user',
-            bypassed: true
-          }),
-          { 
-            headers: { 
-              ...corsHeaders, 
-              'Content-Type': 'application/json' 
-            } 
-          }
+          JSON.stringify({ success: true, message: 'SMS sending bypassed for authorized user', bypassed: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
     }
 
-    // If not a bypass user, return that normal SMS flow should be used
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        message: 'User must use normal SMS verification',
-        bypass: false
-      }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
+      JSON.stringify({ success: false, message: 'User must use normal SMS verification', bypass: false }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
     console.error('❌ SMS Bypass error:', error)
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        message: error.message || 'SMS bypass check failed' 
-      }),
-      { 
-        status: 500,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
+      JSON.stringify({ success: false, message: 'SMS bypass check failed' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })

@@ -119,9 +119,10 @@ const MarketIntelligenceForm: React.FC<MarketIntelligenceFormProps> = ({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: signedUrlData } = await supabase.storage
         .from('market-screenshots')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 86400);
+      const publicUrl = signedUrlData?.signedUrl || '';
 
       setScreenshotPreview(publicUrl);
       updateField('market_screenshot_url', publicUrl);
