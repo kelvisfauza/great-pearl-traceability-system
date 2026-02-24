@@ -15,7 +15,7 @@ import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
 import { Heart } from 'lucide-react';
 import { useHolidayTheme } from '@/hooks/useHolidayTheme';
-import FraudLockScreen from '@/components/FraudLockScreen';
+
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -26,7 +26,7 @@ const Auth = () => {
   const [showBiometric, setShowBiometric] = useState(false);
   
   const [showSystemSelection, setShowSystemSelection] = useState(false);
-  const [fraudLock, setFraudLock] = useState<{ id: string; user_name: string } | null>(null);
+  
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -151,22 +151,10 @@ const Auth = () => {
         setShowBiometric(true);
         setLoading(false);
       } else {
-        // Regular user or preview environment - check for fraud lock first
-        console.log('✅ Login complete, checking fraud lock...');
-        const { data: activeLock } = await supabase
-          .from('user_fraud_locks')
-          .select('id, user_name')
-          .eq('user_email', email)
-          .eq('is_locked', true)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (activeLock) {
-          setFraudLock({ id: activeLock.id, user_name: activeLock.user_name || '' });
-        } else {
-          setShowSystemSelection(true);
-        }
+        // Regular user or preview environment - proceed to system selection
+        // Fraud lock is handled by GlobalActivityTracker after login, not here
+        console.log('✅ Login complete, proceeding...');
+        setShowSystemSelection(true);
         setLoading(false);
       }
     } catch (error: any) {
@@ -213,19 +201,7 @@ const Auth = () => {
     setLoading(false);
   };
 
-  // Show fraud lock screen if user is locked
-  if (fraudLock) {
-    return (
-      <FraudLockScreen
-        lockId={fraudLock.id}
-        userName={fraudLock.user_name}
-        onUnlocked={() => {
-          setFraudLock(null);
-          setShowSystemSelection(true);
-        }}
-      />
-    );
-  }
+  
 
   // Show biometric verification screen for admins
   if (showBiometric) {

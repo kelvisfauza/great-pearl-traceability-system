@@ -1,0 +1,1 @@
+UPDATE user_fraud_locks SET is_locked = false WHERE is_locked = true;
