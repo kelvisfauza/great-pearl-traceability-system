@@ -240,24 +240,63 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const isRetryableAuthTimeout = (err: any): boolean => {
+      const message = String(err?.message || '').toLowerCase();
+      return (
+        err?.name === 'AuthRetryableFetchError' ||
+        err?.status === 504 ||
+        message.includes('upstream request timeout') ||
+        message.includes('timeout') ||
+        message.includes('timed out')
+      );
+    };
+
+    const waitForRecoveredSession = async (): Promise<boolean> => {
+      const maxAttempts = 8;
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) continue;
+
+        if (sessionData.session?.user) {
+          console.log('✅ Login recovered after timeout via existing session');
+          return true;
+        }
+      }
+
+      return false;
+    };
+
     try {
       setLoading(true);
-      
-      // Normalize email
-      const normalizedEmail = email.toLowerCase().trim();
-      
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password: password
       });
 
       if (error) {
-        // Log failed login attempt to security system
+        if (isRetryableAuthTimeout(error)) {
+          console.warn('⚠️ Login request timed out. Checking for recovered session...');
+          const recovered = await waitForRecoveredSession();
+
+          if (recovered) {
+            return {};
+          }
+
+          throw new Error('Login service timed out. Please try again in a few seconds.');
+        }
+
+        // Log failed login attempt to security system only for real auth failures
         await securityService.logFailedLogin(
           normalizedEmail,
           error.message || 'Invalid credentials'
         );
-        
+
         toast({
           title: "Login Failed",
           description: error.message || "Invalid email or password",
@@ -286,22 +325,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       // Block login if account is disabled or status is not active
-      if (employeeData?.disabled === true || 
+      if (employeeData?.disabled === true ||
           (employeeData?.status && employeeData.status.toLowerCase() !== 'active')) {
         // Sign out immediately since we already authenticated
         await supabase.auth.signOut();
-        
+
         await securityService.logFailedLogin(
           normalizedEmail,
           'Account is disabled or inactive'
         );
-        
+
         toast({
           title: "Account Disabled",
           description: "Your account has been disabled. Please contact an administrator.",
           variant: "destructive"
         });
-        
+
         throw new Error('Account is disabled');
       }
 
@@ -333,40 +372,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return {};
     } catch (error: any) {
       console.error('Login error:', error);
-      
-      // Only log to security if not already logged
-      if (!error.message?.includes('Invalid login')) {
+
+      const isRetryableTimeoutError = isRetryableAuthTimeout(error);
+
+      // Only log to security if this was a real credential/access failure
+      if (!isRetryableTimeoutError && !error.message?.includes('Invalid login')) {
         await securityService.logFailedLogin(
-          email.toLowerCase().trim(),
+          normalizedEmail,
           error.message || 'Unknown login error'
         );
       }
-      
+
       toast({
         title: "Login Error",
-        description: error.message || "An error occurred during login",
+        description: isRetryableTimeoutError
+          ? "Connection timed out. We are retrying in the background—please try again."
+          : (error.message || "An error occurred during login"),
         variant: "destructive"
       });
 
-      // Best-effort: record failed logins for IT visibility (no secrets, no password)
-      try {
-        const normalizedEmail = email.toLowerCase().trim();
-        await supabase.from('system_console_logs').insert({
-          level: 'warn',
-          source: 'auth',
-          message: `AUTH: LOGIN_FAILED ${normalizedEmail} - ${String(error.message || 'Unknown error').substring(0, 250)}`,
-          user_id: undefined,
-          user_name: normalizedEmail,
-          user_department: 'Unknown',
-          url: typeof window !== 'undefined' ? window.location.href : undefined,
-          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent.substring(0, 500) : undefined,
-          metadata: {
-            event: 'LOGIN_FAILED',
-            email: normalizedEmail
-          }
-        });
-      } catch {
-        // ignore
+      // Best-effort: record failed logins for IT visibility only for real failures
+      if (!isRetryableTimeoutError) {
+        try {
+          await supabase.from('system_console_logs').insert({
+            level: 'warn',
+            source: 'auth',
+            message: `AUTH: LOGIN_FAILED ${normalizedEmail} - ${String(error.message || 'Unknown error').substring(0, 250)}`,
+            user_id: undefined,
+            user_name: normalizedEmail,
+            user_department: 'Unknown',
+            url: typeof window !== 'undefined' ? window.location.href : undefined,
+            user_agent: typeof navigator !== 'undefined' ? navigator.userAgent.substring(0, 500) : undefined,
+            metadata: {
+              event: 'LOGIN_FAILED',
+              email: normalizedEmail
+            }
+          });
+        } catch {
+          // ignore
+        }
       }
 
       throw error;
