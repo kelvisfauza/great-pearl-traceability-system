@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
-import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle } from "lucide-react";
+import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ const HRDashboard = () => {
     { title: "Performance", description: "Employee performance tracking", icon: Award, path: "/v2/hr/performance" },
     { title: "Salary Advances", description: "Award & track advances", icon: CreditCard, path: "/v2/hr/salary-advances" },
     { title: "Time Deductions", description: "Deduct for missed hours (3,000/hr)", icon: AlertTriangle, path: "/v2/hr/time-deductions" },
+    { title: "Loyalty Balances", description: "Track employee loyalty reward balances", icon: Gift, path: "/v2/hr/loyalty-balances" },
   ];
 
   return (
