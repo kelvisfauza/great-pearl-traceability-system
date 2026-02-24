@@ -5,7 +5,6 @@ import { AuthContext } from '@/contexts/AuthContext';
 
 const RAPID_VISIT_THRESHOLD = 4; // 4 rapid page changes
 const RAPID_VISIT_WINDOW_MS = 15000; // within 15 seconds
-const MIN_PAGE_STAY_MS = 2000; // if user stays less than 2s, it's suspicious
 
 export const useFraudDetection = (onFraudDetected: () => void) => {
   const authContext = useContext(AuthContext);
@@ -13,18 +12,16 @@ export const useFraudDetection = (onFraudDetected: () => void) => {
   const employee = authContext?.employee;
   const location = useLocation();
   const pageVisitTimestamps = useRef<number[]>([]);
-  const lastPageTime = useRef<number>(Date.now());
   const alreadyLocked = useRef(false);
+  const isFirstRender = useRef(true);
 
   const triggerLock = useCallback(async () => {
     if (!user?.id || !employee || alreadyLocked.current) return;
     alreadyLocked.current = true;
 
-    // Generate 6-digit unlock code
     const unlockCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     try {
-      // Insert fraud lock record
       await supabase.from('user_fraud_locks').insert([{
         user_id: user.id,
         user_email: employee.email || user.email || '',
@@ -62,24 +59,26 @@ export const useFraudDetection = (onFraudDetected: () => void) => {
   }, [user, employee, onFraudDetected]);
 
   useEffect(() => {
+    // Skip the initial mount render
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
     const now = Date.now();
-    const timeSinceLastPage = now - lastPageTime.current;
-    lastPageTime.current = now;
+    pageVisitTimestamps.current.push(now);
 
-    // Only count if user stayed less than 2 seconds on previous page
-    if (timeSinceLastPage < MIN_PAGE_STAY_MS && timeSinceLastPage > 100) {
-      pageVisitTimestamps.current.push(now);
+    // Remove timestamps outside the window
+    pageVisitTimestamps.current = pageVisitTimestamps.current.filter(
+      t => now - t < RAPID_VISIT_WINDOW_MS
+    );
 
-      // Remove timestamps outside the window
-      pageVisitTimestamps.current = pageVisitTimestamps.current.filter(
-        t => now - t < RAPID_VISIT_WINDOW_MS
-      );
+    console.log(`Fraud check: ${pageVisitTimestamps.current.length} page changes in last ${RAPID_VISIT_WINDOW_MS / 1000}s (threshold: ${RAPID_VISIT_THRESHOLD})`);
 
-      // Check if threshold reached
-      if (pageVisitTimestamps.current.length >= RAPID_VISIT_THRESHOLD) {
-        console.warn('Fraud detection: Rapid page browsing detected!');
-        triggerLock();
-      }
+    // Check if threshold reached
+    if (pageVisitTimestamps.current.length >= RAPID_VISIT_THRESHOLD) {
+      console.warn('Fraud detection: Rapid page browsing detected! Locking account...');
+      triggerLock();
     }
   }, [location.pathname, triggerLock]);
 };
