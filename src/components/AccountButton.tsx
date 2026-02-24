@@ -4,7 +4,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger 
 } from '@/components/ui/sheet';
 import { 
-  Wallet, DollarSign, TrendingUp, Plus, Smartphone,
+  Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer,
   Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +33,14 @@ export const AccountButton = () => {
   const [showWithdrawal, setShowWithdrawal] = useState(false);
 
   const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
+
+  const reprintVoucher = (withdrawal: { amount: number; phone_number: string; request_ref?: string; channel?: string; created_at: string }) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    const content = `<!doctype html><html><head><meta charset="utf-8"/><title>Withdrawal Voucher – ${withdrawal.request_ref || 'N/A'}</title><style>body{font:14px/1.4 system-ui;margin:0;padding:20px}.card{width:640px;margin:0 auto;padding:24px;border:1px solid #ddd}h1{font-size:18px;margin:0 0 12px}.row{display:flex;justify-content:space-between;margin:6px 0}.muted{color:#555}</style></head><body onload="window.print();"><div class="card"><h1>Withdrawal Request Voucher</h1><div class="row"><div>Ref</div><div><strong>${withdrawal.request_ref || 'N/A'}</strong></div></div><div class="row"><div>Amount</div><div><strong>UGX ${withdrawal.amount.toLocaleString()}</strong></div></div><div class="row"><div>Channel</div><div>${withdrawal.channel || 'N/A'}</div></div><div class="row"><div>Phone</div><div>${withdrawal.phone_number}</div></div><div class="row"><div>Requested</div><div>${new Date(withdrawal.created_at).toLocaleString()}</div></div><hr/><p class="muted">This is a withdrawal request voucher. Present to Finance for processing.</p><div style="margin-top:24px"><div>Employee Signature: _____________________</div><div>Date: ______________</div></div></div></body></html>`;
+    printWindow.document.write(content);
+    printWindow.document.close();
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -76,7 +84,7 @@ export const AccountButton = () => {
         <SheetTrigger asChild>
           <Button variant="outline" size="sm" className="relative gap-2">
             <Wallet className="h-4 w-4" />
-            {formatCurrency(loyaltyBalance)}
+            {formatCurrency(availableLoyalty)}
             {stats && stats.todayEarnings > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0">
                 +{stats.todayEarnings.toLocaleString()}
@@ -103,9 +111,9 @@ export const AccountButton = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-700">
-                  {formatCurrency(loyaltyBalance)}
+                  {formatCurrency(availableLoyalty)}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Earned from Loyalty Rewards</p>
+                <p className="text-xs text-muted-foreground mt-1">Available from Loyalty Rewards</p>
               </CardContent>
             </Card>
 
@@ -224,20 +232,32 @@ export const AccountButton = () => {
               {withdrawalRequests.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">Withdrawal Requests</h4>
-                  {withdrawalRequests.slice(0, 3).map((withdrawal) => (
+                  {withdrawalRequests.slice(0, 5).map((withdrawal) => (
                     <div key={withdrawal.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
                         {getStatusIcon(withdrawal.status)}
                         <div>
                           <div className="font-medium">{formatCurrency(withdrawal.amount)}</div>
                           <div className="text-sm text-muted-foreground">{withdrawal.phone_number}</div>
+                          {withdrawal.request_ref && (
+                            <div className="text-xs text-muted-foreground">Ref: {withdrawal.request_ref}</div>
+                          )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex flex-col items-end gap-1">
                         <Badge className={getStatusColor(withdrawal.status)}>{withdrawal.status}</Badge>
-                        <div className="text-xs text-muted-foreground mt-1">
+                        <div className="text-xs text-muted-foreground">
                           {format(new Date(withdrawal.created_at), 'MMM dd')}
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs px-2"
+                          onClick={() => reprintVoucher(withdrawal)}
+                        >
+                          <Printer className="h-3 w-3 mr-1" />
+                          Reprint
+                        </Button>
                       </div>
                     </div>
                   ))}
