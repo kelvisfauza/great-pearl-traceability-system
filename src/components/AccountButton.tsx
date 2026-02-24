@@ -189,23 +189,6 @@ export const AccountButton = () => {
               </Button>
             </div>
 
-            {/* How It Works */}
-            <Card className="bg-muted/30">
-              <CardContent className="pt-4 pb-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">How Loyalty Points Work</span>
-                </div>
-                <ul className="text-xs text-muted-foreground space-y-1">
-                  <li>• <strong>Data Entry:</strong> 100 UGX per action</li>
-                  <li>• <strong>Form Submissions:</strong> 200 UGX each</li>
-                  <li>• <strong>Reports:</strong> 300 UGX each</li>
-                  <li>• <strong>Transactions:</strong> 250 UGX each</li>
-                  <li>• <strong>Monthly cap:</strong> 50,000 UGX max</li>
-                </ul>
-              </CardContent>
-            </Card>
-
             <Separator />
 
             {/* Recent Requests */}

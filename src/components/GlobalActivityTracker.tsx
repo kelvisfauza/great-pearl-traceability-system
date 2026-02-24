@@ -1,10 +1,23 @@
-import { useEffect, useContext } from 'react';
+import { useEffect, useContext, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AuthContext } from '@/contexts/AuthContext';
 import { useActivityTracker } from '@/hooks/useActivityTracker';
 
-// Internal component that uses the hook
 const ActivityTrackerInternal = () => {
-  const { trackDataEntry, trackFormSubmission } = useActivityTracker();
+  const { trackDataEntry, trackFormSubmission, trackPageVisit, trackButtonClick } = useActivityTracker();
+  const location = useLocation();
+  const lastTrackedPage = useRef('');
+  const clickDebounce = useRef<NodeJS.Timeout | null>(null);
+  const inputDebounce = useRef<NodeJS.Timeout | null>(null);
+
+  // Track page visits across all departments
+  useEffect(() => {
+    const page = location.pathname;
+    if (page !== lastTrackedPage.current) {
+      lastTrackedPage.current = page;
+      trackPageVisit(page);
+    }
+  }, [location.pathname, trackPageVisit]);
 
   useEffect(() => {
     // Track form submissions
@@ -16,45 +29,46 @@ const ActivityTrackerInternal = () => {
       }
     };
 
-    // Track input interactions (data entry)
-    const trackInputActivity = (event: Event) => {
+    // Track input interactions (data entry) - debounced
+    const trackInputActivity = () => {
+      if (inputDebounce.current) clearTimeout(inputDebounce.current);
+      inputDebounce.current = setTimeout(() => {
+        trackDataEntry();
+      }, 3000); // 3s debounce to avoid spam
+    };
+
+    // Track meaningful button clicks - debounced
+    const trackClickActivity = (event: Event) => {
       const target = event.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' || 
-        target.tagName === 'TEXTAREA' || 
-        target.tagName === 'SELECT'
-      ) {
-        // Debounce to avoid too many calls
-        setTimeout(() => {
-          trackDataEntry();
-        }, 1000);
+      const button = target.closest('button, [role="button"], a[href]');
+      if (button && !button.closest('[data-no-track]')) {
+        if (clickDebounce.current) clearTimeout(clickDebounce.current);
+        clickDebounce.current = setTimeout(() => {
+          trackButtonClick();
+        }, 5000); // 5s debounce
       }
     };
 
-    // Add event listeners
     document.addEventListener('submit', trackFormSubmit);
     document.addEventListener('change', trackInputActivity);
     document.addEventListener('input', trackInputActivity);
+    document.addEventListener('click', trackClickActivity);
 
-    // Cleanup
     return () => {
       document.removeEventListener('submit', trackFormSubmit);
       document.removeEventListener('change', trackInputActivity);
       document.removeEventListener('input', trackInputActivity);
+      document.removeEventListener('click', trackClickActivity);
+      if (inputDebounce.current) clearTimeout(inputDebounce.current);
+      if (clickDebounce.current) clearTimeout(clickDebounce.current);
     };
-  }, [trackDataEntry, trackFormSubmission]);
+  }, [trackDataEntry, trackFormSubmission, trackButtonClick]);
 
   return null;
 };
 
-// Main component that conditionally renders based on auth context
 export const GlobalActivityTracker = () => {
   const authContext = useContext(AuthContext);
-  
-  // Only render the activity tracker if auth context is available
-  if (!authContext) {
-    return null;
-  }
-
+  if (!authContext) return null;
   return <ActivityTrackerInternal />;
 };
