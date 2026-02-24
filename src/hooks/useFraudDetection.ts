@@ -3,13 +3,16 @@ import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContext } from '@/contexts/AuthContext';
 
-const RAPID_VISIT_THRESHOLD = 4; // 4 rapid page changes
-const RAPID_VISIT_WINDOW_MS = 15000; // within 15 seconds
-const STORAGE_KEY = 'fraud_nav_timestamps';
+const RAPID_VISIT_THRESHOLD = 10; // 10 rapid page changes
+const RAPID_VISIT_WINDOW_MS = 20000; // within 20 seconds
+const LEGACY_STORAGE_KEY = 'fraud_nav_timestamps';
+const AUTH_ROUTES = ['/auth', '/login', '/signup', '/reset-password'];
 
-const readTimestamps = (): number[] => {
+const getStorageKey = (userId: string) => `fraud_nav_timestamps:${userId}`;
+
+const readTimestamps = (userId: string): number[] => {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(getStorageKey(userId));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'number') : [];
@@ -18,9 +21,17 @@ const readTimestamps = (): number[] => {
   }
 };
 
-const writeTimestamps = (timestamps: number[]) => {
+const writeTimestamps = (userId: string, timestamps: number[]) => {
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(timestamps));
+    sessionStorage.setItem(getStorageKey(userId), JSON.stringify(timestamps));
+  } catch {
+    // ignore storage failures
+  }
+};
+
+const clearLegacyTimestamps = () => {
+  try {
+    sessionStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
     // ignore storage failures
   }
@@ -97,10 +108,19 @@ export const useFraudDetection = (onFraudDetected: () => void) => {
   useEffect(() => {
     if (!user?.id) return;
 
+    const currentPath = location.pathname.toLowerCase();
+    const onAuthRoute = AUTH_ROUTES.some((route) => currentPath.startsWith(route));
+
+    if (onAuthRoute) {
+      writeTimestamps(user.id, []);
+      clearLegacyTimestamps();
+      return;
+    }
+
     const now = Date.now();
-    const timestamps = readTimestamps();
+    const timestamps = readTimestamps(user.id);
     const updated = [...timestamps, now].filter((t) => now - t < RAPID_VISIT_WINDOW_MS);
-    writeTimestamps(updated);
+    writeTimestamps(user.id, updated);
 
     console.log(
       `Fraud check: ${updated.length} page changes in last ${RAPID_VISIT_WINDOW_MS / 1000}s (threshold: ${RAPID_VISIT_THRESHOLD})`
@@ -108,7 +128,7 @@ export const useFraudDetection = (onFraudDetected: () => void) => {
 
     if (updated.length >= RAPID_VISIT_THRESHOLD) {
       console.warn('Fraud detection: Rapid page browsing detected. Locking account.');
-      writeTimestamps([]); // reset burst immediately
+      writeTimestamps(user.id, []); // reset burst immediately
       triggerLock();
     }
   }, [location.pathname, user?.id, triggerLock]);
