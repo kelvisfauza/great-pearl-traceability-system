@@ -66,6 +66,9 @@ export const AccountButton = () => {
   }
 
   const monthlyProgress = stats ? (stats.monthlyEarnings / stats.monthlyCap) * 100 : 0;
+  const loyaltyBalance = stats?.monthlyEarnings || 0;
+  const pendingAmount = account?.pending_withdrawals || 0;
+  const availableLoyalty = Math.max(0, loyaltyBalance - pendingAmount);
 
   return (
     <>
@@ -73,7 +76,7 @@ export const AccountButton = () => {
         <SheetTrigger asChild>
           <Button variant="outline" size="sm" className="relative gap-2">
             <Wallet className="h-4 w-4" />
-            {account ? formatCurrency(account.wallet_balance) : 'Account'}
+            {formatCurrency(loyaltyBalance)}
             {stats && stats.todayEarnings > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0">
                 +{stats.todayEarnings.toLocaleString()}
@@ -94,15 +97,15 @@ export const AccountButton = () => {
             <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-green-600" />
-                  Total Balance
+                  <Star className="h-4 w-4 text-green-600" />
+                  Loyalty Balance
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-700">
-                  {account ? formatCurrency(account.wallet_balance) : formatCurrency(0)}
+                  {formatCurrency(loyaltyBalance)}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Salary + Loyalty Rewards</p>
+                <p className="text-xs text-muted-foreground mt-1">Earned from Loyalty Rewards</p>
               </CardContent>
             </Card>
 
@@ -155,7 +158,7 @@ export const AccountButton = () => {
                     <span className="text-xs text-muted-foreground">Pending</span>
                   </div>
                   <div className="text-lg font-bold text-orange-600">
-                    {account ? formatCurrency(account.pending_withdrawals) : formatCurrency(0)}
+                    {formatCurrency(pendingAmount)}
                   </div>
                 </CardContent>
               </Card>
@@ -166,7 +169,7 @@ export const AccountButton = () => {
                     <span className="text-xs text-muted-foreground">Available</span>
                   </div>
                   <div className="text-lg font-bold text-blue-600">
-                    {account ? formatCurrency(account.available_to_request) : formatCurrency(0)}
+                    {formatCurrency(availableLoyalty)}
                   </div>
                 </CardContent>
               </Card>
@@ -182,7 +185,7 @@ export const AccountButton = () => {
                 variant="outline"
                 onClick={() => setShowWithdrawal(true)}
                 className="flex items-center gap-2"
-                disabled={!account || account.available_to_request <= 0}
+                disabled={availableLoyalty <= 0}
               >
                 <Smartphone className="h-4 w-4" />
                 Withdraw
@@ -255,7 +258,7 @@ export const AccountButton = () => {
       <WithdrawalModal 
         open={showWithdrawal} 
         onOpenChange={setShowWithdrawal}
-        availableAmount={account?.available_to_request || 0}
+        availableAmount={availableLoyalty}
       />
     </>
   );
