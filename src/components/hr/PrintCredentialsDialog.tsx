@@ -212,12 +212,17 @@ const PrintCredentialsDialog = ({ isOpen, onClose, employee }: PrintCredentialsD
             <Label htmlFor="password">Enter Employee Password</Label>
             <div className="relative">
               <Input
-                id="password"
+                id="print-cred-pw"
+                name="print-cred-pw"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password to print credentials"
                 className="pr-10"
+                autoComplete="new-password"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
               />
               <Button
                 type="button"
