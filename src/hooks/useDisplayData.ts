@@ -72,7 +72,8 @@ export const useDisplayData = () => {
     // Top suppliers
     const supplierMap = new Map<string, number>();
     coffeeRecords.data?.forEach((r) => {
-      const name = stripLegacySupplierSuffix(r.supplier_name || 'Unknown');
+      const raw = stripLegacySupplierSuffix(r.supplier_name || 'Unknown');
+      const name = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
       supplierMap.set(name, (supplierMap.get(name) || 0) + Number(r.kilograms || 0));
     });
     const topSuppliers = Array.from(supplierMap.entries())
