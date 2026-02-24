@@ -27,7 +27,8 @@ const TopSuppliersChart = () => {
         const supplierMap = new Map<string, number>();
 
         coffeeRecords?.forEach((record) => {
-          const supplierName = stripLegacySupplierSuffix(record.supplier_name || 'Unknown');
+          const raw = stripLegacySupplierSuffix(record.supplier_name || 'Unknown');
+          const supplierName = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
           const kgs = Number(record.kilograms || 0);
           
           supplierMap.set(supplierName, (supplierMap.get(supplierName) || 0) + kgs);
