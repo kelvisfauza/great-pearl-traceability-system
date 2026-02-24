@@ -1,11 +1,9 @@
 import { useCallback, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContext } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 
 export const useActivityTracker = () => {
   const authContext = useContext(AuthContext);
-  const { toast } = useToast();
   
   const user = authContext?.user;
 
@@ -42,21 +40,13 @@ export const useActivityTracker = () => {
 
       if (error) {
         console.error('Error awarding activity reward:', error);
-      } else {
-        console.log('🎯 Loyalty reward result:', data);
-        if (data?.success && data?.reward_given > 0) {
-          toast({
-            title: "Loyalty Points Earned! 🎉",
-            description: `+UGX ${data.reward_given.toLocaleString()} | Monthly: UGX ${data.monthly_total.toLocaleString()}/50,000`,
-          });
-        }
       }
 
-      console.log('Activity tracked successfully for user:', user.email);
+      console.log('Activity tracked for user:', user.email);
     } catch (error: any) {
       console.error('Error tracking activity:', error);
     }
-  }, [user, toast]);
+  }, [user]);
 
   // Specific activity trackers for common actions
   const trackDataEntry = useCallback(() => {
@@ -83,6 +73,14 @@ export const useActivityTracker = () => {
     trackActivity('transaction', 'processing a transaction');
   }, [trackActivity]);
 
+  const trackPageVisit = useCallback((page: string) => {
+    trackActivity('page_visit', `visiting ${page}`);
+  }, [trackActivity]);
+
+  const trackButtonClick = useCallback(() => {
+    trackActivity('interaction', 'button click');
+  }, [trackActivity]);
+
   return {
     trackActivity,
     trackDataEntry,
@@ -90,6 +88,8 @@ export const useActivityTracker = () => {
     trackReportGeneration,
     trackTaskCompletion,
     trackDocumentUpload,
-    trackTransaction
+    trackTransaction,
+    trackPageVisit,
+    trackButtonClick
   };
 };
