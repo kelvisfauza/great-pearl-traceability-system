@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Truck } from 'lucide-react';
 import EUDRDispatchReportsList from '@/components/store/EUDRDispatchReportsList';
+import PrintDispatchReports from '@/components/store/PrintDispatchReports';
 import { useEUDRDispatchReports } from '@/hooks/useEUDRDispatchReports';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -46,6 +47,7 @@ const EUDRDispatchReportsPage = () => {
               </p>
             </div>
           </div>
+          <PrintDispatchReports reports={reports} />
         </div>
 
         <EUDRDispatchReportsList reports={reports} showAll={true} onRefresh={fetchReports} />
