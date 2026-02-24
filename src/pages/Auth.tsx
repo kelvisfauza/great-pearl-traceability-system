@@ -13,7 +13,6 @@ import BiometricVerification from '@/components/BiometricVerification';
 import { supabase } from '@/integrations/supabase/client';
 import { smsService } from '@/services/smsService';
 import { useToast } from '@/hooks/use-toast';
-import { NewYearTransition } from '@/components/NewYearTransition';
 import { Heart } from 'lucide-react';
 import { useHolidayTheme } from '@/hooks/useHolidayTheme';
 
@@ -24,7 +23,7 @@ const Auth = () => {
   const [error, setError] = useState('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [showBiometric, setShowBiometric] = useState(false);
-  const [showNewYearTransition, setShowNewYearTransition] = useState(false);
+  
   const [showSystemSelection, setShowSystemSelection] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -150,16 +149,9 @@ const Auth = () => {
         setShowBiometric(true);
         setLoading(false);
       } else {
-        // Regular user or preview environment - show New Year transition then system selection
-        console.log('✅ Login complete, showing New Year transition...');
-        // Only show New Year transition from Jan 1-5, 2026
-        const now = new Date();
-        const isNewYearPeriod = now >= new Date('2026-01-01') && now <= new Date('2026-01-05T23:59:59');
-        if (isNewYearPeriod) {
-          setShowNewYearTransition(true);
-        } else {
-          setShowSystemSelection(true);
-        }
+        // Regular user or preview environment - show system selection
+        console.log('✅ Login complete, showing system selection...');
+        setShowSystemSelection(true);
         setLoading(false);
       }
     } catch (error: any) {
@@ -189,11 +181,6 @@ const Auth = () => {
 
   const handleBiometricComplete = () => {
     setShowBiometric(false);
-    setShowNewYearTransition(true);
-  };
-
-  const handleNewYearComplete = () => {
-    setShowNewYearTransition(false);
     setShowSystemSelection(true);
   };
 
@@ -211,11 +198,6 @@ const Auth = () => {
     setLoading(false);
   };
 
-
-  // Show New Year transition animation
-  if (showNewYearTransition) {
-    return <NewYearTransition onComplete={handleNewYearComplete} />;
-  }
 
   // Show biometric verification screen for admins
   if (showBiometric) {
