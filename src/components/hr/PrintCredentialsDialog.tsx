@@ -214,15 +214,21 @@ const PrintCredentialsDialog = ({ isOpen, onClose, employee }: PrintCredentialsD
               <Input
                 id="print-cred-pw"
                 name="print-cred-pw"
-                type={showPassword ? "text" : "password"}
+                type="text"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password to print credentials"
                 className="pr-10"
-                autoComplete="new-password"
+                style={!showPassword ? { WebkitTextSecurity: 'disc', textSecurity: 'disc' } as React.CSSProperties : undefined}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 data-lpignore="true"
                 data-1p-ignore="true"
                 data-form-type="other"
+                readOnly
+                onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
               />
               <Button
                 type="button"
