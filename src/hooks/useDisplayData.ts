@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-
+import { stripLegacySupplierSuffix } from '@/utils/supplierDisplay';
 export interface DisplayData {
   // Suppliers chart
   topSuppliers: { name: string; kgs: number }[];
@@ -72,7 +72,7 @@ export const useDisplayData = () => {
     // Top suppliers
     const supplierMap = new Map<string, number>();
     coffeeRecords.data?.forEach((r) => {
-      const name = (r.supplier_name || 'Unknown').split(' ')[0];
+      const name = stripLegacySupplierSuffix(r.supplier_name || 'Unknown');
       supplierMap.set(name, (supplierMap.get(name) || 0) + Number(r.kilograms || 0));
     });
     const topSuppliers = Array.from(supplierMap.entries())

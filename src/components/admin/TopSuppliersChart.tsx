@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { TrendingUp, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { stripLegacySupplierSuffix } from '@/utils/supplierDisplay';
 
 const TopSuppliersChart = () => {
   const [supplierData, setSupplierData] = useState<any[]>([]);
@@ -26,14 +27,10 @@ const TopSuppliersChart = () => {
         const supplierMap = new Map<string, number>();
 
         coffeeRecords?.forEach((record) => {
-          const supplierName = record.supplier_name || 'Unknown';
+          const supplierName = stripLegacySupplierSuffix(record.supplier_name || 'Unknown');
           const kgs = Number(record.kilograms || 0);
           
-          if (supplierMap.has(supplierName)) {
-            supplierMap.set(supplierName, supplierMap.get(supplierName)! + kgs);
-          } else {
-            supplierMap.set(supplierName, kgs);
-          }
+          supplierMap.set(supplierName, (supplierMap.get(supplierName) || 0) + kgs);
         });
 
         const sortedSuppliers = Array.from(supplierMap.entries())
