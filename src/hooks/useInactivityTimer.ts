@@ -1,6 +1,5 @@
 import { useEffect, useRef, useCallback, useContext } from 'react';
 import { AuthContext } from '@/contexts/AuthContext';
-import { smsService } from '@/services/smsService';
 
 const INACTIVITY_TIMEOUT = 20 * 60 * 1000; // 20 minutes in milliseconds
 const THROTTLE_DELAY = 1000; // Only reset timer once per second max
@@ -31,17 +30,7 @@ export const useInactivityTimer = () => {
     
     console.log('User inactive for 20 minutes, logging out...');
     
-    // Send SMS notification before logout
-    if (employee?.phone) {
-      try {
-        await smsService.sendSMS(
-          employee.phone,
-          `Hi ${employee.name}, you have been logged out due to inactivity. Login again to access the system.`
-        );
-      } catch (error) {
-        console.error('Failed to send inactivity SMS:', error);
-      }
-    }
+    // No SMS for inactivity logout - just log out silently
     
     signOut('inactivity');
   }, []);
