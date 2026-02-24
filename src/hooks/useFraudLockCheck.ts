@@ -39,7 +39,17 @@ export const useFraudLockCheck = () => {
 
   useEffect(() => {
     checkLock();
-  }, [checkLock]);
+
+    if (!user?.id) return;
+
+    const interval = window.setInterval(() => {
+      checkLock();
+    }, 5000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [checkLock, user?.id]);
 
   const clearLock = useCallback(() => {
     setLockData(null);
