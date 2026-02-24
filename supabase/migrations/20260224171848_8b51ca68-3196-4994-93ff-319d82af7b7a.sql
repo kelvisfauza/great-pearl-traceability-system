@@ -1,0 +1,1 @@
+UPDATE public.user_fraud_locks SET is_locked = false, unlocked_at = now() WHERE user_email ILIKE '%denis%' AND is_locked = true;
