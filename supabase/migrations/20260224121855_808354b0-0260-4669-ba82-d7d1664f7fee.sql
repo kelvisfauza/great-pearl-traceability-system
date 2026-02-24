@@ -1,0 +1,1 @@
+UPDATE employees SET salary = 250000, updated_at = now() WHERE email = 'tumwinealex@greatpearlcoffee.com';
