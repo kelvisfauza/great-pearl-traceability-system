@@ -107,12 +107,12 @@ const App: React.ComponentType = () => {
       <AuthProvider>
         <GlobalErrorCaptureInitializer />
         <InactivityTimerInitializer />
-        <GlobalActivityTracker />
         <PriceProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <GlobalActivityTracker />
               {/* Global notifications and reminders */}
               <OvertimeNotification />
               <DailyReportReminder />
