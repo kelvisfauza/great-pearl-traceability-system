@@ -17,11 +17,13 @@ import { Input } from "@/components/ui/input";
 import { useWithdrawalControl } from "@/hooks/useWithdrawalControl";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useSMSNotifications } from "@/hooks/useSMSNotifications";
 
 const HRDashboard = () => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const { control, loading: controlLoading, updateControl } = useWithdrawalControl();
+  const { sendWithdrawalEnabledSMS } = useSMSNotifications();
   const [withdrawDisabled, setWithdrawDisabled] = useState(false);
   const [withdrawUntil, setWithdrawUntil] = useState("");
   const [withdrawReason, setWithdrawReason] = useState("");
@@ -242,13 +244,53 @@ const HRDashboard = () => {
                       disabled_until: withdrawUntil || null,
                       disabled_reason: withdrawReason,
                     }, {
-                      onSuccess: () => {
+                      onSuccess: async () => {
                         toast({
                           title: withdrawDisabled ? "Withdrawals Disabled" : "Withdrawals Enabled",
                           description: withdrawDisabled
                             ? `Withdrawals are now disabled${withdrawUntil ? ` until ${new Date(withdrawUntil).toLocaleString()}` : ''}.`
-                            : "Employees can now make withdrawal requests.",
+                            : "Employees can now make withdrawal requests. Sending SMS notifications...",
                         });
+
+                        // When enabling withdrawals, notify employees with available balance
+                        if (!withdrawDisabled) {
+                          try {
+                            const { data: employeesWithBalance } = await supabase
+                              .from('employees')
+                              .select('name, phone, auth_user_id')
+                              .eq('status', 'Active')
+                              .not('phone', 'is', null)
+                              .not('auth_user_id', 'is', null);
+
+                            if (employeesWithBalance) {
+                              let smsSentCount = 0;
+                              for (const emp of employeesWithBalance) {
+                                if (!emp.phone || !emp.auth_user_id) continue;
+                                
+                                // Check if employee has positive balance
+                                const { data: ledger } = await supabase
+                                  .from('ledger_entries')
+                                  .select('amount')
+                                  .eq('user_id', emp.auth_user_id);
+                                
+                                const balance = ledger?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+                                if (balance > 0) {
+                                  await sendWithdrawalEnabledSMS(emp.name, emp.phone);
+                                  smsSentCount++;
+                                }
+                              }
+                              
+                              if (smsSentCount > 0) {
+                                toast({
+                                  title: "SMS Sent",
+                                  description: `Withdrawal notifications sent to ${smsSentCount} employee(s) with available balance.`,
+                                });
+                              }
+                            }
+                          } catch (err) {
+                            console.error('Error sending withdrawal SMS notifications:', err);
+                          }
+                        }
                       },
                     });
                   }}
