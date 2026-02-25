@@ -179,11 +179,38 @@ export const useSMSNotifications = () => {
     }
   };
 
+  const sendWithdrawalEnabledSMS = async (employeeName: string, phoneNumber: string) => {
+    try {
+      console.log('Sending withdrawal enabled SMS notification...');
+      
+      const { data, error } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: phoneNumber,
+          message: `Dear ${employeeName}, withdrawals have been enabled. You can now withdraw your available balance from the system. Log in and go to your wallet to request a withdrawal.`,
+          userName: employeeName,
+          messageType: 'withdrawal_enabled'
+        }
+      });
+
+      if (error) {
+        console.error('Error sending SMS:', error);
+        throw error;
+      }
+
+      console.log('Withdrawal enabled SMS sent successfully:', data);
+      return true;
+    } catch (error) {
+      console.error('Failed to send withdrawal enabled SMS:', error);
+      return false;
+    }
+  };
+
   return {
     sendSalaryApprovalSMS,
     sendSalaryInitializedSMS,
     sendApprovalRequestSMS,
     sendFieldFinancingApprovalSMS,
-    sendBonusAwardedSMS
+    sendBonusAwardedSMS,
+    sendWithdrawalEnabledSMS
   };
 };
