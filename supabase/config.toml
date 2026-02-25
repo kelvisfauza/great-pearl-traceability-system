@@ -190,3 +190,9 @@ verify_jwt = false
 
 [functions.attendance-reminder]
 verify_jwt = false
+
+[functions.gosentepay-deposit]
+verify_jwt = true
+
+[functions.gosentepay-callback]
+verify_jwt = false
