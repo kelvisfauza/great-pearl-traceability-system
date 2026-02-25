@@ -14,6 +14,7 @@ import { Smartphone, AlertTriangle, Printer } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
 
 interface WithdrawalModalProps {
   open: boolean;
@@ -32,6 +33,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const { createWithdrawalRequest, refreshAccount } = useUserAccount();
   const { user, employee } = useAuth();
   const { toast } = useToast();
+  const { isWithdrawalDisabled } = useWithdrawalControl();
+  const withdrawalStatus = isWithdrawalDisabled();
 
   const numberToWords = (num: number): string => {
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
@@ -142,7 +145,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     }
   };
 
-  const isAmountValid = amount && parseFloat(amount) <= availableAmount && parseFloat(amount) >= 100;
+  const isAmountValid = amount && parseFloat(amount) <= availableAmount && parseFloat(amount) >= 100 && !withdrawalStatus.disabled;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -167,6 +170,18 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           </Alert>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {withdrawalStatus.disabled && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Withdrawals are currently disabled.</strong>
+                  {withdrawalStatus.reason && <> {withdrawalStatus.reason}</>}
+                  {withdrawalStatus.until && (
+                    <div className="text-xs mt-1">Available after: {new Date(withdrawalStatus.until).toLocaleString()}</div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="bg-blue-50 p-3 rounded-lg">
               <p className="text-sm text-blue-800">
                 <strong>Cash Payment:</strong> You will collect cash directly from Finance department after approval.
