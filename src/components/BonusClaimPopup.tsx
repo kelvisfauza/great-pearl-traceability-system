@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Gift, PartyPopper, Printer, AlertTriangle } from "lucide-react";
+import { Gift, PartyPopper, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -201,7 +201,7 @@ const BonusClaimPopup = () => {
     <Dialog open={showDialog} onOpenChange={() => { setPendingBonuses([]); setClaimedRef(null); setClaimedBonus(null); }}>
       <DialogContent className="sm:max-w-md">
         {claimedRef ? (
-          /* Post-claim: show ref & print voucher */
+          /* Post-claim: show ref & balance credited */
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl">
@@ -222,21 +222,16 @@ const BonusClaimPopup = () => {
                   UGX {Number(claimedBonus?.amount || 0).toLocaleString()}
                 </div>
                 <p className="text-sm text-muted-foreground">{claimedBonus?.reason}</p>
+                <p className="text-sm text-green-600 font-medium">
+                  ✅ Added to your wallet balance. You can withdraw when withdrawals are enabled.
+                </p>
               </div>
 
               <Button
-                onClick={handlePrintAndNext}
-                className="w-full gap-2 h-12 font-semibold"
-              >
-                <Printer className="h-5 w-5" />
-                Print Voucher
-              </Button>
-              <Button
-                variant="ghost"
                 onClick={handleSkipPrint}
-                className="w-full text-muted-foreground"
+                className="w-full h-12 font-semibold"
               >
-                Skip Printing
+                Done
               </Button>
             </div>
           </>
@@ -266,22 +261,9 @@ const BonusClaimPopup = () => {
                 </p>
               </div>
 
-              {withdrawalStatus.disabled && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                  <div className="flex items-center gap-2 font-semibold mb-1">
-                    <AlertTriangle className="h-4 w-4" />
-                    Bonus claiming is temporarily disabled
-                  </div>
-                  {withdrawalStatus.reason && <p>{withdrawalStatus.reason}</p>}
-                  {withdrawalStatus.until && (
-                    <p className="text-xs mt-1">Available after: {new Date(withdrawalStatus.until).toLocaleString()}</p>
-                  )}
-                </div>
-              )}
-
               <Button
                 onClick={claimBonus}
-                disabled={claiming || withdrawalStatus.disabled}
+                disabled={claiming}
                 className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-semibold text-lg h-12"
               >
                 {claiming ? "Claiming..." : "🎉 Claim Bonus"}
