@@ -10,17 +10,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUserAccount } from '@/hooks/useUserAccount';
 import { useAuth } from '@/contexts/AuthContext';
-import { Smartphone, AlertTriangle, Printer } from 'lucide-react';
+import { Smartphone, AlertTriangle, Printer, ShieldCheck, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@/components/ui/input-otp';
 
 interface WithdrawalModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   availableAmount: number;
 }
+
+type Step = 'amount' | 'verify' | 'done';
 
 export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   open,
@@ -30,6 +37,12 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const [amount, setAmount] = useState('');
   const [channel] = useState('CASH');
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<Step>('amount');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [sentCode, setSentCode] = useState('');
+  const [sendingCode, setSendingCode] = useState(false);
+  const [completedRef, setCompletedRef] = useState('');
+  const [completedAmount, setCompletedAmount] = useState(0);
   const { createWithdrawalRequest, refreshAccount } = useUserAccount();
   const { user, employee } = useAuth();
   const { toast } = useToast();
@@ -48,7 +61,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     return numberToWords(Math.floor(num / 1000000)) + ' Million' + (num % 1000000 ? ' ' + numberToWords(num % 1000000) : '');
   };
 
-  const printVoucher = (ref: string, amt: number, phone: string, ch: string) => {
+  const printVoucher = (ref: string, amt: number) => {
     const w = window.open('', '_blank');
     if (!w) return;
     const empName = employee?.name || user?.email || 'Employee';
@@ -59,6 +72,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   body{font:13px/1.5 'Segoe UI',system-ui,sans-serif;margin:0;padding:20px;color:#000}
   .voucher{max-width:700px;margin:0 auto;border:2px solid #000;padding:0}
   .header{text-align:center;padding:16px;border-bottom:2px solid #000;background:#f8f8f8}
+  .header img{height:50px;margin-bottom:6px}
   .header h1{margin:0;font-size:16px;text-transform:uppercase;letter-spacing:1px}
   .header h2{margin:4px 0 0;font-size:13px;font-weight:normal}
   .header .sub{font-size:11px;color:#555;margin-top:2px}
@@ -76,22 +90,24 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   .sig-line{border-top:1px solid #000;margin-top:40px;padding-top:4px;font-size:11px}
   .footer{text-align:center;padding:10px;border-top:2px solid #000;font-size:10px;color:#666}
   .stamp{border:2px dashed #999;padding:8px;text-align:center;font-size:10px;color:#999;margin-top:16px}
+  .verified-badge{text-align:center;margin:10px 0;padding:6px;background:#e8f5e9;border:1px solid #4caf50;border-radius:4px;font-size:11px;color:#2e7d32}
   @media print{body{padding:0}.voucher{border:2px solid #000}}
 </style></head><body onload="window.print();">
 <div class="voucher">
   <div class="header">
     <h1>Great Pearl Coffee Factory Ltd.</h1>
     <h2>Employee Withdrawal Payment Voucher</h2>
-    <div class="sub">P.O. Box XXXXX, Kampala, Uganda</div>
+    <div class="sub">P.O. Box XXXXX, Kampala, Uganda | Tel: +256-XXX-XXXXXX</div>
   </div>
   <div class="title">PAYMENT VOUCHER</div>
   <div class="body">
+    <div class="verified-badge">✅ SMS Verified — This withdrawal was authenticated via SMS verification code</div>
     <div class="row"><span class="label">Voucher Reference:</span><span class="value">${ref}</span></div>
     <div class="row"><span class="label">Date:</span><span class="value">${now.toLocaleDateString('en-UG', {day:'2-digit',month:'long',year:'numeric'})}</span></div>
+    <div class="row"><span class="label">Time:</span><span class="value">${now.toLocaleTimeString('en-UG', {hour:'2-digit',minute:'2-digit'})}</span></div>
     <div class="row"><span class="label">Employee Name:</span><span class="value">${empName}</span></div>
     <div class="row"><span class="label">Employee Email:</span><span class="value">${user?.email || ''}</span></div>
-    <div class="row"><span class="label">Payment Channel:</span><span class="value">${ch === 'ZENGAPAY' ? 'Mobile Money' : 'Cash Payment'}</span></div>
-    ${ch === 'ZENGAPAY' ? `<div class="row"><span class="label">Phone Number:</span><span class="value">${phone}</span></div>` : ''}
+    <div class="row"><span class="label">Payment Channel:</span><span class="value">Cash Payment</span></div>
     <div class="row"><span class="label">Source:</span><span class="value">Loyalty Rewards Balance</span></div>
     <div class="amount-box">
       <div class="big">UGX ${amt.toLocaleString()}</div>
@@ -107,7 +123,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     </div>
     <div class="stamp">OFFICE STAMP / SEAL</div>
   </div>
-  <div class="footer">This voucher must be presented to the Finance Department for payment processing. Valid for 7 days from date of issue.</div>
+  <div class="footer">This voucher must be presented to the Finance Department for payment processing. Valid for 7 days from date of issue.<br/>Generated: ${now.toISOString()}</div>
 </div>
 </body></html>`);
     w.document.close();
@@ -117,122 +133,303 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     return `UGX ${amount.toLocaleString()}`;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const generateAndSendCode = async () => {
+    if (!employee?.phone) {
+      toast({
+        title: "No Phone Number",
+        description: "Your employee profile does not have a phone number. Please contact HR.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingCode(true);
+    try {
+      // Generate 5-digit code
+      const code = String(Math.floor(10000 + Math.random() * 90000));
+      setSentCode(code);
+
+      // Send via SMS
+      const { error } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: employee.phone,
+          message: `Your Great Pearl withdrawal verification code is: ${code}. Do NOT share this code. It expires in 5 minutes.`,
+          userName: employee.name,
+          messageType: 'withdrawal_verification'
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Verification Code Sent",
+        description: `A 5-digit code has been sent to your phone (${employee.phone?.slice(-4) ? '****' + employee.phone.slice(-4) : ''}).`,
+      });
+
+      setStep('verify');
+    } catch (error) {
+      console.error('Error sending verification code:', error);
+      toast({
+        title: "Failed to Send Code",
+        description: "Could not send the verification SMS. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const handleAmountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!amount) return;
 
     const withdrawalAmount = parseFloat(amount);
-    if (withdrawalAmount > availableAmount) {
+    if (withdrawalAmount > availableAmount || withdrawalAmount < 100) return;
+
+    // Send verification code
+    await generateAndSendCode();
+  };
+
+  const handleVerifyAndWithdraw = async () => {
+    if (verificationCode !== sentCode) {
+      toast({
+        title: "Invalid Code",
+        description: "The verification code you entered is incorrect. Please try again.",
+        variant: "destructive",
+      });
       return;
     }
 
     setLoading(true);
     try {
+      const withdrawalAmount = parseFloat(amount);
       const ref = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
+      
       await createWithdrawalRequest(withdrawalAmount, '', channel);
       
-      // Print voucher after successful submission
-      printVoucher(ref, withdrawalAmount, '', channel);
-      
-      // Reset form
-      setAmount('');
-      onOpenChange(false);
+      setCompletedRef(ref);
+      setCompletedAmount(withdrawalAmount);
+      setStep('done');
+
+      // Force refresh account data
+      setTimeout(() => {
+        refreshAccount();
+      }, 500);
+
+      toast({
+        title: "Withdrawal Completed!",
+        description: `Reference: ${ref}. Amount UGX ${withdrawalAmount.toLocaleString()} deducted. Print your voucher below.`,
+        duration: 8000,
+      });
     } catch (error) {
       console.error('Error submitting withdrawal:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process withdrawal. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleClose = () => {
+    setStep('amount');
+    setAmount('');
+    setVerificationCode('');
+    setSentCode('');
+    setCompletedRef('');
+    setCompletedAmount(0);
+    onOpenChange(false);
+    // Ensure wallet refreshes
+    refreshAccount();
+  };
+
   const isAmountValid = amount && parseFloat(amount) <= availableAmount && parseFloat(amount) >= 100 && !withdrawalStatus.disabled;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5" />
-            Request Withdrawal
+            {step === 'verify' ? <ShieldCheck className="h-5 w-5" /> : <Smartphone className="h-5 w-5" />}
+            {step === 'amount' && 'Request Withdrawal'}
+            {step === 'verify' && 'Verify Withdrawal'}
+            {step === 'done' && 'Withdrawal Complete'}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Available to Request: <strong>{formatCurrency(availableAmount)}</strong>
-              <br />
-              <span className="text-xs text-muted-foreground">
-                This prevents double-spending while you have pending withdrawals.
-              </span>
-            </AlertDescription>
-          </Alert>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {withdrawalStatus.disabled && (
-              <Alert variant="destructive">
+          {/* Step 1: Enter Amount */}
+          {step === 'amount' && (
+            <>
+              <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Withdrawals are currently disabled.</strong>
-                  {withdrawalStatus.reason && <> {withdrawalStatus.reason}</>}
-                  {withdrawalStatus.until && (
-                    <div className="text-xs mt-1">Available after: {new Date(withdrawalStatus.until).toLocaleString()}</div>
-                  )}
+                  Available to Request: <strong>{formatCurrency(availableAmount)}</strong>
+                  <br />
+                  <span className="text-xs text-muted-foreground">
+                    This prevents double-spending while you have pending withdrawals.
+                  </span>
                 </AlertDescription>
               </Alert>
-            )}
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>Cash Payment:</strong> You will collect cash directly from Finance department after approval.
-              </p>
+
+              <form onSubmit={handleAmountSubmit} className="space-y-4">
+                {withdrawalStatus.disabled && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Withdrawals are currently disabled.</strong>
+                      {withdrawalStatus.reason && <> {withdrawalStatus.reason}</>}
+                      {withdrawalStatus.until && (
+                        <div className="text-xs mt-1">Available after: {new Date(withdrawalStatus.until).toLocaleString()}</div>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Cash Payment:</strong> A verification code will be sent to your phone before processing.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount (UGX)</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="Enter withdrawal amount"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    required
+                    min="100"
+                    max={availableAmount}
+                    step="1000"
+                  />
+                  {amount && parseFloat(amount) > availableAmount && (
+                    <p className="text-sm text-red-600">
+                      Amount exceeds available to request
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={handleClose} disabled={sendingCode}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={sendingCode || !isAmountValid}>
+                    {sendingCode ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending Code...</>
+                    ) : (
+                      'Send Verification Code'
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </>
+          )}
+
+          {/* Step 2: Enter Verification Code */}
+          {step === 'verify' && (
+            <div className="space-y-4">
+              <Alert>
+                <ShieldCheck className="h-4 w-4" />
+                <AlertDescription>
+                  A 5-digit verification code has been sent to your phone
+                  {employee?.phone ? ` (****${employee.phone.slice(-4)})` : ''}.
+                  <br />
+                  <span className="text-xs text-muted-foreground">
+                    Amount: <strong>{formatCurrency(parseFloat(amount))}</strong>
+                  </span>
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex flex-col items-center gap-4">
+                <Label>Enter 5-digit verification code</Label>
+                <InputOTP
+                  maxLength={5}
+                  value={verificationCode}
+                  onChange={setVerificationCode}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={generateAndSendCode}
+                  disabled={sendingCode}
+                >
+                  {sendingCode ? 'Resending...' : 'Resend Code'}
+                </Button>
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => { setStep('amount'); setVerificationCode(''); }}>
+                  Back
+                </Button>
+                <Button
+                  onClick={handleVerifyAndWithdraw}
+                  disabled={loading || verificationCode.length !== 5}
+                >
+                  {loading ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</>
+                  ) : (
+                    'Verify & Withdraw'
+                  )}
+                </Button>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount (UGX)</Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="Enter withdrawal amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-                min="1000"
-                max={availableAmount}
-                step="1000"
-              />
-              {amount && parseFloat(amount) > availableAmount && (
-                <p className="text-sm text-red-600">
-                  Amount exceeds available to request
+          )}
+
+          {/* Step 3: Done - Print Voucher */}
+          {step === 'done' && (
+            <div className="space-y-4 text-center">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <ShieldCheck className="h-10 w-10 text-green-600 mx-auto mb-2" />
+                <h3 className="font-bold text-green-800">Withdrawal Successful!</h3>
+                <p className="text-sm text-green-700 mt-1">
+                  Reference: <strong>{completedRef}</strong>
                 </p>
-              )}
+                <p className="text-lg font-bold text-green-800 mt-2">
+                  {formatCurrency(completedAmount)}
+                </p>
+                <p className="text-xs text-green-600 mt-1">
+                  has been deducted from your balance
+                </p>
+              </div>
+
+              <Alert>
+                <Printer className="h-4 w-4" />
+                <AlertDescription>
+                  Print your payment voucher and present it to Finance to collect your cash.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex justify-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleClose}
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => printVoucher(completedRef, completedAmount)}
+                  className="gap-2"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print Voucher
+                </Button>
+              </div>
             </div>
-
-
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                Your request will create a Request Slip that you must print and present to Finance. 
-                No funds are deducted until Finance approves your request.
-              </AlertDescription>
-            </Alert>
-
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={loading || !isAmountValid}
-              >
-                {loading ? 'Creating Request...' : 'Create Withdrawal Request'}
-              </Button>
-            </div>
-          </form>
+          )}
         </div>
       </DialogContent>
     </Dialog>
