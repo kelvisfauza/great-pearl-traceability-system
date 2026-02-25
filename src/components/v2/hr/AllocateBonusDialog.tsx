@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Gift, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useSMSNotifications } from "@/hooks/useSMSNotifications";
 
 const AllocateBonusDialog = () => {
   const [open, setOpen] = useState(false);
@@ -21,13 +22,14 @@ const AllocateBonusDialog = () => {
   const { employee } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { sendBonusAwardedSMS } = useSMSNotifications();
 
   const { data: employees } = useQuery({
     queryKey: ["active-employees-for-bonus"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employees")
-        .select("id, name, email, department, position")
+        .select("id, name, email, department, position, phone")
         .eq("status", "Active")
         .order("name");
       if (error) throw error;
@@ -65,9 +67,16 @@ const AllocateBonusDialog = () => {
       if (error) throw error;
     },
     onSuccess: () => {
+      const emp = employees?.find((e) => e.id === selectedEmployee);
+      
+      // Send SMS notification to the employee
+      if (emp?.phone) {
+        sendBonusAwardedSMS(emp.name, emp.phone, parseFloat(amount));
+      }
+
       toast({ 
         title: "Bonus Allocated!", 
-        description: `UGX ${parseInt(amount).toLocaleString()} bonus allocated successfully. The employee will see a bonus notification when they refresh their browser.`,
+        description: `UGX ${parseInt(amount).toLocaleString()} bonus allocated successfully. SMS sent to ${emp?.name || 'employee'}. They should refresh their browser to claim.`,
         duration: 8000,
       });
       setOpen(false);
