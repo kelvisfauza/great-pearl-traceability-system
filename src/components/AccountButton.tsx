@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { 
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger 
@@ -33,10 +35,28 @@ export const AccountButton = () => {
   const { stats, loading: statsLoading } = useLoyaltyStats();
   const { bonusData } = useBonusBalance();
   const { isWithdrawalDisabled } = useWithdrawalControl();
+  const { user } = useAuth();
   const [showMoneyRequest, setShowMoneyRequest] = useState(false);
   const [showWithdrawal, setShowWithdrawal] = useState(false);
+  const [totalWithdrawn, setTotalWithdrawn] = useState(0);
 
   const withdrawalStatus = isWithdrawalDisabled();
+
+  // Fetch total withdrawals from ledger to properly calculate available balance
+  useEffect(() => {
+    const fetchWithdrawals = async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from('ledger_entries')
+        .select('amount')
+        .eq('user_id', user.id)
+        .eq('entry_type', 'WITHDRAWAL');
+      
+      const total = (data || []).reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0);
+      setTotalWithdrawn(total);
+    };
+    fetchWithdrawals();
+  }, [user, withdrawalRequests]);
 
   const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
 
@@ -83,7 +103,8 @@ export const AccountButton = () => {
   const loyaltyBalance = stats?.monthlyEarnings || 0;
   const pendingAmount = account?.pending_withdrawals || 0;
   const bonusBalance = bonusData?.totalClaimed || 0;
-  const availableLoyalty = Math.max(0, loyaltyBalance - pendingAmount) + bonusBalance;
+  // Available = loyalty + bonus - withdrawals - pending
+  const availableLoyalty = Math.max(0, loyaltyBalance + bonusBalance - totalWithdrawn - pendingAmount);
 
   return (
     <>
@@ -134,7 +155,7 @@ export const AccountButton = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-purple-700">
-                  {formatCurrency(bonusBalance)}
+                  {formatCurrency(Math.max(0, bonusBalance - Math.max(0, totalWithdrawn - loyaltyBalance)))}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {bonusData?.totalPending ? `${formatCurrency(bonusData.totalPending)} pending claim` : 'From allocated bonuses'}

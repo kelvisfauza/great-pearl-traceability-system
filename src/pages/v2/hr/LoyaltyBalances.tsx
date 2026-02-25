@@ -59,10 +59,14 @@ const LoyaltyBalances = () => {
 
         let totalEarned = 0;
         let totalWithdrawn = 0;
+        let bonusTotal = 0;
 
         (ledger || []).forEach((entry: any) => {
           if (entry.entry_type === "LOYALTY_REWARD" && entry.amount > 0) {
             totalEarned += Number(entry.amount);
+          }
+          if (entry.entry_type === "BONUS" && entry.amount > 0) {
+            bonusTotal += Number(entry.amount);
           }
           if (entry.entry_type === "WITHDRAWAL" && entry.amount < 0) {
             totalWithdrawn += Math.abs(Number(entry.amount));
@@ -74,9 +78,9 @@ const LoyaltyBalances = () => {
           name: emp.name,
           email: emp.email,
           department: emp.department,
-          totalEarned,
+          totalEarned: totalEarned + bonusTotal,
           totalWithdrawn,
-          currentBalance: totalEarned - totalWithdrawn,
+          currentBalance: totalEarned + bonusTotal - totalWithdrawn,
         });
       }
 
