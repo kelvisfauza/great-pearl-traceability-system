@@ -27,8 +27,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   availableAmount,
 }) => {
   const [amount, setAmount] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [channel, setChannel] = useState('ZENGAPAY');
+  const [channel] = useState('CASH');
   const [loading, setLoading] = useState(false);
   const { createWithdrawalRequest, refreshAccount } = useUserAccount();
   const { user, employee } = useAuth();
@@ -118,7 +117,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || (channel === 'ZENGAPAY' && !phoneNumber)) return;
+    if (!amount) return;
 
     const withdrawalAmount = parseFloat(amount);
     if (withdrawalAmount > availableAmount) {
@@ -128,14 +127,13 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     setLoading(true);
     try {
       const ref = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
-      await createWithdrawalRequest(withdrawalAmount, phoneNumber, channel);
+      await createWithdrawalRequest(withdrawalAmount, '', channel);
       
       // Print voucher after successful submission
-      printVoucher(ref, withdrawalAmount, phoneNumber, channel);
+      printVoucher(ref, withdrawalAmount, '', channel);
       
       // Reset form
       setAmount('');
-      setPhoneNumber('');
       onOpenChange(false);
     } catch (error) {
       console.error('Error submitting withdrawal:', error);
@@ -169,18 +167,10 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           </Alert>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="channel">Payment Channel</Label>
-              <select
-                id="channel"
-                value={channel}
-                onChange={(e) => setChannel(e.target.value)}
-                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="ZENGAPAY">Mobile Money (ZengaPay)</option>
-                <option value="CASH">Cash Payment</option>
-              </select>
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Cash Payment:</strong> You will collect cash directly from Finance department after approval.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="amount">Amount (UGX)</Label>
@@ -202,32 +192,6 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
               )}
             </div>
 
-            {channel === 'ZENGAPAY' && (
-              <div className="space-y-2">
-                <Label htmlFor="phoneNumber">Mobile Money Number</Label>
-                <Input
-                  id="phoneNumber"
-                  type="tel"
-                  placeholder="Enter phone number (e.g., 256700123456)"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  required
-                  pattern="256[0-9]{9}"
-                  title="Please enter a valid Ugandan phone number starting with 256"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter phone number with country code (256)
-                </p>
-              </div>
-            )}
-
-            {channel === 'CASH' && (
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Cash Payment:</strong> You will collect cash directly from Finance department after approval.
-                </p>
-              </div>
-            )}
 
             <Alert>
               <AlertTriangle className="h-4 w-4" />
@@ -248,7 +212,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
               </Button>
               <Button 
                 type="submit" 
-                disabled={loading || !isAmountValid || (channel === 'ZENGAPAY' && !phoneNumber)}
+                disabled={loading || !isAmountValid}
               >
                 {loading ? 'Creating Request...' : 'Create Withdrawal Request'}
               </Button>
