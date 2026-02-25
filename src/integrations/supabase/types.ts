@@ -4174,6 +4174,60 @@ export type Database = {
           },
         ]
       }
+      mobile_money_transactions: {
+        Row: {
+          amount: number
+          completed_at: string | null
+          created_at: string
+          currency: string
+          deposit_rate: number | null
+          id: string
+          phone: string
+          provider: string
+          provider_response: Json | null
+          status: string
+          transaction_ref: string
+          transaction_type: string
+          updated_at: string
+          user_id: string
+          withdrawal_id: string | null
+        }
+        Insert: {
+          amount: number
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          deposit_rate?: number | null
+          id?: string
+          phone: string
+          provider?: string
+          provider_response?: Json | null
+          status?: string
+          transaction_ref: string
+          transaction_type?: string
+          updated_at?: string
+          user_id: string
+          withdrawal_id?: string | null
+        }
+        Update: {
+          amount?: number
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          deposit_rate?: number | null
+          id?: string
+          phone?: string
+          provider?: string
+          provider_response?: Json | null
+          status?: string
+          transaction_ref?: string
+          transaction_type?: string
+          updated_at?: string
+          user_id?: string
+          withdrawal_id?: string | null
+        }
+        Relationships: []
+      }
       modification_requests: {
         Row: {
           batch_number: string | null
