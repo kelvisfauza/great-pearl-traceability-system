@@ -148,10 +148,42 @@ export const useSMSNotifications = () => {
     }
   };
 
+  const sendBonusAwardedSMS = async (employeeName: string, phoneNumber: string, amount: number) => {
+    try {
+      console.log('Sending bonus awarded SMS notification...');
+      
+      const { data, error } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: phoneNumber,
+          message: `Dear ${employeeName}, you have been awarded a bonus of UGX ${amount.toLocaleString()}. Please open the system and refresh your browser to claim it.`,
+          userName: employeeName,
+          messageType: 'bonus_awarded'
+        }
+      });
+
+      if (error) {
+        console.error('Error sending SMS:', error);
+        throw error;
+      }
+
+      console.log('Bonus SMS sent successfully:', data);
+      return true;
+    } catch (error) {
+      console.error('Failed to send bonus SMS notification:', error);
+      toast({
+        title: "SMS Notification Failed",
+        description: "Could not send SMS notification to employee",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   return {
     sendSalaryApprovalSMS,
     sendSalaryInitializedSMS,
     sendApprovalRequestSMS,
-    sendFieldFinancingApprovalSMS
+    sendFieldFinancingApprovalSMS,
+    sendBonusAwardedSMS
   };
 };
