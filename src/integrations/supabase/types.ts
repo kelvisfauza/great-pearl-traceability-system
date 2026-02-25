@@ -638,6 +638,51 @@ export type Database = {
         }
         Relationships: []
       }
+      bonuses: {
+        Row: {
+          allocated_at: string
+          allocated_by: string
+          amount: number
+          claimed_at: string | null
+          created_at: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          reason: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          allocated_at?: string
+          allocated_by: string
+          amount: number
+          claimed_at?: string | null
+          created_at?: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          reason: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          allocated_at?: string
+          allocated_by?: string
+          amount?: number
+          claimed_at?: string | null
+          created_at?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          reason?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       buyer_contracts: {
         Row: {
           allocated_quantity: number

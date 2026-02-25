@@ -8,6 +8,7 @@ import PerformanceOverview from '@/components/PerformanceOverview';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import EUDRSummaryCard from '@/components/store/EUDRSummaryCard';
 import AssignedRoleNotification from '@/components/AssignedRoleNotification';
+import BonusClaimPopup from '@/components/BonusClaimPopup';
 import NotificationPanel from '@/components/notifications/NotificationPanel';
 import BuyingRecommendationsCard from '@/components/admin/BuyingRecommendationsCard';
 import UpcomingBookingsWidget from '@/components/admin/UpcomingBookingsWidget';
@@ -202,6 +203,9 @@ const Index = () => {
           isOpen={isNotificationOpen}
           onClose={() => setIsNotificationOpen(false)}
         />
+
+        {/* Bonus Claim Popup */}
+        <BonusClaimPopup />
       </div>
     </DashboardLayout>
   );

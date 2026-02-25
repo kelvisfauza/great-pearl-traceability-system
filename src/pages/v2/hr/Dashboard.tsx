@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
 import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift } from "lucide-react";
+import AllocateBonusDialog from "@/components/v2/hr/AllocateBonusDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -132,6 +133,22 @@ const HRDashboard = () => {
               </CardHeader>
               <CardContent>
                 <ProcessPayrollDialog />
+              </CardContent>
+            </Card>
+
+            {/* Bonus Allocation */}
+            <Card className="border-2 border-purple-200 bg-purple-50/50 dark:bg-purple-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
+                  <Gift className="h-5 w-5" />
+                  Employee Bonuses
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Allocate bonuses to employees. They'll see a popup on login to claim it instantly.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <AllocateBonusDialog />
               </CardContent>
             </Card>
 
