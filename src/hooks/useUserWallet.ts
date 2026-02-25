@@ -191,8 +191,9 @@ export const useUserWallet = () => {
         duration: 8000,
       });
 
-      // Refresh wallet data
-      fetchWalletData();
+      // Refresh wallet data after a short delay to let DB settle
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await fetchWalletData();
     } catch (error: any) {
       console.error('Error creating withdrawal request:', error);
       toast({
