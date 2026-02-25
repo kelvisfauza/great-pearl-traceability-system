@@ -59,7 +59,7 @@ serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${GOSENTEPAY_API_KEY}`,
+        "Authorization": GOSENTEPAY_API_KEY,
       },
       body: JSON.stringify({
         secret_key: GOSENTEPAY_SECRET_KEY,
