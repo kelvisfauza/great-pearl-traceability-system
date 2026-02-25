@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Gift, PartyPopper, Printer } from "lucide-react";
+import { Gift, PartyPopper, Printer, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useWithdrawalControl } from "@/hooks/useWithdrawalControl";
 
 const generateBonusRef = () => {
   const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
@@ -91,6 +92,8 @@ const BonusClaimPopup = () => {
   const { user, employee } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isWithdrawalDisabled } = useWithdrawalControl();
+  const withdrawalStatus = isWithdrawalDisabled();
 
   useEffect(() => {
     if (!user?.email) return;
@@ -263,9 +266,22 @@ const BonusClaimPopup = () => {
                 </p>
               </div>
 
+              {withdrawalStatus.disabled && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <div className="flex items-center gap-2 font-semibold mb-1">
+                    <AlertTriangle className="h-4 w-4" />
+                    Bonus claiming is temporarily disabled
+                  </div>
+                  {withdrawalStatus.reason && <p>{withdrawalStatus.reason}</p>}
+                  {withdrawalStatus.until && (
+                    <p className="text-xs mt-1">Available after: {new Date(withdrawalStatus.until).toLocaleString()}</p>
+                  )}
+                </div>
+              )}
+
               <Button
                 onClick={claimBonus}
-                disabled={claiming}
+                disabled={claiming || withdrawalStatus.disabled}
                 className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-semibold text-lg h-12"
               >
                 {claiming ? "Claiming..." : "🎉 Claim Bonus"}
