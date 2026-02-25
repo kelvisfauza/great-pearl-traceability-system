@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
-import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift } from "lucide-react";
+import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift, Ban } from "lucide-react";
 import AllocateBonusDialog from "@/components/v2/hr/AllocateBonusDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,9 +11,28 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import SalaryAnnouncementDialog from "@/components/v2/hr/SalaryAnnouncementDialog";
 import ProcessPayrollDialog from "@/components/v2/hr/ProcessPayrollDialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useWithdrawalControl } from "@/hooks/useWithdrawalControl";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const HRDashboard = () => {
   const { employee } = useAuth();
+  const { toast } = useToast();
+  const { control, loading: controlLoading, updateControl } = useWithdrawalControl();
+  const [withdrawDisabled, setWithdrawDisabled] = useState(false);
+  const [withdrawUntil, setWithdrawUntil] = useState("");
+  const [withdrawReason, setWithdrawReason] = useState("");
+
+  useEffect(() => {
+    if (control) {
+      setWithdrawDisabled(control.disabled);
+      setWithdrawUntil(control.disabled_until || "");
+      setWithdrawReason(control.disabled_reason || "");
+    }
+  }, [control]);
 
   const { data: stats } = useQuery({
     queryKey: ["hr-v2-stats"],
@@ -165,6 +184,79 @@ const HRDashboard = () => {
               </CardHeader>
               <CardContent>
                 <SalaryAnnouncementDialog />
+              </CardContent>
+            </Card>
+
+            {/* Withdrawal Control */}
+            <Card className="border-2 border-red-200 bg-red-50/50 dark:bg-red-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                  <Ban className="h-5 w-5" />
+                  Withdrawal Control
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Enable or disable employee withdrawal requests. You can set a specific date/time when withdrawals will be re-enabled.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="withdraw-toggle" className="font-medium">
+                    Disable Withdrawals
+                  </Label>
+                  <Switch
+                    id="withdraw-toggle"
+                    checked={withdrawDisabled}
+                    onCheckedChange={setWithdrawDisabled}
+                  />
+                </div>
+
+                {withdrawDisabled && (
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="withdraw-until">Re-enable withdrawals at (optional)</Label>
+                      <Input
+                        id="withdraw-until"
+                        type="datetime-local"
+                        value={withdrawUntil}
+                        onChange={(e) => setWithdrawUntil(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="withdraw-reason">Reason (shown to employees)</Label>
+                      <Input
+                        id="withdraw-reason"
+                        value={withdrawReason}
+                        onChange={(e) => setWithdrawReason(e.target.value)}
+                        placeholder="e.g. Month-end processing in progress"
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => {
+                    updateControl.mutate({
+                      disabled: withdrawDisabled,
+                      disabled_until: withdrawUntil || null,
+                      disabled_reason: withdrawReason,
+                    }, {
+                      onSuccess: () => {
+                        toast({
+                          title: withdrawDisabled ? "Withdrawals Disabled" : "Withdrawals Enabled",
+                          description: withdrawDisabled
+                            ? `Withdrawals are now disabled${withdrawUntil ? ` until ${new Date(withdrawUntil).toLocaleString()}` : ''}.`
+                            : "Employees can now make withdrawal requests.",
+                        });
+                      },
+                    });
+                  }}
+                  disabled={updateControl.isPending}
+                  variant={withdrawDisabled ? "destructive" : "default"}
+                >
+                  {updateControl.isPending ? "Saving..." : "Save Settings"}
+                </Button>
               </CardContent>
             </Card>
 

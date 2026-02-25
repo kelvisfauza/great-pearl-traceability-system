@@ -65,7 +65,11 @@ const AllocateBonusDialog = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "Bonus Allocated!", description: `UGX ${parseInt(amount).toLocaleString()} bonus allocated successfully.` });
+      toast({ 
+        title: "Bonus Allocated!", 
+        description: `UGX ${parseInt(amount).toLocaleString()} bonus allocated successfully. The employee will see a bonus notification when they refresh their browser.`,
+        duration: 8000,
+      });
       setOpen(false);
       setSelectedEmployee("");
       setAmount("");

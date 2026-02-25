@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { useUserAccount } from '@/hooks/useUserAccount';
 import { useLoyaltyStats } from '@/hooks/useLoyaltyStats';
 import { useBonusBalance } from '@/hooks/useBonusBalance';
+import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
 import { MoneyRequestModal } from './MoneyRequestModal';
 import { WithdrawalModal } from './WithdrawalModal';
 import { format } from 'date-fns';
@@ -31,8 +32,11 @@ export const AccountButton = () => {
   const { account, moneyRequests, withdrawalRequests, loading } = useUserAccount();
   const { stats, loading: statsLoading } = useLoyaltyStats();
   const { bonusData } = useBonusBalance();
+  const { isWithdrawalDisabled } = useWithdrawalControl();
   const [showMoneyRequest, setShowMoneyRequest] = useState(false);
   const [showWithdrawal, setShowWithdrawal] = useState(false);
+
+  const withdrawalStatus = isWithdrawalDisabled();
 
   const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
 
@@ -214,12 +218,22 @@ export const AccountButton = () => {
                 variant="outline"
                 onClick={() => setShowWithdrawal(true)}
                 className="flex items-center gap-2"
-                disabled={availableLoyalty <= 0}
+                disabled={availableLoyalty <= 0 || withdrawalStatus.disabled}
               >
                 <Smartphone className="h-4 w-4" />
                 Withdraw
               </Button>
             </div>
+
+            {withdrawalStatus.disabled && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                <p className="font-medium">Withdrawals are currently disabled</p>
+                {withdrawalStatus.reason && <p className="text-xs mt-1">{withdrawalStatus.reason}</p>}
+                {withdrawalStatus.until && (
+                  <p className="text-xs mt-1">Available after: {new Date(withdrawalStatus.until).toLocaleString()}</p>
+                )}
+              </div>
+            )}
 
             <Separator />
 
