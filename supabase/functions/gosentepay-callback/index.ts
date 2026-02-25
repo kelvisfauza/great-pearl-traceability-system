@@ -30,25 +30,65 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Log the callback to a table for tracking
-    const { error: logError } = await supabaseClient
+    // Get the transaction to find the user
+    const { data: transaction, error: fetchError } = await supabaseClient
+      .from("mobile_money_transactions")
+      .select("*")
+      .eq("transaction_ref", ref)
+      .single();
+
+    if (fetchError || !transaction) {
+      console.error("Transaction not found for ref:", ref, fetchError);
+      return new Response(
+        JSON.stringify({ error: "Transaction not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const isSuccess = status === "successful";
+
+    // Update the transaction record
+    const { error: updateError } = await supabaseClient
       .from("mobile_money_transactions")
       .update({
-        status: status === "successful" ? "completed" : "failed",
+        status: isSuccess ? "completed" : "failed",
         provider_response: body,
         deposit_rate: deposit_rate ? Number(deposit_rate) : null,
         completed_at: new Date().toISOString(),
       })
       .eq("transaction_ref", ref);
 
-    if (logError) {
-      console.error("Error updating transaction:", logError);
+    if (updateError) {
+      console.error("Error updating transaction:", updateError);
     }
 
-    if (status === "successful") {
-      console.log(`Deposit successful: ${amount_deposited} ${currency} from ${phone}, ref: ${ref}`);
+    // If successful, credit the user's balance via ledger entry
+    if (isSuccess) {
+      const depositAmount = Number(amount_deposited) || transaction.amount;
+
+      const { error: ledgerError } = await supabaseClient
+        .from("ledger_entries")
+        .insert({
+          user_id: transaction.user_id,
+          entry_type: "DEPOSIT",
+          amount: depositAmount,
+          reference: `DEPOSIT-${ref}`,
+          metadata: JSON.stringify({
+            transaction_ref: ref,
+            phone: phone,
+            currency: currency,
+            deposit_rate: deposit_rate,
+            provider: "gosentepay",
+          }),
+        });
+
+      if (ledgerError) {
+        console.error("Error creating ledger entry:", ledgerError);
+      } else {
+        console.log(`Successfully credited UGX ${depositAmount} to user ${transaction.user_id}`);
+      }
     } else {
-      console.log(`Deposit failed: ${amount_deposited} ${currency} from ${phone}, ref: ${ref}`);
+      console.log(`Deposit failed for ref ${ref}, phone ${phone}`);
     }
 
     return new Response(

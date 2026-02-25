@@ -19,6 +19,7 @@ import { useBonusBalance } from '@/hooks/useBonusBalance';
 import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
 import { MoneyRequestModal } from './MoneyRequestModal';
 import { WithdrawalModal } from './WithdrawalModal';
+import { DepositModal } from './DepositModal';
 import { format } from 'date-fns';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -38,24 +39,38 @@ export const AccountButton = () => {
   const { user } = useAuth();
   const [showMoneyRequest, setShowMoneyRequest] = useState(false);
   const [showWithdrawal, setShowWithdrawal] = useState(false);
+  const [showDeposit, setShowDeposit] = useState(false);
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
+  const [totalDeposited, setTotalDeposited] = useState(0);
 
   const withdrawalStatus = isWithdrawalDisabled();
 
-  // Fetch total withdrawals from ledger to properly calculate available balance
+  // Fetch total withdrawals and deposits from ledger
   useEffect(() => {
-    const fetchWithdrawals = async () => {
+    const fetchLedgerTotals = async () => {
       if (!user?.id) return;
-      const { data } = await supabase
+      
+      // Fetch withdrawals
+      const { data: withdrawals } = await supabase
         .from('ledger_entries')
         .select('amount')
         .eq('user_id', user.id)
         .eq('entry_type', 'WITHDRAWAL');
       
-      const total = (data || []).reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0);
-      setTotalWithdrawn(total);
+      const totalW = (withdrawals || []).reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0);
+      setTotalWithdrawn(totalW);
+
+      // Fetch deposits
+      const { data: deposits } = await supabase
+        .from('ledger_entries')
+        .select('amount')
+        .eq('user_id', user.id)
+        .eq('entry_type', 'DEPOSIT');
+      
+      const totalD = (deposits || []).reduce((sum, e) => sum + Number(e.amount), 0);
+      setTotalDeposited(totalD);
     };
-    fetchWithdrawals();
+    fetchLedgerTotals();
   }, [user, withdrawalRequests]);
 
   const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
@@ -103,8 +118,8 @@ export const AccountButton = () => {
   const loyaltyBalance = stats?.monthlyEarnings || 0;
   const pendingAmount = account?.pending_withdrawals || 0;
   const bonusBalance = bonusData?.totalClaimed || 0;
-  // Available = loyalty + bonus - withdrawals - pending
-  const availableLoyalty = Math.max(0, loyaltyBalance + bonusBalance - totalWithdrawn - pendingAmount);
+  // Available = loyalty + bonus + deposits - withdrawals - pending
+  const availableLoyalty = Math.max(0, loyaltyBalance + bonusBalance + totalDeposited - totalWithdrawn - pendingAmount);
 
   return (
     <>
@@ -230,10 +245,14 @@ export const AccountButton = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
+              <Button onClick={() => setShowDeposit(true)} variant="outline" className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4" />
+                Deposit
+              </Button>
               <Button onClick={() => setShowMoneyRequest(true)} className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
-                Request Money
+                Request
               </Button>
               <Button 
                 variant="outline"
@@ -241,7 +260,7 @@ export const AccountButton = () => {
                 className="flex items-center gap-2"
                 disabled={availableLoyalty <= 0 || withdrawalStatus.disabled}
               >
-                <Smartphone className="h-4 w-4" />
+                <DollarSign className="h-4 w-4" />
                 Withdraw
               </Button>
             </div>
@@ -336,6 +355,7 @@ export const AccountButton = () => {
         onOpenChange={setShowWithdrawal}
         availableAmount={availableLoyalty}
       />
+      <DepositModal open={showDeposit} onOpenChange={setShowDeposit} />
     </>
   );
 };
