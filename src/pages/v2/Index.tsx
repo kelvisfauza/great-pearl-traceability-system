@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import V2Agreement from "@/components/v2/V2Agreement";
 import PriceTicker from "@/components/PriceTicker";
+import BonusClaimPopup from "@/components/BonusClaimPopup";
 import { Package, FlaskConical, Wallet, Warehouse, ShoppingCart, TrendingUp, Clock, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -227,6 +228,7 @@ const V2Index = () => {
           </div>
         </div>
       </div>
+      <BonusClaimPopup />
     </div>
   );
 };

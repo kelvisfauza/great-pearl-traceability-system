@@ -5,7 +5,7 @@ import {
 } from '@/components/ui/sheet';
 import { 
   Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer,
-  Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award
+  Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useUserAccount } from '@/hooks/useUserAccount';
 import { useLoyaltyStats } from '@/hooks/useLoyaltyStats';
+import { useBonusBalance } from '@/hooks/useBonusBalance';
 import { MoneyRequestModal } from './MoneyRequestModal';
 import { WithdrawalModal } from './WithdrawalModal';
 import { format } from 'date-fns';
@@ -29,6 +30,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
 export const AccountButton = () => {
   const { account, moneyRequests, withdrawalRequests, loading } = useUserAccount();
   const { stats, loading: statsLoading } = useLoyaltyStats();
+  const { bonusData } = useBonusBalance();
   const [showMoneyRequest, setShowMoneyRequest] = useState(false);
   const [showWithdrawal, setShowWithdrawal] = useState(false);
 
@@ -76,7 +78,8 @@ export const AccountButton = () => {
   const monthlyProgress = stats ? (stats.monthlyEarnings / stats.monthlyCap) * 100 : 0;
   const loyaltyBalance = stats?.monthlyEarnings || 0;
   const pendingAmount = account?.pending_withdrawals || 0;
-  const availableLoyalty = Math.max(0, loyaltyBalance - pendingAmount);
+  const bonusBalance = bonusData?.totalClaimed || 0;
+  const availableLoyalty = Math.max(0, loyaltyBalance - pendingAmount) + bonusBalance;
 
   return (
     <>
@@ -114,6 +117,24 @@ export const AccountButton = () => {
                   {formatCurrency(availableLoyalty)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Available from Loyalty Rewards</p>
+              </CardContent>
+            </Card>
+
+            {/* Bonus Balance Card */}
+            <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-purple-600" />
+                  Bonus Balance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-purple-700">
+                  {formatCurrency(bonusBalance)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {bonusData?.totalPending ? `${formatCurrency(bonusData.totalPending)} pending claim` : 'From allocated bonuses'}
+                </p>
               </CardContent>
             </Card>
 
