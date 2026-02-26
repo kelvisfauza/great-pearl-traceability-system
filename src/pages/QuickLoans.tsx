@@ -11,8 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
+import { Textarea } from '@/components/ui/textarea';
 
 const INTEREST_RATES: Record<number, number> = {
   1: 5,
@@ -31,6 +32,11 @@ const QuickLoans = () => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [showEarlyPayDialog, setShowEarlyPayDialog] = useState(false);
+  const [selectedLoanForPayment, setSelectedLoanForPayment] = useState<any>(null);
+  const [earlyPayAmount, setEarlyPayAmount] = useState('');
+  const [earlyPayMethod, setEarlyPayMethod] = useState('');
+  const [earlyPayNotes, setEarlyPayNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [guarantorCode, setGuarantorCode] = useState('');
   const [pendingGuarantorLoan, setPendingGuarantorLoan] = useState<any>(null);
@@ -299,6 +305,87 @@ const QuickLoans = () => {
     }
   };
 
+  const handleEarlyRepayment = async () => {
+    if (!selectedLoanForPayment || !employee) return;
+    const amount = parseFloat(earlyPayAmount) || 0;
+    if (amount <= 0) {
+      toast({ title: "Error", description: "Enter a valid amount", variant: "destructive" });
+      return;
+    }
+    if (amount > (selectedLoanForPayment.remaining_balance || 0)) {
+      toast({ title: "Error", description: `Amount exceeds remaining balance of UGX ${selectedLoanForPayment.remaining_balance?.toLocaleString()}`, variant: "destructive" });
+      return;
+    }
+    if (!earlyPayMethod) {
+      toast({ title: "Error", description: "Select a payment method", variant: "destructive" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const newBalance = (selectedLoanForPayment.remaining_balance || 0) - amount;
+
+      // Update loan remaining balance
+      const { error } = await supabase.from('loans').update({
+        remaining_balance: newBalance,
+        status: newBalance <= 0 ? 'completed' : 'active',
+      }).eq('id', selectedLoanForPayment.id);
+      if (error) throw error;
+
+      // Mark unpaid installments as paid (earliest first) until amount is consumed
+      const { data: unpaidInstallments } = await supabase.from('loan_repayments')
+        .select('*')
+        .eq('loan_id', selectedLoanForPayment.id)
+        .eq('status', 'pending')
+        .order('due_date', { ascending: true });
+
+      let remaining = amount;
+      for (const inst of (unpaidInstallments || [])) {
+        if (remaining <= 0) break;
+        const payable = Math.min(remaining, inst.amount_due - (inst.amount_paid || 0));
+        const newPaid = (inst.amount_paid || 0) + payable;
+        const isPaid = newPaid >= inst.amount_due;
+        await supabase.from('loan_repayments').update({
+          amount_paid: newPaid,
+          status: isPaid ? 'paid' : 'pending',
+          paid_at: isPaid ? new Date().toISOString() : null,
+        }).eq('id', inst.id);
+        remaining -= payable;
+      }
+
+      // Create a ledger entry for the early payment (deduct from wallet if deposit)
+      if (earlyPayMethod === 'wallet') {
+        const borrowerEmployee = await supabase.from('employees').select('auth_user_id').eq('email', selectedLoanForPayment.employee_email).single();
+        if (borrowerEmployee.data?.auth_user_id) {
+          await supabase.from('ledger_entries').insert({
+            user_id: borrowerEmployee.data.auth_user_id,
+            entry_type: 'LOAN_REPAYMENT',
+            amount: -amount,
+            reference: 'LOAN-REPAY-' + selectedLoanForPayment.id + '-' + Date.now(),
+            metadata: { loan_id: selectedLoanForPayment.id, method: earlyPayMethod, notes: earlyPayNotes },
+          });
+        }
+      }
+
+      toast({ 
+        title: "Payment Recorded", 
+        description: `UGX ${amount.toLocaleString()} paid via ${earlyPayMethod}. ${newBalance <= 0 ? 'Loan fully paid off!' : `Remaining: UGX ${newBalance.toLocaleString()}`}`,
+        duration: 6000,
+      });
+
+      setShowEarlyPayDialog(false);
+      setEarlyPayAmount('');
+      setEarlyPayMethod('');
+      setEarlyPayNotes('');
+      setSelectedLoanForPayment(null);
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
       pending_guarantor: { variant: 'outline', label: 'Awaiting Guarantor' },
@@ -375,6 +462,50 @@ const QuickLoans = () => {
                     {submitting ? 'Submitting...' : 'Submit Loan Request'}
                   </Button>
                 </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Early Repayment Dialog */}
+            <Dialog open={showEarlyPayDialog} onOpenChange={(open) => { setShowEarlyPayDialog(open); if (!open) setSelectedLoanForPayment(null); }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Early Loan Repayment</DialogTitle>
+                </DialogHeader>
+                {selectedLoanForPayment && (
+                  <div className="space-y-4">
+                    <Card className="bg-muted/50">
+                      <CardContent className="p-4 space-y-1 text-sm">
+                        <div className="flex justify-between"><span>Loan Amount:</span><span>UGX {selectedLoanForPayment.loan_amount?.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Total Repayable:</span><span>UGX {selectedLoanForPayment.total_repayable?.toLocaleString()}</span></div>
+                        <div className="flex justify-between font-semibold text-primary"><span>Remaining Balance:</span><span>UGX {selectedLoanForPayment.remaining_balance?.toLocaleString()}</span></div>
+                      </CardContent>
+                    </Card>
+                    <div>
+                      <Label>Payment Amount (UGX)</Label>
+                      <Input type="number" value={earlyPayAmount} onChange={e => setEarlyPayAmount(e.target.value)} placeholder="Enter amount to pay" />
+                      <p className="text-xs text-muted-foreground mt-1">Max: UGX {selectedLoanForPayment.remaining_balance?.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <Label>Payment Method</Label>
+                      <Select value={earlyPayMethod} onValueChange={setEarlyPayMethod}>
+                        <SelectTrigger><SelectValue placeholder="How are you paying?" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">Cash (handed to finance)</SelectItem>
+                          <SelectItem value="bank_deposit">Bank Deposit</SelectItem>
+                          <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                          <SelectItem value="wallet">Deduct from Wallet Balance</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Notes / Reference (optional)</Label>
+                      <Textarea value={earlyPayNotes} onChange={e => setEarlyPayNotes(e.target.value)} placeholder="e.g. Bank deposit ref, receipt number..." rows={2} />
+                    </div>
+                    <Button onClick={handleEarlyRepayment} disabled={submitting} className="w-full">
+                      {submitting ? 'Processing...' : `Pay UGX ${(parseFloat(earlyPayAmount) || 0).toLocaleString()}`}
+                    </Button>
+                  </div>
+                )}
               </DialogContent>
             </Dialog>
           </div>
@@ -474,6 +605,7 @@ const QuickLoans = () => {
                         <TableHead>Guarantor</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Remaining</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -487,10 +619,20 @@ const QuickLoans = () => {
                           <TableCell className="text-sm">{loan.guarantor_name}</TableCell>
                           <TableCell>{getStatusBadge(loan.status)}</TableCell>
                           <TableCell>UGX {loan.remaining_balance?.toLocaleString()}</TableCell>
+                          <TableCell>
+                            {loan.status === 'active' && (loan.remaining_balance || 0) > 0 && (
+                              <Button size="sm" variant="outline" onClick={() => {
+                                setSelectedLoanForPayment(loan);
+                                setShowEarlyPayDialog(true);
+                              }}>
+                                <CreditCard className="mr-1 h-3 w-3" /> Pay Early
+                              </Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))}
                       {myLoans.length === 0 && (
-                        <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No loans yet</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">No loans yet</TableCell></TableRow>
                       )}
                     </TableBody>
                   </Table>
