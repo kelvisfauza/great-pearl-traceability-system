@@ -80,6 +80,7 @@ import { OvertimeNotification } from "./components/OvertimeNotification";
 import RoleNotificationHandler from "./components/RoleNotificationHandler";
 import MaintenanceGuard from "./components/MaintenanceGuard";
 import MaintenanceRecovery from "./pages/MaintenanceRecovery";
+import QuickLoans from "./pages/QuickLoans";
 
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -276,6 +277,11 @@ const App: React.ComponentType = () => {
                 <Route path="/suppliers" element={
                   <ProtectedRoute>
                     <Suppliers />
+                  </ProtectedRoute>
+                } />
+                <Route path="/quick-loans" element={
+                  <ProtectedRoute>
+                    <QuickLoans />
                   </ProtectedRoute>
                 } />
                 <Route path="/user-daily-reports" element={

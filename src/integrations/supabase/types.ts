@@ -3510,6 +3510,161 @@ export type Database = {
         }
         Relationships: []
       }
+      loan_repayments: {
+        Row: {
+          amount_due: number
+          amount_paid: number | null
+          created_at: string
+          deducted_from: string | null
+          due_date: string
+          id: string
+          installment_number: number
+          loan_id: string
+          paid_date: string | null
+          payment_reference: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_due: number
+          amount_paid?: number | null
+          created_at?: string
+          deducted_from?: string | null
+          due_date: string
+          id?: string
+          installment_number: number
+          loan_id: string
+          paid_date?: string | null
+          payment_reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_due?: number
+          amount_paid?: number | null
+          created_at?: string
+          deducted_from?: string | null
+          due_date?: string
+          id?: string
+          installment_number?: number
+          loan_id?: string
+          paid_date?: string | null
+          payment_reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_repayments_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loans: {
+        Row: {
+          admin_approved: boolean | null
+          admin_approved_at: string | null
+          admin_approved_by: string | null
+          admin_rejection_reason: string | null
+          created_at: string
+          disbursed_amount: number | null
+          duration_months: number
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          employee_phone: string | null
+          end_date: string | null
+          guarantor_approval_code: string | null
+          guarantor_approved: boolean | null
+          guarantor_approved_at: string | null
+          guarantor_declined: boolean | null
+          guarantor_email: string | null
+          guarantor_id: string | null
+          guarantor_name: string | null
+          guarantor_phone: string | null
+          id: string
+          interest_rate: number
+          loan_amount: number
+          monthly_installment: number
+          next_deduction_date: string | null
+          paid_amount: number | null
+          remaining_balance: number
+          start_date: string | null
+          status: string
+          total_repayable: number
+          updated_at: string
+        }
+        Insert: {
+          admin_approved?: boolean | null
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
+          admin_rejection_reason?: string | null
+          created_at?: string
+          disbursed_amount?: number | null
+          duration_months: number
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          employee_phone?: string | null
+          end_date?: string | null
+          guarantor_approval_code?: string | null
+          guarantor_approved?: boolean | null
+          guarantor_approved_at?: string | null
+          guarantor_declined?: boolean | null
+          guarantor_email?: string | null
+          guarantor_id?: string | null
+          guarantor_name?: string | null
+          guarantor_phone?: string | null
+          id?: string
+          interest_rate: number
+          loan_amount: number
+          monthly_installment: number
+          next_deduction_date?: string | null
+          paid_amount?: number | null
+          remaining_balance: number
+          start_date?: string | null
+          status?: string
+          total_repayable: number
+          updated_at?: string
+        }
+        Update: {
+          admin_approved?: boolean | null
+          admin_approved_at?: string | null
+          admin_approved_by?: string | null
+          admin_rejection_reason?: string | null
+          created_at?: string
+          disbursed_amount?: number | null
+          duration_months?: number
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          employee_phone?: string | null
+          end_date?: string | null
+          guarantor_approval_code?: string | null
+          guarantor_approved?: boolean | null
+          guarantor_approved_at?: string | null
+          guarantor_declined?: boolean | null
+          guarantor_email?: string | null
+          guarantor_id?: string | null
+          guarantor_name?: string | null
+          guarantor_phone?: string | null
+          id?: string
+          interest_rate?: number
+          loan_amount?: number
+          monthly_installment?: number
+          next_deduction_date?: string | null
+          paid_amount?: number | null
+          remaining_balance?: number
+          start_date?: string | null
+          status?: string
+          total_repayable?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       login_tokens: {
         Row: {
           auth_user_id: string | null
