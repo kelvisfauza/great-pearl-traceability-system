@@ -13,18 +13,17 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log("Ssentezo callback received:", JSON.stringify(body));
+    console.log("GosentePay callback received:", JSON.stringify(body));
 
-    // Ssentezo callback format:
-    // { externalReference, transactionStatus (SUCCEEDED/FAILED), amount, currency, msisdn, financialTransactionId, ... }
-    const externalReference = body.externalReference || body.ref;
-    const transactionStatus = body.transactionStatus || body.status;
-    const amount = body.amount || body.amount_deposited;
-    const phone = body.msisdn || body.phone;
-    const financialTransactionId = body.financialTransactionId;
+    // GosentePay callback format:
+    // { status: "successful"/"failed", currency, amount_deposited, deposit_rate, phone, ref }
+    const ref = body.ref;
+    const status = body.status;
+    const amount = body.amount_deposited;
+    const phone = body.phone;
 
-    if (!externalReference) {
-      console.error("Callback missing externalReference");
+    if (!ref) {
+      console.error("Callback missing ref");
       return new Response(
         JSON.stringify({ error: "Missing transaction reference" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -40,21 +39,19 @@ serve(async (req) => {
     const { data: transaction, error: fetchError } = await supabaseClient
       .from("mobile_money_transactions")
       .select("*")
-      .eq("transaction_ref", externalReference)
+      .eq("transaction_ref", ref)
       .single();
 
     if (fetchError || !transaction) {
-      console.error("Transaction not found for ref:", externalReference, fetchError);
+      console.error("Transaction not found for ref:", ref, fetchError);
       return new Response(
         JSON.stringify({ error: "Transaction not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Ssentezo uses "SUCCEEDED" for success, "FAILED" for failure
-    const isSuccess = transactionStatus === "SUCCEEDED" || transactionStatus === "successful";
-
-    console.log(`Transaction ${externalReference}: status=${transactionStatus}, isSuccess=${isSuccess}`);
+    const isSuccess = status === "successful";
+    console.log(`Transaction ${ref}: status=${status}, isSuccess=${isSuccess}`);
 
     // Update the transaction record
     const { error: updateError } = await supabaseClient
@@ -64,7 +61,7 @@ serve(async (req) => {
         provider_response: body,
         completed_at: new Date().toISOString(),
       })
-      .eq("transaction_ref", externalReference);
+      .eq("transaction_ref", ref);
 
     if (updateError) {
       console.error("Error updating transaction:", updateError);
@@ -80,13 +77,13 @@ serve(async (req) => {
           user_id: transaction.user_id,
           entry_type: "DEPOSIT",
           amount: depositAmount,
-          reference: `DEPOSIT-${externalReference}`,
+          reference: `DEPOSIT-${ref}`,
           metadata: JSON.stringify({
-            transaction_ref: externalReference,
+            transaction_ref: ref,
             phone: phone,
             currency: body.currency || "UGX",
-            financialTransactionId: financialTransactionId,
-            provider: "ssentezo",
+            deposit_rate: body.deposit_rate,
+            provider: "gosentepay",
           }),
         });
 
@@ -96,7 +93,7 @@ serve(async (req) => {
         console.log(`Successfully credited UGX ${depositAmount} to user ${transaction.user_id}`);
       }
     } else {
-      console.log(`Deposit failed for ref ${externalReference}, phone ${phone}, status: ${transactionStatus}`);
+      console.log(`Deposit failed for ref ${ref}, phone ${phone}, status: ${status}`);
     }
 
     return new Response(
@@ -104,7 +101,7 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Ssentezo callback error:", error);
+    console.error("GosentePay callback error:", error);
     return new Response(
       JSON.stringify({ error: "Callback processing failed" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
