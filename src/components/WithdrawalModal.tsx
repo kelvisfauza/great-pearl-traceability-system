@@ -35,7 +35,11 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   availableAmount,
 }) => {
   const [amount, setAmount] = useState('');
-  const [channel] = useState('CASH');
+  const [channel, setChannel] = useState<'CASH' | 'MOBILE_MONEY' | 'BANK'>('CASH');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<Step>('amount');
   const [verificationCode, setVerificationCode] = useState('');
@@ -209,13 +213,18 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
         .insert({
           user_id: user?.id || '',
           amount: withdrawalAmount,
-          phone_number: employee?.phone || '',
+          phone_number: channel === 'MOBILE_MONEY' ? mobileNumber : (employee?.phone || ''),
           channel: channel,
           status: 'pending_approval',
           request_ref: ref,
           requester_name: employee?.name || user?.email || '',
           requester_email: user?.email || employee?.email || '',
           requires_three_approvals: withdrawalAmount > 100000,
+          disbursement_method: channel,
+          disbursement_phone: channel === 'MOBILE_MONEY' ? mobileNumber : null,
+          disbursement_bank_name: channel === 'BANK' ? bankName : null,
+          disbursement_account_number: channel === 'BANK' ? accountNumber : null,
+          disbursement_account_name: channel === 'BANK' ? accountName : null,
         });
 
       if (insertError) throw insertError;
@@ -244,6 +253,11 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const handleClose = () => {
     setStep('amount');
     setAmount('');
+    setChannel('CASH');
+    setMobileNumber('');
+    setBankName('');
+    setAccountNumber('');
+    setAccountName('');
     setVerificationCode('');
     setSentCode('');
     setCompletedRef('');
@@ -252,7 +266,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     refreshAccount();
   };
 
-  const isAmountValid = amount && parseFloat(amount) <= availableAmount && parseFloat(amount) >= 100 && !withdrawalStatus.disabled;
+  const isDisbursementValid = channel === 'CASH' || (channel === 'MOBILE_MONEY' && mobileNumber.length >= 10) || (channel === 'BANK' && bankName && accountNumber && accountName);
+  const isAmountValid = amount && parseFloat(amount) <= availableAmount && parseFloat(amount) >= 100 && !withdrawalStatus.disabled && isDisbursementValid;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -303,11 +318,52 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     </AlertDescription>
                   </Alert>
                 )}
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>Cash Payment:</strong> A verification code will be sent to your phone before submitting.
-                  </p>
+                <div className="space-y-2">
+                  <Label>Disbursement Method</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['CASH', 'MOBILE_MONEY', 'BANK'] as const).map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setChannel(method)}
+                        className={`p-2 text-xs rounded-lg border text-center transition-colors ${
+                          channel === method
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                        }`}
+                      >
+                        {method === 'CASH' ? '💵 Cash' : method === 'MOBILE_MONEY' ? '📱 Mobile Money' : '🏦 Bank'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                {channel === 'MOBILE_MONEY' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="mobileNumber">Mobile Money Number</Label>
+                    <Input
+                      id="mobileNumber"
+                      type="tel"
+                      placeholder="e.g. 0771234567"
+                      value={mobileNumber}
+                      onChange={(e) => setMobileNumber(e.target.value)}
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">Money will be sent to this number after approval.</p>
+                  </div>
+                )}
+
+                {channel === 'BANK' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="bankName">Bank Name</Label>
+                    <Input id="bankName" placeholder="e.g. Stanbic Bank" value={bankName} onChange={(e) => setBankName(e.target.value)} required />
+                    <Label htmlFor="accountName">Account Name</Label>
+                    <Input id="accountName" placeholder="Full name on account" value={accountName} onChange={(e) => setAccountName(e.target.value)} required />
+                    <Label htmlFor="accountNumber">Account Number</Label>
+                    <Input id="accountNumber" placeholder="Account number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} required />
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="amount">Amount (UGX)</Label>
                   <Input

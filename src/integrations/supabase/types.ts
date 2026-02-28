@@ -4449,6 +4449,15 @@ export type Database = {
       money_requests: {
         Row: {
           admin_approved: boolean | null
+          admin_approved_1: boolean | null
+          admin_approved_1_at: string | null
+          admin_approved_1_by: string | null
+          admin_approved_2: boolean | null
+          admin_approved_2_at: string | null
+          admin_approved_2_by: string | null
+          admin_approved_3: boolean | null
+          admin_approved_3_at: string | null
+          admin_approved_3_by: string | null
           admin_approved_at: string | null
           admin_approved_by: string | null
           amount: number
@@ -4456,6 +4465,9 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          disbursement_account_name: string | null
+          disbursement_account_number: string | null
+          disbursement_bank_name: string | null
           finance_approved: boolean | null
           finance_approved_at: string | null
           finance_approved_by: string | null
@@ -4468,12 +4480,24 @@ export type Database = {
           rejection_reason: string | null
           request_type: string
           requested_by: string
+          requires_three_approvals: boolean | null
           status: string
           updated_at: string
           user_id: string
+          wallet_balance_at_approval: number | null
+          wallet_balance_verified: boolean | null
         }
         Insert: {
           admin_approved?: boolean | null
+          admin_approved_1?: boolean | null
+          admin_approved_1_at?: string | null
+          admin_approved_1_by?: string | null
+          admin_approved_2?: boolean | null
+          admin_approved_2_at?: string | null
+          admin_approved_2_by?: string | null
+          admin_approved_3?: boolean | null
+          admin_approved_3_at?: string | null
+          admin_approved_3_by?: string | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           amount: number
@@ -4481,6 +4505,9 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          disbursement_account_name?: string | null
+          disbursement_account_number?: string | null
+          disbursement_bank_name?: string | null
           finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
@@ -4493,12 +4520,24 @@ export type Database = {
           rejection_reason?: string | null
           request_type?: string
           requested_by: string
+          requires_three_approvals?: boolean | null
           status?: string
           updated_at?: string
           user_id: string
+          wallet_balance_at_approval?: number | null
+          wallet_balance_verified?: boolean | null
         }
         Update: {
           admin_approved?: boolean | null
+          admin_approved_1?: boolean | null
+          admin_approved_1_at?: string | null
+          admin_approved_1_by?: string | null
+          admin_approved_2?: boolean | null
+          admin_approved_2_at?: string | null
+          admin_approved_2_by?: string | null
+          admin_approved_3?: boolean | null
+          admin_approved_3_at?: string | null
+          admin_approved_3_by?: string | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           amount?: number
@@ -4506,6 +4545,9 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          disbursement_account_name?: string | null
+          disbursement_account_number?: string | null
+          disbursement_bank_name?: string | null
           finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
@@ -4518,9 +4560,12 @@ export type Database = {
           rejection_reason?: string | null
           request_type?: string
           requested_by?: string
+          requires_three_approvals?: boolean | null
           status?: string
           updated_at?: string
           user_id?: string
+          wallet_balance_at_approval?: number | null
+          wallet_balance_verified?: boolean | null
         }
         Relationships: []
       }
@@ -5990,6 +6035,45 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_notification_queue: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message: string
+          notification_type: string
+          recipient_email: string
+          recipient_phone: string | null
+          reference_id: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message: string
+          notification_type: string
+          recipient_email: string
+          recipient_phone?: string | null
+          reference_id?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message?: string
+          notification_type?: string
+          recipient_email?: string
+          recipient_phone?: string | null
+          reference_id?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       storage_locations: {
         Row: {
           capacity: number
@@ -7212,7 +7296,11 @@ export type Database = {
           approved_by: string | null
           channel: string | null
           created_at: string
+          disbursement_account_name: string | null
+          disbursement_account_number: string | null
+          disbursement_bank_name: string | null
           disbursement_method: string | null
+          disbursement_phone: string | null
           failure_reason: string | null
           finance_approved_at: string | null
           finance_approved_by: string | null
@@ -7248,7 +7336,11 @@ export type Database = {
           approved_by?: string | null
           channel?: string | null
           created_at?: string
+          disbursement_account_name?: string | null
+          disbursement_account_number?: string | null
+          disbursement_bank_name?: string | null
           disbursement_method?: string | null
+          disbursement_phone?: string | null
           failure_reason?: string | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
@@ -7284,7 +7376,11 @@ export type Database = {
           approved_by?: string | null
           channel?: string | null
           created_at?: string
+          disbursement_account_name?: string | null
+          disbursement_account_number?: string | null
+          disbursement_bank_name?: string | null
           disbursement_method?: string | null
+          disbursement_phone?: string | null
           failure_reason?: string | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
