@@ -325,33 +325,117 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
       default:
         return (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
                 <Package className="h-4 w-4" />
-                General Request Details
+                {request.details?.expense_type || request.requestType || 'General Request'} Details
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium">Type</p>
-                    <p className="text-sm text-muted-foreground">{request.requestType}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Department</p>
-                    <p className="text-sm text-muted-foreground">{request.department}</p>
-                  </div>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium">Request Type</p>
+                  <Badge variant="outline">{request.details?.expense_type || request.requestType}</Badge>
                 </div>
-                {request.details && (
+                <div>
+                  <p className="text-sm font-medium">Department</p>
+                  <Badge variant="secondary">{request.department}</Badge>
+                </div>
+                {request.details?.requestedby_name && (
                   <div>
-                    <p className="text-sm font-medium">Additional Details</p>
-                    <pre className="text-xs text-muted-foreground bg-gray-50 p-3 rounded overflow-auto">
-                      {JSON.stringify(request.details, null, 2)}
-                    </pre>
+                    <p className="text-sm font-medium">Requester Name</p>
+                    <p className="text-sm text-muted-foreground">{request.details.requestedby_name}</p>
                   </div>
                 )}
+                {request.details?.requestedby_position && (
+                  <div>
+                    <p className="text-sm font-medium">Position</p>
+                    <p className="text-sm text-muted-foreground">{request.details.requestedby_position}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-medium">Amount</p>
+                  <p className="text-lg font-bold text-green-600">{formatCurrency(request.amount)}</p>
+                </div>
               </div>
+
+              {/* Description / Reason */}
+              {request.description && (
+                <div>
+                  <p className="text-sm font-medium">Description / Reason</p>
+                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded border">
+                    {request.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Disbursement Information */}
+              {(request.details?.disbursement_method || request.details?.payment_method) && (
+                <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                  <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-3 flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Payment / Disbursement Information
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {request.details?.disbursement_method && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-800 dark:text-blue-300">Disbursement Method</p>
+                        <p className="text-sm font-medium capitalize">{request.details.disbursement_method}</p>
+                      </div>
+                    )}
+                    {request.details?.payment_method && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-800 dark:text-blue-300">Payment Method</p>
+                        <p className="text-sm font-medium capitalize">{request.details.payment_method}</p>
+                      </div>
+                    )}
+                    {request.details?.disbursement_phone && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-800 dark:text-blue-300">Phone Number</p>
+                        <p className="text-sm font-mono font-medium">{request.details.disbursement_phone}</p>
+                      </div>
+                    )}
+                    {request.details?.disbursement_bank_name && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-800 dark:text-blue-300">Bank Name</p>
+                        <p className="text-sm font-medium">{request.details.disbursement_bank_name}</p>
+                      </div>
+                    )}
+                    {request.details?.disbursement_account_number && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-800 dark:text-blue-300">Account Number</p>
+                        <p className="text-sm font-mono font-medium">{request.details.disbursement_account_number}</p>
+                      </div>
+                    )}
+                    {request.details?.disbursement_account_name && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-800 dark:text-blue-300">Account Name</p>
+                        <p className="text-sm font-medium">{request.details.disbursement_account_name}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 3-tier approval info */}
+              {request.details?.requires_three_approvals && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    High-value request — requires 2 admin approvals + Finance approval
+                  </p>
+                  {request.details?.admin_approved_1_by && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      ✅ Admin 1 approved by: {request.details.admin_approved_1_by}
+                    </p>
+                  )}
+                  {request.details?.admin_approved_2_by && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      ✅ Admin 2 approved by: {request.details.admin_approved_2_by}
+                    </p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         );
