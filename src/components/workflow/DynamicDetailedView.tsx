@@ -68,7 +68,15 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
 
         const userId = emp.auth_user_id;
 
-        // Fetch ledger entries
+        // Use the same RPC the wallet uses for accurate balance
+        const { data: balanceData } = await supabase
+          .rpc('get_user_balance_safe', { user_email: requesterEmail });
+
+        const walletBalance = balanceData?.[0]?.wallet_balance 
+          ? Number(balanceData[0].wallet_balance) 
+          : 0;
+
+        // Fetch recent ledger entries for earning history display
         const { data: entries } = await supabase
           .from('ledger_entries')
           .select('*')
@@ -76,14 +84,9 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
           .order('created_at', { ascending: false })
           .limit(20);
 
-        const allEntries = entries || [];
-        const balance = allEntries
-          .filter(e => ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'].includes(e.entry_type))
-          .reduce((sum: number, e: any) => sum + Number(e.amount), 0);
-
         setWalletData({
-          balance,
-          recentEntries: allEntries.slice(0, 10),
+          balance: walletBalance,
+          recentEntries: (entries || []).slice(0, 10),
           loading: false,
         });
       } catch (err) {
