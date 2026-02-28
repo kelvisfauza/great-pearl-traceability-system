@@ -178,12 +178,54 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
       if (error) throw error;
 
-      // Send SMS notification
       const phoneToNotify = selectedRequest.employee_phone || selectedRequest.phone_number;
+      const isMobileMoney = selectedRequest.channel !== 'CASH';
+
+      // For Mobile Money: initiate payout via GosentePay
+      let payoutRef = '';
+      let payoutSuccess = false;
+      if (isMobileMoney && phoneToNotify) {
+        try {
+          // Normalize phone for GosentePay (must start with 256)
+          let payoutPhone = phoneToNotify.replace(/\D/g, '');
+          if (payoutPhone.startsWith('0')) payoutPhone = '256' + payoutPhone.slice(1);
+          if (!payoutPhone.startsWith('256')) payoutPhone = '256' + payoutPhone;
+
+          const { data: payoutData, error: payoutError } = await supabase.functions.invoke('gosentepay-payout', {
+            body: {
+              phone: payoutPhone,
+              amount: selectedRequest.amount,
+              ref: selectedRequest.request_ref || `WD-${selectedRequest.id.slice(0, 8)}`
+            }
+          });
+
+          if (payoutError) {
+            console.error('GosentePay payout error:', payoutError);
+          } else if (payoutData?.status === 'success') {
+            payoutSuccess = true;
+            payoutRef = payoutData.ref || selectedRequest.request_ref;
+            console.log('GosentePay payout initiated successfully:', payoutRef);
+          } else {
+            console.error('GosentePay payout failed:', payoutData);
+          }
+        } catch (payoutErr) {
+          console.error('GosentePay payout exception:', payoutErr);
+        }
+      }
+
+      // Send SMS notification
       if (phoneToNotify) {
-        const paymentMethod = selectedRequest.channel === 'CASH' ? 'CASH' : 'Mobile Money';
-        const message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been FULLY APPROVED by Finance. Payment method: ${paymentMethod}. ${selectedRequest.channel === 'CASH' ? 'Please collect your cash from Finance.' : `Funds will be sent to ${selectedRequest.phone_number}.`} Ref: ${selectedRequest.request_ref}`;
-        
+        let message = '';
+        if (isMobileMoney) {
+          if (payoutSuccess) {
+            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${selectedRequest.phone_number}. Ref: ${payoutRef}. Great Pearl Coffee.`;
+          } else {
+            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Mobile Money disbursement is being processed to ${selectedRequest.phone_number}. Ref: ${selectedRequest.request_ref}. Contact Finance if not received. Great Pearl Coffee.`;
+          }
+        } else {
+          message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Please collect your CASH from the Finance office. Ref: ${selectedRequest.request_ref}. Great Pearl Coffee.`;
+        }
+
         try {
           await supabase.functions.invoke('send-sms', {
             body: { phone: phoneToNotify, message }
@@ -195,7 +237,11 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
       toast({
         title: "Withdrawal Approved by Finance",
-        description: `UGX ${selectedRequest.amount.toLocaleString()} approved for ${selectedRequest.employee_name}. Balance has been deducted.`,
+        description: isMobileMoney && payoutSuccess
+          ? `UGX ${selectedRequest.amount.toLocaleString()} sent to ${selectedRequest.phone_number} via Mobile Money.`
+          : isMobileMoney
+          ? `UGX ${selectedRequest.amount.toLocaleString()} approved. Mobile Money payout may need manual follow-up.`
+          : `UGX ${selectedRequest.amount.toLocaleString()} approved for cash collection by ${selectedRequest.employee_name}.`,
       });
 
       setShowApproveDialog(false);
