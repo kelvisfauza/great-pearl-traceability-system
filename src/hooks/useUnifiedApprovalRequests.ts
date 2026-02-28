@@ -361,7 +361,7 @@ export const useUnifiedApprovalRequests = () => {
 
         if (status === 'Approved') {
           if (reqThreeApprovals) {
-            // 3 admin approvals needed
+            // 2 admin approvals needed for high-value withdrawals
             if (!currentWithdrawal.admin_approved_1_at) {
               wUpdateData.admin_approved_1_at = new Date().toISOString();
               wUpdateData.admin_approved_1_by = adminName;
@@ -373,16 +373,8 @@ export const useUnifiedApprovalRequests = () => {
               }
               wUpdateData.admin_approved_2_at = new Date().toISOString();
               wUpdateData.admin_approved_2_by = adminName;
-              wUpdateData.status = 'pending_admin_3';
-              console.log('✅ Withdrawal: Admin 2 approved');
-            } else if (!currentWithdrawal.admin_approved_3_at) {
-              if (currentWithdrawal.admin_approved_1_by === adminName || currentWithdrawal.admin_approved_2_by === adminName) {
-                return { blocked: true, reason: 'You already approved this withdrawal. A different administrator must provide the third approval.' };
-              }
-              wUpdateData.admin_approved_3_at = new Date().toISOString();
-              wUpdateData.admin_approved_3_by = adminName;
               wUpdateData.status = 'pending_finance';
-              console.log('✅ Withdrawal: Admin 3 approved, moving to Finance');
+              console.log('✅ Withdrawal: Admin 2 approved, moving to Finance');
             }
           } else {
             // 1 admin approval needed
