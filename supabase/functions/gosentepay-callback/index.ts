@@ -13,12 +13,18 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log("GosentePay callback received:", JSON.stringify(body));
+    console.log("Ssentezo callback received:", JSON.stringify(body));
 
-    const { status, currency, amount_deposited, deposit_rate, phone, ref } = body;
+    // Ssentezo callback format:
+    // { externalReference, transactionStatus (SUCCEEDED/FAILED), amount, currency, msisdn, financialTransactionId, ... }
+    const externalReference = body.externalReference || body.ref;
+    const transactionStatus = body.transactionStatus || body.status;
+    const amount = body.amount || body.amount_deposited;
+    const phone = body.msisdn || body.phone;
+    const financialTransactionId = body.financialTransactionId;
 
-    if (!ref) {
-      console.error("Callback missing ref");
+    if (!externalReference) {
+      console.error("Callback missing externalReference");
       return new Response(
         JSON.stringify({ error: "Missing transaction reference" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -34,18 +40,21 @@ serve(async (req) => {
     const { data: transaction, error: fetchError } = await supabaseClient
       .from("mobile_money_transactions")
       .select("*")
-      .eq("transaction_ref", ref)
+      .eq("transaction_ref", externalReference)
       .single();
 
     if (fetchError || !transaction) {
-      console.error("Transaction not found for ref:", ref, fetchError);
+      console.error("Transaction not found for ref:", externalReference, fetchError);
       return new Response(
         JSON.stringify({ error: "Transaction not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const isSuccess = status === "successful";
+    // Ssentezo uses "SUCCEEDED" for success, "FAILED" for failure
+    const isSuccess = transactionStatus === "SUCCEEDED" || transactionStatus === "successful";
+
+    console.log(`Transaction ${externalReference}: status=${transactionStatus}, isSuccess=${isSuccess}`);
 
     // Update the transaction record
     const { error: updateError } = await supabaseClient
@@ -53,10 +62,9 @@ serve(async (req) => {
       .update({
         status: isSuccess ? "completed" : "failed",
         provider_response: body,
-        deposit_rate: deposit_rate ? Number(deposit_rate) : null,
         completed_at: new Date().toISOString(),
       })
-      .eq("transaction_ref", ref);
+      .eq("transaction_ref", externalReference);
 
     if (updateError) {
       console.error("Error updating transaction:", updateError);
@@ -64,7 +72,7 @@ serve(async (req) => {
 
     // If successful, credit the user's balance via ledger entry
     if (isSuccess) {
-      const depositAmount = Number(amount_deposited) || transaction.amount;
+      const depositAmount = Number(amount) || transaction.amount;
 
       const { error: ledgerError } = await supabaseClient
         .from("ledger_entries")
@@ -72,13 +80,13 @@ serve(async (req) => {
           user_id: transaction.user_id,
           entry_type: "DEPOSIT",
           amount: depositAmount,
-          reference: `DEPOSIT-${ref}`,
+          reference: `DEPOSIT-${externalReference}`,
           metadata: JSON.stringify({
-            transaction_ref: ref,
+            transaction_ref: externalReference,
             phone: phone,
-            currency: currency,
-            deposit_rate: deposit_rate,
-            provider: "gosentepay",
+            currency: body.currency || "UGX",
+            financialTransactionId: financialTransactionId,
+            provider: "ssentezo",
           }),
         });
 
@@ -88,7 +96,7 @@ serve(async (req) => {
         console.log(`Successfully credited UGX ${depositAmount} to user ${transaction.user_id}`);
       }
     } else {
-      console.log(`Deposit failed for ref ${ref}, phone ${phone}`);
+      console.log(`Deposit failed for ref ${externalReference}, phone ${phone}, status: ${transactionStatus}`);
     }
 
     return new Response(
@@ -96,7 +104,7 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("GosentePay callback error:", error);
+    console.error("Ssentezo callback error:", error);
     return new Response(
       JSON.stringify({ error: "Callback processing failed" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
