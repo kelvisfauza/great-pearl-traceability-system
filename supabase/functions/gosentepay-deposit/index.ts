@@ -96,9 +96,17 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error("GosentePay deposit error:", error);
+    
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    const isConnectionError = errorMsg.includes("Connection refused") || errorMsg.includes("ECONNREFUSED") || errorMsg.includes("tcp connect error");
+    
+    const userMessage = isConnectionError
+      ? "Mobile money service is temporarily unavailable. Please try again later."
+      : errorMsg;
+    
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: userMessage, technical_error: errorMsg }),
+      { status: isConnectionError ? 503 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

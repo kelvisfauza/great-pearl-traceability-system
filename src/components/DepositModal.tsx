@@ -106,9 +106,30 @@ export const DepositModal: React.FC<DepositModalProps> = ({ open, onOpenChange }
       }
     } catch (error: any) {
       console.error('Deposit error:', error);
+      
+      // Parse the error body if it's a FunctionsHttpError
+      let errorMessage = "Could not initiate mobile money deposit. Try again.";
+      try {
+        if (error?.context?.body) {
+          const body = await error.context.json();
+          errorMessage = body?.error || errorMessage;
+        } else if (error?.message) {
+          // Check if the message contains JSON
+          const jsonMatch = error.message.match(/\{.*\}/s);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            errorMessage = parsed?.error || errorMessage;
+          } else {
+            errorMessage = error.message;
+          }
+        }
+      } catch {
+        errorMessage = error?.message || errorMessage;
+      }
+      
       toast({
         title: "Deposit Failed",
-        description: error.message || "Could not initiate mobile money deposit. Try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
