@@ -22,6 +22,13 @@ interface WithdrawalRequest {
   created_at: string;
 }
 
+const PENDING_WITHDRAWAL_STATUSES = [
+  'pending_approval',
+  'pending_admin_2',
+  'pending_admin_3',
+  'pending_finance',
+];
+
 export const useUserWallet = () => {
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
@@ -100,7 +107,22 @@ export const useUserWallet = () => {
         .eq('user_id', unifiedUserId)
         .order('created_at', { ascending: false });
 
-      setWithdrawalRequests(withdrawalRequestsData || []);
+      const allWithdrawals = withdrawalRequestsData || [];
+      setWithdrawalRequests(allWithdrawals);
+
+      const frozenPending = allWithdrawals
+        .filter((withdrawal) => PENDING_WITHDRAWAL_STATUSES.includes((withdrawal.status || '').toLowerCase()))
+        .reduce((sum, withdrawal) => sum + (Number(withdrawal.amount) || 0), 0);
+
+      setWalletData((prev) => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          pendingWithdrawals: frozenPending,
+          availableToRequest: Math.max(0, prev.balance - frozenPending),
+        };
+      });
       
     } catch (error: any) {
       console.error('❌ Error fetching wallet data:', error);
