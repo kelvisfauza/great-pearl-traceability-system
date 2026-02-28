@@ -182,6 +182,12 @@ export const AccountButton = () => {
                   {formatCurrency(availableLoyalty)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Available from Loyalty Rewards</p>
+                {pendingAmount > 0 && (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                    <Clock className="h-3 w-3" />
+                    <span>UGX {pendingAmount.toLocaleString()} frozen (pending approval)</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
