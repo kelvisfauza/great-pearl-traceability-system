@@ -37,18 +37,18 @@ const DEFAULT_CONFIG = { label: 'Transaction', icon: FileText, color: 'text-gray
 interface TransactionStatementProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  currentBalance: number;
 }
 
-export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange }) => {
+export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance }) => {
   const { user } = useAuth();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [limit, setLimit] = useState(30);
   const [hasMore, setHasMore] = useState(true);
-  const [runningBalance, setRunningBalance] = useState<number[]>([]);
 
   const fetchEntries = async (count: number) => {
-    if (!user?.id) return;
+    if (!user?.email) return;
     setLoading(true);
     try {
       // Get unified user ID
@@ -56,11 +56,12 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .rpc('get_unified_user_id', { input_email: user.email });
       const unifiedUserId = userIdData || user.id;
 
-      // Fetch entries
+      // Only show entries that contribute to loyalty wallet balance shown at the top
       const { data, error } = await supabase
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
+        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'])
         .order('created_at', { ascending: false })
         .limit(count);
 
@@ -68,25 +69,6 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const items = (data || []) as LedgerEntry[];
       setEntries(items);
       setHasMore(items.length === count);
-
-      // Get total balance from ALL entries to calculate correct running balances
-      const { data: totalData } = await supabase
-        .rpc('get_user_balance_safe', { user_email: user.email || '' });
-      const totalBalance = Number(totalData?.[0]?.wallet_balance) || 0;
-
-      // Sum of amounts in our current page
-      const pageSum = items.reduce((s, e) => s + e.amount, 0);
-      // Balance BEFORE the oldest entry in our page
-      const balanceBefore = totalBalance - pageSum;
-
-      // Calculate running balance from oldest to newest
-      const sorted = [...items].reverse();
-      let bal = balanceBefore;
-      const balances = sorted.map(e => {
-        bal += e.amount;
-        return bal;
-      });
-      setRunningBalance(balances.reverse());
     } catch (err) {
       console.error('Error fetching ledger:', err);
     } finally {
@@ -130,6 +112,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         </Button>
       </div>
 
+      <div className="text-sm text-muted-foreground">
+        Current balance: <span className="font-semibold text-foreground">UGX {currentBalance.toLocaleString()}</span>
+      </div>
+
       {loading && entries.length === 0 ? (
         <div className="flex justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -140,9 +126,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         </div>
       ) : (
         <div className="space-y-1.5">
-          {entries.map((entry, idx) => {
+          {entries.map((entry) => {
             const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
-            const Icon = config.icon;
             const isCredit = entry.amount > 0;
             const activityLabel = getActivityLabel(entry);
 
@@ -171,9 +156,6 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                 <div className="text-right flex-shrink-0">
                   <div className={`text-sm font-semibold ${isCredit ? 'text-green-700' : 'text-red-700'}`}>
                     {isCredit ? '+' : ''}{entry.amount.toLocaleString()}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    Bal: {runningBalance[idx]?.toLocaleString() || '—'}
                   </div>
                 </div>
               </div>
