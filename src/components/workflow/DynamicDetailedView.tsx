@@ -44,9 +44,11 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
 }) => {
   const [walletData, setWalletData] = useState<{
     balance: number;
+    frozenPending: number;
+    availableBalance: number;
     recentEntries: any[];
     loading: boolean;
-  }>({ balance: 0, recentEntries: [], loading: true });
+  }>({ balance: 0, frozenPending: 0, availableBalance: 0, recentEntries: [], loading: true });
 
   // Fetch wallet balance and earning history for the requester
   useEffect(() => {
@@ -92,11 +94,14 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
         const frozenPending = (pendingW || [])
           .reduce((sum: number, w: any) => sum + (Number(w.amount) || 0), 0);
         
-        // Available for new requests after freezing all pending approvals
+        // Total balance = all ledger entries (before any freezing)
+        // Available = total - frozen pending
         const availableBalance = Math.max(0, balance - frozenPending);
 
         setWalletData({
-          balance: availableBalance,
+          balance: balance, // total balance before freezing
+          frozenPending,
+          availableBalance,
           recentEntries: allEntries.slice(0, 10),
           loading: false,
         });
@@ -129,9 +134,12 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
   const isWithdrawalRequest =
     (request.requestType || '').toLowerCase().includes('withdrawal') ||
     Boolean(request.details?.withdrawal_id);
+  // For withdrawals: total balance → minus this request → remaining after approval
+  // The frozen amount already includes this request, so after approval = availableBalance
+  const displayBalance = isWithdrawalRequest ? walletData.balance : walletData.availableBalance;
   const projectedBalanceAfterApproval = isWithdrawalRequest
-    ? walletData.balance
-    : walletData.balance - requestAmount;
+    ? walletData.availableBalance
+    : walletData.availableBalance - requestAmount;
 
   const renderStoreReportDeletion = () => (
     <>
@@ -599,8 +607,13 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="flex-1 p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200">
-                    <p className="text-xs font-medium text-muted-foreground">Available Balance (Pending Frozen)</p>
-                    <p className="text-2xl font-bold text-green-700">UGX {walletData.balance.toLocaleString()}</p>
+                    <p className="text-xs font-medium text-muted-foreground">Total Balance</p>
+                    <p className="text-2xl font-bold text-green-700">UGX {displayBalance.toLocaleString()}</p>
+                    {isWithdrawalRequest && walletData.frozenPending > 0 && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        (UGX {walletData.frozenPending.toLocaleString()} frozen in pending requests)
+                      </p>
+                    )}
                   </div>
                   <div className="flex-1 p-4 rounded-lg bg-muted border">
                     <p className="text-xs font-medium text-muted-foreground">Requesting</p>
@@ -614,7 +627,7 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                   </div>
                 </div>
 
-                {walletData.balance < Number(request.amount) && (
+                {displayBalance < requestAmount && (
                   <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-destructive" />
                     <p className="text-sm font-medium text-destructive">
