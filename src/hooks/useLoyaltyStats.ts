@@ -87,5 +87,27 @@ export const useLoyaltyStats = () => {
     fetchStats();
   }, [user]);
 
+  // Real-time subscription for loyalty reward changes
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('loyalty-realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'ledger_entries',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        console.log('📡 New ledger entry, refreshing loyalty stats...');
+        fetchStats();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   return { stats, loading, refreshStats: fetchStats };
 };

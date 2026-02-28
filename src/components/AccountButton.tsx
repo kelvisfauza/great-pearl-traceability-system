@@ -46,32 +46,55 @@ export const AccountButton = () => {
   const withdrawalStatus = isWithdrawalDisabled();
 
   // Fetch total withdrawals and deposits from ledger
-  useEffect(() => {
-    const fetchLedgerTotals = async () => {
-      if (!user?.id) return;
-      
-      // Fetch withdrawals
-      const { data: withdrawals } = await supabase
-        .from('ledger_entries')
-        .select('amount')
-        .eq('user_id', user.id)
-        .eq('entry_type', 'WITHDRAWAL');
-      
-      const totalW = (withdrawals || []).reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0);
-      setTotalWithdrawn(totalW);
+  const fetchLedgerTotals = async () => {
+    if (!user?.id) return;
+    
+    // Fetch withdrawals
+    const { data: withdrawals } = await supabase
+      .from('ledger_entries')
+      .select('amount')
+      .eq('user_id', user.id)
+      .eq('entry_type', 'WITHDRAWAL');
+    
+    const totalW = (withdrawals || []).reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0);
+    setTotalWithdrawn(totalW);
 
-      // Fetch deposits
-      const { data: deposits } = await supabase
-        .from('ledger_entries')
-        .select('amount')
-        .eq('user_id', user.id)
-        .eq('entry_type', 'DEPOSIT');
-      
-      const totalD = (deposits || []).reduce((sum, e) => sum + Number(e.amount), 0);
-      setTotalDeposited(totalD);
-    };
+    // Fetch deposits
+    const { data: deposits } = await supabase
+      .from('ledger_entries')
+      .select('amount')
+      .eq('user_id', user.id)
+      .eq('entry_type', 'DEPOSIT');
+    
+    const totalD = (deposits || []).reduce((sum, e) => sum + Number(e.amount), 0);
+    setTotalDeposited(totalD);
+  };
+
+  useEffect(() => {
     fetchLedgerTotals();
   }, [user, withdrawalRequests]);
+
+  // Real-time subscription for ledger changes
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('account-ledger-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'ledger_entries',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        console.log('📡 Ledger changed, refreshing account totals...');
+        fetchLedgerTotals();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
 

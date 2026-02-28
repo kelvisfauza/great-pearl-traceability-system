@@ -212,6 +212,37 @@ export const useUserWallet = () => {
     }
   }, [user, employee]);
 
+  // Real-time subscription for balance changes
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('wallet-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'ledger_entries',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        console.log('📡 Ledger entry changed, refreshing wallet...');
+        fetchWalletData();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'withdrawal_requests',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        console.log('📡 Withdrawal request changed, refreshing wallet...');
+        fetchWalletData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   return {
     walletData,
     withdrawalRequests,
