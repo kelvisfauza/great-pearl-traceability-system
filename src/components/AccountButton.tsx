@@ -312,7 +312,7 @@ export const AccountButton = () => {
             </Button>
 
             {/* Transaction Statement */}
-            <TransactionStatement open={showStatement} onOpenChange={setShowStatement} />
+            <TransactionStatement open={showStatement} onOpenChange={setShowStatement} currentBalance={availableLoyalty} />
 
             <Separator />
 
