@@ -100,7 +100,7 @@ export const AuditPrintModal: React.FC<AuditPrintModalProps> = ({
             )}
           </div>
 
-          {workflowData && (
+          {workflowData && workflowData.supplier && (
             <>
               {/* Supplier Information */}
               <Card className="print:border print:border-gray-300">
