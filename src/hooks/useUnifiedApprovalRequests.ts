@@ -321,10 +321,21 @@ export const useUnifiedApprovalRequests = () => {
       console.log('Updating unified request status:', request.id, status);
 
       // POLICY: Check self-approval and SoD for approvals on supabase requests
-      if (status === 'Approved' && request.source === 'supabase') {
+      // Skip for withdrawal requests – they have their own SoD checks below
+      if (status === 'Approved' && request.source === 'supabase' && !request.details?.is_withdrawal) {
         const sodCheck = await checkExpenseRequestEligibility(request.id);
         if (!sodCheck.canApprove) {
           return { blocked: true, reason: sodCheck.reason || 'Approval blocked by policy' };
+        }
+      }
+
+      // For withdrawal requests, check self-approval (can't approve own withdrawal)
+      if (status === 'Approved' && request.details?.is_withdrawal) {
+        const currentUserName = employee?.name || employee?.email;
+        const currentUserEmail = employee?.email;
+        const requestedBy = request.requestedBy || request.details?.requested_by;
+        if (requestedBy === currentUserName || requestedBy === currentUserEmail) {
+          return { blocked: true, reason: 'You cannot approve your own withdrawal request. Policy requires a different person to review and approve your submissions.' };
         }
       }
 
