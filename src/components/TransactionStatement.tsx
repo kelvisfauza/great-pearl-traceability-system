@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, ArrowUpRight, ArrowDownLeft, Star, Briefcase, 
-  Gift, Smartphone, Loader2, ChevronDown, TrendingUp, Minus
+  Gift, Smartphone, Loader2, ChevronDown, TrendingUp, Minus, Printer
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -41,11 +41,49 @@ interface TransactionStatementProps {
 }
 
 export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance }) => {
-  const { user } = useAuth();
+  const { user, employee } = useAuth();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [limit, setLimit] = useState(30);
   const [hasMore, setHasMore] = useState(true);
+
+  const printStatement = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const rows = entries.map(e => {
+      const config = ENTRY_CONFIG[e.entry_type] || DEFAULT_CONFIG;
+      const isCredit = e.amount > 0;
+      const activityLabel = getActivityLabel(e);
+      return `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${format(new Date(e.created_at), 'MMM dd, yyyy h:mm a')}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${config.label}${activityLabel ? ' - ' + activityLabel : ''}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:${isCredit ? '#15803d' : '#b91c1c'};font-weight:600">${isCredit ? '+' : ''}${e.amount.toLocaleString()}</td>
+      </tr>`;
+    }).join('');
+
+    const content = `<!doctype html><html><head><meta charset="utf-8"/><title>Transaction Statement</title>
+      <style>body{font:13px/1.5 system-ui;margin:0;padding:20px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px;border-bottom:2px solid #333;font-size:12px}@media print{.no-print{display:none}}</style>
+    </head><body onload="window.print();">
+      <div style="max-width:700px;margin:0 auto">
+        <h2 style="margin:0 0 4px">Great Pearl Coffee</h2>
+        <h3 style="margin:0 0 16px;font-weight:normal;color:#555">Transaction Statement</h3>
+        <div style="margin-bottom:12px;font-size:13px">
+          <strong>Employee:</strong> ${employee?.name || user?.email || 'N/A'}<br/>
+          <strong>Date:</strong> ${format(new Date(), 'MMMM dd, yyyy')}<br/>
+          <strong>Current Balance:</strong> UGX ${currentBalance.toLocaleString()}
+        </div>
+        <table>
+          <thead><tr><th>Date</th><th>Type</th><th style="text-align:right">Amount (UGX)</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div style="margin-top:20px;font-size:11px;color:#888">Printed on ${new Date().toLocaleString()}</div>
+      </div>
+    </body></html>`;
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+  };
 
   const fetchEntries = async (count: number) => {
     if (!user?.email) return;
@@ -107,9 +145,15 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           <FileText className="h-5 w-5" />
           Transaction Statement
         </h3>
-        <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-          Hide
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={printStatement} disabled={entries.length === 0}>
+            <Printer className="h-4 w-4 mr-1" />
+            Print
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+            Hide
+          </Button>
+        </div>
       </div>
 
       <div className="text-sm text-muted-foreground">
