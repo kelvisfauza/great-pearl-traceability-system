@@ -52,6 +52,16 @@ interface WithdrawalRequest {
   approved_at?: string;
   processed_at?: string;
   payment_voucher?: string;
+  requires_three_approvals?: boolean;
+  admin_approved_1_by?: string;
+  admin_approved_1_at?: string;
+  admin_approved_2_by?: string;
+  admin_approved_2_at?: string;
+  admin_approved_3_by?: string;
+  admin_approved_3_at?: string;
+  requester_name?: string;
+  requester_email?: string;
+  disbursement_method?: string;
   // Joined employee data
   employee_name?: string;
   employee_email?: string;
@@ -74,11 +84,11 @@ export const WithdrawalRequestsManager: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch pending withdrawal requests
+      // Fetch withdrawal requests that are pending finance approval (all admins have approved)
       const { data: withdrawalData, error } = await supabase
         .from('withdrawal_requests')
         .select('*')
-        .in('status', ['pending', 'processing'])
+        .eq('status', 'pending_finance')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -137,13 +147,22 @@ export const WithdrawalRequestsManager: React.FC = () => {
   const handleApprove = async () => {
     if (!selectedRequest) return;
     
+    // Prevent self-approval
+    const requesterEmail = (selectedRequest as any).requester_email || selectedRequest.employee_email;
+    if (requesterEmail === employee?.email) {
+      toast({
+        title: "Self-Approval Blocked",
+        description: "You cannot approve your own withdrawal request.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setProcessing(selectedRequest.id);
     try {
       const updateData: any = {
-        status: 'approved',
-        approved_by: employee?.name || employee?.email || 'Finance',
-        approved_at: new Date().toISOString(),
-        processed_at: new Date().toISOString(),
+        finance_approved_at: new Date().toISOString(),
+        finance_approved_by: employee?.name || employee?.email || 'Finance',
         updated_at: new Date().toISOString()
       };
 
@@ -151,7 +170,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
         updateData.payment_voucher = paymentVoucher;
       }
 
-      // Update withdrawal request status
+      // The trigger will auto-set status to 'approved' and create ledger entry
       const { error } = await supabase
         .from('withdrawal_requests')
         .update(updateData)
@@ -159,49 +178,24 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
       if (error) throw error;
 
-      // Reduce the user's balance
-      const { data: userAccount, error: accountError } = await supabase
-        .from('user_accounts')
-        .select('current_balance, total_withdrawn')
-        .eq('user_id', selectedRequest.user_id)
-        .maybeSingle();
-
-      if (userAccount) {
-        const newBalance = Math.max(0, (userAccount.current_balance || 0) - selectedRequest.amount);
-        const newTotalWithdrawn = (userAccount.total_withdrawn || 0) + selectedRequest.amount;
-
-        await supabase
-          .from('user_accounts')
-          .update({
-            current_balance: newBalance,
-            total_withdrawn: newTotalWithdrawn,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', selectedRequest.user_id);
-      }
-
-      // Send SMS notification to the requestor
+      // Send SMS notification
       const phoneToNotify = selectedRequest.employee_phone || selectedRequest.phone_number;
       if (phoneToNotify) {
         const paymentMethod = selectedRequest.channel === 'CASH' ? 'CASH' : 'Mobile Money';
-        const message = `Dear ${selectedRequest.employee_name}, your withdrawal request of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Payment method: ${paymentMethod}. ${selectedRequest.channel === 'CASH' ? 'Please collect your cash from the Finance office.' : `Funds will be sent to ${selectedRequest.phone_number}.`} Ref: ${selectedRequest.request_ref}`;
+        const message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been FULLY APPROVED by Finance. Payment method: ${paymentMethod}. ${selectedRequest.channel === 'CASH' ? 'Please collect your cash from Finance.' : `Funds will be sent to ${selectedRequest.phone_number}.`} Ref: ${selectedRequest.request_ref}`;
         
         try {
           await supabase.functions.invoke('send-sms', {
-            body: {
-              phone: phoneToNotify,
-              message: message
-            }
+            body: { phone: phoneToNotify, message }
           });
         } catch (smsError) {
           console.error('SMS notification failed:', smsError);
-          // Don't fail the approval if SMS fails
         }
       }
 
       toast({
-        title: "Withdrawal Approved",
-        description: `${selectedRequest.channel === 'CASH' ? 'Cash payment' : 'Mobile money'} of UGX ${selectedRequest.amount.toLocaleString()} approved for ${selectedRequest.employee_name}`,
+        title: "Withdrawal Approved by Finance",
+        description: `UGX ${selectedRequest.amount.toLocaleString()} approved for ${selectedRequest.employee_name}. Balance has been deducted.`,
       });
 
       setShowApproveDialog(false);
@@ -229,9 +223,9 @@ export const WithdrawalRequestsManager: React.FC = () => {
         .from('withdrawal_requests')
         .update({
           status: 'rejected',
-          approved_by: employee?.name || employee?.email || 'Finance',
-          approved_at: new Date().toISOString(),
-          failure_reason: rejectionReason || 'Rejected by Finance',
+          rejection_reason: rejectionReason || 'Rejected by Finance',
+          rejected_by: employee?.name || employee?.email || 'Finance',
+          rejected_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('id', selectedRequest.id);
@@ -440,6 +434,33 @@ export const WithdrawalRequestsManager: React.FC = () => {
                       <p className="font-medium">{request.channel === 'CASH' ? 'Cash' : 'Mobile Money'}</p>
                     </div>
                   </div>
+                </div>
+
+                {/* Admin Approval Info */}
+                <div className="mb-4 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                  <p className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1">✅ Admin Approvals Complete</p>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {request.admin_approved_1_by && (
+                      <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">Admin 1: {request.admin_approved_1_by}</span>
+                    )}
+                    {request.admin_approved_2_by && (
+                      <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">Admin 2: {request.admin_approved_2_by}</span>
+                    )}
+                    {request.admin_approved_3_by && (
+                      <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">Admin 3: {request.admin_approved_3_by}</span>
+                    )}
+                  </div>
+                  {request.requires_three_approvals && (
+                    <p className="text-xs text-green-600 mt-1">⚡ High-value withdrawal — required 3 admin approvals</p>
+                  )}
+                </div>
+
+                {/* Caution for Finance */}
+                <div className="mb-4 p-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    ⚠️ <strong>Finance Caution:</strong> By approving, UGX {request.amount.toLocaleString()} will be deducted from the employee's wallet balance.
+                    {request.channel !== 'CASH' && ' Ensure the phone number is correct before sending mobile money.'}
+                  </p>
                 </div>
 
                 <div className="flex gap-2 flex-wrap">
