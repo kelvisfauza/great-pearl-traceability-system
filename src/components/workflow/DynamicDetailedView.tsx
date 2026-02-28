@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,13 @@ import {
   UserPlus,
   Scale,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight
 } from 'lucide-react';
 import { UnifiedApprovalRequest } from '@/hooks/useUnifiedApprovalRequests';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DynamicDetailedViewProps {
   request: UnifiedApprovalRequest;
@@ -38,6 +42,60 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
   onPrint,
   className
 }) => {
+  const [walletData, setWalletData] = useState<{
+    balance: number;
+    recentEntries: any[];
+    loading: boolean;
+  }>({ balance: 0, recentEntries: [], loading: true });
+
+  // Fetch wallet balance and earning history for the requester
+  useEffect(() => {
+    const fetchWalletInfo = async () => {
+      try {
+        const requesterEmail = request.details?.requester_email || request.requestedBy;
+        
+        // Find user_id from employees
+        const { data: emp } = await supabase
+          .from('employees')
+          .select('auth_user_id, name')
+          .eq('email', requesterEmail)
+          .maybeSingle();
+
+        if (!emp?.auth_user_id) {
+          setWalletData(prev => ({ ...prev, loading: false }));
+          return;
+        }
+
+        const userId = emp.auth_user_id;
+
+        // Fetch ledger entries
+        const { data: entries } = await supabase
+          .from('ledger_entries')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        const allEntries = entries || [];
+        const balance = allEntries
+          .filter(e => ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'].includes(e.entry_type))
+          .reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+
+        setWalletData({
+          balance,
+          recentEntries: allEntries.slice(0, 10),
+          loading: false,
+        });
+      } catch (err) {
+        console.error('Error fetching wallet info:', err);
+        setWalletData(prev => ({ ...prev, loading: false }));
+      }
+    };
+
+    fetchWalletInfo();
+  }, [request.id, request.requestedBy, request.details]);
+
+
   const formatCurrency = (amount: string | number) => {
     if (!amount || amount === 0 || amount === '0') return 'N/A';
     const numericAmount = typeof amount === 'string' ? parseFloat(amount.replace(/[^\d.-]/g, '')) : amount;
@@ -503,6 +561,94 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
 
           {/* Specific Request Content */}
           {renderRequestContent()}
+
+          {/* Wallet Balance & Earning History */}
+          {!walletData.loading && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-amber-500" />
+                  User Account Balance & Earnings
+                </CardTitle>
+                <CardDescription>
+                  Current wallet state for {request.details?.requester_name || request.details?.requestedby_name || request.requestedBy}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 p-4 rounded-lg bg-muted border">
+                    <p className="text-xs font-medium text-muted-foreground">Available Balance</p>
+                    <p className="text-2xl font-bold">UGX {walletData.balance.toLocaleString()}</p>
+                  </div>
+                  <div className="flex-1 p-4 rounded-lg bg-muted border">
+                    <p className="text-xs font-medium text-muted-foreground">Withdrawal Amount</p>
+                    <p className="text-2xl font-bold text-destructive">UGX {Number(request.amount).toLocaleString()}</p>
+                  </div>
+                  <div className="flex-1 p-4 rounded-lg bg-muted border">
+                    <p className="text-xs font-medium text-muted-foreground">Balance After</p>
+                    <p className={`text-2xl font-bold ${walletData.balance - Number(request.amount) < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                      UGX {(walletData.balance - Number(request.amount)).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                {walletData.balance < Number(request.amount) && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                    <p className="text-sm font-medium text-destructive">
+                      Insufficient balance! User is requesting more than their available balance.
+                    </p>
+                  </div>
+                )}
+
+                {walletData.recentEntries.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium mb-2">How They Earned (Recent Transactions)</p>
+                    <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                      <div className="text-xs bg-muted p-2 font-medium grid grid-cols-4 gap-2 sticky top-0">
+                        <span>Date</span>
+                        <span>Type</span>
+                        <span className="text-right">Amount</span>
+                        <span>Source</span>
+                      </div>
+                      {walletData.recentEntries.map((entry: any, idx: number) => {
+                        const isPositive = Number(entry.amount) > 0;
+                        const typeLabels: Record<string, string> = {
+                          LOYALTY_REWARD: 'Loyalty Reward',
+                          BONUS: 'Bonus',
+                          DEPOSIT: 'Deposit',
+                          WITHDRAWAL: 'Withdrawal',
+                          ADJUSTMENT: 'Adjustment',
+                          DAILY_SALARY: 'Daily Salary',
+                        };
+                        return (
+                          <div key={idx} className="text-xs p-2 border-t grid grid-cols-4 gap-2 items-center">
+                            <span className="text-muted-foreground">
+                              {new Date(entry.created_at).toLocaleDateString()}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              {isPositive ? (
+                                <ArrowDownRight className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <ArrowUpRight className="h-3 w-3 text-destructive" />
+                              )}
+                              {typeLabels[entry.entry_type] || entry.entry_type}
+                            </span>
+                            <span className={`text-right font-mono font-medium ${isPositive ? 'text-green-600' : 'text-destructive'}`}>
+                              {isPositive ? '+' : ''}{Number(entry.amount).toLocaleString()}
+                            </span>
+                            <span className="text-muted-foreground truncate">
+                              {entry.metadata?.activity_type || entry.reference?.split('-')[0] || '—'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </ScrollArea>
 
