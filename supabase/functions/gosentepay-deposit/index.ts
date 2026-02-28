@@ -11,13 +11,11 @@ serve(async (req) => {
   }
 
   try {
-    // GOSENTEPAY_API_KEY = Ssentezo API User
-    // GOSENTEPAY_SECRET_KEY = Ssentezo API Key
-    const apiUser = Deno.env.get("GOSENTEPAY_API_KEY");
-    const apiKey = Deno.env.get("GOSENTEPAY_SECRET_KEY");
+    const apiKey = Deno.env.get("GOSENTEPAY_API_KEY");
+    const secretKey = Deno.env.get("GOSENTEPAY_SECRET_KEY");
 
-    if (!apiUser || !apiKey) {
-      throw new Error("Ssentezo API credentials not configured");
+    if (!apiKey || !secretKey) {
+      throw new Error("GosentePay API credentials not configured");
     }
 
     const { phone, amount, email, ref } = await req.json();
@@ -46,51 +44,42 @@ serve(async (req) => {
       );
     }
 
-    // Build callback URLs
+    // Build callback URL
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const successCallback = `${supabaseUrl}/functions/v1/gosentepay-callback`;
-    const failureCallback = `${supabaseUrl}/functions/v1/gosentepay-callback`;
-
-    // Ssentezo Wallet uses Basic Auth: base64(apiUser:apiKey)
-    const encodedCredentials = btoa(`${apiUser}:${apiKey}`);
+    const callbackUrl = `${supabaseUrl}/functions/v1/gosentepay-callback`;
 
     const requestBody = {
-      externalReference: ref,
-      msisdn: cleanPhone,
-      amount: numAmount,
+      secret_key: secretKey,
       currency: "UGX",
-      reason: "Wallet deposit",
-      name: email || "Customer",
-      success_callback: successCallback,
-      failure_callback: failureCallback,
+      phone: cleanPhone,
+      amount: String(numAmount),
+      email: email || "customer@example.com",
+      ref,
+      callback: callbackUrl,
     };
 
-    console.log("Initiating Ssentezo deposit:", { phone: cleanPhone, amount: numAmount, ref, successCallback });
-    console.log("Request body:", JSON.stringify(requestBody));
+    console.log("Initiating GosentePay deposit:", { phone: cleanPhone, amount: numAmount, ref, callback: callbackUrl });
 
-    const response = await fetch("https://wallet.ssentezo.com/api/deposit", {
+    const response = await fetch("https://api.gosentepay.com/v1/deposit", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Basic ${encodedCredentials}`,
+        "Authorization": apiKey,
       },
       body: JSON.stringify(requestBody),
     });
 
     const data = await response.json();
-    console.log("Ssentezo deposit response:", JSON.stringify(data));
-    console.log("Ssentezo HTTP status:", response.status);
+    console.log("GosentePay deposit response:", JSON.stringify(data));
+    console.log("GosentePay HTTP status:", response.status);
 
-    // Ssentezo returns { response: "OK", data: { transactionStatus: "PENDING", ... } }
-    if (response.status === 202 || data.response === "OK") {
+    if (data.status === "success" && data.code === 200) {
       return new Response(
         JSON.stringify({
           status: "success",
           code: 200,
-          message: "A push notification has been sent to the phone",
-          ref,
-          ssentezoRef: data.data?.ssentezoWalletReference,
-          transactionStatus: data.data?.transactionStatus,
+          message: data.message || "A push notification has been sent to the phone",
+          ref: data.ref || ref,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -98,15 +87,15 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           status: "error",
-          code: response.status,
-          message: data.error?.message || data.message || "Failed to initiate deposit",
+          code: data.code || response.status,
+          message: data.message || "Failed to initiate deposit",
           details: data,
         }),
-        { status: response.status || 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
   } catch (error) {
-    console.error("Ssentezo deposit error:", error);
+    console.error("GosentePay deposit error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
