@@ -96,7 +96,80 @@ export const useUnifiedApprovalRequests = () => {
         reportDatabaseError(error, 'fetch approval_requests', 'approval_requests');
       }
 
-      // 2. Fetch Supabase deletion requests
+      // 2.5. Fetch pending withdrawal requests for admin approval
+      try {
+        const { data: withdrawalRequests, error: withdrawalError } = await supabase
+          .from('withdrawal_requests')
+          .select('*')
+          .in('status', ['pending_approval', 'pending_admin_2', 'pending_admin_3'])
+          .order('created_at', { ascending: false });
+
+        if (!withdrawalError && withdrawalRequests) {
+          // Enrich with employee names
+          const enrichedWithdrawals = await Promise.all(
+            (withdrawalRequests || []).map(async (req) => {
+              let empName = req.requester_name || req.user_id;
+              let empEmail = req.requester_email || req.user_id;
+              
+              if (!req.requester_name) {
+                const { data: empData } = await supabase
+                  .from('employees')
+                  .select('name, email')
+                  .or(`auth_user_id.eq.${req.user_id},email.eq.${req.user_id}`)
+                  .maybeSingle();
+                if (empData) {
+                  empName = empData.name;
+                  empEmail = empData.email;
+                }
+              }
+
+              const adminCount = req.requires_three_approvals ? 3 : 1;
+              const approvedAdmins = [req.admin_approved_1_at, req.admin_approved_2_at, req.admin_approved_3_at].filter(Boolean).length;
+              
+              return {
+                id: req.id,
+                type: 'general' as const,
+                source: 'supabase' as const,
+                department: 'Wallet',
+                requestType: 'Withdrawal Request',
+                title: `Withdrawal - UGX ${req.amount.toLocaleString()}`,
+                description: `${empName} requests withdrawal of UGX ${req.amount.toLocaleString()} via ${req.channel === 'CASH' ? 'Cash' : 'Mobile Money'}`,
+                amount: req.amount,
+                requestedBy: empEmail,
+                dateRequested: new Date(req.created_at).toLocaleDateString(),
+                priority: req.amount > 100000 ? 'High' : 'Medium',
+                status: req.status === 'pending_admin_2' ? 'Pending Admin 2' : req.status === 'pending_admin_3' ? 'Pending Admin 3' : 'Pending',
+                details: {
+                  withdrawal_id: req.id,
+                  phone_number: req.phone_number,
+                  channel: req.channel,
+                  request_ref: req.request_ref,
+                  requester_name: empName,
+                  requester_email: empEmail,
+                  requires_three_approvals: req.requires_three_approvals,
+                  admin_approved_1_by: req.admin_approved_1_by,
+                  admin_approved_2_by: req.admin_approved_2_by,
+                  admin_approved_3_by: req.admin_approved_3_by,
+                  admin_approved_1_at: req.admin_approved_1_at,
+                  admin_approved_2_at: req.admin_approved_2_at,
+                  admin_approved_3_at: req.admin_approved_3_at,
+                  approved_admins: approvedAdmins,
+                  required_admins: adminCount,
+                  is_withdrawal: true,
+                },
+                createdAt: req.created_at,
+                updatedAt: req.updated_at,
+              };
+            })
+          );
+          allRequests.push(...enrichedWithdrawals);
+          console.log('Fetched withdrawal requests for admin approval:', enrichedWithdrawals.length);
+        }
+      } catch (error) {
+        console.error('Error fetching withdrawal requests:', error);
+      }
+
+      // 3. Fetch Supabase deletion requests (original numbering continues)
       try {
         const { data: deletionRequests, error: deletionError } = await supabase
           .from('deletion_requests')
@@ -243,6 +316,101 @@ export const useUnifiedApprovalRequests = () => {
         if (!sodCheck.canApprove) {
           return { blocked: true, reason: sodCheck.reason || 'Approval blocked by policy' };
         }
+      }
+
+      // Handle withdrawal request approvals separately
+      if (request.details?.is_withdrawal) {
+        const withdrawalId = request.details.withdrawal_id || request.id;
+        const adminName = employee?.name || employee?.email || 'Admin';
+        
+        // Fetch current withdrawal state
+        const { data: currentWithdrawal, error: wFetchError } = await supabase
+          .from('withdrawal_requests')
+          .select('*')
+          .eq('id', withdrawalId)
+          .single();
+
+        if (wFetchError || !currentWithdrawal) {
+          console.error('Failed to fetch withdrawal request:', wFetchError);
+          return false;
+        }
+
+        const reqThreeApprovals = currentWithdrawal.requires_three_approvals;
+        const wUpdateData: any = { updated_at: new Date().toISOString() };
+
+        if (status === 'Approved') {
+          if (reqThreeApprovals) {
+            // 3 admin approvals needed
+            if (!currentWithdrawal.admin_approved_1_at) {
+              wUpdateData.admin_approved_1_at = new Date().toISOString();
+              wUpdateData.admin_approved_1_by = adminName;
+              wUpdateData.status = 'pending_admin_2';
+              console.log('✅ Withdrawal: Admin 1 approved');
+            } else if (!currentWithdrawal.admin_approved_2_at) {
+              if (currentWithdrawal.admin_approved_1_by === adminName) {
+                return { blocked: true, reason: 'You already approved this withdrawal as Admin 1. A different administrator must provide the second approval.' };
+              }
+              wUpdateData.admin_approved_2_at = new Date().toISOString();
+              wUpdateData.admin_approved_2_by = adminName;
+              wUpdateData.status = 'pending_admin_3';
+              console.log('✅ Withdrawal: Admin 2 approved');
+            } else if (!currentWithdrawal.admin_approved_3_at) {
+              if (currentWithdrawal.admin_approved_1_by === adminName || currentWithdrawal.admin_approved_2_by === adminName) {
+                return { blocked: true, reason: 'You already approved this withdrawal. A different administrator must provide the third approval.' };
+              }
+              wUpdateData.admin_approved_3_at = new Date().toISOString();
+              wUpdateData.admin_approved_3_by = adminName;
+              wUpdateData.status = 'pending_finance';
+              console.log('✅ Withdrawal: Admin 3 approved, moving to Finance');
+            }
+          } else {
+            // 1 admin approval needed
+            wUpdateData.admin_approved_1_at = new Date().toISOString();
+            wUpdateData.admin_approved_1_by = adminName;
+            wUpdateData.status = 'pending_finance';
+            console.log('✅ Withdrawal: Admin approved, moving to Finance');
+          }
+        } else {
+          wUpdateData.status = 'rejected';
+          wUpdateData.rejection_reason = rejectionReason || 'Rejected by Administrator';
+          wUpdateData.rejected_by = adminName;
+          wUpdateData.rejected_at = new Date().toISOString();
+        }
+
+        const { error: wError } = await supabase
+          .from('withdrawal_requests')
+          .update(wUpdateData)
+          .eq('id', withdrawalId);
+
+        if (wError) {
+          console.error('Withdrawal update error:', wError);
+          return false;
+        }
+
+        // Send SMS to requester
+        try {
+          const recipientEmail = request.details?.requester_email || request.requestedBy;
+          const { data: recipientEmp } = await supabase
+            .from('employees')
+            .select('phone, name')
+            .eq('email', recipientEmail)
+            .single();
+
+          if (recipientEmp?.phone) {
+            const msg = status === 'Approved'
+              ? `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has received admin approval from ${adminName}. ${wUpdateData.status === 'pending_finance' ? 'It is now pending final Finance approval.' : 'Awaiting more admin approvals.'} Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`
+              : `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`;
+
+            await supabase.functions.invoke('send-sms', {
+              body: { phone: recipientEmp.phone, message: msg, userName: recipientEmp.name, messageType: 'withdrawal_approval' }
+            });
+          }
+        } catch (smsErr) {
+          console.error('SMS notification error (non-blocking):', smsErr);
+        }
+
+        await fetchAllRequests(true);
+        return true;
       }
 
       if (request.source === 'supabase') {

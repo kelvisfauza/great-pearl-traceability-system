@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUserAccount } from '@/hooks/useUserAccount';
 import { useAuth } from '@/contexts/AuthContext';
-import { Smartphone, AlertTriangle, Printer, ShieldCheck, Loader2 } from 'lucide-react';
+import { Smartphone, AlertTriangle, Printer, ShieldCheck, Loader2, Clock } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +49,8 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const { isWithdrawalDisabled } = useWithdrawalControl();
   const withdrawalStatus = isWithdrawalDisabled();
 
+  // ... keep existing code (numberToWords, printVoucher, formatCurrency, generateAndSendCode, handleAmountSubmit functions)
+
   const numberToWords = (num: number): string => {
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
       'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
@@ -72,7 +74,6 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   body{font:13px/1.5 'Segoe UI',system-ui,sans-serif;margin:0;padding:20px;color:#000}
   .voucher{max-width:700px;margin:0 auto;border:2px solid #000;padding:0}
   .header{text-align:center;padding:16px;border-bottom:2px solid #000;background:#f8f8f8}
-  .header img{height:50px;margin-bottom:6px}
   .header h1{margin:0;font-size:16px;text-transform:uppercase;letter-spacing:1px}
   .header h2{margin:4px 0 0;font-size:13px;font-weight:normal}
   .header .sub{font-size:11px;color:#555;margin-top:2px}
@@ -145,11 +146,9 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
     setSendingCode(true);
     try {
-      // Generate 5-digit code
       const code = String(Math.floor(10000 + Math.random() * 90000));
       setSentCode(code);
 
-      // Send via SMS
       const { error } = await supabase.functions.invoke('send-sms', {
         body: {
           phone: employee.phone,
@@ -186,7 +185,6 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     const withdrawalAmount = parseFloat(amount);
     if (withdrawalAmount > availableAmount || withdrawalAmount < 100) return;
 
-    // Send verification code
     await generateAndSendCode();
   };
 
@@ -205,27 +203,37 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       const withdrawalAmount = parseFloat(amount);
       const ref = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
       
-      await createWithdrawalRequest(withdrawalAmount, '', channel);
+      // Create withdrawal request with pending_approval status
+      const { error: insertError } = await supabase
+        .from('withdrawal_requests')
+        .insert({
+          user_id: user?.id || '',
+          amount: withdrawalAmount,
+          phone_number: employee?.phone || '',
+          channel: channel,
+          status: 'pending_approval',
+          request_ref: ref,
+          requester_name: employee?.name || user?.email || '',
+          requester_email: user?.email || employee?.email || '',
+          requires_three_approvals: withdrawalAmount > 100000,
+        });
+
+      if (insertError) throw insertError;
       
       setCompletedRef(ref);
       setCompletedAmount(withdrawalAmount);
       setStep('done');
 
-      // Force refresh account data
-      setTimeout(() => {
-        refreshAccount();
-      }, 500);
-
       toast({
-        title: "Withdrawal Completed!",
-        description: `Reference: ${ref}. Amount UGX ${withdrawalAmount.toLocaleString()} deducted. Print your voucher below.`,
+        title: "Withdrawal Request Submitted!",
+        description: `Reference: ${ref}. Your request for UGX ${withdrawalAmount.toLocaleString()} has been submitted for admin approval.`,
         duration: 8000,
       });
     } catch (error) {
       console.error('Error submitting withdrawal:', error);
       toast({
         title: "Error",
-        description: "Failed to process withdrawal. Please try again.",
+        description: "Failed to submit withdrawal request. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -241,7 +249,6 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     setCompletedRef('');
     setCompletedAmount(0);
     onOpenChange(false);
-    // Ensure wallet refreshes
     refreshAccount();
   };
 
@@ -255,7 +262,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
             {step === 'verify' ? <ShieldCheck className="h-5 w-5" /> : <Smartphone className="h-5 w-5" />}
             {step === 'amount' && 'Request Withdrawal'}
             {step === 'verify' && 'Verify Withdrawal'}
-            {step === 'done' && 'Withdrawal Complete'}
+            {step === 'done' && 'Request Submitted'}
           </DialogTitle>
         </DialogHeader>
 
@@ -269,10 +276,19 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   Available to Request: <strong>{formatCurrency(availableAmount)}</strong>
                   <br />
                   <span className="text-xs text-muted-foreground">
-                    This prevents double-spending while you have pending withdrawals.
+                    Withdrawals require admin & finance approval before disbursement.
                   </span>
                 </AlertDescription>
               </Alert>
+
+              {parseFloat(amount) > 100000 && (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    <strong>High-value withdrawal:</strong> Amounts above UGX 100,000 require 3 admin approvals + finance approval.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <form onSubmit={handleAmountSubmit} className="space-y-4">
                 {withdrawalStatus.disabled && (
@@ -289,7 +305,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 )}
                 <div className="bg-blue-50 p-3 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    <strong>Cash Payment:</strong> A verification code will be sent to your phone before processing.
+                    <strong>Cash Payment:</strong> A verification code will be sent to your phone before submitting.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -380,52 +396,40 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                   disabled={loading || verificationCode.length !== 5}
                 >
                   {loading ? (
-                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</>
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...</>
                   ) : (
-                    'Verify & Withdraw'
+                    'Submit for Approval'
                   )}
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Step 3: Done - Print Voucher */}
+          {/* Step 3: Submitted for Approval */}
           {step === 'done' && (
             <div className="space-y-4 text-center">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <ShieldCheck className="h-10 w-10 text-green-600 mx-auto mb-2" />
-                <h3 className="font-bold text-green-800">Withdrawal Successful!</h3>
-                <p className="text-sm text-green-700 mt-1">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <Clock className="h-10 w-10 text-amber-600 mx-auto mb-2" />
+                <h3 className="font-bold text-amber-800">Withdrawal Submitted for Approval</h3>
+                <p className="text-sm text-amber-700 mt-1">
                   Reference: <strong>{completedRef}</strong>
                 </p>
-                <p className="text-lg font-bold text-green-800 mt-2">
+                <p className="text-lg font-bold text-amber-800 mt-2">
                   {formatCurrency(completedAmount)}
                 </p>
-                <p className="text-xs text-green-600 mt-1">
-                  has been deducted from your balance
+                <p className="text-xs text-amber-600 mt-2">
+                  {completedAmount > 100000 
+                    ? '⚡ This requires 3 admin approvals + finance approval'
+                    : '⚡ This requires admin approval + finance approval'}
+                </p>
+                <p className="text-xs text-amber-600 mt-1">
+                  You will receive an SMS once approved. Money will NOT be deducted until fully approved.
                 </p>
               </div>
 
-              <Alert>
-                <Printer className="h-4 w-4" />
-                <AlertDescription>
-                  Print your payment voucher and present it to Finance to collect your cash.
-                </AlertDescription>
-              </Alert>
-
               <div className="flex justify-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleClose}
-                >
+                <Button variant="outline" onClick={handleClose}>
                   Close
-                </Button>
-                <Button
-                  onClick={() => printVoucher(completedRef, completedAmount)}
-                  className="gap-2"
-                >
-                  <Printer className="h-4 w-4" />
-                  Print Voucher
                 </Button>
               </div>
             </div>
