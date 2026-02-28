@@ -82,15 +82,20 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
         // Sum only the types visible in the user's loyalty wallet (excludes DAILY_SALARY, LOAN_DISBURSEMENT)
         const balance = allEntries.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
 
-        // Get pending withdrawals
+        // Get pending withdrawals EXCLUDING the current request being reviewed
         const { data: pendingW } = await supabase
           .from('withdrawal_requests')
-          .select('amount')
+          .select('id, amount')
           .eq('user_id', userId)
           .in('status', ['pending_approval', 'pending_admin_2', 'pending_admin_3', 'pending_finance']);
 
-        const pendingTotal = (pendingW || []).reduce((s: number, w: any) => s + Number(w.amount), 0);
-        const availableBalance = Math.max(0, balance - pendingTotal);
+        const currentRequestId = request.details?.withdrawal_id || request.id;
+        const otherPending = (pendingW || [])
+          .filter((w: any) => w.id !== currentRequestId)
+          .reduce((s: number, w: any) => s + Number(w.amount), 0);
+        
+        // Show balance BEFORE this withdrawal — only subtract other pending requests
+        const availableBalance = Math.max(0, balance - otherPending);
 
         setWalletData({
           balance: availableBalance,
@@ -587,16 +592,16 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex-1 p-4 rounded-lg bg-muted border">
-                    <p className="text-xs font-medium text-muted-foreground">Available Balance</p>
-                    <p className="text-2xl font-bold">UGX {walletData.balance.toLocaleString()}</p>
+                  <div className="flex-1 p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200">
+                    <p className="text-xs font-medium text-muted-foreground">Balance Before Approval</p>
+                    <p className="text-2xl font-bold text-green-700">UGX {walletData.balance.toLocaleString()}</p>
                   </div>
                   <div className="flex-1 p-4 rounded-lg bg-muted border">
-                    <p className="text-xs font-medium text-muted-foreground">Withdrawal Amount</p>
-                    <p className="text-2xl font-bold text-destructive">UGX {Number(request.amount).toLocaleString()}</p>
+                    <p className="text-xs font-medium text-muted-foreground">Requesting</p>
+                    <p className="text-2xl font-bold text-destructive">− UGX {Number(request.amount).toLocaleString()}</p>
                   </div>
                   <div className="flex-1 p-4 rounded-lg bg-muted border">
-                    <p className="text-xs font-medium text-muted-foreground">Balance After</p>
+                    <p className="text-xs font-medium text-muted-foreground">Balance After Approval</p>
                     <p className={`text-2xl font-bold ${walletData.balance - Number(request.amount) < 0 ? 'text-destructive' : 'text-green-600'}`}>
                       UGX {(walletData.balance - Number(request.amount)).toLocaleString()}
                     </p>
