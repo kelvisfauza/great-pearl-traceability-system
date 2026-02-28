@@ -68,25 +68,33 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
 
         const userId = emp.auth_user_id;
 
-        // Use the same RPC the wallet uses for accurate balance
-        const { data: balanceData } = await supabase
-          .rpc('get_user_balance_safe', { user_email: requesterEmail });
-
-        const walletBalance = balanceData?.[0]?.wallet_balance 
-          ? Number(balanceData[0].wallet_balance) 
-          : 0;
-
-        // Fetch recent ledger entries for earning history display
+        // Fetch ALL ledger entries to calculate the same balance the user sees
+        // The user dashboard shows: loyalty + bonus + deposits - withdrawals - pending
         const { data: entries } = await supabase
           .from('ledger_entries')
           .select('*')
           .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(20);
+          .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'])
+          .order('created_at', { ascending: false });
+
+        const allEntries = entries || [];
+        
+        // Sum only the types visible in the user's loyalty wallet (excludes DAILY_SALARY, LOAN_DISBURSEMENT)
+        const balance = allEntries.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+
+        // Get pending withdrawals
+        const { data: pendingW } = await supabase
+          .from('withdrawal_requests')
+          .select('amount')
+          .eq('user_id', userId)
+          .in('status', ['pending_approval', 'pending_admin_2', 'pending_admin_3', 'pending_finance']);
+
+        const pendingTotal = (pendingW || []).reduce((s: number, w: any) => s + Number(w.amount), 0);
+        const availableBalance = Math.max(0, balance - pendingTotal);
 
         setWalletData({
-          balance: walletBalance,
-          recentEntries: (entries || []).slice(0, 10),
+          balance: availableBalance,
+          recentEntries: allEntries.slice(0, 10),
           loading: false,
         });
       } catch (err) {
