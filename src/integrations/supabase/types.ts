@@ -3713,6 +3713,39 @@ export type Database = {
         }
         Relationships: []
       }
+      login_verification_codes: {
+        Row: {
+          attempts: number | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          phone_number: string
+          user_id: string
+          verification_code: string
+          verified: boolean | null
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          phone_number: string
+          user_id: string
+          verification_code: string
+          verified?: boolean | null
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          phone_number?: string
+          user_id?: string
+          verification_code?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
       market_data: {
         Row: {
           change_percentage: number | null
@@ -6947,6 +6980,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_security_questions: {
+        Row: {
+          answer_1_hash: string
+          answer_2_hash: string
+          answer_3_hash: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          question_1: string
+          question_2: string
+          question_3: string
+          updated_at: string | null
+          user_email: string
+          user_id: string
+        }
+        Insert: {
+          answer_1_hash: string
+          answer_2_hash: string
+          answer_3_hash: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          question_1: string
+          question_2: string
+          question_3: string
+          updated_at?: string | null
+          user_email: string
+          user_id: string
+        }
+        Update: {
+          answer_1_hash?: string
+          answer_2_hash?: string
+          answer_3_hash?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          question_1?: string
+          question_2?: string
+          question_3?: string
+          updated_at?: string | null
+          user_email?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_sessions: {
         Row: {
           created_at: string
@@ -7283,6 +7361,50 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawal_approval_logs: {
+        Row: {
+          action: string
+          approver_email: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          verification_method: string | null
+          withdrawal_request_id: string
+        }
+        Insert: {
+          action: string
+          approver_email: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          verification_method?: string | null
+          withdrawal_request_id: string
+        }
+        Update: {
+          action?: string
+          approver_email?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          verification_method?: string | null
+          withdrawal_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_approval_logs_withdrawal_request_id_fkey"
+            columns: ["withdrawal_request_id"]
+            isOneToOne: false
+            referencedRelation: "withdrawal_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       withdrawal_requests: {
         Row: {
           admin_approved_1_at: string | null
@@ -7406,6 +7528,56 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawal_verification_codes: {
+        Row: {
+          approver_email: string
+          approver_phone: string
+          attempts: number | null
+          code_expires_at: string
+          created_at: string | null
+          id: string
+          max_attempts: number | null
+          verification_code: string
+          verified: boolean | null
+          verified_at: string | null
+          withdrawal_request_id: string
+        }
+        Insert: {
+          approver_email: string
+          approver_phone: string
+          attempts?: number | null
+          code_expires_at: string
+          created_at?: string | null
+          id?: string
+          max_attempts?: number | null
+          verification_code: string
+          verified?: boolean | null
+          verified_at?: string | null
+          withdrawal_request_id: string
+        }
+        Update: {
+          approver_email?: string
+          approver_phone?: string
+          attempts?: number | null
+          code_expires_at?: string
+          created_at?: string | null
+          id?: string
+          max_attempts?: number | null
+          verification_code?: string
+          verified?: boolean | null
+          verified_at?: string | null
+          withdrawal_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_verification_codes_withdrawal_request_id_fkey"
+            columns: ["withdrawal_request_id"]
+            isOneToOne: false
+            referencedRelation: "withdrawal_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_steps: {
         Row: {
           action: string
@@ -7488,10 +7660,19 @@ export type Database = {
         Args: never
         Returns: undefined
       }
+      cleanup_expired_login_codes: { Args: never; Returns: undefined }
       cleanup_expired_verification_codes: { Args: never; Returns: undefined }
       cleanup_inactive_sessions: { Args: never; Returns: undefined }
       cleanup_old_price_calculations: { Args: never; Returns: undefined }
       create_timothy_auth_account: { Args: never; Returns: Json }
+      create_withdrawal_verification_code: {
+        Args: {
+          p_approver_email: string
+          p_approver_phone: string
+          p_withdrawal_request_id: string
+        }
+        Returns: Json
+      }
       deduct_from_inventory_batches: {
         Args: {
           p_coffee_type: string
@@ -7507,6 +7688,7 @@ export type Database = {
       }
       expire_old_bookings: { Args: never; Returns: undefined }
       fix_denis_auth_final: { Args: never; Returns: Json }
+      generate_verification_code: { Args: never; Returns: string }
       get_available_to_request: { Args: { user_uuid: string }; Returns: number }
       get_available_to_request_safe: {
         Args: { user_uuid: string }
@@ -7636,6 +7818,10 @@ export type Database = {
       user_is_conversation_participant: {
         Args: { conversation_uuid: string }
         Returns: boolean
+      }
+      verify_withdrawal_code: {
+        Args: { p_code: string; p_code_id: string }
+        Returns: Json
       }
     }
     Enums: {
