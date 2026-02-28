@@ -51,10 +51,16 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (!user?.id) return;
     setLoading(true);
     try {
+      // Get unified user ID
+      const { data: userIdData } = await supabase
+        .rpc('get_unified_user_id', { input_email: user.email });
+      const unifiedUserId = userIdData || user.id;
+
+      // Fetch entries
       const { data, error } = await supabase
         .from('ledger_entries')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', unifiedUserId)
         .order('created_at', { ascending: false })
         .limit(count);
 
@@ -63,9 +69,19 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       setEntries(items);
       setHasMore(items.length === count);
 
-      // Calculate running balance (from oldest to newest, then reverse)
+      // Get total balance from ALL entries to calculate correct running balances
+      const { data: totalData } = await supabase
+        .rpc('get_user_balance_safe', { user_email: user.email || '' });
+      const totalBalance = Number(totalData?.[0]?.wallet_balance) || 0;
+
+      // Sum of amounts in our current page
+      const pageSum = items.reduce((s, e) => s + e.amount, 0);
+      // Balance BEFORE the oldest entry in our page
+      const balanceBefore = totalBalance - pageSum;
+
+      // Calculate running balance from oldest to newest
       const sorted = [...items].reverse();
-      let bal = 0;
+      let bal = balanceBefore;
       const balances = sorted.map(e => {
         bal += e.amount;
         return bal;
