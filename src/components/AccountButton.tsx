@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/sheet';
 import { 
   Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer,
-  Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift
+  Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift, FileText
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
 import { MoneyRequestModal } from './MoneyRequestModal';
 import { WithdrawalModal } from './WithdrawalModal';
 import { DepositModal } from './DepositModal';
+import { TransactionStatement } from './TransactionStatement';
 import { format } from 'date-fns';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -40,6 +41,7 @@ export const AccountButton = () => {
   const [showMoneyRequest, setShowMoneyRequest] = useState(false);
   const [showWithdrawal, setShowWithdrawal] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
+  const [showStatement, setShowStatement] = useState(false);
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
   const [totalDeposited, setTotalDeposited] = useState(0);
 
@@ -297,6 +299,20 @@ export const AccountButton = () => {
                 )}
               </div>
             )}
+
+            {/* Statement Toggle */}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full flex items-center gap-2"
+              onClick={() => setShowStatement(!showStatement)}
+            >
+              <FileText className="h-4 w-4" />
+              {showStatement ? 'Hide Statement' : 'View Transaction Statement'}
+            </Button>
+
+            {/* Transaction Statement */}
+            <TransactionStatement open={showStatement} onOpenChange={setShowStatement} />
 
             <Separator />
 
