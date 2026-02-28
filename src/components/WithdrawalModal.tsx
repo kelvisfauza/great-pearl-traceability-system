@@ -187,7 +187,17 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     if (!amount) return;
 
     const withdrawalAmount = parseFloat(amount);
-    if (withdrawalAmount > availableAmount || withdrawalAmount < 100) return;
+    if (withdrawalAmount > availableAmount || withdrawalAmount < 2000) return;
+
+    // For cash, enforce round amounts (multiples of 500)
+    if (channel === 'CASH' && withdrawalAmount % 500 !== 0) {
+      toast({
+        title: "Invalid Cash Amount",
+        description: "Cash withdrawals must be in round figures (multiples of 500). E.g. 2000, 2500, 5000.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     await generateAndSendCode();
   };
@@ -266,8 +276,10 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     refreshAccount();
   };
 
+  const parsedAmount = amount ? parseFloat(amount) : 0;
+  const isCashRoundAmount = channel !== 'CASH' || parsedAmount % 500 === 0;
   const isDisbursementValid = channel === 'CASH' || (channel === 'MOBILE_MONEY' && mobileNumber.length >= 10) || (channel === 'BANK' && bankName && accountNumber && accountName);
-  const isAmountValid = amount && parseFloat(amount) <= availableAmount && parseFloat(amount) >= 100 && !withdrawalStatus.disabled && isDisbursementValid;
+  const isAmountValid = amount && parsedAmount <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && isDisbursementValid;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -373,14 +385,18 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     required
-                    min="100"
+                    min="2000"
                     max={availableAmount}
-                    step="1000"
+                    step={channel === 'CASH' ? '500' : '1'}
                   />
-                  {amount && parseFloat(amount) > availableAmount && (
-                    <p className="text-sm text-red-600">
-                      Amount exceeds available to request
-                    </p>
+                  {amount && parsedAmount < 2000 && (
+                    <p className="text-sm text-destructive">Minimum withdrawal is UGX 2,000</p>
+                  )}
+                  {amount && parsedAmount > availableAmount && (
+                    <p className="text-sm text-destructive">Amount exceeds available balance</p>
+                  )}
+                  {amount && channel === 'CASH' && parsedAmount >= 2000 && parsedAmount % 500 !== 0 && (
+                    <p className="text-sm text-destructive">Cash must be in round figures (multiples of 500)</p>
                   )}
                 </div>
 
