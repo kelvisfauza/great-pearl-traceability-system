@@ -28,6 +28,11 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
   const [verificationCode, setVerificationCode] = useState('');
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
+  // OTP gate for biometric registration
+  const [registrationOtpRequired, setRegistrationOtpRequired] = useState(false);
+  const [registrationOtpCode, setRegistrationOtpCode] = useState('');
+  const [registrationOtpSent, setRegistrationOtpSent] = useState(false);
+  const [registrationOtpVerified, setRegistrationOtpVerified] = useState(false);
 
   useEffect(() => {
     // Check if biometric is available on this device
@@ -74,11 +79,12 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
         .single();
 
       if (!credential) {
-        // No credential registered, prompt to register
+        // No credential registered, prompt to register with OTP verification first
         console.log('⚠️ No biometric credential found for user, switching to registration');
         setIsRegistering(true);
+        setRegistrationOtpRequired(true);
         setIsVerifying(false);
-        toast.info('No fingerprint registered yet. Please register now.');
+        toast.info('No fingerprint registered yet. SMS verification is required before registration.');
         return;
       }
 
@@ -129,9 +135,30 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       return;
     }
 
+    // Require OTP verification before allowing registration
+    if (!registrationOtpVerified) {
+      setError('Please verify your identity via SMS before registering a fingerprint.');
+      setRegistrationOtpRequired(true);
+      return;
+    }
+
     try {
       setIsVerifying(true);
       setError('');
+
+      // SECURITY: Check if biometric credential already exists (first-login only)
+      const { data: existingCredential } = await supabase
+        .from('biometric_credentials')
+        .select('credential_id, created_at')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (existingCredential) {
+        setError('A fingerprint is already registered for this account. Only the first registered fingerprint is allowed. Contact an administrator if you need to reset it.');
+        setIsVerifying(false);
+        toast.error('Biometric already registered. Contact admin to reset.');
+        return;
+      }
 
       console.log('🔐 Starting biometric registration for:', email);
       console.log('🌐 Current hostname:', window.location.hostname);
@@ -139,14 +166,10 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       const challenge = new Uint8Array(32);
       crypto.getRandomValues(challenge);
 
-      // Generate a proper user ID from email
       const userId = new TextEncoder().encode(email.substring(0, 16).padEnd(16, '0'));
 
-      // For WebAuthn, localhost and lovable domains need special handling
       const hostname = window.location.hostname;
       let rpId = hostname;
-      
-      // For localhost, use 'localhost'. For lovable previews, use the full hostname
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         rpId = 'localhost';
       }
@@ -166,8 +189,8 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
             displayName: email
           },
           pubKeyCredParams: [
-            { alg: -7, type: 'public-key' },  // ES256
-            { alg: -257, type: 'public-key' } // RS256
+            { alg: -7, type: 'public-key' },
+            { alg: -257, type: 'public-key' }
           ],
           authenticatorSelection: {
             authenticatorAttachment: 'platform',
@@ -180,20 +203,43 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       }) as PublicKeyCredential;
 
       if (credential) {
-        // Store credential in database
         const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
         
-        await supabase.from('biometric_credentials').upsert({
+        // Use INSERT (not upsert) to prevent overwriting existing credentials
+        const { error: insertError } = await supabase.from('biometric_credentials').insert({
           email: email,
           credential_id: credentialId,
           created_at: new Date().toISOString()
         });
 
+        if (insertError) {
+          if (insertError.code === '23505') {
+            // Unique constraint violation - credential already exists
+            setError('A fingerprint is already registered for this account. Contact an administrator to reset it.');
+            setIsVerifying(false);
+            return;
+          }
+          throw insertError;
+        }
+
+        // Log the registration for audit
+        try {
+          await supabase.rpc('log_audit_action', {
+            p_action: 'biometric_registered',
+            p_table_name: 'biometric_credentials',
+            p_record_id: email,
+            p_reason: 'New biometric credential registered after SMS OTP verification',
+            p_record_data: {
+              device_user_agent: navigator.userAgent,
+              registered_at: new Date().toISOString()
+            }
+          });
+        } catch { /* Don't fail if audit logging fails */ }
+
         console.log('✅ Biometric credential registered');
         toast.success('Biometric authentication registered successfully!');
         setIsRegistering(false);
         
-        // Now authenticate with the newly registered credential
         startBiometricAuth();
       }
     } catch (err: any) {
@@ -206,6 +252,95 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       } else {
         setError(`Registration failed: ${err.message || 'Please try again or contact IT support.'}`);
       }
+      setIsVerifying(false);
+    }
+  };
+
+  // Send OTP for biometric registration verification
+  const sendRegistrationOtp = async () => {
+    try {
+      setIsSendingCode(true);
+      setError('');
+
+      const { data: employee } = await supabase
+        .from('employees')
+        .select('name, phone')
+        .eq('email', email)
+        .single();
+
+      if (!employee?.phone) {
+        setError('No phone number found for this account. Please contact IT support.');
+        return;
+      }
+
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+
+      await supabase.from('verification_codes').insert({
+        email: email,
+        phone: employee.phone,
+        code: code,
+        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
+      });
+
+      const { error: smsError } = await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: employee.phone,
+          message: `Your Great Pearl fingerprint registration code is: ${code}. Valid for 10 minutes. If you did not request this, contact your administrator immediately.`,
+          userName: employee.name,
+          messageType: 'verification_code'
+        }
+      });
+
+      if (smsError) throw smsError;
+
+      setRegistrationOtpSent(true);
+      toast.success('Verification code sent to your phone');
+    } catch (err: any) {
+      console.error('Error sending registration OTP:', err);
+      setError(`Failed to send code: ${err.message || 'Please try again'}`);
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  // Verify OTP for biometric registration
+  const verifyRegistrationOtp = async () => {
+    try {
+      setIsVerifying(true);
+      setError('');
+
+      if (!registrationOtpCode || registrationOtpCode.length !== 4) {
+        setError('Please enter a valid 4-digit code');
+        setIsVerifying(false);
+        return;
+      }
+
+      const { data: storedCode, error: codeError } = await supabase
+        .from('verification_codes')
+        .select('*')
+        .eq('email', email)
+        .eq('code', registrationOtpCode)
+        .gte('expires_at', new Date().toISOString())
+        .single();
+
+      if (codeError || !storedCode) {
+        setError('Invalid or expired verification code');
+        setIsVerifying(false);
+        return;
+      }
+
+      await supabase
+        .from('verification_codes')
+        .delete()
+        .eq('id', storedCode.id);
+
+      setRegistrationOtpVerified(true);
+      setRegistrationOtpRequired(false);
+      toast.success('Identity verified! You can now register your fingerprint.');
+    } catch (err: any) {
+      console.error('Registration OTP verification error:', err);
+      setError('Verification failed. Please try again.');
+    } finally {
       setIsVerifying(false);
     }
   };
@@ -378,7 +513,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
             You haven't registered fingerprint authentication yet. Register now for secure admin access.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+      <CardContent className="space-y-4">
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -393,40 +528,133 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
             </AlertDescription>
           </Alert>
 
-          <Alert>
-            <AlertDescription className="text-sm">
-              <strong>First time setup:</strong> Place your finger on the sensor when prompted to register your fingerprint for secure access.
-            </AlertDescription>
-          </Alert>
+          {/* OTP verification required before registration */}
+          {registrationOtpRequired && !registrationOtpVerified ? (
+            <div className="space-y-4">
+              <Alert>
+                <AlertDescription className="text-sm">
+                  <strong>Identity verification required:</strong> For security, you must verify your identity via SMS before registering a fingerprint. This ensures only you can register biometric access to your account.
+                </AlertDescription>
+              </Alert>
 
-          <div className="space-y-2">
-            <Button 
-              onClick={registerBiometric} 
-              disabled={isVerifying || !isBiometricAvailable}
-              className="w-full"
-              size="lg"
-            >
-              {isVerifying ? (
-                <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Setting up...
-                </>
+              {!registrationOtpSent ? (
+                <div className="space-y-2">
+                  <Button 
+                    onClick={sendRegistrationOtp} 
+                    disabled={isSendingCode}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isSendingCode ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Sending Code...
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="h-5 w-5 mr-2" />
+                        Send SMS Verification Code
+                      </>
+                    )}
+                  </Button>
+                  <Button onClick={onCancel} variant="outline" className="w-full">
+                    Cancel
+                  </Button>
+                </div>
               ) : (
-                <>
-                  <Fingerprint className="h-5 w-5 mr-2" />
-                  Register Fingerprint
-                </>
+                <div className="space-y-3">
+                  <Alert>
+                    <CheckCircle className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      Verification code sent! Check your phone.
+                    </AlertDescription>
+                  </Alert>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Enter 4-digit code</label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={registrationOtpCode}
+                      onChange={(e) => setRegistrationOtpCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="0000"
+                      className="text-center text-2xl tracking-widest"
+                    />
+                  </div>
+                  <Button 
+                    onClick={verifyRegistrationOtp} 
+                    disabled={isVerifying || registrationOtpCode.length !== 4}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isVerifying ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      'Verify Code'
+                    )}
+                  </Button>
+                  <Button 
+                    onClick={sendRegistrationOtp} 
+                    disabled={isSendingCode}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {isSendingCode ? 'Resending...' : 'Resend Code'}
+                  </Button>
+                  <Button onClick={onCancel} variant="ghost" className="w-full">
+                    Cancel
+                  </Button>
+                </div>
               )}
-            </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {registrationOtpVerified && (
+                <Alert>
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription className="text-sm text-green-700">
+                    ✓ Identity verified via SMS. You can now register your fingerprint.
+                  </AlertDescription>
+                </Alert>
+              )}
 
-            <Button 
-              onClick={onCancel} 
-              variant="outline"
-              className="w-full"
-            >
-              Cancel
-            </Button>
-          </div>
+              <Alert>
+                <AlertDescription className="text-sm">
+                  <strong>First time setup:</strong> Place your finger on the sensor when prompted to register your fingerprint for secure access.
+                </AlertDescription>
+              </Alert>
+
+              <Button 
+                onClick={registerBiometric} 
+                disabled={isVerifying || !isBiometricAvailable}
+                className="w-full"
+                size="lg"
+              >
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Setting up...
+                  </>
+                ) : (
+                  <>
+                    <Fingerprint className="h-5 w-5 mr-2" />
+                    Register Fingerprint
+                  </>
+                )}
+              </Button>
+
+              <Button 
+                onClick={onCancel} 
+                variant="outline"
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
