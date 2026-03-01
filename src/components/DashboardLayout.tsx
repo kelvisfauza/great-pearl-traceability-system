@@ -101,7 +101,7 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
               unreadCount={notificationUnreadCount}
             />
             <ThemeToggle />
-            {!isMobile && <AccountButton />}
+            <AccountButton />
           </div>
         </header>
 
