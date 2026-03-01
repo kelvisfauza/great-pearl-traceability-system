@@ -299,6 +299,44 @@ const ProcessPayrollDialog = () => {
 
     setSubmitting(true);
     try {
+      // DUPLICATE CHECK: Prevent double entries for the same employee + month + payment type
+      const { data: existingPayments } = await supabase
+        .from('employee_salary_payments')
+        .select('id, payment_label, status')
+        .eq('employee_id', selectedEmployee.id)
+        .eq('payment_month', form.month)
+        .in('status', ['completed', 'processing']);
+
+      if (existingPayments && existingPayments.length > 0) {
+        const sameTypePayment = existingPayments.find(p => {
+          if (paymentType === 'full') return p.payment_label === 'FULL SALARY';
+          if (paymentType === 'half') return p.payment_label === 'HALF SALARY';
+          if (paymentType === 'balance') return p.payment_label === 'BALANCE SALARY';
+          return false;
+        });
+
+        if (sameTypePayment) {
+          toast({ 
+            title: "Duplicate Payment Blocked", 
+            description: `${selectedEmployee.name} already has a ${paymentType} salary payment for ${form.month} (${sameTypePayment.status}). Cannot process again.`, 
+            variant: "destructive" 
+          });
+          setSubmitting(false);
+          return;
+        }
+
+        // Block full salary if any payment exists
+        if (paymentType === 'full' && existingPayments.length > 0) {
+          toast({ 
+            title: "Duplicate Payment Blocked", 
+            description: `${selectedEmployee.name} already has a payment record for ${form.month}. Cannot process full salary again.`, 
+            variant: "destructive" 
+          });
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('employee_salary_payments')
         .insert({
