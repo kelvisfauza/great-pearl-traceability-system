@@ -90,6 +90,18 @@ const ProcessPayrollDialog = () => {
   const [halfPayAlreadyPaid, setHalfPayAlreadyPaid] = useState(false);
   const [halfPayInfo, setHalfPayInfo] = useState<{ netPaid: number; grossPaid: number; deductionsApplied: number } | null>(null);
   const [currentMonthPaymentInfo, setCurrentMonthPaymentInfo] = useState<{ count: number; totalPaid: number } | null>(null);
+  // Generate month options: 3 previous months, current month, next month
+  const getMonthOptions = () => {
+    const options: string[] = [];
+    const now = new Date();
+    for (let i = -3; i <= 1; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      options.push(format(d, 'MMMM yyyy'));
+    }
+    return options;
+  };
+  const monthOptions = getMonthOptions();
+
   const [form, setForm] = useState({
     salaryAmount: '',
     advanceDeduction: '',
@@ -146,13 +158,13 @@ const ProcessPayrollDialog = () => {
 
     if (!emp) return;
 
-    // Check if employee already has a completed/processing payment for current month
-    const currentMonth = format(new Date(), 'MMMM yyyy');
+    // Check if employee already has a completed/processing payment for selected month
+    const selectedMonth = form.month || format(new Date(), 'MMMM yyyy');
     const { data: existingPayments } = await supabase
       .from('employee_salary_payments')
       .select('id, net_salary, gross_salary, status, payment_month, payment_label, advance_deduction, time_deduction, notes')
       .eq('employee_id', emp.id)
-      .eq('payment_month', currentMonth)
+      .eq('payment_month', selectedMonth)
       .in('status', ['completed', 'processing']);
 
     const paidThisMonth = existingPayments && existingPayments.length > 0;
@@ -178,7 +190,7 @@ const ProcessPayrollDialog = () => {
         ...prev,
         salaryAmount: balanceGross.toString(),
         advanceDeduction: '0', // Deductions already applied on half pay
-        month: currentMonth,
+        month: selectedMonth,
       }));
     } else if (paidThisMonth) {
       const totalPaid = existingPayments.reduce((sum, p) => sum + Number(p.net_salary || 0), 0);
@@ -252,7 +264,7 @@ const ProcessPayrollDialog = () => {
       ...prev,
       salaryAmount: paidThisMonth ? salaryAmount.toString() : salaryAmount.toString(),
       advanceDeduction: advMinPayment > 0 ? advMinPayment.toString() : '0',
-      month: paidThisMonth ? getNextMonth() : currentMonth,
+      month: paidThisMonth ? getNextMonth() : selectedMonth,
     }));
   };
 
@@ -512,11 +524,16 @@ const ProcessPayrollDialog = () => {
 
                   <div className="space-y-2">
                     <Label>Payment Month</Label>
-                    <Input
-                      value={form.month}
-                      onChange={e => setForm({ ...form, month: e.target.value })}
-                      placeholder="e.g. February 2026"
-                    />
+                    <Select value={form.month} onValueChange={(v) => setForm({ ...form, month: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select month..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {monthOptions.map(m => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
