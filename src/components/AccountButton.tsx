@@ -42,23 +42,31 @@ export const AccountButton = () => {
   const [showWithdrawal, setShowWithdrawal] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
-  const [totalWithdrawn, setTotalWithdrawn] = useState(0);
-  const [totalDeposited, setTotalDeposited] = useState(0);
-  const [balanceBroughtForward, setBalanceBroughtForward] = useState(0);
-  const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
+  const [breakdown, setBreakdown] = useState({
+    lastMonthLoyalty: 0,
+    lastMonthBonuses: 0,
+    lastMonthDeposits: 0,
+    lastMonthWithdrawals: 0,
+    lastMonthAdjustments: 0,
+    thisMonthLoyalty: 0,
+    thisMonthBonuses: 0,
+    thisMonthDeposits: 0,
+    thisMonthWithdrawals: 0,
+    thisMonthAdjustments: 0,
+    balanceBroughtForward: 0,
+    thisMonthNet: 0,
+  });
 
   const withdrawalStatus = isWithdrawalDisabled();
 
-  // Fetch total withdrawals, deposits, and month breakdown from ledger
+  // Fetch detailed breakdown from ledger
   const fetchLedgerTotals = async () => {
     if (!user?.id) return;
     
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
-    const monthStartISO = monthStart.toISOString();
 
-    // Fetch all wallet-relevant entries
     const { data: allEntries } = await supabase
       .from('ledger_entries')
       .select('amount, entry_type, created_at')
@@ -66,27 +74,31 @@ export const AccountButton = () => {
       .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
 
     const entries = allEntries || [];
-    
-    const totalW = entries
-      .filter(e => e.entry_type === 'WITHDRAWAL')
-      .reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0);
-    setTotalWithdrawn(totalW);
+    const before = entries.filter(e => new Date(e.created_at) < monthStart);
+    const current = entries.filter(e => new Date(e.created_at) >= monthStart);
 
-    const totalD = entries
-      .filter(e => e.entry_type === 'DEPOSIT')
-      .reduce((sum, e) => sum + Number(e.amount), 0);
-    setTotalDeposited(totalD);
+    const sumByType = (arr: typeof entries, type: string) =>
+      arr.filter(e => e.entry_type === type).reduce((s, e) => s + Number(e.amount), 0);
 
-    // Split into before this month (brought forward) and this month
-    const beforeMonth = entries
-      .filter(e => new Date(e.created_at) < monthStart)
-      .reduce((sum, e) => sum + Number(e.amount), 0);
-    setBalanceBroughtForward(beforeMonth);
+    const lastMonthLoyalty = sumByType(before, 'LOYALTY_REWARD');
+    const lastMonthBonuses = sumByType(before, 'BONUS');
+    const lastMonthDeposits = sumByType(before, 'DEPOSIT');
+    const lastMonthWithdrawals = sumByType(before, 'WITHDRAWAL');
+    const lastMonthAdjustments = sumByType(before, 'ADJUSTMENT');
+    const balanceBroughtForward = lastMonthLoyalty + lastMonthBonuses + lastMonthDeposits + lastMonthWithdrawals + lastMonthAdjustments;
 
-    const thisMonth = entries
-      .filter(e => new Date(e.created_at) >= monthStart)
-      .reduce((sum, e) => sum + Number(e.amount), 0);
-    setThisMonthEarnings(thisMonth);
+    const thisMonthLoyalty = sumByType(current, 'LOYALTY_REWARD');
+    const thisMonthBonuses = sumByType(current, 'BONUS');
+    const thisMonthDeposits = sumByType(current, 'DEPOSIT');
+    const thisMonthWithdrawals = sumByType(current, 'WITHDRAWAL');
+    const thisMonthAdjustments = sumByType(current, 'ADJUSTMENT');
+    const thisMonthNet = thisMonthLoyalty + thisMonthBonuses + thisMonthDeposits + thisMonthWithdrawals + thisMonthAdjustments;
+
+    setBreakdown({
+      lastMonthLoyalty, lastMonthBonuses, lastMonthDeposits, lastMonthWithdrawals, lastMonthAdjustments,
+      thisMonthLoyalty, thisMonthBonuses, thisMonthDeposits, thisMonthWithdrawals, thisMonthAdjustments,
+      balanceBroughtForward, thisMonthNet,
+    });
   };
 
   useEffect(() => {
@@ -189,50 +201,89 @@ export const AccountButton = () => {
             <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Star className="h-4 w-4 text-green-600" />
-                  Loyalty Balance
+                  <Wallet className="h-4 w-4 text-green-600" />
+                  Wallet Balance
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-700">
                   {formatCurrency(availableLoyalty)}
                 </div>
-                <div className="mt-2 space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Balance from last month</span>
-                    <span className="font-medium">{formatCurrency(Math.max(0, balanceBroughtForward))}</span>
+                
+                <div className="mt-3 space-y-1 text-xs">
+                  {/* Last month section */}
+                  <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide pt-1">Balance from previous months</div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Loyalty Rewards</span>
+                    <span className="font-medium">{breakdown.lastMonthLoyalty.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">This month</span>
-                    <span className={`font-medium ${thisMonthEarnings >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                      {thisMonthEarnings >= 0 ? '+' : ''}{formatCurrency(thisMonthEarnings)}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Bonuses</span>
+                    <span className="font-medium">{breakdown.lastMonthBonuses.toLocaleString()}</span>
+                  </div>
+                  {breakdown.lastMonthDeposits > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Deposits</span>
+                      <span className="font-medium">{breakdown.lastMonthDeposits.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {breakdown.lastMonthWithdrawals < 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Withdrawals</span>
+                      <span className="font-medium text-red-600">{breakdown.lastMonthWithdrawals.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-semibold border-t border-green-200 pt-1">
+                    <span>Brought Forward</span>
+                    <span>{formatCurrency(breakdown.balanceBroughtForward)}</span>
+                  </div>
+
+                  {/* This month section */}
+                  <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide pt-2">This Month</div>
+                  {breakdown.thisMonthLoyalty > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Loyalty Rewards</span>
+                      <span className="font-medium text-green-700">+{breakdown.thisMonthLoyalty.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {breakdown.thisMonthBonuses > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bonuses</span>
+                      <span className="font-medium text-green-700">+{breakdown.thisMonthBonuses.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {breakdown.thisMonthDeposits > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Deposits</span>
+                      <span className="font-medium text-green-700">+{breakdown.thisMonthDeposits.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {breakdown.thisMonthWithdrawals < 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Withdrawals</span>
+                      <span className="font-medium text-red-600">{breakdown.thisMonthWithdrawals.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-semibold border-t border-green-200 pt-1">
+                    <span>This Month Net</span>
+                    <span className={breakdown.thisMonthNet >= 0 ? 'text-green-700' : 'text-red-700'}>
+                      {breakdown.thisMonthNet >= 0 ? '+' : ''}{formatCurrency(breakdown.thisMonthNet)}
                     </span>
                   </div>
+
+                  {/* Total */}
+                  <div className="flex justify-between font-bold text-sm border-t-2 border-green-300 pt-2 mt-1">
+                    <span>Total Balance</span>
+                    <span className="text-green-700">{formatCurrency(availableLoyalty)}</span>
+                  </div>
                 </div>
+
                 {pendingAmount > 0 && (
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
                     <Clock className="h-3 w-3" />
                     <span>UGX {pendingAmount.toLocaleString()} frozen (pending approval)</span>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Bonus Balance Card */}
-            <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Gift className="h-4 w-4 text-purple-600" />
-                  Bonus Balance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-purple-700">
-                  {formatCurrency(bonusData?.totalClaimed || 0)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {bonusData?.totalPending ? `${formatCurrency(bonusData.totalPending)} pending claim` : 'From allocated bonuses'}
-                </p>
               </CardContent>
             </Card>
 
@@ -345,7 +396,7 @@ export const AccountButton = () => {
             </Button>
 
             {/* Transaction Statement */}
-            <TransactionStatement open={showStatement} onOpenChange={setShowStatement} currentBalance={availableLoyalty} balanceBroughtForward={balanceBroughtForward} thisMonthEarnings={thisMonthEarnings} />
+            <TransactionStatement open={showStatement} onOpenChange={setShowStatement} currentBalance={availableLoyalty} balanceBroughtForward={breakdown.balanceBroughtForward} thisMonthEarnings={breakdown.thisMonthNet} />
 
             <Separator />
 
