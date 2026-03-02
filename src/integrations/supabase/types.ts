@@ -4792,6 +4792,45 @@ export type Database = {
           },
         ]
       }
+      per_diem_awards: {
+        Row: {
+          amount: number
+          awarded_at: string
+          awarded_by: string
+          created_at: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          awarded_at?: string
+          awarded_by: string
+          created_at?: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          awarded_at?: string
+          awarded_by?: string
+          created_at?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       performance_data: {
         Row: {
           category: string

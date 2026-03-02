@@ -67,6 +67,7 @@ const HRDashboard = () => {
     { title: "Performance", description: "Employee performance tracking", icon: Award, path: "/v2/hr/performance" },
     { title: "Salary Advances", description: "Award & track advances", icon: CreditCard, path: "/v2/hr/salary-advances" },
     { title: "Time Deductions", description: "Deduct for missed hours (3,000/hr)", icon: AlertTriangle, path: "/v2/hr/time-deductions" },
+    { title: "Per Diem", description: "Award per diem allowances to employees", icon: CreditCard, path: "/v2/hr/per-diem" },
     { title: "Loyalty Balances", description: "Track employee loyalty reward balances", icon: Gift, path: "/v2/hr/loyalty-balances" },
   ];
 
