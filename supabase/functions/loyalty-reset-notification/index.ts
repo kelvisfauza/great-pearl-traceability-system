@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
 
     if (error) throw error
 
-    const message = `GREAT PEARL COFFEE\n\nMonthly Loyalty Reset\n\nYour loyalty rewards balance has reset to zero for the new month. Please remember to withdraw your earnings before the end of each month.\n\nNote: Only loyalty rewards reset monthly. Your direct deposits remain in your wallet.\n\nThank you for your hard work!`
+    const message = `GREAT PEARL COFFEE: Your loyalty rewards have reset to zero for the new month. Withdraw your earnings before month end. Deposits are not affected.`
 
     let sent = 0
     let failed = 0
