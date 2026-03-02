@@ -35,9 +35,11 @@ interface TransactionStatementProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentBalance: number;
+  balanceBroughtForward?: number;
+  thisMonthEarnings?: number;
 }
 
-export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance }) => {
+export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
   const { user, employee } = useAuth();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -87,6 +89,8 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         <div style="margin-bottom:12px;font-size:13px">
           <strong>Employee:</strong> ${employee?.name || user?.email || 'N/A'}<br/>
           <strong>Date:</strong> ${format(new Date(), 'MMMM dd, yyyy')}<br/>
+          <strong>Balance from last month:</strong> UGX ${Math.max(0, balanceBroughtForward).toLocaleString()}<br/>
+          <strong>This month:</strong> UGX ${thisMonthEarnings.toLocaleString()}<br/>
           <strong>Current Balance:</strong> UGX ${currentBalance.toLocaleString()}
         </div>
         <table>
@@ -170,8 +174,21 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         </div>
       </div>
 
-      <div className="text-sm text-muted-foreground">
-        Current balance: <span className="font-semibold text-foreground">UGX {currentBalance.toLocaleString()}</span>
+      <div className="text-sm space-y-0.5">
+        <div className="flex justify-between text-muted-foreground">
+          <span>Balance from last month:</span>
+          <span className="font-medium text-foreground">UGX {Math.max(0, balanceBroughtForward).toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between text-muted-foreground">
+          <span>This month:</span>
+          <span className={`font-medium ${thisMonthEarnings >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+            {thisMonthEarnings >= 0 ? '+' : ''}UGX {thisMonthEarnings.toLocaleString()}
+          </span>
+        </div>
+        <div className="flex justify-between font-semibold border-t pt-1 mt-1">
+          <span>Current balance:</span>
+          <span>UGX {currentBalance.toLocaleString()}</span>
+        </div>
       </div>
 
       {loading && entries.length === 0 ? (
