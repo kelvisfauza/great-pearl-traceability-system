@@ -44,32 +44,49 @@ export const AccountButton = () => {
   const [showStatement, setShowStatement] = useState(false);
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
   const [totalDeposited, setTotalDeposited] = useState(0);
+  const [balanceBroughtForward, setBalanceBroughtForward] = useState(0);
+  const [thisMonthEarnings, setThisMonthEarnings] = useState(0);
 
   const withdrawalStatus = isWithdrawalDisabled();
 
-  // Fetch total withdrawals and deposits from ledger
+  // Fetch total withdrawals, deposits, and month breakdown from ledger
   const fetchLedgerTotals = async () => {
     if (!user?.id) return;
     
-    // Fetch withdrawals
-    const { data: withdrawals } = await supabase
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthStartISO = monthStart.toISOString();
+
+    // Fetch all wallet-relevant entries
+    const { data: allEntries } = await supabase
       .from('ledger_entries')
-      .select('amount')
+      .select('amount, entry_type, created_at')
       .eq('user_id', user.id)
-      .eq('entry_type', 'WITHDRAWAL');
+      .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+
+    const entries = allEntries || [];
     
-    const totalW = (withdrawals || []).reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0);
+    const totalW = entries
+      .filter(e => e.entry_type === 'WITHDRAWAL')
+      .reduce((sum, e) => sum + Math.abs(Number(e.amount)), 0);
     setTotalWithdrawn(totalW);
 
-    // Fetch deposits
-    const { data: deposits } = await supabase
-      .from('ledger_entries')
-      .select('amount')
-      .eq('user_id', user.id)
-      .eq('entry_type', 'DEPOSIT');
-    
-    const totalD = (deposits || []).reduce((sum, e) => sum + Number(e.amount), 0);
+    const totalD = entries
+      .filter(e => e.entry_type === 'DEPOSIT')
+      .reduce((sum, e) => sum + Number(e.amount), 0);
     setTotalDeposited(totalD);
+
+    // Split into before this month (brought forward) and this month
+    const beforeMonth = entries
+      .filter(e => new Date(e.created_at) < monthStart)
+      .reduce((sum, e) => sum + Number(e.amount), 0);
+    setBalanceBroughtForward(beforeMonth);
+
+    const thisMonth = entries
+      .filter(e => new Date(e.created_at) >= monthStart)
+      .reduce((sum, e) => sum + Number(e.amount), 0);
+    setThisMonthEarnings(thisMonth);
   };
 
   useEffect(() => {
@@ -180,7 +197,18 @@ export const AccountButton = () => {
                 <div className="text-3xl font-bold text-green-700">
                   {formatCurrency(availableLoyalty)}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Available from Loyalty Rewards</p>
+                <div className="mt-2 space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Balance from last month</span>
+                    <span className="font-medium">{formatCurrency(Math.max(0, balanceBroughtForward))}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">This month</span>
+                    <span className={`font-medium ${thisMonthEarnings >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                      {thisMonthEarnings >= 0 ? '+' : ''}{formatCurrency(thisMonthEarnings)}
+                    </span>
+                  </div>
+                </div>
                 {pendingAmount > 0 && (
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
                     <Clock className="h-3 w-3" />
@@ -317,7 +345,7 @@ export const AccountButton = () => {
             </Button>
 
             {/* Transaction Statement */}
-            <TransactionStatement open={showStatement} onOpenChange={setShowStatement} currentBalance={availableLoyalty} />
+            <TransactionStatement open={showStatement} onOpenChange={setShowStatement} currentBalance={availableLoyalty} balanceBroughtForward={balanceBroughtForward} thisMonthEarnings={thisMonthEarnings} />
 
             <Separator />
 
