@@ -55,21 +55,18 @@ const LoyaltyBalances = () => {
         const { data: ledger } = await supabase
           .from("ledger_entries")
           .select("entry_type, amount")
-          .eq("user_id", emp.auth_user_id);
+          .eq("user_id", emp.auth_user_id)
+          .in("entry_type", ["LOYALTY_REWARD", "BONUS", "DEPOSIT", "WITHDRAWAL", "ADJUSTMENT"]);
 
         let totalEarned = 0;
         let totalWithdrawn = 0;
-        let bonusTotal = 0;
 
         (ledger || []).forEach((entry: any) => {
-          if (entry.entry_type === "LOYALTY_REWARD" && entry.amount > 0) {
-            totalEarned += Number(entry.amount);
-          }
-          if (entry.entry_type === "BONUS" && entry.amount > 0) {
-            bonusTotal += Number(entry.amount);
-          }
-          if (entry.entry_type === "WITHDRAWAL" && entry.amount < 0) {
-            totalWithdrawn += Math.abs(Number(entry.amount));
+          const amt = Number(entry.amount);
+          if (amt > 0) {
+            totalEarned += amt;
+          } else if (amt < 0) {
+            totalWithdrawn += Math.abs(amt);
           }
         });
 
@@ -78,9 +75,9 @@ const LoyaltyBalances = () => {
           name: emp.name,
           email: emp.email,
           department: emp.department,
-          totalEarned: totalEarned + bonusTotal,
+          totalEarned,
           totalWithdrawn,
-          currentBalance: totalEarned + bonusTotal - totalWithdrawn,
+          currentBalance: totalEarned - totalWithdrawn,
         });
       }
 
