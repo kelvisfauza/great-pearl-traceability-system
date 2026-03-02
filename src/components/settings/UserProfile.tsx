@@ -23,6 +23,7 @@ import {
   Key
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import LeaveApplication from './LeaveApplication';
 
 interface UserProfileProps {
   employee: any;
@@ -436,6 +437,9 @@ const UserProfile = ({ employee }: UserProfileProps) => {
           )}
         </CardContent>
       </Card>
+
+      {/* Leave Application */}
+      <LeaveApplication />
     </div>
   );
 };

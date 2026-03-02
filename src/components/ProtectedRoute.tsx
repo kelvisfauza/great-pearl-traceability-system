@@ -2,6 +2,8 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLeaveEnforcement } from '@/contexts/LeaveEnforcementContext';
+import LeaveEnforcementBanner from '@/components/LeaveEnforcementBanner';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -20,6 +22,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   showAccessDenied = true
 }) => {
   const { user, employee, loading, hasPermission, hasRole } = useAuth();
+  const { activeLeave, isOnLeave } = useLeaveEnforcement();
 
   if (loading) {
     return (
@@ -38,40 +41,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // If we have a user but no employee data, create a basic employee or show error
   if (!employee) {
-    // For authenticated users without employee records, redirect to auth
-    // This handles cases where the user exists but has no employee profile
     return <Navigate to="/auth" replace />;
   }
 
   // Check if user has required permissions (only if permissions are specified)
   if (requiredPermissions.length > 0) {
-    console.log('🔒 DEBUGGING PERMISSION CHECK:', {
-      userEmail: user?.email,
-      employeeName: employee?.name,
-      employeeRole: employee?.role,
-      employeePermissions: employee?.permissions,
-      requiredPermissions: requiredPermissions,
-      route: window.location.pathname
-    });
-    
-    // Check each permission individually for debugging
-    const permissionResults = requiredPermissions.map(permission => {
-      const hasIt = hasPermission(permission);
-      console.log(`🔒 Permission "${permission}": ${hasIt ? '✅ GRANTED' : '❌ DENIED'}`);
-      return { permission, hasIt };
-    });
-    
     const hasRequiredPermission = requiredPermissions.some(permission => hasPermission(permission));
     
-    console.log('🔒 FINAL RESULT:', { 
-      hasRequiredPermission,
-      permissionResults,
-      willGrantAccess: hasRequiredPermission
-    });
-    
     if (!hasRequiredPermission) {
-      console.log('🚫 ACCESS DENIED - Showing access denied screen');
-      
       if (showAccessDenied) {
         return (
           <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center">
@@ -112,7 +89,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const hasRequiredRole = requiredRoles.some(role => hasRole(role));
     
     if (!hasRequiredRole) {
-      
       if (showAccessDenied) {
         return (
           <div className="min-h-screen bg-gradient-to-br from-green-50 to-amber-50 flex items-center justify-center">
@@ -142,6 +118,39 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       
       return <Navigate to={fallbackRoute} replace />;
     }
+  }
+
+  // If user is on approved leave, show banner and enforce read-only
+  if (isOnLeave && activeLeave) {
+    return (
+      <>
+        <LeaveEnforcementBanner activeLeave={activeLeave} />
+        <div className="pt-10 relative">
+          {/* Overlay to block clicks on interactive elements */}
+          <div 
+            className="absolute inset-0 z-40"
+            style={{ pointerEvents: 'auto' }}
+            onClick={(e) => {
+              const target = e.target as HTMLElement;
+              // Allow navigation links, scrolling, and viewing
+              const isLink = target.closest('a') || target.closest('[role="link"]');
+              const isNav = target.closest('nav') || target.closest('[role="navigation"]');
+              if (!isLink && !isNav) {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+            }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          />
+          <div className="pointer-events-auto" style={{ opacity: 0.7 }}>
+            {children}
+          </div>
+        </div>
+      </>
+    );
   }
 
   return <>{children}</>;
