@@ -140,11 +140,10 @@ export const AccountButton = () => {
   }
 
   const monthlyProgress = stats ? (stats.monthlyEarnings / stats.monthlyCap) * 100 : 0;
-  const loyaltyBalance = stats?.monthlyEarnings || 0;
   const pendingAmount = account?.pending_withdrawals || 0;
-  const bonusBalance = bonusData?.totalClaimed || 0;
-  // Available = loyalty + bonus + deposits - withdrawals - pending
-  const availableLoyalty = Math.max(0, loyaltyBalance + bonusBalance + totalDeposited - totalWithdrawn - pendingAmount);
+  // Use the wallet balance from get_user_balance_safe (already excludes DAILY_SALARY)
+  const walletBalance = account?.wallet_balance || 0;
+  const availableLoyalty = Math.max(0, walletBalance - pendingAmount);
 
   return (
     <>
@@ -201,7 +200,7 @@ export const AccountButton = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-purple-700">
-                  {formatCurrency(Math.max(0, bonusBalance - Math.max(0, totalWithdrawn - loyaltyBalance)))}
+                  {formatCurrency(bonusData?.totalClaimed || 0)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {bonusData?.totalPending ? `${formatCurrency(bonusData.totalPending)} pending claim` : 'From allocated bonuses'}
