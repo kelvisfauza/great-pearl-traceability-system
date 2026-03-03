@@ -157,6 +157,30 @@ const TimeDeductionManager = () => {
 
       if (error) throw error;
 
+      // Deduct from employee's ledger balance
+      try {
+        const { data: userIdData } = await supabase
+          .rpc('get_unified_user_id', { input_email: selectedEmployee.email });
+        const unifiedUserId = userIdData || selectedEmployee.auth_user_id || selectedEmployee.id;
+
+        await supabase.from('ledger_entries').insert({
+          user_id: unifiedUserId,
+          entry_type: 'ADJUSTMENT',
+          amount: -totalDeduction,
+          reference: `TIME-DEDUCTION-${form.month}-${selectedEmployee.id}`,
+          metadata: {
+            type: 'time_deduction',
+            employee_name: selectedEmployee.name,
+            hours_missed: totalHoursDecimal,
+            month: form.month,
+            rate_per_hour: RATE_PER_HOUR,
+          }
+        });
+        console.log('✅ Ledger deduction created for time deduction:', totalDeduction);
+      } catch (ledgerErr) {
+        console.error('Ledger deduction error (non-blocking):', ledgerErr);
+      }
+
       // Send SMS
       const smsSent = await sendDeductionSMS(selectedEmployee, totalHoursDecimal, totalDeduction, form.month);
 
