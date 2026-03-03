@@ -142,6 +142,33 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
   useEffect(() => {
     fetchRequests();
+
+    // Real-time subscription for instant updates when withdrawal status changes
+    const channel = supabase
+      .channel('withdrawal-finance-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'withdrawal_requests',
+        },
+        () => {
+          console.log('🔄 Withdrawal request changed, refreshing...');
+          fetchRequests();
+        }
+      )
+      .subscribe();
+
+    // Auto-refresh every 5 seconds for fast pickup
+    const interval = setInterval(() => {
+      fetchRequests();
+    }, 5000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleApprove = async () => {
@@ -181,35 +208,51 @@ export const WithdrawalRequestsManager: React.FC = () => {
       const phoneToNotify = (selectedRequest as any).disbursement_phone || selectedRequest.phone_number || selectedRequest.employee_phone;
       const isMobileMoney = selectedRequest.channel === 'MOBILE_MONEY' || (selectedRequest.channel !== 'CASH' && selectedRequest.channel !== 'BANK');
 
-      // For Mobile Money: initiate payout via GosentePay
+      // For Mobile Money: initiate payout via GosentePay with retry
       let payoutRef = '';
       let payoutSuccess = false;
       if (isMobileMoney && phoneToNotify) {
-        try {
-          // Normalize phone for GosentePay (must start with 256)
-          let payoutPhone = phoneToNotify.replace(/\D/g, '');
-          if (payoutPhone.startsWith('0')) payoutPhone = '256' + payoutPhone.slice(1);
-          if (!payoutPhone.startsWith('256')) payoutPhone = '256' + payoutPhone;
+        // Normalize phone for GosentePay (must start with 256)
+        let payoutPhone = phoneToNotify.replace(/\D/g, '');
+        if (payoutPhone.startsWith('0')) payoutPhone = '256' + payoutPhone.slice(1);
+        if (!payoutPhone.startsWith('256')) payoutPhone = '256' + payoutPhone;
 
-          const { data: payoutData, error: payoutError } = await supabase.functions.invoke('gosentepay-payout', {
-            body: {
-              phone: payoutPhone,
-              amount: selectedRequest.amount,
-              ref: selectedRequest.request_ref || `WD-${selectedRequest.id.slice(0, 8)}`
+        // Try payout up to 2 times for reliability
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            console.log(`GosentePay payout attempt ${attempt}: ${payoutPhone}, UGX ${selectedRequest.amount}`);
+            const { data: payoutData, error: payoutError } = await supabase.functions.invoke('gosentepay-payout', {
+              body: {
+                phone: payoutPhone,
+                amount: selectedRequest.amount,
+                ref: selectedRequest.request_ref || `WD-${selectedRequest.id.slice(0, 8)}`
+              }
+            });
+
+            if (payoutError) {
+              console.error(`GosentePay payout attempt ${attempt} error:`, payoutError);
+              if (attempt < 2) {
+                await new Promise(r => setTimeout(r, 2000)); // Wait 2s before retry
+                continue;
+              }
+            } else if (payoutData?.status === 'success') {
+              payoutSuccess = true;
+              payoutRef = payoutData.ref || selectedRequest.request_ref;
+              console.log('GosentePay payout SUCCESS:', payoutRef);
+              break;
+            } else {
+              console.error(`GosentePay payout attempt ${attempt} failed:`, payoutData);
+              if (attempt < 2) {
+                await new Promise(r => setTimeout(r, 2000));
+                continue;
+              }
             }
-          });
-
-          if (payoutError) {
-            console.error('GosentePay payout error:', payoutError);
-          } else if (payoutData?.status === 'success') {
-            payoutSuccess = true;
-            payoutRef = payoutData.ref || selectedRequest.request_ref;
-            console.log('GosentePay payout initiated successfully:', payoutRef);
-          } else {
-            console.error('GosentePay payout failed:', payoutData);
+          } catch (payoutErr) {
+            console.error(`GosentePay payout attempt ${attempt} exception:`, payoutErr);
+            if (attempt < 2) {
+              await new Promise(r => setTimeout(r, 2000));
+            }
           }
-        } catch (payoutErr) {
-          console.error('GosentePay payout exception:', payoutErr);
         }
       }
 
@@ -218,9 +261,9 @@ export const WithdrawalRequestsManager: React.FC = () => {
         let message = '';
         if (isMobileMoney) {
           if (payoutSuccess) {
-            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${selectedRequest.phone_number}. Ref: ${payoutRef}. Great Pearl Coffee.`;
+            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${phoneToNotify}. Ref: ${payoutRef}. Great Pearl Coffee.`;
           } else {
-            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Mobile Money disbursement is being processed to ${selectedRequest.phone_number}. Ref: ${selectedRequest.request_ref}. Contact Finance if not received. Great Pearl Coffee.`;
+            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Mobile Money disbursement is being processed to ${phoneToNotify}. Ref: ${selectedRequest.request_ref}. Contact Finance if not received. Great Pearl Coffee.`;
           }
         } else {
           message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Please collect your CASH from the Finance office. Ref: ${selectedRequest.request_ref}. Great Pearl Coffee.`;
