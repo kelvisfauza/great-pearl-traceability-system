@@ -37,11 +37,12 @@ export const AccountButton = () => {
   const { stats, loading: statsLoading } = useLoyaltyStats();
   const { bonusData } = useBonusBalance();
   const { isWithdrawalDisabled } = useWithdrawalControl();
-  const { user } = useAuth();
+  const { user, employee } = useAuth();
   const [showMoneyRequest, setShowMoneyRequest] = useState(false);
   const [showWithdrawal, setShowWithdrawal] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
+  const [ledgerUserId, setLedgerUserId] = useState<string | null>(null);
   const [breakdown, setBreakdown] = useState({
     lastMonthLoyalty: 0,
     lastMonthBonuses: 0,
@@ -61,17 +62,42 @@ export const AccountButton = () => {
 
   // Fetch detailed breakdown from ledger
   const fetchLedgerTotals = async () => {
-    if (!user?.id) return;
-    
+    const lookupEmail = employee?.email || user?.email || null;
+    const fallbackUserId = user?.id || null;
+
+    if (!lookupEmail && !fallbackUserId) return;
+
+    let resolvedUserId = fallbackUserId;
+
+    if (lookupEmail) {
+      const { data: userIdData, error: userIdError } = await supabase
+        .rpc('get_unified_user_id', { input_email: lookupEmail });
+
+      if (userIdError) {
+        console.error('Error resolving unified user ID for account breakdown:', userIdError);
+      }
+
+      resolvedUserId = userIdData || fallbackUserId;
+    }
+
+    if (!resolvedUserId) return;
+
+    setLedgerUserId(resolvedUserId);
+
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const { data: allEntries } = await supabase
+    const { data: allEntries, error } = await supabase
       .from('ledger_entries')
       .select('amount, entry_type, created_at')
-      .eq('user_id', user.id)
+      .eq('user_id', resolvedUserId)
       .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+
+    if (error) {
+      console.error('Error loading account breakdown ledger entries:', error);
+      return;
+    }
 
     const entries = allEntries || [];
     const before = entries.filter(e => new Date(e.created_at) < monthStart);
@@ -103,11 +129,11 @@ export const AccountButton = () => {
 
   useEffect(() => {
     fetchLedgerTotals();
-  }, [user, withdrawalRequests]);
+  }, [user?.id, user?.email, employee?.email, withdrawalRequests.length]);
 
   // Real-time subscription for ledger changes
   useEffect(() => {
-    if (!user?.id) return;
+    if (!ledgerUserId) return;
 
     const channel = supabase
       .channel('account-ledger-realtime')
@@ -115,7 +141,7 @@ export const AccountButton = () => {
         event: '*',
         schema: 'public',
         table: 'ledger_entries',
-        filter: `user_id=eq.${user.id}`,
+        filter: `user_id=eq.${ledgerUserId}`,
       }, () => {
         console.log('📡 Ledger changed, refreshing account totals...');
         fetchLedgerTotals();
@@ -125,7 +151,7 @@ export const AccountButton = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [ledgerUserId]);
 
   const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
 
@@ -233,6 +259,14 @@ export const AccountButton = () => {
                       <span className="font-medium text-red-600">{breakdown.lastMonthWithdrawals.toLocaleString()}</span>
                     </div>
                   )}
+                  {breakdown.lastMonthAdjustments !== 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Adjustments</span>
+                      <span className={breakdown.lastMonthAdjustments >= 0 ? 'font-medium text-green-700' : 'font-medium text-red-600'}>
+                        {breakdown.lastMonthAdjustments > 0 ? '+' : ''}{breakdown.lastMonthAdjustments.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-semibold border-t border-green-200 pt-1">
                     <span>Brought Forward</span>
                     <span>{formatCurrency(breakdown.balanceBroughtForward)}</span>
@@ -262,6 +296,14 @@ export const AccountButton = () => {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Withdrawals</span>
                       <span className="font-medium text-red-600">{breakdown.thisMonthWithdrawals.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {breakdown.thisMonthAdjustments !== 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Adjustments (deductions/refunds)</span>
+                      <span className={breakdown.thisMonthAdjustments >= 0 ? 'font-medium text-green-700' : 'font-medium text-red-600'}>
+                        {breakdown.thisMonthAdjustments > 0 ? '+' : ''}{breakdown.thisMonthAdjustments.toLocaleString()}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between font-semibold border-t border-green-200 pt-1">
