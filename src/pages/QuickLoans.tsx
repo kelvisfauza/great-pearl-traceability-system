@@ -33,6 +33,8 @@ const QuickLoans = () => {
   const [loans, setLoans] = useState<any[]>([]);
   const [myLoans, setMyLoans] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
+  const [myWalletBalance, setMyWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [showEarlyPayDialog, setShowEarlyPayDialog] = useState(false);
@@ -54,6 +56,7 @@ const QuickLoans = () => {
     fetchLoans();
     fetchEmployees();
     checkGuarantorRequests();
+    fetchWalletBalances();
   }, [employee]);
 
   const fetchLoans = async () => {
@@ -74,8 +77,32 @@ const QuickLoans = () => {
   };
 
   const fetchEmployees = async () => {
-    const { data } = await supabase.from('employees').select('id, name, email, phone, salary').eq('status', 'Active');
+    const { data } = await supabase.from('employees').select('id, name, email, phone, salary, auth_user_id').eq('status', 'Active');
     setEmployees(data || []);
+  };
+
+  const fetchWalletBalances = async () => {
+    if (!employee) return;
+    try {
+      // Fetch all ledger entries to compute balances
+      const { data: ledgerData } = await supabase.from('ledger_entries').select('user_id, amount');
+      if (ledgerData) {
+        const balances: Record<string, number> = {};
+        ledgerData.forEach((entry: any) => {
+          balances[entry.user_id] = (balances[entry.user_id] || 0) + Number(entry.amount);
+        });
+        setWalletBalances(balances);
+
+        // Set current user's wallet balance
+        if (employee.authUserId) {
+          const { data: userId } = await supabase.rpc('get_unified_user_id', { input_email: employee.email });
+          const uid = userId || employee.authUserId;
+          setMyWalletBalance(balances[uid] || 0);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching wallet balances:', err);
+    }
   };
 
   const checkGuarantorRequests = async () => {
@@ -407,6 +434,19 @@ const QuickLoans = () => {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
+  // Calculate loan limit for a given employee
+  const getLoanLimit = (empEmail: string, empSalary: number, empAuthId?: string) => {
+    const maxFromSalary = empSalary * 3;
+    const empLoans = (loans.length > 0 ? loans : myLoans).filter(l => l.employee_email === empEmail && ['active', 'pending_guarantor', 'pending_admin'].includes(l.status));
+    const outstanding = empLoans.reduce((s: number, l: any) => s + (l.remaining_balance || l.loan_amount || 0), 0);
+    const activeCount = empLoans.length;
+    const walletBal = empAuthId ? (walletBalances[empAuthId] || 0) : 0;
+    const availableLimit = Math.max(0, maxFromSalary - outstanding);
+    return { salary: empSalary, maxFromSalary, outstanding, activeCount, walletBal, availableLimit };
+  };
+
+  const myLimit = employee ? getLoanLimit(employee.email, employee.salary || 0, employee.authUserId) : null;
+
   const { rate: previewRate, interest: previewInterest, insurance: previewInsurance, processingFee: previewFee, total: previewTotal, monthly: previewMonthly } = calculateLoanDetails();
 
   return (
@@ -552,6 +592,40 @@ const QuickLoans = () => {
             </Card>
           )}
 
+          {/* Loan Eligibility Card */}
+          {myLimit && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2"><Shield className="h-5 w-5" /> My Loan Eligibility</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Monthly Salary</p>
+                    <p className="text-lg font-bold">UGX {myLimit.salary.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Wallet Balance</p>
+                    <p className="text-lg font-bold text-primary">UGX {Math.max(0, myLimit.walletBal).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Max Limit (3x Salary)</p>
+                    <p className="text-lg font-bold">UGX {myLimit.maxFromSalary.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Outstanding Loans</p>
+                    <p className="text-lg font-bold text-destructive">UGX {myLimit.outstanding.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Available to Borrow</p>
+                    <p className="text-lg font-bold text-green-600">UGX {myLimit.availableLimit.toLocaleString()}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Active loans: {myLimit.activeCount}/3 • Processing fee: UGX {PROCESSING_FEE.toLocaleString()} • Insurance: {INSURANCE_RATE}%</p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
@@ -565,7 +639,7 @@ const QuickLoans = () => {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <Clock className="h-8 w-8 text-yellow-600" />
+                <Clock className="h-8 w-8 text-muted-foreground" />
                 <div>
                   <p className="text-sm text-muted-foreground">Pending</p>
                   <p className="text-2xl font-bold">{myLoans.filter(l => ['pending_guarantor', 'pending_admin'].includes(l.status)).length}</p>
@@ -574,7 +648,7 @@ const QuickLoans = () => {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <Shield className="h-8 w-8 text-blue-600" />
+                <Shield className="h-8 w-8 text-muted-foreground" />
                 <div>
                   <p className="text-sm text-muted-foreground">Total Borrowed</p>
                   <p className="text-2xl font-bold">UGX {myLoans.filter(l => ['active', 'completed'].includes(l.status)).reduce((s, l) => s + (l.loan_amount || 0), 0).toLocaleString()}</p>
@@ -583,7 +657,7 @@ const QuickLoans = () => {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <Users className="h-8 w-8 text-green-600" />
+                <Users className="h-8 w-8 text-muted-foreground" />
                 <div>
                   <p className="text-sm text-muted-foreground">Outstanding</p>
                   <p className="text-2xl font-bold">UGX {myLoans.filter(l => l.status === 'active').reduce((s, l) => s + (l.remaining_balance || 0), 0).toLocaleString()}</p>
@@ -658,24 +732,33 @@ const QuickLoans = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Employee</TableHead>
+                          <TableHead>Salary</TableHead>
+                          <TableHead>Wallet</TableHead>
                           <TableHead>Amount</TableHead>
                           <TableHead>Duration</TableHead>
                           <TableHead>Total Repayable</TableHead>
+                          <TableHead>Available Limit</TableHead>
                           <TableHead>Guarantor</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {loans.map(loan => (
+                        {loans.map(loan => {
+                          const emp = employees.find(e => e.email === loan.employee_email);
+                          const limit = getLoanLimit(loan.employee_email, emp?.salary || 0, emp?.auth_user_id);
+                          return (
                           <TableRow key={loan.id}>
                             <TableCell>
                               <div>{loan.employee_name}</div>
                               <div className="text-xs text-muted-foreground">{loan.employee_email}</div>
                             </TableCell>
+                            <TableCell className="text-xs">UGX {(emp?.salary || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-xs">UGX {Math.max(0, limit.walletBal).toLocaleString()}</TableCell>
                             <TableCell>UGX {loan.loan_amount?.toLocaleString()}</TableCell>
                             <TableCell>{loan.duration_months}mo ({loan.interest_rate}%)</TableCell>
                             <TableCell>UGX {loan.total_repayable?.toLocaleString()}</TableCell>
+                            <TableCell className="text-xs font-medium text-green-600">UGX {limit.availableLimit.toLocaleString()}</TableCell>
                             <TableCell>
                               <div>{loan.guarantor_name}</div>
                               <div className="text-xs">{loan.guarantor_approved ? <Badge variant="default" className="text-xs">Approved</Badge> : <Badge variant="outline" className="text-xs">Pending</Badge>}</div>
@@ -694,9 +777,10 @@ const QuickLoans = () => {
                               )}
                             </TableCell>
                           </TableRow>
-                        ))}
+                          );
+                        })}
                         {loans.length === 0 && (
-                          <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No loan requests</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">No loan requests</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
