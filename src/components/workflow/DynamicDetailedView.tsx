@@ -505,6 +505,38 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                 </div>
               )}
 
+              {/* Withdrawal Disbursement Details */}
+              {isWithdrawalRequest && (request.details?.phone_number || request.details?.channel) && (
+                <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
+                  <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-200 mb-3 flex items-center gap-2">
+                    <Wallet className="h-4 w-4" />
+                    Withdrawal Disbursement Details
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {request.details?.channel && (
+                      <div>
+                        <p className="text-xs font-medium text-purple-800 dark:text-purple-300">Payment Channel</p>
+                        <p className="text-sm font-medium">
+                          {request.details.channel === 'MOBILE_MONEY' ? '📱 Mobile Money' : request.details.channel === 'CASH' ? '💵 Cash' : '🏦 Bank Transfer'}
+                        </p>
+                      </div>
+                    )}
+                    {request.details?.phone_number && (
+                      <div>
+                        <p className="text-xs font-medium text-purple-800 dark:text-purple-300">Receive Number</p>
+                        <p className="text-sm font-mono font-bold text-purple-900 dark:text-purple-100">{request.details.phone_number}</p>
+                      </div>
+                    )}
+                    {request.details?.request_ref && (
+                      <div>
+                        <p className="text-xs font-medium text-purple-800 dark:text-purple-300">Reference</p>
+                        <p className="text-sm font-mono font-medium">{request.details.request_ref}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* 3-tier approval info */}
               {request.details?.requires_three_approvals && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
