@@ -116,7 +116,7 @@ const QuickLoans = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-loan-limit`,
+        `https://pudfybkyfedeggmokhco.supabase.co/functions/v1/ai-loan-limit`,
         {
           method: 'POST',
           headers: {
@@ -153,7 +153,7 @@ const QuickLoans = () => {
         const promises = batch.map(async (emp: any) => {
           try {
             const resp = await fetch(
-              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-loan-limit`,
+              `https://pudfybkyfedeggmokhco.supabase.co/functions/v1/ai-loan-limit`,
               {
                 method: 'POST',
                 headers: {
