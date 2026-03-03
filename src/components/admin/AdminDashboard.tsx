@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Shield, CheckCircle, DollarSign, Users, TrendingUp, BarChart3, Settings, Archive, Coffee } from 'lucide-react';
+import GosentepayBalanceMonitor from './GosentepayBalanceMonitor';
 import RoleAssignmentManager from './RoleAssignmentManager';
 import PermissionOverview from './PermissionOverview';
 import UserPermissionsList from './UserPermissionsList';
@@ -119,21 +120,7 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-2 hover:shadow-lg transition-all">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Finance Status</p>
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl font-bold">Active</span>
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-green-50 dark:bg-green-950">
-                    <DollarSign className="h-7 w-7 text-green-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <GosentepayBalanceMonitor />
           </div>
 
           {/* Quick Actions */}
