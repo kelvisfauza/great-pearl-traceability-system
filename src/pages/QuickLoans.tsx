@@ -378,10 +378,10 @@ const QuickLoans = () => {
         if (borrowerEmployee.data?.auth_user_id) {
           await supabase.from('ledger_entries').insert({
             user_id: borrowerEmployee.data.auth_user_id,
-            entry_type: 'LOAN_DISBURSEMENT',
+            entry_type: 'DEPOSIT',
             amount: disbursedAmount,
-            reference: 'LOAN-' + loanId,
-            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate, principal: loan.loan_amount },
+            reference: 'LOAN-DISBURSE-' + loanId,
+            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate, principal: loan.loan_amount, source: 'loan_disbursement' },
           });
         }
 

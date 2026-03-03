@@ -1,0 +1,1 @@
+UPDATE ledger_entries SET entry_type = 'DEPOSIT', reference = 'LOAN-DISBURSE-' || SUBSTRING(reference FROM 6) WHERE entry_type = 'LOAN_DISBURSEMENT';
