@@ -27,16 +27,18 @@ serve(async (req) => {
   }
 
   try {
-    // Find approved MOBILE_MONEY withdrawals that haven't been disbursed yet
+    // SAFETY: Only pick up withdrawals that have NEVER been attempted (payout_attempted_at IS NULL)
+    // This prevents dangerous retry loops. Failed payouts must be retried MANUALLY by Finance.
     const { data: pendingPayouts, error: fetchError } = await supabase
       .from("withdrawal_requests")
       .select("*")
       .eq("status", "approved")
       .eq("channel", "MOBILE_MONEY")
       .eq("payout_status", "pending")
+      .is("payout_attempted_at", null)  // CRITICAL: Only never-attempted records
       .not("finance_approved_at", "is", null)
       .order("finance_approved_at", { ascending: true })
-      .limit(10);
+      .limit(5);
 
     if (fetchError) {
       console.error("Error fetching pending payouts:", fetchError);
@@ -44,13 +46,12 @@ serve(async (req) => {
     }
 
     if (!pendingPayouts || pendingPayouts.length === 0) {
-      console.log("No pending payouts to process");
-      return new Response(JSON.stringify({ status: "ok", processed: 0 }), {
+      return new Response(JSON.stringify({ status: "ok", processed: 0, message: "No new payouts to process" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    console.log(`Found ${pendingPayouts.length} pending payout(s) to process`);
+    console.log(`Found ${pendingPayouts.length} NEW payout(s) to process (never attempted before)`);
 
     let processed = 0;
     let failed = 0;
@@ -63,9 +64,10 @@ serve(async (req) => {
         console.log("Waiting 12s for GosentePay rate limit...");
         await new Promise(r => setTimeout(r, 12000));
       }
+
       const phone = withdrawal.disbursement_phone || withdrawal.phone_number;
       if (!phone) {
-        console.error(`No phone for withdrawal ${withdrawal.id}, skipping`);
+        console.error(`No phone for withdrawal ${withdrawal.id}, marking failed`);
         await supabase.from("withdrawal_requests").update({
           payout_status: "failed",
           payout_error: "No disbursement phone number",
@@ -80,11 +82,18 @@ serve(async (req) => {
       if (cleanPhone.startsWith("0")) cleanPhone = "256" + cleanPhone.slice(1);
       if (!cleanPhone.startsWith("256")) cleanPhone = "256" + cleanPhone;
 
-      // Mark as processing to prevent double-sends
-      await supabase.from("withdrawal_requests").update({
+      // Mark as processing IMMEDIATELY to prevent double-sends
+      const { error: lockError } = await supabase.from("withdrawal_requests").update({
         payout_status: "processing",
         payout_attempted_at: new Date().toISOString()
-      }).eq("id", withdrawal.id);
+      }).eq("id", withdrawal.id)
+        .eq("payout_status", "pending")  // Optimistic lock - only update if still pending
+        .is("payout_attempted_at", null);
+
+      if (lockError) {
+        console.error(`Failed to lock withdrawal ${withdrawal.id}, skipping (may already be processing)`);
+        continue;
+      }
 
       try {
         console.log(`Processing payout: ${withdrawal.id} - UGX ${withdrawal.amount} to ${cleanPhone}`);
@@ -116,7 +125,6 @@ serve(async (req) => {
         if (isSuccess) {
           const txRef = payoutData.txRef || withdrawal.request_ref;
           
-          // Mark as sent
           await supabase.from("withdrawal_requests").update({
             payout_status: "sent",
             payout_ref: txRef,
@@ -156,14 +164,14 @@ serve(async (req) => {
           processed++;
           console.log(`Payout SUCCESS for ${withdrawal.id}: ${txRef}`);
         } else {
-          // Mark as failed with error details
+          // Mark as FAILED - will NOT be auto-retried. Finance must manually retry.
           await supabase.from("withdrawal_requests").update({
             payout_status: "failed",
-            payout_error: innerData.message || "Transfer rejected",
+            payout_error: innerData.message || "Transfer rejected by provider",
             payout_attempted_at: new Date().toISOString()
           }).eq("id", withdrawal.id);
           failed++;
-          console.error(`Payout FAILED for ${withdrawal.id}:`, innerData.message);
+          console.error(`Payout FAILED for ${withdrawal.id}: ${innerData.message}. Will NOT auto-retry - Finance must retry manually.`);
         }
       } catch (payoutErr) {
         console.error(`Payout exception for ${withdrawal.id}:`, payoutErr);
@@ -176,7 +184,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Auto-disburse complete: ${processed} sent, ${failed} failed`);
+    console.log(`Auto-disburse complete: ${processed} sent, ${failed} failed (failed ones require manual retry)`);
 
     return new Response(
       JSON.stringify({ status: "ok", processed, failed, total: pendingPayouts.length }),
