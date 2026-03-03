@@ -157,8 +157,29 @@ const TimeDeductionManager = () => {
 
       if (error) throw error;
 
-      // Time deductions only affect salary (handled during payroll), NOT the wallet/ledger
-      console.log('✅ Time deduction recorded for salary processing only (no wallet impact):', totalDeduction);
+      // Deduct from employee's wallet (ledger only, not salary)
+      try {
+        const { data: userIdData } = await supabase
+          .rpc('get_unified_user_id', { input_email: selectedEmployee.email });
+        const unifiedUserId = userIdData || selectedEmployee.auth_user_id || selectedEmployee.id;
+
+        await supabase.from('ledger_entries').insert({
+          user_id: unifiedUserId,
+          entry_type: 'ADJUSTMENT',
+          amount: -totalDeduction,
+          reference: `TIME-DEDUCTION-${form.month}-${selectedEmployee.id}`,
+          metadata: {
+            type: 'time_deduction',
+            employee_name: selectedEmployee.name,
+            hours_missed: totalHoursDecimal,
+            month: form.month,
+            rate_per_hour: RATE_PER_HOUR,
+          }
+        });
+        console.log('✅ Wallet deduction applied:', totalDeduction);
+      } catch (ledgerErr) {
+        console.error('Ledger deduction error (non-blocking):', ledgerErr);
+      }
 
       // Send SMS
       const smsSent = await sendDeductionSMS(selectedEmployee, totalHoursDecimal, totalDeduction, form.month);
