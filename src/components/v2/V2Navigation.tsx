@@ -18,6 +18,7 @@ import {
   ShoppingBag,
   Monitor,
   Shield,
+  ShieldAlert,
   Home,
   CreditCard,
   Clock
@@ -88,6 +89,7 @@ const DEPARTMENT_NAV_CONFIG: Record<string, {
         { icon: Users, label: "HR Dashboard", path: "/v2/hr", permission: "Human Resources" },
         { icon: CreditCard, label: "Salary Advances", path: "/v2/hr/salary-advances", permission: "Human Resources" },
         { icon: Clock, label: "Time Deductions", path: "/v2/hr/time-deductions", permission: "Human Resources" },
+        { icon: ShieldAlert, label: "Absence Appeals", path: "/v2/hr/absence-appeals", permission: "Human Resources" },
         { icon: Wallet, label: "Per Diem", path: "/v2/hr/per-diem", permission: "Human Resources" },
       ]
     }
