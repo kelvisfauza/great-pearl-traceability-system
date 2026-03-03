@@ -38,38 +38,32 @@ Deno.serve(async (req) => {
 
     let processed = 0
     const deducted: string[] = []
+    const skipped: string[] = []
 
     for (const emp of employees || []) {
-      // Check if employee has logged into the system today via user_sessions
+      if (!emp.auth_user_id) {
+        skipped.push(`${emp.name} (no auth_user_id)`)
+        continue
+      }
+
+      // ONLY check if employee has logged into the system today via user_sessions
+      // We do NOT check attendance_time_records because those are fed late
       const { data: session } = await supabase
         .from('user_sessions')
         .select('id, created_at')
-        .eq('user_id', emp.auth_user_id || '')
-        .gte('created_at', today + 'T00:00:00')
+        .eq('user_id', emp.auth_user_id)
+        .gte('created_at', today + 'T00:00:00Z')
         .lte('created_at', today + 'T06:00:00Z') // 9AM EAT = 6AM UTC
         .limit(1)
         .maybeSingle()
 
       if (session) {
-        // Employee logged in before 9AM - skip
+        // Employee logged into the system before 9AM - skip
+        skipped.push(`${emp.name} (logged in)`)
         continue
       }
 
-      // Also check attendance_time_records as fallback
-      const { data: attendance } = await supabase
-        .from('attendance_time_records')
-        .select('id, arrival_time')
-        .eq('employee_email', emp.email)
-        .eq('record_date', today)
-        .maybeSingle()
-
-      if (attendance?.arrival_time) {
-        // Has attendance record with arrival - skip
-        continue
-      }
-
-      // Check if already auto-deducted today
-      const referenceKey = `AUTO-ABSENCE-${today}-${emp.id}`
+      // Check if already deducted today
       const { data: existing } = await supabase
         .from('absence_appeals')
         .select('id')
@@ -78,7 +72,7 @@ Deno.serve(async (req) => {
         .maybeSingle()
 
       if (existing) {
-        // Already deducted today - skip
+        skipped.push(`${emp.name} (already deducted)`)
         continue
       }
 
@@ -86,6 +80,8 @@ Deno.serve(async (req) => {
       const { data: userIdData } = await supabase
         .rpc('get_unified_user_id', { input_email: emp.email })
       const userId = userIdData || emp.auth_user_id || emp.id
+
+      const referenceKey = `AUTO-ABSENCE-${today}-${emp.id}`
 
       // Create negative ledger entry (allows negative balance)
       const { error: ledgerError } = await supabase
@@ -140,7 +136,6 @@ Deno.serve(async (req) => {
             }),
           })
 
-          // Mark SMS as sent
           await supabase
             .from('absence_appeals')
             .update({ sms_sent: true })
@@ -157,7 +152,7 @@ Deno.serve(async (req) => {
         .insert({
           recipient_phone: emp.phone || '',
           recipient_email: emp.email,
-          message: `Great Pearl Coffee: UGX ${DEDUCTION_AMOUNT.toLocaleString()} deducted for late login on ${today}. Appeal via system.`,
+          message: `Great Pearl Coffee: UGX ${DEDUCTION_AMOUNT.toLocaleString()} deducted for not logging in by 9AM on ${today}. Appeal via system.`,
           notification_type: 'absence_deduction',
           reference_id: referenceKey,
         })
@@ -166,13 +161,14 @@ Deno.serve(async (req) => {
       processed++
     }
 
-    console.log(`Auto-deduction complete: ${processed} employees deducted on ${today}`)
+    console.log(`Auto-deduction complete: ${processed} employees deducted, ${skipped.length} skipped on ${today}`)
 
     return new Response(JSON.stringify({
       success: true,
       date: today,
       processed,
       deducted,
+      skipped_count: skipped.length,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
