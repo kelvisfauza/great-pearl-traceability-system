@@ -15,6 +15,7 @@ import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, Cr
 import DashboardLayout from '@/components/DashboardLayout';
 import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
+import LoanReviewModal from '@/components/loans/LoanReviewModal';
 
 const INTEREST_RATES: Record<number, number> = {
   1: 20,
@@ -49,6 +50,7 @@ const QuickLoans = () => {
   const [submitting, setSubmitting] = useState(false);
   const [guarantorCode, setGuarantorCode] = useState('');
   const [pendingGuarantorLoan, setPendingGuarantorLoan] = useState<any>(null);
+  const [reviewLoan, setReviewLoan] = useState<any>(null);
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
@@ -884,14 +886,9 @@ const QuickLoans = () => {
                             <TableCell>{getStatusBadge(loan.status)}</TableCell>
                             <TableCell>
                               {loan.status === 'pending_admin' && (
-                                <div className="flex gap-2">
-                                  <Button size="sm" onClick={() => handleAdminApproval(loan.id, true)} disabled={submitting}>
-                                    <CheckCircle className="mr-1 h-3 w-3" /> Approve
-                                  </Button>
-                                  <Button size="sm" variant="destructive" onClick={() => handleAdminApproval(loan.id, false, 'Admin declined')} disabled={submitting}>
-                                    <XCircle className="mr-1 h-3 w-3" /> Reject
-                                  </Button>
-                                </div>
+                                <Button size="sm" variant="outline" onClick={() => setReviewLoan(loan)} disabled={submitting}>
+                                  <Shield className="mr-1 h-3 w-3" /> Review
+                                </Button>
                               )}
                             </TableCell>
                           </TableRow>
@@ -986,6 +983,22 @@ const QuickLoans = () => {
             </TabsContent>
           </Tabs>
       </div>
+
+      <LoanReviewModal
+        loan={reviewLoan}
+        open={!!reviewLoan}
+        onClose={() => setReviewLoan(null)}
+        onApprove={(loanId) => {
+          handleAdminApproval(loanId, true);
+          setReviewLoan(null);
+        }}
+        onReject={(loanId, reason) => {
+          handleAdminApproval(loanId, false, reason);
+          setReviewLoan(null);
+        }}
+        submitting={submitting}
+        walletBalances={walletBalances}
+      />
     </DashboardLayout>
   );
 };
