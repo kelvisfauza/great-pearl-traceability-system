@@ -997,7 +997,6 @@ const QuickLoans = () => {
           setReviewLoan(null);
         }}
         submitting={submitting}
-        walletBalances={walletBalances}
       />
     </DashboardLayout>
   );
