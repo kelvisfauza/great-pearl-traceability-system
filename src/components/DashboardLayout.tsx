@@ -11,6 +11,7 @@ import { useMessages } from "@/hooks/useMessages";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePresence } from "@/hooks/usePresence";
+import { useLoginTracker } from "@/hooks/useLoginTracker";
 import { useIsMobile } from "@/hooks/use-mobile";
 import FeatureAnnouncementModal from "./FeatureAnnouncementModal";
 import TrainingTour from "./training/TrainingTour";
@@ -39,6 +40,7 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
   const { user, employee } = useAuth();
   const isMobile = useIsMobile();
   usePresence(user?.id);
+  useLoginTracker(user?.id || null, employee?.name, employee?.email, employee?.id);
 
   // Check if user needs to update email to company domain
   const email = user?.email?.toLowerCase() || "";
