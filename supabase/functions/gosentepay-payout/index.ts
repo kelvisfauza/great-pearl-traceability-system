@@ -18,20 +18,23 @@ serve(async (req) => {
       throw new Error("GosentePay API credentials not configured");
     }
 
-    const { phone, amount, ref } = await req.json();
+    const { phone, amount, ref, emailAddress } = await req.json();
 
-    if (!phone || !amount || !ref) {
+    if (!phone || !amount) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: phone, amount, ref" }),
+        JSON.stringify({ error: "Missing required fields: phone, amount" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate phone format (must start with 256)
-    const cleanPhone = phone.replace(/\+/g, "").replace(/\s/g, "");
-    if (!cleanPhone.startsWith("256") || cleanPhone.length < 12) {
+    // Validate and normalize phone format (must start with 256)
+    let cleanPhone = phone.replace(/\+/g, "").replace(/\s/g, "");
+    if (cleanPhone.startsWith("0")) cleanPhone = "256" + cleanPhone.slice(1);
+    if (!cleanPhone.startsWith("256")) cleanPhone = "256" + cleanPhone;
+    
+    if (cleanPhone.length < 12) {
       return new Response(
-        JSON.stringify({ error: "Phone number must start with 256 and be at least 12 digits" }),
+        JSON.stringify({ error: "Phone number must be at least 12 digits with country code 256" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -44,22 +47,18 @@ serve(async (req) => {
       );
     }
 
-    // Build callback URL
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const callbackUrl = `${supabaseUrl}/functions/v1/gosentepay-callback`;
-
     const requestBody = {
       secret_key: secretKey,
       currency: "UGX",
-      phone: cleanPhone,
       amount: String(numAmount),
-      ref,
-      callback: callbackUrl,
+      emailAddress: emailAddress || "system@greatpearlcoffee.com",
+      phone: cleanPhone,
+      reason: ref ? `Wallet withdrawal - ${ref}` : "Wallet withdrawal",
     };
 
-    console.log("Initiating GosentePay payout:", { phone: cleanPhone, amount: numAmount, ref });
+    console.log("Initiating GosentePay withdraw collection:", { phone: cleanPhone, amount: numAmount, ref });
 
-    const response = await fetch("https://api.gosentepay.com/v1/payout", {
+    const response = await fetch("https://api.gosentepay.com/v1/withdraw_collections.php", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
