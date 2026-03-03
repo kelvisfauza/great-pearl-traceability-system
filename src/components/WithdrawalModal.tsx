@@ -278,7 +278,9 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
   const parsedAmount = amount ? parseFloat(amount) : 0;
   const isCashRoundAmount = channel !== 'CASH' || parsedAmount % 500 === 0;
-  const isDisbursementValid = channel === 'CASH' || (channel === 'MOBILE_MONEY' && mobileNumber.length >= 10) || (channel === 'BANK' && bankName && accountNumber && accountName);
+  const cleanMobile = mobileNumber.replace(/\s/g, '');
+  const isAirtelNumber = /^(070|075|074)\d{7}$/.test(cleanMobile) || /^(256(?:70|75|74))\d{7}$/.test(cleanMobile.replace(/\+/g, ''));
+  const isDisbursementValid = channel === 'CASH' || (channel === 'MOBILE_MONEY' && isAirtelNumber) || (channel === 'BANK' && bankName && accountNumber && accountName);
   const isAmountValid = amount && parsedAmount <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && isDisbursementValid;
 
   return (
@@ -352,16 +354,25 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
                 {channel === 'MOBILE_MONEY' && (
                   <div className="space-y-2">
-                    <Label htmlFor="mobileNumber">Mobile Money Number</Label>
+                    <Label htmlFor="mobileNumber">Airtel Mobile Money Number</Label>
                     <Input
                       id="mobileNumber"
                       type="tel"
-                      placeholder="e.g. 0771234567"
+                      placeholder="e.g. 0752724165"
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value)}
                       required
                     />
-                    <p className="text-xs text-muted-foreground">Money will be sent to this number after approval.</p>
+                    <Alert className="py-2">
+                      <AlertTriangle className="h-3 w-3" />
+                      <AlertDescription className="text-xs">
+                        <strong>Airtel numbers only</strong> (starting with 070, 074, or 075). MTN is not yet supported.
+                      </AlertDescription>
+                    </Alert>
+                    {mobileNumber && !isAirtelNumber && (
+                      <p className="text-sm text-destructive">Please enter a valid Airtel number (070, 074, or 075)</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">Money will be sent automatically to this number after full approval.</p>
                   </div>
                 )}
 

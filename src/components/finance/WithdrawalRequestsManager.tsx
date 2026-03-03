@@ -178,8 +178,8 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
       if (error) throw error;
 
-      const phoneToNotify = selectedRequest.employee_phone || selectedRequest.phone_number;
-      const isMobileMoney = selectedRequest.channel !== 'CASH';
+      const phoneToNotify = (selectedRequest as any).disbursement_phone || selectedRequest.phone_number || selectedRequest.employee_phone;
+      const isMobileMoney = selectedRequest.channel === 'MOBILE_MONEY' || (selectedRequest.channel !== 'CASH' && selectedRequest.channel !== 'BANK');
 
       // For Mobile Money: initiate payout via GosentePay
       let payoutRef = '';
