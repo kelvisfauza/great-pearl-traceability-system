@@ -45,7 +45,7 @@ serve(async (req) => {
     const { data: unifiedId } = await supabase.rpc("get_unified_user_id", { input_email: employee_email });
     const userId = unifiedId || emp.auth_user_id;
 
-    // 3. Fetch wallet ledger entries (last 6 months)
+    // 3. Fetch wallet ledger entries (last 6 months for AI analysis)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
@@ -55,6 +55,14 @@ serve(async (req) => {
       .eq("user_id", userId)
       .gte("created_at", sixMonthsAgo.toISOString())
       .order("created_at", { ascending: true });
+
+    // 3b. Fetch ALL-TIME wallet balance (same logic as dashboard)
+    const walletEntryTypes = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'];
+    const { data: allWalletEntries } = await supabase
+      .from("ledger_entries")
+      .select("entry_type, amount")
+      .eq("user_id", userId)
+      .in("entry_type", walletEntryTypes);
 
     // 4. Fetch loan history
     const { data: loanHistory } = await supabase
@@ -196,7 +204,7 @@ Return ONLY the JSON object, no explanation.`;
         salary: emp.salary || 0,
         outstanding: outstandingBalance,
         active_loans: activeLoans.length,
-        wallet_balance: totalEarnings - totalWithdrawals,
+        wallet_balance: (allWalletEntries || []).reduce((s: number, e: any) => s + Number(e.amount), 0),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
