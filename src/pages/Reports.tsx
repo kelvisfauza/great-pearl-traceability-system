@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight, ClipboardList, Truck } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Store, ShoppingCart, BookOpen, Calculator, Receipt, Wallet, AlertTriangle, MapPin, ArrowRight, ClipboardList, Truck, Globe } from "lucide-react";
 import KeyMetrics from "@/components/reports/KeyMetrics";
 import { RefreshMetricsButton } from "@/components/reports/RefreshMetricsButton";
 
@@ -13,6 +13,13 @@ const Reports = () => {
   const isAdmin = employee?.role === 'Administrator' || employee?.role === 'Super Admin' || employee?.role === 'Manager';
 
   const reportCards = [
+    {
+      title: "Whole Business Report",
+      description: "Complete business intelligence with rankings & recommendations",
+      icon: Globe,
+      path: "/reports/whole-business",
+      color: "text-emerald-700"
+    },
     {
       title: "Finance Report",
       description: "Monthly financial overview and analysis",

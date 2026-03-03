@@ -75,6 +75,7 @@ import GenerateReport from "./pages/reports/GenerateReport";
 import FieldOperationsReport from "./pages/reports/FieldOperationsReport";
 import ComparisonReport from "./pages/reports/ComparisonReport";
 import EUDRDispatchReports from "./pages/reports/EUDRDispatchReports";
+import WholeBusinessReport from "./pages/reports/WholeBusinessReport";
 import SystemSettings from "./pages/admin/SystemSettings";
 import UserDailyReports from "./pages/UserDailyReports";
 import { DailyReportReminder } from "./components/reports/DailyReportReminder";
@@ -355,6 +356,11 @@ const App: React.ComponentType = () => {
                 <Route path="/reports/eudr-dispatch" element={
                   <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
                     <EUDRDispatchReports />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports/whole-business" element={
+                  <ProtectedRoute requiredRoles={['Manager', 'Administrator', 'Super Admin']}>
+                    <WholeBusinessReport />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin/system-settings" element={
