@@ -3314,6 +3314,75 @@ export type Database = {
         }
         Relationships: []
       }
+      gosentepay_balance: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          last_transaction_ref: string | null
+          last_transaction_type: string | null
+          last_updated_by: string | null
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          last_transaction_ref?: string | null
+          last_transaction_type?: string | null
+          last_updated_by?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          last_transaction_ref?: string | null
+          last_transaction_type?: string | null
+          last_updated_by?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gosentepay_balance_log: {
+        Row: {
+          change_amount: number
+          change_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          new_balance: number
+          notes: string | null
+          previous_balance: number
+          reference: string | null
+        }
+        Insert: {
+          change_amount: number
+          change_type: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_balance: number
+          notes?: string | null
+          previous_balance: number
+          reference?: string | null
+        }
+        Update: {
+          change_amount?: number
+          change_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_balance?: number
+          notes?: string | null
+          previous_balance?: number
+          reference?: string | null
+        }
+        Relationships: []
+      }
       inventory_batch_sales: {
         Row: {
           batch_id: string

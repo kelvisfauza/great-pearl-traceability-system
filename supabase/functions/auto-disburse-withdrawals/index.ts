@@ -132,6 +132,35 @@ serve(async (req) => {
             payout_error: null
           }).eq("id", withdrawal.id);
 
+          // Deduct from tracked GosentePay balance
+          const { data: currentBal } = await supabase
+            .from("gosentepay_balance")
+            .select("balance")
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (currentBal) {
+            const newBal = currentBal.balance - withdrawal.amount;
+            await supabase.from("gosentepay_balance").update({
+              balance: newBal,
+              last_updated_by: "auto-disburse",
+              last_transaction_ref: txRef,
+              last_transaction_type: "payout_deduction",
+              updated_at: new Date().toISOString()
+            }).order("updated_at", { ascending: false }).limit(1);
+
+            await supabase.from("gosentepay_balance_log").insert({
+              previous_balance: currentBal.balance,
+              new_balance: newBal,
+              change_amount: -withdrawal.amount,
+              change_type: "payout_deduction",
+              reference: txRef,
+              notes: `Auto-disburse to ${cleanPhone}`,
+              created_by: "system"
+            });
+          }
+
           // Get employee name for SMS
           let employeeName = "User";
           const { data: emp } = await supabase

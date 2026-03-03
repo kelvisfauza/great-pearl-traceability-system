@@ -252,6 +252,35 @@ export const WithdrawalRequestsManager: React.FC = () => {
           payout_error: null
         }).eq('id', request.id);
 
+        // Deduct from tracked GosentePay balance
+        const { data: currentBal } = await supabase
+          .from('gosentepay_balance')
+          .select('balance')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (currentBal) {
+          const newBal = currentBal.balance - request.amount;
+          await supabase.from('gosentepay_balance').update({
+            balance: newBal,
+            last_updated_by: employee?.name || 'Finance',
+            last_transaction_ref: result.ref,
+            last_transaction_type: 'payout_deduction',
+            updated_at: new Date().toISOString()
+          }).order('updated_at', { ascending: false }).limit(1);
+
+          await supabase.from('gosentepay_balance_log').insert({
+            previous_balance: currentBal.balance,
+            new_balance: newBal,
+            change_amount: -request.amount,
+            change_type: 'payout_deduction',
+            reference: result.ref,
+            notes: `Retry payout to ${request.phone_number}`,
+            created_by: employee?.name || 'Finance'
+          });
+        }
+
         toast({
           title: "Payout Sent!",
           description: `UGX ${request.amount.toLocaleString()} sent to ${request.phone_number}. Ref: ${result.ref}`,
@@ -332,6 +361,35 @@ export const WithdrawalRequestsManager: React.FC = () => {
             payout_attempted_at: new Date().toISOString(),
             payout_error: null
           }).eq('id', selectedRequest.id);
+
+          // Deduct from tracked GosentePay balance
+          const { data: currentBal } = await supabase
+            .from('gosentepay_balance')
+            .select('balance')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (currentBal) {
+            const newBal = currentBal.balance - selectedRequest.amount;
+            await supabase.from('gosentepay_balance').update({
+              balance: newBal,
+              last_updated_by: employee?.name || 'Finance',
+              last_transaction_ref: payoutRef,
+              last_transaction_type: 'payout_deduction',
+              updated_at: new Date().toISOString()
+            }).order('updated_at', { ascending: false }).limit(1);
+
+            await supabase.from('gosentepay_balance_log').insert({
+              previous_balance: currentBal.balance,
+              new_balance: newBal,
+              change_amount: -selectedRequest.amount,
+              change_type: 'payout_deduction',
+              reference: payoutRef,
+              notes: `Payout to ${phoneToNotify}`,
+              created_by: employee?.name || 'Finance'
+            });
+          }
         } else {
           await supabase.from('withdrawal_requests').update({
             payout_status: 'failed',
