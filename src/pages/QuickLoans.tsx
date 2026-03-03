@@ -37,6 +37,8 @@ const QuickLoans = () => {
   const [myWalletBalance, setMyWalletBalance] = useState(0);
   const [aiLoanLimit, setAiLoanLimit] = useState<any>(null);
   const [aiLimitLoading, setAiLimitLoading] = useState(false);
+  const [allAiLimits, setAllAiLimits] = useState<Record<string, any>>({});
+  const [allAiLimitsLoading, setAllAiLimitsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [showEarlyPayDialog, setShowEarlyPayDialog] = useState(false);
@@ -134,6 +136,46 @@ const QuickLoans = () => {
       setAiLimitLoading(false);
     }
   };
+
+  const fetchAllAiLimits = async () => {
+    if (!employees.length) return;
+    setAllAiLimitsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const results: Record<string, any> = {};
+      // Fetch in parallel batches of 5
+      for (let i = 0; i < employees.length; i += 5) {
+        const batch = employees.slice(i, i + 5);
+        const promises = batch.map(async (emp: any) => {
+          try {
+            const resp = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-loan-limit`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                },
+                body: JSON.stringify({ employee_email: emp.email }),
+              }
+            );
+            if (resp.ok) {
+              results[emp.email] = await resp.json();
+            }
+          } catch (err) {
+            console.error(`AI limit error for ${emp.email}:`, err);
+          }
+        });
+        await Promise.all(promises);
+      }
+      setAllAiLimits(results);
+    } catch (err) {
+      console.error('Error fetching all AI limits:', err);
+    } finally {
+      setAllAiLimitsLoading(false);
+    }
+  };
+
 
   const checkGuarantorRequests = async () => {
     if (!employee) return;
@@ -727,6 +769,7 @@ const QuickLoans = () => {
             <TabsList>
               <TabsTrigger value="my-loans">My Loans</TabsTrigger>
               {isAdmin() && <TabsTrigger value="all-loans">All Loans (Admin)</TabsTrigger>}
+              {isAdmin() && <TabsTrigger value="employee-limits" onClick={() => { if (Object.keys(allAiLimits).length === 0 && !allAiLimitsLoading) fetchAllAiLimits(); }}>Employee Limits</TabsTrigger>}
               <TabsTrigger value="repayments">Repayment Schedule</TabsTrigger>
             </TabsList>
 
@@ -841,6 +884,80 @@ const QuickLoans = () => {
                         )}
                       </TableBody>
                     </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {isAdmin() && (
+              <TabsContent value="employee-limits">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      AI Credit Assessment — All Employees
+                      {allAiLimitsLoading && <Badge variant="outline" className="text-xs">Analyzing...</Badge>}
+                      {!allAiLimitsLoading && Object.keys(allAiLimits).length > 0 && (
+                        <Badge variant="outline" className="text-xs">{Object.keys(allAiLimits).length} assessed</Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {allAiLimitsLoading && Object.keys(allAiLimits).length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Shield className="h-8 w-8 mx-auto mb-2 animate-pulse" />
+                        <p>AI is analyzing employee credit profiles...</p>
+                        <p className="text-xs mt-1">This may take a moment for all employees</p>
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Employee</TableHead>
+                            <TableHead>Salary</TableHead>
+                            <TableHead>Wallet</TableHead>
+                            <TableHead>Risk Score</TableHead>
+                            <TableHead>AI Loan Limit</TableHead>
+                            <TableHead>Outstanding</TableHead>
+                            <TableHead>Active Loans</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {employees.map((emp: any) => {
+                            const aiData = allAiLimits[emp.email];
+                            return (
+                              <TableRow key={emp.id}>
+                                <TableCell>
+                                  <div className="font-medium">{emp.name}</div>
+                                  <div className="text-xs text-muted-foreground">{emp.email}</div>
+                                </TableCell>
+                                <TableCell className="text-sm">UGX {(emp.salary || 0).toLocaleString()}</TableCell>
+                                <TableCell className="text-sm">
+                                  {aiData ? `UGX ${Math.max(0, aiData.wallet_balance || 0).toLocaleString()}` : '—'}
+                                </TableCell>
+                                <TableCell>
+                                  {aiData ? (
+                                    <Badge variant={aiData.risk_score >= 70 ? 'default' : aiData.risk_score >= 40 ? 'outline' : 'destructive'}>
+                                      {aiData.risk_score}/100
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="font-semibold text-green-600">
+                                  {aiData ? `UGX ${(aiData.loan_limit || 0).toLocaleString()}` : '—'}
+                                </TableCell>
+                                <TableCell className="text-sm text-destructive">
+                                  {aiData ? `UGX ${(aiData.outstanding || 0).toLocaleString()}` : '—'}
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {aiData ? aiData.active_loans : '—'}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
