@@ -4698,6 +4698,75 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_allowance_log: {
+        Row: {
+          allowance_type: string
+          amount: number
+          employee_email: string
+          employee_name: string
+          id: string
+          ledger_reference: string | null
+          month_year: string
+          processed_at: string | null
+          sms_sent: boolean | null
+        }
+        Insert: {
+          allowance_type: string
+          amount: number
+          employee_email: string
+          employee_name: string
+          id?: string
+          ledger_reference?: string | null
+          month_year: string
+          processed_at?: string | null
+          sms_sent?: boolean | null
+        }
+        Update: {
+          allowance_type?: string
+          amount?: number
+          employee_email?: string
+          employee_name?: string
+          id?: string
+          ledger_reference?: string | null
+          month_year?: string
+          processed_at?: string | null
+          sms_sent?: boolean | null
+        }
+        Relationships: []
+      }
+      monthly_allowances: {
+        Row: {
+          allowance_type: string
+          amount: number
+          created_at: string | null
+          employee_email: string
+          employee_name: string
+          id: string
+          is_active: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          allowance_type: string
+          amount?: number
+          created_at?: string | null
+          employee_email: string
+          employee_name: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          allowance_type?: string
+          amount?: number
+          created_at?: string | null
+          employee_email?: string
+          employee_name?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       network_whitelist: {
         Row: {
           created_at: string

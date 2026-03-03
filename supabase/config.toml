@@ -202,3 +202,6 @@ verify_jwt = true
 
 [functions.auto-attendance-deduction]
 verify_jwt = false
+
+[functions.process-monthly-allowances]
+verify_jwt = false
