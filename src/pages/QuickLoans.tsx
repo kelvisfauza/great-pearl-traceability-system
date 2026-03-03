@@ -383,11 +383,17 @@ const QuickLoans = () => {
           });
         }
 
-        // SMS to borrower
+        // SMS to borrower with repayment details
+        const firstRepaymentDate = new Date(startDate);
+        firstRepaymentDate.setMonth(firstRepaymentDate.getMonth() + 1);
+        firstRepaymentDate.setDate(1);
+        const repaymentDateStr = firstRepaymentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        const monthlyAmount = Math.ceil(loan.total_repayable / loan.duration_months);
+
         await supabase.functions.invoke('send-sms', {
           body: {
             phone: loan.employee_phone,
-            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved. UGX ${disbursedAmount.toLocaleString()} has been disbursed to your wallet. Monthly installment: UGX ${Math.ceil(loan.total_repayable / loan.duration_months).toLocaleString()} for ${loan.duration_months} month(s).`,
+            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Repayment: UGX ${monthlyAmount.toLocaleString()}/month for ${loan.duration_months} month(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Pearl Coffee`,
             userName: loan.employee_name,
             messageType: 'loan_approved'
           }
