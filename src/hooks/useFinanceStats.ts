@@ -74,8 +74,8 @@ const fetchStats = async (): Promise<FinanceStats> => {
   // Calculate advance amount (when balance is negative)
   const advanceAmount = netBalance < 0 ? Math.abs(netBalance) : 0;
   
-  // Available cash is 0 if there's an advance, otherwise show the balance
-  const availableCash = Math.max(0, netBalance);
+  // Show actual balance including negatives
+  const availableCash = netBalance;
 
   // Fetch pending expense requests from Supabase
   const { data: expenseRequests } = await supabase
