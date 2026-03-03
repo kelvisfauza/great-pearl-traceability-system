@@ -24,8 +24,7 @@ const INTEREST_RATES: Record<number, number> = {
   6: 45,
 };
 
-const PROCESSING_FEE = 20000;
-const INSURANCE_RATE = 10; // 10%
+// Processing fees and insurance removed
 
 const QuickLoans = () => {
   const { employee, isAdmin } = useAuth();
@@ -203,11 +202,9 @@ const QuickLoans = () => {
     const months = parseInt(durationMonths) || 0;
     const rate = INTEREST_RATES[months] || 0;
     const interest = amount * (rate / 100);
-    const insurance = amount * (INSURANCE_RATE / 100);
-    const processingFee = PROCESSING_FEE;
-    const total = amount + interest + insurance + processingFee;
+    const total = amount + interest;
     const monthly = months > 0 ? total / months : 0;
-    return { amount, months, rate, interest, insurance, processingFee, total, monthly };
+    return { amount, months, rate, interest, total, monthly };
   };
 
   const handleRequestLoan = async () => {
@@ -372,9 +369,8 @@ const QuickLoans = () => {
         }
         await supabase.from('loan_repayments').insert(repayments);
 
-        // Add to borrower's wallet via ledger (principal minus processing fee and insurance)
-        const insurance = loan.loan_amount * (INSURANCE_RATE / 100);
-        const disbursedAmount = loan.loan_amount - PROCESSING_FEE - insurance;
+        // Add to borrower's wallet via ledger (full principal amount)
+        const disbursedAmount = loan.loan_amount;
         const borrowerEmployee = await supabase.from('employees').select('auth_user_id').eq('email', loan.employee_email).single();
         if (borrowerEmployee.data?.auth_user_id) {
           await supabase.from('ledger_entries').insert({
@@ -382,7 +378,7 @@ const QuickLoans = () => {
             entry_type: 'LOAN_DISBURSEMENT',
             amount: disbursedAmount,
             reference: 'LOAN-' + loanId,
-            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate, processing_fee: PROCESSING_FEE, insurance, principal: loan.loan_amount },
+            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate, principal: loan.loan_amount },
           });
         }
 
@@ -390,7 +386,7 @@ const QuickLoans = () => {
         await supabase.functions.invoke('send-sms', {
           body: {
             phone: loan.employee_phone,
-            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved. After processing fee (UGX ${PROCESSING_FEE.toLocaleString()}) and insurance (${INSURANCE_RATE}%), UGX ${disbursedAmount.toLocaleString()} has been disbursed to your wallet. Monthly installment: UGX ${Math.ceil(loan.total_repayable / loan.duration_months).toLocaleString()} for ${loan.duration_months} month(s).`,
+            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved. UGX ${disbursedAmount.toLocaleString()} has been disbursed to your wallet. Monthly installment: UGX ${Math.ceil(loan.total_repayable / loan.duration_months).toLocaleString()} for ${loan.duration_months} month(s).`,
             userName: loan.employee_name,
             messageType: 'loan_approved'
           }
@@ -546,7 +542,7 @@ const QuickLoans = () => {
 
   const myLimit = employee ? getLoanLimit(employee.email, employee.salary || 0, employee.authUserId) : null;
 
-  const { rate: previewRate, interest: previewInterest, insurance: previewInsurance, processingFee: previewFee, total: previewTotal, monthly: previewMonthly } = calculateLoanDetails();
+  const { rate: previewRate, interest: previewInterest, total: previewTotal, monthly: previewMonthly } = calculateLoanDetails();
 
   return (
     <DashboardLayout title="Quick Loans" subtitle="Borrow and manage short-term loans">
@@ -598,8 +594,6 @@ const QuickLoans = () => {
                       <CardContent className="p-4 space-y-1 text-sm">
                         <div className="flex justify-between"><span>Principal:</span><span>UGX {parseFloat(loanAmount).toLocaleString()}</span></div>
                         <div className="flex justify-between"><span>Interest ({previewRate}%):</span><span>UGX {Math.ceil(previewInterest).toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span>Insurance ({INSURANCE_RATE}%):</span><span>UGX {Math.ceil(previewInsurance).toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span>Processing Fee:</span><span>UGX {PROCESSING_FEE.toLocaleString()}</span></div>
                         <div className="flex justify-between font-semibold"><span>Total Repayable:</span><span>UGX {Math.ceil(previewTotal).toLocaleString()}</span></div>
                         <div className="flex justify-between font-semibold text-primary"><span>Monthly Installment:</span><span>UGX {Math.ceil(previewMonthly).toLocaleString()}</span></div>
                       </CardContent>
@@ -728,7 +722,7 @@ const QuickLoans = () => {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Active loans: {myLimit.activeCount}/3 • Processing fee: UGX {PROCESSING_FEE.toLocaleString()} • Insurance: {INSURANCE_RATE}%
+                  Active loans: {myLimit.activeCount}/3
                   {myLimit.isAi && ' • Limit determined by AI risk assessment'}
                 </p>
               </CardContent>
