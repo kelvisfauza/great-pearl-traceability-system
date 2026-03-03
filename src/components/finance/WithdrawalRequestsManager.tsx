@@ -302,7 +302,14 @@ export const WithdrawalRequestsManager: React.FC = () => {
       fetchRequests();
     } catch (err: any) {
       console.error('Retry payout error:', err);
+      // CRITICAL: Always reset to 'failed' if exception occurs, never leave as 'processing'
+      await supabase.from('withdrawal_requests').update({
+        payout_status: 'failed',
+        payout_error: err?.message || 'Exception during retry',
+        payout_attempted_at: new Date().toISOString()
+      }).eq('id', request.id);
       toast({ title: "Error", description: err.message, variant: "destructive" });
+      fetchRequests();
     } finally {
       setRetrying(null);
     }
