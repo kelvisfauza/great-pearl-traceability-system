@@ -7632,6 +7632,10 @@ export type Database = {
           finance_approved_by: string | null
           id: string
           payment_voucher: string | null
+          payout_attempted_at: string | null
+          payout_error: string | null
+          payout_ref: string | null
+          payout_status: string | null
           phone_number: string
           printed_at: string | null
           processed_at: string | null
@@ -7672,6 +7676,10 @@ export type Database = {
           finance_approved_by?: string | null
           id?: string
           payment_voucher?: string | null
+          payout_attempted_at?: string | null
+          payout_error?: string | null
+          payout_ref?: string | null
+          payout_status?: string | null
           phone_number: string
           printed_at?: string | null
           processed_at?: string | null
@@ -7712,6 +7720,10 @@ export type Database = {
           finance_approved_by?: string | null
           id?: string
           payment_voucher?: string | null
+          payout_attempted_at?: string | null
+          payout_error?: string | null
+          payout_ref?: string | null
+          payout_status?: string | null
           phone_number?: string
           printed_at?: string | null
           processed_at?: string | null

@@ -1,0 +1,192 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  const gosentepayApiKey = Deno.env.get("GOSENTEPAY_API_KEY");
+  const gosentepaySecretKey = Deno.env.get("GOSENTEPAY_SECRET_KEY");
+  const yoolaSmsApiKey = Deno.env.get("YOOLA_SMS_API_KEY");
+
+  if (!gosentepayApiKey || !gosentepaySecretKey) {
+    console.error("GosentePay credentials not configured");
+    return new Response(JSON.stringify({ error: "GosentePay not configured" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  try {
+    // Find approved MOBILE_MONEY withdrawals that haven't been disbursed yet
+    const { data: pendingPayouts, error: fetchError } = await supabase
+      .from("withdrawal_requests")
+      .select("*")
+      .eq("status", "approved")
+      .eq("channel", "MOBILE_MONEY")
+      .eq("payout_status", "pending")
+      .not("finance_approved_at", "is", null)
+      .order("finance_approved_at", { ascending: true })
+      .limit(10);
+
+    if (fetchError) {
+      console.error("Error fetching pending payouts:", fetchError);
+      throw fetchError;
+    }
+
+    if (!pendingPayouts || pendingPayouts.length === 0) {
+      console.log("No pending payouts to process");
+      return new Response(JSON.stringify({ status: "ok", processed: 0 }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    console.log(`Found ${pendingPayouts.length} pending payout(s) to process`);
+
+    let processed = 0;
+    let failed = 0;
+
+    for (let i = 0; i < pendingPayouts.length; i++) {
+      const withdrawal = pendingPayouts[i];
+      
+      // GosentePay rate limit: wait 12 seconds between transfers
+      if (i > 0) {
+        console.log("Waiting 12s for GosentePay rate limit...");
+        await new Promise(r => setTimeout(r, 12000));
+      }
+      const phone = withdrawal.disbursement_phone || withdrawal.phone_number;
+      if (!phone) {
+        console.error(`No phone for withdrawal ${withdrawal.id}, skipping`);
+        await supabase.from("withdrawal_requests").update({
+          payout_status: "failed",
+          payout_error: "No disbursement phone number",
+          payout_attempted_at: new Date().toISOString()
+        }).eq("id", withdrawal.id);
+        failed++;
+        continue;
+      }
+
+      // Normalize phone
+      let cleanPhone = phone.replace(/\D/g, "");
+      if (cleanPhone.startsWith("0")) cleanPhone = "256" + cleanPhone.slice(1);
+      if (!cleanPhone.startsWith("256")) cleanPhone = "256" + cleanPhone;
+
+      // Mark as processing to prevent double-sends
+      await supabase.from("withdrawal_requests").update({
+        payout_status: "processing",
+        payout_attempted_at: new Date().toISOString()
+      }).eq("id", withdrawal.id);
+
+      try {
+        console.log(`Processing payout: ${withdrawal.id} - UGX ${withdrawal.amount} to ${cleanPhone}`);
+
+        const payoutResponse = await fetch("https://api.gosentepay.com/v1/withdraw_collections.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": gosentepayApiKey,
+          },
+          body: JSON.stringify({
+            secret_key: gosentepaySecretKey,
+            currency: "UGX",
+            amount: String(withdrawal.amount),
+            emailAddress: "system@greatpearlcoffee.com",
+            phone: cleanPhone,
+            reason: `Wallet withdrawal - ${withdrawal.request_ref || withdrawal.id}`,
+          }),
+        });
+
+        const payoutData = await payoutResponse.json();
+        console.log(`Payout response for ${withdrawal.id}:`, JSON.stringify(payoutData));
+
+        const innerData = payoutData.data || payoutData;
+        const isSuccess =
+          (innerData.status === 200 || innerData.status === 202 || innerData.code === 200 || innerData.code === 202) &&
+          (innerData.message?.toLowerCase().includes("accepted") || innerData.message?.toLowerCase().includes("success") || payoutData.status === "success");
+
+        if (isSuccess) {
+          const txRef = payoutData.txRef || withdrawal.request_ref;
+          
+          // Mark as sent
+          await supabase.from("withdrawal_requests").update({
+            payout_status: "sent",
+            payout_ref: txRef,
+            payout_attempted_at: new Date().toISOString(),
+            payout_error: null
+          }).eq("id", withdrawal.id);
+
+          // Get employee name for SMS
+          let employeeName = "User";
+          const { data: emp } = await supabase
+            .from("employees")
+            .select("name")
+            .or(`auth_user_id.eq.${withdrawal.user_id},email.eq.${withdrawal.user_id}`)
+            .maybeSingle();
+          if (emp) employeeName = emp.name;
+
+          // Send SMS notification
+          if (yoolaSmsApiKey) {
+            let smsPhone = cleanPhone;
+            if (!smsPhone.startsWith("+")) smsPhone = "+" + smsPhone;
+
+            const smsMessage = `Dear ${employeeName}, your withdrawal of UGX ${withdrawal.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${phone}. Ref: ${txRef}. Great Pearl Coffee.`;
+
+            try {
+              const smsResp = await fetch("https://yoolasms.com/api/v1/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone: smsPhone, message: smsMessage, api_key: yoolaSmsApiKey }),
+              });
+              const smsResult = await smsResp.text();
+              console.log(`SMS sent for ${withdrawal.id}:`, smsResp.status, smsResult);
+            } catch (smsErr) {
+              console.error(`SMS error for ${withdrawal.id}:`, smsErr);
+            }
+          }
+
+          processed++;
+          console.log(`Payout SUCCESS for ${withdrawal.id}: ${txRef}`);
+        } else {
+          // Mark as failed with error details
+          await supabase.from("withdrawal_requests").update({
+            payout_status: "failed",
+            payout_error: innerData.message || "Transfer rejected",
+            payout_attempted_at: new Date().toISOString()
+          }).eq("id", withdrawal.id);
+          failed++;
+          console.error(`Payout FAILED for ${withdrawal.id}:`, innerData.message);
+        }
+      } catch (payoutErr) {
+        console.error(`Payout exception for ${withdrawal.id}:`, payoutErr);
+        await supabase.from("withdrawal_requests").update({
+          payout_status: "failed",
+          payout_error: payoutErr instanceof Error ? payoutErr.message : "Unknown error",
+          payout_attempted_at: new Date().toISOString()
+        }).eq("id", withdrawal.id);
+        failed++;
+      }
+    }
+
+    console.log(`Auto-disburse complete: ${processed} sent, ${failed} failed`);
+
+    return new Response(
+      JSON.stringify({ status: "ok", processed, failed, total: pendingPayouts.length }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Auto-disburse error:", error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

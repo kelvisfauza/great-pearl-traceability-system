@@ -1,0 +1,1 @@
+UPDATE withdrawal_requests SET payout_status = 'pending', payout_error = NULL WHERE id = '5687ff2f-e1fa-4bb0-937a-50e65d97fe28';

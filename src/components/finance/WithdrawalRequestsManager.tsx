@@ -255,6 +255,16 @@ export const WithdrawalRequestsManager: React.FC = () => {
             }
           }
         }
+
+        // Update payout_status based on result
+        if (payoutSuccess) {
+          await supabase.from('withdrawal_requests').update({
+            payout_status: 'sent',
+            payout_ref: payoutRef,
+            payout_attempted_at: new Date().toISOString()
+          }).eq('id', selectedRequest.id);
+        }
+        // If payout failed, leave payout_status as 'pending' so auto-disburse picks it up
       }
 
       // Send SMS notification
