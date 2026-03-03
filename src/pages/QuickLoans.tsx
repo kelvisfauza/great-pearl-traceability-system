@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Textarea } from '@/components/ui/textarea';
+import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 
 const INTEREST_RATES: Record<number, number> = {
   1: 20,
@@ -552,6 +553,8 @@ const QuickLoans = () => {
               <h1 className="text-2xl font-bold text-foreground">Quick Loans</h1>
               <p className="text-muted-foreground">Borrow and manage short-term loans</p>
             </div>
+            <div className="flex gap-2">
+              {isAdmin() && <LoanAdvertDialog />}
             <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
               <DialogTrigger asChild>
                 <Button><Banknote className="mr-2 h-4 w-4" /> Request Loan</Button>
@@ -650,6 +653,7 @@ const QuickLoans = () => {
                 )}
               </DialogContent>
             </Dialog>
+            </div>
           </div>
 
           {/* Guarantor Approval Banner */}
