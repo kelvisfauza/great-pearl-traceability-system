@@ -205,3 +205,6 @@ verify_jwt = false
 
 [functions.process-monthly-allowances]
 verify_jwt = false
+
+[functions.ai-loan-limit]
+verify_jwt = true
