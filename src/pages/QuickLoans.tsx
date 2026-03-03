@@ -24,6 +24,9 @@ const INTEREST_RATES: Record<number, number> = {
   6: 45,
 };
 
+const PROCESSING_FEE = 20000;
+const INSURANCE_RATE = 10; // 10%
+
 const QuickLoans = () => {
   const { employee, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -91,9 +94,11 @@ const QuickLoans = () => {
     const months = parseInt(durationMonths) || 0;
     const rate = INTEREST_RATES[months] || 0;
     const interest = amount * (rate / 100);
-    const total = amount + interest;
+    const insurance = amount * (INSURANCE_RATE / 100);
+    const processingFee = PROCESSING_FEE;
+    const total = amount + interest + insurance + processingFee;
     const monthly = months > 0 ? total / months : 0;
-    return { amount, months, rate, interest, total, monthly };
+    return { amount, months, rate, interest, insurance, processingFee, total, monthly };
   };
 
   const handleRequestLoan = async () => {
@@ -400,7 +405,7 @@ const QuickLoans = () => {
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
 
-  const { rate: previewRate, interest: previewInterest, total: previewTotal, monthly: previewMonthly } = calculateLoanDetails();
+  const { rate: previewRate, interest: previewInterest, insurance: previewInsurance, processingFee: previewFee, total: previewTotal, monthly: previewMonthly } = calculateLoanDetails();
 
   return (
     <DashboardLayout title="Quick Loans" subtitle="Borrow and manage short-term loans">
@@ -452,6 +457,8 @@ const QuickLoans = () => {
                       <CardContent className="p-4 space-y-1 text-sm">
                         <div className="flex justify-between"><span>Principal:</span><span>UGX {parseFloat(loanAmount).toLocaleString()}</span></div>
                         <div className="flex justify-between"><span>Interest ({previewRate}%):</span><span>UGX {Math.ceil(previewInterest).toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Insurance ({INSURANCE_RATE}%):</span><span>UGX {Math.ceil(previewInsurance).toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Processing Fee:</span><span>UGX {PROCESSING_FEE.toLocaleString()}</span></div>
                         <div className="flex justify-between font-semibold"><span>Total Repayable:</span><span>UGX {Math.ceil(previewTotal).toLocaleString()}</span></div>
                         <div className="flex justify-between font-semibold text-primary"><span>Monthly Installment:</span><span>UGX {Math.ceil(previewMonthly).toLocaleString()}</span></div>
                       </CardContent>
