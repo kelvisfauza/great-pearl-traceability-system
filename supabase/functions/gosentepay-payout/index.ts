@@ -68,16 +68,22 @@ serve(async (req) => {
     });
 
     const data = await response.json();
-    console.log("GosentePay payout response:", JSON.stringify(data));
-    console.log("GosentePay payout HTTP status:", response.status);
+    console.log("GosentePay withdraw collection response:", JSON.stringify(data));
+    console.log("GosentePay withdraw collection HTTP status:", response.status);
 
-    if (data.status === "success" && (data.code === 200 || data.code === 202)) {
+    // GosentePay returns nested: { data: { status: 200, message: "transfer accepted" }, txRef: "..." }
+    const innerData = data.data || data;
+    const isSuccess = 
+      (innerData.status === 200 || innerData.status === 202 || innerData.code === 200 || innerData.code === 202) &&
+      (innerData.message?.toLowerCase().includes("accepted") || innerData.message?.toLowerCase().includes("success") || data.status === "success");
+
+    if (isSuccess) {
       return new Response(
         JSON.stringify({
           status: "success",
-          code: data.code,
-          message: data.message || "Payout initiated successfully",
-          ref: data.ref || ref,
+          code: innerData.code || innerData.status || 200,
+          message: innerData.message || "Withdraw collection initiated successfully",
+          ref: data.txRef || ref,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -85,8 +91,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           status: "error",
-          code: data.code || response.status,
-          message: data.message || "Failed to initiate payout",
+          code: innerData.code || innerData.status || response.status,
+          message: innerData.message || "Failed to initiate withdraw collection",
           details: data,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
