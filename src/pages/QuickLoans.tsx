@@ -412,7 +412,7 @@ const QuickLoans = () => {
             </div>
             <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
               <DialogTrigger asChild>
-                <Button disabled title="Coming soon — awaiting payment API integration"><Banknote className="mr-2 h-4 w-4" /> Request Loan</Button>
+                <Button><Banknote className="mr-2 h-4 w-4" /> Request Loan</Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
