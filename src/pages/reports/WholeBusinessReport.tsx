@@ -17,6 +17,7 @@ import RecommendationsSection from "@/components/reports/business/Recommendation
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { printWholeBusinessReport } from "@/utils/printWholeBusinessReport";
 
 const getMonthOptions = () => {
   const options: { label: string; value: string; start: string; end: string }[] = [
@@ -52,7 +53,9 @@ const WholeBusinessReport = () => {
   const periodLabel = selected && selected.value !== "all" ? selected.label : "All Time";
 
   const handlePrint = () => {
-    window.print();
+    if (data) {
+      printWholeBusinessReport(data, periodLabel);
+    }
   };
 
   return (
