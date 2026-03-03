@@ -33,6 +33,7 @@ export const useUserWallet = () => {
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unifiedUserId, setUnifiedUserId] = useState<string | null>(null);
   const { user, employee } = useAuth();
   const { toast } = useToast();
 
@@ -94,17 +95,18 @@ export const useUserWallet = () => {
         console.log('⚠️ No wallet data found, using defaults with daily salary:', dailySalaryAmount);
       }
       
-      // Get unified user ID for withdrawal requests
+      // Get unified user ID for withdrawal requests and realtime matching
       const { data: userIdData } = await supabase
         .rpc('get_unified_user_id', { input_email: user.email });
       
-      const unifiedUserId = userIdData || user.id;
+      const unifiedId = userIdData || user.id;
+      setUnifiedUserId(unifiedId);
       
       // Fetch withdrawal requests
       const { data: withdrawalRequestsData } = await supabase
         .from('withdrawal_requests')
         .select('*')
-        .eq('user_id', unifiedUserId)
+        .eq('user_id', unifiedId)
         .order('created_at', { ascending: false });
 
       const allWithdrawals = withdrawalRequestsData || [];
@@ -234,9 +236,27 @@ export const useUserWallet = () => {
     }
   }, [user, employee]);
 
-  // Real-time subscription for balance changes
+  // Passive refresh to avoid stale wallet values when realtime misses events
   useEffect(() => {
     if (!user?.id) return;
+
+    const onFocus = () => fetchWalletData();
+    const intervalId = window.setInterval(() => fetchWalletData(), 30000);
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [user?.id, user?.email]);
+
+  // Real-time subscription for balance changes
+  useEffect(() => {
+    const trackedUserId = unifiedUserId || user?.id;
+    if (!trackedUserId) return;
 
     const channel = supabase
       .channel('wallet-realtime')
@@ -244,7 +264,7 @@ export const useUserWallet = () => {
         event: '*',
         schema: 'public',
         table: 'ledger_entries',
-        filter: `user_id=eq.${user.id}`,
+        filter: `user_id=eq.${trackedUserId}`,
       }, () => {
         console.log('📡 Ledger entry changed, refreshing wallet...');
         fetchWalletData();
@@ -253,7 +273,7 @@ export const useUserWallet = () => {
         event: '*',
         schema: 'public',
         table: 'withdrawal_requests',
-        filter: `user_id=eq.${user.id}`,
+        filter: `user_id=eq.${trackedUserId}`,
       }, () => {
         console.log('📡 Withdrawal request changed, refreshing wallet...');
         fetchWalletData();
@@ -263,7 +283,7 @@ export const useUserWallet = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, unifiedUserId]);
 
   return {
     walletData,
