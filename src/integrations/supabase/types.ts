@@ -1730,6 +1730,39 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_login_tracker: {
+        Row: {
+          auth_user_id: string
+          created_at: string
+          employee_email: string | null
+          employee_id: string | null
+          employee_name: string | null
+          id: string
+          login_date: string
+          login_time: string
+        }
+        Insert: {
+          auth_user_id: string
+          created_at?: string
+          employee_email?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          id?: string
+          login_date?: string
+          login_time?: string
+        }
+        Update: {
+          auth_user_id?: string
+          created_at?: string
+          employee_email?: string | null
+          employee_id?: string | null
+          employee_name?: string | null
+          id?: string
+          login_date?: string
+          login_time?: string
+        }
+        Relationships: []
+      }
       employee_salary_advances: {
         Row: {
           created_at: string
