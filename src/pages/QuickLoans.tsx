@@ -82,8 +82,8 @@ const QuickLoans = () => {
   };
 
   const fetchEmployees = async () => {
-    const { data } = await supabase.from('employees').select('id, name, email, phone, salary, auth_user_id').eq('status', 'Active');
-    setEmployees(data || []);
+    const { data } = await supabase.rpc('get_guarantor_candidates');
+    setEmployees((data || []).map((e: any) => ({ ...e, salary: 0, auth_user_id: '' })));
   };
 
   const fetchWalletBalances = async () => {

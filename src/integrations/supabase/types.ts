@@ -7903,6 +7903,15 @@ export type Database = {
         Returns: number
       }
       get_current_user_email: { Args: never; Returns: string }
+      get_guarantor_candidates: {
+        Args: never
+        Returns: {
+          email: string
+          id: string
+          name: string
+          phone: string
+        }[]
+      }
       get_pending_withdrawals: { Args: { user_uuid: string }; Returns: number }
       get_pending_withdrawals_safe: {
         Args: { user_uuid: string }
