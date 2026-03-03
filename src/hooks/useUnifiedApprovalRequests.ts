@@ -151,8 +151,9 @@ export const useUnifiedApprovalRequests = () => {
                 status: req.status === 'pending_admin_2' ? 'Pending Admin 2' : req.status === 'pending_admin_3' ? 'Pending Admin 3' : 'Pending',
                 details: {
                   withdrawal_id: req.id,
-                  phone_number: req.phone_number,
-                  channel: req.channel,
+                  phone_number: req.disbursement_phone || req.phone_number,
+                  disbursement_phone: req.disbursement_phone,
+                  channel: req.channel || req.disbursement_method,
                   request_ref: req.request_ref,
                   requester_name: empName,
                   requester_email: empEmail,
