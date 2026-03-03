@@ -42,7 +42,7 @@ const ApprovedRequestsHistory = () => {
     try {
       setLoading(true);
       
-      const [approvalRequests, deletionRequests, editRequests, moneyRequests] = await Promise.all([
+      const [approvalRequests, deletionRequests, editRequests, moneyRequests, withdrawalRequests] = await Promise.all([
         supabase
           .from('approval_requests')
           .select('*')
@@ -66,10 +66,16 @@ const ApprovedRequestsHistory = () => {
           .select('*')
           .in('status', ['approved', 'Approved'])
           .order('updated_at', { ascending: false })
+          .limit(15),
+        supabase
+          .from('withdrawal_requests')
+          .select('*')
+          .in('status', ['approved', 'Approved', 'completed'])
+          .order('updated_at', { ascending: false })
           .limit(15)
       ]);
 
-      const unified = mapToUnifiedRequests(approvalRequests.data, deletionRequests.data, editRequests.data, moneyRequests.data);
+      const unified = mapToUnifiedRequests(approvalRequests.data, deletionRequests.data, editRequests.data, moneyRequests.data, withdrawalRequests.data);
       unified.sort((a, b) => b.approvedAt.getTime() - a.approvedAt.getTime());
       
       setRecentRequests(unified.slice(0, 10));
@@ -86,7 +92,7 @@ const ApprovedRequestsHistory = () => {
     try {
       setFilterLoading(true);
       
-      const [approvalRequests, deletionRequests, editRequests, moneyRequests] = await Promise.all([
+      const [approvalRequests, deletionRequests, editRequests, moneyRequests, withdrawalRequests] = await Promise.all([
         supabase
           .from('approval_requests')
           .select('*')
@@ -114,10 +120,17 @@ const ApprovedRequestsHistory = () => {
           .in('status', ['approved', 'Approved'])
           .gte('updated_at', startDate)
           .lte('updated_at', endDate + 'T23:59:59')
+          .order('updated_at', { ascending: false }),
+        supabase
+          .from('withdrawal_requests')
+          .select('*')
+          .in('status', ['approved', 'Approved', 'completed'])
+          .gte('updated_at', startDate)
+          .lte('updated_at', endDate + 'T23:59:59')
           .order('updated_at', { ascending: false })
       ]);
 
-      const unified = mapToUnifiedRequests(approvalRequests.data, deletionRequests.data, editRequests.data, moneyRequests.data);
+      const unified = mapToUnifiedRequests(approvalRequests.data, deletionRequests.data, editRequests.data, moneyRequests.data, withdrawalRequests.data);
       unified.sort((a, b) => b.approvedAt.getTime() - a.approvedAt.getTime());
       
       setFilteredRequests(unified);
@@ -133,7 +146,8 @@ const ApprovedRequestsHistory = () => {
     approvalData: any[] | null,
     deletionData: any[] | null,
     editData: any[] | null,
-    moneyData: any[] | null
+    moneyData: any[] | null,
+    withdrawalData: any[] | null
   ): ApprovedRequest[] => {
     return [
       ...(approvalData || []).map(req => ({
@@ -187,6 +201,22 @@ const ApprovedRequestsHistory = () => {
         adminApproved: req.admin_approved,
         adminApprovedBy: req.admin_approved_by,
         adminApprovedAt: req.admin_approved_at ? new Date(req.admin_approved_at) : undefined,
+      })),
+      ...(withdrawalData || []).map(req => ({
+        id: req.id,
+        type: 'withdrawal',
+        title: `Withdrawal - ${req.channel || 'Cash'}`,
+        status: req.status,
+        approvedAt: new Date(req.finance_approved_at || req.admin_approved_at || req.updated_at),
+        approvedBy: req.finance_approved_by || req.admin_approved_by,
+        department: 'Finance',
+        amount: req.amount ? parseFloat(req.amount.toString()) : 0,
+        financeApproved: !!req.finance_approved_at,
+        financeApprovedBy: req.finance_approved_by,
+        financeApprovedAt: req.finance_approved_at ? new Date(req.finance_approved_at) : undefined,
+        adminApproved: !!req.admin_approved_at,
+        adminApprovedBy: req.admin_approved_by,
+        adminApprovedAt: req.admin_approved_at ? new Date(req.admin_approved_at) : undefined,
       }))
     ];
   };
@@ -197,6 +227,7 @@ const ApprovedRequestsHistory = () => {
       case 'deletion': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
       case 'modification': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
       case 'money': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'withdrawal': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
       default: return 'bg-muted text-muted-foreground';
     }
   };
