@@ -17,7 +17,6 @@ interface LoanReviewModalProps {
   onApprove: (loanId: string) => void;
   onReject: (loanId: string, reason: string) => void;
   submitting: boolean;
-  walletBalances: Record<string, number>;
 }
 
 const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting, walletBalances }: LoanReviewModalProps) => {
