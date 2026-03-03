@@ -19,13 +19,14 @@ interface LoanReviewModalProps {
   submitting: boolean;
 }
 
-const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting, walletBalances }: LoanReviewModalProps) => {
+const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting }: LoanReviewModalProps) => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [borrowerDetails, setBorrowerDetails] = useState<any>(null);
   const [guarantorDetails, setGuarantorDetails] = useState<any>(null);
   const [borrowerLoans, setBorrowerLoans] = useState<any[]>([]);
   const [guarantorLoans, setGuarantorLoans] = useState<any[]>([]);
   const [borrowerLedger, setBorrowerLedger] = useState<any[]>([]);
+  const [borrowerWalletBalance, setBorrowerWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
