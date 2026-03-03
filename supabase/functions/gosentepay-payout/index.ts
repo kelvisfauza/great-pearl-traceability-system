@@ -5,6 +5,44 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/**
+ * Send SMS directly via YoolaSMS after successful payout
+ */
+async function sendPayoutSMS(phone: string, employeeName: string, amount: number, ref: string) {
+  try {
+    const apiKey = Deno.env.get("YOOLA_SMS_API_KEY");
+    if (!apiKey) {
+      console.error("YOOLA_SMS_API_KEY not configured, skipping SMS");
+      return;
+    }
+
+    // Format phone for SMS (needs +256 prefix)
+    let smsPhone = phone.replace(/\D/g, "");
+    if (smsPhone.startsWith("256")) smsPhone = "+" + smsPhone;
+    else if (smsPhone.startsWith("0")) smsPhone = "+256" + smsPhone.slice(1);
+    else smsPhone = "+256" + smsPhone;
+
+    const message = `Dear ${employeeName}, your withdrawal of UGX ${amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${phone}. Ref: ${ref}. Great Pearl Coffee.`;
+
+    console.log("Sending payout SMS to:", smsPhone);
+
+    const smsResponse = await fetch("https://yoolasms.com/api/v1/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: smsPhone,
+        message: message,
+        api_key: apiKey,
+      }),
+    });
+
+    const smsResult = await smsResponse.text();
+    console.log("Payout SMS response:", smsResponse.status, smsResult);
+  } catch (smsErr) {
+    console.error("Payout SMS error (non-blocking):", smsErr);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -18,7 +56,7 @@ serve(async (req) => {
       throw new Error("GosentePay API credentials not configured");
     }
 
-    const { phone, amount, ref, emailAddress } = await req.json();
+    const { phone, amount, ref, emailAddress, employeeName } = await req.json();
 
     if (!phone || !amount) {
       return new Response(
@@ -78,12 +116,21 @@ serve(async (req) => {
       (innerData.message?.toLowerCase().includes("accepted") || innerData.message?.toLowerCase().includes("success") || data.status === "success");
 
     if (isSuccess) {
+      const txRef = data.txRef || ref;
+
+      // Send SMS notification directly after successful payout
+      if (employeeName) {
+        await sendPayoutSMS(cleanPhone, employeeName, numAmount, txRef);
+      } else {
+        console.log("No employeeName provided, skipping server-side SMS");
+      }
+
       return new Response(
         JSON.stringify({
           status: "success",
           code: innerData.code || innerData.status || 200,
           message: innerData.message || "Withdraw collection initiated successfully",
-          ref: data.txRef || ref,
+          ref: txRef,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
