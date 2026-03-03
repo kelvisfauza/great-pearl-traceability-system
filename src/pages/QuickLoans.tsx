@@ -16,12 +16,12 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Textarea } from '@/components/ui/textarea';
 
 const INTEREST_RATES: Record<number, number> = {
-  1: 5,
-  2: 8,
-  3: 10,
-  4: 12,
-  5: 13,
-  6: 15,
+  1: 20,
+  2: 25,
+  3: 30,
+  4: 35,
+  5: 40,
+  6: 45,
 };
 
 const QuickLoans = () => {
