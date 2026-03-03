@@ -209,5 +209,8 @@ verify_jwt = false
 [functions.ai-loan-limit]
 verify_jwt = true
 
+[functions.gosentepay-withdraw-collection]
+verify_jwt = true
+
 [functions.process-loan-repayments]
 verify_jwt = false
