@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import V2Navigation from "@/components/v2/V2Navigation";
 import PriceTicker from "@/components/PriceTicker";
-import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift, Ban } from "lucide-react";
+import { Users, Calendar, Award, Clock, MessageSquare, CreditCard, AlertTriangle, Gift, Ban, ShieldAlert } from "lucide-react";
 import AllocateBonusDialog from "@/components/v2/hr/AllocateBonusDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +67,7 @@ const HRDashboard = () => {
     { title: "Performance", description: "Employee performance tracking", icon: Award, path: "/v2/hr/performance" },
     { title: "Salary Advances", description: "Award & track advances", icon: CreditCard, path: "/v2/hr/salary-advances" },
     { title: "Time Deductions", description: "Deduct for missed hours (3,000/hr)", icon: AlertTriangle, path: "/v2/hr/time-deductions" },
+    { title: "Absence Appeals", description: "Review and manage absence deduction appeals", icon: ShieldAlert, path: "/v2/hr/absence-appeals" },
     { title: "Per Diem", description: "Award per diem allowances to employees", icon: CreditCard, path: "/v2/hr/per-diem" },
     { title: "Loyalty Balances", description: "Track employee loyalty reward balances", icon: Gift, path: "/v2/hr/loyalty-balances" },
   ];
