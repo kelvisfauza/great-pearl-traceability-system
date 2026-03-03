@@ -38,17 +38,19 @@ export const useUserWallet = () => {
   const { toast } = useToast();
 
   const fetchWalletData = async () => {
-    if (!user?.email) {
+    const walletOwnerEmail = employee?.email || user?.email;
+
+    if (!walletOwnerEmail) {
       setLoading(false);
       return;
     }
 
     try {
-      console.log('💰 Fetching wallet data for:', user.email);
+      console.log('💰 Fetching wallet data for:', walletOwnerEmail, '(auth email:', user?.email, ')');
 
       // Get balance data using the safe function
       const { data: balanceData, error: balanceError } = await supabase
-        .rpc('get_user_balance_safe', { user_email: user.email });
+        .rpc('get_user_balance_safe', { user_email: walletOwnerEmail });
       
       if (balanceError) {
         throw balanceError;
@@ -97,10 +99,15 @@ export const useUserWallet = () => {
       
       // Get unified user ID for withdrawal requests and realtime matching
       const { data: userIdData } = await supabase
-        .rpc('get_unified_user_id', { input_email: user.email });
+        .rpc('get_unified_user_id', { input_email: walletOwnerEmail });
       
-      const unifiedId = userIdData || user.id;
-      setUnifiedUserId(unifiedId);
+      const unifiedId = userIdData || user?.id;
+      setUnifiedUserId(unifiedId || null);
+
+      if (!unifiedId) {
+        setWithdrawalRequests([]);
+        return;
+      }
       
       // Fetch withdrawal requests
       const { data: withdrawalRequestsData } = await supabase
@@ -149,7 +156,9 @@ export const useUserWallet = () => {
   };
 
   const createWithdrawalRequest = async (amount: number, phoneNumber: string, channel: string = 'ZENGAPAY') => {
-    if (!user?.email || !walletData) return;
+    const walletOwnerEmail = employee?.email || user?.email;
+
+    if (!walletOwnerEmail || !walletData) return;
 
     if (amount > walletData.availableToRequest) {
       toast({
@@ -163,13 +172,16 @@ export const useUserWallet = () => {
     try {
       // Get unified user ID for withdrawal requests
       const { data: userIdData, error: userIdError } = await supabase
-        .rpc('get_unified_user_id', { input_email: user.email });
+        .rpc('get_unified_user_id', { input_email: walletOwnerEmail });
       
       if (userIdError) {
         throw new Error('Error getting user ID');
       }
       
-      const unifiedUserId = userIdData || user.id;
+      const unifiedUserId = userIdData || user?.id;
+      if (!unifiedUserId) {
+        throw new Error('No unified user ID found');
+      }
       
       // Generate request reference
       const requestRef = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
