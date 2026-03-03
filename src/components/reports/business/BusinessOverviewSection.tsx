@@ -3,7 +3,7 @@ import { WholeBusinessData } from "@/hooks/useWholeBusinessReport";
 import { Building2, DollarSign, Package, Users, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 
-const BusinessOverviewSection = ({ data }: { data: WholeBusinessData }) => {
+const BusinessOverviewSection = ({ data, periodLabel }: { data: WholeBusinessData; periodLabel?: string }) => {
   const totalRevenue = data.sales.totalRevenue + data.fieldOps.totalFieldPurchaseAmount;
   const totalExpenditure = data.finance.totalPaymentAmount + data.finance.totalExpenseAmount + data.finance.totalSalaryAmount;
   const overallScore = Math.round(data.departmentScores.reduce((s, d) => s + d.score, 0) / data.departmentScores.length);
@@ -13,6 +13,9 @@ const BusinessOverviewSection = ({ data }: { data: WholeBusinessData }) => {
       <div className="text-center print:mb-4">
         <h1 className="text-3xl font-bold text-foreground">Great Pearl Coffee</h1>
         <p className="text-muted-foreground">Comprehensive Business Report</p>
+        <p className="text-sm text-muted-foreground">
+          Period: <span className="font-semibold">{periodLabel || "All Time"}</span>
+        </p>
         <p className="text-sm text-muted-foreground">Generated: {format(new Date(data.generatedAt), "PPpp")}</p>
       </div>
 

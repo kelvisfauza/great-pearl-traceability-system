@@ -1,6 +1,6 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, RefreshCw, Download, Printer } from "lucide-react";
+import { ArrowLeft, RefreshCw, Printer } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useWholeBusinessReport } from "@/hooks/useWholeBusinessReport";
@@ -15,27 +15,45 @@ import HRSummarySection from "@/components/reports/business/HRSummarySection";
 import FieldOpsSummarySection from "@/components/reports/business/FieldOpsSummarySection";
 import RecommendationsSection from "@/components/reports/business/RecommendationsSection";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+
+const getMonthOptions = () => {
+  const options: { label: string; value: string; start: string; end: string }[] = [
+    { label: "All Time", value: "all", start: "", end: "" },
+  ];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = subMonths(now, i);
+    const start = format(startOfMonth(d), "yyyy-MM-dd");
+    const end = format(endOfMonth(d), "yyyy-MM-dd");
+    options.push({
+      label: format(d, "MMMM yyyy"),
+      value: start,
+      start,
+      end,
+    });
+  }
+  return options;
+};
 
 const WholeBusinessReport = () => {
   const navigate = useNavigate();
-  const { data, loading, refetch } = useWholeBusinessReport();
+  const monthOptions = getMonthOptions();
+  const [selectedMonth, setSelectedMonth] = useState("all");
+
+  const selected = monthOptions.find(m => m.value === selectedMonth);
+  const dateRange = selected && selected.value !== "all"
+    ? { start: selected.start, end: selected.end }
+    : undefined;
+
+  const { data, loading, refetch } = useWholeBusinessReport(dateRange);
+
+  const periodLabel = selected && selected.value !== "all" ? selected.label : "All Time";
 
   const handlePrint = () => {
     window.print();
   };
-
-  if (loading) {
-    return (
-      <Layout title="Whole Business Report" subtitle="Loading comprehensive report...">
-        <div className="space-y-6">
-          <Skeleton className="h-10 w-48" />
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-64 w-full" />
-          ))}
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout
@@ -43,12 +61,22 @@ const WholeBusinessReport = () => {
       subtitle="Comprehensive business intelligence across all departments"
     >
       <div className="space-y-6 print:space-y-4">
-        <div className="flex items-center justify-between print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
           <Button variant="outline" onClick={() => navigate("/reports")} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Back to Reports
           </Button>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select month" />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map(m => (
+                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" onClick={refetch} className="gap-2">
               <RefreshCw className="h-4 w-4" />
               Refresh
@@ -60,9 +88,15 @@ const WholeBusinessReport = () => {
           </div>
         </div>
 
-        {data && (
+        {loading ? (
+          <div className="space-y-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-64 w-full" />
+            ))}
+          </div>
+        ) : data ? (
           <>
-            <BusinessOverviewSection data={data} />
+            <BusinessOverviewSection data={data} periodLabel={periodLabel} />
             <DepartmentRankingSection data={data} />
             <FinanceSummarySection data={data.finance} />
             <ProcurementSummarySection data={data.procurement} />
@@ -73,7 +107,7 @@ const WholeBusinessReport = () => {
             <FieldOpsSummarySection data={data.fieldOps} />
             <RecommendationsSection data={data} />
           </>
-        )}
+        ) : null}
       </div>
     </Layout>
   );

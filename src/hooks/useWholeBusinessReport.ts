@@ -94,7 +94,7 @@ const calculateGrade = (score: number): string => {
   return "F";
 };
 
-export const useWholeBusinessReport = () => {
+export const useWholeBusinessReport = (dateRange?: { start: string; end: string }) => {
   const [data, setData] = useState<WholeBusinessData | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -102,9 +102,16 @@ export const useWholeBusinessReport = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const since = thirtyDaysAgo.toISOString();
+      const startDate = dateRange?.start || "";
+      const endDate = dateRange?.end || "";
+
+      // Helper to apply date range filter
+      const withDateRange = (query: any, dateCol: string = "created_at") => {
+        let q = query;
+        if (startDate) q = q.gte(dateCol, startDate);
+        if (endDate) q = q.lte(dateCol, endDate);
+        return q;
+      };
 
       // Parallel fetch all data
       const [
@@ -117,34 +124,36 @@ export const useWholeBusinessReport = () => {
         fieldAgents, fieldCollections, dailyReports, farmers, fieldPurchases,
         moneyRequests
       ] = await Promise.all([
-        supabase.from("payment_records").select("amount, supplier", { count: "exact" }),
-        supabase.from("finance_cash_transactions").select("amount", { count: "exact" }),
-        supabase.from("finance_expenses").select("amount, status", { count: "exact" }),
-        supabase.from("employee_salary_payments").select("net_salary, status", { count: "exact" }),
-        supabase.from("approval_requests").select("status, amount", { count: "exact" }),
+        withDateRange(supabase.from("payment_records").select("amount, supplier", { count: "exact" })),
+        withDateRange(supabase.from("finance_cash_transactions").select("amount", { count: "exact" })),
+        withDateRange(supabase.from("finance_expenses").select("amount, status", { count: "exact" })),
+        withDateRange(supabase.from("employee_salary_payments").select("net_salary, status", { count: "exact" })),
+        withDateRange(supabase.from("approval_requests").select("status, amount", { count: "exact" })),
         supabase.from("suppliers").select("id, name", { count: "exact" }),
-        supabase.from("supplier_contracts").select("id, status", { count: "exact" }),
-        supabase.from("payment_records").select("amount, supplier"),
-        supabase.from("coffee_bookings").select("id, status", { count: "exact" }),
-        supabase.from("sales_transactions").select("total_amount, weight, customer", { count: "exact" }),
-        supabase.from("buyer_contracts").select("id, status, total_quantity, price_per_kg", { count: "exact" }),
-        supabase.from("eudr_sales").select("id", { count: "exact" }),
-        supabase.from("coffee_records").select("kilograms, bags, status", { count: "exact" }),
+        withDateRange(supabase.from("supplier_contracts").select("id, status", { count: "exact" })),
+        withDateRange(supabase.from("payment_records").select("amount, supplier")),
+        withDateRange(supabase.from("coffee_bookings").select("id, status", { count: "exact" })),
+        withDateRange(supabase.from("sales_transactions").select("total_amount, weight, customer", { count: "exact" })),
+        withDateRange(supabase.from("buyer_contracts").select("id, status, total_quantity, price_per_kg", { count: "exact" })),
+        withDateRange(supabase.from("eudr_sales").select("id", { count: "exact" })),
+        withDateRange(supabase.from("coffee_records").select("kilograms, bags, status", { count: "exact" })),
         supabase.from("inventory_batches").select("total_kilograms, remaining_kilograms", { count: "exact" }),
         supabase.from("storage_locations").select("name, capacity, current_occupancy"),
-        supabase.from("quality_assessments").select("status, moisture", { count: "exact" }),
-        supabase.from("rejected_coffee").select("id", { count: "exact" }),
+        withDateRange(supabase.from("quality_assessments").select("status, moisture", { count: "exact" })),
+        withDateRange(supabase.from("rejected_coffee").select("id", { count: "exact" })),
         supabase.from("employees").select("department, status", { count: "exact" }),
-        supabase.from("attendance").select("status, date").gte("date", since.split("T")[0]),
-        supabase.from("bonuses").select("amount, status", { count: "exact" }),
+        startDate
+          ? supabase.from("attendance").select("status, date").gte("date", startDate).lte("date", endDate || new Date().toISOString().split("T")[0])
+          : supabase.from("attendance").select("status, date"),
+        withDateRange(supabase.from("bonuses").select("amount, status", { count: "exact" })),
         supabase.from("employee_salary_advances").select("original_amount, status", { count: "exact" }),
         supabase.from("employee_login_tracker").select("id").eq("login_date", new Date().toISOString().split("T")[0]),
         supabase.from("field_agents").select("id, status", { count: "exact" }),
-        supabase.from("field_collections").select("bags", { count: "exact" }),
-        supabase.from("daily_reports").select("id", { count: "exact" }),
+        withDateRange(supabase.from("field_collections").select("bags", { count: "exact" })),
+        withDateRange(supabase.from("daily_reports").select("id", { count: "exact" })),
         supabase.from("farmer_profiles").select("id", { count: "exact" }),
-        supabase.from("field_purchases").select("total_value", { count: "exact" }),
-        supabase.from("money_requests").select("status, amount", { count: "exact" }),
+        withDateRange(supabase.from("field_purchases").select("total_value", { count: "exact" })),
+        withDateRange(supabase.from("money_requests").select("status, amount", { count: "exact" })),
       ]);
 
       // Process Finance
@@ -301,7 +310,7 @@ export const useWholeBusinessReport = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, dateRange?.start, dateRange?.end]);
 
   useEffect(() => {
     fetchData();
