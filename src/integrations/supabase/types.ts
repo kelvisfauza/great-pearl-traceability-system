@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      absence_appeals: {
+        Row: {
+          appeal_reason: string | null
+          appeal_status: string
+          appeal_submitted_at: string | null
+          created_at: string
+          deduction_amount: number
+          deduction_date: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id: string
+          ledger_reference: string
+          reason: string | null
+          refund_ledger_reference: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sms_sent: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          appeal_reason?: string | null
+          appeal_status?: string
+          appeal_submitted_at?: string | null
+          created_at?: string
+          deduction_amount?: number
+          deduction_date: string
+          employee_email: string
+          employee_id: string
+          employee_name: string
+          id?: string
+          ledger_reference: string
+          reason?: string | null
+          refund_ledger_reference?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sms_sent?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          appeal_reason?: string | null
+          appeal_status?: string
+          appeal_submitted_at?: string | null
+          created_at?: string
+          deduction_amount?: number
+          deduction_date?: string
+          employee_email?: string
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          ledger_reference?: string
+          reason?: string | null
+          refund_ledger_reference?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sms_sent?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       advance_recoveries: {
         Row: {
           advance_id: string

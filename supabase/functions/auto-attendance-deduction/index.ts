@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     // Get all active employees
     const { data: employees, error: empError } = await supabase
       .from('employees')
-      .select('id, email, name, auth_user_id')
+      .select('id, email, name, auth_user_id, phone')
       .eq('status', 'Active')
 
     if (empError) throw empError
@@ -40,7 +40,22 @@ Deno.serve(async (req) => {
     const deducted: string[] = []
 
     for (const emp of employees || []) {
-      // Check if employee has signed in today via attendance_time_records
+      // Check if employee has logged into the system today via user_sessions
+      const { data: session } = await supabase
+        .from('user_sessions')
+        .select('id, created_at')
+        .eq('user_id', emp.auth_user_id || '')
+        .gte('created_at', today + 'T00:00:00')
+        .lte('created_at', today + 'T06:00:00Z') // 9AM EAT = 6AM UTC
+        .limit(1)
+        .maybeSingle()
+
+      if (session) {
+        // Employee logged in before 9AM - skip
+        continue
+      }
+
+      // Also check attendance_time_records as fallback
       const { data: attendance } = await supabase
         .from('attendance_time_records')
         .select('id, arrival_time')
@@ -49,16 +64,17 @@ Deno.serve(async (req) => {
         .maybeSingle()
 
       if (attendance?.arrival_time) {
-        // Employee signed in - skip
+        // Has attendance record with arrival - skip
         continue
       }
 
       // Check if already auto-deducted today
       const referenceKey = `AUTO-ABSENCE-${today}-${emp.id}`
       const { data: existing } = await supabase
-        .from('ledger_entries')
+        .from('absence_appeals')
         .select('id')
-        .eq('reference', referenceKey)
+        .eq('employee_id', emp.id)
+        .eq('deduction_date', today)
         .maybeSingle()
 
       if (existing) {
@@ -84,7 +100,7 @@ Deno.serve(async (req) => {
             employee_name: emp.name,
             employee_email: emp.email,
             date: today,
-            reason: 'Not signed in by 9:00 AM',
+            reason: 'Not logged into system by 9:00 AM',
           }
         })
 
@@ -92,6 +108,59 @@ Deno.serve(async (req) => {
         console.error(`Failed to deduct for ${emp.name}:`, ledgerError)
         continue
       }
+
+      // Create absence_appeals record for tracking and appeal
+      await supabase
+        .from('absence_appeals')
+        .insert({
+          employee_id: emp.id,
+          employee_name: emp.name,
+          employee_email: emp.email,
+          deduction_date: today,
+          deduction_amount: DEDUCTION_AMOUNT,
+          ledger_reference: referenceKey,
+          appeal_status: 'none',
+        })
+
+      // Send SMS notification
+      if (emp.phone) {
+        const smsMessage = `Great Pearl Coffee: UGX ${DEDUCTION_AMOUNT.toLocaleString()} has been deducted from your wallet for not logging into the system by 9:00 AM today (${today}). You can appeal this deduction in the system under My Deductions. Contact HR for assistance.`
+
+        try {
+          await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({
+              phone: emp.phone,
+              to: emp.phone,
+              message: smsMessage,
+            }),
+          })
+
+          // Mark SMS as sent
+          await supabase
+            .from('absence_appeals')
+            .update({ sms_sent: true })
+            .eq('employee_id', emp.id)
+            .eq('deduction_date', today)
+        } catch (smsErr) {
+          console.error(`SMS failed for ${emp.name}:`, smsErr)
+        }
+      }
+
+      // Also queue SMS via notification queue
+      await supabase
+        .from('sms_notification_queue')
+        .insert({
+          recipient_phone: emp.phone || '',
+          recipient_email: emp.email,
+          message: `Great Pearl Coffee: UGX ${DEDUCTION_AMOUNT.toLocaleString()} deducted for late login on ${today}. Appeal via system.`,
+          notification_type: 'absence_deduction',
+          reference_id: referenceKey,
+        })
 
       deducted.push(emp.name)
       processed++
