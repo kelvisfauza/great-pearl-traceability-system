@@ -52,6 +52,24 @@ const AbsenceAppealManager = () => {
     fetchAppeals();
   }, []);
 
+  const sendAppealSms = async (employeeEmail: string, message: string) => {
+    try {
+      const { data: emp } = await supabase
+        .from('employees')
+        .select('phone')
+        .eq('email', employeeEmail)
+        .maybeSingle();
+
+      if (emp?.phone) {
+        await supabase.functions.invoke('send-sms', {
+          body: { phone: emp.phone, to: emp.phone, message },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send appeal SMS:', err);
+    }
+  };
+
   const handleApprove = async (appeal: AbsenceAppeal) => {
     setProcessing(appeal.id);
     try {
@@ -67,7 +85,7 @@ const AbsenceAppealManager = () => {
         .insert({
           user_id: userIdData || appeal.employee_id,
           entry_type: 'ADJUSTMENT',
-          amount: appeal.deduction_amount, // positive = refund
+          amount: appeal.deduction_amount,
           reference: refundRef,
           metadata: {
             type: 'absence_appeal_refund',
@@ -96,6 +114,12 @@ const AbsenceAppealManager = () => {
 
       if (updateError) throw updateError;
 
+      // Send refund SMS notification
+      await sendAppealSms(
+        appeal.employee_email,
+        `Great Pearl Coffee: Your absence appeal for ${appeal.deduction_date} has been APPROVED. UGX ${appeal.deduction_amount.toLocaleString()} has been refunded to your wallet.`
+      );
+
       toast.success(`Appeal approved for ${appeal.employee_name}. UGX ${appeal.deduction_amount.toLocaleString()} refunded.`);
       fetchAppeals();
     } catch (err: any) {
@@ -119,6 +143,12 @@ const AbsenceAppealManager = () => {
     if (error) {
       toast.error('Failed to reject appeal');
     } else {
+      // Send rejection SMS notification
+      await sendAppealSms(
+        appeal.employee_email,
+        `Great Pearl Coffee: Your absence appeal for ${appeal.deduction_date} has been REJECTED. The UGX ${appeal.deduction_amount.toLocaleString()} deduction stands. Contact HR for questions.`
+      );
+
       toast.success(`Appeal rejected for ${appeal.employee_name}`);
       fetchAppeals();
     }
