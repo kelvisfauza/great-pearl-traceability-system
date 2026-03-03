@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Receipt, Printer, DollarSign, Calendar, User, FileText, Download, Clock, Archive } from 'lucide-react';
+import { Receipt, Printer, DollarSign, Calendar, User, FileText, Download, Clock, Archive, Banknote } from 'lucide-react';
 import { useEnhancedExpenseManagement } from '@/hooks/useEnhancedExpenseManagement';
 import { useOvertimeAwards } from '@/hooks/useOvertimeAwards';
 import { useArchivedExpenses } from '@/hooks/useArchivedExpenses';
@@ -21,6 +21,8 @@ export const ExpensesReport = () => {
   const { awards: overtimeAwards, loading: overtimeLoading } = useOvertimeAwards();
   const { archivedExpenses, loading: archivedLoading } = useArchivedExpenses();
   const { moneyRequests, loading: moneyRequestsLoading } = useMoneyRequests();
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [withdrawalsLoading, setWithdrawalsLoading] = useState(true);
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [includeArchived, setIncludeArchived] = useState(true);
@@ -28,6 +30,20 @@ export const ExpensesReport = () => {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [monthReportData, setMonthReportData] = useState<any>(null);
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Fetch approved withdrawals
+  React.useEffect(() => {
+    const fetchWithdrawals = async () => {
+      const { data } = await (await import('@/integrations/supabase/client')).supabase
+        .from('withdrawal_requests')
+        .select('id, requester_name, requester_email, amount, status, channel, request_ref, disbursement_method, finance_approved_at, finance_approved_by, admin_approved_1_by, created_at')
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+      setWithdrawals(data || []);
+      setWithdrawalsLoading(false);
+    };
+    fetchWithdrawals();
+  }, []);
 
   // Combine current and archived data
   const allExpenses = includeArchived 
@@ -229,12 +245,35 @@ export const ExpensesReport = () => {
       total: groupedOvertimeAwards[monthKey].reduce((sum, a) => sum + (a.total_amount || 0), 0)
     }));
 
+  // Filter withdrawals by period
+  const filteredWithdrawals = (() => {
+    if (filterPeriod === 'all') return withdrawals;
+    const now = new Date();
+    const startDate = new Date();
+    switch (filterPeriod) {
+      case 'today': startDate.setHours(0, 0, 0, 0); break;
+      case 'week': startDate.setDate(now.getDate() - 7); break;
+      case 'month': startDate.setMonth(now.getMonth() - 1); break;
+      case 'quarter': startDate.setMonth(now.getMonth() - 3); break;
+      default: return withdrawals;
+    }
+    return withdrawals.filter(w => new Date(w.finance_approved_at || w.created_at) >= startDate);
+  })();
+
+  // Group withdrawals by month
+  const groupedWithdrawals = groupByMonth(filteredWithdrawals.map(w => ({
+    ...w,
+    financeApprovedAt: w.finance_approved_at,
+    daterequested: w.created_at,
+  })));
+
   // Calculate totals
   const totalExpenses = filteredExpenses.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
   const totalSalaryRequests = filteredSalaryRequests.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
   const totalRequisitions = filteredRequisitions.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
   const totalOvertime = filteredOvertimeAwards.reduce((sum, award) => sum + (award.total_amount || 0), 0);
-  const grandTotal = totalExpenses + totalSalaryRequests + totalRequisitions + totalOvertime;
+  const totalWithdrawals = filteredWithdrawals.reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
+  const grandTotal = totalExpenses + totalSalaryRequests + totalRequisitions + totalOvertime + totalWithdrawals;
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -329,22 +368,30 @@ export const ExpensesReport = () => {
       return date.getMonth() === targetMonth && date.getFullYear() === targetYear;
     });
 
+    const filteredWithdrawalsMonth = withdrawals.filter(w => {
+      const date = new Date(w.finance_approved_at || w.created_at);
+      return date.getMonth() === targetMonth && date.getFullYear() === targetYear;
+    });
+
     const totalExpenses = filteredExpenses.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
     const totalSalaryRequests = filteredSalaryRequests.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
     const totalRequisitions = filteredRequisitions.reduce((sum, req) => sum + (parseFloat(req.amount?.toString() || '0')), 0);
     const totalOvertime = filteredOvertime.reduce((sum, award) => sum + (award.total_amount || 0), 0);
+    const totalWithdrawalsMonth = filteredWithdrawalsMonth.reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
 
     const data = {
       expenses: filteredExpenses,
       salaryRequests: filteredSalaryRequests,
       requisitions: filteredRequisitions,
       overtime: filteredOvertime,
+      withdrawals: filteredWithdrawalsMonth,
       summary: {
         totalExpenses,
         totalSalaryRequests,
         totalRequisitions,
         totalOvertime,
-        grandTotal: totalExpenses + totalSalaryRequests + totalRequisitions + totalOvertime,
+        totalWithdrawals: totalWithdrawalsMonth,
+        grandTotal: totalExpenses + totalSalaryRequests + totalRequisitions + totalOvertime + totalWithdrawalsMonth,
       },
       monthName: format(new Date(targetYear, targetMonth), 'MMMM yyyy')
     };
@@ -424,7 +471,12 @@ export const ExpensesReport = () => {
                 <div class="value">UGX ${monthReportData.summary.totalOvertime.toLocaleString()}</div>
                 <div class="label">${monthReportData.overtime.length} awards</div>
               </div>
-              <div class="summary-item" style="grid-column: span 2;">
+              <div class="summary-item">
+                <div class="label">Withdrawals</div>
+                <div class="value">UGX ${(monthReportData.summary.totalWithdrawals || 0).toLocaleString()}</div>
+                <div class="label">${(monthReportData.withdrawals || []).length} withdrawals</div>
+              </div>
+              <div class="summary-item" style="grid-column: span 3;">
                 <div class="label">Grand Total</div>
                 <div class="value" style="font-size: 24px; color: #2563eb;">UGX ${monthReportData.summary.grandTotal.toLocaleString()}</div>
               </div>
@@ -551,6 +603,38 @@ export const ExpensesReport = () => {
           </div>
           ` : ''}
 
+          ${(monthReportData.withdrawals || []).length > 0 ? `
+          <div class="section">
+            <div class="section-title">Withdrawals (${monthReportData.withdrawals.length})</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Reference</th>
+                  <th>Employee</th>
+                  <th>Channel</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${monthReportData.withdrawals.map((w: any) => `
+                  <tr>
+                    <td>${formatDate(w.finance_approved_at || w.created_at)}</td>
+                    <td>${w.request_ref || w.id?.slice(0, 8) || 'N/A'}</td>
+                    <td>${w.requester_name || 'N/A'}</td>
+                    <td>${w.disbursement_method || w.channel || 'N/A'}</td>
+                    <td>UGX ${(Number(w.amount) || 0).toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+                <tr class="total-row">
+                  <td colspan="4">Subtotal</td>
+                  <td>UGX ${(monthReportData.summary.totalWithdrawals || 0).toLocaleString()}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+
           <div class="grand-total">
             Grand Total: UGX ${monthReportData.summary.grandTotal.toLocaleString()}
           </div>
@@ -570,7 +654,7 @@ export const ExpensesReport = () => {
     printWindow.document.close();
   };
 
-  if (loading || overtimeLoading || archivedLoading || moneyRequestsLoading) {
+  if (loading || overtimeLoading || archivedLoading || moneyRequestsLoading || withdrawalsLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center h-64">
@@ -671,8 +755,7 @@ export const ExpensesReport = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-4 mb-6">
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-600 font-medium">Total Expenses</p>
               <p className="text-2xl font-bold text-blue-800">{formatCurrency(totalExpenses)}</p>
@@ -693,27 +776,35 @@ export const ExpensesReport = () => {
               <p className="text-2xl font-bold text-orange-800">{formatCurrency(totalOvertime)}</p>
               <p className="text-xs text-orange-600 mt-1">{filteredOvertimeAwards.length} awards</p>
             </div>
+            <div className="text-center p-4 bg-rose-50 rounded-lg">
+              <p className="text-sm text-rose-600 font-medium">Total Withdrawals</p>
+              <p className="text-2xl font-bold text-rose-800">{formatCurrency(totalWithdrawals)}</p>
+              <p className="text-xs text-rose-600 mt-1">{filteredWithdrawals.length} withdrawals</p>
+            </div>
             <div className="text-center p-4 bg-purple-50 rounded-lg">
               <p className="text-sm text-purple-600 font-medium">Grand Total</p>
               <p className="text-2xl font-bold text-purple-800">{formatCurrency(grandTotal)}</p>
-              <p className="text-xs text-purple-600 mt-1">{filteredExpenses.length + filteredSalaryRequests.length + filteredRequisitions.length + filteredOvertimeAwards.length} total</p>
+              <p className="text-xs text-purple-600 mt-1">{filteredExpenses.length + filteredSalaryRequests.length + filteredRequisitions.length + filteredOvertimeAwards.length + filteredWithdrawals.length} total</p>
             </div>
           </div>
 
           {/* Tabs for Expenses, Salary Requests, Requisitions, and Overtime */}
           <Tabs defaultValue="expenses" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="expenses">
-                Expense Requests ({filteredExpenses.length})
+                Expenses ({filteredExpenses.length})
               </TabsTrigger>
               <TabsTrigger value="salary">
-                Salary Requests ({filteredSalaryRequests.length})
+                Salary ({filteredSalaryRequests.length})
               </TabsTrigger>
               <TabsTrigger value="requisitions">
                 Requisitions ({filteredRequisitions.length})
               </TabsTrigger>
               <TabsTrigger value="overtime">
-                Overtime Awards ({filteredOvertimeAwards.length})
+                Overtime ({filteredOvertimeAwards.length})
+              </TabsTrigger>
+              <TabsTrigger value="withdrawals">
+                Withdrawals ({filteredWithdrawals.length})
               </TabsTrigger>
             </TabsList>
 
@@ -948,6 +1039,62 @@ export const ExpensesReport = () => {
                 ))
               )}
             </TabsContent>
+
+            <TabsContent value="withdrawals">
+              {filteredWithdrawals.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Banknote className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p>No approved withdrawals found</p>
+                </div>
+              ) : (
+                groupedWithdrawals.map((monthGroup) => (
+                  <div key={monthGroup.month} className="mb-8">
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b">
+                      <h3 className="text-lg font-semibold">{monthGroup.monthName}</h3>
+                      <Badge variant="outline" className="text-lg">
+                        Total: {formatCurrency(monthGroup.total)}
+                      </Badge>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Reference</TableHead>
+                          <TableHead>Employee</TableHead>
+                          <TableHead>Channel</TableHead>
+                          <TableHead>Approved By (Admin)</TableHead>
+                          <TableHead>Approved By (Finance)</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {monthGroup.requests.map((w: any) => (
+                          <TableRow key={w.id}>
+                            <TableCell>{formatDate(w.finance_approved_at || w.created_at)}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono text-xs">
+                                {w.request_ref || w.id.slice(0, 8)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">{w.requester_name || 'N/A'}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {w.disbursement_method || w.channel || 'N/A'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs">{w.admin_approved_1_by || 'N/A'}</TableCell>
+                            <TableCell className="text-xs">{w.finance_approved_by || 'N/A'}</TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {formatCurrency(w.amount)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ))
+              )}
+            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
@@ -965,7 +1112,7 @@ export const ExpensesReport = () => {
           {/* Summary Section */}
           <div className="mb-8">
             <h3 className="font-bold text-lg mb-4 text-gray-900">Summary</h3>
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="border p-3 rounded">
                 <p className="text-sm text-gray-600">Total Expenses</p>
                 <p className="text-xl font-bold">{formatCurrency(totalExpenses)}</p>
@@ -986,10 +1133,15 @@ export const ExpensesReport = () => {
                 <p className="text-xl font-bold">{formatCurrency(totalOvertime)}</p>
                 <p className="text-xs text-gray-500">{filteredOvertimeAwards.length} awards</p>
               </div>
+              <div className="border p-3 rounded">
+                <p className="text-sm text-gray-600">Total Withdrawals</p>
+                <p className="text-xl font-bold">{formatCurrency(totalWithdrawals)}</p>
+                <p className="text-xs text-gray-500">{filteredWithdrawals.length} withdrawals</p>
+              </div>
               <div className="border p-3 rounded bg-gray-50">
                 <p className="text-sm text-gray-600">Grand Total</p>
                 <p className="text-xl font-bold">{formatCurrency(grandTotal)}</p>
-                <p className="text-xs text-gray-500">{filteredExpenses.length + filteredSalaryRequests.length + filteredRequisitions.length + filteredOvertimeAwards.length} total</p>
+                <p className="text-xs text-gray-500">{filteredExpenses.length + filteredSalaryRequests.length + filteredRequisitions.length + filteredOvertimeAwards.length + filteredWithdrawals.length} total</p>
               </div>
             </div>
           </div>
@@ -1121,6 +1273,37 @@ export const ExpensesReport = () => {
                 <tr className="bg-gray-100 font-bold">
                   <td colSpan={5} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
                   <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(totalOvertime)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Withdrawals Table */}
+          <div className="mb-8">
+            <h3 className="font-bold text-lg mb-4 text-gray-900">Withdrawals</h3>
+            <table className="w-full border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Date</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Reference</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Employee</th>
+                  <th className="border border-gray-300 px-2 py-2 text-left text-sm">Channel</th>
+                  <th className="border border-gray-300 px-2 py-2 text-right text-sm">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredWithdrawals.map((w) => (
+                  <tr key={w.id}>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{formatDate(w.finance_approved_at || w.created_at)}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm font-mono text-xs">{w.request_ref || w.id.slice(0, 8)}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{w.requester_name || 'N/A'}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm">{w.disbursement_method || w.channel || 'N/A'}</td>
+                    <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(w.amount)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-gray-100 font-bold">
+                  <td colSpan={4} className="border border-gray-300 px-2 py-2 text-sm text-right">Subtotal:</td>
+                  <td className="border border-gray-300 px-2 py-2 text-sm text-right">{formatCurrency(totalWithdrawals)}</td>
                 </tr>
               </tbody>
             </table>
