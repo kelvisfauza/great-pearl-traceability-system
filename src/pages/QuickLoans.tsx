@@ -262,15 +262,17 @@ const QuickLoans = () => {
         }
         await supabase.from('loan_repayments').insert(repayments);
 
-        // Add to borrower's wallet via ledger
+        // Add to borrower's wallet via ledger (principal minus processing fee and insurance)
+        const insurance = loan.loan_amount * (INSURANCE_RATE / 100);
+        const disbursedAmount = loan.loan_amount - PROCESSING_FEE - insurance;
         const borrowerEmployee = await supabase.from('employees').select('auth_user_id').eq('email', loan.employee_email).single();
         if (borrowerEmployee.data?.auth_user_id) {
           await supabase.from('ledger_entries').insert({
             user_id: borrowerEmployee.data.auth_user_id,
             entry_type: 'LOAN_DISBURSEMENT',
-            amount: loan.loan_amount,
+            amount: disbursedAmount,
             reference: 'LOAN-' + loanId,
-            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate },
+            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate, processing_fee: PROCESSING_FEE, insurance, principal: loan.loan_amount },
           });
         }
 
@@ -278,7 +280,7 @@ const QuickLoans = () => {
         await supabase.functions.invoke('send-sms', {
           body: {
             phone: loan.employee_phone,
-            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Monthly installment: UGX ${Math.ceil(loan.total_repayable / loan.duration_months).toLocaleString()} for ${loan.duration_months} month(s).`,
+            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved. After processing fee (UGX ${PROCESSING_FEE.toLocaleString()}) and insurance (${INSURANCE_RATE}%), UGX ${disbursedAmount.toLocaleString()} has been disbursed to your wallet. Monthly installment: UGX ${Math.ceil(loan.total_repayable / loan.duration_months).toLocaleString()} for ${loan.duration_months} month(s).`,
             userName: loan.employee_name,
             messageType: 'loan_approved'
           }
