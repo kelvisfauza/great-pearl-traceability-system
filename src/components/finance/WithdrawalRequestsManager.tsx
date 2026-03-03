@@ -86,6 +86,9 @@ export const WithdrawalRequestsManager: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<WithdrawalRequest | null>(null);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showPayCashDialog, setShowPayCashDialog] = useState(false);
+  const [cashRequest, setCashRequest] = useState<WithdrawalRequest | null>(null);
+  const [cashVoucher, setCashVoucher] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [paymentVoucher, setPaymentVoucher] = useState('');
   const { toast } = useToast();
@@ -312,6 +315,58 @@ export const WithdrawalRequestsManager: React.FC = () => {
       fetchRequests();
     } finally {
       setRetrying(null);
+    }
+  };
+
+  const handlePayCashInstead = async () => {
+    if (!cashRequest) return;
+    setProcessing(cashRequest.id);
+    try {
+      const { error } = await supabase
+        .from('withdrawal_requests')
+        .update({
+          channel: 'CASH',
+          payout_status: null,
+          payout_error: null,
+          payout_ref: null,
+          payment_voucher: cashVoucher || null,
+          processed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', cashRequest.id);
+
+      if (error) throw error;
+
+      const phoneToNotify = cashRequest.disbursement_phone || cashRequest.phone_number || cashRequest.employee_phone;
+      if (phoneToNotify) {
+        const message = `Dear ${cashRequest.employee_name}, your withdrawal of UGX ${cashRequest.amount.toLocaleString()} has been switched to CASH. Please collect from the Finance office. Ref: ${cashRequest.request_ref}. Great Pearl Coffee.`;
+        try {
+          await supabase.functions.invoke('send-sms', {
+            body: { phone: phoneToNotify, message }
+          });
+        } catch (smsError) {
+          console.error('SMS notification failed:', smsError);
+        }
+      }
+
+      toast({
+        title: "Switched to Cash Payment",
+        description: `UGX ${cashRequest.amount.toLocaleString()} for ${cashRequest.employee_name} is now marked as cash. Employee has been notified.`,
+      });
+
+      setShowPayCashDialog(false);
+      setCashRequest(null);
+      setCashVoucher('');
+      fetchRequests();
+    } catch (error: any) {
+      console.error('Pay cash error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to switch to cash",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessing(null);
     }
   };
 
@@ -680,18 +735,42 @@ export const WithdrawalRequestsManager: React.FC = () => {
                     </div>
                   </div>
 
-                  <Button
-                    size="sm"
-                    onClick={() => handleRetryPayout(request)}
-                    disabled={retrying === request.id}
-                    className="bg-orange-600 hover:bg-orange-700"
-                  >
-                    {retrying === request.id ? (
-                      <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Retrying...</>
-                    ) : (
-                      <><RotateCcw className="h-4 w-4 mr-1" />Retry Payout</>
-                    )}
-                  </Button>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      onClick={() => handleRetryPayout(request)}
+                      disabled={retrying === request.id || processing === request.id}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      {retrying === request.id ? (
+                        <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Retrying...</>
+                      ) : (
+                        <><RotateCcw className="h-4 w-4 mr-1" />Retry Payout</>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setCashRequest(request);
+                        setCashVoucher('');
+                        setShowPayCashDialog(true);
+                      }}
+                      disabled={retrying === request.id || processing === request.id}
+                      className="border-amber-500 text-amber-700 hover:bg-amber-50"
+                    >
+                      <Banknote className="h-4 w-4 mr-1" />
+                      Pay Cash Instead
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => printPaymentSlip(request)}
+                    >
+                      <Printer className="h-4 w-4 mr-1" />
+                      Print Slip
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -959,6 +1038,80 @@ export const WithdrawalRequestsManager: React.FC = () => {
               disabled={processing !== null || !rejectionReason}
             >
               {processing ? 'Processing...' : 'Reject Withdrawal'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pay Cash Instead Dialog */}
+      <Dialog open={showPayCashDialog} onOpenChange={setShowPayCashDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-amber-600" />
+              Switch to Cash Payment
+            </DialogTitle>
+          </DialogHeader>
+          
+          {cashRequest && (
+            <div className="space-y-4">
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
+                <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">
+                  <strong>Mobile Money payout failed.</strong> You are switching this withdrawal to cash payment. The employee will be notified via SMS to collect cash from the Finance office.
+                </p>
+              </div>
+
+              <div className="bg-muted p-4 rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Employee:</span>
+                  <span className="font-medium">{cashRequest.employee_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount:</span>
+                  <span className="font-bold text-lg">UGX {cashRequest.amount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Original Channel:</span>
+                  <span className="font-medium line-through text-red-500">Mobile Money</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">New Channel:</span>
+                  <span className="font-medium text-amber-700">Cash</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Reference:</span>
+                  <span className="font-medium">{cashRequest.request_ref}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cash-voucher">Payment Voucher Number (Optional)</Label>
+                <Input
+                  id="cash-voucher"
+                  placeholder="e.g., PV-2024-001"
+                  value={cashVoucher}
+                  onChange={(e) => setCashVoucher(e.target.value)}
+                />
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 rounded-lg">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  <strong>Cash Payment:</strong> Ensure you verify the employee's identity before handing over cash. Get their signature on the payment slip.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowPayCashDialog(false); setCashRequest(null); }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handlePayCashInstead} 
+              disabled={processing !== null}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {processing ? 'Processing...' : 'Confirm Cash Payment'}
             </Button>
           </DialogFooter>
         </DialogContent>
