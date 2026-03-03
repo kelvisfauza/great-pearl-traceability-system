@@ -322,24 +322,32 @@ export const WithdrawalRequestsManager: React.FC = () => {
     if (!cashRequest) return;
     setProcessing(cashRequest.id);
     try {
+      const financeName = employee?.name || employee?.email || 'Finance';
+      const now = new Date().toISOString();
+      
+      // Update ALL relevant fields so the database accurately reflects cash disbursement
       const { error } = await supabase
         .from('withdrawal_requests')
         .update({
-          channel: 'CASH',
-          payout_status: null,
-          payout_error: null,
-          payout_ref: null,
+          status: 'disbursed',              // Mark as fully disbursed
+          channel: 'CASH',                   // Changed from MOBILE_MONEY to CASH
+          payout_status: 'cash_paid',        // Clear status showing cash was given
+          payout_error: null,                // Clear any previous errors
+          payout_ref: cashVoucher ? `CASH-${cashVoucher}` : `CASH-${Date.now()}`,
           payment_voucher: cashVoucher || null,
-          processed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          processed_at: now,                 // When money was actually handed out
+          payout_attempted_at: now,
+          updated_at: now
         })
         .eq('id', cashRequest.id);
 
       if (error) throw error;
 
+      // Send SMS notification to employee
       const phoneToNotify = cashRequest.disbursement_phone || cashRequest.phone_number || cashRequest.employee_phone;
       if (phoneToNotify) {
-        const message = `Dear ${cashRequest.employee_name}, your withdrawal of UGX ${cashRequest.amount.toLocaleString()} has been switched to CASH. Please collect from the Finance office. Ref: ${cashRequest.request_ref}. Great Pearl Coffee.`;
+        const voucherInfo = cashVoucher ? ` Voucher: ${cashVoucher}.` : '';
+        const message = `Dear ${cashRequest.employee_name}, your withdrawal of UGX ${cashRequest.amount.toLocaleString()} has been PAID in CASH at the Finance office.${voucherInfo} Ref: ${cashRequest.request_ref}. Great Pearl Coffee.`;
         try {
           await supabase.functions.invoke('send-sms', {
             body: { phone: phoneToNotify, message }
@@ -350,8 +358,8 @@ export const WithdrawalRequestsManager: React.FC = () => {
       }
 
       toast({
-        title: "Switched to Cash Payment",
-        description: `UGX ${cashRequest.amount.toLocaleString()} for ${cashRequest.employee_name} is now marked as cash. Employee has been notified.`,
+        title: "Cash Payment Completed",
+        description: `UGX ${cashRequest.amount.toLocaleString()} paid in cash to ${cashRequest.employee_name}. Record updated.`,
       });
 
       setShowPayCashDialog(false);
@@ -362,7 +370,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
       console.error('Pay cash error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to switch to cash",
+        description: error.message || "Failed to process cash payment",
         variant: "destructive"
       });
     } finally {
