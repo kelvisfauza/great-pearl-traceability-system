@@ -138,8 +138,12 @@ const QuickLoans = () => {
   };
 
   const fetchAllAiLimits = async () => {
-    if (!employees.length) return;
+    if (!employees.length) {
+      console.log('⚠️ No employees loaded yet, skipping AI limits fetch');
+      return;
+    }
     setAllAiLimitsLoading(true);
+    console.log(`🤖 Fetching AI limits for ${employees.length} employees...`);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const results: Record<string, any> = {};
@@ -160,7 +164,12 @@ const QuickLoans = () => {
               }
             );
             if (resp.ok) {
-              results[emp.email] = await resp.json();
+              const data = await resp.json();
+              console.log(`✅ AI limit for ${emp.name}:`, data);
+              results[emp.email] = data;
+            } else {
+              const errText = await resp.text();
+              console.error(`❌ AI limit error for ${emp.name} (${resp.status}):`, errText);
             }
           } catch (err) {
             console.error(`AI limit error for ${emp.email}:`, err);
@@ -168,6 +177,7 @@ const QuickLoans = () => {
         });
         await Promise.all(promises);
       }
+      console.log(`🤖 AI limits fetched: ${Object.keys(results).length} results`);
       setAllAiLimits(results);
     } catch (err) {
       console.error('Error fetching all AI limits:', err);
@@ -765,11 +775,15 @@ const QuickLoans = () => {
             </Card>
           </div>
 
-          <Tabs defaultValue="my-loans">
+          <Tabs defaultValue="my-loans" onValueChange={(val) => {
+            if (val === 'employee-limits' && Object.keys(allAiLimits).length === 0 && !allAiLimitsLoading) {
+              fetchAllAiLimits();
+            }
+          }}>
             <TabsList>
               <TabsTrigger value="my-loans">My Loans</TabsTrigger>
               {isAdmin() && <TabsTrigger value="all-loans">All Loans (Admin)</TabsTrigger>}
-              {isAdmin() && <TabsTrigger value="employee-limits" onClick={() => { if (Object.keys(allAiLimits).length === 0 && !allAiLimitsLoading) fetchAllAiLimits(); }}>Employee Limits</TabsTrigger>}
+              {isAdmin() && <TabsTrigger value="employee-limits">Employee Limits</TabsTrigger>}
               <TabsTrigger value="repayments">Repayment Schedule</TabsTrigger>
             </TabsList>
 
