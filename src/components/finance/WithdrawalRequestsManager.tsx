@@ -181,7 +181,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
     const interval = setInterval(() => {
       fetchRequests();
-    }, 10000);
+    }, 30000); // 30s polling - not too aggressive
 
     return () => {
       supabase.removeChannel(channel);
