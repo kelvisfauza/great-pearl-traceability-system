@@ -78,10 +78,12 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
         setGuarantorLoans(gLoans || []);
       }
 
-      // Fetch borrower's recent ledger activity
+      // Fetch borrower's recent ledger activity and compute loyalty wallet balance
       if (borrower?.auth_user_id) {
         const { data: userId } = await supabase.rpc('get_unified_user_id', { input_email: loan.employee_email });
         const uid = userId || borrower.auth_user_id;
+        
+        // Fetch recent ledger for display
         const { data: ledger } = await supabase
           .from('ledger_entries')
           .select('*')
@@ -89,6 +91,16 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
           .order('created_at', { ascending: false })
           .limit(15);
         setBorrowerLedger(ledger || []);
+
+        // Compute loyalty wallet balance (same as dashboard - exclude DAILY_SALARY and LOAN entries)
+        const { data: walletLedger } = await supabase
+          .from('ledger_entries')
+          .select('amount, entry_type')
+          .eq('user_id', uid)
+          .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
+        
+        const walletBal = (walletLedger || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+        setBorrowerWalletBalance(walletBal);
       }
     } catch (err) {
       console.error('Error fetching review data:', err);
@@ -98,10 +110,6 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
   };
 
   if (!loan) return null;
-
-  const borrowerWalletBalance = borrowerDetails?.auth_user_id
-    ? walletBalances[borrowerDetails.auth_user_id] || 0
-    : 0;
 
   const existingActiveLoans = borrowerLoans.filter(l => ['active', 'pending_admin', 'pending_guarantor'].includes(l.status));
   const totalOutstanding = existingActiveLoans.reduce((sum, l) => sum + (l.remaining_balance || 0), 0);
