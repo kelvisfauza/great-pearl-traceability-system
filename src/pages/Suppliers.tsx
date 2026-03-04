@@ -65,7 +65,7 @@ const Suppliers = () => {
   const [coffeeTypeFilter, setCoffeeTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const handleEditSupplier = async (supplierId: string, updates: { name: string; phone: string; origin: string }) => {
+  const handleEditSupplier = async (supplierId: string, updates: { name: string; phone: string; origin: string; bank_name?: string; account_name?: string; account_number?: string }) => {
     console.log('🔧 Editing supplier and reloading transactions...', { 
       supplierId, 
       oldName: selectedSupplier?.name,
