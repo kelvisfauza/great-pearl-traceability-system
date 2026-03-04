@@ -700,6 +700,25 @@ const Suppliers = () => {
                     </div>
                   </div>
                 </div>
+                {(selectedSupplier.bank_name || selectedSupplier.account_number) && (
+                  <div className="mt-4 pt-4 border-t">
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3">Bank Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Bank Name</p>
+                        <p className="font-medium">{selectedSupplier.bank_name || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Account Name</p>
+                        <p className="font-medium">{selectedSupplier.account_name || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Account Number</p>
+                        <p className="font-medium">{selectedSupplier.account_number || '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
