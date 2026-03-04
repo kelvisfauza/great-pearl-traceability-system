@@ -12,6 +12,9 @@ export interface Supplier {
   date_registered: string;
   created_at: string;
   updated_at: string;
+  bank_name: string | null;
+  account_name: string | null;
+  account_number: string | null;
 }
 
 // Normalize name for comparison (lowercase, remove extra spaces, common variations)
@@ -202,6 +205,9 @@ export const useSuppliers = () => {
     name: string;
     phone: string;
     origin: string;
+    bank_name?: string;
+    account_name?: string;
+    account_number?: string;
   }) => {
     try {
       console.log('🔄 Updating supplier info only (not affecting transactions):', supplierId, updates);
@@ -213,6 +219,9 @@ export const useSuppliers = () => {
           name: updates.name,
           phone: updates.phone || null,
           origin: updates.origin,
+          bank_name: updates.bank_name || null,
+          account_name: updates.account_name || null,
+          account_number: updates.account_number || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', supplierId);

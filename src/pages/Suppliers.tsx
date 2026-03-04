@@ -65,7 +65,7 @@ const Suppliers = () => {
   const [coffeeTypeFilter, setCoffeeTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const handleEditSupplier = async (supplierId: string, updates: { name: string; phone: string; origin: string }) => {
+  const handleEditSupplier = async (supplierId: string, updates: { name: string; phone: string; origin: string; bank_name?: string; account_name?: string; account_number?: string }) => {
     console.log('🔧 Editing supplier and reloading transactions...', { 
       supplierId, 
       oldName: selectedSupplier?.name,
@@ -490,17 +490,25 @@ const Suppliers = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="font-bold">Code</TableHead>
                 <TableHead className="font-bold">Supplier Name</TableHead>
-                <TableHead className="font-bold">Supplier Code</TableHead>
                 <TableHead className="font-bold">Phone Number</TableHead>
+                <TableHead className="font-bold">Location</TableHead>
+                <TableHead className="font-bold">Bank Name</TableHead>
+                <TableHead className="font-bold">Account Name</TableHead>
+                <TableHead className="font-bold">Account Number</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {suppliers.map((supplier) => (
                 <TableRow key={supplier.id}>
-                  <TableCell>{supplier.name}</TableCell>
                   <TableCell>{supplier.code}</TableCell>
-                  <TableCell>{supplier.phone || "N/A"}</TableCell>
+                  <TableCell>{supplier.name}</TableCell>
+                  <TableCell>{supplier.phone || "—"}</TableCell>
+                  <TableCell>{supplier.origin}</TableCell>
+                  <TableCell>{supplier.bank_name || "—"}</TableCell>
+                  <TableCell>{supplier.account_name || "—"}</TableCell>
+                  <TableCell>{supplier.account_number || "—"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -692,6 +700,25 @@ const Suppliers = () => {
                     </div>
                   </div>
                 </div>
+                {(selectedSupplier.bank_name || selectedSupplier.account_number) && (
+                  <div className="mt-4 pt-4 border-t">
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3">Bank Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Bank Name</p>
+                        <p className="font-medium">{selectedSupplier.bank_name || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Account Name</p>
+                        <p className="font-medium">{selectedSupplier.account_name || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Account Number</p>
+                        <p className="font-medium">{selectedSupplier.account_number || '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

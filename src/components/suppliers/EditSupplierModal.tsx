@@ -4,47 +4,46 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { Supplier } from "@/hooks/useSuppliers";
+import { Separator } from "@/components/ui/separator";
 
 interface EditSupplierModalProps {
   supplier: Supplier | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (supplierId: string, updates: { name: string; phone: string; origin: string }) => Promise<void>;
+  onSave: (supplierId: string, updates: { name: string; phone: string; origin: string; bank_name?: string; account_name?: string; account_number?: string }) => Promise<void>;
 }
 
 export const EditSupplierModal = ({ supplier, open, onOpenChange, onSave }: EditSupplierModalProps) => {
   const [name, setName] = useState(supplier?.name || "");
   const [phone, setPhone] = useState(supplier?.phone || "");
   const [origin, setOrigin] = useState(supplier?.origin || "");
+  const [bankName, setBankName] = useState(supplier?.bank_name || "");
+  const [accountName, setAccountName] = useState(supplier?.account_name || "");
+  const [accountNumber, setAccountNumber] = useState(supplier?.account_number || "");
   const [saving, setSaving] = useState(false);
 
-  // Update form when supplier changes
   useEffect(() => {
     if (supplier) {
-      console.log('📝 Loading supplier into edit form:', supplier);
       setName(supplier.name);
       setPhone(supplier.phone || "");
       setOrigin(supplier.origin);
+      setBankName(supplier.bank_name || "");
+      setAccountName(supplier.account_name || "");
+      setAccountNumber(supplier.account_number || "");
     }
   }, [supplier]);
 
   const handleSave = async () => {
-    if (!supplier) {
-      console.error('❌ No supplier selected for editing');
-      return;
-    }
-    
-    console.log('💾 Saving supplier changes:', { 
-      id: supplier.id, 
-      oldName: supplier.name,
-      newName: name, 
-      phone, 
-      origin 
-    });
+    if (!supplier) return;
     
     setSaving(true);
     try {
-      await onSave(supplier.id, { name, phone, origin });
+      await onSave(supplier.id, { 
+        name, phone, origin,
+        bank_name: bankName,
+        account_name: accountName,
+        account_number: accountNumber
+      });
       onOpenChange(false);
     } catch (error) {
       console.error('❌ Failed to save supplier:', error);
@@ -55,7 +54,7 @@ export const EditSupplierModal = ({ supplier, open, onOpenChange, onSave }: Edit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit Supplier Information</DialogTitle>
           <DialogDescription>
@@ -66,32 +65,35 @@ export const EditSupplierModal = ({ supplier, open, onOpenChange, onSave }: Edit
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="name">Supplier Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter supplier name"
-            />
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter supplier name" />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Enter phone number"
-            />
+            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter phone number" />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="origin">Location/Origin</Label>
-            <Input
-              id="origin"
-              value={origin}
-              onChange={(e) => setOrigin(e.target.value)}
-              placeholder="Enter location or origin"
-            />
+            <Input id="origin" value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="Enter location or origin" />
+          </div>
+
+          <Separator />
+          <h4 className="font-semibold text-sm">Bank Details</h4>
+
+          <div className="space-y-2">
+            <Label htmlFor="bankName">Bank Name</Label>
+            <Input id="bankName" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. Stanbic Bank, Centenary Bank" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="accountName">Account Name</Label>
+            <Input id="accountName" value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="Name on the bank account" />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="accountNumber">Account Number</Label>
+            <Input id="accountNumber" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="Bank account number" />
           </div>
         </div>
 
