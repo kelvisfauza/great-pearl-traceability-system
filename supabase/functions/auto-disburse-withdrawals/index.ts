@@ -161,19 +161,25 @@ serve(async (req) => {
             });
           }
 
-          // Get employee name for SMS
+          // Get employee name and system phone for SMS
           let employeeName = "User";
+          let employeeSystemPhone = "";
           const { data: emp } = await supabase
             .from("employees")
-            .select("name")
+            .select("name, phone")
             .or(`auth_user_id.eq.${withdrawal.user_id},email.eq.${withdrawal.user_id}`)
             .maybeSingle();
-          if (emp) employeeName = emp.name;
+          if (emp) {
+            employeeName = emp.name;
+            employeeSystemPhone = emp.phone || "";
+          }
 
-          // Send SMS notification
-          if (yoolaSmsApiKey) {
-            let smsPhone = cleanPhone;
-            if (!smsPhone.startsWith("+")) smsPhone = "+" + smsPhone;
+          // Send SMS to employee's system phone, NOT the disbursement number
+          if (yoolaSmsApiKey && employeeSystemPhone) {
+            let smsPhone = employeeSystemPhone.replace(/\D/g, "");
+            if (smsPhone.startsWith("0")) smsPhone = "+256" + smsPhone.slice(1);
+            else if (smsPhone.startsWith("256")) smsPhone = "+" + smsPhone;
+            else if (!smsPhone.startsWith("+")) smsPhone = "+256" + smsPhone;
 
             const smsMessage = `Dear ${employeeName}, your withdrawal of UGX ${withdrawal.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${phone}. Ref: ${txRef}. Great Pearl Coffee.`;
 
