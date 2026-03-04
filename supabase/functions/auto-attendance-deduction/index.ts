@@ -16,89 +16,109 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     const now = new Date()
-    const dayOfWeek = now.getUTCDay() // 0=Sun, 6=Sat
-    
-    // Only run Monday(1) to Saturday(6)
-    if (dayOfWeek === 0) {
-      return new Response(JSON.stringify({ message: 'Sunday - no deductions', processed: 0 }), {
+    const dayOfWeek = now.getUTCDay() // 0=Sun, 1=Mon, ...
+
+    // Only run on Monday (1)
+    if (dayOfWeek !== 1) {
+      return new Response(JSON.stringify({ 
+        message: 'Not Monday - weekly deductions only run on Mondays', 
+        processed: 0 
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const today = now.toISOString().split('T')[0]
-    const DEDUCTION_AMOUNT = 5000
+    // Calculate previous week range: last Monday to last Saturday
+    const lastMonday = new Date(now)
+    lastMonday.setUTCDate(now.getUTCDate() - 7)
+    const lastMondayStr = lastMonday.toISOString().split('T')[0]
 
-    // Get all active employees
-    const { data: employees, error: empError } = await supabase
-      .from('employees')
-      .select('id, email, name, auth_user_id, phone')
-      .eq('status', 'Active')
+    const lastSaturday = new Date(now)
+    lastSaturday.setUTCDate(now.getUTCDate() - 2)
+    const lastSaturdayStr = lastSaturday.toISOString().split('T')[0]
 
-    if (empError) throw empError
+    const RATE_PER_HOUR = 1000 // UGX per net late hour
+
+    // Get all attendance time records for previous week
+    const { data: records, error: recError } = await supabase
+      .from('attendance_time_records')
+      .select('employee_id, employee_name, employee_email, late_minutes, overtime_minutes')
+      .gte('record_date', lastMondayStr)
+      .lte('record_date', lastSaturdayStr)
+
+    if (recError) throw recError
+
+    if (!records || records.length === 0) {
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'No attendance records found for previous week',
+        week: `${lastMondayStr} to ${lastSaturdayStr}`,
+        processed: 0,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Aggregate per employee: total late - total overtime
+    const employeeMap: Record<string, {
+      name: string
+      email: string
+      totalLate: number
+      totalOvertime: number
+    }> = {}
+
+    for (const rec of records) {
+      if (!employeeMap[rec.employee_id]) {
+        employeeMap[rec.employee_id] = {
+          name: rec.employee_name,
+          email: rec.employee_email,
+          totalLate: 0,
+          totalOvertime: 0,
+        }
+      }
+      employeeMap[rec.employee_id].totalLate += (rec.late_minutes || 0)
+      employeeMap[rec.employee_id].totalOvertime += (rec.overtime_minutes || 0)
+    }
 
     let processed = 0
     const deducted: string[] = []
     const skipped: string[] = []
 
-    for (const emp of employees || []) {
-      if (!emp.auth_user_id) {
-        skipped.push(`${emp.name} (no auth_user_id)`)
+    for (const [employeeId, data] of Object.entries(employeeMap)) {
+      const netLateMinutes = data.totalLate - data.totalOvertime
+      
+      if (netLateMinutes <= 0) {
+        skipped.push(`${data.name} (net late: ${netLateMinutes}min - no deduction)`)
         continue
       }
 
-      // Check if employee logged into the system today BEFORE 9AM EAT (6AM UTC)
-      // Uses the dedicated employee_login_tracker table
-      const { data: loginRecord } = await supabase
-        .from('employee_login_tracker')
-        .select('id, login_time')
-        .eq('auth_user_id', emp.auth_user_id)
-        .eq('login_date', today)
+      const netLateHours = Math.ceil(netLateMinutes / 60)
+      const deductionAmount = netLateHours * RATE_PER_HOUR
+
+      // Get employee auth_user_id and phone
+      const { data: emp } = await supabase
+        .from('employees')
+        .select('id, auth_user_id, phone, email')
+        .eq('id', employeeId)
+        .eq('status', 'Active')
         .maybeSingle()
 
-      if (loginRecord) {
-        // Employee logged into the system today
-        const loginTime = new Date(loginRecord.login_time)
-        const loginHourUTC = loginTime.getUTCHours()
-        const loginMinuteUTC = loginTime.getUTCMinutes()
-        
-        // 9:00 AM EAT = 6:00 AM UTC
-        if (loginHourUTC < 6 || (loginHourUTC === 6 && loginMinuteUTC === 0)) {
-          skipped.push(`${emp.name} (logged in at ${loginTime.toISOString()} - before 9AM EAT)`)
-          continue
-        }
-        
-        // Logged in but AFTER 9AM EAT - still deduct
-        console.log(`${emp.name} logged in late at ${loginTime.toISOString()} (after 9AM EAT)`)
-      } else {
-        // No login record at all for today
-        console.log(`${emp.name} has no login record for ${today}`)
-      }
-
-      // Also check user_sessions as a fallback
-      const { data: session } = await supabase
-        .from('user_sessions')
-        .select('id, created_at')
-        .eq('user_id', emp.auth_user_id)
-        .gte('created_at', today + 'T00:00:00Z')
-        .lte('created_at', today + 'T06:00:00Z') // 9AM EAT = 6AM UTC
-        .limit(1)
-        .maybeSingle()
-
-      if (session) {
-        skipped.push(`${emp.name} (session found before 9AM)`)
+      if (!emp || !emp.auth_user_id) {
+        skipped.push(`${data.name} (no auth account)`)
         continue
       }
 
-      // Check if already deducted today
+      const referenceKey = `AUTO-WEEKLY-LATE-${lastMondayStr}-${employeeId}`
+
+      // Check if already deducted for this week
       const { data: existing } = await supabase
-        .from('absence_appeals')
+        .from('ledger_entries')
         .select('id')
-        .eq('employee_id', emp.id)
-        .eq('deduction_date', today)
+        .eq('reference', referenceKey)
         .maybeSingle()
 
       if (existing) {
-        skipped.push(`${emp.name} (already deducted)`)
+        skipped.push(`${data.name} (already deducted this week)`)
         continue
       }
 
@@ -107,54 +127,50 @@ Deno.serve(async (req) => {
         .rpc('get_unified_user_id', { input_email: emp.email })
       const userId = userIdData || emp.auth_user_id || emp.id
 
-      const referenceKey = `AUTO-ABSENCE-${today}-${emp.id}`
-
-      // Create negative ledger entry (allows negative balance)
+      // Create negative ledger entry
       const { error: ledgerError } = await supabase
         .from('ledger_entries')
         .insert({
           user_id: userId,
           entry_type: 'ADJUSTMENT',
-          amount: -DEDUCTION_AMOUNT,
+          amount: -deductionAmount,
           reference: referenceKey,
           metadata: {
-            type: 'auto_absence_deduction',
-            employee_name: emp.name,
-            employee_email: emp.email,
-            date: today,
-            reason: loginRecord 
-              ? `Logged into system late at ${new Date(loginRecord.login_time).toISOString()} (after 9:00 AM EAT)`
-              : 'Not logged into system by 9:00 AM EAT',
+            type: 'weekly_late_deduction',
+            employee_name: data.name,
+            employee_email: data.email,
+            week_start: lastMondayStr,
+            week_end: lastSaturdayStr,
+            total_late_minutes: data.totalLate,
+            total_overtime_minutes: data.totalOvertime,
+            net_late_minutes: netLateMinutes,
+            net_late_hours: netLateHours,
+            rate_per_hour: RATE_PER_HOUR,
           }
         })
 
       if (ledgerError) {
-        console.error(`Failed to deduct for ${emp.name}:`, ledgerError)
+        console.error(`Failed to deduct for ${data.name}:`, ledgerError)
         continue
       }
 
-      // Create absence_appeals record for tracking and appeal
+      // Create absence_appeals record for tracking
       await supabase
         .from('absence_appeals')
         .insert({
-          employee_id: emp.id,
-          employee_name: emp.name,
-          employee_email: emp.email,
-          deduction_date: today,
-          deduction_amount: DEDUCTION_AMOUNT,
+          employee_id: employeeId,
+          employee_name: data.name,
+          employee_email: data.email,
+          deduction_date: lastMondayStr,
+          deduction_amount: deductionAmount,
           ledger_reference: referenceKey,
           appeal_status: 'none',
-          reason: loginRecord
-            ? `Late login at ${new Date(loginRecord.login_time).toLocaleTimeString('en-US', { timeZone: 'Africa/Kampala' })}`
-            : 'No system login recorded before 9:00 AM',
+          reason: `Weekly late deduction: ${data.totalLate}min late - ${data.totalOvertime}min overtime = ${netLateMinutes}min net late (${netLateHours}hrs x UGX ${RATE_PER_HOUR})`,
         })
 
       // Send SMS notification
       if (emp.phone) {
-        const smsMessage = loginRecord
-          ? `Great Pearl Coffee: UGX ${DEDUCTION_AMOUNT.toLocaleString()} deducted - you logged into the system late today (${today}). Login was after 9:00 AM. You can appeal under My Deductions.`
-          : `Great Pearl Coffee: UGX ${DEDUCTION_AMOUNT.toLocaleString()} deducted - you did not log into the system by 9:00 AM today (${today}). You can appeal under My Deductions.`
-
+        const message = `Great Pearl Coffee: UGX ${deductionAmount.toLocaleString()} deducted for ${netLateHours}hr(s) net late time last week (${lastMondayStr} to ${lastSaturdayStr}). Appeal via My Deductions.`
         try {
           await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
             method: 'POST',
@@ -162,43 +178,22 @@ Deno.serve(async (req) => {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${supabaseKey}`,
             },
-            body: JSON.stringify({
-              phone: emp.phone,
-              to: emp.phone,
-              message: smsMessage,
-            }),
+            body: JSON.stringify({ phone: emp.phone, to: emp.phone, message }),
           })
-
-          await supabase
-            .from('absence_appeals')
-            .update({ sms_sent: true })
-            .eq('employee_id', emp.id)
-            .eq('deduction_date', today)
         } catch (smsErr) {
-          console.error(`SMS failed for ${emp.name}:`, smsErr)
+          console.error(`SMS failed for ${data.name}:`, smsErr)
         }
       }
 
-      // Also queue SMS via notification queue
-      await supabase
-        .from('sms_notification_queue')
-        .insert({
-          recipient_phone: emp.phone || '',
-          recipient_email: emp.email,
-          message: `Great Pearl Coffee: UGX ${DEDUCTION_AMOUNT.toLocaleString()} deducted for not logging in by 9AM on ${today}. Appeal via system.`,
-          notification_type: 'absence_deduction',
-          reference_id: referenceKey,
-        })
-
-      deducted.push(emp.name)
+      deducted.push(`${data.name} (${netLateHours}hrs = UGX ${deductionAmount})`)
       processed++
     }
 
-    console.log(`Auto-deduction complete: ${processed} employees deducted, ${skipped.length} skipped on ${today}`)
+    console.log(`Weekly deduction complete: ${processed} employees deducted, ${skipped.length} skipped for week ${lastMondayStr}-${lastSaturdayStr}`)
 
     return new Response(JSON.stringify({
       success: true,
-      date: today,
+      week: `${lastMondayStr} to ${lastSaturdayStr}`,
       processed,
       deducted,
       skipped_count: skipped.length,
@@ -206,7 +201,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
-    console.error('Auto-deduction error:', error)
+    console.error('Weekly deduction error:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
