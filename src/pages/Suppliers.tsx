@@ -490,17 +490,25 @@ const Suppliers = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="font-bold">Code</TableHead>
                 <TableHead className="font-bold">Supplier Name</TableHead>
-                <TableHead className="font-bold">Supplier Code</TableHead>
                 <TableHead className="font-bold">Phone Number</TableHead>
+                <TableHead className="font-bold">Location</TableHead>
+                <TableHead className="font-bold">Bank Name</TableHead>
+                <TableHead className="font-bold">Account Name</TableHead>
+                <TableHead className="font-bold">Account Number</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {suppliers.map((supplier) => (
                 <TableRow key={supplier.id}>
-                  <TableCell>{supplier.name}</TableCell>
                   <TableCell>{supplier.code}</TableCell>
-                  <TableCell>{supplier.phone || "N/A"}</TableCell>
+                  <TableCell>{supplier.name}</TableCell>
+                  <TableCell>{supplier.phone || "—"}</TableCell>
+                  <TableCell>{supplier.origin}</TableCell>
+                  <TableCell>{supplier.bank_name || "—"}</TableCell>
+                  <TableCell>{supplier.account_name || "—"}</TableCell>
+                  <TableCell>{supplier.account_number || "—"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

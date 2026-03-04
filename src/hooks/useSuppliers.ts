@@ -219,6 +219,9 @@ export const useSuppliers = () => {
           name: updates.name,
           phone: updates.phone || null,
           origin: updates.origin,
+          bank_name: updates.bank_name || null,
+          account_name: updates.account_name || null,
+          account_number: updates.account_number || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', supplierId);
