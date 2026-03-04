@@ -214,7 +214,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
         if (payoutError) {
           console.error(`Payout attempt ${attempt} error:`, payoutError);
-          if (attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
+          if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
           return { success: false, ref: '', error: payoutError.message || 'Edge function error' };
         }
         
@@ -224,11 +224,11 @@ export const WithdrawalRequestsManager: React.FC = () => {
         
         const errorMsg = payoutData?.message || payoutData?.details?.data?.message || 'Transfer rejected by provider';
         console.error(`Payout attempt ${attempt} failed:`, payoutData);
-        if (attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
+        if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
         return { success: false, ref: '', error: errorMsg };
       } catch (payoutErr: any) {
         console.error(`Payout attempt ${attempt} exception:`, payoutErr);
-        if (attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
+        if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
         return { success: false, ref: '', error: payoutErr.message || 'Unknown error' };
       }
     }
@@ -393,10 +393,13 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
     setProcessing(selectedRequest.id);
     try {
+      const isMoMo = selectedRequest.channel === 'MOBILE_MONEY' || (selectedRequest.channel !== 'CASH' && selectedRequest.channel !== 'BANK');
       const updateData: any = {
         finance_approved_at: new Date().toISOString(),
         finance_approved_by: employee?.name || employee?.email || 'Finance',
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        // CRITICAL: Lock for payout immediately to prevent cron double-send
+        ...(isMoMo ? { payout_status: 'processing', payout_attempted_at: new Date().toISOString() } : {})
       };
 
       if (paymentVoucher) {
@@ -469,14 +472,26 @@ export const WithdrawalRequestsManager: React.FC = () => {
         }
       }
 
-      // Send SMS notification
-      if (phoneToNotify) {
+      // Send SMS to employee's SYSTEM phone (not disbursement number)
+      let smsPhone = selectedRequest.employee_phone || phoneToNotify;
+      // Try to get system phone from employees table
+      if (selectedRequest.user_id) {
+        const { data: emp } = await supabase
+          .from('employees')
+          .select('phone')
+          .or(`auth_user_id.eq.${selectedRequest.user_id},email.eq.${selectedRequest.employee_email || ''}`)
+          .maybeSingle();
+        if (emp?.phone) smsPhone = emp.phone;
+      }
+
+      if (smsPhone) {
         let message = '';
+        const disbursementPhone = selectedRequest.disbursement_phone || selectedRequest.phone_number;
         if (isMobileMoney) {
           if (payoutSuccess) {
-            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${phoneToNotify}. Ref: ${payoutRef}. Great Pearl Coffee.`;
+            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${disbursementPhone}. Ref: ${payoutRef}. Great Pearl Coffee.`;
           } else {
-            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Mobile Money disbursement is being processed to ${phoneToNotify}. Ref: ${selectedRequest.request_ref}. Contact Finance if not received. Great Pearl Coffee.`;
+            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Mobile Money disbursement is being processed to ${disbursementPhone}. Ref: ${selectedRequest.request_ref}. Contact Finance if not received. Great Pearl Coffee.`;
           }
         } else {
           message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Please collect your CASH from the Finance office. Ref: ${selectedRequest.request_ref}. Great Pearl Coffee.`;
@@ -484,7 +499,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
         try {
           await supabase.functions.invoke('send-sms', {
-            body: { phone: phoneToNotify, message }
+            body: { phone: smsPhone, message }
           });
         } catch (smsError) {
           console.error('SMS notification failed:', smsError);
