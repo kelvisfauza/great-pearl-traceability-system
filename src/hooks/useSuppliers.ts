@@ -205,6 +205,9 @@ export const useSuppliers = () => {
     name: string;
     phone: string;
     origin: string;
+    bank_name?: string;
+    account_name?: string;
+    account_number?: string;
   }) => {
     try {
       console.log('🔄 Updating supplier info only (not affecting transactions):', supplierId, updates);
