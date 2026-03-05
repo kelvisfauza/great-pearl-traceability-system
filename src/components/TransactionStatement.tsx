@@ -27,6 +27,9 @@ const ENTRY_CONFIG: Record<string, { label: string; icon: React.ElementType; col
   WITHDRAWAL: { label: 'Withdrawal', icon: ArrowUpRight, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
   BONUS: { label: 'Bonus', icon: Gift, color: 'text-purple-600', badgeClass: 'bg-purple-100 text-purple-800' },
   ADJUSTMENT: { label: 'Adjustment', icon: Minus, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' },
+  LOAN_DISBURSEMENT: { label: 'Loan Disbursement', icon: Briefcase, color: 'text-blue-600', badgeClass: 'bg-blue-100 text-blue-800' },
+  LOAN_REPAYMENT: { label: 'Loan Repayment', icon: ArrowUpRight, color: 'text-orange-600', badgeClass: 'bg-orange-100 text-orange-800' },
+  LOAN_RECOVERY: { label: 'Loan Recovery (Wallet)', icon: ArrowUpRight, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
 };
 
 const DEFAULT_CONFIG = { label: 'Transaction', icon: FileText, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' };
@@ -46,19 +49,20 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const [limit, setLimit] = useState(30);
   const [hasMore, setHasMore] = useState(true);
 
+  const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'];
+
   // Calculate running balances (oldest to newest, then reverse for display)
   const entriesWithBalance = React.useMemo(() => {
     if (entries.length === 0) return [];
-    // entries are newest-first from DB; reverse to compute running balance from oldest
     const chronological = [...entries].reverse();
-    // The balance after the last entry should equal currentBalance
-    // So starting balance = currentBalance - sum(all entries)
-    const totalSum = chronological.reduce((s, e) => s + e.amount, 0);
-    let runningBalance = currentBalance - totalSum;
+    // Only wallet-affecting entries contribute to running balance
+    const walletSum = chronological.filter(e => WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
+    let runningBalance = currentBalance - walletSum;
     
     const withBalance = chronological.map(e => {
-      runningBalance += e.amount;
-      return { ...e, runningBalance };
+      const affectsWallet = WALLET_TYPES.includes(e.entry_type);
+      if (affectsWallet) runningBalance += e.amount;
+      return { ...e, runningBalance: affectsWallet ? runningBalance : null };
     });
     // Reverse back to newest-first for display
     return withBalance.reverse();
@@ -74,9 +78,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const activityLabel = getActivityLabel(e);
       return `<tr>
         <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${format(new Date(e.created_at), 'MMM dd, yyyy h:mm a')}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${config.label}${activityLabel ? ' - ' + activityLabel : ''}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${getEntryLabel(e)}${activityLabel ? ' - ' + activityLabel : ''}</td>
         <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:${isCredit ? '#15803d' : '#b91c1c'};font-weight:600">${isCredit ? '+' : ''}${e.amount.toLocaleString()}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;font-weight:600">${(e as any).runningBalance.toLocaleString()}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;font-weight:600">${(e as any).runningBalance != null ? (e as any).runningBalance.toLocaleString() : '—'}</td>
       </tr>`;
     }).join('');
 
@@ -117,7 +121,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         .from('ledger_entries')
         .select('*')
         .eq('user_id', unifiedUserId)
-        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'])
+        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT', 'LOAN_RECOVERY'])
         .order('created_at', { ascending: false })
         .limit(count);
 
@@ -137,8 +141,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   }, [open, user?.id, limit]);
 
   const getActivityLabel = (entry: LedgerEntry) => {
-    if (entry.entry_type === 'LOYALTY_REWARD' && entry.metadata) {
-      const meta = typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata;
+    const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+    
+    if (entry.entry_type === 'LOYALTY_REWARD' && meta) {
       const activityMap: Record<string, string> = {
         form_submission: 'Form Submission',
         data_entry: 'Data Entry',
@@ -151,7 +156,36 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       };
       return activityMap[meta.activity_type] || meta.activity_type || '';
     }
+    if (entry.entry_type === 'LOAN_DISBURSEMENT' && meta) {
+      return meta.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan';
+    }
+    // Detect loan disbursement stored as DEPOSIT
+    if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
+      return meta?.duration_months ? `${meta.duration_months} month(s)` : '';
+    }
+    if (entry.entry_type === 'LOAN_REPAYMENT' && meta) {
+      return meta.method === 'mobile_money' ? 'via MoMo' : meta.method || '';
+    }
+    // Detect loan-related wallet deductions
+    if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
+      const source = meta.source === 'wallet' ? 'Wallet Recovery' : meta.source === 'salary' ? 'Salary Recovery' : meta.source === 'guarantor' ? 'Guarantor Recovery' : 'Loan Recovery';
+      return source;
+    }
     return '';
+  };
+
+  const getEntryLabel = (entry: LedgerEntry) => {
+    const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+    const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
+    // Detect loan disbursement (stored as DEPOSIT with loan metadata)
+    if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
+      return '💰 Loan Disbursement';
+    }
+    // Override label for loan-related wallet/adjustment entries
+    if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
+      return '🏦 Loan Recovery';
+    }
+    return config.label;
   };
 
   if (!open) return null;
@@ -218,7 +252,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${config.badgeClass}`}>
-                      {config.label}
+                      {getEntryLabel(entry)}
                     </Badge>
                     {activityLabel && (
                       <span className="text-[10px] text-muted-foreground">{activityLabel}</span>
@@ -233,7 +267,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                     {isCredit ? '+' : ''}{entry.amount.toLocaleString()}
                   </div>
                   <div className="text-[10px] text-muted-foreground">
-                    Bal: {entry.runningBalance.toLocaleString()}
+                    {entry.runningBalance != null ? `Bal: ${entry.runningBalance.toLocaleString()}` : 'Loan tx'}
                   </div>
                 </div>
               </div>

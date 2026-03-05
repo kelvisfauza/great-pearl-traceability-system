@@ -7,7 +7,8 @@ import {
 } from '@/components/ui/sheet';
 import { 
   Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer,
-  Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift, FileText
+  Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift, FileText,
+  Landmark
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +43,8 @@ export const AccountButton = () => {
   const [showWithdrawal, setShowWithdrawal] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
+  const [activeLoanTotal, setActiveLoanTotal] = useState(0);
+  const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [ledgerUserId, setLedgerUserId] = useState<string | null>(null);
   const [breakdown, setBreakdown] = useState({
     lastMonthLoyalty: 0,
@@ -127,8 +130,26 @@ export const AccountButton = () => {
     });
   };
 
+  // Fetch active loans for this employee
+  const fetchActiveLoans = async () => {
+    const email = employee?.email || user?.email;
+    if (!email) return;
+    try {
+      const { data, error } = await supabase
+        .from('loans')
+        .select('remaining_balance')
+        .eq('employee_email', email)
+        .eq('status', 'active');
+      if (!error && data) {
+        setActiveLoanCount(data.length);
+        setActiveLoanTotal(data.reduce((s, l) => s + (l.remaining_balance || 0), 0));
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     fetchLedgerTotals();
+    fetchActiveLoans();
   }, [user?.id, user?.email, employee?.email, withdrawalRequests.length]);
 
   // Real-time subscription for ledger changes
@@ -328,6 +349,34 @@ export const AccountButton = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Active Loans Card */}
+            {activeLoanCount > 0 && (
+              <Card className="border-red-200 bg-gradient-to-br from-red-50 to-orange-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Landmark className="h-4 w-4 text-red-600" />
+                    Active Loans
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-700">
+                    UGX {activeLoanTotal.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {activeLoanCount} active loan{activeLoanCount > 1 ? 's' : ''} · Total outstanding balance
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3 w-full text-xs border-red-200 text-red-700 hover:bg-red-100"
+                    onClick={() => window.location.href = '/quick-loans'}
+                  >
+                    View Loans & Repay
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Loyalty Points Section */}
             <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50">
