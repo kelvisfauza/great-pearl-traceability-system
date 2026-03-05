@@ -28,7 +28,8 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
 
   if (!loanData) return null;
 
-  const { employeeName, employeeEmail, guarantorName, loanAmount, interestRate, dailyRate, durationMonths, totalWeeks, weeklyInstallment, totalRepayable, totalInterest } = loanData;
+  const { employeeName, employeeEmail, guarantorName, loanAmount, interestRate, dailyRate, durationMonths, totalWeeks, weeklyInstallment, totalRepayable, totalInterest, loanType } = loanData;
+  const isLongTerm = loanType === 'long_term';
 
   // Generate reducing balance schedule
   const schedule: { week: number; dueDate: string; installment: number; interest: number; principal: number; balance: number }[] = [];
