@@ -149,6 +149,14 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const getActivityLabel = (entry: LedgerEntry) => {
     const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
     
+    // Wallet transfers - show recipient/sender details
+    if (meta?.type === 'wallet_transfer') {
+      if (entry.amount < 0) {
+        return `to ${meta.to_name || meta.to_email || 'Unknown'}`;
+      }
+      return `from ${meta.from_name || meta.from_email || 'Unknown'}`;
+    }
+    
     if (entry.entry_type === 'LOYALTY_REWARD' && meta) {
       const activityMap: Record<string, string> = {
         form_submission: 'Form Submission',
