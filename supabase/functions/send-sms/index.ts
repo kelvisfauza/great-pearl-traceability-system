@@ -69,7 +69,91 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
-  // --- Authentication check ---
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const supabaseServiceKey = serviceRoleKey || supabaseAnonKey
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+  // Check if this is a queue processing request (no auth needed, uses service role internally)
+  let rawBody = ''
+  try { rawBody = await req.text() } catch {}
+  let parsedBody: any = {}
+  try { parsedBody = JSON.parse(rawBody) } catch {}
+  
+  if (parsedBody.action === 'process_queue') {
+    console.log('Processing SMS queue...')
+    try {
+      const { data: pendingMessages, error: fetchError } = await supabase
+        .from('sms_notification_queue')
+        .select('*')
+        .eq('status', 'pending')
+        .limit(20)
+
+      if (fetchError) {
+        console.error('Failed to fetch queue:', fetchError)
+        return new Response(JSON.stringify({ error: 'Failed to fetch queue' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      if (!pendingMessages || pendingMessages.length === 0) {
+        return new Response(JSON.stringify({ success: true, processed: 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      const results = []
+      for (const msg of pendingMessages) {
+        try {
+          // Format phone
+          let formattedPhone = msg.recipient_phone.toString().trim()
+          if (!formattedPhone.startsWith('+')) {
+            if (formattedPhone.startsWith('0')) formattedPhone = '+256' + formattedPhone.substring(1)
+            else if (formattedPhone.startsWith('256')) formattedPhone = '+' + formattedPhone
+            else formattedPhone = '+256' + formattedPhone
+          }
+
+          const apiKey = Deno.env.get('YOOLA_SMS_API_KEY')
+          if (!apiKey) { results.push({ id: msg.id, success: false, error: 'No API key' }); continue; }
+
+          const smsResponse = await fetch('https://yoolasms.com/api/v1/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: formattedPhone, message: msg.message, api_key: apiKey })
+          })
+
+          const success = smsResponse.ok
+          console.log(`Queue SMS to ${formattedPhone}: ${success ? 'sent' : 'failed'} (${smsResponse.status})`)
+
+          await supabase.from('sms_notification_queue').update({
+            status: success ? 'sent' : 'failed',
+            sent_at: success ? new Date().toISOString() : null,
+            error_message: success ? null : `HTTP ${smsResponse.status}`
+          }).eq('id', msg.id)
+
+          // If YoolaSMS failed, try Infobip fallback
+          if (!success) {
+            const infobipResult = await sendInfobipSmsFallback(formattedPhone, msg.message, supabase, {
+              userName: 'Employee', recipientEmail: msg.recipient_email, messageType: msg.notification_type
+            })
+            if (infobipResult.success) {
+              await supabase.from('sms_notification_queue').update({ status: 'sent', sent_at: new Date().toISOString(), error_message: 'Sent via Infobip fallback' }).eq('id', msg.id)
+            }
+          }
+
+          results.push({ id: msg.id, success })
+        } catch (err) {
+          console.error(`Failed to process queue item ${msg.id}:`, err.message)
+          await supabase.from('sms_notification_queue').update({ status: 'failed', error_message: err.message }).eq('id', msg.id)
+          results.push({ id: msg.id, success: false, error: err.message })
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, processed: results.length, results }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    } catch (err) {
+      console.error('Queue processing error:', err.message)
+      return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+  }
+
+  // --- Authentication check for direct SMS sending ---
   const authHeader = req.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
     return new Response(
@@ -77,10 +161,6 @@ serve(async (req) => {
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
   // Allow service-role key calls (from other edge functions / cron jobs)
   const token = authHeader.replace('Bearer ', '')
@@ -104,12 +184,8 @@ serve(async (req) => {
   }
   console.log('Authenticated:', isServiceRole ? 'service-role' : userId)
 
-  // Use service role for DB operations
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || supabaseAnonKey
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
   try {
-    const { phone, message, userName, messageType, triggeredBy, requestId, department, recipientEmail } = await req.json()
+    const { phone, message, userName, messageType, triggeredBy, requestId, department, recipientEmail } = parsedBody
     
     console.log('📱 SMS request from user:', userId, '| type:', messageType)
     console.log('Received SMS request:', { phone, userName, messageLength: message?.length })
