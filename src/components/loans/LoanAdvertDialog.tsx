@@ -75,7 +75,7 @@ const LoanAdvertDialog = () => {
 
   const deselectAll = () => setSelectedEmployees(new Set());
 
-  const getLoanLimit = (salary: number, outstanding: number = 0) => Math.max(0, (salary || 0) * 3 - outstanding);
+  const getLoanLimit = (salary: number, outstanding: number = 0) => Math.max(0, (salary || 0) * 2 - outstanding);
 
   const handleSend = async () => {
     if (selectedEmployees.size === 0) {
