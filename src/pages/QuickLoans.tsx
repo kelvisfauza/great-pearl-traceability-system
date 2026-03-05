@@ -686,16 +686,27 @@ const QuickLoans = () => {
                     <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 2).toLocaleString()} {myLimit?.isAi ? '(AI assessed)' : '(2x salary)'}</p>
                   </div>
                   <div>
+                    <Label>Loan Type</Label>
+                    <Select value={loanType} onValueChange={(v) => setLoanType(v as LoanType)}>
+                      <SelectTrigger><SelectValue placeholder="Select loan type" /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(LOAN_TYPE_CONFIG).map(([key, cfg]) => (
+                          <SelectItem key={key} value={key}>{cfg.label} – {cfg.description}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label>Duration (Months)</Label>
                     <Select value={durationMonths} onValueChange={setDurationMonths}>
                       <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                       <SelectContent>
                         {[1, 2, 3, 4, 5, 6].map(m => {
                           const { totalWeeks } = getLoanSchedule(m);
-                          const dailyR = getDailyRate(m);
+                          const dailyR = getDailyRate(loanType);
                           return (
                             <SelectItem key={m} value={m.toString()}>
-                              {m} month{m > 1 ? 's' : ''} ({totalWeeks} weeks) - {dailyR.toFixed(2)}%/day
+                              {m} month{m > 1 ? 's' : ''} ({totalWeeks} weeks) - {dailyR.toFixed(2)}%/day ({LOAN_TYPE_CONFIG[loanType].monthlyRate}%/mo)
                             </SelectItem>
                           );
                         })}
