@@ -380,6 +380,7 @@ const SystemTransactions = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
 
       {/* Tabs: Transactions + Pending Reversals */}
       <Tabs defaultValue="transactions" className="space-y-4">
