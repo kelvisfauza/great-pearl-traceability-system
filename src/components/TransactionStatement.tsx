@@ -158,6 +158,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (entry.entry_type === 'LOAN_DISBURSEMENT' && meta) {
       return meta.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan';
     }
+    // Detect loan disbursement stored as DEPOSIT
+    if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
+      return meta?.duration_months ? `${meta.duration_months} month(s)` : '';
+    }
     if (entry.entry_type === 'LOAN_REPAYMENT' && meta) {
       return meta.method === 'mobile_money' ? 'via MoMo' : meta.method || '';
     }
