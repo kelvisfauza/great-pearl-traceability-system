@@ -74,7 +74,7 @@ const LoanAdvertDialog = () => {
       if (!emp.phone) { failCount++; continue; }
 
       const limit = getLoanLimit(emp.salary);
-      const message = `Hi ${emp.name}, your loan limit is UGX ${limit.toLocaleString()}. Borrow now, no paperwork, instant to wallet. Rates from 20%. Log in to Great Pearl Coffee App and grab your cash today!`;
+      const message = `Hi ${emp.name}, your loan limit is UGX ${limit.toLocaleString()}. Borrow now, no paperwork, instant to wallet. Rates from 15%. Log in to Great Pearl Coffee App and grab your cash today!`;
 
       try {
         const { error } = await supabase.functions.invoke("send-sms", {
