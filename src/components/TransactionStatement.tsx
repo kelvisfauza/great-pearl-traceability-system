@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, ArrowUpRight, ArrowDownLeft, Star, Briefcase, 
-  Gift, Smartphone, Loader2, ChevronDown, TrendingUp, Minus, Printer
+  Gift, Smartphone, Loader2, ChevronDown, TrendingUp, Minus, Printer, Send
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -33,6 +33,12 @@ const ENTRY_CONFIG: Record<string, { label: string; icon: React.ElementType; col
 };
 
 const DEFAULT_CONFIG = { label: 'Transaction', icon: FileText, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' };
+
+const getTransferMeta = (entry: LedgerEntry) => {
+  const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+  if (meta?.type === 'wallet_transfer') return meta;
+  return null;
+};
 
 interface TransactionStatementProps {
   open: boolean;
@@ -76,9 +82,21 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const config = ENTRY_CONFIG[e.entry_type] || DEFAULT_CONFIG;
       const isCredit = e.amount > 0;
       const activityLabel = getActivityLabel(e);
+      const transferMeta = getTransferMeta(e);
+      
+      let typeCol = `${getEntryLabel(e)}${activityLabel ? ' - ' + activityLabel : ''}`;
+      // Add transfer details for print
+      if (transferMeta) {
+        if (e.amount < 0 && transferMeta.to_email) {
+          typeCol += `<br/><span style="font-size:10px;color:#666">To: ${transferMeta.to_name} (${transferMeta.to_email})</span>`;
+        } else if (e.amount > 0 && transferMeta.from_email) {
+          typeCol += `<br/><span style="font-size:10px;color:#666">From: ${transferMeta.from_name} (${transferMeta.from_email})</span>`;
+        }
+      }
+      
       return `<tr>
         <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${format(new Date(e.created_at), 'MMM dd, yyyy h:mm a')}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${getEntryLabel(e)}${activityLabel ? ' - ' + activityLabel : ''}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${typeCol}</td>
         <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:${isCredit ? '#15803d' : '#b91c1c'};font-weight:600">${isCredit ? '+' : ''}${e.amount.toLocaleString()}</td>
         <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;font-weight:600">${(e as any).runningBalance != null ? (e as any).runningBalance.toLocaleString() : '—'}</td>
       </tr>`;
@@ -143,6 +161,14 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const getActivityLabel = (entry: LedgerEntry) => {
     const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
     
+    // Wallet transfers - show recipient/sender details
+    if (meta?.type === 'wallet_transfer') {
+      if (entry.amount < 0) {
+        return `to ${meta.to_name || meta.to_email || 'Unknown'}`;
+      }
+      return `from ${meta.from_name || meta.from_email || 'Unknown'}`;
+    }
+    
     if (entry.entry_type === 'LOYALTY_REWARD' && meta) {
       const activityMap: Record<string, string> = {
         form_submission: 'Form Submission',
@@ -177,6 +203,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const getEntryLabel = (entry: LedgerEntry) => {
     const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
     const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
+    // Detect wallet transfers
+    if (meta?.type === 'wallet_transfer') {
+      if (entry.amount < 0) return '📤 Sent Money';
+      return '📥 Received Money';
+    }
     // Detect loan disbursement (stored as DEPOSIT with loan metadata)
     if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
       return '💰 Loan Disbursement';
@@ -239,11 +270,18 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
             const isCredit = entry.amount > 0;
             const activityLabel = getActivityLabel(entry);
+            const transferMeta = getTransferMeta(entry);
+            const isTransferOut = transferMeta && entry.amount < 0;
+            const isTransferIn = transferMeta && entry.amount > 0;
 
             return (
               <div key={entry.id} className="flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                <div className={`p-1.5 rounded-full ${isCredit ? 'bg-green-100' : 'bg-red-100'}`}>
-                  {isCredit ? (
+                <div className={`p-1.5 rounded-full ${isTransferOut ? 'bg-orange-100' : isTransferIn ? 'bg-blue-100' : isCredit ? 'bg-green-100' : 'bg-red-100'}`}>
+                  {isTransferOut ? (
+                    <Send className="h-3.5 w-3.5 text-orange-600" />
+                  ) : isTransferIn ? (
+                    <ArrowDownLeft className="h-3.5 w-3.5 text-blue-600" />
+                  ) : isCredit ? (
                     <ArrowDownLeft className="h-3.5 w-3.5 text-green-600" />
                   ) : (
                     <ArrowUpRight className="h-3.5 w-3.5 text-red-600" />
@@ -251,7 +289,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${config.badgeClass}`}>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${isTransferOut ? 'bg-orange-100 text-orange-800' : isTransferIn ? 'bg-blue-100 text-blue-800' : config.badgeClass}`}>
                       {getEntryLabel(entry)}
                     </Badge>
                     {activityLabel && (
