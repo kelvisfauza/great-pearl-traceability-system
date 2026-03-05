@@ -305,9 +305,12 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             const transferMeta = getTransferMeta(entry);
             const isTransferOut = transferMeta && entry.amount < 0;
             const isTransferIn = transferMeta && entry.amount > 0;
+            const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+            const canReverse = isTransferOut && meta?.reversed !== 'true';
+            const isReversed = meta?.reversed === 'true';
 
             return (
-              <div key={entry.id} className="flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+              <div key={entry.id} className={`flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/50 transition-colors ${isReversed ? 'opacity-60' : ''}`}>
                 <div className={`p-1.5 rounded-full ${isTransferOut ? 'bg-orange-100' : isTransferIn ? 'bg-blue-100' : isCredit ? 'bg-green-100' : 'bg-red-100'}`}>
                   {isTransferOut ? (
                     <Send className="h-3.5 w-3.5 text-orange-600" />
@@ -320,17 +323,30 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${isTransferOut ? 'bg-orange-100 text-orange-800' : isTransferIn ? 'bg-blue-100 text-blue-800' : config.badgeClass}`}>
                       {getEntryLabel(entry)}
                     </Badge>
                     {activityLabel && (
                       <span className="text-[10px] text-muted-foreground">{activityLabel}</span>
                     )}
+                    {isReversed && (
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 bg-destructive/10 text-destructive">
+                        REVERSED
+                      </Badge>
+                    )}
                   </div>
                   <div className="text-[10px] text-muted-foreground mt-0.5">
                     {format(new Date(entry.created_at), 'MMM dd, yyyy · h:mm a')}
                   </div>
+                  {canReverse && (
+                    <button
+                      onClick={() => { setReverseEntry(entry); setReverseReason(''); }}
+                      className="text-[10px] text-destructive hover:underline mt-0.5 flex items-center gap-0.5"
+                    >
+                      <RotateCcw className="h-2.5 w-2.5" /> Reverse this transfer
+                    </button>
+                  )}
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className={`text-sm font-semibold ${isCredit ? 'text-green-700' : 'text-red-700'}`}>
@@ -358,6 +374,71 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
           )}
         </div>
       )}
+
+      {/* Reversal Confirmation Dialog */}
+      <Dialog open={!!reverseEntry} onOpenChange={open => !open && setReverseEntry(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5 text-destructive" />
+              Reverse Transfer
+            </DialogTitle>
+          </DialogHeader>
+          {reverseEntry && (() => {
+            const meta = reverseEntry.metadata ? (typeof reverseEntry.metadata === 'string' ? JSON.parse(reverseEntry.metadata) : reverseEntry.metadata) : null;
+            return (
+              <div className="space-y-4">
+                <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                    <span className="font-medium text-sm text-destructive">Confirm reversal</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    The money will be returned to your wallet and deducted from the recipient's wallet. Both of you will be notified via SMS.
+                    If the recipient has insufficient funds, their balance will go negative.
+                  </p>
+                </div>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Amount:</span>
+                    <span className="font-semibold">UGX {Math.abs(reverseEntry.amount).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Sent to:</span>
+                    <span>{meta?.to_name || meta?.to_email || 'Unknown'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Date:</span>
+                    <span>{format(new Date(reverseEntry.created_at), 'MMM dd, yyyy h:mm a')}</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Reason for reversal *</label>
+                  <Textarea
+                    placeholder="e.g. Sent to wrong person by mistake"
+                    value={reverseReason}
+                    onChange={e => setReverseReason(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReverseEntry(null)} disabled={reversing}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReverse}
+              disabled={reversing || !reverseReason.trim()}
+            >
+              {reversing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+              Reverse Transfer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
