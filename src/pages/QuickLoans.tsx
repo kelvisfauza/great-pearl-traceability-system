@@ -119,8 +119,11 @@ const QuickLoans = () => {
   const fetchWalletBalances = async () => {
     if (!employee) return;
     try {
-      // Fetch all ledger entries to compute balances
-      const { data: ledgerData } = await supabase.from('ledger_entries').select('user_id, amount');
+      // Fetch only wallet-relevant ledger entries (matching get_user_balance_safe)
+      const { data: ledgerData } = await supabase
+        .from('ledger_entries')
+        .select('user_id, amount')
+        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
       if (ledgerData) {
         const balances: Record<string, number> = {};
         ledgerData.forEach((entry: any) => {
