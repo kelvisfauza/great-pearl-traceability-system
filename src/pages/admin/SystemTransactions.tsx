@@ -380,174 +380,289 @@ const SystemTransactions = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Filters */}
-      <Card className="mb-4">
-        <CardContent className="pt-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, email, reference..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[200px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="WITHDRAWAL">Withdrawals</SelectItem>
-                <SelectItem value="DEPOSIT">Deposits</SelectItem>
-                <SelectItem value="LOYALTY_REWARD">Loyalty Rewards</SelectItem>
-                <SelectItem value="BONUS">Bonuses</SelectItem>
-                <SelectItem value="ADJUSTMENT">Adjustments</SelectItem>
-                <SelectItem value="LOAN_DISBURSEMENT">Loan Disbursements</SelectItem>
-                <SelectItem value="LOAN_REPAYMENT">Loan Repayments</SelectItem>
-                <SelectItem value="LOAN_RECOVERY">Loan Recoveries</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="icon" onClick={() => fetchEntries(limit)} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-            <Button variant="outline" onClick={printTransactions} disabled={filtered.length === 0}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print
+      {/* Tabs: Transactions + Pending Reversals */}
+      <Tabs defaultValue="transactions" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="transactions">All Transactions</TabsTrigger>
+          <TabsTrigger value="reversals" className="relative">
+            Reversal Requests
+            {reversalRequests.filter(r => r.status === 'pending').length > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+                {reversalRequests.filter(r => r.status === 'pending').length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="transactions" className="space-y-4">
+          {/* Filters */}
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name, email, reference..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Filter type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="WITHDRAWAL">Withdrawals</SelectItem>
+                    <SelectItem value="DEPOSIT">Deposits</SelectItem>
+                    <SelectItem value="LOYALTY_REWARD">Loyalty Rewards</SelectItem>
+                    <SelectItem value="BONUS">Bonuses</SelectItem>
+                    <SelectItem value="ADJUSTMENT">Adjustments</SelectItem>
+                    <SelectItem value="LOAN_DISBURSEMENT">Loan Disbursements</SelectItem>
+                    <SelectItem value="LOAN_REPAYMENT">Loan Repayments</SelectItem>
+                    <SelectItem value="LOAN_RECOVERY">Loan Recoveries</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon" onClick={() => fetchEntries(limit)} disabled={loading}>
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button variant="outline" onClick={printTransactions} disabled={filtered.length === 0}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Transactions List */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">All Transactions ({filtered.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading && entries.length === 0 ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  No transactions found
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filtered.map(entry => {
+                    const emp = getEmployeeInfo(entry.user_id);
+                    const isCredit = entry.amount > 0;
+                    const transfer = getTransferDetails(entry);
+                    const meta = getMeta(entry);
+                    const reversed = meta?.reversed === 'true';
+                    const canReverse = isReversible(entry);
+                    const labelConfig = ENTRY_LABELS[entry.entry_type] || { label: entry.entry_type, color: 'bg-gray-100 text-gray-800' };
+
+                    return (
+                      <div
+                        key={entry.id}
+                        className={`flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors ${reversed ? 'opacity-60' : ''}`}
+                      >
+                        <div className={`p-1.5 rounded-full flex-shrink-0 mt-0.5 ${
+                          meta?.type === 'wallet_transfer' ? (isCredit ? 'bg-blue-100' : 'bg-orange-100') :
+                          meta?.type === 'transfer_reversal' ? 'bg-purple-100' :
+                          isCredit ? 'bg-green-100' : 'bg-red-100'
+                        }`}>
+                          {meta?.type === 'wallet_transfer' ? (
+                            <Send className={`h-3.5 w-3.5 ${isCredit ? 'text-blue-600' : 'text-orange-600'}`} />
+                          ) : meta?.type === 'transfer_reversal' ? (
+                            <RotateCcw className="h-3.5 w-3.5 text-purple-600" />
+                          ) : isCredit ? (
+                            <ArrowDownLeft className="h-3.5 w-3.5 text-green-600" />
+                          ) : (
+                            <ArrowUpRight className="h-3.5 w-3.5 text-red-600" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm">{emp?.name || 'Unknown User'}</span>
+                            <span className="text-[10px] text-muted-foreground">{emp?.email || entry.user_id}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
+                              meta?.type === 'wallet_transfer' ? (isCredit ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800') :
+                              meta?.type === 'transfer_reversal' ? 'bg-purple-100 text-purple-800' :
+                              labelConfig.color
+                            }`}>
+                              {getDisplayLabel(entry)}
+                            </Badge>
+                            {transfer && (
+                              <span className="text-[10px] text-muted-foreground">
+                                {transfer.direction} {transfer.name || transfer.email}
+                              </span>
+                            )}
+                            {reversed && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-destructive/10 text-destructive">
+                                REVERSED
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            {format(new Date(entry.created_at), 'MMM dd, yyyy · h:mm a')}
+                            {entry.reference && <span className="ml-2">Ref: {entry.reference}</span>}
+                          </div>
+                          {meta?.reason && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                              Reason: {meta.reason}
+                            </div>
+                          )}
+                          {meta?.reversal_reason && (
+                            <div className="text-[10px] text-destructive mt-0.5">
+                              Reversal reason: {meta.reversal_reason}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="text-right flex-shrink-0">
+                          <div className={`text-sm font-semibold ${isCredit ? 'text-green-700' : 'text-red-700'}`}>
+                            {isCredit ? '+' : ''}{entry.amount.toLocaleString()}
+                          </div>
+                          <div className="text-[9px] text-muted-foreground">UGX</div>
+                        </div>
+
+                        {canReverse && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex-shrink-0 text-xs text-destructive hover:text-destructive"
+                            onClick={() => { setReverseModal(entry); setReverseReason(''); }}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                            Reverse
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {hasMore && (
+                    <Button
+                      variant="ghost"
+                      className="w-full text-sm"
+                      onClick={() => setLimit(prev => prev + 100)}
+                      disabled={loading}
+                    >
+                      {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ChevronDown className="h-4 w-4 mr-2" />}
+                      Load More
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reversals" className="space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold">Reversal Requests</h3>
+            <Button variant="outline" size="sm" onClick={fetchReversalRequests} disabled={loadingRequests}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loadingRequests ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Transactions List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">All Transactions ({filtered.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading && entries.length === 0 ? (
+          {loadingRequests ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No transactions found
-            </div>
+          ) : reversalRequests.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                No reversal requests found
+              </CardContent>
+            </Card>
           ) : (
-            <div className="space-y-2">
-              {filtered.map(entry => {
-                const emp = getEmployeeInfo(entry.user_id);
-                const isCredit = entry.amount > 0;
-                const transfer = getTransferDetails(entry);
-                const meta = getMeta(entry);
-                const reversed = meta?.reversed === 'true';
-                const canReverse = isReversible(entry);
-                const labelConfig = ENTRY_LABELS[entry.entry_type] || { label: entry.entry_type, color: 'bg-gray-100 text-gray-800' };
-
-                return (
-                  <div
-                    key={entry.id}
-                    className={`flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors ${reversed ? 'opacity-60' : ''}`}
-                  >
-                    <div className={`p-1.5 rounded-full flex-shrink-0 mt-0.5 ${
-                      meta?.type === 'wallet_transfer' ? (isCredit ? 'bg-blue-100' : 'bg-orange-100') :
-                      meta?.type === 'transfer_reversal' ? 'bg-purple-100' :
-                      isCredit ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      {meta?.type === 'wallet_transfer' ? (
-                        <Send className={`h-3.5 w-3.5 ${isCredit ? 'text-blue-600' : 'text-orange-600'}`} />
-                      ) : meta?.type === 'transfer_reversal' ? (
-                        <RotateCcw className="h-3.5 w-3.5 text-purple-600" />
-                      ) : isCredit ? (
-                        <ArrowDownLeft className="h-3.5 w-3.5 text-green-600" />
-                      ) : (
-                        <ArrowUpRight className="h-3.5 w-3.5 text-red-600" />
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">{emp?.name || 'Unknown User'}</span>
-                        <span className="text-[10px] text-muted-foreground">{emp?.email || entry.user_id}</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
-                          meta?.type === 'wallet_transfer' ? (isCredit ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800') :
-                          meta?.type === 'transfer_reversal' ? 'bg-purple-100 text-purple-800' :
-                          labelConfig.color
-                        }`}>
-                          {getDisplayLabel(entry)}
-                        </Badge>
-                        {transfer && (
-                          <span className="text-[10px] text-muted-foreground">
-                            {transfer.direction} {transfer.name || transfer.email}
-                          </span>
+            <div className="space-y-3">
+              {reversalRequests.map(req => (
+                <Card key={req.id} className={req.status !== 'pending' ? 'opacity-60' : ''}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`p-2 rounded-full flex-shrink-0 ${
+                        req.status === 'pending' ? 'bg-amber-100' :
+                        req.status === 'approved' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {req.status === 'pending' ? (
+                          <Clock className="h-4 w-4 text-amber-600" />
+                        ) : req.status === 'approved' ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-600" />
                         )}
-                        {reversed && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-destructive/10 text-destructive">
-                            REVERSED
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium">{req.sender_name || 'Unknown'}</span>
+                          <span className="text-xs text-muted-foreground">({req.sender_email})</span>
+                          <span className="text-xs">→</span>
+                          <span className="font-medium">{req.receiver_name || 'Unknown'}</span>
+                          <span className="text-xs text-muted-foreground">({req.receiver_email})</span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-lg font-bold">UGX {req.amount?.toLocaleString()}</span>
+                          <Badge variant="outline" className={`text-xs ${
+                            req.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                            req.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
                           </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          <strong>Reason:</strong> {req.reason}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Requested: {format(new Date(req.requested_at), 'MMM dd, yyyy h:mm a')}
+                        </p>
+                        {req.reviewed_at && (
+                          <p className="text-xs text-muted-foreground">
+                            Reviewed by {req.reviewed_by} on {format(new Date(req.reviewed_at), 'MMM dd, yyyy h:mm a')}
+                            {req.review_notes && ` — ${req.review_notes}`}
+                          </p>
                         )}
                       </div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">
-                        {format(new Date(entry.created_at), 'MMM dd, yyyy · h:mm a')}
-                        {entry.reference && <span className="ml-2">Ref: {entry.reference}</span>}
-                      </div>
-                      {meta?.reason && (
-                        <div className="text-[10px] text-muted-foreground mt-0.5">
-                          Reason: {meta.reason}
-                        </div>
-                      )}
-                      {meta?.reversal_reason && (
-                        <div className="text-[10px] text-destructive mt-0.5">
-                          Reversal reason: {meta.reversal_reason}
+
+                      {req.status === 'pending' && (
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Button
+                            size="sm"
+                            onClick={() => handleApproveReversal(req.id)}
+                            disabled={processing}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            {processing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <CheckCircle className="h-3.5 w-3.5 mr-1" />}
+                            Approve
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => { setRejectModal(req); setRejectNotes(''); }}
+                            disabled={processing}
+                          >
+                            <XCircle className="h-3.5 w-3.5 mr-1" />
+                            Reject
+                          </Button>
                         </div>
                       )}
                     </div>
-
-                    <div className="text-right flex-shrink-0">
-                      <div className={`text-sm font-semibold ${isCredit ? 'text-green-700' : 'text-red-700'}`}>
-                        {isCredit ? '+' : ''}{entry.amount.toLocaleString()}
-                      </div>
-                      <div className="text-[9px] text-muted-foreground">UGX</div>
-                    </div>
-
-                    {canReverse && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex-shrink-0 text-xs text-destructive hover:text-destructive"
-                        onClick={() => { setReverseModal(entry); setReverseReason(''); }}
-                      >
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                        Reverse
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-
-              {hasMore && (
-                <Button
-                  variant="ghost"
-                  className="w-full text-sm"
-                  onClick={() => setLimit(prev => prev + 100)}
-                  disabled={loading}
-                >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ChevronDown className="h-4 w-4 mr-2" />}
-                  Load More
-                </Button>
-              )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
 
-      {/* Reverse Transfer Modal */}
+      {/* Admin Reverse Transfer Modal */}
       <Dialog open={!!reverseModal} onOpenChange={open => !open && setReverseModal(null)}>
         <DialogContent>
           <DialogHeader>
@@ -564,10 +679,10 @@ const SystemTransactions = () => {
                 <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertTriangle className="h-4 w-4 text-destructive" />
-                    <span className="font-medium text-sm text-destructive">This action cannot be undone</span>
+                    <span className="font-medium text-sm text-destructive">Admin reversal — no approval needed</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Reversing this transfer will refund the sender and debit the receiver. Both parties will be notified via SMS.
+                    This will immediately reverse the transfer. The sender will be refunded and the receiver debited. Both parties will be notified via SMS.
                   </p>
                 </div>
 
@@ -625,6 +740,54 @@ const SystemTransactions = () => {
             >
               {reversing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
               Confirm Reversal
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Reversal Modal */}
+      <Dialog open={!!rejectModal} onOpenChange={open => !open && setRejectModal(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-destructive" />
+              Reject Reversal Request
+            </DialogTitle>
+          </DialogHeader>
+          {rejectModal && (
+            <div className="space-y-4">
+              <div className="text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">From:</span>
+                  <span>{rejectModal.sender_name} ({rejectModal.sender_email})</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount:</span>
+                  <span className="font-semibold">UGX {rejectModal.amount?.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Reason:</span>
+                  <span>{rejectModal.reason}</span>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Rejection reason (optional)</label>
+                <Textarea
+                  placeholder="e.g. Transfer was legitimate, no reversal needed"
+                  value={rejectNotes}
+                  onChange={e => setRejectNotes(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectModal(null)} disabled={processing}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRejectReversal} disabled={processing}>
+              {processing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
+              Reject
             </Button>
           </DialogFooter>
         </DialogContent>
