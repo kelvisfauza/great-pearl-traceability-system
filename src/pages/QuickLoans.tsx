@@ -632,9 +632,15 @@ const QuickLoans = () => {
                     <Select value={durationMonths} onValueChange={setDurationMonths}>
                       <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                       <SelectContent>
-                        {[1, 2, 3, 4, 5, 6].map(m => (
-                          <SelectItem key={m} value={m.toString()}>{m} month{m > 1 ? 's' : ''} - {INTEREST_RATES[m]}% interest</SelectItem>
-                        ))}
+                        {[1, 2, 3, 4, 5, 6].map(m => {
+                          const { totalWeeks } = getLoanSchedule(m);
+                          const dailyR = getDailyRate(m);
+                          return (
+                            <SelectItem key={m} value={m.toString()}>
+                              {m} month{m > 1 ? 's' : ''} ({totalWeeks} weeks) - {dailyR.toFixed(2)}%/day
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
