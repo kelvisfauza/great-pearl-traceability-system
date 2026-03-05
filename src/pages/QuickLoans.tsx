@@ -781,8 +781,119 @@ const QuickLoans = () => {
     }
   };
 
+  // Calculate early payoff amount with daily pro-rata interest
+  const calculateEarlyPayoff = (loan: any) => {
+    if (!loan?.start_date || !loan?.loan_amount) return loan?.remaining_balance || 0;
+    const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(loan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+    const monthlyRate = LOAN_TYPE_CONFIG[(loan.loan_type || 'quick') as LoanType]?.monthlyRate || 10;
+    const dailyRate = monthlyRate / 30 / 100;
+    const interestForDaysHeld = Math.ceil(loan.loan_amount * dailyRate * daysHeld);
+    const principalOwed = loan.loan_amount - (loan.paid_amount || 0);
+    return Math.max(0, Math.ceil(principalOwed + interestForDaysHeld));
+  };
 
-  const printLoanStatement = async (loan: any) => {
+  // Wallet-based Loan Repayment
+  const handleWalletRepayment = async () => {
+    if (!walletRepayLoan || !employee) return;
+    const amount = parseFloat(walletRepayAmount) || 0;
+    if (amount <= 0 || amount < 500) {
+      toast({ title: "Error", description: "Minimum amount is UGX 500", variant: "destructive" });
+      return;
+    }
+
+    const earlyPayoff = calculateEarlyPayoff(walletRepayLoan);
+    if (amount > earlyPayoff) {
+      toast({ title: "Error", description: `Max payable is UGX ${earlyPayoff.toLocaleString()} (daily pro-rata interest)`, variant: "destructive" });
+      return;
+    }
+
+    // Check wallet balance
+    if (amount > myWalletBalance) {
+      toast({ title: "Insufficient Wallet Balance", description: `Your wallet balance is UGX ${myWalletBalance.toLocaleString()}`, variant: "destructive" });
+      return;
+    }
+
+    setWalletRepayLoading(true);
+    try {
+      const { data: borrowerEmp } = await supabase.from('employees').select('auth_user_id').eq('email', walletRepayLoan.employee_email).single();
+      if (!borrowerEmp?.auth_user_id) throw new Error('Could not find your account.');
+
+      const { data: unifiedId } = await supabase.rpc('get_unified_user_id', { input_email: walletRepayLoan.employee_email });
+      const userId = unifiedId || borrowerEmp.auth_user_id;
+
+      const txRef = `LOANREPAY-WALLET-${walletRepayLoan.id.slice(0, 8)}-${Date.now()}`;
+
+      // Deduct from wallet via ledger
+      const { error: ledgerErr } = await supabase.from('ledger_entries').insert({
+        user_id: userId,
+        entry_type: 'WITHDRAWAL',
+        amount: -amount,
+        reference: txRef,
+        metadata: {
+          loan_id: walletRepayLoan.id,
+          source: 'wallet_loan_repayment',
+          description: `Loan repayment from wallet – UGX ${amount.toLocaleString()}`
+        }
+      });
+      if (ledgerErr) throw new Error('Failed to deduct from wallet');
+
+      // Update loan balance (use daily interest calculation)
+      const newPaidAmount = (walletRepayLoan.paid_amount || 0) + amount;
+      const newRemainingBalance = Math.max(0, earlyPayoff - amount);
+      const isFullyPaid = newRemainingBalance <= 0;
+
+      const { error: loanErr } = await supabase.from('loans').update({
+        paid_amount: newPaidAmount,
+        remaining_balance: newRemainingBalance,
+        status: isFullyPaid ? 'paid_off' : 'active',
+        is_defaulted: isFullyPaid ? false : walletRepayLoan.is_defaulted,
+      }).eq('id', walletRepayLoan.id);
+      if (loanErr) throw loanErr;
+
+      // Mark installments as paid (earliest first)
+      const { data: unpaidInstallments } = await supabase.from('loan_repayments')
+        .select('*')
+        .eq('loan_id', walletRepayLoan.id)
+        .in('status', ['pending', 'overdue'])
+        .order('due_date', { ascending: true });
+
+      let remaining = amount;
+      for (const inst of (unpaidInstallments || [])) {
+        if (remaining <= 0) break;
+        const owed = inst.amount_due - (inst.amount_paid || 0);
+        const payable = Math.min(remaining, owed);
+        const newPaid = (inst.amount_paid || 0) + payable;
+        const isPaid = newPaid >= inst.amount_due;
+        await supabase.from('loan_repayments').update({
+          amount_paid: newPaid,
+          status: isPaid ? 'paid' : inst.status,
+          paid_date: isPaid ? new Date().toISOString().split('T')[0] : null,
+          payment_reference: txRef,
+          deducted_from: 'Wallet Repayment',
+        }).eq('id', inst.id);
+        remaining -= payable;
+      }
+
+      toast({
+        title: isFullyPaid ? "Loan Fully Paid Off! 🎉" : "Wallet Payment Successful! ✅",
+        description: `UGX ${amount.toLocaleString()} deducted from your wallet.${isFullyPaid ? '' : ` Remaining: UGX ${newRemainingBalance.toLocaleString()}`}`,
+        duration: 8000,
+      });
+
+      setShowWalletRepayDialog(false);
+      setWalletRepayAmount('');
+      setWalletRepayLoan(null);
+      fetchLoans();
+      // Update wallet balance
+      setMyWalletBalance(prev => prev - amount);
+    } catch (err: any) {
+      toast({ title: "Payment Failed ❌", description: err.message, variant: "destructive" });
+    } finally {
+      setWalletRepayLoading(false);
+    }
+  };
+
+
     // Fetch repayment installments for this loan
     const { data: repayments } = await supabase
       .from('loan_repayments')
