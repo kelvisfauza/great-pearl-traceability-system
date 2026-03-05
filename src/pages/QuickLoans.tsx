@@ -1049,6 +1049,33 @@ const QuickLoans = () => {
             </Card>
           )}
 
+          {/* Wallet & Loan Balance Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="border-green-500/30 bg-green-50/50 dark:bg-green-950/10">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <Banknote className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">My Wallet Balance</p>
+                  <p className="text-2xl font-bold text-green-600">UGX {Math.max(0, myWalletBalance).toLocaleString()}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-destructive/30 bg-destructive/5">
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <CreditCard className="h-6 w-6 text-destructive" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Loan Balance</p>
+                  <p className="text-2xl font-bold text-destructive">UGX {myLoans.filter(l => l.status === 'active').reduce((s, l) => s + (l.remaining_balance || 0), 0).toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">{myLoans.filter(l => l.status === 'active').length} active loan(s)</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
