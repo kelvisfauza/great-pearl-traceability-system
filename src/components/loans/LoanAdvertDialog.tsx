@@ -74,7 +74,7 @@ const LoanAdvertDialog = () => {
       if (!emp.phone) { failCount++; continue; }
 
       const limit = getLoanLimit(emp.salary);
-      const message = `Dear ${emp.name}, Quick Loans are now available! You qualify for up to UGX ${limit.toLocaleString()}. Apply directly from your dashboard, get funds in your wallet instantly upon approval. Interest from 20%. Log in now. - Great Pearl Coffee`;
+      const message = `Hi ${emp.name}! 💰 What would YOU do with UGX ${limit.toLocaleString()}? That's YOUR current loan limit ready to go! Borrow instantly, funds hit your wallet in seconds. No paperwork, no delays. Rates from just 20%. Log in now & grab your cash 👉 Great Pearl Coffee App`;
 
       try {
         const { error } = await supabase.functions.invoke("send-sms", {
