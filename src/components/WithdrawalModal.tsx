@@ -282,7 +282,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const cleanMobile = mobileNumber.replace(/\s/g, '');
   const isAirtelNumber = /^(070|075|074)\d{7}$/.test(cleanMobile) || /^(256(?:70|75|74))\d{7}$/.test(cleanMobile.replace(/\+/g, ''));
   const isDisbursementValid = channel === 'CASH' || (channel === 'MOBILE_MONEY' && isAirtelNumber) || (channel === 'BANK' && bankName && accountNumber && accountName);
-  const isAmountValid = amount && parsedAmount <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && isDisbursementValid;
+  const isAmountValid = amount && parsedAmount <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && !isWalletFrozen && isDisbursementValid;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
