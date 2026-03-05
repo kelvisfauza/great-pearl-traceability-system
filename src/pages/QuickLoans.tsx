@@ -357,12 +357,19 @@ const QuickLoans = () => {
       if (!loan) return;
 
       if (approve) {
+        const isWeekly = loan.repayment_frequency === 'weekly';
         const startDate = new Date();
         const endDate = new Date();
         endDate.setMonth(endDate.getMonth() + loan.duration_months);
+
+        // For weekly loans, next deduction is 7 days from now; for monthly, 1st of next month
         const nextDeduction = new Date();
-        nextDeduction.setMonth(nextDeduction.getMonth() + 1);
-        nextDeduction.setDate(1);
+        if (isWeekly) {
+          nextDeduction.setDate(nextDeduction.getDate() + 7);
+        } else {
+          nextDeduction.setMonth(nextDeduction.getMonth() + 1);
+          nextDeduction.setDate(1);
+        }
 
         // Update loan status
         const { error } = await supabase.from('loans').update({
@@ -377,18 +384,33 @@ const QuickLoans = () => {
         }).eq('id', loanId);
         if (error) throw error;
 
-        // Create repayment schedule
+        // Create repayment schedule (weekly or monthly)
         const repayments = [];
-        for (let i = 1; i <= loan.duration_months; i++) {
-          const dueDate = new Date(startDate);
-          dueDate.setMonth(dueDate.getMonth() + i);
-          dueDate.setDate(1);
-          repayments.push({
-            loan_id: loanId,
-            installment_number: i,
-            amount_due: Math.ceil(loan.total_repayable / loan.duration_months),
-            due_date: dueDate.toISOString().split('T')[0],
-          });
+        if (isWeekly) {
+          const numWeeks = loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7);
+          const weeklyAmount = Math.ceil(loan.total_repayable / numWeeks);
+          for (let i = 1; i <= numWeeks; i++) {
+            const dueDate = new Date(startDate);
+            dueDate.setDate(dueDate.getDate() + (i * 7));
+            repayments.push({
+              loan_id: loanId,
+              installment_number: i,
+              amount_due: i === numWeeks ? loan.total_repayable - (weeklyAmount * (numWeeks - 1)) : weeklyAmount,
+              due_date: dueDate.toISOString().split('T')[0],
+            });
+          }
+        } else {
+          for (let i = 1; i <= loan.duration_months; i++) {
+            const dueDate = new Date(startDate);
+            dueDate.setMonth(dueDate.getMonth() + i);
+            dueDate.setDate(1);
+            repayments.push({
+              loan_id: loanId,
+              installment_number: i,
+              amount_due: Math.ceil(loan.total_repayable / loan.duration_months),
+              due_date: dueDate.toISOString().split('T')[0],
+            });
+          }
         }
         await supabase.from('loan_repayments').insert(repayments);
 
@@ -401,21 +423,29 @@ const QuickLoans = () => {
             entry_type: 'DEPOSIT',
             amount: disbursedAmount,
             reference: 'LOAN-DISBURSE-' + loanId,
-            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate, principal: loan.loan_amount, source: 'loan_disbursement' },
+            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate, principal: loan.loan_amount, source: 'loan_disbursement', repayment_frequency: loan.repayment_frequency || 'monthly' },
           });
         }
 
         // SMS to borrower with repayment details
         const firstRepaymentDate = new Date(startDate);
-        firstRepaymentDate.setMonth(firstRepaymentDate.getMonth() + 1);
-        firstRepaymentDate.setDate(1);
+        if (isWeekly) {
+          firstRepaymentDate.setDate(firstRepaymentDate.getDate() + 7);
+        } else {
+          firstRepaymentDate.setMonth(firstRepaymentDate.getMonth() + 1);
+          firstRepaymentDate.setDate(1);
+        }
         const repaymentDateStr = firstRepaymentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        const monthlyAmount = Math.ceil(loan.total_repayable / loan.duration_months);
+        const installmentAmount = isWeekly
+          ? Math.ceil(loan.total_repayable / (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7)))
+          : Math.ceil(loan.total_repayable / loan.duration_months);
+        const scheduleLabel = isWeekly ? 'week' : 'month';
+        const numInstallments = isWeekly ? (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7)) : loan.duration_months;
 
         await supabase.functions.invoke('send-sms', {
           body: {
             phone: loan.employee_phone,
-            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Repayment: UGX ${monthlyAmount.toLocaleString()}/month for ${loan.duration_months} month(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Pearl Coffee`,
+            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Repayment: UGX ${installmentAmount.toLocaleString()}/${scheduleLabel} for ${numInstallments} ${scheduleLabel}(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Pearl Coffee`,
             userName: loan.employee_name,
             messageType: 'loan_approved'
           }
