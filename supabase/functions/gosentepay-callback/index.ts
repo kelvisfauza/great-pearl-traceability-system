@@ -120,10 +120,10 @@ serve(async (req) => {
             remaining -= payable;
           }
 
-          // Create ledger entry for loan repayment (debit from user)
+          // Create ledger entry for loan repayment tracking (does NOT affect wallet balance)
           await supabaseClient.from("ledger_entries").insert({
             user_id: transaction.user_id,
-            entry_type: "WITHDRAWAL",
+            entry_type: "LOAN_REPAYMENT",
             amount: -depositAmount,
             reference: `LOAN-MOMO-REPAY-${loanId}-${Date.now()}`,
             metadata: JSON.stringify({
@@ -131,6 +131,7 @@ serve(async (req) => {
               method: "mobile_money",
               phone: phone,
               transaction_ref: ref,
+              loan_remaining_balance: newBalance,
             }),
           });
 
