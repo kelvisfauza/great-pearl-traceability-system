@@ -270,11 +270,18 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
             const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
             const isCredit = entry.amount > 0;
             const activityLabel = getActivityLabel(entry);
+            const transferMeta = getTransferMeta(entry);
+            const isTransferOut = transferMeta && entry.amount < 0;
+            const isTransferIn = transferMeta && entry.amount > 0;
 
             return (
               <div key={entry.id} className="flex items-center gap-3 p-2.5 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                <div className={`p-1.5 rounded-full ${isCredit ? 'bg-green-100' : 'bg-red-100'}`}>
-                  {isCredit ? (
+                <div className={`p-1.5 rounded-full ${isTransferOut ? 'bg-orange-100' : isTransferIn ? 'bg-blue-100' : isCredit ? 'bg-green-100' : 'bg-red-100'}`}>
+                  {isTransferOut ? (
+                    <Send className="h-3.5 w-3.5 text-orange-600" />
+                  ) : isTransferIn ? (
+                    <ArrowDownLeft className="h-3.5 w-3.5 text-blue-600" />
+                  ) : isCredit ? (
                     <ArrowDownLeft className="h-3.5 w-3.5 text-green-600" />
                   ) : (
                     <ArrowUpRight className="h-3.5 w-3.5 text-red-600" />
