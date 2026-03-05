@@ -3700,8 +3700,10 @@ export type Database = {
           id: string
           installment_number: number
           loan_id: string
+          overdue_days: number | null
           paid_date: string | null
           payment_reference: string | null
+          penalty_applied: number | null
           status: string
           updated_at: string
         }
@@ -3714,8 +3716,10 @@ export type Database = {
           id?: string
           installment_number: number
           loan_id: string
+          overdue_days?: number | null
           paid_date?: string | null
           payment_reference?: string | null
+          penalty_applied?: number | null
           status?: string
           updated_at?: string
         }
@@ -3728,8 +3732,10 @@ export type Database = {
           id?: string
           installment_number?: number
           loan_id?: string
+          overdue_days?: number | null
           paid_date?: string | null
           payment_reference?: string | null
+          penalty_applied?: number | null
           status?: string
           updated_at?: string
         }
@@ -3768,10 +3774,13 @@ export type Database = {
           guarantor_phone: string | null
           id: string
           interest_rate: number
+          is_defaulted: boolean | null
           loan_amount: number
+          missed_installments: number | null
           monthly_installment: number
           next_deduction_date: string | null
           paid_amount: number | null
+          penalty_amount: number | null
           remaining_balance: number
           repayment_frequency: string
           start_date: string | null
@@ -3805,10 +3814,13 @@ export type Database = {
           guarantor_phone?: string | null
           id?: string
           interest_rate: number
+          is_defaulted?: boolean | null
           loan_amount: number
+          missed_installments?: number | null
           monthly_installment: number
           next_deduction_date?: string | null
           paid_amount?: number | null
+          penalty_amount?: number | null
           remaining_balance: number
           repayment_frequency?: string
           start_date?: string | null
@@ -3842,10 +3854,13 @@ export type Database = {
           guarantor_phone?: string | null
           id?: string
           interest_rate?: number
+          is_defaulted?: boolean | null
           loan_amount?: number
+          missed_installments?: number | null
           monthly_installment?: number
           next_deduction_date?: string | null
           paid_amount?: number | null
+          penalty_amount?: number | null
           remaining_balance?: number
           repayment_frequency?: string
           start_date?: string | null

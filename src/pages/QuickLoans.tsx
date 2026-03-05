@@ -242,6 +242,13 @@ const QuickLoans = () => {
       return;
     }
 
+    // Check if borrower has any defaulted loans
+    const defaultedLoans = myLoans.filter(l => l.is_defaulted);
+    if (defaultedLoans.length > 0) {
+      toast({ title: "Blocked", description: "You have an overdue loan. Clear your outstanding balance before requesting a new loan.", variant: "destructive" });
+      return;
+    }
+
     // Check active loans count
     const activeLoans = myLoans.filter(l => ['pending_guarantor', 'pending_admin', 'approved', 'disbursed', 'active'].includes(l.status));
     if (activeLoans.length >= 3) {
