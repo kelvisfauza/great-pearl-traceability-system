@@ -161,10 +161,22 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (entry.entry_type === 'LOAN_REPAYMENT' && meta) {
       return meta.method === 'mobile_money' ? 'via MoMo' : meta.method || '';
     }
-    if (entry.entry_type === 'LOAN_RECOVERY' && meta) {
-      return meta.recovery_source || 'Wallet Recovery';
+    // Detect loan-related wallet deductions
+    if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
+      const source = meta.source === 'wallet' ? 'Wallet Recovery' : meta.source === 'salary' ? 'Salary Recovery' : meta.source === 'guarantor' ? 'Guarantor Recovery' : 'Loan Recovery';
+      return source;
     }
     return '';
+  };
+
+  const getEntryLabel = (entry: LedgerEntry) => {
+    const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+    const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
+    // Override label for loan-related wallet/adjustment entries
+    if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
+      return 'Loan Recovery';
+    }
+    return config.label;
   };
 
   if (!open) return null;
