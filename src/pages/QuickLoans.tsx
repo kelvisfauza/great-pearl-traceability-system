@@ -217,11 +217,13 @@ const QuickLoans = () => {
   const calculateLoanDetails = () => {
     const amount = parseFloat(loanAmount) || 0;
     const months = parseInt(durationMonths) || 0;
-    const rate = INTEREST_RATES[months] || 0;
-    const interest = amount * (rate / 100);
+    const dailyRate = getDailyRate(months);
+    const { totalDays, totalWeeks } = getLoanSchedule(months);
+    const interest = amount * (dailyRate / 100) * totalDays;
     const total = amount + interest;
-    const monthly = months > 0 ? total / months : 0;
-    return { amount, months, rate, interest, total, monthly };
+    const weekly = totalWeeks > 0 ? total / totalWeeks : 0;
+    const monthlyRate = MONTHLY_INTEREST_RATES[months] || 10;
+    return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly };
   };
 
   const handleRequestLoan = async () => {
