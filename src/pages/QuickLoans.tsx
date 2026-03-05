@@ -17,13 +17,27 @@ import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
 
-const INTEREST_RATES: Record<number, number> = {
-  1: 15,
-  2: 20,
-  3: 25,
-  4: 30,
-  5: 35,
-  6: 40,
+// Monthly interest rates (used to derive daily rate = monthly_rate / 30)
+const MONTHLY_INTEREST_RATES: Record<number, number> = {
+  1: 10,
+  2: 10,
+  3: 10,
+  4: 10,
+  5: 10,
+  6: 10,
+};
+
+// Helper: calculate daily interest rate from monthly rate
+const getDailyRate = (months: number) => {
+  const monthlyRate = MONTHLY_INTEREST_RATES[months] || 10;
+  return monthlyRate / 30; // e.g. 10% / 30 = 0.333% per day
+};
+
+// Helper: calculate total days and weeks for a duration
+const getLoanSchedule = (months: number) => {
+  const totalDays = months * 30;
+  const totalWeeks = Math.ceil(totalDays / 7);
+  return { totalDays, totalWeeks };
 };
 
 // Processing fees and insurance removed
