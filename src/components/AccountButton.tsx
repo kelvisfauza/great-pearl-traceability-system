@@ -130,8 +130,26 @@ export const AccountButton = () => {
     });
   };
 
+  // Fetch active loans for this employee
+  const fetchActiveLoans = async () => {
+    const email = employee?.email || user?.email;
+    if (!email) return;
+    try {
+      const { data, error } = await supabase
+        .from('loans')
+        .select('remaining_balance')
+        .eq('employee_email', email)
+        .eq('status', 'active');
+      if (!error && data) {
+        setActiveLoanCount(data.length);
+        setActiveLoanTotal(data.reduce((s, l) => s + (l.remaining_balance || 0), 0));
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     fetchLedgerTotals();
+    fetchActiveLoans();
   }, [user?.id, user?.email, employee?.email, withdrawalRequests.length]);
 
   // Real-time subscription for ledger changes
