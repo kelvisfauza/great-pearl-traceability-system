@@ -350,6 +350,34 @@ export const AccountButton = () => {
               </CardContent>
             </Card>
 
+            {/* Active Loans Card */}
+            {activeLoanCount > 0 && (
+              <Card className="border-red-200 bg-gradient-to-br from-red-50 to-orange-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Landmark className="h-4 w-4 text-red-600" />
+                    Active Loans
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-700">
+                    UGX {activeLoanTotal.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {activeLoanCount} active loan{activeLoanCount > 1 ? 's' : ''} · Total outstanding balance
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3 w-full text-xs border-red-200 text-red-700 hover:bg-red-100"
+                    onClick={() => window.location.href = '/quick-loans'}
+                  >
+                    View Loans & Repay
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Loyalty Points Section */}
             <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50">
               <CardHeader className="pb-2">
