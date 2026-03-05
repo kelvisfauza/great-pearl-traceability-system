@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, XCircle, User, Wallet, Shield, Calendar, AlertTriangle, TrendingUp, Banknote } from 'lucide-react';
+import { CheckCircle, XCircle, User, Wallet, Shield, Calendar, AlertTriangle, TrendingUp, Banknote, Printer } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface LoanReviewModalProps {
