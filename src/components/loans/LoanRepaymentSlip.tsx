@@ -44,7 +44,7 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
     dueDate.setDate(dueDate.getDate() + i * 7);
     const isLast = i === totalWeeks;
     const principalPart = isLast ? balance : weeklyPrincipalPortion;
-    const interestPart = isLast ? (totalInterest - weeklyInterestPortion * (totalWeeks - 1)) : weeklyInterestPortion;
+    const interestPart = isLast ? (scheduleInterest - weeklyInterestPortion * (totalWeeks - 1)) : weeklyInterestPortion;
     const installmentAmt = principalPart + interestPart;
     const newBalance = Math.max(0, Math.round(balance - principalPart));
     schedule.push({
