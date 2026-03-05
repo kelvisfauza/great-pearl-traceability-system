@@ -331,7 +331,7 @@ const QuickLoans = () => {
       setRepaymentSlipData({
         employeeName: employee.name,
         employeeEmail: employee.email,
-        guarantorName: guarantor?.name || '',
+        guarantorName: slipGuarantor?.name || '',
         loanAmount: amount,
         interestRate: monthlyRate,
         dailyRate,
