@@ -171,8 +171,8 @@ const LoanAdvertDialog = () => {
                     <p className="text-sm font-medium truncate">{emp.name}</p>
                     <p className="text-xs text-muted-foreground">{emp.department} · {emp.phone}</p>
                   </div>
-                  <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                    UGX {getLoanLimit(emp.salary).toLocaleString()}
+                  <Badge variant={getLoanLimit(emp.salary, emp.outstanding) > 0 ? "secondary" : "destructive"} className="text-xs whitespace-nowrap">
+                    UGX {getLoanLimit(emp.salary, emp.outstanding).toLocaleString()}
                   </Badge>
                 </div>
               ))
