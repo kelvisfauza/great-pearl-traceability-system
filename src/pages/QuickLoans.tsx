@@ -658,29 +658,10 @@ const QuickLoans = () => {
         }
       });
 
-      // supabase.functions.invoke puts the response body in data even on non-2xx
-      // but fnErr is set for non-2xx status codes
-      if (fnErr) {
-        // Try to extract the actual error message from the response
-        let errorMsg = 'Payment collection failed';
-        try {
-          // fnErr.context contains the Response object
-          if (result?.message) {
-            errorMsg = result.message;
-          } else if (result?.error) {
-            errorMsg = result.error;
-          } else {
-            const ctx = (fnErr as any)?.context;
-            if (ctx && typeof ctx.json === 'function') {
-              const body = await ctx.json();
-              errorMsg = body?.message || body?.error || errorMsg;
-            }
-          }
-        } catch {}
+      // When edge function returns non-2xx, fnErr is set but result may still contain parsed body
+      if (fnErr || result?.status === 'error' || result?.error) {
+        const errorMsg = result?.message || result?.error || fnErr?.message || 'Payment collection failed. The mobile money provider rejected the request. Please ensure you have sufficient funds and try again.';
         throw new Error(errorMsg);
-      }
-      if (result?.status === 'error' || result?.error) {
-        throw new Error(result?.message || result?.error || 'Payment collection failed');
       }
 
       // Success - update loan balance
