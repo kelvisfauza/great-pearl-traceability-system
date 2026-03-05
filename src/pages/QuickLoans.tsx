@@ -36,7 +36,7 @@ const getDailyRate = (months: number) => {
 // Helper: calculate total days and weeks for a duration
 const getLoanSchedule = (months: number) => {
   const totalDays = months * 30;
-  const totalWeeks = Math.ceil(totalDays / 7);
+  const totalWeeks = months * 4; // 4 weeks per month
   return { totalDays, totalWeeks };
 };
 
