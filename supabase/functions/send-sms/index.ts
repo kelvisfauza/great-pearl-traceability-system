@@ -185,7 +185,7 @@ serve(async (req) => {
   console.log('Authenticated:', isServiceRole ? 'service-role' : userId)
 
   try {
-    const { phone, message, userName, messageType, triggeredBy, requestId, department, recipientEmail } = await req.json()
+    const { phone, message, userName, messageType, triggeredBy, requestId, department, recipientEmail } = parsedBody
     
     console.log('📱 SMS request from user:', userId, '| type:', messageType)
     console.log('Received SMS request:', { phone, userName, messageLength: message?.length })
