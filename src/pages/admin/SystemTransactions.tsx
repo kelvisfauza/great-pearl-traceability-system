@@ -11,10 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowUpRight, ArrowDownLeft, Search, Loader2, Send, Star, Gift,
   Smartphone, Briefcase, Minus, FileText, RotateCcw, Filter, RefreshCw,
-  AlertTriangle, ChevronDown, Printer
+  AlertTriangle, ChevronDown, Printer, CheckCircle, XCircle, Clock
 } from 'lucide-react';
 import { format } from 'date-fns';
 
