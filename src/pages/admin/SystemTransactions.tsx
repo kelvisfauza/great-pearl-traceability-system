@@ -57,7 +57,12 @@ const SystemTransactions = () => {
   const [reverseModal, setReverseModal] = useState<SystemLedgerEntry | null>(null);
   const [reverseReason, setReverseReason] = useState('');
   const [reversing, setReversing] = useState(false);
-
+  const [reversalRequests, setReversalRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [approveNotes, setApproveNotes] = useState('');
+  const [rejectModal, setRejectModal] = useState<any>(null);
+  const [rejectNotes, setRejectNotes] = useState('');
+  const [processing, setProcessing] = useState(false);
   const fetchEmployees = async () => {
     const { data } = await supabase.from('employees').select('name, email, auth_user_id');
     const map: Record<string, { name: string; email: string }> = {};
