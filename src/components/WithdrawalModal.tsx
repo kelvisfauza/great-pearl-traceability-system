@@ -52,6 +52,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const { toast } = useToast();
   const { isWithdrawalDisabled } = useWithdrawalControl();
   const withdrawalStatus = isWithdrawalDisabled();
+  const isWalletFrozen = !!(employee as any)?.wallet_frozen;
 
   // ... keep existing code (numberToWords, printVoucher, formatCurrency, generateAndSendCode, handleAmountSubmit functions)
 
@@ -281,7 +282,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const cleanMobile = mobileNumber.replace(/\s/g, '');
   const isAirtelNumber = /^(070|075|074)\d{7}$/.test(cleanMobile) || /^(256(?:70|75|74))\d{7}$/.test(cleanMobile.replace(/\+/g, ''));
   const isDisbursementValid = channel === 'CASH' || (channel === 'MOBILE_MONEY' && isAirtelNumber) || (channel === 'BANK' && bankName && accountNumber && accountName);
-  const isAmountValid = amount && parsedAmount <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && isDisbursementValid;
+  const isAmountValid = amount && parsedAmount <= availableAmount && parsedAmount >= 2000 && isCashRoundAmount && !withdrawalStatus.disabled && !isWalletFrozen && isDisbursementValid;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -320,7 +321,19 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
               )}
 
               <form onSubmit={handleAmountSubmit} className="space-y-4">
-                {withdrawalStatus.disabled && (
+                {isWalletFrozen && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Your wallet has been frozen by an administrator.</strong>
+                      <div className="text-xs mt-1">
+                        Reason: {(employee as any)?.wallet_frozen_reason || 'No reason provided'}
+                      </div>
+                      <div className="text-xs">Deposits and rewards still apply. Contact HR for assistance.</div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {withdrawalStatus.disabled && !isWalletFrozen && (
                   <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>

@@ -3,7 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FirebaseMigrationTool from "@/components/admin/FirebaseMigrationTool";
 import SuperAdminCreator from "@/components/admin/SuperAdminCreator";
 import MessagingSettings from "@/components/admin/MessagingSettings";
-import { Database, Settings, Shield, MessageSquare } from "lucide-react";
+import WalletFreezeManager from "@/components/admin/WalletFreezeManager";
+import { Database, Settings, Shield, MessageSquare, Snowflake } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MigrateSupplierCodesButton } from "@/components/suppliers/MigrateSupplierCodesButton";
 import { MigrateBatchNumbersButton } from "@/components/admin/MigrateBatchNumbersButton";
@@ -15,10 +16,14 @@ const SystemSettings = () => {
       subtitle="Configure system-wide settings and perform administrative tasks"
     >
       <Tabs defaultValue="messaging" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="messaging" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             Messaging
+          </TabsTrigger>
+          <TabsTrigger value="wallet" className="gap-2">
+            <Snowflake className="h-4 w-4" />
+            Wallet Freeze
           </TabsTrigger>
           <TabsTrigger value="migration" className="gap-2">
             <Database className="h-4 w-4" />
@@ -36,6 +41,10 @@ const SystemSettings = () => {
 
         <TabsContent value="messaging" className="space-y-4">
           <MessagingSettings />
+        </TabsContent>
+
+        <TabsContent value="wallet" className="space-y-4">
+          <WalletFreezeManager />
         </TabsContent>
 
         <TabsContent value="migration" className="space-y-4">
