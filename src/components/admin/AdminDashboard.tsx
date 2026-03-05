@@ -139,6 +139,46 @@ const AdminDashboard = () => {
             <GosentepayBalanceMonitor />
           </div>
 
+          {/* Pending Loan Applications */}
+          {(pendingLoans?.length || 0) > 0 && (
+            <Card className="border-2 border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-lg">
+                    <Banknote className="h-5 w-5 text-amber-600" />
+                    Pending Loan Applications
+                    <Badge variant="destructive" className="ml-1">{pendingLoans.length}</Badge>
+                  </span>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/quick-loans" className="flex items-center gap-1">
+                      Review <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-2">
+                  {pendingLoans.slice(0, 5).map((loan: any) => (
+                    <div key={loan.id} className="flex items-center justify-between p-3 rounded-lg bg-background border">
+                      <div>
+                        <p className="font-medium text-sm">{loan.employee_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan • Applied {new Date(loan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        </p>
+                      </div>
+                      <span className="font-bold text-sm">UGX {loan.loan_amount?.toLocaleString()}</span>
+                    </div>
+                  ))}
+                  {pendingLoans.length > 5 && (
+                    <p className="text-xs text-muted-foreground text-center pt-1">
+                      +{pendingLoans.length - 5} more pending
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Quick Actions */}
           <Card className="border-2">
             <CardHeader>
