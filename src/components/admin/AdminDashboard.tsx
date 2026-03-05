@@ -180,6 +180,9 @@ const AdminDashboard = () => {
             </Card>
           )}
 
+          {/* Due & Overdue Installments */}
+          <DueInstallmentsCard />
+
           {/* Quick Actions */}
           <Card className="border-2">
             <CardHeader>
