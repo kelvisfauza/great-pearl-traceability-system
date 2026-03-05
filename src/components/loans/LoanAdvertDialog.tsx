@@ -16,6 +16,7 @@ interface Employee {
   email: string;
   department: string;
   salary: number;
+  outstanding: number;
 }
 
 const LoanAdvertDialog = () => {
@@ -36,7 +37,25 @@ const LoanAdvertDialog = () => {
         .order("name");
 
       if (error) throw error;
-      return data as Employee[];
+
+      // Fetch outstanding loan balances for all employees
+      const { data: activeLoans } = await supabase
+        .from("loans")
+        .select("employee_email, remaining_balance, loan_amount, status")
+        .in("status", ["active", "pending_guarantor", "pending_admin"]);
+
+      // Build a map of email -> total outstanding balance
+      const outstandingMap: Record<string, number> = {};
+      (activeLoans || []).forEach((loan: any) => {
+        const email = loan.employee_email;
+        const balance = Number(loan.remaining_balance) || Number(loan.loan_amount) || 0;
+        outstandingMap[email] = (outstandingMap[email] || 0) + balance;
+      });
+
+      return (data as Employee[]).map((emp) => ({
+        ...emp,
+        outstanding: outstandingMap[emp.email] || 0,
+      }));
     },
     enabled: open,
   });
@@ -56,7 +75,7 @@ const LoanAdvertDialog = () => {
 
   const deselectAll = () => setSelectedEmployees(new Set());
 
-  const getLoanLimit = (salary: number) => (salary || 0) * 3;
+  const getLoanLimit = (salary: number, outstanding: number = 0) => Math.max(0, (salary || 0) * 3 - outstanding);
 
   const handleSend = async () => {
     if (selectedEmployees.size === 0) {
@@ -73,7 +92,8 @@ const LoanAdvertDialog = () => {
     for (const emp of selectedList) {
       if (!emp.phone) { failCount++; continue; }
 
-      const limit = getLoanLimit(emp.salary);
+      const limit = getLoanLimit(emp.salary, emp.outstanding);
+      if (limit <= 0) { successCount++; continue; } // Skip employees with no remaining limit
       const message = `Hi ${emp.name}, your loan limit is UGX ${limit.toLocaleString()}. Borrow now, no paperwork, instant to wallet. Rates from 15%. Log in to Great Pearl Coffee App and grab your cash today!`;
 
       try {
@@ -151,8 +171,8 @@ const LoanAdvertDialog = () => {
                     <p className="text-sm font-medium truncate">{emp.name}</p>
                     <p className="text-xs text-muted-foreground">{emp.department} · {emp.phone}</p>
                   </div>
-                  <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                    UGX {getLoanLimit(emp.salary).toLocaleString()}
+                  <Badge variant={getLoanLimit(emp.salary, emp.outstanding) > 0 ? "secondary" : "destructive"} className="text-xs whitespace-nowrap">
+                    UGX {getLoanLimit(emp.salary, emp.outstanding).toLocaleString()}
                   </Badge>
                 </div>
               ))
