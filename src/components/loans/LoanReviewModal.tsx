@@ -219,7 +219,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                       <p className="font-bold">UGX {loan.loan_amount?.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Interest ({loan.interest_rate}%)</p>
+                      <p className="text-muted-foreground text-xs">Interest ({isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(2)}%/day` : `${loan.interest_rate}%`})</p>
                       <p className="font-bold">UGX {(loan.total_repayable - loan.loan_amount)?.toLocaleString()}</p>
                     </div>
                     <div>
@@ -227,8 +227,8 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                       <p className="font-bold">UGX {loan.total_repayable?.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Monthly Installment</p>
-                      <p className="font-bold">UGX {newMonthlyInstallment?.toLocaleString()}</p>
+                      <p className="text-muted-foreground text-xs">{isWeekly ? 'Weekly' : 'Monthly'} Installment</p>
+                      <p className="font-bold">UGX {installmentAmount?.toLocaleString()}</p>
                     </div>
                   </div>
                 </CardContent>
