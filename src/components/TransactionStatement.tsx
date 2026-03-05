@@ -53,9 +53,14 @@ interface TransactionStatementProps {
 
 export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open, onOpenChange, currentBalance, balanceBroughtForward = 0, thisMonthEarnings = 0 }) => {
   const { user, employee } = useAuth();
+  const { toast } = useToast();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [limit, setLimit] = useState(30);
+  const [hasMore, setHasMore] = useState(true);
+  const [reverseEntry, setReverseEntry] = useState<LedgerEntry | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
+  const [reversing, setReversing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
   const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'];
