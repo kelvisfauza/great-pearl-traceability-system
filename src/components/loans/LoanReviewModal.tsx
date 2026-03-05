@@ -130,29 +130,31 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
     ? Math.floor((Date.now() - new Date(borrowerDetails.join_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
     : 0;
 
-  // Generate repayment schedule preview (reducing balance)
+  // Generate repayment schedule preview (flat interest)
   const repaymentSchedule = [];
   const startDate = new Date();
   if (isWeekly) {
-    const dailyRate = loan.daily_interest_rate || 0.333;
-    const weeklyRate = (dailyRate / 100) * 7;
+    const totalInterestAmt = loan.total_repayable - loan.loan_amount;
+    const weeklyInterestPortion = Math.round(totalInterestAmt / numInstallments);
+    const weeklyPrincipalPortion = Math.round(loan.loan_amount / numInstallments);
     let balance = loan.loan_amount;
     for (let i = 1; i <= numInstallments; i++) {
       const dueDate = new Date(startDate);
       dueDate.setDate(dueDate.getDate() + (i * 7));
-      const interestPortion = Math.round(balance * weeklyRate);
-      const amt = i === numInstallments ? Math.ceil(balance + interestPortion) : installmentAmount;
-      const principalPortion = amt - interestPortion;
+      const isLast = i === numInstallments;
+      const principalPart = isLast ? balance : weeklyPrincipalPortion;
+      const interestPart = isLast ? (totalInterestAmt - weeklyInterestPortion * (numInstallments - 1)) : weeklyInterestPortion;
+      const amt = principalPart + interestPart;
       repaymentSchedule.push({
         installment: i,
         dueDate: dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
         amount: Math.ceil(amt),
-        interest: interestPortion,
-        principal: Math.max(0, principalPortion),
-        balance: Math.max(0, Math.round(balance - principalPortion)),
+        interest: interestPart,
+        principal: Math.max(0, principalPart),
+        balance: Math.max(0, Math.round(balance - principalPart)),
         source: 'Weekly deduction',
       });
-      balance = Math.max(0, balance - principalPortion);
+      balance = Math.max(0, balance - principalPart);
     }
   } else {
     for (let i = 1; i <= loan.duration_months; i++) {
