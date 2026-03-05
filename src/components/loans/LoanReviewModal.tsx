@@ -130,20 +130,29 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
     ? Math.floor((Date.now() - new Date(borrowerDetails.join_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
     : 0;
 
-  // Generate repayment schedule preview
+  // Generate repayment schedule preview (reducing balance)
   const repaymentSchedule = [];
   const startDate = new Date();
   if (isWeekly) {
+    const dailyRate = loan.daily_interest_rate || 0.333;
+    const weeklyRate = (dailyRate / 100) * 7;
+    let balance = loan.loan_amount;
     for (let i = 1; i <= numInstallments; i++) {
       const dueDate = new Date(startDate);
       dueDate.setDate(dueDate.getDate() + (i * 7));
-      const amt = i === numInstallments ? loan.total_repayable - (installmentAmount * (numInstallments - 1)) : installmentAmount;
+      const interestPortion = Math.round(balance * weeklyRate);
+      const amt = i === numInstallments ? Math.ceil(balance + interestPortion) : installmentAmount;
+      const principalPortion = amt - interestPortion;
       repaymentSchedule.push({
         installment: i,
         dueDate: dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
         amount: Math.ceil(amt),
+        interest: interestPortion,
+        principal: Math.max(0, principalPortion),
+        balance: Math.max(0, Math.round(balance - principalPortion)),
         source: 'Weekly deduction',
       });
+      balance = Math.max(0, balance - principalPortion);
     }
   } else {
     for (let i = 1; i <= loan.duration_months; i++) {
@@ -384,17 +393,21 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                         <tr>
                           <th className="text-left p-2 text-xs font-medium">#</th>
                           <th className="text-left p-2 text-xs font-medium">Due Date</th>
-                          <th className="text-left p-2 text-xs font-medium">Amount</th>
-                          <th className="text-left p-2 text-xs font-medium">Source</th>
+                          <th className="text-right p-2 text-xs font-medium">Interest</th>
+                          <th className="text-right p-2 text-xs font-medium">Principal</th>
+                          <th className="text-right p-2 text-xs font-medium">Installment</th>
+                          <th className="text-right p-2 text-xs font-medium">Balance</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {repaymentSchedule.map((r) => (
+                        {repaymentSchedule.map((r: any) => (
                           <tr key={r.installment} className="border-t">
                             <td className="p-2 text-xs">{r.installment}</td>
                             <td className="p-2 text-xs font-medium">{r.dueDate}</td>
-                            <td className="p-2 text-xs">UGX {r.amount.toLocaleString()}</td>
-                            <td className="p-2 text-xs text-muted-foreground">{r.source}</td>
+                            <td className="p-2 text-xs text-right text-muted-foreground">{r.interest != null ? `UGX ${r.interest.toLocaleString()}` : '—'}</td>
+                            <td className="p-2 text-xs text-right">{r.principal != null ? `UGX ${r.principal.toLocaleString()}` : '—'}</td>
+                            <td className="p-2 text-xs text-right font-medium">UGX {r.amount.toLocaleString()}</td>
+                            <td className="p-2 text-xs text-right">{r.balance != null ? `UGX ${r.balance.toLocaleString()}` : '—'}</td>
                           </tr>
                         ))}
                       </tbody>

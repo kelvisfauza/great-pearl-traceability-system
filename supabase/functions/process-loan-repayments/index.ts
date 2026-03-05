@@ -57,10 +57,9 @@ Deno.serve(async (req) => {
       const dueDate = new Date(repayment.due_date)
       const overdueDays = Math.max(0, Math.floor((todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
       
-      // Late penalty: daily interest continues to accrue on the overdue amount
-      // Use the loan's daily interest rate on the unpaid installment amount
-      const dailyRate = loan.daily_interest_rate || (loan.interest_rate / 30) || 0.333
-      const penaltyAmount = overdueDays > 0 ? Math.round(amountDue * (dailyRate / 100) * overdueDays) : 0
+      // Late penalty: flat 20% of the installment amount (applied once when overdue)
+      const alreadyPenalized = (repayment.penalty_applied || 0) > 0
+      const penaltyAmount = (overdueDays > 0 && !alreadyPenalized) ? Math.round(amountDue * 0.20) : 0
       const totalOwed = amountDue + penaltyAmount - (repayment.amount_paid || 0)
 
       console.log(`\n💰 Processing repayment #${repayment.installment_number} for ${borrowerEmail}: UGX ${amountDue} (overdue ${overdueDays} days, penalty UGX ${penaltyAmount})`)

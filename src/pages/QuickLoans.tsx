@@ -218,11 +218,28 @@ const QuickLoans = () => {
     const amount = parseFloat(loanAmount) || 0;
     const months = parseInt(durationMonths) || 0;
     const dailyRate = getDailyRate(months);
-    const { totalDays, totalWeeks } = getLoanSchedule(months);
-    const interest = amount * (dailyRate / 100) * totalDays;
-    const total = amount + interest;
-    const weekly = totalWeeks > 0 ? total / totalWeeks : 0;
     const monthlyRate = MONTHLY_INTEREST_RATES[months] || 10;
+    const { totalDays, totalWeeks } = getLoanSchedule(months);
+
+    // Reducing balance: weekly installment = P * r * (1+r)^n / ((1+r)^n - 1)
+    // where r = daily rate as decimal * 7 (weekly rate), n = totalWeeks
+    const weeklyRate = (dailyRate / 100) * 7;
+    let weekly = 0;
+    let total = 0;
+    let interest = 0;
+
+    if (totalWeeks > 0 && weeklyRate > 0) {
+      const factor = Math.pow(1 + weeklyRate, totalWeeks);
+      weekly = amount * (weeklyRate * factor) / (factor - 1);
+      weekly = Math.ceil(weekly);
+      total = weekly * totalWeeks;
+      interest = total - amount;
+    } else if (totalWeeks > 0) {
+      weekly = Math.ceil(amount / totalWeeks);
+      total = amount;
+      interest = 0;
+    }
+
     return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly };
   };
 
@@ -391,20 +408,28 @@ const QuickLoans = () => {
         }).eq('id', loanId);
         if (error) throw error;
 
-        // Create repayment schedule (weekly or monthly)
+        // Create repayment schedule using reducing balance
         const repayments = [];
         if (isWeekly) {
-          const numWeeks = loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7);
-          const weeklyAmount = Math.ceil(loan.total_repayable / numWeeks);
+          const numWeeks = loan.total_weeks || (loan.duration_months * 4);
+          const dailyRate = loan.daily_interest_rate || 0.333;
+          const weeklyRate = (dailyRate / 100) * 7;
+          let balance = loan.loan_amount;
+          
           for (let i = 1; i <= numWeeks; i++) {
+            const interestPortion = Math.round(balance * weeklyRate);
+            const installment = loan.weekly_installment || Math.ceil(loan.total_repayable / numWeeks);
+            const principalPortion = installment - interestPortion;
+            
             const dueDate = new Date(startDate);
             dueDate.setDate(dueDate.getDate() + (i * 7));
             repayments.push({
               loan_id: loanId,
               installment_number: i,
-              amount_due: i === numWeeks ? loan.total_repayable - (weeklyAmount * (numWeeks - 1)) : weeklyAmount,
+              amount_due: i === numWeeks ? Math.ceil(balance + interestPortion) : installment,
               due_date: dueDate.toISOString().split('T')[0],
             });
+            balance = Math.max(0, balance - principalPortion);
           }
         } else {
           for (let i = 1; i <= loan.duration_months; i++) {
