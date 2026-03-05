@@ -69,8 +69,8 @@ const WalletFreezeManager = () => {
       setFreezeTarget(null);
       setFreezeReason("");
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to freeze wallet", variant: "destructive" });
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message || "Failed to freeze wallet", variant: "destructive" });
     },
   });
 
