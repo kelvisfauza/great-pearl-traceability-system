@@ -63,6 +63,7 @@ const QuickLoans = () => {
   const [submitting, setSubmitting] = useState(false);
   const [guarantorCode, setGuarantorCode] = useState('');
   const [pendingGuarantorLoan, setPendingGuarantorLoan] = useState<any>(null);
+  const [guaranteedLoans, setGuaranteedLoans] = useState<any[]>([]);
   const [reviewLoan, setReviewLoan] = useState<any>(null);
   const [showRepaymentSlip, setShowRepaymentSlip] = useState(false);
   const [repaymentSlipData, setRepaymentSlipData] = useState<any>(null);
