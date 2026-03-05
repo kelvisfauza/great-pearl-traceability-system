@@ -874,9 +874,9 @@ const QuickLoans = () => {
                         <TableRow key={loan.id}>
                           <TableCell className="text-sm">{new Date(loan.created_at).toLocaleDateString()}</TableCell>
                           <TableCell>UGX {loan.loan_amount?.toLocaleString()}</TableCell>
-                          <TableCell>{loan.duration_months}mo</TableCell>
-                          <TableCell>{loan.interest_rate}%</TableCell>
-                          <TableCell>UGX {loan.monthly_installment?.toLocaleString()}</TableCell>
+                          <TableCell>{loan.duration_months}mo {loan.repayment_frequency === 'weekly' ? `(${loan.total_weeks || '?'}wks)` : ''}</TableCell>
+                          <TableCell>{loan.repayment_frequency === 'weekly' ? `${(loan.daily_interest_rate || 0).toFixed(2)}%/day` : `${loan.interest_rate}%`}</TableCell>
+                          <TableCell>UGX {loan.monthly_installment?.toLocaleString()}{loan.repayment_frequency === 'weekly' ? '/wk' : '/mo'}</TableCell>
                           <TableCell className="text-sm">{loan.guarantor_name}</TableCell>
                           <TableCell>{getStatusBadge(loan.status)}</TableCell>
                           <TableCell>UGX {loan.remaining_balance?.toLocaleString()}</TableCell>
