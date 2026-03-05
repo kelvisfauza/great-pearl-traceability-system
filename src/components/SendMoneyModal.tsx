@@ -75,60 +75,30 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
 
       const ref = `SEND-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
-      // Deduct from sender
-      const { error: deductErr } = await supabase.from('ledger_entries').insert({
-        user_id: senderUserId,
-        entry_type: 'WITHDRAWAL',
-        amount: -parsedAmount,
-        reference: ref,
-        metadata: {
-          type: 'wallet_transfer',
-          to_email: selectedRecipient.email,
-          to_name: selectedRecipient.name,
-          description: `Sent UGX ${parsedAmount.toLocaleString()} to ${selectedRecipient.name}`,
-        },
+      // Use SECURITY DEFINER function for atomic transfer
+      const { data: transferResult, error: transferErr } = await supabase.rpc('transfer_wallet_funds', {
+        p_sender_user_id: senderUserId,
+        p_receiver_user_id: receiverUserId,
+        p_amount: parsedAmount,
+        p_reference: ref,
+        p_sender_email: senderEmail,
+        p_sender_name: employee?.name || 'Unknown',
+        p_receiver_email: selectedRecipient.email,
+        p_receiver_name: selectedRecipient.name,
       });
-      if (deductErr) throw new Error('Failed to deduct from your wallet');
 
-      // Credit receiver
-      const { error: creditErr } = await supabase.from('ledger_entries').insert({
-        user_id: receiverUserId,
-        entry_type: 'DEPOSIT',
-        amount: parsedAmount,
-        reference: ref,
-        metadata: {
-          type: 'wallet_transfer',
-          from_email: senderEmail,
-          from_name: employee?.name || 'Unknown',
-          description: `Received UGX ${parsedAmount.toLocaleString()} from ${employee?.name || senderEmail}`,
-        },
-      });
-      if (creditErr) {
-        // Rollback sender deduction
-        await supabase.from('ledger_entries').insert({
-          user_id: senderUserId,
-          entry_type: 'ADJUSTMENT',
-          amount: parsedAmount,
-          reference: `ROLLBACK-${ref}`,
-          metadata: { type: 'transfer_rollback', original_ref: ref },
-        });
-        throw new Error('Failed to credit receiver. Your deduction has been reversed.');
-      }
-
-      // Compute receiver's new balance for SMS
-      const { data: receiverEntries } = await supabase
-        .from('ledger_entries')
-        .select('amount')
-        .eq('user_id', receiverUserId)
-        .in('entry_type', ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT']);
-      const receiverBalance = (receiverEntries || []).reduce((s: number, e: any) => s + Number(e.amount), 0);
+      if (transferErr) throw new Error(transferErr.message);
+      
+      const result = typeof transferResult === 'string' ? JSON.parse(transferResult) : transferResult;
+      if (!result?.success) throw new Error(result?.error || 'Transfer failed');
 
       // Send SMS to receiver
       if (selectedRecipient.phone) {
+        const receiverBalance = result.receiver_balance || 0;
         await supabase.functions.invoke('send-sms', {
           body: {
             phone: selectedRecipient.phone,
-            message: `Dear ${selectedRecipient.name}, you have received UGX ${parsedAmount.toLocaleString()} from ${employee?.name || senderEmail}. Your wallet balance is now UGX ${receiverBalance.toLocaleString()}. Transaction ID: ${ref}. - Great Pearl Coffee`,
+            message: `Dear ${selectedRecipient.name}, you have received UGX ${parsedAmount.toLocaleString()} from ${employee?.name || senderEmail}. Your wallet balance is now UGX ${Number(receiverBalance).toLocaleString()}. Transaction ID: ${ref}. - Great Pearl Coffee`,
             userName: selectedRecipient.name,
             messageType: 'wallet_transfer',
           },
