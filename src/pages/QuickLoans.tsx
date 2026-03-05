@@ -16,6 +16,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
+import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 
 // Monthly interest rates (used to derive daily rate = monthly_rate / 30)
 const MONTHLY_INTEREST_RATES: Record<number, number> = {
@@ -65,6 +66,8 @@ const QuickLoans = () => {
   const [guarantorCode, setGuarantorCode] = useState('');
   const [pendingGuarantorLoan, setPendingGuarantorLoan] = useState<any>(null);
   const [reviewLoan, setReviewLoan] = useState<any>(null);
+  const [showRepaymentSlip, setShowRepaymentSlip] = useState(false);
+  const [repaymentSlipData, setRepaymentSlipData] = useState<any>(null);
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
@@ -322,6 +325,24 @@ const QuickLoans = () => {
 
       toast({ title: "Loan Requested", description: "Guarantor has been notified via SMS" });
       setShowRequestDialog(false);
+
+      // Trigger repayment statement slip
+      const slipGuarantor = employees.find(e => e.id === guarantorId);
+      setRepaymentSlipData({
+        employeeName: employee.name,
+        employeeEmail: employee.email,
+        guarantorName: slipGuarantor?.name || '',
+        loanAmount: amount,
+        interestRate: monthlyRate,
+        dailyRate,
+        durationMonths: months,
+        totalWeeks,
+        weeklyInstallment: weekly,
+        totalRepayable: total,
+        totalInterest: interest,
+      });
+      setShowRepaymentSlip(true);
+
       setLoanAmount('');
       setDurationMonths('');
       setGuarantorId('');
@@ -1087,6 +1108,11 @@ const QuickLoans = () => {
           setReviewLoan(null);
         }}
         submitting={submitting}
+      />
+      <LoanRepaymentSlip
+        open={showRepaymentSlip}
+        onClose={() => setShowRepaymentSlip(false)}
+        loanData={repaymentSlipData}
       />
     </DashboardLayout>
   );
