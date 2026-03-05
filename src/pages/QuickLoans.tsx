@@ -616,7 +616,122 @@ const QuickLoans = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  // Mobile Money Loan Repayment via GosentePay
+  const handleMomoRepayment = async () => {
+    if (!momoRepayLoan || !employee) return;
+    const amount = parseFloat(momoRepayAmount) || 0;
+    if (amount <= 0 || amount < 500) {
+      toast({ title: "Error", description: "Minimum amount is UGX 500", variant: "destructive" });
+      return;
+    }
+
+    // For long-term loans, calculate actual interest based on days held
+    let maxPayable = momoRepayLoan.remaining_balance || 0;
+    if (momoRepayLoan.loan_type === 'long_term' && momoRepayLoan.start_date) {
+      const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(momoRepayLoan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+      const dailyRate = (momoRepayLoan.daily_interest_rate || 0.5) / 100;
+      const interestForDaysHeld = Math.ceil(momoRepayLoan.loan_amount * dailyRate * daysHeld);
+      const earlyPayoff = momoRepayLoan.loan_amount - (momoRepayLoan.paid_amount || 0) + interestForDaysHeld;
+      maxPayable = Math.max(0, Math.ceil(earlyPayoff));
+    }
+
+    if (amount > maxPayable) {
+      toast({ title: "Error", description: `Max payable is UGX ${maxPayable.toLocaleString()}`, variant: "destructive" });
+      return;
+    }
+    if (!momoRepayPhone) {
+      toast({ title: "Error", description: "Enter your phone number", variant: "destructive" });
+      return;
+    }
+
+    setMomoRepayLoading(true);
+    setMomoRepayStatus('processing');
+    try {
+      // Trigger GosentePay withdraw collection (collect from user's phone)
+      const { data: result, error: fnErr } = await supabase.functions.invoke('gosentepay-withdraw-collection', {
+        body: {
+          phone: momoRepayPhone,
+          amount: amount,
+          reason: `Loan repayment - ${momoRepayLoan.id.slice(0, 8)}`,
+          emailAddress: employee.email,
+        }
+      });
+
+      if (fnErr) throw new Error(fnErr.message || 'Collection failed');
+      if (result?.status === 'error' || result?.error) {
+        throw new Error(result?.message || result?.error || 'Payment collection failed');
+      }
+
+      // Success - update loan balance
+      const newBalance = Math.max(0, (momoRepayLoan.remaining_balance || 0) - amount);
+      const newPaidAmount = (momoRepayLoan.paid_amount || 0) + amount;
+
+      await supabase.from('loans').update({
+        remaining_balance: newBalance,
+        paid_amount: newPaidAmount,
+        status: newBalance <= 0 ? 'completed' : 'active',
+        is_defaulted: newBalance <= 0 ? false : momoRepayLoan.is_defaulted,
+        missed_installments: newBalance <= 0 ? 0 : momoRepayLoan.missed_installments,
+      } as any).eq('id', momoRepayLoan.id);
+
+      // Mark pending installments as paid
+      const { data: unpaidInstallments } = await supabase.from('loan_repayments')
+        .select('*')
+        .eq('loan_id', momoRepayLoan.id)
+        .in('status', ['pending', 'overdue'])
+        .order('due_date', { ascending: true });
+
+      let remaining = amount;
+      for (const inst of (unpaidInstallments || [])) {
+        if (remaining <= 0) break;
+        const owed = (inst.amount_due || 0) - (inst.amount_paid || 0);
+        const payable = Math.min(remaining, owed);
+        const newPaid = (inst.amount_paid || 0) + payable;
+        await supabase.from('loan_repayments').update({
+          amount_paid: newPaid,
+          status: newPaid >= inst.amount_due ? 'paid' : inst.status,
+          paid_date: newPaid >= inst.amount_due ? new Date().toISOString().split('T')[0] : null,
+          payment_reference: `MOMO-${result?.ref || 'COLLECT'}`,
+        }).eq('id', inst.id);
+        remaining -= payable;
+      }
+
+      // Ledger entry
+      const { data: borrowerEmp } = await supabase.from('employees').select('auth_user_id').eq('email', momoRepayLoan.employee_email).single();
+      if (borrowerEmp?.auth_user_id) {
+        await supabase.from('ledger_entries').insert({
+          user_id: borrowerEmp.auth_user_id,
+          entry_type: 'WITHDRAWAL',
+          amount: -amount,
+          reference: `LOAN-MOMO-REPAY-${momoRepayLoan.id}-${Date.now()}`,
+          metadata: { loan_id: momoRepayLoan.id, method: 'mobile_money', phone: momoRepayPhone, ref: result?.ref },
+        });
+      }
+
+      setMomoRepayStatus('success');
+      toast({
+        title: "Payment Successful! ✅",
+        description: `UGX ${amount.toLocaleString()} collected. ${newBalance <= 0 ? 'Loan fully paid off!' : `Remaining: UGX ${newBalance.toLocaleString()}`}`,
+        duration: 8000,
+      });
+      fetchLoans();
+      setTimeout(() => {
+        setShowMomoRepayDialog(false);
+        setMomoRepayStatus('idle');
+        setMomoRepayAmount('');
+        setMomoRepayPhone('');
+        setMomoRepayLoan(null);
+      }, 2000);
+
+    } catch (err: any) {
+      setMomoRepayStatus('failed');
+      toast({ title: "Payment Failed ❌", description: err.message || 'Collection failed. Try again.', variant: "destructive", duration: 8000 });
+    } finally {
+      setMomoRepayLoading(false);
+    }
+  };
+
+
     const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
       pending_guarantor: { variant: 'outline', label: 'Awaiting Guarantor' },
       pending_admin: { variant: 'secondary', label: 'Pending Admin' },
