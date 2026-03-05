@@ -321,7 +321,19 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
               )}
 
               <form onSubmit={handleAmountSubmit} className="space-y-4">
-                {withdrawalStatus.disabled && (
+                {isWalletFrozen && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Your wallet has been frozen by an administrator.</strong>
+                      <div className="text-xs mt-1">
+                        Reason: {(employee as any)?.wallet_frozen_reason || 'No reason provided'}
+                      </div>
+                      <div className="text-xs">Deposits and rewards still apply. Contact HR for assistance.</div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {withdrawalStatus.disabled && !isWalletFrozen && (
                   <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>

@@ -43,6 +43,10 @@ const SystemSettings = () => {
           <MessagingSettings />
         </TabsContent>
 
+        <TabsContent value="wallet" className="space-y-4">
+          <WalletFreezeManager />
+        </TabsContent>
+
         <TabsContent value="migration" className="space-y-4">
           <Card>
             <CardHeader>
