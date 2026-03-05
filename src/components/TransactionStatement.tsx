@@ -140,8 +140,9 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   }, [open, user?.id, limit]);
 
   const getActivityLabel = (entry: LedgerEntry) => {
-    if (entry.entry_type === 'LOYALTY_REWARD' && entry.metadata) {
-      const meta = typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata;
+    const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+    
+    if (entry.entry_type === 'LOYALTY_REWARD' && meta) {
       const activityMap: Record<string, string> = {
         form_submission: 'Form Submission',
         data_entry: 'Data Entry',
@@ -153,6 +154,15 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
         transaction: 'Transaction',
       };
       return activityMap[meta.activity_type] || meta.activity_type || '';
+    }
+    if (entry.entry_type === 'LOAN_DISBURSEMENT' && meta) {
+      return meta.loan_type === 'long_term' ? 'Long-Term Loan' : 'Quick Loan';
+    }
+    if (entry.entry_type === 'LOAN_REPAYMENT' && meta) {
+      return meta.method === 'mobile_money' ? 'via MoMo' : meta.method || '';
+    }
+    if (entry.entry_type === 'LOAN_RECOVERY' && meta) {
+      return meta.recovery_source || 'Wallet Recovery';
     }
     return '';
   };
