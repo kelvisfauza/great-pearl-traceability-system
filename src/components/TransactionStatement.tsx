@@ -172,9 +172,13 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const getEntryLabel = (entry: LedgerEntry) => {
     const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
     const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
+    // Detect loan disbursement (stored as DEPOSIT with loan metadata)
+    if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
+      return '💰 Loan Disbursement';
+    }
     // Override label for loan-related wallet/adjustment entries
     if ((entry.entry_type === 'WITHDRAWAL' || entry.entry_type === 'ADJUSTMENT') && meta?.loan_id) {
-      return 'Loan Recovery';
+      return '🏦 Loan Recovery';
     }
     return config.label;
   };
