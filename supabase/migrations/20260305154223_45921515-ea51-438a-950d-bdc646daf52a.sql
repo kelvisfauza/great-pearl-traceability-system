@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.transfer_wallet_funds(uuid, uuid, numeric, text, text, text, text, text);

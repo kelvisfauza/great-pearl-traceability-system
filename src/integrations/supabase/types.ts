@@ -8155,33 +8155,19 @@ export type Database = {
           has_qc_general: boolean
         }[]
       }
-      transfer_wallet_funds:
-        | {
-            Args: {
-              p_amount: number
-              p_receiver_email: string
-              p_receiver_name: string
-              p_receiver_user_id: string
-              p_reference: string
-              p_sender_email: string
-              p_sender_name: string
-              p_sender_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_receiver_email: string
-              p_receiver_name: string
-              p_receiver_user_id: string
-              p_reference: string
-              p_sender_email: string
-              p_sender_name: string
-              p_sender_user_id: string
-            }
-            Returns: Json
-          }
+      transfer_wallet_funds: {
+        Args: {
+          p_amount: number
+          p_receiver_email: string
+          p_receiver_name: string
+          p_receiver_user_id: string
+          p_reference: string
+          p_sender_email: string
+          p_sender_name: string
+          p_sender_user_id: string
+        }
+        Returns: Json
+      }
       trigger_daily_salary_processing: { Args: never; Returns: Json }
       user_has_permission: {
         Args: { permission_name: string }
