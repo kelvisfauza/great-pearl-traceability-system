@@ -52,6 +52,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const { toast } = useToast();
   const { isWithdrawalDisabled } = useWithdrawalControl();
   const withdrawalStatus = isWithdrawalDisabled();
+  const isWalletFrozen = !!(employee as any)?.wallet_frozen;
 
   // ... keep existing code (numberToWords, printVoucher, formatCurrency, generateAndSendCode, handleAmountSubmit functions)
 
