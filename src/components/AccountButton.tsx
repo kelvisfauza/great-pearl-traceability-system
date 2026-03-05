@@ -43,6 +43,8 @@ export const AccountButton = () => {
   const [showWithdrawal, setShowWithdrawal] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
+  const [activeLoanTotal, setActiveLoanTotal] = useState(0);
+  const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [ledgerUserId, setLedgerUserId] = useState<string | null>(null);
   const [breakdown, setBreakdown] = useState({
     lastMonthLoyalty: 0,
