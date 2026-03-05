@@ -732,6 +732,7 @@ const QuickLoans = () => {
   };
 
 
+  const getStatusBadge = (status: string) => {
     const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
       pending_guarantor: { variant: 'outline', label: 'Awaiting Guarantor' },
       pending_admin: { variant: 'secondary', label: 'Pending Admin' },
