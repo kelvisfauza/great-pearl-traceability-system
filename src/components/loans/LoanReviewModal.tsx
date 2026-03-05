@@ -180,13 +180,185 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
 
   const paidOffLoans = borrowerLoans.filter(l => l.status === 'paid_off' || l.status === 'completed');
 
+  const handlePrint = () => {
+    const riskHtml = riskFlags.length > 0 ? `
+      <div class="risk-box">
+        <strong>⚠ Risk Indicators:</strong>
+        ${riskFlags.map(f => `<span class="risk-badge ${f.severity}">${f.label}</span>`).join(' ')}
+      </div>
+    ` : '<div style="color:green;font-weight:bold;margin-bottom:10px;">✅ No major risk flags detected</div>';
+
+    const scheduleRows = repaymentSchedule.map((r: any) => `
+      <tr>
+        <td>${r.installment}</td>
+        <td>${r.dueDate}</td>
+        <td class="amount">${r.interest != null ? r.interest.toLocaleString() : '—'}</td>
+        <td class="amount">${r.principal != null ? r.principal.toLocaleString() : '—'}</td>
+        <td class="amount" style="font-weight:600">${r.amount.toLocaleString()}</td>
+        <td class="amount">${r.balance != null ? r.balance.toLocaleString() : '—'}</td>
+      </tr>
+    `).join('');
+
+    const walletRows = borrowerLedger.slice(0, 8).map((e: any) => `
+      <tr>
+        <td>${e.entry_type?.replace(/_/g, ' ')}</td>
+        <td>${new Date(e.created_at).toLocaleDateString('en-GB')}</td>
+        <td class="amount" style="color:${e.amount >= 0 ? '#28a745' : '#dc3545'}">${e.amount >= 0 ? '+' : ''}${e.amount?.toLocaleString()}</td>
+      </tr>
+    `).join('');
+
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<html><head><title>Loan Review - ${loan.employee_name}</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; color: #1a1a1a; font-size: 12px; line-height: 1.4; }
+      .header { text-align: center; border-bottom: 2px solid #1a365d; padding-bottom: 12px; margin-bottom: 16px; }
+      .header h1 { font-size: 18px; color: #1a365d; margin: 0 0 2px; text-transform: uppercase; }
+      .header h2 { font-size: 13px; color: #555; margin: 0; font-weight: normal; }
+      .header .date { font-size: 10px; color: #999; margin-top: 4px; }
+      .section { margin-bottom: 14px; break-inside: avoid; }
+      .section-title { font-size: 13px; font-weight: bold; padding: 5px 8px; background: #f0f4ff; border-left: 3px solid #1a365d; margin-bottom: 8px; }
+      .grid { display: grid; gap: 4px 20px; font-size: 12px; }
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+      .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+      .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+      .grid .label { color: #666; font-size: 10px; }
+      .grid .value { font-weight: 600; margin-bottom: 4px; }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 6px 0; }
+      th { background: #f3f3f3; padding: 5px 6px; border: 1px solid #ddd; text-align: left; font-weight: 600; font-size: 10px; }
+      td { padding: 4px 6px; border: 1px solid #ddd; }
+      tr:nth-child(even) { background: #fafafa; }
+      .amount { text-align: right; }
+      .risk-box { background: #fff3cd; border: 1px solid #ffc107; padding: 8px; border-radius: 4px; margin-bottom: 12px; font-size: 11px; }
+      .risk-badge { display: inline-block; padding: 2px 6px; border-radius: 3px; margin: 2px; font-size: 10px; }
+      .risk-badge.high { background: #f8d7da; color: #721c24; }
+      .risk-badge.medium { background: #fff3cd; color: #856404; }
+      .risk-badge.low { background: #d4edda; color: #155724; }
+      .affordability { background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 8px; }
+      .recovery-note { background: #e8f4fd; border: 1px solid #bee5eb; padding: 8px; border-radius: 4px; font-size: 11px; margin-top: 8px; }
+      .penalty-note { background: #fff3cd; border: 1px solid #ffc107; padding: 8px; border-radius: 4px; font-size: 11px; margin-top: 8px; }
+      .signatures { display: flex; justify-content: space-between; margin-top: 30px; font-size: 11px; }
+      .signatures div { text-align: center; flex: 1; margin: 0 15px; }
+      .sig-line { border-top: 1px solid #000; margin: 20px auto 6px; width: 140px; }
+      .footer { text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 8px; margin-top: 20px; }
+      .text-red { color: #dc3545; }
+      .text-green { color: #28a745; }
+      .text-orange { color: #e67e22; }
+      @media print { body { padding: 0; } }
+    </style></head><body>
+      <div class="header">
+        <h1>GREAT PEARL COFFEE</h1>
+        <h2>Loan Application Review Report</h2>
+        <div class="date">Generated: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} at ${new Date().toLocaleTimeString()}</div>
+      </div>
+
+      ${riskHtml}
+
+      <div class="section">
+        <div class="section-title">📋 Loan Request Details</div>
+        <div class="grid grid-4">
+          <div><div class="label">Loan Type</div><div class="value">${loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan</div></div>
+          <div><div class="label">Principal Amount</div><div class="value">UGX ${loan.loan_amount?.toLocaleString()}</div></div>
+          <div><div class="label">Interest Rate</div><div class="value">${isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(3)}%/day` : `${loan.interest_rate}%/month`}</div></div>
+          <div><div class="label">Duration</div><div class="value">${loan.duration_months} month(s) / ${numInstallments} ${isWeekly ? 'weeks' : 'months'}</div></div>
+          <div><div class="label">Total Interest</div><div class="value">UGX ${(loan.total_repayable - loan.loan_amount)?.toLocaleString()}</div></div>
+          <div><div class="label">Total Repayable</div><div class="value">UGX ${loan.total_repayable?.toLocaleString()}</div></div>
+          <div><div class="label">${isWeekly ? 'Weekly' : 'Monthly'} Installment</div><div class="value">UGX ${installmentAmount?.toLocaleString()}</div></div>
+          <div><div class="label">Repayment Method</div><div class="value">${isWeekly ? 'Weekly (Reducing Balance)' : 'Monthly'}</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">👤 Borrower Profile</div>
+        <div class="grid grid-3">
+          <div><div class="label">Full Name</div><div class="value">${loan.employee_name}</div></div>
+          <div><div class="label">Email</div><div class="value">${loan.employee_email}</div></div>
+          <div><div class="label">Phone</div><div class="value">${borrowerDetails?.phone || '—'}</div></div>
+          <div><div class="label">Position</div><div class="value">${borrowerDetails?.position || '—'}</div></div>
+          <div><div class="label">Department</div><div class="value">${borrowerDetails?.department || '—'}</div></div>
+          <div><div class="label">Employment Tenure</div><div class="value">${tenureMonths} months</div></div>
+          <div><div class="label">Monthly Salary</div><div class="value">UGX ${salary.toLocaleString()}</div></div>
+          <div><div class="label">Wallet Balance</div><div class="value ${borrowerWalletBalance < 0 ? 'text-red' : ''}">UGX ${Math.abs(borrowerWalletBalance).toLocaleString()}</div></div>
+          <div><div class="label">Existing Active Loans</div><div class="value">${existingActiveLoans.length}</div></div>
+          <div><div class="label">Outstanding Balance</div><div class="value text-red">UGX ${totalOutstanding.toLocaleString()}</div></div>
+          <div><div class="label">Past Loans Completed</div><div class="value text-green">${paidOffLoans.length}</div></div>
+          <div><div class="label">Current Monthly Obligations</div><div class="value">UGX ${totalMonthlyObligations.toLocaleString()}</div></div>
+        </div>
+        <div class="affordability">
+          <strong>📊 Affordability Analysis</strong>
+          <div class="grid grid-3" style="margin-top:6px;">
+            <div><div class="label">Total Monthly After Approval</div><div class="value">UGX ${totalMonthlyAfterApproval.toLocaleString()}</div></div>
+            <div><div class="label">Salary Remaining</div><div class="value ${(salary - totalMonthlyAfterApproval) < 0 ? 'text-red' : 'text-green'}">UGX ${(salary - totalMonthlyAfterApproval).toLocaleString()}</div></div>
+            <div><div class="label">Debt-to-Income Ratio</div><div class="value ${Number(debtToIncomeRatio) > 50 ? 'text-red' : Number(debtToIncomeRatio) > 30 ? 'text-orange' : 'text-green'}">${debtToIncomeRatio}%</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">🛡️ Guarantor Information</div>
+        <div class="grid grid-3">
+          <div><div class="label">Name</div><div class="value">${loan.guarantor_name || '—'}</div></div>
+          <div><div class="label">Position</div><div class="value">${guarantorDetails?.position || '—'}</div></div>
+          <div><div class="label">Salary</div><div class="value">UGX ${(guarantorDetails?.salary || 0).toLocaleString()}</div></div>
+          <div><div class="label">Guarantee Status</div><div class="value">${loan.guarantor_approved ? '✅ Approved' : loan.guarantor_declined ? '❌ Declined' : '⏳ Pending'}</div></div>
+          <div><div class="label">Own Active Loans</div><div class="value">${guarantorLoans.filter((l: any) => l.employee_email === loan.guarantor_email).length}</div></div>
+          <div><div class="label">Guaranteeing Others</div><div class="value">${guarantorLoans.filter((l: any) => l.guarantor_email === loan.guarantor_email && l.id !== loan.id).length}</div></div>
+        </div>
+        <div class="recovery-note">
+          <strong>🔄 Recovery Plan:</strong> ${isWeekly ? 'Weekly' : 'Monthly'} installments of UGX ${installmentAmount.toLocaleString()} (${numInstallments} ${isWeekly ? 'weeks' : 'months'}). 
+          Default recovery order: Wallet → Salary → Guarantor (${loan.guarantor_name}).
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">📅 Repayment Schedule (Reducing Balance)</div>
+        <table>
+          <thead><tr><th>#</th><th>Due Date</th><th class="amount">Interest</th><th class="amount">Principal</th><th class="amount">Installment</th><th class="amount">Balance</th></tr></thead>
+          <tbody>${scheduleRows}</tbody>
+        </table>
+      </div>
+
+      ${borrowerLedger.length > 0 ? `
+      <div class="section">
+        <div class="section-title">💰 Recent Wallet Activity</div>
+        <table>
+          <thead><tr><th>Type</th><th>Date</th><th class="amount">Amount (UGX)</th></tr></thead>
+          <tbody>${walletRows}</tbody>
+        </table>
+      </div>` : ''}
+
+      <div class="penalty-note">
+        <strong>⚠ Late Payment Policy:</strong> 20% penalty per week overdue, max 2 weeks (40%). Missed installments block new loan requests. Recovery: Wallet → Salary → Guarantor.
+      </div>
+
+      <div class="signatures">
+        <div><div class="sig-line"></div><strong>Reviewed By</strong><br/>Administrator</div>
+        <div><div class="sig-line"></div><strong>Approved By</strong><br/>Finance Manager</div>
+        <div><div class="sig-line"></div><strong>Borrower</strong><br/>${loan.employee_name}</div>
+        <div><div class="sig-line"></div><strong>Guarantor</strong><br/>${loan.guarantor_name || '—'}</div>
+      </div>
+
+      <div class="footer">
+        This is a system-generated loan review report. All figures are calculated using reducing balance method. Subject to company lending policy.<br/>
+        GREAT PEARL COFFEE &mdash; Loan Management System &mdash; ${new Date().getFullYear()}
+      </div>
+    </body></html>`);
+    win.document.close();
+    win.print();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] p-0">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-xl flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            Loan Application Review
+          <DialogTitle className="text-xl flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Loan Application Review
+            </span>
+            <Button variant="outline" size="sm" onClick={handlePrint} className="no-print">
+              <Printer className="h-4 w-4 mr-1" /> Print
+            </Button>
           </DialogTitle>
         </DialogHeader>
 
