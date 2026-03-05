@@ -21,6 +21,7 @@ import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
 import { MoneyRequestModal } from './MoneyRequestModal';
 import { WithdrawalModal } from './WithdrawalModal';
 import { DepositModal } from './DepositModal';
+import { SendMoneyModal } from './SendMoneyModal';
 import { TransactionStatement } from './TransactionStatement';
 import { format } from 'date-fns';
 
