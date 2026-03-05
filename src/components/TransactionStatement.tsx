@@ -432,7 +432,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
               disabled={reversing || !reverseReason.trim()}
             >
               {reversing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
-              Reverse Transfer
+              Request Reversal
             </Button>
           </DialogFooter>
         </DialogContent>
