@@ -100,8 +100,71 @@ const SystemTransactions = () => {
     }
   };
 
+  const fetchReversalRequests = async () => {
+    setLoadingRequests(true);
+    try {
+      const { data, error } = await supabase
+        .from('transfer_reversal_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setReversalRequests(data || []);
+    } catch (err) {
+      console.error('Error fetching reversal requests:', err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
+  const handleApproveReversal = async (requestId: string) => {
+    setProcessing(true);
+    try {
+      const { data, error } = await supabase.rpc('approve_transfer_reversal', {
+        p_request_id: requestId,
+        p_notes: approveNotes || null,
+      });
+      if (error) throw error;
+      const result = typeof data === 'string' ? JSON.parse(data) : data;
+      if (!result?.success) throw new Error(result?.error || 'Approval failed');
+      toast({
+        title: 'Reversal Approved',
+        description: `UGX ${result.amount?.toLocaleString()} reversed. ${result.sender_name} refunded, ${result.receiver_name} debited. Both notified.`,
+      });
+      setApproveNotes('');
+      fetchReversalRequests();
+      fetchEntries(limit);
+    } catch (err: any) {
+      toast({ title: 'Approval Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleRejectReversal = async () => {
+    if (!rejectModal) return;
+    setProcessing(true);
+    try {
+      const { data, error } = await supabase.rpc('reject_transfer_reversal', {
+        p_request_id: rejectModal.id,
+        p_notes: rejectNotes || null,
+      });
+      if (error) throw error;
+      const result = typeof data === 'string' ? JSON.parse(data) : data;
+      if (!result?.success) throw new Error(result?.error || 'Rejection failed');
+      toast({ title: 'Reversal Rejected', description: 'The sender has been notified.' });
+      setRejectModal(null);
+      setRejectNotes('');
+      fetchReversalRequests();
+    } catch (err: any) {
+      toast({ title: 'Rejection Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   useEffect(() => {
     fetchEmployees();
+    fetchReversalRequests();
   }, []);
 
   useEffect(() => {
