@@ -219,8 +219,8 @@ const QuickLoans = () => {
       return;
     }
 
-    // Check against AI-determined limit or fallback to 3x salary
-    const maxLoan = myLimit?.availableLimit || (employee.salary || 0) * 3;
+    // Check against AI-determined limit or fallback to 2x salary
+    const maxLoan = myLimit?.availableLimit || (employee.salary || 0) * 2;
     if (amount > maxLoan) {
       toast({ title: "Error", description: `Max loan is UGX ${maxLoan.toLocaleString()} based on your credit assessment`, variant: "destructive" });
       return;
