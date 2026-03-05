@@ -114,7 +114,13 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
             <span className="text-muted-foreground">Loan Amount:</span><span className="font-semibold">UGX {loanAmount.toLocaleString()}</span>
             <span className="text-muted-foreground">Interest Rate:</span><span>{dailyRate.toFixed(3)}%/day ({interestRate}%/month)</span>
             <span className="text-muted-foreground">Duration:</span><span>{durationMonths} month(s) / {totalWeeks} weeks</span>
+            <span className="text-muted-foreground">Loan Type:</span><span className="font-semibold">{isLongTerm ? 'Long-Term Loan' : 'Quick Loan'}</span>
             <span className="text-muted-foreground">Repayment:</span><span>Weekly (Reducing Balance)</span>
+            {isLongTerm && (
+              <>
+                <span className="text-muted-foreground">Early Repayment:</span><span className="text-green-600 font-medium">Pay only for days used</span>
+              </>
+            )}
           </div>
 
           <Table>
