@@ -82,9 +82,21 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const config = ENTRY_CONFIG[e.entry_type] || DEFAULT_CONFIG;
       const isCredit = e.amount > 0;
       const activityLabel = getActivityLabel(e);
+      const transferMeta = getTransferMeta(e);
+      
+      let typeCol = `${getEntryLabel(e)}${activityLabel ? ' - ' + activityLabel : ''}`;
+      // Add transfer details for print
+      if (transferMeta) {
+        if (e.amount < 0 && transferMeta.to_email) {
+          typeCol += `<br/><span style="font-size:10px;color:#666">To: ${transferMeta.to_name} (${transferMeta.to_email})</span>`;
+        } else if (e.amount > 0 && transferMeta.from_email) {
+          typeCol += `<br/><span style="font-size:10px;color:#666">From: ${transferMeta.from_name} (${transferMeta.from_email})</span>`;
+        }
+      }
+      
       return `<tr>
         <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${format(new Date(e.created_at), 'MMM dd, yyyy h:mm a')}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${getEntryLabel(e)}${activityLabel ? ' - ' + activityLabel : ''}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${typeCol}</td>
         <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:${isCredit ? '#15803d' : '#b91c1c'};font-weight:600">${isCredit ? '+' : ''}${e.amount.toLocaleString()}</td>
         <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;font-weight:600">${(e as any).runningBalance != null ? (e as any).runningBalance.toLocaleString() : '—'}</td>
       </tr>`;
