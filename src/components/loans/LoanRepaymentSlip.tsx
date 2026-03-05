@@ -33,7 +33,7 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
 
   // Generate flat interest schedule (equal installments)
   const schedule: { week: number; dueDate: string; installment: number; interest: number; principal: number; balance: number }[] = [];
-  const totalInterest = totalRepayable - loanAmount;
+  const scheduleInterest = totalRepayable - loanAmount;
   const weeklyInterestPortion = Math.round(totalInterest / totalWeeks);
   const weeklyPrincipalPortion = Math.round(loanAmount / totalWeeks);
   let balance = loanAmount;
