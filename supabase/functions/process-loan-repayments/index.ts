@@ -53,14 +53,17 @@ Deno.serve(async (req) => {
       const borrowerEmail = loan.employee_email
       const guarantorEmail = loan.guarantor_email
 
-      // Calculate overdue days and penalty
+      // Calculate overdue weeks and penalty (20% per week, max 2 weeks = 40%)
       const dueDate = new Date(repayment.due_date)
       const overdueDays = Math.max(0, Math.floor((todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+      const overdueWeeks = Math.min(2, Math.floor(overdueDays / 7)) // cap at 2 weeks
       
-      // Late penalty: flat 20% of the installment amount (applied once when overdue)
-      const alreadyPenalized = (repayment.penalty_applied || 0) > 0
-      const penaltyAmount = (overdueDays > 0 && !alreadyPenalized) ? Math.round(amountDue * 0.20) : 0
-      const totalOwed = amountDue + penaltyAmount - (repayment.amount_paid || 0)
+      // 20% penalty per overdue week, minus any penalty already applied
+      const totalPenaltyRate = overdueWeeks * 0.20
+      const grossPenalty = Math.round(amountDue * totalPenaltyRate)
+      const previouslyAppliedPenalty = repayment.penalty_applied || 0
+      const penaltyAmount = Math.max(0, grossPenalty - previouslyAppliedPenalty) // only add the new portion
+      const totalOwed = amountDue + grossPenalty - (repayment.amount_paid || 0)
 
       console.log(`\n💰 Processing repayment #${repayment.installment_number} for ${borrowerEmail}: UGX ${amountDue} (overdue ${overdueDays} days, penalty UGX ${penaltyAmount})`)
 
