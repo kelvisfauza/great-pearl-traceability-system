@@ -327,7 +327,7 @@ const QuickLoans = () => {
       setShowRequestDialog(false);
 
       // Trigger repayment statement slip
-      const guarantor = employees.find(e => e.id === guarantorId);
+      const slipGuarantor = employees.find(e => e.id === guarantorId);
       setRepaymentSlipData({
         employeeName: employee.name,
         employeeEmail: employee.email,
