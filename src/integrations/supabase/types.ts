@@ -3750,6 +3750,7 @@ export type Database = {
           admin_approved_by: string | null
           admin_rejection_reason: string | null
           created_at: string
+          daily_interest_rate: number | null
           disbursed_amount: number | null
           duration_months: number
           employee_email: string
@@ -3772,10 +3773,13 @@ export type Database = {
           next_deduction_date: string | null
           paid_amount: number | null
           remaining_balance: number
+          repayment_frequency: string
           start_date: string | null
           status: string
           total_repayable: number
+          total_weeks: number | null
           updated_at: string
+          weekly_installment: number | null
         }
         Insert: {
           admin_approved?: boolean | null
@@ -3783,6 +3787,7 @@ export type Database = {
           admin_approved_by?: string | null
           admin_rejection_reason?: string | null
           created_at?: string
+          daily_interest_rate?: number | null
           disbursed_amount?: number | null
           duration_months: number
           employee_email: string
@@ -3805,10 +3810,13 @@ export type Database = {
           next_deduction_date?: string | null
           paid_amount?: number | null
           remaining_balance: number
+          repayment_frequency?: string
           start_date?: string | null
           status?: string
           total_repayable: number
+          total_weeks?: number | null
           updated_at?: string
+          weekly_installment?: number | null
         }
         Update: {
           admin_approved?: boolean | null
@@ -3816,6 +3824,7 @@ export type Database = {
           admin_approved_by?: string | null
           admin_rejection_reason?: string | null
           created_at?: string
+          daily_interest_rate?: number | null
           disbursed_amount?: number | null
           duration_months?: number
           employee_email?: string
@@ -3838,10 +3847,13 @@ export type Database = {
           next_deduction_date?: string | null
           paid_amount?: number | null
           remaining_balance?: number
+          repayment_frequency?: string
           start_date?: string | null
           status?: string
           total_repayable?: number
+          total_weeks?: number | null
           updated_at?: string
+          weekly_installment?: number | null
         }
         Relationships: []
       }

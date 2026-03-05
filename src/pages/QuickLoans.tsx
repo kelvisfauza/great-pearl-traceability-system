@@ -17,13 +17,27 @@ import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
 
-const INTEREST_RATES: Record<number, number> = {
-  1: 15,
-  2: 20,
-  3: 25,
-  4: 30,
-  5: 35,
-  6: 40,
+// Monthly interest rates (used to derive daily rate = monthly_rate / 30)
+const MONTHLY_INTEREST_RATES: Record<number, number> = {
+  1: 10,
+  2: 10,
+  3: 10,
+  4: 10,
+  5: 10,
+  6: 10,
+};
+
+// Helper: calculate daily interest rate from monthly rate
+const getDailyRate = (months: number) => {
+  const monthlyRate = MONTHLY_INTEREST_RATES[months] || 10;
+  return monthlyRate / 30; // e.g. 10% / 30 = 0.333% per day
+};
+
+// Helper: calculate total days and weeks for a duration
+const getLoanSchedule = (months: number) => {
+  const totalDays = months * 30;
+  const totalWeeks = Math.ceil(totalDays / 7);
+  return { totalDays, totalWeeks };
 };
 
 // Processing fees and insurance removed
@@ -203,16 +217,18 @@ const QuickLoans = () => {
   const calculateLoanDetails = () => {
     const amount = parseFloat(loanAmount) || 0;
     const months = parseInt(durationMonths) || 0;
-    const rate = INTEREST_RATES[months] || 0;
-    const interest = amount * (rate / 100);
+    const dailyRate = getDailyRate(months);
+    const { totalDays, totalWeeks } = getLoanSchedule(months);
+    const interest = amount * (dailyRate / 100) * totalDays;
     const total = amount + interest;
-    const monthly = months > 0 ? total / months : 0;
-    return { amount, months, rate, interest, total, monthly };
+    const weekly = totalWeeks > 0 ? total / totalWeeks : 0;
+    const monthlyRate = MONTHLY_INTEREST_RATES[months] || 10;
+    return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly };
   };
 
   const handleRequestLoan = async () => {
     if (!employee) return;
-    const { amount, months, rate, total, monthly } = calculateLoanDetails();
+    const { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly } = calculateLoanDetails();
 
     if (amount <= 0 || months <= 0 || !guarantorId) {
       toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
@@ -251,18 +267,22 @@ const QuickLoans = () => {
         employee_name: employee.name,
         employee_phone: employee.phone || '',
         loan_amount: amount,
-        interest_rate: rate,
-        total_repayable: total,
+        interest_rate: monthlyRate,
+        daily_interest_rate: dailyRate,
+        total_repayable: Math.ceil(total),
         duration_months: months,
-        monthly_installment: Math.ceil(monthly),
-        remaining_balance: total,
+        monthly_installment: Math.ceil(weekly), // store weekly installment in this field
+        weekly_installment: Math.ceil(weekly),
+        total_weeks: totalWeeks,
+        remaining_balance: Math.ceil(total),
+        repayment_frequency: 'weekly',
         status: 'pending_guarantor',
         guarantor_id: guarantor.id,
         guarantor_email: guarantor.email,
         guarantor_name: guarantor.name,
         guarantor_phone: guarantor.phone || '',
         guarantor_approval_code: approvalCode,
-      });
+      } as any);
 
       if (error) throw error;
 
@@ -337,12 +357,19 @@ const QuickLoans = () => {
       if (!loan) return;
 
       if (approve) {
+        const isWeekly = loan.repayment_frequency === 'weekly';
         const startDate = new Date();
         const endDate = new Date();
         endDate.setMonth(endDate.getMonth() + loan.duration_months);
+
+        // For weekly loans, next deduction is 7 days from now; for monthly, 1st of next month
         const nextDeduction = new Date();
-        nextDeduction.setMonth(nextDeduction.getMonth() + 1);
-        nextDeduction.setDate(1);
+        if (isWeekly) {
+          nextDeduction.setDate(nextDeduction.getDate() + 7);
+        } else {
+          nextDeduction.setMonth(nextDeduction.getMonth() + 1);
+          nextDeduction.setDate(1);
+        }
 
         // Update loan status
         const { error } = await supabase.from('loans').update({
@@ -357,18 +384,33 @@ const QuickLoans = () => {
         }).eq('id', loanId);
         if (error) throw error;
 
-        // Create repayment schedule
+        // Create repayment schedule (weekly or monthly)
         const repayments = [];
-        for (let i = 1; i <= loan.duration_months; i++) {
-          const dueDate = new Date(startDate);
-          dueDate.setMonth(dueDate.getMonth() + i);
-          dueDate.setDate(1);
-          repayments.push({
-            loan_id: loanId,
-            installment_number: i,
-            amount_due: Math.ceil(loan.total_repayable / loan.duration_months),
-            due_date: dueDate.toISOString().split('T')[0],
-          });
+        if (isWeekly) {
+          const numWeeks = loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7);
+          const weeklyAmount = Math.ceil(loan.total_repayable / numWeeks);
+          for (let i = 1; i <= numWeeks; i++) {
+            const dueDate = new Date(startDate);
+            dueDate.setDate(dueDate.getDate() + (i * 7));
+            repayments.push({
+              loan_id: loanId,
+              installment_number: i,
+              amount_due: i === numWeeks ? loan.total_repayable - (weeklyAmount * (numWeeks - 1)) : weeklyAmount,
+              due_date: dueDate.toISOString().split('T')[0],
+            });
+          }
+        } else {
+          for (let i = 1; i <= loan.duration_months; i++) {
+            const dueDate = new Date(startDate);
+            dueDate.setMonth(dueDate.getMonth() + i);
+            dueDate.setDate(1);
+            repayments.push({
+              loan_id: loanId,
+              installment_number: i,
+              amount_due: Math.ceil(loan.total_repayable / loan.duration_months),
+              due_date: dueDate.toISOString().split('T')[0],
+            });
+          }
         }
         await supabase.from('loan_repayments').insert(repayments);
 
@@ -381,21 +423,29 @@ const QuickLoans = () => {
             entry_type: 'DEPOSIT',
             amount: disbursedAmount,
             reference: 'LOAN-DISBURSE-' + loanId,
-            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate, principal: loan.loan_amount, source: 'loan_disbursement' },
+            metadata: { loan_id: loanId, duration_months: loan.duration_months, interest_rate: loan.interest_rate, principal: loan.loan_amount, source: 'loan_disbursement', repayment_frequency: loan.repayment_frequency || 'monthly' },
           });
         }
 
         // SMS to borrower with repayment details
         const firstRepaymentDate = new Date(startDate);
-        firstRepaymentDate.setMonth(firstRepaymentDate.getMonth() + 1);
-        firstRepaymentDate.setDate(1);
+        if (isWeekly) {
+          firstRepaymentDate.setDate(firstRepaymentDate.getDate() + 7);
+        } else {
+          firstRepaymentDate.setMonth(firstRepaymentDate.getMonth() + 1);
+          firstRepaymentDate.setDate(1);
+        }
         const repaymentDateStr = firstRepaymentDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-        const monthlyAmount = Math.ceil(loan.total_repayable / loan.duration_months);
+        const installmentAmount = isWeekly
+          ? Math.ceil(loan.total_repayable / (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7)))
+          : Math.ceil(loan.total_repayable / loan.duration_months);
+        const scheduleLabel = isWeekly ? 'week' : 'month';
+        const numInstallments = isWeekly ? (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7)) : loan.duration_months;
 
         await supabase.functions.invoke('send-sms', {
           body: {
             phone: loan.employee_phone,
-            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Repayment: UGX ${monthlyAmount.toLocaleString()}/month for ${loan.duration_months} month(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Pearl Coffee`,
+            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Repayment: UGX ${installmentAmount.toLocaleString()}/${scheduleLabel} for ${numInstallments} ${scheduleLabel}(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Pearl Coffee`,
             userName: loan.employee_name,
             messageType: 'loan_approved'
           }
@@ -551,7 +601,7 @@ const QuickLoans = () => {
 
   const myLimit = employee ? getLoanLimit(employee.email, employee.salary || 0, employee.authUserId) : null;
 
-  const { rate: previewRate, interest: previewInterest, total: previewTotal, monthly: previewMonthly } = calculateLoanDetails();
+  const { monthlyRate: previewRate, dailyRate: previewDailyRate, interest: previewInterest, total: previewTotal, weekly: previewWeekly, totalWeeks: previewTotalWeeks, totalDays: previewTotalDays } = calculateLoanDetails();
 
   return (
     <DashboardLayout title="Quick Loans" subtitle="Borrow and manage short-term loans">
@@ -582,9 +632,15 @@ const QuickLoans = () => {
                     <Select value={durationMonths} onValueChange={setDurationMonths}>
                       <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                       <SelectContent>
-                        {[1, 2, 3, 4, 5, 6].map(m => (
-                          <SelectItem key={m} value={m.toString()}>{m} month{m > 1 ? 's' : ''} - {INTEREST_RATES[m]}% interest</SelectItem>
-                        ))}
+                        {[1, 2, 3, 4, 5, 6].map(m => {
+                          const { totalWeeks } = getLoanSchedule(m);
+                          const dailyR = getDailyRate(m);
+                          return (
+                            <SelectItem key={m} value={m.toString()}>
+                              {m} month{m > 1 ? 's' : ''} ({totalWeeks} weeks) - {dailyR.toFixed(2)}%/day
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
@@ -604,9 +660,11 @@ const QuickLoans = () => {
                     <Card className="bg-muted/50">
                       <CardContent className="p-4 space-y-1 text-sm">
                         <div className="flex justify-between"><span>Principal:</span><span>UGX {parseFloat(loanAmount).toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span>Interest ({previewRate}%):</span><span>UGX {Math.ceil(previewInterest).toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Daily Rate:</span><span>{previewDailyRate.toFixed(3)}% ({previewRate}%/month)</span></div>
+                        <div className="flex justify-between"><span>Duration:</span><span>{previewTotalDays} days ({previewTotalWeeks} weeks)</span></div>
+                        <div className="flex justify-between"><span>Total Interest:</span><span>UGX {Math.ceil(previewInterest).toLocaleString()}</span></div>
                         <div className="flex justify-between font-semibold"><span>Total Repayable:</span><span>UGX {Math.ceil(previewTotal).toLocaleString()}</span></div>
-                        <div className="flex justify-between font-semibold text-primary"><span>Monthly Installment:</span><span>UGX {Math.ceil(previewMonthly).toLocaleString()}</span></div>
+                        <div className="flex justify-between font-semibold text-primary"><span>Weekly Installment:</span><span>UGX {Math.ceil(previewWeekly).toLocaleString()}</span></div>
                       </CardContent>
                     </Card>
                   )}
@@ -676,7 +734,7 @@ const QuickLoans = () => {
                       <p className="text-sm text-muted-foreground">
                         <strong>{pendingGuarantorLoan.employee_name}</strong> wants you to guarantee a loan of{' '}
                         <strong>UGX {pendingGuarantorLoan.loan_amount?.toLocaleString()}</strong> for{' '}
-                        {pendingGuarantorLoan.duration_months} month(s). If they fail to repay, the amount will be deducted from your salary.
+                        {pendingGuarantorLoan.duration_months} month(s) ({pendingGuarantorLoan.repayment_frequency === 'weekly' ? 'weekly repayments' : 'monthly repayments'}). If they fail to repay, the amount will be deducted from your salary.
                       </p>
                     </div>
                     <div className="flex items-end gap-3">
@@ -804,7 +862,7 @@ const QuickLoans = () => {
                         <TableHead>Amount</TableHead>
                         <TableHead>Duration</TableHead>
                         <TableHead>Interest</TableHead>
-                        <TableHead>Monthly</TableHead>
+                        <TableHead>Installment</TableHead>
                         <TableHead>Guarantor</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Remaining</TableHead>
@@ -816,9 +874,9 @@ const QuickLoans = () => {
                         <TableRow key={loan.id}>
                           <TableCell className="text-sm">{new Date(loan.created_at).toLocaleDateString()}</TableCell>
                           <TableCell>UGX {loan.loan_amount?.toLocaleString()}</TableCell>
-                          <TableCell>{loan.duration_months}mo</TableCell>
-                          <TableCell>{loan.interest_rate}%</TableCell>
-                          <TableCell>UGX {loan.monthly_installment?.toLocaleString()}</TableCell>
+                          <TableCell>{loan.duration_months}mo {loan.repayment_frequency === 'weekly' ? `(${loan.total_weeks || '?'}wks)` : ''}</TableCell>
+                          <TableCell>{loan.repayment_frequency === 'weekly' ? `${(loan.daily_interest_rate || 0).toFixed(2)}%/day` : `${loan.interest_rate}%`}</TableCell>
+                          <TableCell>UGX {loan.monthly_installment?.toLocaleString()}{loan.repayment_frequency === 'weekly' ? '/wk' : '/mo'}</TableCell>
                           <TableCell className="text-sm">{loan.guarantor_name}</TableCell>
                           <TableCell>{getStatusBadge(loan.status)}</TableCell>
                           <TableCell>UGX {loan.remaining_balance?.toLocaleString()}</TableCell>
@@ -876,7 +934,7 @@ const QuickLoans = () => {
                             <TableCell className="text-xs">UGX {(emp?.salary || 0).toLocaleString()}</TableCell>
                             <TableCell className="text-xs">UGX {Math.max(0, limit.walletBal).toLocaleString()}</TableCell>
                             <TableCell>UGX {loan.loan_amount?.toLocaleString()}</TableCell>
-                            <TableCell>{loan.duration_months}mo ({loan.interest_rate}%)</TableCell>
+                            <TableCell>{loan.duration_months}mo {loan.repayment_frequency === 'weekly' ? `(${loan.total_weeks || '?'}wks, ${(loan.daily_interest_rate || 0).toFixed(2)}%/day)` : `(${loan.interest_rate}%)`}</TableCell>
                             <TableCell>UGX {loan.total_repayable?.toLocaleString()}</TableCell>
                             <TableCell className="text-xs font-medium text-green-600">UGX {limit.availableLimit.toLocaleString()}</TableCell>
                             <TableCell>

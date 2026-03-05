@@ -94,7 +94,7 @@ const LoanAdvertDialog = () => {
 
       const limit = getLoanLimit(emp.salary, emp.outstanding);
       if (limit <= 0) { successCount++; continue; } // Skip employees with no remaining limit
-      const message = `Hi ${emp.name}, your loan limit is UGX ${limit.toLocaleString()}. Borrow now, no paperwork, instant to wallet. Rates from 15%. Log in to Great Pearl Coffee App and grab your cash today!`;
+      const message = `Hi ${emp.name}, your loan limit is UGX ${limit.toLocaleString()}. Borrow now, no paperwork, instant to wallet. Daily interest from 0.33%, weekly repayments. Log in to Great Pearl Coffee App and grab your cash today!`;
 
       try {
         const { error } = await supabase.functions.invoke("send-sms", {
@@ -139,7 +139,7 @@ const LoanAdvertDialog = () => {
           <div className="p-3 rounded-lg bg-muted text-sm">
             <p className="font-medium mb-1">Message Preview:</p>
              <p className="text-muted-foreground italic">
-               "Hi [Name], your loan limit is UGX [2x salary]. Borrow now, no paperwork, instant to wallet. Rates from 15%. Log in to Great Pearl Coffee App and grab your cash today!"
+               "Hi [Name], your loan limit is UGX [2x salary]. Borrow now, no paperwork, instant to wallet. Daily interest from 0.33%, weekly repayments. Log in to Great Pearl Coffee App and grab your cash today!"
               </p>
           </div>
 

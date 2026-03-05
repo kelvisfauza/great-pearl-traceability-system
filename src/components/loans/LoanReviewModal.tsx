@@ -117,8 +117,12 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
     .filter(l => l.status === 'active')
     .reduce((sum, l) => sum + (l.monthly_installment || 0), 0);
 
-  const newMonthlyInstallment = loan.monthly_installment || Math.ceil(loan.total_repayable / loan.duration_months);
-  const totalMonthlyAfterApproval = totalMonthlyObligations + newMonthlyInstallment;
+  const isWeekly = loan.repayment_frequency === 'weekly';
+  const numInstallments = isWeekly 
+    ? (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7))
+    : loan.duration_months;
+  const installmentAmount = loan.monthly_installment || Math.ceil(loan.total_repayable / numInstallments);
+  const totalMonthlyAfterApproval = totalMonthlyObligations + (isWeekly ? installmentAmount * 4 : installmentAmount); // convert weekly to monthly equivalent for ratio
   const salary = borrowerDetails?.salary || 0;
   const debtToIncomeRatio = salary > 0 ? ((totalMonthlyAfterApproval / salary) * 100).toFixed(1) : 'N/A';
 
@@ -129,16 +133,30 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
   // Generate repayment schedule preview
   const repaymentSchedule = [];
   const startDate = new Date();
-  for (let i = 1; i <= loan.duration_months; i++) {
-    const dueDate = new Date(startDate);
-    dueDate.setMonth(dueDate.getMonth() + i);
-    dueDate.setDate(1);
-    repaymentSchedule.push({
-      installment: i,
-      dueDate: dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-      amount: newMonthlyInstallment,
-      source: 'Salary deduction',
-    });
+  if (isWeekly) {
+    for (let i = 1; i <= numInstallments; i++) {
+      const dueDate = new Date(startDate);
+      dueDate.setDate(dueDate.getDate() + (i * 7));
+      const amt = i === numInstallments ? loan.total_repayable - (installmentAmount * (numInstallments - 1)) : installmentAmount;
+      repaymentSchedule.push({
+        installment: i,
+        dueDate: dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        amount: Math.ceil(amt),
+        source: 'Weekly deduction',
+      });
+    }
+  } else {
+    for (let i = 1; i <= loan.duration_months; i++) {
+      const dueDate = new Date(startDate);
+      dueDate.setMonth(dueDate.getMonth() + i);
+      dueDate.setDate(1);
+      repaymentSchedule.push({
+        installment: i,
+        dueDate: dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        amount: installmentAmount,
+        source: 'Salary deduction',
+      });
+    }
   }
 
   // Risk indicators
@@ -201,7 +219,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                       <p className="font-bold">UGX {loan.loan_amount?.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Interest ({loan.interest_rate}%)</p>
+                      <p className="text-muted-foreground text-xs">Interest ({isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(2)}%/day` : `${loan.interest_rate}%`})</p>
                       <p className="font-bold">UGX {(loan.total_repayable - loan.loan_amount)?.toLocaleString()}</p>
                     </div>
                     <div>
@@ -209,8 +227,8 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                       <p className="font-bold">UGX {loan.total_repayable?.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground text-xs">Monthly Installment</p>
-                      <p className="font-bold">UGX {newMonthlyInstallment?.toLocaleString()}</p>
+                      <p className="text-muted-foreground text-xs">{isWeekly ? 'Weekly' : 'Monthly'} Installment</p>
+                      <p className="font-bold">UGX {installmentAmount?.toLocaleString()}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -345,9 +363,9 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                   </div>
 
                   <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
-                    <strong>Recovery Plan:</strong> Monthly installments of UGX {newMonthlyInstallment.toLocaleString()} will be auto-deducted from borrower's salary. 
+                    <strong>Recovery Plan:</strong> {isWeekly ? 'Weekly' : 'Monthly'} installments of UGX {installmentAmount.toLocaleString()} will be auto-deducted from borrower's account ({numInstallments} {isWeekly ? 'weeks' : 'months'}). 
                     If borrower defaults, the guarantor ({loan.guarantor_name}) becomes liable for the remaining balance. 
-                    System will flag overdue payments and escalate recovery through salary deductions from both borrower and guarantor if necessary.
+                    System will flag overdue payments and escalate recovery through deductions from both borrower and guarantor if necessary.
                   </div>
                 </CardContent>
               </Card>
