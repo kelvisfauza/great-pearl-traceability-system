@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
           status: repaymentStatus,
           deducted_from: deductionSources.join('; '),
           payment_reference: `AUTO-${today}`,
-          penalty_applied: penaltyAmount,
+          penalty_applied: grossPenalty, // total cumulative penalty for this installment
           overdue_days: overdueDays
         }).eq('id', repayment.id)
 
