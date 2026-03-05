@@ -369,6 +369,11 @@ const App: React.ComponentType = () => {
                     <SystemSettings />
                   </ProtectedRoute>
                 } />
+                <Route path="/admin/system-transactions" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <SystemTransactions />
+                  </ProtectedRoute>
+                } />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </MaintenanceGuard>
