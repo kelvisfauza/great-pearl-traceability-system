@@ -168,7 +168,7 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
           )}
 
           <p className="text-center text-[10px] text-muted-foreground mt-4 border-t pt-2">
-            This is a system-generated statement. Amounts are calculated using reducing balance method. Terms subject to company policy.
+            This is a system-generated statement. Interest is calculated as flat rate on the full principal. Terms subject to company policy.
           </p>
         </div>
       </DialogContent>
