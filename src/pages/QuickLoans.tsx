@@ -212,6 +212,52 @@ const QuickLoans = () => {
     }
   };
 
+  const fetchGuaranteedLoans = async () => {
+    if (!employee) return;
+    const { data } = await supabase.from('loans').select('*')
+      .eq('guarantor_email', employee.email)
+      .order('created_at', { ascending: false });
+    setGuaranteedLoans(data || []);
+  };
+
+  const handleRevokeGuarantee = async (loanId: string) => {
+    if (!employee) return;
+    setSubmitting(true);
+    try {
+      // Double-check loan is still in pending_admin status
+      const { data: loan } = await supabase.from('loans').select('status, employee_name, employee_phone').eq('id', loanId).single();
+      if (!loan || loan.status !== 'pending_admin') {
+        toast({ title: "Cannot Revoke", description: "This loan has already been processed by admin.", variant: "destructive" });
+        return;
+      }
+
+      const { error } = await supabase.from('loans').update({
+        guarantor_approved: false,
+        guarantor_declined: true,
+        status: 'rejected',
+        admin_rejection_reason: `Guarantor ${employee.name} revoked their guarantee`,
+      }).eq('id', loanId);
+      if (error) throw error;
+
+      // Notify borrower
+      await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: loan.employee_phone,
+          message: `Dear ${loan.employee_name}, your guarantor ${employee.name} has revoked their guarantee for your loan. The loan has been cancelled. You may request a new loan with a different guarantor. - Great Pearl Coffee`,
+          userName: loan.employee_name,
+          messageType: 'loan_guarantor_revoked'
+        }
+      });
+
+      toast({ title: "Guarantee Revoked", description: "The borrower has been notified. The loan has been cancelled." });
+      fetchGuaranteedLoans();
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const checkGuarantorRequests = async () => {
     if (!employee) return;
