@@ -38,11 +38,8 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
     setTxRef('');
     // Fetch active employees
     const fetchEmployees = async () => {
-      const { data } = await supabase
-        .from('employees')
-        .select('id, name, email, phone')
-        .eq('status', 'Active')
-        .order('name');
+      // Use security definer function to bypass RLS so all users can see recipients
+      const { data } = await supabase.rpc('get_guarantor_candidates');
       setEmployees((data || []).filter(e => e.email !== (employee?.email || user?.email)));
     };
     fetchEmployees();
