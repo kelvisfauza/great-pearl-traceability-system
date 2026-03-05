@@ -18,12 +18,12 @@ import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
 
 const INTEREST_RATES: Record<number, number> = {
-  1: 20,
-  2: 25,
-  3: 30,
-  4: 35,
-  5: 40,
-  6: 45,
+  1: 15,
+  2: 20,
+  3: 25,
+  4: 30,
+  5: 35,
+  6: 40,
 };
 
 // Processing fees and insurance removed
