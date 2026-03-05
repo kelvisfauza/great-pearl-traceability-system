@@ -393,17 +393,21 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                         <tr>
                           <th className="text-left p-2 text-xs font-medium">#</th>
                           <th className="text-left p-2 text-xs font-medium">Due Date</th>
-                          <th className="text-left p-2 text-xs font-medium">Amount</th>
-                          <th className="text-left p-2 text-xs font-medium">Source</th>
+                          <th className="text-right p-2 text-xs font-medium">Interest</th>
+                          <th className="text-right p-2 text-xs font-medium">Principal</th>
+                          <th className="text-right p-2 text-xs font-medium">Installment</th>
+                          <th className="text-right p-2 text-xs font-medium">Balance</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {repaymentSchedule.map((r) => (
+                        {repaymentSchedule.map((r: any) => (
                           <tr key={r.installment} className="border-t">
                             <td className="p-2 text-xs">{r.installment}</td>
                             <td className="p-2 text-xs font-medium">{r.dueDate}</td>
-                            <td className="p-2 text-xs">UGX {r.amount.toLocaleString()}</td>
-                            <td className="p-2 text-xs text-muted-foreground">{r.source}</td>
+                            <td className="p-2 text-xs text-right text-muted-foreground">{r.interest != null ? `UGX ${r.interest.toLocaleString()}` : '—'}</td>
+                            <td className="p-2 text-xs text-right">{r.principal != null ? `UGX ${r.principal.toLocaleString()}` : '—'}</td>
+                            <td className="p-2 text-xs text-right font-medium">UGX {r.amount.toLocaleString()}</td>
+                            <td className="p-2 text-xs text-right">{r.balance != null ? `UGX ${r.balance.toLocaleString()}` : '—'}</td>
                           </tr>
                         ))}
                       </tbody>
