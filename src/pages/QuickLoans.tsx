@@ -648,86 +648,99 @@ const QuickLoans = () => {
     setMomoRepayLoading(true);
     setMomoRepayStatus('processing');
     try {
-      // Trigger GosentePay withdraw collection (collect from user's phone)
-      const { data: result, error: fnErr } = await supabase.functions.invoke('gosentepay-withdraw-collection', {
+      // Get user auth id for creating transaction record
+      const { data: borrowerEmp } = await supabase.from('employees').select('auth_user_id').eq('email', momoRepayLoan.employee_email).single();
+      if (!borrowerEmp?.auth_user_id) {
+        throw new Error('Could not find your account. Please contact admin.');
+      }
+
+      // Create unique ref for this loan repayment
+      const txRef = `LOANREPAY-${momoRepayLoan.id.slice(0, 8)}-${Date.now()}`;
+
+      // Normalize phone
+      let cleanPhone = momoRepayPhone.replace(/\+/g, '').replace(/\s/g, '');
+      if (cleanPhone.startsWith('0')) cleanPhone = '256' + cleanPhone.slice(1);
+      if (!cleanPhone.startsWith('256')) cleanPhone = '256' + cleanPhone;
+
+      // Create mobile_money_transactions record so callback can process it
+      const { error: txInsertErr } = await supabase.from('mobile_money_transactions').insert({
+        user_id: borrowerEmp.auth_user_id,
+        transaction_ref: txRef,
+        transaction_type: 'loan_repayment',
+        amount: amount,
+        phone: cleanPhone,
+        status: 'pending',
+        provider: 'gosentepay',
+        withdrawal_id: momoRepayLoan.id, // Store loan_id in withdrawal_id field
+      });
+
+      if (txInsertErr) throw new Error('Failed to create transaction record');
+
+      // Use deposit API (sends push notification to user's phone)
+      const { data: result, error: fnErr } = await supabase.functions.invoke('gosentepay-deposit', {
         body: {
-          phone: momoRepayPhone,
+          phone: cleanPhone,
           amount: amount,
-          reason: `Loan repayment - ${momoRepayLoan.id.slice(0, 8)}`,
-          emailAddress: employee.email,
+          email: employee.email,
+          ref: txRef,
         }
       });
 
-      // When edge function returns non-2xx, fnErr is set but result may still contain parsed body
       if (fnErr || result?.status === 'error' || result?.error) {
-        const errorMsg = result?.message || result?.error || fnErr?.message || 'Payment collection failed. The mobile money provider rejected the request. Please ensure you have sufficient funds and try again.';
+        // Mark transaction as failed
+        await supabase.from('mobile_money_transactions').update({ status: 'failed' }).eq('transaction_ref', txRef);
+        const errorMsg = result?.message || result?.error || fnErr?.message || 'Payment request failed. Please try again.';
         throw new Error(errorMsg);
       }
 
-      // Success - update loan balance
-      const newBalance = Math.max(0, (momoRepayLoan.remaining_balance || 0) - amount);
-      const newPaidAmount = (momoRepayLoan.paid_amount || 0) + amount;
-
-      await supabase.from('loans').update({
-        remaining_balance: newBalance,
-        paid_amount: newPaidAmount,
-        status: newBalance <= 0 ? 'completed' : 'active',
-        is_defaulted: newBalance <= 0 ? false : momoRepayLoan.is_defaulted,
-        missed_installments: newBalance <= 0 ? 0 : momoRepayLoan.missed_installments,
-      } as any).eq('id', momoRepayLoan.id);
-
-      // Mark pending installments as paid
-      const { data: unpaidInstallments } = await supabase.from('loan_repayments')
-        .select('*')
-        .eq('loan_id', momoRepayLoan.id)
-        .in('status', ['pending', 'overdue'])
-        .order('due_date', { ascending: true });
-
-      let remaining = amount;
-      for (const inst of (unpaidInstallments || [])) {
-        if (remaining <= 0) break;
-        const owed = (inst.amount_due || 0) - (inst.amount_paid || 0);
-        const payable = Math.min(remaining, owed);
-        const newPaid = (inst.amount_paid || 0) + payable;
-        await supabase.from('loan_repayments').update({
-          amount_paid: newPaid,
-          status: newPaid >= inst.amount_due ? 'paid' : inst.status,
-          paid_date: newPaid >= inst.amount_due ? new Date().toISOString().split('T')[0] : null,
-          payment_reference: `MOMO-${result?.ref || 'COLLECT'}`,
-        }).eq('id', inst.id);
-        remaining -= payable;
-      }
-
-      // Ledger entry
-      const { data: borrowerEmp } = await supabase.from('employees').select('auth_user_id').eq('email', momoRepayLoan.employee_email).single();
-      if (borrowerEmp?.auth_user_id) {
-        await supabase.from('ledger_entries').insert({
-          user_id: borrowerEmp.auth_user_id,
-          entry_type: 'WITHDRAWAL',
-          amount: -amount,
-          reference: `LOAN-MOMO-REPAY-${momoRepayLoan.id}-${Date.now()}`,
-          metadata: { loan_id: momoRepayLoan.id, method: 'mobile_money', phone: momoRepayPhone, ref: result?.ref },
-        });
-      }
-
+      // Push notification sent successfully - waiting for user to approve on phone
       setMomoRepayStatus('success');
       toast({
-        title: "Payment Successful! ✅",
-        description: `UGX ${amount.toLocaleString()} collected. ${newBalance <= 0 ? 'Loan fully paid off!' : `Remaining: UGX ${newBalance.toLocaleString()}`}`,
-        duration: 8000,
+        title: "Payment Request Sent! 📱",
+        description: `A payment prompt has been sent to ${momoRepayPhone}. Please approve the payment of UGX ${amount.toLocaleString()} on your phone. Your loan balance will update automatically once confirmed.`,
+        duration: 15000,
       });
-      fetchLoans();
+      
+      // Poll for transaction completion
+      const pollInterval = setInterval(async () => {
+        const { data: tx } = await supabase.from('mobile_money_transactions')
+          .select('status')
+          .eq('transaction_ref', txRef)
+          .single();
+        
+        if (tx?.status === 'completed') {
+          clearInterval(pollInterval);
+          toast({
+            title: "Loan Payment Confirmed! ✅",
+            description: `UGX ${amount.toLocaleString()} has been deducted from your loan balance.`,
+            duration: 8000,
+          });
+          fetchLoans();
+        } else if (tx?.status === 'failed') {
+          clearInterval(pollInterval);
+          toast({
+            title: "Payment Failed ❌",
+            description: "The payment was not completed. Please try again.",
+            variant: "destructive",
+            duration: 8000,
+          });
+        }
+      }, 5000);
+
+      // Stop polling after 2 minutes
+      setTimeout(() => clearInterval(pollInterval), 120000);
+
       setTimeout(() => {
         setShowMomoRepayDialog(false);
         setMomoRepayStatus('idle');
         setMomoRepayAmount('');
         setMomoRepayPhone('');
         setMomoRepayLoan(null);
-      }, 2000);
+      }, 3000);
 
     } catch (err: any) {
       setMomoRepayStatus('failed');
-      toast({ title: "Payment Failed ❌", description: err.message || 'Collection failed. Try again.', variant: "destructive", duration: 8000 });
+      toast({ title: "Payment Failed ❌", description: err.message || 'Payment request failed. Try again.', variant: "destructive", duration: 8000 });
     } finally {
       setMomoRepayLoading(false);
     }
