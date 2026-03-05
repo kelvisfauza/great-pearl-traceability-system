@@ -45,6 +45,7 @@ export const AccountButton = () => {
   const [showDeposit, setShowDeposit] = useState(false);
   const [showSendMoney, setShowSendMoney] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
+  const [balanceHidden, setBalanceHidden] = useState(false);
   const [activeLoanTotal, setActiveLoanTotal] = useState(0);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [ledgerUserId, setLedgerUserId] = useState<string | null>(null);
