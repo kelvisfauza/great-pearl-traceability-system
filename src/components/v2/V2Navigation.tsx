@@ -21,7 +21,8 @@ import {
   ShieldAlert,
   Home,
   CreditCard,
-  Clock
+  Clock,
+  ArrowLeftRight
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -197,6 +198,13 @@ const ADMIN_NAV = [
       { icon: MapPin, label: "Field Ops", path: "/v2/field-operations" },
       { icon: BarChart3, label: "Analytics", path: "/v2/analytics" },
       { icon: Leaf, label: "EUDR", path: "/v2/eudr" },
+    ]
+  },
+  {
+    section: "System Admin",
+    items: [
+      { icon: ArrowLeftRight, label: "System Transactions", path: "/admin/system-transactions" },
+      { icon: Cog, label: "System Settings", path: "/admin/system-settings" },
     ]
   }
 ];

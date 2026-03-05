@@ -8135,6 +8135,10 @@ export type Database = {
           request_type: string
         }[]
       }
+      reverse_wallet_transfer: {
+        Args: { p_admin_reason: string; p_ledger_entry_id: string }
+        Returns: Json
+      }
       sync_unlinked_coffee_to_batches: {
         Args: { p_coffee_type?: string }
         Returns: {

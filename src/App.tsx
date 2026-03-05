@@ -77,6 +77,7 @@ import ComparisonReport from "./pages/reports/ComparisonReport";
 import EUDRDispatchReports from "./pages/reports/EUDRDispatchReports";
 import WholeBusinessReport from "./pages/reports/WholeBusinessReport";
 import SystemSettings from "./pages/admin/SystemSettings";
+import SystemTransactions from "./pages/admin/SystemTransactions";
 import UserDailyReports from "./pages/UserDailyReports";
 import { DailyReportReminder } from "./components/reports/DailyReportReminder";
 import { MonthlyReportReminder } from "./components/reports/MonthlyReportReminder";
@@ -366,6 +367,11 @@ const App: React.ComponentType = () => {
                 <Route path="/admin/system-settings" element={
                   <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
                     <SystemSettings />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/system-transactions" element={
+                  <ProtectedRoute requiredRoles={['Administrator', 'Super Admin']}>
+                    <SystemTransactions />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<NotFound />} />
