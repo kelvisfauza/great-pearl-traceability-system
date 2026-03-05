@@ -661,15 +661,8 @@ const QuickLoans = () => {
       return;
     }
 
-    // For long-term loans, calculate actual interest based on days held
-    let maxPayable = momoRepayLoan.remaining_balance || 0;
-    if (momoRepayLoan.loan_type === 'long_term' && momoRepayLoan.start_date) {
-      const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(momoRepayLoan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
-      const dailyRate = (momoRepayLoan.daily_interest_rate || 0.5) / 100;
-      const interestForDaysHeld = Math.ceil(momoRepayLoan.loan_amount * dailyRate * daysHeld);
-      const earlyPayoff = momoRepayLoan.loan_amount - (momoRepayLoan.paid_amount || 0) + interestForDaysHeld;
-      maxPayable = Math.max(0, Math.ceil(earlyPayoff));
-    }
+    // Calculate max payable using daily pro-rata interest
+    let maxPayable = calculateEarlyPayoff(momoRepayLoan);
 
     if (amount > maxPayable) {
       toast({ title: "Error", description: `Max payable is UGX ${maxPayable.toLocaleString()}`, variant: "destructive" });
