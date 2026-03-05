@@ -208,10 +208,15 @@ Deno.serve(async (req) => {
           loanUpdate.status = 'paid_off'
           console.log(`  🎉 Loan fully paid off!`)
         } else {
-          // Set next deduction date
+          // Set next deduction date based on repayment frequency
+          const isWeekly = loan.repayment_frequency === 'weekly'
           const nextDate = new Date(today)
-          nextDate.setMonth(nextDate.getMonth() + 1)
-          nextDate.setDate(1)
+          if (isWeekly) {
+            nextDate.setDate(nextDate.getDate() + 7)
+          } else {
+            nextDate.setMonth(nextDate.getMonth() + 1)
+            nextDate.setDate(1)
+          }
           loanUpdate.next_deduction_date = nextDate.toISOString().split('T')[0]
         }
 
