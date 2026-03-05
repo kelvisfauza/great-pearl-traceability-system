@@ -92,7 +92,8 @@ const LoanAdvertDialog = () => {
     for (const emp of selectedList) {
       if (!emp.phone) { failCount++; continue; }
 
-      const limit = getLoanLimit(emp.salary);
+      const limit = getLoanLimit(emp.salary, emp.outstanding);
+      if (limit <= 0) { successCount++; continue; } // Skip employees with no remaining limit
       const message = `Hi ${emp.name}, your loan limit is UGX ${limit.toLocaleString()}. Borrow now, no paperwork, instant to wallet. Rates from 15%. Log in to Great Pearl Coffee App and grab your cash today!`;
 
       try {
