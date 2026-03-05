@@ -66,9 +66,16 @@ const QuickLoans = () => {
   const [reviewLoan, setReviewLoan] = useState<any>(null);
   const [showRepaymentSlip, setShowRepaymentSlip] = useState(false);
   const [repaymentSlipData, setRepaymentSlipData] = useState<any>(null);
+  const [showMomoRepayDialog, setShowMomoRepayDialog] = useState(false);
+  const [momoRepayLoan, setMomoRepayLoan] = useState<any>(null);
+  const [momoRepayAmount, setMomoRepayAmount] = useState('');
+  const [momoRepayPhone, setMomoRepayPhone] = useState('');
+  const [momoRepayLoading, setMomoRepayLoading] = useState(false);
+  const [momoRepayStatus, setMomoRepayStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
+  const [loanType, setLoanType] = useState<LoanType>('quick');
   const [durationMonths, setDurationMonths] = useState('');
   const [guarantorId, setGuarantorId] = useState('');
   const [loanPurpose, setLoanPurpose] = useState('');
