@@ -904,6 +904,70 @@ const QuickLoans = () => {
                 )}
               </DialogContent>
             </Dialog>
+
+            {/* Mobile Money Repayment Dialog */}
+            <Dialog open={showMomoRepayDialog} onOpenChange={(open) => { setShowMomoRepayDialog(open); if (!open) { setMomoRepayLoan(null); setMomoRepayStatus('idle'); } }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Phone className="h-5 w-5" /> Repay Loan via Mobile Money</DialogTitle>
+                </DialogHeader>
+                {momoRepayLoan && (
+                  <div className="space-y-4">
+                    <Card className="bg-muted/50">
+                      <CardContent className="p-4 space-y-1 text-sm">
+                        <div className="flex justify-between"><span>Loan Amount:</span><span>UGX {momoRepayLoan.loan_amount?.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Total Repayable:</span><span>UGX {momoRepayLoan.total_repayable?.toLocaleString()}</span></div>
+                        <div className="flex justify-between font-semibold text-primary"><span>Remaining Balance:</span><span>UGX {momoRepayLoan.remaining_balance?.toLocaleString()}</span></div>
+                        {momoRepayLoan.loan_type === 'long_term' && momoRepayLoan.start_date && (
+                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded text-xs">
+                            <strong>Long-term loan:</strong> Interest calculated on actual days held.
+                            {(() => {
+                              const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(momoRepayLoan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+                              const dailyRate = (momoRepayLoan.daily_interest_rate || 0.5) / 100;
+                              const interestForDays = Math.ceil(momoRepayLoan.loan_amount * dailyRate * daysHeld);
+                              const principalOwed = momoRepayLoan.loan_amount - (momoRepayLoan.paid_amount || 0);
+                              const earlyPayoff = Math.max(0, Math.ceil(principalOwed + interestForDays));
+                              return <div className="mt-1">Days held: {daysHeld} | Interest so far: UGX {interestForDays.toLocaleString()} | <strong>Early payoff: UGX {earlyPayoff.toLocaleString()}</strong></div>;
+                            })()}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                    <div>
+                      <Label>Phone Number (Mobile Money)</Label>
+                      <Input value={momoRepayPhone} onChange={e => setMomoRepayPhone(e.target.value)} placeholder="e.g. 0701234567" />
+                      <p className="text-xs text-muted-foreground mt-1">You'll receive a payment prompt on this number</p>
+                    </div>
+                    <div>
+                      <Label>Amount to Pay (UGX)</Label>
+                      <Input type="number" value={momoRepayAmount} onChange={e => setMomoRepayAmount(e.target.value)} placeholder="Enter amount" />
+                      <p className="text-xs text-muted-foreground mt-1">Max: UGX {momoRepayLoan.remaining_balance?.toLocaleString()}</p>
+                    </div>
+
+                    {momoRepayStatus === 'success' && (
+                      <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-300 dark:border-green-700 rounded text-sm text-green-800 dark:text-green-300 flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5" /> Payment successful! Balance updated.
+                      </div>
+                    )}
+                    {momoRepayStatus === 'failed' && (
+                      <div className="p-3 bg-destructive/10 border border-destructive/30 rounded text-sm text-destructive flex items-center gap-2">
+                        <XCircle className="h-5 w-5" /> Payment failed. Please try again.
+                      </div>
+                    )}
+
+                    <Button onClick={handleMomoRepayment} disabled={momoRepayLoading || momoRepayStatus === 'success'} className="w-full">
+                      {momoRepayLoading ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Collecting payment...</>
+                      ) : momoRepayStatus === 'success' ? (
+                        <><CheckCircle className="mr-2 h-4 w-4" /> Payment Complete</>
+                      ) : (
+                        <><Phone className="mr-2 h-4 w-4" /> Collect UGX {(parseFloat(momoRepayAmount) || 0).toLocaleString()} via MoMo</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
             </div>
           </div>
 
