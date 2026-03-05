@@ -21,7 +21,8 @@ import {
   ShieldAlert,
   Home,
   CreditCard,
-  Clock
+  Clock,
+  ArrowLeftRight
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
