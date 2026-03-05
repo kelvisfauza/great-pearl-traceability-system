@@ -629,10 +629,10 @@ const QuickLoans = () => {
         if (borrowerEmployee.data?.auth_user_id) {
           await supabase.from('ledger_entries').insert({
             user_id: borrowerEmployee.data.auth_user_id,
-            entry_type: 'LOAN_REPAYMENT',
+            entry_type: 'WITHDRAWAL',
             amount: -amount,
-            reference: 'LOAN-REPAY-' + selectedLoanForPayment.id + '-' + Date.now(),
-            metadata: { loan_id: selectedLoanForPayment.id, method: earlyPayMethod, notes: earlyPayNotes },
+            reference: 'LOANREPAY-ADMIN-' + selectedLoanForPayment.id.slice(0, 8) + '-' + Date.now(),
+            metadata: { loan_id: selectedLoanForPayment.id, method: earlyPayMethod, source: 'admin_early_pay', notes: earlyPayNotes },
           });
         }
       }
