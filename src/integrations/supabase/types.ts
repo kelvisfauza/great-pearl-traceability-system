@@ -8028,9 +8028,10 @@ export type Database = {
     }
     Functions: {
       admin_delete_all_system_data: { Args: never; Returns: Json }
-      approve_transfer_reversal:
-        | { Args: { p_notes?: string; p_request_id: string }; Returns: Json }
-        | { Args: { p_notes?: string; p_request_id: string }; Returns: Json }
+      approve_transfer_reversal: {
+        Args: { p_notes?: string; p_request_id: string }
+        Returns: Json
+      }
       award_activity_reward: {
         Args: { activity_name: string; user_uuid: string }
         Returns: Json
@@ -8206,15 +8207,10 @@ export type Database = {
           request_type: string
         }[]
       }
-      reverse_wallet_transfer:
-        | {
-            Args: { p_admin_reason: string; p_ledger_entry_id: string }
-            Returns: Json
-          }
-        | {
-            Args: { p_admin_reason: string; p_ledger_entry_id: string }
-            Returns: Json
-          }
+      reverse_wallet_transfer: {
+        Args: { p_admin_reason: string; p_ledger_entry_id: string }
+        Returns: Json
+      }
       sync_unlinked_coffee_to_batches: {
         Args: { p_coffee_type?: string }
         Returns: {
