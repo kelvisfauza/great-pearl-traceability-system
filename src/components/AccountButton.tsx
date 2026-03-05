@@ -230,12 +230,19 @@ export const AccountButton = () => {
         <SheetTrigger asChild>
           <Button variant="outline" size="sm" className="relative gap-2">
             <Wallet className="h-4 w-4" />
-            {formatCurrency(availableLoyalty)}
-            {stats && stats.todayEarnings > 0 && (
+            {balanceHidden ? '••••••' : formatCurrency(availableLoyalty)}
+            {!balanceHidden && stats && stats.todayEarnings > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0">
                 +{stats.todayEarnings.toLocaleString()}
               </Badge>
             )}
+            <span
+              role="button"
+              className="ml-1 cursor-pointer text-muted-foreground hover:text-foreground"
+              onClick={(e) => { e.stopPropagation(); setBalanceHidden(h => !h); }}
+            >
+              {balanceHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            </span>
           </Button>
         </SheetTrigger>
         <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
