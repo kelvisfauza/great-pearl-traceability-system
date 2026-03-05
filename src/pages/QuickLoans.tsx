@@ -225,12 +225,11 @@ const QuickLoans = () => {
   const calculateLoanDetails = () => {
     const amount = parseFloat(loanAmount) || 0;
     const months = parseInt(durationMonths) || 0;
-    const dailyRate = getDailyRate(months);
-    const monthlyRate = MONTHLY_INTEREST_RATES[months] || 10;
+    const dailyRate = getDailyRate(loanType);
+    const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
     const { totalDays, totalWeeks } = getLoanSchedule(months);
 
     // Reducing balance: weekly installment = P * r * (1+r)^n / ((1+r)^n - 1)
-    // where r = daily rate as decimal * 7 (weekly rate), n = totalWeeks
     const weeklyRate = (dailyRate / 100) * 7;
     let weekly = 0;
     let total = 0;
