@@ -16,6 +16,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
+import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 
 // Monthly interest rates (used to derive daily rate = monthly_rate / 30)
 const MONTHLY_INTEREST_RATES: Record<number, number> = {
