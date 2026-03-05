@@ -341,7 +341,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
       </div>
 
       <div class="footer">
-        This is a system-generated loan review report. All figures are calculated using reducing balance method. Subject to company lending policy.<br/>
+        This is a system-generated loan review report. Interest is calculated as flat rate on the full principal. Subject to company lending policy.<br/>
         GREAT PEARL COFFEE &mdash; Loan Management System &mdash; ${new Date().getFullYear()}
       </div>
     </body></html>`);
