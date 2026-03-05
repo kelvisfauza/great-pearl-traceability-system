@@ -165,22 +165,21 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
     if (!reverseEntry || !reverseReason.trim()) return;
     setReversing(true);
     try {
-      const { data, error } = await supabase.rpc('reverse_wallet_transfer', {
+      const { data, error } = await supabase.rpc('request_transfer_reversal', {
         p_ledger_entry_id: reverseEntry.id,
-        p_admin_reason: reverseReason.trim(),
+        p_reason: reverseReason.trim(),
       });
       if (error) throw error;
       const result = typeof data === 'string' ? JSON.parse(data) : data;
-      if (!result?.success) throw new Error(result?.error || 'Reversal failed');
+      if (!result?.success) throw new Error(result?.error || 'Request failed');
       toast({
-        title: 'Transfer Reversed',
-        description: `UGX ${result.amount?.toLocaleString()} has been refunded to your wallet. ${result.receiver_name} has been notified.`,
+        title: 'Reversal Requested',
+        description: `Your request to reverse UGX ${result.amount?.toLocaleString()} (sent to ${result.receiver_name}) has been submitted for admin approval.`,
       });
       setReverseEntry(null);
       setReverseReason('');
-      fetchEntries(limit);
     } catch (err: any) {
-      toast({ title: 'Reversal Failed', description: err.message, variant: 'destructive' });
+      toast({ title: 'Request Failed', description: err.message, variant: 'destructive' });
     } finally {
       setReversing(false);
     }
