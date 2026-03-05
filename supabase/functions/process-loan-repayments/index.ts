@@ -53,14 +53,17 @@ Deno.serve(async (req) => {
       const borrowerEmail = loan.employee_email
       const guarantorEmail = loan.guarantor_email
 
-      // Calculate overdue days and penalty
+      // Calculate overdue weeks and penalty (20% per week, max 2 weeks = 40%)
       const dueDate = new Date(repayment.due_date)
       const overdueDays = Math.max(0, Math.floor((todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+      const overdueWeeks = Math.min(2, Math.floor(overdueDays / 7)) // cap at 2 weeks
       
-      // Late penalty: flat 20% of the installment amount (applied once when overdue)
-      const alreadyPenalized = (repayment.penalty_applied || 0) > 0
-      const penaltyAmount = (overdueDays > 0 && !alreadyPenalized) ? Math.round(amountDue * 0.20) : 0
-      const totalOwed = amountDue + penaltyAmount - (repayment.amount_paid || 0)
+      // 20% penalty per overdue week, minus any penalty already applied
+      const totalPenaltyRate = overdueWeeks * 0.20
+      const grossPenalty = Math.round(amountDue * totalPenaltyRate)
+      const previouslyAppliedPenalty = repayment.penalty_applied || 0
+      const penaltyAmount = Math.max(0, grossPenalty - previouslyAppliedPenalty) // only add the new portion
+      const totalOwed = amountDue + grossPenalty - (repayment.amount_paid || 0)
 
       console.log(`\n💰 Processing repayment #${repayment.installment_number} for ${borrowerEmail}: UGX ${amountDue} (overdue ${overdueDays} days, penalty UGX ${penaltyAmount})`)
 
@@ -201,7 +204,7 @@ Deno.serve(async (req) => {
           status: repaymentStatus,
           deducted_from: deductionSources.join('; '),
           payment_reference: `AUTO-${today}`,
-          penalty_applied: penaltyAmount,
+          penalty_applied: grossPenalty, // total cumulative penalty for this installment
           overdue_days: overdueDays
         }).eq('id', repayment.id)
 
@@ -249,10 +252,10 @@ Deno.serve(async (req) => {
         await supabase.from('loans').update(loanUpdate).eq('id', loan.id)
 
         // SMS to borrower
-        const penaltyNote = penaltyAmount > 0 ? ` (includes late penalty of UGX ${penaltyAmount.toLocaleString()})` : ''
+        const penaltyNote = grossPenalty > 0 ? ` (penalty: 20% x ${overdueWeeks} week(s) = UGX ${grossPenalty.toLocaleString()})` : ''
         const smsMessage = isFullyPaid
           ? `Dear ${loan.employee_name}, your loan repayment of UGX ${totalCollected.toLocaleString()}${penaltyNote} (installment ${repayment.installment_number}) has been processed. Sources: ${deductionSources.join(', ')}. Remaining: UGX ${Math.max(0, newRemainingBalance).toLocaleString()}. - Great Pearl Coffee`
-          : `Dear ${loan.employee_name}, your loan repayment of UGX ${amountDue.toLocaleString()} (installment ${repayment.installment_number}) is OVERDUE${penaltyNote}. Only UGX ${totalCollected.toLocaleString()} could be recovered. Outstanding: UGX ${remainingAmount.toLocaleString()}. Late interest continues to accrue daily. Please top up immediately. New loan requests are BLOCKED until cleared. - Great Pearl Coffee`
+          : `Dear ${loan.employee_name}, installment ${repayment.installment_number} of UGX ${amountDue.toLocaleString()} is ${overdueWeeks} week(s) OVERDUE${penaltyNote}. Recovered UGX ${totalCollected.toLocaleString()} from ${deductionSources.length > 0 ? deductionSources.join(', ') : 'no sources'}. Still owed: UGX ${remainingAmount.toLocaleString()}. Penalty increases each week (max 2 weeks). New loans BLOCKED. - Great Pearl Coffee`
 
         await supabase.functions.invoke('send-sms', {
           body: {
