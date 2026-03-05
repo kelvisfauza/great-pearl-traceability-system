@@ -228,7 +228,7 @@ const QuickLoans = () => {
 
   const handleRequestLoan = async () => {
     if (!employee) return;
-    const { amount, months, rate, total, monthly } = calculateLoanDetails();
+    const { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly } = calculateLoanDetails();
 
     if (amount <= 0 || months <= 0 || !guarantorId) {
       toast({ title: "Error", description: "Please fill all fields", variant: "destructive" });
@@ -267,18 +267,22 @@ const QuickLoans = () => {
         employee_name: employee.name,
         employee_phone: employee.phone || '',
         loan_amount: amount,
-        interest_rate: rate,
-        total_repayable: total,
+        interest_rate: monthlyRate,
+        daily_interest_rate: dailyRate,
+        total_repayable: Math.ceil(total),
         duration_months: months,
-        monthly_installment: Math.ceil(monthly),
-        remaining_balance: total,
+        monthly_installment: Math.ceil(weekly), // store weekly installment in this field
+        weekly_installment: Math.ceil(weekly),
+        total_weeks: totalWeeks,
+        remaining_balance: Math.ceil(total),
+        repayment_frequency: 'weekly',
         status: 'pending_guarantor',
         guarantor_id: guarantor.id,
         guarantor_email: guarantor.email,
         guarantor_name: guarantor.name,
         guarantor_phone: guarantor.phone || '',
         guarantor_approval_code: approvalCode,
-      });
+      } as any);
 
       if (error) throw error;
 
