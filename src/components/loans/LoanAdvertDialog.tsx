@@ -75,7 +75,7 @@ const LoanAdvertDialog = () => {
 
   const deselectAll = () => setSelectedEmployees(new Set());
 
-  const getLoanLimit = (salary: number, outstanding: number = 0) => Math.max(0, (salary || 0) * 3 - outstanding);
+  const getLoanLimit = (salary: number, outstanding: number = 0) => Math.max(0, (salary || 0) * 2 - outstanding);
 
   const handleSend = async () => {
     if (selectedEmployees.size === 0) {
@@ -139,7 +139,7 @@ const LoanAdvertDialog = () => {
           <div className="p-3 rounded-lg bg-muted text-sm">
             <p className="font-medium mb-1">Message Preview:</p>
              <p className="text-muted-foreground italic">
-               "Hi [Name], your loan limit is UGX [3x salary]. Borrow now, no paperwork, instant to wallet. Rates from 15%. Log in to Great Pearl Coffee App and grab your cash today!"
+               "Hi [Name], your loan limit is UGX [2x salary]. Borrow now, no paperwork, instant to wallet. Rates from 15%. Log in to Great Pearl Coffee App and grab your cash today!"
               </p>
           </div>
 

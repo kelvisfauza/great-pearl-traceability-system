@@ -219,8 +219,8 @@ const QuickLoans = () => {
       return;
     }
 
-    // Check against AI-determined limit or fallback to 3x salary
-    const maxLoan = myLimit?.availableLimit || (employee.salary || 0) * 3;
+    // Check against AI-determined limit or fallback to 2x salary
+    const maxLoan = myLimit?.availableLimit || (employee.salary || 0) * 2;
     if (amount > maxLoan) {
       toast({ title: "Error", description: `Max loan is UGX ${maxLoan.toLocaleString()} based on your credit assessment`, variant: "destructive" });
       return;
@@ -544,7 +544,7 @@ const QuickLoans = () => {
       };
     }
 
-    const maxFromSalary = empSalary * 3;
+    const maxFromSalary = empSalary * 2;
     const availableLimit = Math.max(0, maxFromSalary - outstanding);
     return { salary: empSalary, maxFromSalary, outstanding, activeCount, walletBal, availableLimit, riskScore: null, factors: null, isAi: false };
   };
@@ -575,7 +575,7 @@ const QuickLoans = () => {
                   <div>
                     <Label>Loan Amount (UGX)</Label>
                     <Input type="number" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} placeholder="e.g. 500000" />
-                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 3).toLocaleString()} {myLimit?.isAi ? '(AI assessed)' : '(3x salary)'}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 2).toLocaleString()} {myLimit?.isAi ? '(AI assessed)' : '(2x salary)'}</p>
                   </div>
                   <div>
                     <Label>Duration (Months)</Label>
