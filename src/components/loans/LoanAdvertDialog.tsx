@@ -119,8 +119,8 @@ const LoanAdvertDialog = () => {
           <div className="p-3 rounded-lg bg-muted text-sm">
             <p className="font-medium mb-1">Message Preview:</p>
              <p className="text-muted-foreground italic">
-               "Hi [Name]! 💰 What would YOU do with UGX [3x salary]? That's YOUR current loan limit ready to go! Borrow instantly, funds hit your wallet in seconds. No paperwork, no delays. Rates from just 20%. Log in now & grab your cash 👉 Great Pearl Coffee App"
-             </p>
+               "Hi [Name], your loan limit is UGX [3x salary]. Borrow now, no paperwork, instant to wallet. Rates from 20%. Log in to Great Pearl Coffee App and grab your cash today!"
+              </p>
           </div>
 
           <div className="flex items-center justify-between">
