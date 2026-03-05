@@ -289,7 +289,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${config.badgeClass}`}>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${isTransferOut ? 'bg-orange-100 text-orange-800' : isTransferIn ? 'bg-blue-100 text-blue-800' : config.badgeClass}`}>
                       {getEntryLabel(entry)}
                     </Badge>
                     {activityLabel && (
