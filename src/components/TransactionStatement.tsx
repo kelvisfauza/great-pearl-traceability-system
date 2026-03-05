@@ -34,6 +34,12 @@ const ENTRY_CONFIG: Record<string, { label: string; icon: React.ElementType; col
 
 const DEFAULT_CONFIG = { label: 'Transaction', icon: FileText, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' };
 
+const getTransferMeta = (entry: LedgerEntry) => {
+  const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
+  if (meta?.type === 'wallet_transfer') return meta;
+  return null;
+};
+
 interface TransactionStatementProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
