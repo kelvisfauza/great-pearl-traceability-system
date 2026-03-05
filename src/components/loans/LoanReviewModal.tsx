@@ -313,7 +313,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
       </div>
 
       <div class="section">
-        <div class="section-title">📅 Repayment Schedule (Reducing Balance)</div>
+        <div class="section-title">📅 Repayment Schedule (Flat Interest)</div>
         <table>
           <thead><tr><th>#</th><th>Due Date</th><th class="amount">Interest</th><th class="amount">Principal</th><th class="amount">Installment</th><th class="amount">Balance</th></tr></thead>
           <tbody>${scheduleRows}</tbody>
