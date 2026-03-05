@@ -747,6 +747,181 @@ const QuickLoans = () => {
   };
 
 
+  const printLoanStatement = async (loan: any) => {
+    // Fetch repayment installments for this loan
+    const { data: repayments } = await supabase
+      .from('loan_repayments')
+      .select('*')
+      .eq('loan_id', loan.id)
+      .order('due_date', { ascending: true });
+
+    // Fetch loan-related ledger entries
+    const { data: userId } = await supabase.rpc('get_unified_user_id', { input_email: loan.employee_email });
+    const { data: ledgerEntries } = await supabase
+      .from('ledger_entries')
+      .select('*')
+      .eq('user_id', userId || '')
+      .or(`reference.ilike.%${loan.id}%,reference.ilike.%LOAN%`)
+      .order('created_at', { ascending: true });
+
+    const isWeekly = loan.repayment_frequency === 'weekly';
+    const totalPaid = (repayments || []).reduce((s: number, r: any) => s + (r.amount_paid || 0), 0);
+    const paidInstallments = (repayments || []).filter((r: any) => r.status === 'paid').length;
+    const overdueInstallments = (repayments || []).filter((r: any) => r.status === 'overdue').length;
+    const pendingInstallments = (repayments || []).filter((r: any) => r.status === 'pending').length;
+
+    // Build installment rows
+    const installmentRows = (repayments || []).map((r: any) => `
+      <tr>
+        <td style="padding:5px 8px;border:1px solid #ddd;text-align:center;font-size:11px">${r.installment_number}</td>
+        <td style="padding:5px 8px;border:1px solid #ddd;font-size:11px">${new Date(r.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+        <td style="padding:5px 8px;border:1px solid #ddd;text-align:right;font-size:11px">${(r.amount_due || 0).toLocaleString()}</td>
+        <td style="padding:5px 8px;border:1px solid #ddd;text-align:right;font-size:11px">${(r.amount_paid || 0).toLocaleString()}</td>
+        <td style="padding:5px 8px;border:1px solid #ddd;text-align:right;font-size:11px">${(r.penalty_applied || 0).toLocaleString()}</td>
+        <td style="padding:5px 8px;border:1px solid #ddd;font-size:11px">${r.deducted_from || '—'}</td>
+        <td style="padding:5px 8px;border:1px solid #ddd;text-align:center;font-size:11px">
+          <span style="color:${r.status === 'paid' ? '#16a34a' : r.status === 'overdue' ? '#dc2626' : '#666'};font-weight:600">${r.status.toUpperCase()}</span>
+        </td>
+        <td style="padding:5px 8px;border:1px solid #ddd;font-size:11px">${r.paid_date ? new Date(r.paid_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—'}</td>
+      </tr>
+    `).join('');
+
+    // Build transaction history rows (loan-related ledger entries)
+    const loanLedger = (ledgerEntries || []).filter((e: any) => 
+      e.reference?.includes(loan.id) || 
+      e.reference?.includes('LOAN')
+    );
+    const txRows = loanLedger.map((e: any) => {
+      const meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata || {};
+      let description = meta.description || e.entry_type?.replace(/_/g, ' ');
+      if (e.entry_type === 'LOAN_DISBURSEMENT') description = '💰 Loan Disbursement to Wallet';
+      else if (e.entry_type === 'LOAN_REPAYMENT') description = '📱 Repayment via MoMo';
+      else if (e.reference?.includes('LOAN-REPAY') && e.entry_type === 'WITHDRAWAL') description = '🏦 Auto Recovery (Wallet)';
+      else if (e.reference?.includes('LOAN-REPAY-SALARY')) description = '🏦 Auto Recovery (Salary)';
+      else if (e.reference?.includes('LOAN-GUARANTOR')) description = '🏦 Guarantor Recovery';
+      return `
+        <tr>
+          <td style="padding:4px 8px;border:1px solid #eee;font-size:11px">${new Date(e.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+          <td style="padding:4px 8px;border:1px solid #eee;font-size:11px">${description}</td>
+          <td style="padding:4px 8px;border:1px solid #eee;font-size:11px">${e.reference || '—'}</td>
+          <td style="padding:4px 8px;border:1px solid #eee;text-align:right;font-size:11px;color:${e.amount >= 0 ? '#16a34a' : '#dc2626'};font-weight:600">
+            ${e.amount >= 0 ? '+' : ''}${Number(e.amount).toLocaleString()}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const progress = loan.total_repayable ? Math.round((totalPaid / loan.total_repayable) * 100) : 0;
+
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<html><head><title>Loan Statement - ${loan.employee_name}</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; color: #1a1a1a; font-size: 12px; line-height: 1.4; }
+      .header { text-align: center; border-bottom: 2px solid #1a365d; padding-bottom: 12px; margin-bottom: 16px; }
+      .header h1 { font-size: 18px; color: #1a365d; margin: 0 0 2px; text-transform: uppercase; }
+      .header h2 { font-size: 13px; color: #555; margin: 0; font-weight: normal; }
+      .header .date { font-size: 10px; color: #999; margin-top: 4px; }
+      .section { margin-bottom: 16px; break-inside: avoid; }
+      .section-title { font-size: 13px; font-weight: bold; padding: 5px 8px; background: #f0f4ff; border-left: 3px solid #1a365d; margin-bottom: 8px; }
+      .grid { display: grid; gap: 4px 20px; font-size: 12px; }
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+      .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+      .grid .label { color: #666; font-size: 10px; }
+      .grid .value { font-weight: 600; margin-bottom: 4px; }
+      table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+      th { background: #f3f3f3; padding: 6px 8px; border: 1px solid #ddd; text-align: left; font-weight: 600; font-size: 10px; }
+      .amount { text-align: right; }
+      .progress-bar { height: 14px; background: #e5e7eb; border-radius: 7px; overflow: hidden; margin: 8px 0; }
+      .progress-fill { height: 100%; background: #1a365d; border-radius: 7px; }
+      .summary-box { background: #f8f9fa; border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin: 12px 0; }
+      .summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
+      .summary-row.total { border-top: 2px solid #333; margin-top: 6px; padding-top: 8px; font-weight: bold; font-size: 13px; }
+      .status-badges { display: flex; gap: 12px; margin: 8px 0; }
+      .status-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+      .badge-paid { background: #dcfce7; color: #166534; }
+      .badge-pending { background: #f3f4f6; color: #374151; }
+      .badge-overdue { background: #fef2f2; color: #991b1b; }
+      .footer { text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 8px; margin-top: 20px; }
+      .penalty-note { background: #fff3cd; border: 1px solid #ffc107; padding: 8px; border-radius: 4px; font-size: 11px; margin-top: 10px; }
+      @media print { body { padding: 10px; } }
+    </style></head><body>
+      <div class="header">
+        <h1>GREAT PEARL COFFEE</h1>
+        <h2>Loan Account Statement</h2>
+        <div class="date">Statement Date: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">📋 Loan Details</div>
+        <div class="grid grid-3">
+          <div><div class="label">Borrower</div><div class="value">${loan.employee_name}</div></div>
+          <div><div class="label">Loan Type</div><div class="value">${loan.loan_type === 'long_term' ? 'Long-Term' : 'Quick'} Loan</div></div>
+          <div><div class="label">Status</div><div class="value" style="color:${loan.status === 'active' ? '#16a34a' : loan.status === 'paid_off' ? '#1a365d' : '#dc2626'}">${loan.status.toUpperCase()}</div></div>
+          <div><div class="label">Principal Amount</div><div class="value">UGX ${(loan.loan_amount || 0).toLocaleString()}</div></div>
+          <div><div class="label">Interest Rate</div><div class="value">${isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(3)}%/day (${loan.interest_rate}%/mo)` : `${loan.interest_rate}%/month`}</div></div>
+          <div><div class="label">Duration</div><div class="value">${loan.duration_months} month(s) / ${loan.total_weeks || '—'} weeks</div></div>
+          <div><div class="label">Disbursement Date</div><div class="value">${loan.disbursed_at ? new Date(loan.disbursed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date(loan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div></div>
+          <div><div class="label">Guarantor</div><div class="value">${loan.guarantor_name || '—'}</div></div>
+          <div><div class="label">${isWeekly ? 'Weekly' : 'Monthly'} Installment</div><div class="value">UGX ${(loan.monthly_installment || 0).toLocaleString()}</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">💰 Payment Summary</div>
+        <div class="summary-box">
+          <div class="summary-row"><span>Total Repayable (Principal + Interest)</span><span>UGX ${(loan.total_repayable || 0).toLocaleString()}</span></div>
+          <div class="summary-row"><span>Penalties Applied</span><span style="color:#dc2626">UGX ${(loan.penalty_amount || 0).toLocaleString()}</span></div>
+          <div class="summary-row"><span>Total Amount Due</span><span>UGX ${((loan.total_repayable || 0) + (loan.penalty_amount || 0)).toLocaleString()}</span></div>
+          <div class="summary-row"><span>Total Paid to Date</span><span style="color:#16a34a">UGX ${totalPaid.toLocaleString()}</span></div>
+          <div class="summary-row total"><span>Outstanding Balance</span><span style="color:#dc2626">UGX ${(loan.remaining_balance || 0).toLocaleString()}</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+          <span style="font-size:11px;color:#666">Repayment Progress:</span>
+          <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${progress}%"></div></div>
+          <span style="font-size:11px;font-weight:600">${progress}%</span>
+        </div>
+        <div class="status-badges">
+          <span class="status-badge badge-paid">✅ Paid: ${paidInstallments}</span>
+          <span class="status-badge badge-pending">⏳ Pending: ${pendingInstallments}</span>
+          <span class="status-badge badge-overdue">⚠️ Overdue: ${overdueInstallments}</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">📅 Installment Schedule</div>
+        <table>
+          <thead><tr>
+            <th style="text-align:center">#</th><th>Due Date</th><th class="amount">Due (UGX)</th><th class="amount">Paid (UGX)</th><th class="amount">Penalty</th><th>Source</th><th style="text-align:center">Status</th><th>Paid Date</th>
+          </tr></thead>
+          <tbody>${installmentRows || '<tr><td colspan="8" style="text-align:center;padding:12px;color:#999">No installments recorded yet</td></tr>'}</tbody>
+        </table>
+      </div>
+
+      ${txRows ? `
+      <div class="section" style="page-break-before:auto">
+        <div class="section-title">📊 Transaction History</div>
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th>Reference</th><th class="amount">Amount (UGX)</th></tr></thead>
+          <tbody>${txRows}</tbody>
+        </table>
+      </div>` : ''}
+
+      <div class="penalty-note">
+        <strong>⚠ Terms & Conditions:</strong> Late payments incur a 20% penalty per overdue week (max 2 weeks / 40%). 
+        Recovery order: Wallet → Salary → Guarantor. Missed installments block new loan requests.
+        ${loan.loan_type === 'long_term' ? '<br/><strong>💡 Early Repayment:</strong> Long-term loans charge interest daily. Pay early via MoMo to save on interest.' : ''}
+      </div>
+
+      <div class="footer">
+        This is a system-generated loan statement for ${loan.employee_name}. All amounts in Uganda Shillings (UGX).<br/>
+        GREAT PEARL COFFEE — Loan Management System — ${new Date().getFullYear()}
+      </div>
+    </body></html>`);
+    win.document.close();
+    win.print();
+  };
+
   const getStatusBadge = (status: string) => {
     const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
       pending_guarantor: { variant: 'outline', label: 'Awaiting Guarantor' },
