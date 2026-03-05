@@ -6,9 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 import { 
   FileText, ArrowUpRight, ArrowDownLeft, Star, Briefcase, 
-  Gift, Smartphone, Loader2, ChevronDown, TrendingUp, Minus, Printer, Send
+  Gift, Smartphone, Loader2, ChevronDown, TrendingUp, Minus, Printer, Send, RotateCcw, AlertTriangle
 } from 'lucide-react';
 import { format } from 'date-fns';
 
