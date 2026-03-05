@@ -6,7 +6,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger 
 } from '@/components/ui/sheet';
 import { 
-  Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer,
+  Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer, Send,
   Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift, FileText,
   Landmark
 } from 'lucide-react';
