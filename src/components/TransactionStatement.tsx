@@ -61,7 +61,6 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const [reverseEntry, setReverseEntry] = useState<LedgerEntry | null>(null);
   const [reverseReason, setReverseReason] = useState('');
   const [reversing, setReversing] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
 
   const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'];
 
