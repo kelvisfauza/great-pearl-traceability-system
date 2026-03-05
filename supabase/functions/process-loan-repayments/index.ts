@@ -252,10 +252,10 @@ Deno.serve(async (req) => {
         await supabase.from('loans').update(loanUpdate).eq('id', loan.id)
 
         // SMS to borrower
-        const penaltyNote = penaltyAmount > 0 ? ` (includes late penalty of UGX ${penaltyAmount.toLocaleString()})` : ''
+        const penaltyNote = grossPenalty > 0 ? ` (penalty: 20% x ${overdueWeeks} week(s) = UGX ${grossPenalty.toLocaleString()})` : ''
         const smsMessage = isFullyPaid
           ? `Dear ${loan.employee_name}, your loan repayment of UGX ${totalCollected.toLocaleString()}${penaltyNote} (installment ${repayment.installment_number}) has been processed. Sources: ${deductionSources.join(', ')}. Remaining: UGX ${Math.max(0, newRemainingBalance).toLocaleString()}. - Great Pearl Coffee`
-          : `Dear ${loan.employee_name}, your loan repayment of UGX ${amountDue.toLocaleString()} (installment ${repayment.installment_number}) is OVERDUE${penaltyNote}. Only UGX ${totalCollected.toLocaleString()} could be recovered. Outstanding: UGX ${remainingAmount.toLocaleString()}. Late interest continues to accrue daily. Please top up immediately. New loan requests are BLOCKED until cleared. - Great Pearl Coffee`
+          : `Dear ${loan.employee_name}, installment ${repayment.installment_number} of UGX ${amountDue.toLocaleString()} is ${overdueWeeks} week(s) OVERDUE${penaltyNote}. Recovered UGX ${totalCollected.toLocaleString()} from ${deductionSources.length > 0 ? deductionSources.join(', ') : 'no sources'}. Still owed: UGX ${remainingAmount.toLocaleString()}. Penalty increases each week (max 2 weeks). New loans BLOCKED. - Great Pearl Coffee`
 
         await supabase.functions.invoke('send-sms', {
           body: {
