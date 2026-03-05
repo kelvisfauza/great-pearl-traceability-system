@@ -447,7 +447,7 @@ export const AccountButton = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <Button onClick={() => setShowDeposit(true)} variant="outline" className="flex items-center gap-2">
                 <Smartphone className="h-4 w-4" />
                 Deposit
@@ -464,6 +464,15 @@ export const AccountButton = () => {
               >
                 <DollarSign className="h-4 w-4" />
                 Withdraw
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setShowSendMoney(true)}
+                className="flex items-center gap-2"
+                disabled={availableLoyalty <= 0}
+              >
+                <Send className="h-4 w-4" />
+                Send Money
               </Button>
             </div>
 
