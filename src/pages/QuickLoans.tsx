@@ -578,8 +578,9 @@ const QuickLoans = () => {
       toast({ title: "Error", description: "Enter a valid amount", variant: "destructive" });
       return;
     }
-    if (amount > (selectedLoanForPayment.remaining_balance || 0)) {
-      toast({ title: "Error", description: `Amount exceeds remaining balance of UGX ${selectedLoanForPayment.remaining_balance?.toLocaleString()}`, variant: "destructive" });
+    const earlyPayoff = calculateEarlyPayoff(selectedLoanForPayment);
+    if (amount > earlyPayoff) {
+      toast({ title: "Error", description: `Max payable is UGX ${earlyPayoff.toLocaleString()} (daily pro-rata interest)`, variant: "destructive" });
       return;
     }
     if (!earlyPayMethod) {
@@ -589,7 +590,7 @@ const QuickLoans = () => {
 
     setSubmitting(true);
     try {
-      const newBalance = (selectedLoanForPayment.remaining_balance || 0) - amount;
+      const newBalance = Math.max(0, earlyPayoff - amount);
 
       // Update loan remaining balance
       const { error } = await supabase.from('loans').update({
