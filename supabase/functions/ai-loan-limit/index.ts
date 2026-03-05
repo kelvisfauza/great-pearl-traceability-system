@@ -138,7 +138,7 @@ Loan History:
 - Outstanding Balance: UGX ${outstandingBalance.toLocaleString()}
 
 Rules:
-- Loan limit MUST NOT exceed 3x monthly salary (UGX ${((emp.salary || 0) * 3).toLocaleString()})
+- Loan limit MUST NOT exceed 2x monthly salary (UGX ${((emp.salary || 0) * 2).toLocaleString()})
 - Subtract outstanding balance from the limit
 - Higher earnings consistency = higher limit
 - Defaults dramatically reduce the limit
