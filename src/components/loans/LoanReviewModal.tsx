@@ -130,29 +130,31 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
     ? Math.floor((Date.now() - new Date(borrowerDetails.join_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
     : 0;
 
-  // Generate repayment schedule preview (reducing balance)
+  // Generate repayment schedule preview (flat interest)
   const repaymentSchedule = [];
   const startDate = new Date();
   if (isWeekly) {
-    const dailyRate = loan.daily_interest_rate || 0.333;
-    const weeklyRate = (dailyRate / 100) * 7;
+    const totalInterestAmt = loan.total_repayable - loan.loan_amount;
+    const weeklyInterestPortion = Math.round(totalInterestAmt / numInstallments);
+    const weeklyPrincipalPortion = Math.round(loan.loan_amount / numInstallments);
     let balance = loan.loan_amount;
     for (let i = 1; i <= numInstallments; i++) {
       const dueDate = new Date(startDate);
       dueDate.setDate(dueDate.getDate() + (i * 7));
-      const interestPortion = Math.round(balance * weeklyRate);
-      const amt = i === numInstallments ? Math.ceil(balance + interestPortion) : installmentAmount;
-      const principalPortion = amt - interestPortion;
+      const isLast = i === numInstallments;
+      const principalPart = isLast ? balance : weeklyPrincipalPortion;
+      const interestPart = isLast ? (totalInterestAmt - weeklyInterestPortion * (numInstallments - 1)) : weeklyInterestPortion;
+      const amt = principalPart + interestPart;
       repaymentSchedule.push({
         installment: i,
         dueDate: dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
         amount: Math.ceil(amt),
-        interest: interestPortion,
-        principal: Math.max(0, principalPortion),
-        balance: Math.max(0, Math.round(balance - principalPortion)),
+        interest: interestPart,
+        principal: Math.max(0, principalPart),
+        balance: Math.max(0, Math.round(balance - principalPart)),
         source: 'Weekly deduction',
       });
-      balance = Math.max(0, balance - principalPortion);
+      balance = Math.max(0, balance - principalPart);
     }
   } else {
     for (let i = 1; i <= loan.duration_months; i++) {
@@ -264,7 +266,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
           <div><div class="label">Total Interest</div><div class="value">UGX ${(loan.total_repayable - loan.loan_amount)?.toLocaleString()}</div></div>
           <div><div class="label">Total Repayable</div><div class="value">UGX ${loan.total_repayable?.toLocaleString()}</div></div>
           <div><div class="label">${isWeekly ? 'Weekly' : 'Monthly'} Installment</div><div class="value">UGX ${installmentAmount?.toLocaleString()}</div></div>
-          <div><div class="label">Repayment Method</div><div class="value">${isWeekly ? 'Weekly (Reducing Balance)' : 'Monthly'}</div></div>
+          <div><div class="label">Repayment Method</div><div class="value">${isWeekly ? 'Weekly (Flat Interest)' : 'Monthly'}</div></div>
         </div>
       </div>
 
@@ -311,7 +313,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
       </div>
 
       <div class="section">
-        <div class="section-title">📅 Repayment Schedule (Reducing Balance)</div>
+        <div class="section-title">📅 Repayment Schedule (Flat Interest)</div>
         <table>
           <thead><tr><th>#</th><th>Due Date</th><th class="amount">Interest</th><th class="amount">Principal</th><th class="amount">Installment</th><th class="amount">Balance</th></tr></thead>
           <tbody>${scheduleRows}</tbody>
@@ -339,7 +341,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
       </div>
 
       <div class="footer">
-        This is a system-generated loan review report. All figures are calculated using reducing balance method. Subject to company lending policy.<br/>
+        This is a system-generated loan review report. Interest is calculated as flat rate on the full principal. Subject to company lending policy.<br/>
         GREAT PEARL COFFEE &mdash; Loan Management System &mdash; ${new Date().getFullYear()}
       </div>
     </body></html>`);

@@ -31,25 +31,28 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
   const { employeeName, employeeEmail, guarantorName, loanAmount, interestRate, dailyRate, durationMonths, totalWeeks, weeklyInstallment, totalRepayable, totalInterest, loanType } = loanData;
   const isLongTerm = loanType === 'long_term';
 
-  // Generate reducing balance schedule
+  // Generate flat interest schedule (equal installments)
   const schedule: { week: number; dueDate: string; installment: number; interest: number; principal: number; balance: number }[] = [];
-  const weeklyRate = (dailyRate / 100) * 7;
+  const scheduleInterest = totalRepayable - loanAmount;
+  const weeklyInterestPortion = Math.round(scheduleInterest / totalWeeks);
+  const weeklyPrincipalPortion = Math.round(loanAmount / totalWeeks);
   let balance = loanAmount;
   const startDate = new Date();
 
   for (let i = 1; i <= totalWeeks; i++) {
     const dueDate = new Date(startDate);
     dueDate.setDate(dueDate.getDate() + i * 7);
-    const interestPortion = Math.round(balance * weeklyRate);
-    const amt = i === totalWeeks ? Math.ceil(balance + interestPortion) : weeklyInstallment;
-    const principalPortion = amt - interestPortion;
-    const newBalance = Math.max(0, Math.round(balance - principalPortion));
+    const isLast = i === totalWeeks;
+    const principalPart = isLast ? balance : weeklyPrincipalPortion;
+    const interestPart = isLast ? (scheduleInterest - weeklyInterestPortion * (totalWeeks - 1)) : weeklyInterestPortion;
+    const installmentAmt = principalPart + interestPart;
+    const newBalance = Math.max(0, Math.round(balance - principalPart));
     schedule.push({
       week: i,
       dueDate: dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      installment: Math.ceil(amt),
-      interest: interestPortion,
-      principal: Math.max(0, principalPortion),
+      installment: Math.ceil(installmentAmt),
+      interest: interestPart,
+      principal: Math.max(0, principalPart),
       balance: newBalance,
     });
     balance = newBalance;
@@ -115,7 +118,7 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
             <span className="text-muted-foreground">Interest Rate:</span><span>{dailyRate.toFixed(3)}%/day ({interestRate}%/month)</span>
             <span className="text-muted-foreground">Duration:</span><span>{durationMonths} month(s) / {totalWeeks} weeks</span>
             <span className="text-muted-foreground">Loan Type:</span><span className="font-semibold">{isLongTerm ? 'Long-Term Loan' : 'Quick Loan'}</span>
-            <span className="text-muted-foreground">Repayment:</span><span>Weekly (Reducing Balance)</span>
+            <span className="text-muted-foreground">Repayment:</span><span>Weekly (Flat Interest)</span>
             {isLongTerm && (
               <>
                 <span className="text-muted-foreground">Early Repayment:</span><span className="text-green-600 font-medium">Pay only for days used</span>
@@ -165,7 +168,7 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
           )}
 
           <p className="text-center text-[10px] text-muted-foreground mt-4 border-t pt-2">
-            This is a system-generated statement. Amounts are calculated using reducing balance method. Terms subject to company policy.
+            This is a system-generated statement. Interest is calculated as flat rate on the full principal. Terms subject to company policy.
           </p>
         </div>
       </DialogContent>
