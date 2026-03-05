@@ -544,7 +544,7 @@ const QuickLoans = () => {
       };
     }
 
-    const maxFromSalary = empSalary * 3;
+    const maxFromSalary = empSalary * 2;
     const availableLimit = Math.max(0, maxFromSalary - outstanding);
     return { salary: empSalary, maxFromSalary, outstanding, activeCount, walletBal, availableLimit, riskScore: null, factors: null, isAi: false };
   };
