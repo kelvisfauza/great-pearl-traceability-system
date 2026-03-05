@@ -117,8 +117,12 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
     .filter(l => l.status === 'active')
     .reduce((sum, l) => sum + (l.monthly_installment || 0), 0);
 
-  const newMonthlyInstallment = loan.monthly_installment || Math.ceil(loan.total_repayable / loan.duration_months);
-  const totalMonthlyAfterApproval = totalMonthlyObligations + newMonthlyInstallment;
+  const isWeekly = loan.repayment_frequency === 'weekly';
+  const numInstallments = isWeekly 
+    ? (loan.total_weeks || Math.ceil((loan.duration_months * 30) / 7))
+    : loan.duration_months;
+  const installmentAmount = loan.monthly_installment || Math.ceil(loan.total_repayable / numInstallments);
+  const totalMonthlyAfterApproval = totalMonthlyObligations + (isWeekly ? installmentAmount * 4 : installmentAmount); // convert weekly to monthly equivalent for ratio
   const salary = borrowerDetails?.salary || 0;
   const debtToIncomeRatio = salary > 0 ? ((totalMonthlyAfterApproval / salary) * 100).toFixed(1) : 'N/A';
 
@@ -129,16 +133,30 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
   // Generate repayment schedule preview
   const repaymentSchedule = [];
   const startDate = new Date();
-  for (let i = 1; i <= loan.duration_months; i++) {
-    const dueDate = new Date(startDate);
-    dueDate.setMonth(dueDate.getMonth() + i);
-    dueDate.setDate(1);
-    repaymentSchedule.push({
-      installment: i,
-      dueDate: dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-      amount: newMonthlyInstallment,
-      source: 'Salary deduction',
-    });
+  if (isWeekly) {
+    for (let i = 1; i <= numInstallments; i++) {
+      const dueDate = new Date(startDate);
+      dueDate.setDate(dueDate.getDate() + (i * 7));
+      const amt = i === numInstallments ? loan.total_repayable - (installmentAmount * (numInstallments - 1)) : installmentAmount;
+      repaymentSchedule.push({
+        installment: i,
+        dueDate: dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        amount: Math.ceil(amt),
+        source: 'Weekly deduction',
+      });
+    }
+  } else {
+    for (let i = 1; i <= loan.duration_months; i++) {
+      const dueDate = new Date(startDate);
+      dueDate.setMonth(dueDate.getMonth() + i);
+      dueDate.setDate(1);
+      repaymentSchedule.push({
+        installment: i,
+        dueDate: dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        amount: installmentAmount,
+        source: 'Salary deduction',
+      });
+    }
   }
 
   // Risk indicators
