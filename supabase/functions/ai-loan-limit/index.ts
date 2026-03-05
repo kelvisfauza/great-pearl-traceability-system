@@ -188,7 +188,7 @@ Return ONLY the JSON object, no explanation.`;
       parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
     } catch {
       // Fallback: simple salary-based calculation
-      const fallbackLimit = Math.max(0, (emp.salary || 0) * 3 - outstandingBalance);
+      const fallbackLimit = Math.max(0, (emp.salary || 0) * 2 - outstandingBalance);
       parsed = {
         risk_score: 50,
         loan_limit: fallbackLimit,
