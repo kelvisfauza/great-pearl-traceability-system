@@ -6,7 +6,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger 
 } from '@/components/ui/sheet';
 import { 
-  Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer,
+  Wallet, DollarSign, TrendingUp, Plus, Smartphone, Printer, Send,
   Clock, CheckCircle, XCircle, AlertCircle, Star, Zap, Award, Gift, FileText,
   Landmark
 } from 'lucide-react';
@@ -21,6 +21,7 @@ import { useWithdrawalControl } from '@/hooks/useWithdrawalControl';
 import { MoneyRequestModal } from './MoneyRequestModal';
 import { WithdrawalModal } from './WithdrawalModal';
 import { DepositModal } from './DepositModal';
+import { SendMoneyModal } from './SendMoneyModal';
 import { TransactionStatement } from './TransactionStatement';
 import { format } from 'date-fns';
 
@@ -42,6 +43,7 @@ export const AccountButton = () => {
   const [showMoneyRequest, setShowMoneyRequest] = useState(false);
   const [showWithdrawal, setShowWithdrawal] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
+  const [showSendMoney, setShowSendMoney] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
   const [activeLoanTotal, setActiveLoanTotal] = useState(0);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
@@ -445,7 +447,7 @@ export const AccountButton = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <Button onClick={() => setShowDeposit(true)} variant="outline" className="flex items-center gap-2">
                 <Smartphone className="h-4 w-4" />
                 Deposit
@@ -462,6 +464,15 @@ export const AccountButton = () => {
               >
                 <DollarSign className="h-4 w-4" />
                 Withdraw
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setShowSendMoney(true)}
+                className="flex items-center gap-2"
+                disabled={availableLoyalty <= 0}
+              >
+                <Send className="h-4 w-4" />
+                Send Money
               </Button>
             </div>
 
@@ -570,6 +581,7 @@ export const AccountButton = () => {
         availableAmount={availableLoyalty}
       />
       <DepositModal open={showDeposit} onOpenChange={setShowDeposit} />
+      <SendMoneyModal open={showSendMoney} onOpenChange={setShowSendMoney} availableBalance={availableLoyalty} />
     </>
   );
 };
