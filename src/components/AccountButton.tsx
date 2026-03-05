@@ -581,6 +581,7 @@ export const AccountButton = () => {
         availableAmount={availableLoyalty}
       />
       <DepositModal open={showDeposit} onOpenChange={setShowDeposit} />
+      <SendMoneyModal open={showSendMoney} onOpenChange={setShowSendMoney} availableBalance={availableLoyalty} />
     </>
   );
 };
