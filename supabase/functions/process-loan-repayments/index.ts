@@ -16,13 +16,14 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const today = new Date().toISOString().split('T')[0]
+    const todayDate = new Date(today)
     console.log(`🏦 Processing loan repayments for ${today}`)
 
     // Get all active loans with due repayments today (or overdue)
     const { data: dueRepayments, error: repErr } = await supabase
       .from('loan_repayments')
       .select('*, loans(*)')
-      .eq('status', 'pending')
+      .in('status', ['pending', 'overdue'])
       .lte('due_date', today)
       .order('due_date', { ascending: true })
 
@@ -52,7 +53,17 @@ Deno.serve(async (req) => {
       const borrowerEmail = loan.employee_email
       const guarantorEmail = loan.guarantor_email
 
-      console.log(`\n💰 Processing repayment #${repayment.installment_number} for ${borrowerEmail}: UGX ${amountDue}`)
+      // Calculate overdue days and penalty
+      const dueDate = new Date(repayment.due_date)
+      const overdueDays = Math.max(0, Math.floor((todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+      
+      // Late penalty: daily interest continues to accrue on the overdue amount
+      // Use the loan's daily interest rate on the unpaid installment amount
+      const dailyRate = loan.daily_interest_rate || (loan.interest_rate / 30) || 0.333
+      const penaltyAmount = overdueDays > 0 ? Math.round(amountDue * (dailyRate / 100) * overdueDays) : 0
+      const totalOwed = amountDue + penaltyAmount - (repayment.amount_paid || 0)
+
+      console.log(`\n💰 Processing repayment #${repayment.installment_number} for ${borrowerEmail}: UGX ${amountDue} (overdue ${overdueDays} days, penalty UGX ${penaltyAmount})`)
 
       try {
         // Step 1: Get borrower's unified user ID and wallet balance
@@ -64,7 +75,7 @@ Deno.serve(async (req) => {
           continue
         }
 
-        // Get borrower's loyalty wallet balance (same types as dashboard)
+        // Get borrower's loyalty wallet balance
         const { data: walletEntries } = await supabase
           .from('ledger_entries')
           .select('amount')
@@ -74,14 +85,14 @@ Deno.serve(async (req) => {
         const walletBalance = (walletEntries || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0)
         console.log(`  Wallet balance: UGX ${walletBalance}`)
 
-        let remainingAmount = amountDue
+        let remainingAmount = totalOwed
         let deductedFromWallet = 0
         let deductedFromSalary = 0
         let deductedFromGuarantor = 0
         let deductionSources: string[] = []
 
         // Step 2: Deduct from wallet first
-        if (walletBalance > 0) {
+        if (walletBalance > 0 && remainingAmount > 0) {
           deductedFromWallet = Math.min(walletBalance, remainingAmount)
           remainingAmount -= deductedFromWallet
 
@@ -94,7 +105,8 @@ Deno.serve(async (req) => {
               loan_id: loan.id,
               installment: repayment.installment_number,
               source: 'wallet',
-              description: `Loan repayment installment ${repayment.installment_number}`
+              penalty_included: penaltyAmount,
+              description: `Loan repayment installment ${repayment.installment_number}${penaltyAmount > 0 ? ` (incl. penalty UGX ${penaltyAmount})` : ''}`
             }
           })
           deductionSources.push(`Wallet: UGX ${deductedFromWallet.toLocaleString()}`)
@@ -103,14 +115,13 @@ Deno.serve(async (req) => {
 
         // Step 3: If wallet insufficient, deduct from salary balance
         if (remainingAmount > 0) {
-          // Get borrower's full balance including salary
           const { data: allEntries } = await supabase
             .from('ledger_entries')
             .select('amount')
             .eq('user_id', borrowerUserId)
 
           const totalBalance = (allEntries || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0)
-          const salaryBalance = totalBalance - walletBalance + deductedFromWallet // salary portion
+          const salaryBalance = totalBalance - walletBalance + deductedFromWallet
 
           if (salaryBalance > 0) {
             deductedFromSalary = Math.min(salaryBalance, remainingAmount)
@@ -140,7 +151,6 @@ Deno.serve(async (req) => {
           const { data: guarantorUserId } = await supabase.rpc('get_unified_user_id', { input_email: guarantorEmail })
 
           if (guarantorUserId) {
-            // Get guarantor's total balance
             const { data: guarantorEntries } = await supabase
               .from('ledger_entries')
               .select('amount')
@@ -183,32 +193,49 @@ Deno.serve(async (req) => {
 
         const totalCollected = deductedFromWallet + deductedFromSalary + deductedFromGuarantor
         const isFullyPaid = remainingAmount <= 0
-        const repaymentStatus = isFullyPaid ? 'paid' : (totalCollected > 0 ? 'partial' : 'overdue')
+        const repaymentStatus = isFullyPaid ? 'paid' : 'overdue'
 
         // Update repayment record
         await supabase.from('loan_repayments').update({
-          amount_paid: totalCollected,
+          amount_paid: (repayment.amount_paid || 0) + totalCollected,
           paid_date: isFullyPaid ? today : null,
           status: repaymentStatus,
           deducted_from: deductionSources.join('; '),
-          payment_reference: `AUTO-${today}`
+          payment_reference: `AUTO-${today}`,
+          penalty_applied: penaltyAmount,
+          overdue_days: overdueDays
         }).eq('id', repayment.id)
 
         // Update loan paid_amount and remaining_balance
         const newPaidAmount = (loan.paid_amount || 0) + totalCollected
-        const newRemainingBalance = loan.total_repayable - newPaidAmount
+        const newRemainingBalance = loan.total_repayable + (loan.penalty_amount || 0) + penaltyAmount - newPaidAmount
 
         const loanUpdate: any = {
           paid_amount: newPaidAmount,
           remaining_balance: Math.max(0, newRemainingBalance),
+          penalty_amount: (loan.penalty_amount || 0) + penaltyAmount,
+        }
+
+        // Track missed installments and escalation
+        if (!isFullyPaid) {
+          const newMissedCount = (loan.missed_installments || 0) + (repayment.status === 'pending' ? 1 : 0) // only count first miss
+          loanUpdate.missed_installments = newMissedCount
+
+          // After 1 missed installment → mark as defaulted (blocks new loans)
+          if (newMissedCount >= 1) {
+            loanUpdate.is_defaulted = true
+            console.log(`  🚨 Loan marked as DEFAULTED after ${newMissedCount} missed installment(s)`)
+          }
         }
 
         // Check if loan is fully paid off
         if (newRemainingBalance <= 0) {
           loanUpdate.status = 'paid_off'
+          loanUpdate.is_defaulted = false
+          loanUpdate.missed_installments = 0
           console.log(`  🎉 Loan fully paid off!`)
         } else {
-          // Set next deduction date based on repayment frequency
+          // Set next deduction date
           const isWeekly = loan.repayment_frequency === 'weekly'
           const nextDate = new Date(today)
           if (isWeekly) {
@@ -223,11 +250,10 @@ Deno.serve(async (req) => {
         await supabase.from('loans').update(loanUpdate).eq('id', loan.id)
 
         // SMS to borrower
+        const penaltyNote = penaltyAmount > 0 ? ` (includes late penalty of UGX ${penaltyAmount.toLocaleString()})` : ''
         const smsMessage = isFullyPaid
-          ? `Dear ${loan.employee_name}, your loan repayment of UGX ${amountDue.toLocaleString()} (installment ${repayment.installment_number}/${loan.duration_months}) has been processed. Sources: ${deductionSources.join(', ')}. Remaining balance: UGX ${Math.max(0, newRemainingBalance).toLocaleString()}. - Great Pearl Coffee`
-          : remainingAmount > 0 && totalCollected > 0
-          ? `Dear ${loan.employee_name}, partial loan repayment of UGX ${totalCollected.toLocaleString()} collected (installment ${repayment.installment_number}). UGX ${remainingAmount.toLocaleString()} still outstanding. Please top up your wallet. - Great Pearl Coffee`
-          : `Dear ${loan.employee_name}, your loan repayment of UGX ${amountDue.toLocaleString()} (installment ${repayment.installment_number}) is OVERDUE. Insufficient funds in all sources. Please top up immediately. - Great Pearl Coffee`
+          ? `Dear ${loan.employee_name}, your loan repayment of UGX ${totalCollected.toLocaleString()}${penaltyNote} (installment ${repayment.installment_number}) has been processed. Sources: ${deductionSources.join(', ')}. Remaining: UGX ${Math.max(0, newRemainingBalance).toLocaleString()}. - Great Pearl Coffee`
+          : `Dear ${loan.employee_name}, your loan repayment of UGX ${amountDue.toLocaleString()} (installment ${repayment.installment_number}) is OVERDUE${penaltyNote}. Only UGX ${totalCollected.toLocaleString()} could be recovered. Outstanding: UGX ${remainingAmount.toLocaleString()}. Late interest continues to accrue daily. Please top up immediately. New loan requests are BLOCKED until cleared. - Great Pearl Coffee`
 
         await supabase.functions.invoke('send-sms', {
           body: {
@@ -244,6 +270,7 @@ Deno.serve(async (req) => {
           borrower: borrowerEmail,
           installment: repayment.installment_number,
           amount_due: amountDue,
+          penalty: penaltyAmount,
           collected: totalCollected,
           shortfall: remainingAmount,
           sources: deductionSources,
