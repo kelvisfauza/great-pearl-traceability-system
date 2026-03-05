@@ -302,7 +302,7 @@ const QuickLoans = () => {
         daily_interest_rate: dailyRate,
         total_repayable: Math.ceil(total),
         duration_months: months,
-        monthly_installment: Math.ceil(weekly), // store weekly installment in this field
+        monthly_installment: Math.ceil(weekly),
         weekly_installment: Math.ceil(weekly),
         total_weeks: totalWeeks,
         remaining_balance: Math.ceil(total),
@@ -313,6 +313,7 @@ const QuickLoans = () => {
         guarantor_name: guarantor.name,
         guarantor_phone: guarantor.phone || '',
         guarantor_approval_code: approvalCode,
+        loan_type: loanType,
       } as any);
 
       if (error) throw error;
