@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { 
   FileText, ArrowUpRight, ArrowDownLeft, Star, Briefcase, 
-  Gift, Smartphone, Loader2, ChevronDown, TrendingUp, Minus, Printer
+  Gift, Smartphone, Loader2, ChevronDown, TrendingUp, Minus, Printer, Send
 } from 'lucide-react';
 import { format } from 'date-fns';
 
