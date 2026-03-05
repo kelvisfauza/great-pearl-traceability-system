@@ -1203,14 +1203,24 @@ const QuickLoans = () => {
                     <Card className="bg-muted/50">
                       <CardContent className="p-4 space-y-1 text-sm">
                         <div className="flex justify-between"><span>Loan Amount:</span><span>UGX {selectedLoanForPayment.loan_amount?.toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span>Total Repayable:</span><span>UGX {selectedLoanForPayment.total_repayable?.toLocaleString()}</span></div>
-                        <div className="flex justify-between font-semibold text-primary"><span>Remaining Balance:</span><span>UGX {selectedLoanForPayment.remaining_balance?.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Original Total:</span><span>UGX {selectedLoanForPayment.total_repayable?.toLocaleString()}</span></div>
+                        {selectedLoanForPayment.start_date && (() => {
+                          const ep = calculateEarlyPayoff(selectedLoanForPayment);
+                          const dh = Math.max(1, Math.floor((Date.now() - new Date(selectedLoanForPayment.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+                          return (
+                            <>
+                              <div className="flex justify-between"><span>Days Held:</span><span>{dh} day(s)</span></div>
+                              <div className="flex justify-between font-semibold text-primary"><span>Early Payoff (daily interest):</span><span>UGX {ep.toLocaleString()}</span></div>
+                              <div className="mt-1 p-2 bg-accent/50 rounded text-xs">💡 Interest calculated daily – pay sooner, save more!</div>
+                            </>
+                          );
+                        })()}
                       </CardContent>
                     </Card>
                     <div>
                       <Label>Payment Amount (UGX)</Label>
                       <Input type="number" value={earlyPayAmount} onChange={e => setEarlyPayAmount(e.target.value)} placeholder="Enter amount to pay" />
-                      <p className="text-xs text-muted-foreground mt-1">Max: UGX {selectedLoanForPayment.remaining_balance?.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Max: UGX {calculateEarlyPayoff(selectedLoanForPayment).toLocaleString()}</p>
                     </div>
                     <div>
                       <Label>Payment Method</Label>
