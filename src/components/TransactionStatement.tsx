@@ -27,6 +27,9 @@ const ENTRY_CONFIG: Record<string, { label: string; icon: React.ElementType; col
   WITHDRAWAL: { label: 'Withdrawal', icon: ArrowUpRight, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
   BONUS: { label: 'Bonus', icon: Gift, color: 'text-purple-600', badgeClass: 'bg-purple-100 text-purple-800' },
   ADJUSTMENT: { label: 'Adjustment', icon: Minus, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' },
+  LOAN_DISBURSEMENT: { label: 'Loan Disbursement', icon: Briefcase, color: 'text-blue-600', badgeClass: 'bg-blue-100 text-blue-800' },
+  LOAN_REPAYMENT: { label: 'Loan Repayment', icon: ArrowUpRight, color: 'text-orange-600', badgeClass: 'bg-orange-100 text-orange-800' },
+  LOAN_RECOVERY: { label: 'Loan Recovery (Wallet)', icon: ArrowUpRight, color: 'text-red-600', badgeClass: 'bg-red-100 text-red-800' },
 };
 
 const DEFAULT_CONFIG = { label: 'Transaction', icon: FileText, color: 'text-gray-600', badgeClass: 'bg-gray-100 text-gray-800' };
