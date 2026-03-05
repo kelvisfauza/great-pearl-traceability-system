@@ -76,8 +76,12 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
   // Check if this is a queue processing request (no auth needed, uses service role internally)
-  const url = new URL(req.url)
-  if (url.searchParams.get('action') === 'process_queue') {
+  let rawBody = ''
+  try { rawBody = await req.text() } catch {}
+  let parsedBody: any = {}
+  try { parsedBody = JSON.parse(rawBody) } catch {}
+  
+  if (parsedBody.action === 'process_queue') {
     console.log('Processing SMS queue...')
     try {
       const { data: pendingMessages, error: fetchError } = await supabase
