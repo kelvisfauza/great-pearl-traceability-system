@@ -85,6 +85,7 @@ const QuickLoans = () => {
     fetchLoans();
     fetchEmployees();
     checkGuarantorRequests();
+    fetchGuaranteedLoans();
     fetchWalletBalances();
     fetchAiLoanLimit();
   }, [employee]);
