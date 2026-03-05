@@ -65,30 +65,17 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
       const senderEmail = employee?.email || user?.email;
       if (!senderEmail) throw new Error('Sender not identified');
 
-      // Resolve sender unified ID
-      const { data: senderUserId } = await supabase.rpc('get_unified_user_id', { input_email: senderEmail });
-      if (!senderUserId) throw new Error('Could not resolve sender account');
-
-      // Resolve receiver unified ID
-      const { data: receiverUserId } = await supabase.rpc('get_unified_user_id', { input_email: selectedRecipient.email });
-      if (!receiverUserId) throw new Error('Could not resolve receiver account');
-
       const ref = `SEND-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
-      // Use SECURITY DEFINER function for atomic transfer
-      const { data: transferResult, error: transferErr } = await supabase.rpc('transfer_wallet_funds', {
-        p_sender_user_id: senderUserId,
-        p_receiver_user_id: receiverUserId,
+      // Server-side secure transfer (resolves sender/receiver internally)
+      const { data: transferResult, error: transferErr } = await supabase.rpc('transfer_wallet_funds_secure', {
+        p_receiver_email: selectedRecipient.email,
         p_amount: parsedAmount,
         p_reference: ref,
-        p_sender_email: senderEmail,
-        p_sender_name: employee?.name || 'Unknown',
-        p_receiver_email: selectedRecipient.email,
-        p_receiver_name: selectedRecipient.name,
       });
 
       if (transferErr) throw new Error(transferErr.message);
-      
+
       const result = typeof transferResult === 'string' ? JSON.parse(transferResult) : transferResult;
       if (!result?.success) throw new Error(result?.error || 'Transfer failed');
 
