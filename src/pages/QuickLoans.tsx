@@ -658,7 +658,27 @@ const QuickLoans = () => {
         }
       });
 
-      if (fnErr) throw new Error(fnErr.message || 'Collection failed');
+      // supabase.functions.invoke puts the response body in data even on non-2xx
+      // but fnErr is set for non-2xx status codes
+      if (fnErr) {
+        // Try to extract the actual error message from the response
+        let errorMsg = 'Payment collection failed';
+        try {
+          // fnErr.context contains the Response object
+          if (result?.message) {
+            errorMsg = result.message;
+          } else if (result?.error) {
+            errorMsg = result.error;
+          } else {
+            const ctx = (fnErr as any)?.context;
+            if (ctx && typeof ctx.json === 'function') {
+              const body = await ctx.json();
+              errorMsg = body?.message || body?.error || errorMsg;
+            }
+          }
+        } catch {}
+        throw new Error(errorMsg);
+      }
       if (result?.status === 'error' || result?.error) {
         throw new Error(result?.message || result?.error || 'Payment collection failed');
       }
