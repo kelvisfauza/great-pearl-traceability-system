@@ -1923,6 +1923,10 @@ export type Database = {
           status: string
           training_progress: number | null
           updated_at: string
+          wallet_frozen: boolean | null
+          wallet_frozen_at: string | null
+          wallet_frozen_by: string | null
+          wallet_frozen_reason: string | null
         }
         Insert: {
           account_name?: string | null
@@ -1957,6 +1961,10 @@ export type Database = {
           status?: string
           training_progress?: number | null
           updated_at?: string
+          wallet_frozen?: boolean | null
+          wallet_frozen_at?: string | null
+          wallet_frozen_by?: string | null
+          wallet_frozen_reason?: string | null
         }
         Update: {
           account_name?: string | null
@@ -1991,6 +1999,10 @@ export type Database = {
           status?: string
           training_progress?: number | null
           updated_at?: string
+          wallet_frozen?: boolean | null
+          wallet_frozen_at?: string | null
+          wallet_frozen_by?: string | null
+          wallet_frozen_reason?: string | null
         }
         Relationships: []
       }
