@@ -390,11 +390,10 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                 <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-1">
                     <AlertTriangle className="h-4 w-4 text-destructive" />
-                    <span className="font-medium text-sm text-destructive">Confirm reversal</span>
+                    <span className="font-medium text-sm text-destructive">Request reversal</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    The money will be returned to your wallet and deducted from the recipient's wallet. Both of you will be notified via SMS.
-                    If the recipient has insufficient funds, their balance will go negative.
+                    Your reversal request will be sent to an administrator for approval. Once approved, the money will be returned to your wallet and deducted from the recipient. Both parties will be notified via SMS.
                   </p>
                 </div>
                 <div className="space-y-1.5 text-sm">
