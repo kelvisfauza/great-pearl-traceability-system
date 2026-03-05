@@ -229,23 +229,10 @@ const QuickLoans = () => {
     const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
     const { totalDays, totalWeeks } = getLoanSchedule(months);
 
-    // Reducing balance: weekly installment = P * r * (1+r)^n / ((1+r)^n - 1)
-    const weeklyRate = (dailyRate / 100) * 7;
-    let weekly = 0;
-    let total = 0;
-    let interest = 0;
-
-    if (totalWeeks > 0 && weeklyRate > 0) {
-      const factor = Math.pow(1 + weeklyRate, totalWeeks);
-      weekly = amount * (weeklyRate * factor) / (factor - 1);
-      weekly = Math.ceil(weekly);
-      total = weekly * totalWeeks;
-      interest = total - amount;
-    } else if (totalWeeks > 0) {
-      weekly = Math.ceil(amount / totalWeeks);
-      total = amount;
-      interest = 0;
-    }
+    // Flat/simple interest: Interest = Principal × monthlyRate% × months
+    const interest = amount * (monthlyRate / 100) * months;
+    const total = Math.ceil(amount + interest);
+    const weekly = totalWeeks > 0 ? Math.ceil(total / totalWeeks) : 0;
 
     return { amount, months, dailyRate, monthlyRate, totalDays, totalWeeks, interest, total, weekly };
   };
