@@ -1350,25 +1350,30 @@ const QuickLoans = () => {
                           <TableCell>{getStatusBadge(loan.status)}</TableCell>
                           <TableCell>UGX {loan.remaining_balance?.toLocaleString()}</TableCell>
                           <TableCell>
-                            {loan.status === 'active' && (loan.remaining_balance || 0) > 0 && (
-                              <div className="flex gap-1 flex-wrap">
-                                <Button size="sm" variant="outline" onClick={() => {
-                                  setSelectedLoanForPayment(loan);
-                                  setShowEarlyPayDialog(true);
-                                }}>
-                                  <CreditCard className="mr-1 h-3 w-3" /> Pay Early
-                                </Button>
-                                <Button size="sm" variant="default" onClick={() => {
-                                  setMomoRepayLoan(loan);
-                                  setMomoRepayPhone(employee?.phone || '');
-                                  setMomoRepayAmount('');
-                                  setMomoRepayStatus('idle');
-                                  setShowMomoRepayDialog(true);
-                                }}>
-                                  <Phone className="mr-1 h-3 w-3" /> Repay via MoMo
-                                </Button>
-                              </div>
-                            )}
+                            <div className="flex gap-1 flex-wrap">
+                              <Button size="sm" variant="ghost" onClick={() => printLoanStatement(loan)}>
+                                <FileText className="mr-1 h-3 w-3" /> Statement
+                              </Button>
+                              {loan.status === 'active' && (loan.remaining_balance || 0) > 0 && (
+                                <>
+                                  <Button size="sm" variant="outline" onClick={() => {
+                                    setSelectedLoanForPayment(loan);
+                                    setShowEarlyPayDialog(true);
+                                  }}>
+                                    <CreditCard className="mr-1 h-3 w-3" /> Pay Early
+                                  </Button>
+                                  <Button size="sm" variant="default" onClick={() => {
+                                    setMomoRepayLoan(loan);
+                                    setMomoRepayPhone(employee?.phone || '');
+                                    setMomoRepayAmount('');
+                                    setMomoRepayStatus('idle');
+                                    setShowMomoRepayDialog(true);
+                                  }}>
+                                    <Phone className="mr-1 h-3 w-3" /> Repay via MoMo
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
