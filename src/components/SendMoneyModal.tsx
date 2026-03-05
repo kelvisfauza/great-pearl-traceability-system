@@ -189,12 +189,12 @@ export const SendMoneyModal: React.FC<SendMoneyModalProps> = ({
                   <SelectValue placeholder="Select employee to send to" />
                 </SelectTrigger>
                 <SelectContent>
+                  {employees.length === 0 && (
+                    <div className="p-2 text-sm text-muted-foreground text-center">No employees found</div>
+                  )}
                   {employees.map(emp => (
                     <SelectItem key={emp.id} value={emp.id}>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-3 w-3" />
-                        {emp.name} ({emp.email})
-                      </div>
+                      {emp.name} — {emp.email}
                     </SelectItem>
                   ))}
                 </SelectContent>
