@@ -28,6 +28,19 @@ const AdminDashboard = () => {
   
   const { onlineCount, loading: presenceLoading } = usePresenceList();
 
+  const { data: pendingLoans } = useQuery({
+    queryKey: ['admin-pending-loans'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('loans')
+        .select('id, employee_name, loan_amount, loan_type, created_at')
+        .eq('status', 'pending_admin')
+        .order('created_at', { ascending: false });
+      return data || [];
+    },
+    refetchInterval: 15000,
+  });
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
