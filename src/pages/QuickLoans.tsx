@@ -1519,6 +1519,13 @@ const QuickLoans = () => {
                                   }}>
                                     <Phone className="mr-1 h-3 w-3" /> Repay via MoMo
                                   </Button>
+                                  <Button size="sm" variant="secondary" onClick={() => {
+                                    setWalletRepayLoan(loan);
+                                    setWalletRepayAmount('');
+                                    setShowWalletRepayDialog(true);
+                                  }}>
+                                    <Wallet className="mr-1 h-3 w-3" /> Pay from Wallet
+                                  </Button>
                                 </>
                               )}
                             </div>
