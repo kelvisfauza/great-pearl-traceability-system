@@ -734,7 +734,7 @@ const QuickLoans = () => {
                       <p className="text-sm text-muted-foreground">
                         <strong>{pendingGuarantorLoan.employee_name}</strong> wants you to guarantee a loan of{' '}
                         <strong>UGX {pendingGuarantorLoan.loan_amount?.toLocaleString()}</strong> for{' '}
-                        {pendingGuarantorLoan.duration_months} month(s). If they fail to repay, the amount will be deducted from your salary.
+                        {pendingGuarantorLoan.duration_months} month(s) ({pendingGuarantorLoan.repayment_frequency === 'weekly' ? 'weekly repayments' : 'monthly repayments'}). If they fail to repay, the amount will be deducted from your salary.
                       </p>
                     </div>
                     <div className="flex items-end gap-3">
