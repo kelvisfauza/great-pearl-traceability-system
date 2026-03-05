@@ -363,9 +363,9 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
                   </div>
 
                   <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
-                    <strong>Recovery Plan:</strong> Monthly installments of UGX {newMonthlyInstallment.toLocaleString()} will be auto-deducted from borrower's salary. 
+                    <strong>Recovery Plan:</strong> {isWeekly ? 'Weekly' : 'Monthly'} installments of UGX {installmentAmount.toLocaleString()} will be auto-deducted from borrower's account ({numInstallments} {isWeekly ? 'weeks' : 'months'}). 
                     If borrower defaults, the guarantor ({loan.guarantor_name}) becomes liable for the remaining balance. 
-                    System will flag overdue payments and escalate recovery through salary deductions from both borrower and guarantor if necessary.
+                    System will flag overdue payments and escalate recovery through deductions from both borrower and guarantor if necessary.
                   </div>
                 </CardContent>
               </Card>
