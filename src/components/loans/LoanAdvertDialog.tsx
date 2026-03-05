@@ -36,7 +36,25 @@ const LoanAdvertDialog = () => {
         .order("name");
 
       if (error) throw error;
-      return data as Employee[];
+
+      // Fetch outstanding loan balances for all employees
+      const { data: activeLoans } = await supabase
+        .from("loans")
+        .select("employee_email, remaining_balance, loan_amount, status")
+        .in("status", ["active", "pending_guarantor", "pending_admin"]);
+
+      // Build a map of email -> total outstanding balance
+      const outstandingMap: Record<string, number> = {};
+      (activeLoans || []).forEach((loan: any) => {
+        const email = loan.employee_email;
+        const balance = Number(loan.remaining_balance) || Number(loan.loan_amount) || 0;
+        outstandingMap[email] = (outstandingMap[email] || 0) + balance;
+      });
+
+      return (data as Employee[]).map((emp) => ({
+        ...emp,
+        outstanding: outstandingMap[emp.email] || 0,
+      }));
     },
     enabled: open,
   });
