@@ -73,6 +73,10 @@ const QuickLoans = () => {
   const [momoRepayPhone, setMomoRepayPhone] = useState('');
   const [momoRepayLoading, setMomoRepayLoading] = useState(false);
   const [momoRepayStatus, setMomoRepayStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
+  const [showWalletRepayDialog, setShowWalletRepayDialog] = useState(false);
+  const [walletRepayLoan, setWalletRepayLoan] = useState<any>(null);
+  const [walletRepayAmount, setWalletRepayAmount] = useState('');
+  const [walletRepayLoading, setWalletRepayLoading] = useState(false);
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
