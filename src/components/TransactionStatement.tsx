@@ -243,7 +243,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${config.badgeClass}`}>
-                      {config.label}
+                      {getEntryLabel(entry)}
                     </Badge>
                     {activityLabel && (
                       <span className="text-[10px] text-muted-foreground">{activityLabel}</span>
