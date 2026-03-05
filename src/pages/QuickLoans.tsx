@@ -18,20 +18,18 @@ import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
 import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 
-// Monthly interest rates (used to derive daily rate = monthly_rate / 30)
-const MONTHLY_INTEREST_RATES: Record<number, number> = {
-  1: 10,
-  2: 10,
-  3: 10,
-  4: 10,
-  5: 10,
-  6: 10,
+// Loan types with their monthly interest rates
+type LoanType = 'quick' | 'long_term';
+
+const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; description: string }> = {
+  quick: { label: 'Quick Loan', monthlyRate: 10, description: '10%/month – Short-term, weekly repayments' },
+  long_term: { label: 'Long-Term Loan', monthlyRate: 15, description: '15%/month – Pay for actual days used, early repayment saves interest' },
 };
 
 // Helper: calculate daily interest rate from monthly rate
-const getDailyRate = (months: number) => {
-  const monthlyRate = MONTHLY_INTEREST_RATES[months] || 10;
-  return monthlyRate / 30; // e.g. 10% / 30 = 0.333% per day
+const getDailyRate = (loanType: LoanType) => {
+  const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
+  return monthlyRate / 30;
 };
 
 // Helper: calculate total days and weeks for a duration
