@@ -345,6 +345,7 @@ const QuickLoans = () => {
         weeklyInstallment: weekly,
         totalRepayable: total,
         totalInterest: interest,
+        loanType,
       });
       setShowRepaymentSlip(true);
 

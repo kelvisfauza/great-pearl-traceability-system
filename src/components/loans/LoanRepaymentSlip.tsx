@@ -19,6 +19,7 @@ interface LoanRepaymentSlipProps {
     weeklyInstallment: number;
     totalRepayable: number;
     totalInterest: number;
+    loanType?: 'quick' | 'long_term';
   } | null;
 }
 
