@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText } from 'lucide-react';
+import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
@@ -63,6 +63,7 @@ const QuickLoans = () => {
   const [submitting, setSubmitting] = useState(false);
   const [guarantorCode, setGuarantorCode] = useState('');
   const [pendingGuarantorLoan, setPendingGuarantorLoan] = useState<any>(null);
+  const [guaranteedLoans, setGuaranteedLoans] = useState<any[]>([]);
   const [reviewLoan, setReviewLoan] = useState<any>(null);
   const [showRepaymentSlip, setShowRepaymentSlip] = useState(false);
   const [repaymentSlipData, setRepaymentSlipData] = useState<any>(null);
@@ -84,6 +85,7 @@ const QuickLoans = () => {
     fetchLoans();
     fetchEmployees();
     checkGuarantorRequests();
+    fetchGuaranteedLoans();
     fetchWalletBalances();
     fetchAiLoanLimit();
   }, [employee]);
@@ -210,6 +212,52 @@ const QuickLoans = () => {
     }
   };
 
+  const fetchGuaranteedLoans = async () => {
+    if (!employee) return;
+    const { data } = await supabase.from('loans').select('*')
+      .eq('guarantor_email', employee.email)
+      .order('created_at', { ascending: false });
+    setGuaranteedLoans(data || []);
+  };
+
+  const handleRevokeGuarantee = async (loanId: string) => {
+    if (!employee) return;
+    setSubmitting(true);
+    try {
+      // Double-check loan is still in pending_admin status
+      const { data: loan } = await supabase.from('loans').select('status, employee_name, employee_phone').eq('id', loanId).single();
+      if (!loan || loan.status !== 'pending_admin') {
+        toast({ title: "Cannot Revoke", description: "This loan has already been processed by admin.", variant: "destructive" });
+        return;
+      }
+
+      const { error } = await supabase.from('loans').update({
+        guarantor_approved: false,
+        guarantor_declined: true,
+        status: 'rejected',
+        admin_rejection_reason: `Guarantor ${employee.name} revoked their guarantee`,
+      }).eq('id', loanId);
+      if (error) throw error;
+
+      // Notify borrower
+      await supabase.functions.invoke('send-sms', {
+        body: {
+          phone: loan.employee_phone,
+          message: `Dear ${loan.employee_name}, your guarantor ${employee.name} has revoked their guarantee for your loan. The loan has been cancelled. You may request a new loan with a different guarantor. - Great Pearl Coffee`,
+          userName: loan.employee_name,
+          messageType: 'loan_guarantor_revoked'
+        }
+      });
+
+      toast({ title: "Guarantee Revoked", description: "The borrower has been notified. The loan has been cancelled." });
+      fetchGuaranteedLoans();
+      fetchLoans();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const checkGuarantorRequests = async () => {
     if (!employee) return;
@@ -1298,6 +1346,7 @@ const QuickLoans = () => {
               {isAdmin() && <TabsTrigger value="all-loans">All Loans (Admin)</TabsTrigger>}
               {isAdmin() && <TabsTrigger value="employee-limits">Employee Limits</TabsTrigger>}
               <TabsTrigger value="repayments">Repayment Schedule</TabsTrigger>
+              <TabsTrigger value="guaranteed">Guaranteed Loans</TabsTrigger>
             </TabsList>
 
             <TabsContent value="my-loans">
@@ -1506,6 +1555,16 @@ const QuickLoans = () => {
 
             <TabsContent value="repayments">
               <RepaymentSchedule myLoans={myLoans} />
+            </TabsContent>
+
+            <TabsContent value="guaranteed">
+              <GuaranteedLoansTab
+                guaranteedLoans={guaranteedLoans}
+                onRevoke={handleRevokeGuarantee}
+                submitting={submitting}
+                getStatusBadge={getStatusBadge}
+                printLoanStatement={printLoanStatement}
+              />
             </TabsContent>
           </Tabs>
       </div>
@@ -1738,6 +1797,152 @@ const RepaymentSchedule = ({ myLoans }: { myLoans: any[] }) => {
           </Card>
         );
       })}
+    </div>
+  );
+};
+
+const GuaranteedLoansTab = ({ guaranteedLoans, onRevoke, submitting, getStatusBadge, printLoanStatement }: {
+  guaranteedLoans: any[];
+  onRevoke: (loanId: string) => void;
+  submitting: boolean;
+  getStatusBadge: (status: string) => React.ReactNode;
+  printLoanStatement: (loan: any) => void;
+}) => {
+  const [repayments, setRepayments] = useState<Record<string, any[]>>({});
+  const [expandedLoan, setExpandedLoan] = useState<string | null>(null);
+
+  const fetchRepaymentsForLoan = async (loanId: string) => {
+    if (repayments[loanId]) {
+      setExpandedLoan(expandedLoan === loanId ? null : loanId);
+      return;
+    }
+    const { data } = await supabase.from('loan_repayments').select('*').eq('loan_id', loanId).order('due_date', { ascending: true });
+    setRepayments(prev => ({ ...prev, [loanId]: data || [] }));
+    setExpandedLoan(loanId);
+  };
+
+  if (guaranteedLoans.length === 0) {
+    return (
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" /> Loans I've Guaranteed</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-center text-muted-foreground py-8">You haven't guaranteed any loans yet.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" /> Loans I've Guaranteed</CardTitle>
+          <p className="text-sm text-muted-foreground">Track loans you've guaranteed and their repayment progress. You can revoke your guarantee if admin hasn't approved yet.</p>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Borrower</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Total Repayable</TableHead>
+                <TableHead>Remaining</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {guaranteedLoans.map(loan => {
+                const progress = loan.total_repayable ? Math.round(((loan.total_repayable - (loan.remaining_balance || 0)) / loan.total_repayable) * 100) : 0;
+                const canRevoke = loan.status === 'pending_admin' && !loan.admin_approved;
+                return (
+                  <React.Fragment key={loan.id}>
+                    <TableRow>
+                      <TableCell>
+                        <div className="font-medium">{loan.employee_name}</div>
+                        <div className="text-xs text-muted-foreground">{loan.employee_email}</div>
+                      </TableCell>
+                      <TableCell>UGX {(loan.loan_amount || 0).toLocaleString()}</TableCell>
+                      <TableCell>{loan.duration_months}mo</TableCell>
+                      <TableCell>UGX {(loan.total_repayable || 0).toLocaleString()}</TableCell>
+                      <TableCell>
+                        <div>UGX {(loan.remaining_balance || 0).toLocaleString()}</div>
+                        {loan.status === 'active' && (
+                          <div className="mt-1">
+                            <div className="h-1.5 w-20 bg-muted rounded-full overflow-hidden">
+                              <div className="h-full bg-primary rounded-full" style={{ width: `${progress}%` }} />
+                            </div>
+                            <span className="text-[10px] text-muted-foreground">{progress}% paid</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(loan.status)}</TableCell>
+                      <TableCell className="text-sm">{new Date(loan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 flex-wrap">
+                          {['active', 'completed', 'defaulted'].includes(loan.status) && (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => fetchRepaymentsForLoan(loan.id)}>
+                                <Eye className="mr-1 h-3 w-3" /> {expandedLoan === loan.id ? 'Hide' : 'View'} Schedule
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => printLoanStatement(loan)}>
+                                <FileText className="mr-1 h-3 w-3" /> Statement
+                              </Button>
+                            </>
+                          )}
+                          {canRevoke && (
+                            <Button size="sm" variant="destructive" onClick={() => onRevoke(loan.id)} disabled={submitting}>
+                              <ShieldOff className="mr-1 h-3 w-3" /> Revoke Guarantee
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {expandedLoan === loan.id && repayments[loan.id] && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="bg-muted/30 p-4">
+                          <div className="text-sm font-semibold mb-2">Repayment Schedule for {loan.employee_name}</div>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-12">#</TableHead>
+                                <TableHead>Due Date</TableHead>
+                                <TableHead>Amount Due</TableHead>
+                                <TableHead>Amount Paid</TableHead>
+                                <TableHead>Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {repayments[loan.id].map((r: any) => (
+                                <TableRow key={r.id}>
+                                  <TableCell>{r.installment_number}</TableCell>
+                                  <TableCell>{new Date(r.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</TableCell>
+                                  <TableCell>UGX {(r.amount_due || 0).toLocaleString()}</TableCell>
+                                  <TableCell>UGX {(r.amount_paid || 0).toLocaleString()}</TableCell>
+                                  <TableCell>
+                                    <Badge variant={r.status === 'paid' ? 'default' : r.status === 'overdue' ? 'destructive' : 'outline'}>
+                                      {r.status}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                              {repayments[loan.id].length === 0 && (
+                                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-4">No installments yet</TableCell></TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 };
