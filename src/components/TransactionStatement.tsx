@@ -183,6 +183,11 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const getEntryLabel = (entry: LedgerEntry) => {
     const meta = entry.metadata ? (typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata) : null;
     const config = ENTRY_CONFIG[entry.entry_type] || DEFAULT_CONFIG;
+    // Detect wallet transfers
+    if (meta?.type === 'wallet_transfer') {
+      if (entry.amount < 0) return '📤 Sent Money';
+      return '📥 Received Money';
+    }
     // Detect loan disbursement (stored as DEPOSIT with loan metadata)
     if (entry.entry_type === 'DEPOSIT' && (meta?.source === 'loan_disbursement' || entry.reference?.startsWith('LOAN-DISBURSE'))) {
       return '💰 Loan Disbursement';
