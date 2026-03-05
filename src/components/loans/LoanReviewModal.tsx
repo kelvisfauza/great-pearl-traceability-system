@@ -266,7 +266,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
           <div><div class="label">Total Interest</div><div class="value">UGX ${(loan.total_repayable - loan.loan_amount)?.toLocaleString()}</div></div>
           <div><div class="label">Total Repayable</div><div class="value">UGX ${loan.total_repayable?.toLocaleString()}</div></div>
           <div><div class="label">${isWeekly ? 'Weekly' : 'Monthly'} Installment</div><div class="value">UGX ${installmentAmount?.toLocaleString()}</div></div>
-          <div><div class="label">Repayment Method</div><div class="value">${isWeekly ? 'Weekly (Reducing Balance)' : 'Monthly'}</div></div>
+          <div><div class="label">Repayment Method</div><div class="value">${isWeekly ? 'Weekly (Flat Interest)' : 'Monthly'}</div></div>
         </div>
       </div>
 
