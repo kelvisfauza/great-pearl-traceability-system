@@ -325,6 +325,24 @@ const QuickLoans = () => {
 
       toast({ title: "Loan Requested", description: "Guarantor has been notified via SMS" });
       setShowRequestDialog(false);
+
+      // Trigger repayment statement slip
+      const guarantor = employees.find(e => e.id === guarantorId);
+      setRepaymentSlipData({
+        employeeName: employee.name,
+        employeeEmail: employee.email,
+        guarantorName: guarantor?.name || '',
+        loanAmount: amount,
+        interestRate: monthlyRate,
+        dailyRate,
+        durationMonths: months,
+        totalWeeks,
+        weeklyInstallment: weekly,
+        totalRepayable: total,
+        totalInterest: interest,
+      });
+      setShowRepaymentSlip(true);
+
       setLoanAmount('');
       setDurationMonths('');
       setGuarantorId('');
