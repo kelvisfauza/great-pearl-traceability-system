@@ -16,6 +16,7 @@ interface Employee {
   email: string;
   department: string;
   salary: number;
+  outstanding: number;
 }
 
 const LoanAdvertDialog = () => {
