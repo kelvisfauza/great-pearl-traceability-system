@@ -601,7 +601,7 @@ const QuickLoans = () => {
 
   const myLimit = employee ? getLoanLimit(employee.email, employee.salary || 0, employee.authUserId) : null;
 
-  const { rate: previewRate, interest: previewInterest, total: previewTotal, monthly: previewMonthly } = calculateLoanDetails();
+  const { monthlyRate: previewRate, dailyRate: previewDailyRate, interest: previewInterest, total: previewTotal, weekly: previewWeekly, totalWeeks: previewTotalWeeks, totalDays: previewTotalDays } = calculateLoanDetails();
 
   return (
     <DashboardLayout title="Quick Loans" subtitle="Borrow and manage short-term loans">
