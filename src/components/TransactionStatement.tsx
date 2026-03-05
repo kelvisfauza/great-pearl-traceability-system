@@ -267,7 +267,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
                     {isCredit ? '+' : ''}{entry.amount.toLocaleString()}
                   </div>
                   <div className="text-[10px] text-muted-foreground">
-                    Bal: {entry.runningBalance.toLocaleString()}
+                    {entry.runningBalance != null ? `Bal: ${entry.runningBalance.toLocaleString()}` : 'Loan tx'}
                   </div>
                 </div>
               </div>
