@@ -49,19 +49,20 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
   const [limit, setLimit] = useState(30);
   const [hasMore, setHasMore] = useState(true);
 
+  const WALLET_TYPES = ['LOYALTY_REWARD', 'BONUS', 'DEPOSIT', 'WITHDRAWAL', 'ADJUSTMENT'];
+
   // Calculate running balances (oldest to newest, then reverse for display)
   const entriesWithBalance = React.useMemo(() => {
     if (entries.length === 0) return [];
-    // entries are newest-first from DB; reverse to compute running balance from oldest
     const chronological = [...entries].reverse();
-    // The balance after the last entry should equal currentBalance
-    // So starting balance = currentBalance - sum(all entries)
-    const totalSum = chronological.reduce((s, e) => s + e.amount, 0);
-    let runningBalance = currentBalance - totalSum;
+    // Only wallet-affecting entries contribute to running balance
+    const walletSum = chronological.filter(e => WALLET_TYPES.includes(e.entry_type)).reduce((s, e) => s + e.amount, 0);
+    let runningBalance = currentBalance - walletSum;
     
     const withBalance = chronological.map(e => {
-      runningBalance += e.amount;
-      return { ...e, runningBalance };
+      const affectsWallet = WALLET_TYPES.includes(e.entry_type);
+      if (affectsWallet) runningBalance += e.amount;
+      return { ...e, runningBalance: affectsWallet ? runningBalance : null };
     });
     // Reverse back to newest-first for display
     return withBalance.reverse();
