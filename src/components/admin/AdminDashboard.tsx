@@ -17,6 +17,7 @@ import TopSuppliersChart from './TopSuppliersChart';
 import { PermissionChangeApprovals } from './PermissionChangeApprovals';
 import PriceApprovalPanel from './PriceApprovalPanel';
 import AttendanceOverviewCard from './AttendanceOverviewCard';
+import DueInstallmentsCard from './DueInstallmentsCard';
 
 import { DataArchiveManager } from './DataArchiveManager';
 import { usePresenceList } from '@/hooks/usePresenceList';
