@@ -1305,6 +1305,56 @@ const QuickLoans = () => {
                 )}
               </DialogContent>
             </Dialog>
+
+            {/* Wallet Repayment Dialog */}
+            <Dialog open={showWalletRepayDialog} onOpenChange={(open) => { setShowWalletRepayDialog(open); if (!open) setWalletRepayLoan(null); }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" /> Repay Loan from Wallet</DialogTitle>
+                </DialogHeader>
+                {walletRepayLoan && (() => {
+                  const earlyPayoff = calculateEarlyPayoff(walletRepayLoan);
+                  const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(walletRepayLoan.start_date || Date.now()).getTime()) / (1000 * 60 * 60 * 24)));
+                  const monthlyRate = LOAN_TYPE_CONFIG[(walletRepayLoan.loan_type || 'quick') as LoanType]?.monthlyRate || 10;
+                  const dailyRate = monthlyRate / 30 / 100;
+                  const interestForDays = Math.ceil(walletRepayLoan.loan_amount * dailyRate * daysHeld);
+                  return (
+                    <div className="space-y-4">
+                      <Card className="bg-muted/50">
+                        <CardContent className="p-4 space-y-1 text-sm">
+                          <div className="flex justify-between"><span>Loan Amount:</span><span>UGX {walletRepayLoan.loan_amount?.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>Original Total:</span><span>UGX {walletRepayLoan.total_repayable?.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>Days Held:</span><span>{daysHeld} day(s)</span></div>
+                          <div className="flex justify-between"><span>Daily Interest ({(dailyRate * 100).toFixed(3)}%/day):</span><span>UGX {interestForDays.toLocaleString()}</span></div>
+                          <div className="flex justify-between font-semibold text-primary"><span>Early Payoff Amount:</span><span>UGX {earlyPayoff.toLocaleString()}</span></div>
+                          <div className="mt-2 p-2 bg-accent/50 rounded text-xs">
+                            💡 Interest is calculated daily. Pay sooner = pay less interest!
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <div className="p-3 bg-muted rounded-lg text-sm flex justify-between">
+                        <span>Your Wallet Balance:</span>
+                        <span className="font-semibold">UGX {myWalletBalance.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <Label>Amount to Pay (UGX)</Label>
+                        <Input type="number" value={walletRepayAmount} onChange={e => setWalletRepayAmount(e.target.value)} placeholder="Enter amount" />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Max payable: UGX {Math.min(earlyPayoff, myWalletBalance).toLocaleString()}
+                        </p>
+                      </div>
+                      <Button onClick={handleWalletRepayment} disabled={walletRepayLoading || !walletRepayAmount} className="w-full">
+                        {walletRepayLoading ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                        ) : (
+                          <><Wallet className="mr-2 h-4 w-4" /> Pay UGX {(parseFloat(walletRepayAmount) || 0).toLocaleString()} from Wallet</>
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })()}
+              </DialogContent>
+            </Dialog>
             </div>
           </div>
 
