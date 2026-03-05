@@ -163,7 +163,6 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
               <strong>💡 Early Repayment Benefit:</strong> Long-term loans charge interest daily ({dailyRate.toFixed(3)}%/day = {interestRate}%/month). If you repay early, you only pay interest for the actual number of days you held the loan. Use the "Repay via MoMo" button to pay early and save on interest.
             </div>
           )}
-          </div>
 
           <p className="text-center text-[10px] text-muted-foreground mt-4 border-t pt-2">
             This is a system-generated statement. Amounts are calculated using reducing balance method. Terms subject to company policy.
