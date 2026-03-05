@@ -77,7 +77,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       const activityLabel = getActivityLabel(e);
       return `<tr>
         <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${format(new Date(e.created_at), 'MMM dd, yyyy h:mm a')}</td>
-        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${config.label}${activityLabel ? ' - ' + activityLabel : ''}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px">${getEntryLabel(e)}${activityLabel ? ' - ' + activityLabel : ''}</td>
         <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;color:${isCredit ? '#15803d' : '#b91c1c'};font-weight:600">${isCredit ? '+' : ''}${e.amount.toLocaleString()}</td>
         <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;text-align:right;font-weight:600">${(e as any).runningBalance.toLocaleString()}</td>
       </tr>`;
