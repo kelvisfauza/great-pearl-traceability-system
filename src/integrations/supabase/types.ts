@@ -7157,6 +7157,66 @@ export type Database = {
           },
         ]
       }
+      transfer_reversal_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          ledger_entry_id: string
+          reason: string
+          receiver_email: string | null
+          receiver_name: string | null
+          receiver_user_id: string
+          requested_at: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sender_email: string | null
+          sender_name: string | null
+          sender_user_id: string
+          status: string
+          tx_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          ledger_entry_id: string
+          reason: string
+          receiver_email?: string | null
+          receiver_name?: string | null
+          receiver_user_id: string
+          requested_at?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          sender_user_id: string
+          status?: string
+          tx_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          ledger_entry_id?: string
+          reason?: string
+          receiver_email?: string | null
+          receiver_name?: string | null
+          receiver_user_id?: string
+          requested_at?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          sender_user_id?: string
+          status?: string
+          tx_id?: string
+        }
+        Relationships: []
+      }
       user_accounts: {
         Row: {
           created_at: string
@@ -7968,6 +8028,10 @@ export type Database = {
     }
     Functions: {
       admin_delete_all_system_data: { Args: never; Returns: Json }
+      approve_transfer_reversal: {
+        Args: { p_notes?: string; p_request_id: string }
+        Returns: Json
+      }
       award_activity_reward: {
         Args: { activity_name: string; user_uuid: string }
         Returns: Json
@@ -8125,6 +8189,14 @@ export type Database = {
         Returns: Json
       }
       refresh_current_week_allowances: { Args: never; Returns: Json }
+      reject_transfer_reversal: {
+        Args: { p_notes?: string; p_request_id: string }
+        Returns: Json
+      }
+      request_transfer_reversal: {
+        Args: { p_ledger_entry_id: string; p_reason: string }
+        Returns: Json
+      }
       reset_money_requests_to_pending_admin: {
         Args: never
         Returns: {
