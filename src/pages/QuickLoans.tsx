@@ -1556,6 +1556,16 @@ const QuickLoans = () => {
             <TabsContent value="repayments">
               <RepaymentSchedule myLoans={myLoans} />
             </TabsContent>
+
+            <TabsContent value="guaranteed">
+              <GuaranteedLoansTab
+                guaranteedLoans={guaranteedLoans}
+                onRevoke={handleRevokeGuarantee}
+                submitting={submitting}
+                getStatusBadge={getStatusBadge}
+                printLoanStatement={printLoanStatement}
+              />
+            </TabsContent>
           </Tabs>
       </div>
 
