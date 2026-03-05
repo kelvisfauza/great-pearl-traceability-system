@@ -894,6 +894,7 @@ const QuickLoans = () => {
   };
 
 
+  const printLoanStatement = async (loan: any) => {
     // Fetch repayment installments for this loan
     const { data: repayments } = await supabase
       .from('loan_repayments')
