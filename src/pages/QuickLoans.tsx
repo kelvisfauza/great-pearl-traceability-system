@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff } from 'lucide-react';
+import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
@@ -73,6 +73,10 @@ const QuickLoans = () => {
   const [momoRepayPhone, setMomoRepayPhone] = useState('');
   const [momoRepayLoading, setMomoRepayLoading] = useState(false);
   const [momoRepayStatus, setMomoRepayStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
+  const [showWalletRepayDialog, setShowWalletRepayDialog] = useState(false);
+  const [walletRepayLoan, setWalletRepayLoan] = useState<any>(null);
+  const [walletRepayAmount, setWalletRepayAmount] = useState('');
+  const [walletRepayLoading, setWalletRepayLoading] = useState(false);
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
@@ -574,8 +578,9 @@ const QuickLoans = () => {
       toast({ title: "Error", description: "Enter a valid amount", variant: "destructive" });
       return;
     }
-    if (amount > (selectedLoanForPayment.remaining_balance || 0)) {
-      toast({ title: "Error", description: `Amount exceeds remaining balance of UGX ${selectedLoanForPayment.remaining_balance?.toLocaleString()}`, variant: "destructive" });
+    const earlyPayoff = calculateEarlyPayoff(selectedLoanForPayment);
+    if (amount > earlyPayoff) {
+      toast({ title: "Error", description: `Max payable is UGX ${earlyPayoff.toLocaleString()} (daily pro-rata interest)`, variant: "destructive" });
       return;
     }
     if (!earlyPayMethod) {
@@ -585,7 +590,7 @@ const QuickLoans = () => {
 
     setSubmitting(true);
     try {
-      const newBalance = (selectedLoanForPayment.remaining_balance || 0) - amount;
+      const newBalance = Math.max(0, earlyPayoff - amount);
 
       // Update loan remaining balance
       const { error } = await supabase.from('loans').update({
@@ -657,15 +662,8 @@ const QuickLoans = () => {
       return;
     }
 
-    // For long-term loans, calculate actual interest based on days held
-    let maxPayable = momoRepayLoan.remaining_balance || 0;
-    if (momoRepayLoan.loan_type === 'long_term' && momoRepayLoan.start_date) {
-      const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(momoRepayLoan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
-      const dailyRate = (momoRepayLoan.daily_interest_rate || 0.5) / 100;
-      const interestForDaysHeld = Math.ceil(momoRepayLoan.loan_amount * dailyRate * daysHeld);
-      const earlyPayoff = momoRepayLoan.loan_amount - (momoRepayLoan.paid_amount || 0) + interestForDaysHeld;
-      maxPayable = Math.max(0, Math.ceil(earlyPayoff));
-    }
+    // Calculate max payable using daily pro-rata interest
+    let maxPayable = calculateEarlyPayoff(momoRepayLoan);
 
     if (amount > maxPayable) {
       toast({ title: "Error", description: `Max payable is UGX ${maxPayable.toLocaleString()}`, variant: "destructive" });
@@ -774,6 +772,118 @@ const QuickLoans = () => {
       toast({ title: "Payment Failed ❌", description: err.message || 'Payment request failed. Try again.', variant: "destructive", duration: 8000 });
     } finally {
       setMomoRepayLoading(false);
+    }
+  };
+
+  // Calculate early payoff amount with daily pro-rata interest
+  const calculateEarlyPayoff = (loan: any) => {
+    if (!loan?.start_date || !loan?.loan_amount) return loan?.remaining_balance || 0;
+    const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(loan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+    const monthlyRate = LOAN_TYPE_CONFIG[(loan.loan_type || 'quick') as LoanType]?.monthlyRate || 10;
+    const dailyRate = monthlyRate / 30 / 100;
+    const interestForDaysHeld = Math.ceil(loan.loan_amount * dailyRate * daysHeld);
+    const principalOwed = loan.loan_amount - (loan.paid_amount || 0);
+    return Math.max(0, Math.ceil(principalOwed + interestForDaysHeld));
+  };
+
+  // Wallet-based Loan Repayment
+  const handleWalletRepayment = async () => {
+    if (!walletRepayLoan || !employee) return;
+    const amount = parseFloat(walletRepayAmount) || 0;
+    if (amount <= 0 || amount < 500) {
+      toast({ title: "Error", description: "Minimum amount is UGX 500", variant: "destructive" });
+      return;
+    }
+
+    const earlyPayoff = calculateEarlyPayoff(walletRepayLoan);
+    if (amount > earlyPayoff) {
+      toast({ title: "Error", description: `Max payable is UGX ${earlyPayoff.toLocaleString()} (daily pro-rata interest)`, variant: "destructive" });
+      return;
+    }
+
+    // Check wallet balance
+    if (amount > myWalletBalance) {
+      toast({ title: "Insufficient Wallet Balance", description: `Your wallet balance is UGX ${myWalletBalance.toLocaleString()}`, variant: "destructive" });
+      return;
+    }
+
+    setWalletRepayLoading(true);
+    try {
+      const { data: borrowerEmp } = await supabase.from('employees').select('auth_user_id').eq('email', walletRepayLoan.employee_email).single();
+      if (!borrowerEmp?.auth_user_id) throw new Error('Could not find your account.');
+
+      const { data: unifiedId } = await supabase.rpc('get_unified_user_id', { input_email: walletRepayLoan.employee_email });
+      const userId = unifiedId || borrowerEmp.auth_user_id;
+
+      const txRef = `LOANREPAY-WALLET-${walletRepayLoan.id.slice(0, 8)}-${Date.now()}`;
+
+      // Deduct from wallet via ledger
+      const { error: ledgerErr } = await supabase.from('ledger_entries').insert({
+        user_id: userId,
+        entry_type: 'WITHDRAWAL',
+        amount: -amount,
+        reference: txRef,
+        metadata: {
+          loan_id: walletRepayLoan.id,
+          source: 'wallet_loan_repayment',
+          description: `Loan repayment from wallet – UGX ${amount.toLocaleString()}`
+        }
+      });
+      if (ledgerErr) throw new Error('Failed to deduct from wallet');
+
+      // Update loan balance (use daily interest calculation)
+      const newPaidAmount = (walletRepayLoan.paid_amount || 0) + amount;
+      const newRemainingBalance = Math.max(0, earlyPayoff - amount);
+      const isFullyPaid = newRemainingBalance <= 0;
+
+      const { error: loanErr } = await supabase.from('loans').update({
+        paid_amount: newPaidAmount,
+        remaining_balance: newRemainingBalance,
+        status: isFullyPaid ? 'paid_off' : 'active',
+        is_defaulted: isFullyPaid ? false : walletRepayLoan.is_defaulted,
+      }).eq('id', walletRepayLoan.id);
+      if (loanErr) throw loanErr;
+
+      // Mark installments as paid (earliest first)
+      const { data: unpaidInstallments } = await supabase.from('loan_repayments')
+        .select('*')
+        .eq('loan_id', walletRepayLoan.id)
+        .in('status', ['pending', 'overdue'])
+        .order('due_date', { ascending: true });
+
+      let remaining = amount;
+      for (const inst of (unpaidInstallments || [])) {
+        if (remaining <= 0) break;
+        const owed = inst.amount_due - (inst.amount_paid || 0);
+        const payable = Math.min(remaining, owed);
+        const newPaid = (inst.amount_paid || 0) + payable;
+        const isPaid = newPaid >= inst.amount_due;
+        await supabase.from('loan_repayments').update({
+          amount_paid: newPaid,
+          status: isPaid ? 'paid' : inst.status,
+          paid_date: isPaid ? new Date().toISOString().split('T')[0] : null,
+          payment_reference: txRef,
+          deducted_from: 'Wallet Repayment',
+        }).eq('id', inst.id);
+        remaining -= payable;
+      }
+
+      toast({
+        title: isFullyPaid ? "Loan Fully Paid Off! 🎉" : "Wallet Payment Successful! ✅",
+        description: `UGX ${amount.toLocaleString()} deducted from your wallet.${isFullyPaid ? '' : ` Remaining: UGX ${newRemainingBalance.toLocaleString()}`}`,
+        duration: 8000,
+      });
+
+      setShowWalletRepayDialog(false);
+      setWalletRepayAmount('');
+      setWalletRepayLoan(null);
+      fetchLoans();
+      // Update wallet balance
+      setMyWalletBalance(prev => prev - amount);
+    } catch (err: any) {
+      toast({ title: "Payment Failed ❌", description: err.message, variant: "destructive" });
+    } finally {
+      setWalletRepayLoading(false);
     }
   };
 
@@ -1093,14 +1203,24 @@ const QuickLoans = () => {
                     <Card className="bg-muted/50">
                       <CardContent className="p-4 space-y-1 text-sm">
                         <div className="flex justify-between"><span>Loan Amount:</span><span>UGX {selectedLoanForPayment.loan_amount?.toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span>Total Repayable:</span><span>UGX {selectedLoanForPayment.total_repayable?.toLocaleString()}</span></div>
-                        <div className="flex justify-between font-semibold text-primary"><span>Remaining Balance:</span><span>UGX {selectedLoanForPayment.remaining_balance?.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Original Total:</span><span>UGX {selectedLoanForPayment.total_repayable?.toLocaleString()}</span></div>
+                        {selectedLoanForPayment.start_date && (() => {
+                          const ep = calculateEarlyPayoff(selectedLoanForPayment);
+                          const dh = Math.max(1, Math.floor((Date.now() - new Date(selectedLoanForPayment.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+                          return (
+                            <>
+                              <div className="flex justify-between"><span>Days Held:</span><span>{dh} day(s)</span></div>
+                              <div className="flex justify-between font-semibold text-primary"><span>Early Payoff (daily interest):</span><span>UGX {ep.toLocaleString()}</span></div>
+                              <div className="mt-1 p-2 bg-accent/50 rounded text-xs">💡 Interest calculated daily – pay sooner, save more!</div>
+                            </>
+                          );
+                        })()}
                       </CardContent>
                     </Card>
                     <div>
                       <Label>Payment Amount (UGX)</Label>
                       <Input type="number" value={earlyPayAmount} onChange={e => setEarlyPayAmount(e.target.value)} placeholder="Enter amount to pay" />
-                      <p className="text-xs text-muted-foreground mt-1">Max: UGX {selectedLoanForPayment.remaining_balance?.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Max: UGX {calculateEarlyPayoff(selectedLoanForPayment).toLocaleString()}</p>
                     </div>
                     <div>
                       <Label>Payment Method</Label>
@@ -1139,19 +1259,19 @@ const QuickLoans = () => {
                         <div className="flex justify-between"><span>Loan Amount:</span><span>UGX {momoRepayLoan.loan_amount?.toLocaleString()}</span></div>
                         <div className="flex justify-between"><span>Total Repayable:</span><span>UGX {momoRepayLoan.total_repayable?.toLocaleString()}</span></div>
                         <div className="flex justify-between font-semibold text-primary"><span>Remaining Balance:</span><span>UGX {momoRepayLoan.remaining_balance?.toLocaleString()}</span></div>
-                        {momoRepayLoan.loan_type === 'long_term' && momoRepayLoan.start_date && (
-                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded text-xs">
-                            <strong>Long-term loan:</strong> Interest calculated on actual days held.
-                            {(() => {
-                              const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(momoRepayLoan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
-                              const dailyRate = (momoRepayLoan.daily_interest_rate || 0.5) / 100;
-                              const interestForDays = Math.ceil(momoRepayLoan.loan_amount * dailyRate * daysHeld);
-                              const principalOwed = momoRepayLoan.loan_amount - (momoRepayLoan.paid_amount || 0);
-                              const earlyPayoff = Math.max(0, Math.ceil(principalOwed + interestForDays));
-                              return <div className="mt-1">Days held: {daysHeld} | Interest so far: UGX {interestForDays.toLocaleString()} | <strong>Early payoff: UGX {earlyPayoff.toLocaleString()}</strong></div>;
-                            })()}
-                          </div>
-                        )}
+                        {momoRepayLoan.start_date && (() => {
+                          const earlyPayoff = calculateEarlyPayoff(momoRepayLoan);
+                          const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(momoRepayLoan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+                          const monthlyRate = LOAN_TYPE_CONFIG[(momoRepayLoan.loan_type || 'quick') as LoanType]?.monthlyRate || 10;
+                          const dailyRate = monthlyRate / 30 / 100;
+                          const interestForDays = Math.ceil(momoRepayLoan.loan_amount * dailyRate * daysHeld);
+                          return (
+                            <div className="mt-2 p-2 bg-accent/50 rounded text-xs">
+                              <strong>💡 Daily interest:</strong> {(dailyRate * 100).toFixed(3)}%/day
+                              <div className="mt-1">Days held: {daysHeld} | Interest so far: UGX {interestForDays.toLocaleString()} | <strong>Early payoff: UGX {earlyPayoff.toLocaleString()}</strong></div>
+                            </div>
+                          );
+                        })()}
                       </CardContent>
                     </Card>
                     <div>
@@ -1187,6 +1307,56 @@ const QuickLoans = () => {
                     </Button>
                   </div>
                 )}
+              </DialogContent>
+            </Dialog>
+
+            {/* Wallet Repayment Dialog */}
+            <Dialog open={showWalletRepayDialog} onOpenChange={(open) => { setShowWalletRepayDialog(open); if (!open) setWalletRepayLoan(null); }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" /> Repay Loan from Wallet</DialogTitle>
+                </DialogHeader>
+                {walletRepayLoan && (() => {
+                  const earlyPayoff = calculateEarlyPayoff(walletRepayLoan);
+                  const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(walletRepayLoan.start_date || Date.now()).getTime()) / (1000 * 60 * 60 * 24)));
+                  const monthlyRate = LOAN_TYPE_CONFIG[(walletRepayLoan.loan_type || 'quick') as LoanType]?.monthlyRate || 10;
+                  const dailyRate = monthlyRate / 30 / 100;
+                  const interestForDays = Math.ceil(walletRepayLoan.loan_amount * dailyRate * daysHeld);
+                  return (
+                    <div className="space-y-4">
+                      <Card className="bg-muted/50">
+                        <CardContent className="p-4 space-y-1 text-sm">
+                          <div className="flex justify-between"><span>Loan Amount:</span><span>UGX {walletRepayLoan.loan_amount?.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>Original Total:</span><span>UGX {walletRepayLoan.total_repayable?.toLocaleString()}</span></div>
+                          <div className="flex justify-between"><span>Days Held:</span><span>{daysHeld} day(s)</span></div>
+                          <div className="flex justify-between"><span>Daily Interest ({(dailyRate * 100).toFixed(3)}%/day):</span><span>UGX {interestForDays.toLocaleString()}</span></div>
+                          <div className="flex justify-between font-semibold text-primary"><span>Early Payoff Amount:</span><span>UGX {earlyPayoff.toLocaleString()}</span></div>
+                          <div className="mt-2 p-2 bg-accent/50 rounded text-xs">
+                            💡 Interest is calculated daily. Pay sooner = pay less interest!
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <div className="p-3 bg-muted rounded-lg text-sm flex justify-between">
+                        <span>Your Wallet Balance:</span>
+                        <span className="font-semibold">UGX {myWalletBalance.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <Label>Amount to Pay (UGX)</Label>
+                        <Input type="number" value={walletRepayAmount} onChange={e => setWalletRepayAmount(e.target.value)} placeholder="Enter amount" />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Max payable: UGX {Math.min(earlyPayoff, myWalletBalance).toLocaleString()}
+                        </p>
+                      </div>
+                      <Button onClick={handleWalletRepayment} disabled={walletRepayLoading || !walletRepayAmount} className="w-full">
+                        {walletRepayLoading ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                        ) : (
+                          <><Wallet className="mr-2 h-4 w-4" /> Pay UGX {(parseFloat(walletRepayAmount) || 0).toLocaleString()} from Wallet</>
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })()}
               </DialogContent>
             </Dialog>
             </div>
@@ -1402,6 +1572,13 @@ const QuickLoans = () => {
                                     setShowMomoRepayDialog(true);
                                   }}>
                                     <Phone className="mr-1 h-3 w-3" /> Repay via MoMo
+                                  </Button>
+                                  <Button size="sm" variant="secondary" onClick={() => {
+                                    setWalletRepayLoan(loan);
+                                    setWalletRepayAmount('');
+                                    setShowWalletRepayDialog(true);
+                                  }}>
+                                    <Wallet className="mr-1 h-3 w-3" /> Pay from Wallet
                                   </Button>
                                 </>
                               )}
