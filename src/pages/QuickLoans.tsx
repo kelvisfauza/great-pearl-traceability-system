@@ -660,9 +660,11 @@ const QuickLoans = () => {
                     <Card className="bg-muted/50">
                       <CardContent className="p-4 space-y-1 text-sm">
                         <div className="flex justify-between"><span>Principal:</span><span>UGX {parseFloat(loanAmount).toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span>Interest ({previewRate}%):</span><span>UGX {Math.ceil(previewInterest).toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Daily Rate:</span><span>{previewDailyRate.toFixed(3)}% ({previewRate}%/month)</span></div>
+                        <div className="flex justify-between"><span>Duration:</span><span>{previewTotalDays} days ({previewTotalWeeks} weeks)</span></div>
+                        <div className="flex justify-between"><span>Total Interest:</span><span>UGX {Math.ceil(previewInterest).toLocaleString()}</span></div>
                         <div className="flex justify-between font-semibold"><span>Total Repayable:</span><span>UGX {Math.ceil(previewTotal).toLocaleString()}</span></div>
-                        <div className="flex justify-between font-semibold text-primary"><span>Monthly Installment:</span><span>UGX {Math.ceil(previewMonthly).toLocaleString()}</span></div>
+                        <div className="flex justify-between font-semibold text-primary"><span>Weekly Installment:</span><span>UGX {Math.ceil(previewWeekly).toLocaleString()}</span></div>
                       </CardContent>
                     </Card>
                   )}
