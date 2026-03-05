@@ -48,6 +48,10 @@ const WalletFreezeManager = () => {
 
   const freezeMutation = useMutation({
     mutationFn: async ({ employeeId, reason }: { employeeId: string; reason: string }) => {
+      // Enforce max 2 frozen accounts
+      if (frozenAccounts.length >= 2) {
+        throw new Error("Maximum of 2 wallets can be frozen at a time. Unfreeze one first.");
+      }
       const { error } = await supabase
         .from("employees")
         .update({
@@ -65,8 +69,8 @@ const WalletFreezeManager = () => {
       setFreezeTarget(null);
       setFreezeReason("");
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to freeze wallet", variant: "destructive" });
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message || "Failed to freeze wallet", variant: "destructive" });
     },
   });
 
@@ -136,33 +140,39 @@ const WalletFreezeManager = () => {
             </div>
           )}
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search employee to freeze..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+          {frozenAccounts.length >= 2 ? (
+            <p className="text-sm text-muted-foreground">Maximum of 2 frozen wallets reached. Unfreeze one to freeze another.</p>
+          ) : (
+            <>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search employee to freeze..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
 
-          {search && (
-            <div className="max-h-60 overflow-auto space-y-1 border rounded-lg p-2">
-              {filtered.filter((e) => !e.wallet_frozen).map((emp) => (
-                <div key={emp.id} className="flex items-center justify-between p-2 hover:bg-muted rounded">
-                  <div>
-                    <p className="font-medium text-sm">{emp.name}</p>
-                    <p className="text-xs text-muted-foreground">{emp.department} • {emp.email}</p>
-                  </div>
-                  <Button size="sm" variant="destructive" onClick={() => setFreezeTarget(emp)}>
-                    <Snowflake className="h-4 w-4 mr-1" /> Freeze
-                  </Button>
+              {search && (
+                <div className="max-h-60 overflow-auto space-y-1 border rounded-lg p-2">
+                  {filtered.filter((e) => !e.wallet_frozen).map((emp) => (
+                    <div key={emp.id} className="flex items-center justify-between p-2 hover:bg-muted rounded">
+                      <div>
+                        <p className="font-medium text-sm">{emp.name}</p>
+                        <p className="text-xs text-muted-foreground">{emp.department} • {emp.email}</p>
+                      </div>
+                      <Button size="sm" variant="destructive" onClick={() => setFreezeTarget(emp)}>
+                        <Snowflake className="h-4 w-4 mr-1" /> Freeze
+                      </Button>
+                    </div>
+                  ))}
+                  {filtered.filter((e) => !e.wallet_frozen).length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">No matching employees found</p>
+                  )}
                 </div>
-              ))}
-              {filtered.filter((e) => !e.wallet_frozen).length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">No matching employees found</p>
               )}
-            </div>
+            </>
           )}
         </CardContent>
       </Card>
