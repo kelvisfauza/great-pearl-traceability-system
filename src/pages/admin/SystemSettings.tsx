@@ -16,10 +16,14 @@ const SystemSettings = () => {
       subtitle="Configure system-wide settings and perform administrative tasks"
     >
       <Tabs defaultValue="messaging" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="messaging" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             Messaging
+          </TabsTrigger>
+          <TabsTrigger value="wallet" className="gap-2">
+            <Snowflake className="h-4 w-4" />
+            Wallet Freeze
           </TabsTrigger>
           <TabsTrigger value="migration" className="gap-2">
             <Database className="h-4 w-4" />
