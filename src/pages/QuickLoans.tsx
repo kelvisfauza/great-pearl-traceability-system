@@ -1062,11 +1062,10 @@ const QuickLoans = () => {
 
 const RepaymentSchedule = ({ myLoans }: { myLoans: any[] }) => {
   const [repayments, setRepayments] = useState<any[]>([]);
+  const activeLoans = myLoans.filter(l => l.status === 'active');
 
   useEffect(() => {
-    const activeLoans = myLoans.filter(l => l.status === 'active');
     if (activeLoans.length === 0) return;
-
     const fetchRepayments = async () => {
       const loanIds = activeLoans.map(l => l.id);
       const { data } = await supabase.from('loan_repayments').select('*').in('loan_id', loanIds).order('due_date', { ascending: true });
@@ -1075,41 +1074,198 @@ const RepaymentSchedule = ({ myLoans }: { myLoans: any[] }) => {
     fetchRepayments();
   }, [myLoans]);
 
+  const getRepaymentsByLoan = (loanId: string) => repayments.filter(r => r.loan_id === loanId);
+
+  const printLoanSchedule = (loan: any) => {
+    const loanRepayments = getRepaymentsByLoan(loan.id);
+    const isWeekly = loan.repayment_frequency === 'weekly';
+    const totalPaid = loanRepayments.reduce((s: number, r: any) => s + (r.amount_paid || 0), 0);
+
+    const rows = loanRepayments.map((r: any) => `
+      <tr>
+        <td style="padding:6px 10px;border:1px solid #ddd;text-align:center">${r.installment_number}</td>
+        <td style="padding:6px 10px;border:1px solid #ddd">${new Date(r.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+        <td style="padding:6px 10px;border:1px solid #ddd;text-align:right">UGX ${(r.amount_due || 0).toLocaleString()}</td>
+        <td style="padding:6px 10px;border:1px solid #ddd;text-align:right">UGX ${(r.amount_paid || 0).toLocaleString()}</td>
+        <td style="padding:6px 10px;border:1px solid #ddd;text-align:center;color:${r.status === 'paid' ? '#16a34a' : r.status === 'overdue' ? '#dc2626' : '#666'};font-weight:600">${r.status.toUpperCase()}</td>
+      </tr>
+    `).join('');
+
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Loan Repayment Program</title>
+      <style>
+        body{font:13px/1.6 system-ui;margin:0;padding:24px;color:#333}
+        table{width:100%;border-collapse:collapse;margin:16px 0}
+        th{padding:8px 10px;border:1px solid #333;background:#f1f3f4;font-size:12px;text-align:left}
+        .header{text-align:center;border-bottom:2px solid #333;padding-bottom:12px;margin-bottom:20px}
+        .summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0;font-size:13px}
+        .summary div{padding:6px 0;border-bottom:1px solid #eee}
+        .footer{text-align:center;font-size:10px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
+        @media print{body{padding:15px}}
+      </style>
+    </head><body>
+      <div class="header">
+        <h2 style="margin:0 0 4px;color:#1a365d">GREAT PEARL COFFEE</h2>
+        <h3 style="margin:0;font-weight:normal;color:#555">Loan Repayment Program</h3>
+      </div>
+
+      <div class="summary">
+        <div><strong>Borrower:</strong> ${loan.employee_name}</div>
+        <div><strong>Loan Date:</strong> ${new Date(loan.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+        <div><strong>Principal Amount:</strong> UGX ${(loan.loan_amount || 0).toLocaleString()}</div>
+        <div><strong>Interest:</strong> ${isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(2)}% daily` : `${loan.interest_rate}% monthly`}</div>
+        <div><strong>Total Repayable:</strong> UGX ${(loan.total_repayable || 0).toLocaleString()}</div>
+        <div><strong>Frequency:</strong> ${isWeekly ? `Weekly (${loan.total_weeks} weeks)` : `Monthly (${loan.duration_months} months)`}</div>
+        <div><strong>Installment:</strong> UGX ${(loan.monthly_installment || 0).toLocaleString()} / ${isWeekly ? 'week' : 'month'}</div>
+        <div><strong>Remaining Balance:</strong> UGX ${(loan.remaining_balance || 0).toLocaleString()}</div>
+        <div><strong>Guarantor:</strong> ${loan.guarantor_name || 'N/A'}</div>
+        <div><strong>Total Paid:</strong> UGX ${totalPaid.toLocaleString()}</div>
+      </div>
+
+      <table>
+        <thead><tr><th style="text-align:center">#</th><th>Due Date</th><th style="text-align:right">Amount Due (UGX)</th><th style="text-align:right">Amount Paid (UGX)</th><th style="text-align:center">Status</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <div class="footer">
+        <p>Generated on ${new Date().toLocaleString()}</p>
+        <p>This is a computer-generated document. For queries, contact the Finance Department.</p>
+      </div>
+    </body></html>`;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+  };
+
+  const downloadLoanSchedule = (loan: any) => {
+    const loanRepayments = getRepaymentsByLoan(loan.id);
+    const isWeekly = loan.repayment_frequency === 'weekly';
+    let csv = 'Installment,Due Date,Amount Due (UGX),Amount Paid (UGX),Status\n';
+    loanRepayments.forEach((r: any) => {
+      csv += `${r.installment_number},${new Date(r.due_date).toLocaleDateString()},${r.amount_due || 0},${r.amount_paid || 0},${r.status}\n`;
+    });
+    csv += `\nLoan Summary\n`;
+    csv += `Principal,UGX ${loan.loan_amount}\n`;
+    csv += `Total Repayable,UGX ${loan.total_repayable}\n`;
+    csv += `Frequency,${isWeekly ? 'Weekly' : 'Monthly'}\n`;
+    csv += `Remaining Balance,UGX ${loan.remaining_balance}\n`;
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `repayment-program-${loan.id.slice(0, 8)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  if (activeLoans.length === 0) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Repayment Schedule</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-center text-muted-foreground py-8">No active loans with repayment schedules</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader><CardTitle>Repayment Schedule</CardTitle></CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>#</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Amount Due</TableHead>
-              <TableHead>Amount Paid</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {repayments.map(r => (
-              <TableRow key={r.id}>
-                <TableCell>{r.installment_number}</TableCell>
-                <TableCell>{new Date(r.due_date).toLocaleDateString()}</TableCell>
-                <TableCell>UGX {r.amount_due?.toLocaleString()}</TableCell>
-                <TableCell>UGX {(r.amount_paid || 0).toLocaleString()}</TableCell>
-                <TableCell>
-                  <Badge variant={r.status === 'paid' ? 'default' : r.status === 'overdue' ? 'destructive' : 'outline'}>
-                    {r.status}
+    <div className="space-y-6">
+      {activeLoans.map(loan => {
+        const loanRepayments = getRepaymentsByLoan(loan.id);
+        const isWeekly = loan.repayment_frequency === 'weekly';
+        const totalPaid = loanRepayments.reduce((s: number, r: any) => s + (r.amount_paid || 0), 0);
+        const progress = loan.total_repayable ? Math.round((totalPaid / loan.total_repayable) * 100) : 0;
+
+        return (
+          <Card key={loan.id}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-base">
+                  Loan — UGX {(loan.loan_amount || 0).toLocaleString()}
+                  <Badge variant="outline" className="ml-2 text-xs">
+                    {isWeekly ? `${loan.total_weeks} weeks` : `${loan.duration_months} months`}
                   </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
-            {repayments.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No active repayment schedules</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => downloadLoanSchedule(loan)}>
+                    <Download className="h-3.5 w-3.5 mr-1" /> Download
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => printLoanSchedule(loan)}>
+                    <Printer className="h-3.5 w-3.5 mr-1" /> Print
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Principal:</span>
+                  <span className="ml-1 font-medium">UGX {(loan.loan_amount || 0).toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Interest:</span>
+                  <span className="ml-1 font-medium">{isWeekly ? `${(loan.daily_interest_rate || 0).toFixed(2)}%/day` : `${loan.interest_rate}%/mo`}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Installment:</span>
+                  <span className="ml-1 font-medium">UGX {(loan.monthly_installment || 0).toLocaleString()}/{isWeekly ? 'wk' : 'mo'}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Remaining:</span>
+                  <span className="ml-1 font-medium text-destructive">UGX {(loan.remaining_balance || 0).toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="mt-2">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                  <span>Repayment progress</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">#</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Amount Due</TableHead>
+                    <TableHead>Amount Paid</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loanRepayments.map(r => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.installment_number}</TableCell>
+                      <TableCell>{new Date(r.due_date).toLocaleDateString()}</TableCell>
+                      <TableCell>UGX {(r.amount_due || 0).toLocaleString()}</TableCell>
+                      <TableCell>UGX {(r.amount_paid || 0).toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={r.status === 'paid' ? 'default' : r.status === 'overdue' ? 'destructive' : 'outline'}>
+                          {r.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {loanRepayments.length === 0 && (
+                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-4">No installments found</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
   );
 };
 
