@@ -130,20 +130,29 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
     ? Math.floor((Date.now() - new Date(borrowerDetails.join_date).getTime()) / (1000 * 60 * 60 * 24 * 30))
     : 0;
 
-  // Generate repayment schedule preview
+  // Generate repayment schedule preview (reducing balance)
   const repaymentSchedule = [];
   const startDate = new Date();
   if (isWeekly) {
+    const dailyRate = loan.daily_interest_rate || 0.333;
+    const weeklyRate = (dailyRate / 100) * 7;
+    let balance = loan.loan_amount;
     for (let i = 1; i <= numInstallments; i++) {
       const dueDate = new Date(startDate);
       dueDate.setDate(dueDate.getDate() + (i * 7));
-      const amt = i === numInstallments ? loan.total_repayable - (installmentAmount * (numInstallments - 1)) : installmentAmount;
+      const interestPortion = Math.round(balance * weeklyRate);
+      const amt = i === numInstallments ? Math.ceil(balance + interestPortion) : installmentAmount;
+      const principalPortion = amt - interestPortion;
       repaymentSchedule.push({
         installment: i,
         dueDate: dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
         amount: Math.ceil(amt),
+        interest: interestPortion,
+        principal: Math.max(0, principalPortion),
+        balance: Math.max(0, Math.round(balance - principalPortion)),
         source: 'Weekly deduction',
       });
+      balance = Math.max(0, balance - principalPortion);
     }
   } else {
     for (let i = 1; i <= loan.duration_months; i++) {
