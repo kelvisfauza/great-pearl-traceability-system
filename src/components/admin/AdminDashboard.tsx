@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, CheckCircle, DollarSign, Users, TrendingUp, BarChart3, Settings, Archive, Coffee } from 'lucide-react';
+import { Shield, CheckCircle, DollarSign, Users, TrendingUp, BarChart3, Settings, Archive, Coffee, Banknote, ArrowRight } from 'lucide-react';
 import GosentepayBalanceMonitor from './GosentepayBalanceMonitor';
 import RoleAssignmentManager from './RoleAssignmentManager';
 import PermissionOverview from './PermissionOverview';
