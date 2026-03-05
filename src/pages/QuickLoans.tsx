@@ -1109,6 +1109,11 @@ const QuickLoans = () => {
         }}
         submitting={submitting}
       />
+      <LoanRepaymentSlip
+        open={showRepaymentSlip}
+        onClose={() => setShowRepaymentSlip(false)}
+        loanData={repaymentSlipData}
+      />
     </DashboardLayout>
   );
 };
