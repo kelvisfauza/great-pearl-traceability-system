@@ -8168,6 +8168,14 @@ export type Database = {
         }
         Returns: Json
       }
+      transfer_wallet_funds_secure: {
+        Args: {
+          p_amount: number
+          p_receiver_email: string
+          p_reference: string
+        }
+        Returns: Json
+      }
       trigger_daily_salary_processing: { Args: never; Returns: Json }
       user_has_permission: {
         Args: { permission_name: string }
