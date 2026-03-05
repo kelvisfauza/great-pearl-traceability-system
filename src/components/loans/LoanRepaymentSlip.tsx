@@ -158,6 +158,12 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
           <div className="mt-3 p-2 bg-yellow-50 border border-yellow-300 rounded text-xs text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-700 dark:text-yellow-300">
             <strong>⚠ Late Payment Penalty:</strong> 20% of installment per week overdue, max 2 weeks (40%). Recovery order: Wallet → Salary → Guarantor. Missed installments block new loan requests.
           </div>
+          {isLongTerm && (
+            <div className="mt-2 p-2 bg-blue-50 border border-blue-300 rounded text-xs text-blue-800 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-300">
+              <strong>💡 Early Repayment Benefit:</strong> Long-term loans charge interest daily ({dailyRate.toFixed(3)}%/day = {interestRate}%/month). If you repay early, you only pay interest for the actual number of days you held the loan. Use the "Repay via MoMo" button to pay early and save on interest.
+            </div>
+          )}
+          </div>
 
           <p className="text-center text-[10px] text-muted-foreground mt-4 border-t pt-2">
             This is a system-generated statement. Amounts are calculated using reducing balance method. Terms subject to company policy.
