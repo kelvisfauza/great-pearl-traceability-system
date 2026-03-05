@@ -862,7 +862,7 @@ const QuickLoans = () => {
                         <TableHead>Amount</TableHead>
                         <TableHead>Duration</TableHead>
                         <TableHead>Interest</TableHead>
-                        <TableHead>Monthly</TableHead>
+                        <TableHead>Installment</TableHead>
                         <TableHead>Guarantor</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Remaining</TableHead>
