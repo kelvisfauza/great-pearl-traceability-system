@@ -48,6 +48,10 @@ const WalletFreezeManager = () => {
 
   const freezeMutation = useMutation({
     mutationFn: async ({ employeeId, reason }: { employeeId: string; reason: string }) => {
+      // Enforce max 2 frozen accounts
+      if (frozenAccounts.length >= 2) {
+        throw new Error("Maximum of 2 wallets can be frozen at a time. Unfreeze one first.");
+      }
       const { error } = await supabase
         .from("employees")
         .update({
