@@ -31,25 +31,28 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
   const { employeeName, employeeEmail, guarantorName, loanAmount, interestRate, dailyRate, durationMonths, totalWeeks, weeklyInstallment, totalRepayable, totalInterest, loanType } = loanData;
   const isLongTerm = loanType === 'long_term';
 
-  // Generate reducing balance schedule
+  // Generate flat interest schedule (equal installments)
   const schedule: { week: number; dueDate: string; installment: number; interest: number; principal: number; balance: number }[] = [];
-  const weeklyRate = (dailyRate / 100) * 7;
+  const totalInterest = totalRepayable - loanAmount;
+  const weeklyInterestPortion = Math.round(totalInterest / totalWeeks);
+  const weeklyPrincipalPortion = Math.round(loanAmount / totalWeeks);
   let balance = loanAmount;
   const startDate = new Date();
 
   for (let i = 1; i <= totalWeeks; i++) {
     const dueDate = new Date(startDate);
     dueDate.setDate(dueDate.getDate() + i * 7);
-    const interestPortion = Math.round(balance * weeklyRate);
-    const amt = i === totalWeeks ? Math.ceil(balance + interestPortion) : weeklyInstallment;
-    const principalPortion = amt - interestPortion;
-    const newBalance = Math.max(0, Math.round(balance - principalPortion));
+    const isLast = i === totalWeeks;
+    const principalPart = isLast ? balance : weeklyPrincipalPortion;
+    const interestPart = isLast ? (totalInterest - weeklyInterestPortion * (totalWeeks - 1)) : weeklyInterestPortion;
+    const installmentAmt = principalPart + interestPart;
+    const newBalance = Math.max(0, Math.round(balance - principalPart));
     schedule.push({
       week: i,
       dueDate: dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      installment: Math.ceil(amt),
-      interest: interestPortion,
-      principal: Math.max(0, principalPortion),
+      installment: Math.ceil(installmentAmt),
+      interest: interestPart,
+      principal: Math.max(0, principalPart),
       balance: newBalance,
     });
     balance = newBalance;
