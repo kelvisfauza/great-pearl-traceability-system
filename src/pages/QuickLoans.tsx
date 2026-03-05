@@ -1248,19 +1248,19 @@ const QuickLoans = () => {
                         <div className="flex justify-between"><span>Loan Amount:</span><span>UGX {momoRepayLoan.loan_amount?.toLocaleString()}</span></div>
                         <div className="flex justify-between"><span>Total Repayable:</span><span>UGX {momoRepayLoan.total_repayable?.toLocaleString()}</span></div>
                         <div className="flex justify-between font-semibold text-primary"><span>Remaining Balance:</span><span>UGX {momoRepayLoan.remaining_balance?.toLocaleString()}</span></div>
-                        {momoRepayLoan.loan_type === 'long_term' && momoRepayLoan.start_date && (
-                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded text-xs">
-                            <strong>Long-term loan:</strong> Interest calculated on actual days held.
-                            {(() => {
-                              const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(momoRepayLoan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
-                              const dailyRate = (momoRepayLoan.daily_interest_rate || 0.5) / 100;
-                              const interestForDays = Math.ceil(momoRepayLoan.loan_amount * dailyRate * daysHeld);
-                              const principalOwed = momoRepayLoan.loan_amount - (momoRepayLoan.paid_amount || 0);
-                              const earlyPayoff = Math.max(0, Math.ceil(principalOwed + interestForDays));
-                              return <div className="mt-1">Days held: {daysHeld} | Interest so far: UGX {interestForDays.toLocaleString()} | <strong>Early payoff: UGX {earlyPayoff.toLocaleString()}</strong></div>;
-                            })()}
-                          </div>
-                        )}
+                        {momoRepayLoan.start_date && (() => {
+                          const earlyPayoff = calculateEarlyPayoff(momoRepayLoan);
+                          const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(momoRepayLoan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+                          const monthlyRate = LOAN_TYPE_CONFIG[(momoRepayLoan.loan_type || 'quick') as LoanType]?.monthlyRate || 10;
+                          const dailyRate = monthlyRate / 30 / 100;
+                          const interestForDays = Math.ceil(momoRepayLoan.loan_amount * dailyRate * daysHeld);
+                          return (
+                            <div className="mt-2 p-2 bg-accent/50 rounded text-xs">
+                              <strong>💡 Daily interest:</strong> {(dailyRate * 100).toFixed(3)}%/day
+                              <div className="mt-1">Days held: {daysHeld} | Interest so far: UGX {interestForDays.toLocaleString()} | <strong>Early payoff: UGX {earlyPayoff.toLocaleString()}</strong></div>
+                            </div>
+                          );
+                        })()}
                       </CardContent>
                     </Card>
                     <div>
