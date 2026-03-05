@@ -1,0 +1,2 @@
+INSERT INTO sms_notification_queue (recipient_phone, recipient_email, message, notification_type) VALUES
+('+256773318456', 'tatwanzire@greatpearlcoffee.com', 'Dear Artwanzire Timothy, your monthly salary has been revised to UGX 350,000 effective this month. Thank you - Great Pearl Coffee.', 'salary_update');
