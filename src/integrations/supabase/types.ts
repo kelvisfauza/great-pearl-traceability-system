@@ -3776,6 +3776,7 @@ export type Database = {
           interest_rate: number
           is_defaulted: boolean | null
           loan_amount: number
+          loan_type: string
           missed_installments: number | null
           monthly_installment: number
           next_deduction_date: string | null
@@ -3816,6 +3817,7 @@ export type Database = {
           interest_rate: number
           is_defaulted?: boolean | null
           loan_amount: number
+          loan_type?: string
           missed_installments?: number | null
           monthly_installment: number
           next_deduction_date?: string | null
@@ -3856,6 +3858,7 @@ export type Database = {
           interest_rate?: number
           is_defaulted?: boolean | null
           loan_amount?: number
+          loan_type?: string
           missed_installments?: number | null
           monthly_installment?: number
           next_deduction_date?: string | null

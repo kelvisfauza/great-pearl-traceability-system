@@ -11,27 +11,25 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer } from 'lucide-react';
+import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
 import LoanRepaymentSlip from '@/components/loans/LoanRepaymentSlip';
 
-// Monthly interest rates (used to derive daily rate = monthly_rate / 30)
-const MONTHLY_INTEREST_RATES: Record<number, number> = {
-  1: 10,
-  2: 10,
-  3: 10,
-  4: 10,
-  5: 10,
-  6: 10,
+// Loan types with their monthly interest rates
+type LoanType = 'quick' | 'long_term';
+
+const LOAN_TYPE_CONFIG: Record<LoanType, { label: string; monthlyRate: number; description: string }> = {
+  quick: { label: 'Quick Loan', monthlyRate: 10, description: '10%/month – Short-term, weekly repayments' },
+  long_term: { label: 'Long-Term Loan', monthlyRate: 15, description: '15%/month – Pay for actual days used, early repayment saves interest' },
 };
 
 // Helper: calculate daily interest rate from monthly rate
-const getDailyRate = (months: number) => {
-  const monthlyRate = MONTHLY_INTEREST_RATES[months] || 10;
-  return monthlyRate / 30; // e.g. 10% / 30 = 0.333% per day
+const getDailyRate = (loanType: LoanType) => {
+  const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
+  return monthlyRate / 30;
 };
 
 // Helper: calculate total days and weeks for a duration
@@ -68,9 +66,16 @@ const QuickLoans = () => {
   const [reviewLoan, setReviewLoan] = useState<any>(null);
   const [showRepaymentSlip, setShowRepaymentSlip] = useState(false);
   const [repaymentSlipData, setRepaymentSlipData] = useState<any>(null);
+  const [showMomoRepayDialog, setShowMomoRepayDialog] = useState(false);
+  const [momoRepayLoan, setMomoRepayLoan] = useState<any>(null);
+  const [momoRepayAmount, setMomoRepayAmount] = useState('');
+  const [momoRepayPhone, setMomoRepayPhone] = useState('');
+  const [momoRepayLoading, setMomoRepayLoading] = useState(false);
+  const [momoRepayStatus, setMomoRepayStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
+  const [loanType, setLoanType] = useState<LoanType>('quick');
   const [durationMonths, setDurationMonths] = useState('');
   const [guarantorId, setGuarantorId] = useState('');
   const [loanPurpose, setLoanPurpose] = useState('');
@@ -220,12 +225,11 @@ const QuickLoans = () => {
   const calculateLoanDetails = () => {
     const amount = parseFloat(loanAmount) || 0;
     const months = parseInt(durationMonths) || 0;
-    const dailyRate = getDailyRate(months);
-    const monthlyRate = MONTHLY_INTEREST_RATES[months] || 10;
+    const dailyRate = getDailyRate(loanType);
+    const monthlyRate = LOAN_TYPE_CONFIG[loanType].monthlyRate;
     const { totalDays, totalWeeks } = getLoanSchedule(months);
 
     // Reducing balance: weekly installment = P * r * (1+r)^n / ((1+r)^n - 1)
-    // where r = daily rate as decimal * 7 (weekly rate), n = totalWeeks
     const weeklyRate = (dailyRate / 100) * 7;
     let weekly = 0;
     let total = 0;
@@ -298,7 +302,7 @@ const QuickLoans = () => {
         daily_interest_rate: dailyRate,
         total_repayable: Math.ceil(total),
         duration_months: months,
-        monthly_installment: Math.ceil(weekly), // store weekly installment in this field
+        monthly_installment: Math.ceil(weekly),
         weekly_installment: Math.ceil(weekly),
         total_weeks: totalWeeks,
         remaining_balance: Math.ceil(total),
@@ -309,6 +313,7 @@ const QuickLoans = () => {
         guarantor_name: guarantor.name,
         guarantor_phone: guarantor.phone || '',
         guarantor_approval_code: approvalCode,
+        loan_type: loanType,
       } as any);
 
       if (error) throw error;
@@ -340,6 +345,7 @@ const QuickLoans = () => {
         weeklyInstallment: weekly,
         totalRepayable: total,
         totalInterest: interest,
+        loanType,
       });
       setShowRepaymentSlip(true);
 
@@ -611,6 +617,122 @@ const QuickLoans = () => {
     }
   };
 
+  // Mobile Money Loan Repayment via GosentePay
+  const handleMomoRepayment = async () => {
+    if (!momoRepayLoan || !employee) return;
+    const amount = parseFloat(momoRepayAmount) || 0;
+    if (amount <= 0 || amount < 500) {
+      toast({ title: "Error", description: "Minimum amount is UGX 500", variant: "destructive" });
+      return;
+    }
+
+    // For long-term loans, calculate actual interest based on days held
+    let maxPayable = momoRepayLoan.remaining_balance || 0;
+    if (momoRepayLoan.loan_type === 'long_term' && momoRepayLoan.start_date) {
+      const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(momoRepayLoan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+      const dailyRate = (momoRepayLoan.daily_interest_rate || 0.5) / 100;
+      const interestForDaysHeld = Math.ceil(momoRepayLoan.loan_amount * dailyRate * daysHeld);
+      const earlyPayoff = momoRepayLoan.loan_amount - (momoRepayLoan.paid_amount || 0) + interestForDaysHeld;
+      maxPayable = Math.max(0, Math.ceil(earlyPayoff));
+    }
+
+    if (amount > maxPayable) {
+      toast({ title: "Error", description: `Max payable is UGX ${maxPayable.toLocaleString()}`, variant: "destructive" });
+      return;
+    }
+    if (!momoRepayPhone) {
+      toast({ title: "Error", description: "Enter your phone number", variant: "destructive" });
+      return;
+    }
+
+    setMomoRepayLoading(true);
+    setMomoRepayStatus('processing');
+    try {
+      // Trigger GosentePay withdraw collection (collect from user's phone)
+      const { data: result, error: fnErr } = await supabase.functions.invoke('gosentepay-withdraw-collection', {
+        body: {
+          phone: momoRepayPhone,
+          amount: amount,
+          reason: `Loan repayment - ${momoRepayLoan.id.slice(0, 8)}`,
+          emailAddress: employee.email,
+        }
+      });
+
+      if (fnErr) throw new Error(fnErr.message || 'Collection failed');
+      if (result?.status === 'error' || result?.error) {
+        throw new Error(result?.message || result?.error || 'Payment collection failed');
+      }
+
+      // Success - update loan balance
+      const newBalance = Math.max(0, (momoRepayLoan.remaining_balance || 0) - amount);
+      const newPaidAmount = (momoRepayLoan.paid_amount || 0) + amount;
+
+      await supabase.from('loans').update({
+        remaining_balance: newBalance,
+        paid_amount: newPaidAmount,
+        status: newBalance <= 0 ? 'completed' : 'active',
+        is_defaulted: newBalance <= 0 ? false : momoRepayLoan.is_defaulted,
+        missed_installments: newBalance <= 0 ? 0 : momoRepayLoan.missed_installments,
+      } as any).eq('id', momoRepayLoan.id);
+
+      // Mark pending installments as paid
+      const { data: unpaidInstallments } = await supabase.from('loan_repayments')
+        .select('*')
+        .eq('loan_id', momoRepayLoan.id)
+        .in('status', ['pending', 'overdue'])
+        .order('due_date', { ascending: true });
+
+      let remaining = amount;
+      for (const inst of (unpaidInstallments || [])) {
+        if (remaining <= 0) break;
+        const owed = (inst.amount_due || 0) - (inst.amount_paid || 0);
+        const payable = Math.min(remaining, owed);
+        const newPaid = (inst.amount_paid || 0) + payable;
+        await supabase.from('loan_repayments').update({
+          amount_paid: newPaid,
+          status: newPaid >= inst.amount_due ? 'paid' : inst.status,
+          paid_date: newPaid >= inst.amount_due ? new Date().toISOString().split('T')[0] : null,
+          payment_reference: `MOMO-${result?.ref || 'COLLECT'}`,
+        }).eq('id', inst.id);
+        remaining -= payable;
+      }
+
+      // Ledger entry
+      const { data: borrowerEmp } = await supabase.from('employees').select('auth_user_id').eq('email', momoRepayLoan.employee_email).single();
+      if (borrowerEmp?.auth_user_id) {
+        await supabase.from('ledger_entries').insert({
+          user_id: borrowerEmp.auth_user_id,
+          entry_type: 'WITHDRAWAL',
+          amount: -amount,
+          reference: `LOAN-MOMO-REPAY-${momoRepayLoan.id}-${Date.now()}`,
+          metadata: { loan_id: momoRepayLoan.id, method: 'mobile_money', phone: momoRepayPhone, ref: result?.ref },
+        });
+      }
+
+      setMomoRepayStatus('success');
+      toast({
+        title: "Payment Successful! ✅",
+        description: `UGX ${amount.toLocaleString()} collected. ${newBalance <= 0 ? 'Loan fully paid off!' : `Remaining: UGX ${newBalance.toLocaleString()}`}`,
+        duration: 8000,
+      });
+      fetchLoans();
+      setTimeout(() => {
+        setShowMomoRepayDialog(false);
+        setMomoRepayStatus('idle');
+        setMomoRepayAmount('');
+        setMomoRepayPhone('');
+        setMomoRepayLoan(null);
+      }, 2000);
+
+    } catch (err: any) {
+      setMomoRepayStatus('failed');
+      toast({ title: "Payment Failed ❌", description: err.message || 'Collection failed. Try again.', variant: "destructive", duration: 8000 });
+    } finally {
+      setMomoRepayLoading(false);
+    }
+  };
+
+
   const getStatusBadge = (status: string) => {
     const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
       pending_guarantor: { variant: 'outline', label: 'Awaiting Guarantor' },
@@ -681,16 +803,27 @@ const QuickLoans = () => {
                     <p className="text-xs text-muted-foreground mt-1">Max: UGX {(myLimit?.availableLimit || (employee?.salary || 0) * 2).toLocaleString()} {myLimit?.isAi ? '(AI assessed)' : '(2x salary)'}</p>
                   </div>
                   <div>
+                    <Label>Loan Type</Label>
+                    <Select value={loanType} onValueChange={(v) => setLoanType(v as LoanType)}>
+                      <SelectTrigger><SelectValue placeholder="Select loan type" /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(LOAN_TYPE_CONFIG).map(([key, cfg]) => (
+                          <SelectItem key={key} value={key}>{cfg.label} – {cfg.description}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label>Duration (Months)</Label>
                     <Select value={durationMonths} onValueChange={setDurationMonths}>
                       <SelectTrigger><SelectValue placeholder="Select duration" /></SelectTrigger>
                       <SelectContent>
                         {[1, 2, 3, 4, 5, 6].map(m => {
                           const { totalWeeks } = getLoanSchedule(m);
-                          const dailyR = getDailyRate(m);
+                          const dailyR = getDailyRate(loanType);
                           return (
                             <SelectItem key={m} value={m.toString()}>
-                              {m} month{m > 1 ? 's' : ''} ({totalWeeks} weeks) - {dailyR.toFixed(2)}%/day
+                              {m} month{m > 1 ? 's' : ''} ({totalWeeks} weeks) - {dailyR.toFixed(2)}%/day ({LOAN_TYPE_CONFIG[loanType].monthlyRate}%/mo)
                             </SelectItem>
                           );
                         })}
@@ -767,6 +900,70 @@ const QuickLoans = () => {
                     </div>
                     <Button onClick={handleEarlyRepayment} disabled={submitting} className="w-full">
                       {submitting ? 'Processing...' : `Pay UGX ${(parseFloat(earlyPayAmount) || 0).toLocaleString()}`}
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* Mobile Money Repayment Dialog */}
+            <Dialog open={showMomoRepayDialog} onOpenChange={(open) => { setShowMomoRepayDialog(open); if (!open) { setMomoRepayLoan(null); setMomoRepayStatus('idle'); } }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2"><Phone className="h-5 w-5" /> Repay Loan via Mobile Money</DialogTitle>
+                </DialogHeader>
+                {momoRepayLoan && (
+                  <div className="space-y-4">
+                    <Card className="bg-muted/50">
+                      <CardContent className="p-4 space-y-1 text-sm">
+                        <div className="flex justify-between"><span>Loan Amount:</span><span>UGX {momoRepayLoan.loan_amount?.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span>Total Repayable:</span><span>UGX {momoRepayLoan.total_repayable?.toLocaleString()}</span></div>
+                        <div className="flex justify-between font-semibold text-primary"><span>Remaining Balance:</span><span>UGX {momoRepayLoan.remaining_balance?.toLocaleString()}</span></div>
+                        {momoRepayLoan.loan_type === 'long_term' && momoRepayLoan.start_date && (
+                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded text-xs">
+                            <strong>Long-term loan:</strong> Interest calculated on actual days held.
+                            {(() => {
+                              const daysHeld = Math.max(1, Math.floor((Date.now() - new Date(momoRepayLoan.start_date).getTime()) / (1000 * 60 * 60 * 24)));
+                              const dailyRate = (momoRepayLoan.daily_interest_rate || 0.5) / 100;
+                              const interestForDays = Math.ceil(momoRepayLoan.loan_amount * dailyRate * daysHeld);
+                              const principalOwed = momoRepayLoan.loan_amount - (momoRepayLoan.paid_amount || 0);
+                              const earlyPayoff = Math.max(0, Math.ceil(principalOwed + interestForDays));
+                              return <div className="mt-1">Days held: {daysHeld} | Interest so far: UGX {interestForDays.toLocaleString()} | <strong>Early payoff: UGX {earlyPayoff.toLocaleString()}</strong></div>;
+                            })()}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                    <div>
+                      <Label>Phone Number (Mobile Money)</Label>
+                      <Input value={momoRepayPhone} onChange={e => setMomoRepayPhone(e.target.value)} placeholder="e.g. 0701234567" />
+                      <p className="text-xs text-muted-foreground mt-1">You'll receive a payment prompt on this number</p>
+                    </div>
+                    <div>
+                      <Label>Amount to Pay (UGX)</Label>
+                      <Input type="number" value={momoRepayAmount} onChange={e => setMomoRepayAmount(e.target.value)} placeholder="Enter amount" />
+                      <p className="text-xs text-muted-foreground mt-1">Max: UGX {momoRepayLoan.remaining_balance?.toLocaleString()}</p>
+                    </div>
+
+                    {momoRepayStatus === 'success' && (
+                      <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-300 dark:border-green-700 rounded text-sm text-green-800 dark:text-green-300 flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5" /> Payment successful! Balance updated.
+                      </div>
+                    )}
+                    {momoRepayStatus === 'failed' && (
+                      <div className="p-3 bg-destructive/10 border border-destructive/30 rounded text-sm text-destructive flex items-center gap-2">
+                        <XCircle className="h-5 w-5" /> Payment failed. Please try again.
+                      </div>
+                    )}
+
+                    <Button onClick={handleMomoRepayment} disabled={momoRepayLoading || momoRepayStatus === 'success'} className="w-full">
+                      {momoRepayLoading ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Collecting payment...</>
+                      ) : momoRepayStatus === 'success' ? (
+                        <><CheckCircle className="mr-2 h-4 w-4" /> Payment Complete</>
+                      ) : (
+                        <><Phone className="mr-2 h-4 w-4" /> Collect UGX {(parseFloat(momoRepayAmount) || 0).toLocaleString()} via MoMo</>
+                      )}
                     </Button>
                   </div>
                 )}
@@ -925,7 +1122,10 @@ const QuickLoans = () => {
                     <TableBody>
                       {myLoans.map(loan => (
                         <TableRow key={loan.id}>
-                          <TableCell className="text-sm">{new Date(loan.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-sm">
+                            {new Date(loan.created_at).toLocaleDateString()}
+                            {loan.loan_type === 'long_term' && <Badge variant="secondary" className="ml-1 text-[10px]">Long-term</Badge>}
+                          </TableCell>
                           <TableCell>UGX {loan.loan_amount?.toLocaleString()}</TableCell>
                           <TableCell>{loan.duration_months}mo {loan.repayment_frequency === 'weekly' ? `(${loan.total_weeks || '?'}wks)` : ''}</TableCell>
                           <TableCell>{loan.repayment_frequency === 'weekly' ? `${(loan.daily_interest_rate || 0).toFixed(2)}%/day` : `${loan.interest_rate}%`}</TableCell>
@@ -935,12 +1135,23 @@ const QuickLoans = () => {
                           <TableCell>UGX {loan.remaining_balance?.toLocaleString()}</TableCell>
                           <TableCell>
                             {loan.status === 'active' && (loan.remaining_balance || 0) > 0 && (
-                              <Button size="sm" variant="outline" onClick={() => {
-                                setSelectedLoanForPayment(loan);
-                                setShowEarlyPayDialog(true);
-                              }}>
-                                <CreditCard className="mr-1 h-3 w-3" /> Pay Early
-                              </Button>
+                              <div className="flex gap-1 flex-wrap">
+                                <Button size="sm" variant="outline" onClick={() => {
+                                  setSelectedLoanForPayment(loan);
+                                  setShowEarlyPayDialog(true);
+                                }}>
+                                  <CreditCard className="mr-1 h-3 w-3" /> Pay Early
+                                </Button>
+                                <Button size="sm" variant="default" onClick={() => {
+                                  setMomoRepayLoan(loan);
+                                  setMomoRepayPhone(employee?.phone || '');
+                                  setMomoRepayAmount('');
+                                  setMomoRepayStatus('idle');
+                                  setShowMomoRepayDialog(true);
+                                }}>
+                                  <Phone className="mr-1 h-3 w-3" /> Repay via MoMo
+                                </Button>
+                              </div>
                             )}
                           </TableCell>
                         </TableRow>

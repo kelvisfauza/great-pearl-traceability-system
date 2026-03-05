@@ -1,0 +1,1 @@
+ALTER TABLE public.loans ADD COLUMN IF NOT EXISTS loan_type text NOT NULL DEFAULT 'quick';
