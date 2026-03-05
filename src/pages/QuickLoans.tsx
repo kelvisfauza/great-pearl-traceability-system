@@ -66,6 +66,8 @@ const QuickLoans = () => {
   const [guarantorCode, setGuarantorCode] = useState('');
   const [pendingGuarantorLoan, setPendingGuarantorLoan] = useState<any>(null);
   const [reviewLoan, setReviewLoan] = useState<any>(null);
+  const [showRepaymentSlip, setShowRepaymentSlip] = useState(false);
+  const [repaymentSlipData, setRepaymentSlipData] = useState<any>(null);
 
   // Form state
   const [loanAmount, setLoanAmount] = useState('');
