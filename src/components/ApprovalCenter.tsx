@@ -349,7 +349,7 @@ const ApprovalCenter = () => {
                             </span>
                           </div>
                           <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                            High-value request ({formatAmount(request.amount)}) requires 2 admin approvals before Finance review.
+                            High-value request ({formatAmount(request.amount)}) requires Finance review + 2 admin approvals.
                           </p>
                         </div>
                       )}
