@@ -134,25 +134,25 @@ export const useEnhancedExpenseManagement = () => {
       const updateData: any = {};
       
       if (approved) {
-        // ADMIN APPROVAL - First step in main app
+        // ADMIN APPROVAL - Final step (after Finance has approved)
         if (approvalType === 'admin') {
           updateData.admin_approved = true;
           updateData.admin_approved_at = new Date().toISOString();
           updateData.admin_approved_by = approvedBy;
-          updateData.status = 'Pending Finance'; // ✅ NEW: Admin approved, now waiting for Finance portal
-          console.log('✅ Admin approved - status set to Pending Finance');
+          updateData.status = 'Approved'; // Admin is the final step
+          console.log('✅ Admin approved - FULLY APPROVED');
         } else if (approvalType === 'admin1') {
           updateData.admin_approved_1 = true;
           updateData.admin_approved_1_at = new Date().toISOString();
           updateData.admin_approved_1_by = approvedBy;
-          updateData.status = 'Pending Finance';
-          console.log('✅ Admin 1 approved - status set to Pending Finance');
+          updateData.status = 'Pending Admin 2';
+          console.log('✅ Admin 1 approved - waiting for Admin 2');
         } else if (approvalType === 'admin2') {
           updateData.admin_approved_2 = true;
           updateData.admin_approved_2_at = new Date().toISOString();
           updateData.admin_approved_2_by = approvedBy;
-          updateData.status = 'Pending Finance';
-          console.log('✅ Admin 2 approved - status set to Pending Finance');
+          updateData.status = 'Approved'; // Final step
+          console.log('✅ Admin 2 approved - FULLY APPROVED');
         }
       } else {
         // Rejection logic - only set rejection fields, don't modify approval timestamps

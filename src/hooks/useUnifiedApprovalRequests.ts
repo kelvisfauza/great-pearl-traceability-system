@@ -519,7 +519,7 @@ export const useUnifiedApprovalRequests = () => {
             let message = '';
             
             if (status === 'Approved') {
-              message = `Dear ${recipientEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been approved by ${adminName}. Awaiting final Finance approval. Great Pearl Coffee.`;
+              message = `Dear ${recipientEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been FULLY APPROVED by ${adminName}. Great Pearl Coffee.`;
             } else {
               message = `Dear ${recipientEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Great Pearl Coffee.`;
             }
