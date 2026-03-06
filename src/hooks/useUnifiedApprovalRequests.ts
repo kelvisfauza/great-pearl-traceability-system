@@ -431,7 +431,7 @@ export const useUnifiedApprovalRequests = () => {
                     phone: payoutPhone,
                     amount: currentWithdrawal.amount,
                     ref: currentWithdrawal.request_ref || `WD-${currentWithdrawal.id.slice(0, 8)}`,
-                    employeeName: (currentWithdrawal as any).employee_name || request.requestedByName || 'Employee'
+                    employeeName: (currentWithdrawal as any).employee_name || request.requestedBy || 'Employee'
                   }
                 });
 
