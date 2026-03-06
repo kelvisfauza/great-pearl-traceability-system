@@ -58,6 +58,7 @@ export const useUnifiedApprovalRequests = () => {
           .select('*')
           // Fetch requests pending any Admin approval stage (after Finance has approved)
           .in('status', [
+            'Finance Approved',
             'Pending Admin',
             'Pending Admin Approval',
             'Pending Admin 2',
