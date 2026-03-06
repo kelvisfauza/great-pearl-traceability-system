@@ -64,7 +64,7 @@ const BatchCard = ({ batch }: BatchCardProps) => {
     return formatSupplierDisplay({ supplier, fallbackName: source.supplier_name });
   };
   
-  const percentRemaining = (batch.remaining_kilograms / batch.target_capacity) * 100;
+  const percentRemaining = batch.total_kilograms > 0 ? (batch.remaining_kilograms / batch.total_kilograms) * 100 : 0;
   const percentSold = batch.total_kilograms > 0 
     ? ((batch.total_kilograms - batch.remaining_kilograms) / batch.total_kilograms) * 100 
     : 0;

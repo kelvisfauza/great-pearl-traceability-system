@@ -149,8 +149,8 @@ const InventoryBatchView = () => {
         <Card>
           <CardContent className="pt-4">
             <div>
-              <p className="text-2xl font-bold">{summary.utilizationPercent.toFixed(1)}%</p>
-              <p className="text-xs text-muted-foreground">Capacity Used</p>
+              <p className="text-2xl font-bold">{summary.utilizationPercent.toFixed(0)}%</p>
+              <p className="text-xs text-muted-foreground">Stock Remaining</p>
             </div>
           </CardContent>
         </Card>
