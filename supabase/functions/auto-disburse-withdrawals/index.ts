@@ -37,7 +37,8 @@ serve(async (req) => {
       .eq("payout_status", "pending")
       .is("payout_attempted_at", null)  // CRITICAL: Only never-attempted records
       .not("finance_approved_at", "is", null)
-      .order("finance_approved_at", { ascending: true })
+      .not("admin_approved_at", "is", null)  // CRITICAL: Must have admin final approval
+      .order("admin_approved_at", { ascending: true })
       .limit(5);
 
     if (fetchError) {
