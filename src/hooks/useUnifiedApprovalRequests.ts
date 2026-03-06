@@ -392,6 +392,15 @@ export const useUnifiedApprovalRequests = () => {
           wUpdateData.rejected_at = new Date().toISOString();
         }
 
+        // Lock for payout immediately if this is the final approval
+        const isFinalApproval = wUpdateData.status === 'approved';
+        const isMoMo = currentWithdrawal.channel === 'MOBILE_MONEY' || (currentWithdrawal.channel !== 'CASH' && currentWithdrawal.channel !== 'BANK');
+        
+        if (isFinalApproval && isMoMo) {
+          wUpdateData.payout_status = 'processing';
+          wUpdateData.payout_attempted_at = new Date().toISOString();
+        }
+
         const { error: wError } = await supabase
           .from('withdrawal_requests')
           .update(wUpdateData)
@@ -400,6 +409,99 @@ export const useUnifiedApprovalRequests = () => {
         if (wError) {
           console.error('Withdrawal update error:', wError);
           return false;
+        }
+
+        // Trigger GosentePay payout immediately on final admin approval
+        let payoutSuccess = false;
+        let payoutRef = '';
+        let payoutError = '';
+        
+        if (isFinalApproval && isMoMo) {
+          const phoneToNotify = currentWithdrawal.disbursement_phone || currentWithdrawal.phone_number || currentWithdrawal.employee_phone;
+          if (phoneToNotify) {
+            let payoutPhone = phoneToNotify.replace(/\D/g, '');
+            if (payoutPhone.startsWith('0')) payoutPhone = '256' + payoutPhone.slice(1);
+            if (!payoutPhone.startsWith('256')) payoutPhone = '256' + payoutPhone;
+
+            for (let attempt = 1; attempt <= 2; attempt++) {
+              try {
+                console.log(`GosentePay payout attempt ${attempt}: ${payoutPhone}, UGX ${currentWithdrawal.amount}`);
+                const { data: payoutData, error: payoutErr } = await supabase.functions.invoke('gosentepay-payout', {
+                  body: {
+                    phone: payoutPhone,
+                    amount: currentWithdrawal.amount,
+                    ref: currentWithdrawal.request_ref || `WD-${currentWithdrawal.id.slice(0, 8)}`,
+                    employeeName: currentWithdrawal.employee_name
+                  }
+                });
+
+                if (payoutErr) {
+                  console.error(`Payout attempt ${attempt} error:`, payoutErr);
+                  if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
+                  payoutError = payoutErr.message || 'Edge function error';
+                  break;
+                }
+
+                if (payoutData?.status === 'success') {
+                  payoutSuccess = true;
+                  payoutRef = payoutData.ref || currentWithdrawal.request_ref;
+                  break;
+                }
+
+                payoutError = payoutData?.message || payoutData?.details?.data?.message || 'Transfer rejected by provider';
+                if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
+              } catch (err: any) {
+                console.error(`Payout attempt ${attempt} exception:`, err);
+                if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
+                payoutError = err.message || 'Unknown error';
+              }
+            }
+
+            // Update payout status based on result
+            if (payoutSuccess) {
+              await supabase.from('withdrawal_requests').update({
+                payout_status: 'sent',
+                payout_ref: payoutRef,
+                payout_attempted_at: new Date().toISOString(),
+                payout_error: null
+              }).eq('id', withdrawalId);
+
+              // Deduct from tracked GosentePay balance
+              const { data: currentBal } = await supabase
+                .from('gosentepay_balance')
+                .select('balance')
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (currentBal) {
+                const newBal = currentBal.balance - currentWithdrawal.amount;
+                await supabase.from('gosentepay_balance').update({
+                  balance: newBal,
+                  last_updated_by: adminName,
+                  last_transaction_ref: payoutRef,
+                  last_transaction_type: 'payout_deduction',
+                  updated_at: new Date().toISOString()
+                }).order('updated_at', { ascending: false }).limit(1);
+
+                await supabase.from('gosentepay_balance_log').insert({
+                  previous_balance: currentBal.balance,
+                  new_balance: newBal,
+                  change_amount: -currentWithdrawal.amount,
+                  change_type: 'payout_deduction',
+                  reference: payoutRef,
+                  notes: `Admin-approved payout to ${phoneToNotify}`,
+                  created_by: adminName
+                });
+              }
+            } else {
+              await supabase.from('withdrawal_requests').update({
+                payout_status: 'failed',
+                payout_error: payoutError,
+                payout_attempted_at: new Date().toISOString()
+              }).eq('id', withdrawalId);
+            }
+          }
         }
 
         // Send SMS to requester
@@ -412,9 +514,18 @@ export const useUnifiedApprovalRequests = () => {
             .single();
 
           if (recipientEmp?.phone) {
-            const msg = status === 'Approved'
-              ? `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has received final admin approval from ${adminName}. ${wUpdateData.status === 'approved' ? 'Your funds will be disbursed shortly.' : 'Awaiting more admin approvals.'} Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`
-              : `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`;
+            let msg = '';
+            if (status === 'Approved') {
+              if (isFinalApproval && isMoMo && payoutSuccess) {
+                msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money. Ref: ${payoutRef}. Great Pearl Coffee.`;
+              } else if (isFinalApproval) {
+                msg = `Dear ${recipientEmp.name}, your withdrawal of UGX ${currentWithdrawal.amount.toLocaleString()} has been FULLY APPROVED by ${adminName}. Your funds will be disbursed shortly. Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`;
+              } else {
+                msg = `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has received admin approval from ${adminName}. Awaiting more admin approvals. Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`;
+              }
+            } else {
+              msg = `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`;
+            }
 
             await supabase.functions.invoke('send-sms', {
               body: { phone: recipientEmp.phone, message: msg, userName: recipientEmp.name, messageType: 'withdrawal_approval' }
@@ -425,7 +536,7 @@ export const useUnifiedApprovalRequests = () => {
         }
 
         await fetchAllRequests(true);
-        return true;
+        return { payoutSuccess, payoutError, isFinalApproval };
       }
 
       if (request.source === 'supabase') {
