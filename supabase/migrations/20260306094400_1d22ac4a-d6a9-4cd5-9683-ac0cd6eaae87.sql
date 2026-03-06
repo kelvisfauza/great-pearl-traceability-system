@@ -1,0 +1,1 @@
+UPDATE public.withdrawal_requests SET payout_status = 'pending', payout_attempted_at = NULL, payout_error = NULL WHERE id = 'ea24fbee-3628-484c-b159-5f4ada203f5b';
