@@ -234,8 +234,8 @@ export const useFinanceApprovals = () => {
       }
 
       toast({
-        title: approve ? "Request Approved" : "Request Rejected",
-        description: `Request has been ${approve ? 'approved' : 'rejected'} successfully${approve && request?.type === 'Salary Advance' ? '. Salary advance has been activated.' : ''}`
+        title: approve ? "Request Approved by Finance" : "Request Rejected",
+        description: `Request has been ${approve ? 'approved by Finance and sent to Admin for final approval' : 'rejected'} successfully`
       });
 
       await fetchRequests();
