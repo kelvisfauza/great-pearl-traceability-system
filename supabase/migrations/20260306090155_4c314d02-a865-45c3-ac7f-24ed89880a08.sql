@@ -1,0 +1,1 @@
+UPDATE withdrawal_requests SET status = 'pending_finance' WHERE id = 'ea24fbee-3628-484c-b159-5f4ada203f5b' AND status = 'pending_approval';
