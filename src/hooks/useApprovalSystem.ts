@@ -32,7 +32,7 @@ export const useApprovalSystem = () => {
         requestedby: employee?.email || 'Unknown User',
         daterequested: new Date().toLocaleDateString(),
         priority: details.priority || 'High',
-        status: 'Pending Admin', // ✅ NEW: Requests start pending admin approval
+        status: 'Pending Finance', // Finance approves first, then Admin
         admin_approved: false,
         finance_approved: false,
         details: JSON.stringify(details), // Stringify details for Supabase
