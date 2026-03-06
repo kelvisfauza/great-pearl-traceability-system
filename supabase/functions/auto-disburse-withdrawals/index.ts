@@ -37,7 +37,8 @@ serve(async (req) => {
       .eq("payout_status", "pending")
       .is("payout_attempted_at", null)  // CRITICAL: Only never-attempted records
       .not("finance_approved_at", "is", null)
-      .not("approved_at", "is", null)  // CRITICAL: Must have final admin approval (approved_at set by admin)
+      .not("admin_approved_1_at", "is", null)  // CRITICAL: Must have at least one admin approval
+      .not("approved_at", "is", null)  // CRITICAL: Must have final admin approval timestamp (set by admin, not finance)
       .order("approved_at", { ascending: true })
       .limit(5);
 
