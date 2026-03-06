@@ -57,7 +57,7 @@ export const RequisitionForm = () => {
           priority: formData.priority,
           requestedby: employee.email,
           daterequested: new Date().toISOString(),
-          status: 'Pending',
+          status: 'Pending Finance',
           department: employee.department,
           details: {
             category: formData.category,
