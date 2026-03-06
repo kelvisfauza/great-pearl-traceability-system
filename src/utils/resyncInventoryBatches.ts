@@ -9,9 +9,8 @@ interface ResyncResult {
 }
 
 /**
- * Resync inventory batches to reflect actual coffee in store.
- * This recalculates based on coffee_records with status='inventory' 
- * minus any quantities already sold (tracked in sales_inventory_tracking).
+ * Resync inventory batches (daily batching model).
+ * Finds unlinked coffee_records and adds them to the correct daily batch.
  */
 export const resyncInventoryBatches = async (): Promise<ResyncResult> => {
   try {
@@ -26,14 +25,13 @@ export const resyncInventoryBatches = async (): Promise<ResyncResult> => {
 
     if (fetchError) throw fetchError;
 
-    // Step 2: Get all sales tracking to calculate what's been sold
+    // Step 2: Get sales tracking
     const { data: salesTracking, error: salesError } = await supabase
       .from('sales_inventory_tracking')
       .select('coffee_record_id, quantity_kg');
 
     if (salesError) throw salesError;
 
-    // Step 3: Calculate sold quantities per coffee record
     const soldByRecord: Record<string, number> = {};
     for (const sale of salesTracking || []) {
       if (sale.coffee_record_id) {
@@ -41,16 +39,16 @@ export const resyncInventoryBatches = async (): Promise<ResyncResult> => {
       }
     }
 
-    // Step 4: Get records already linked to batches
+    // Step 3: Get already-linked records
     const { data: existingSources, error: sourcesError } = await supabase
       .from('inventory_batch_sources')
-      .select('coffee_record_id, kilograms');
+      .select('coffee_record_id');
 
     if (sourcesError) throw sourcesError;
 
     const linkedRecordIds = new Set((existingSources || []).map(s => s.coffee_record_id));
 
-    // Step 5: Calculate remaining for each unlinked record
+    // Step 4: Find unlinked records with remaining stock
     const unlinkedRecords = (coffeeRecords || [])
       .filter(record => !linkedRecordIds.has(record.id))
       .map(record => {
@@ -59,17 +57,14 @@ export const resyncInventoryBatches = async (): Promise<ResyncResult> => {
         return {
           id: record.id,
           coffee_type: record.coffee_type,
-          original_kg: record.kilograms,
           remaining_kg: remaining,
           supplier_name: record.supplier_name,
-          date: record.date,
-          batch_number: record.batch_number
+          date: record.date
         };
       })
       .filter(record => record.remaining_kg > 1);
 
     if (unlinkedRecords.length === 0) {
-      // Calculate current totals
       const { data: batches } = await supabase
         .from('inventory_batches')
         .select('remaining_kilograms')
@@ -86,110 +81,94 @@ export const resyncInventoryBatches = async (): Promise<ResyncResult> => {
       };
     }
 
-    // Step 6: Group unlinked records by coffee type (normalize case)
-    const groupedByType: Record<string, typeof unlinkedRecords> = {};
-    for (const record of unlinkedRecords) {
-      const normalizedType = record.coffee_type.toLowerCase();
-      const displayType = normalizedType.charAt(0).toUpperCase() + normalizedType.slice(1);
-      if (!groupedByType[displayType]) {
-        groupedByType[displayType] = [];
-      }
-      groupedByType[displayType].push(record);
-    }
-
+    // Step 5: Group by type + date and add to daily batches
     let batchesCreated = 0;
     let batchesUpdated = 0;
     let totalKgAdded = 0;
 
-    // Step 7: Process each coffee type
-    for (const [coffeeType, records] of Object.entries(groupedByType)) {
-      // Find existing filling batch for this coffee type
-      const { data: existingBatch } = await supabase
+    // Helper to get next batch number
+    const getNextBatchNum = async (): Promise<number> => {
+      const { data } = await supabase
+        .from('inventory_batches')
+        .select('batch_code')
+        .like('batch_code', 'B%');
+      let max = 0;
+      for (const row of data || []) {
+        const match = String(row.batch_code || '').match(/^B(\d+)/);
+        if (match) {
+          const n = parseInt(match[1], 10);
+          if (!isNaN(n)) max = Math.max(max, n);
+        }
+      }
+      return max + 1;
+    };
+
+    for (const record of unlinkedRecords) {
+      const normalizedType = record.coffee_type.charAt(0).toUpperCase() + record.coffee_type.slice(1).toLowerCase();
+      const dateStr = record.date.slice(0, 10);
+
+      // Find or create daily batch
+      let { data: batch } = await supabase
         .from('inventory_batches')
         .select('*')
-        .eq('coffee_type', coffeeType)
-        .in('status', ['filling', 'active'])
-        .lt('total_kilograms', 5000)
-        .order('created_at', { ascending: false })
+        .ilike('coffee_type', normalizedType)
+        .eq('batch_date', dateStr)
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      let currentBatchId: string | null = existingBatch?.id || null;
-      let currentBatchKg = existingBatch?.total_kilograms || 0;
+      if (!batch) {
+        const prefix = normalizedType.substring(0, 3).toUpperCase();
+        const nextNum = await getNextBatchNum();
+        const batchCode = `B${String(nextNum).padStart(3, '0')}-${dateStr}-${prefix}`;
 
-      for (const record of records) {
-        // Check if we need a new batch
-        if (!currentBatchId || currentBatchKg >= 5000) {
-          // Count existing batches for this type
-          const { count } = await supabase
-            .from('inventory_batches')
-            .select('*', { count: 'exact', head: true })
-            .ilike('coffee_type', coffeeType);
-
-          const batchNum = (count || 0) + 1;
-          const batchCode = `${coffeeType.substring(0, 3).toUpperCase()}-B${String(batchNum).padStart(3, '0')}`;
-          
-          const { data: newBatch, error: batchError } = await supabase
-            .from('inventory_batches')
-            .insert({
-              batch_code: batchCode,
-              coffee_type: coffeeType,
-              target_capacity: 5000,
-              total_kilograms: 0,
-              remaining_kilograms: 0,
-              status: 'filling',
-              batch_date: record.date
-            })
-            .select()
-            .single();
-
-          if (batchError) throw batchError;
-          
-          currentBatchId = newBatch.id;
-          currentBatchKg = 0;
-          batchesCreated++;
-        }
-
-        // Add record to current batch
-        const { error: sourceError } = await supabase
-          .from('inventory_batch_sources')
+        const { data: newBatch, error: createError } = await supabase
+          .from('inventory_batches')
           .insert({
-            batch_id: currentBatchId,
-            coffee_record_id: record.id,
-            kilograms: record.remaining_kg,
-            supplier_name: record.supplier_name,
-            purchase_date: record.date
-          });
-
-        if (sourceError) {
-          console.warn('Error adding source:', sourceError);
-          continue;
-        }
-
-        currentBatchKg += record.remaining_kg;
-        totalKgAdded += record.remaining_kg;
-
-        // Update batch totals
-        const { error: updateError } = await supabase
-          .from('inventory_batches')
-          .update({
-            total_kilograms: currentBatchKg,
-            remaining_kilograms: currentBatchKg,
-            status: currentBatchKg >= 5000 ? 'active' : 'filling'
+            batch_code: batchCode,
+            coffee_type: normalizedType,
+            batch_date: dateStr,
+            total_kilograms: 0,
+            remaining_kilograms: 0,
+            status: 'active'
           })
-          .eq('id', currentBatchId);
+          .select()
+          .single();
 
-        if (updateError) throw updateError;
-        batchesUpdated++;
+        if (createError) throw createError;
+        batch = newBatch;
+        batchesCreated++;
       }
 
-      // Mark batch as active if it has content
-      if (currentBatchId && currentBatchKg > 0) {
-        await supabase
-          .from('inventory_batches')
-          .update({ status: 'active' })
-          .eq('id', currentBatchId);
+      // Add source
+      const { error: sourceError } = await supabase
+        .from('inventory_batch_sources')
+        .insert({
+          batch_id: batch.id,
+          coffee_record_id: record.id,
+          kilograms: record.remaining_kg,
+          supplier_name: record.supplier_name,
+          purchase_date: record.date
+        });
+
+      if (sourceError) {
+        console.warn('Error adding source:', sourceError);
+        continue;
       }
+
+      // Update batch totals
+      const newTotal = (batch.total_kilograms || 0) + record.remaining_kg;
+      const newRemaining = (batch.remaining_kilograms || 0) + record.remaining_kg;
+
+      await supabase
+        .from('inventory_batches')
+        .update({
+          total_kilograms: newTotal,
+          remaining_kilograms: newRemaining
+        })
+        .eq('id', batch.id);
+
+      totalKgAdded += record.remaining_kg;
+      batchesUpdated++;
     }
 
     // Calculate final totals
@@ -202,7 +181,7 @@ export const resyncInventoryBatches = async (): Promise<ResyncResult> => {
 
     return {
       success: true,
-      message: `Added ${totalKgAdded.toLocaleString()} kg from ${unlinkedRecords.length} records into batches`,
+      message: `Added ${totalKgAdded.toLocaleString()} kg from ${unlinkedRecords.length} records into daily batches`,
       totalAvailableKg: totalAvailable,
       batchesUpdated,
       batchesCreated

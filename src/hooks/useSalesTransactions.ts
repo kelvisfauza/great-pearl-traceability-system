@@ -57,7 +57,7 @@ export const useSalesTransactions = () => {
         .select('remaining_kilograms, coffee_type')
         .ilike('coffee_type', `%${coffeeType}%`)
         .gt('remaining_kilograms', 0)
-        .in('status', ['filling', 'active', 'selling']);
+        .in('status', ['active', 'selling']);
       
       if (!batchError && batches && batches.length > 0) {
         const totalFromBatches = batches.reduce((sum, b) => sum + Number(b.remaining_kilograms), 0);

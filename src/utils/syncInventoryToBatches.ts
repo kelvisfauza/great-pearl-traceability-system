@@ -9,26 +9,24 @@ type CoffeeRecordForBatch = {
   created_at?: string;
 };
 
-const BATCH_CAPACITY_KG = 5000;
-
 const getBatchPrefix = (coffeeType: string) => {
   const t = (coffeeType || "").trim();
   if (!t) return "BAT";
   return t.substring(0, 3).toUpperCase();
 };
 
-const getNextBatchNumber = async (prefix: string): Promise<number> => {
+const getNextBatchNumber = async (): Promise<number> => {
   const { data, error } = await supabase
     .from("inventory_batches")
     .select("batch_code")
-    .like("batch_code", `${prefix}-B%`);
+    .like("batch_code", "B%");
 
   if (error) throw error;
 
   let max = 0;
   for (const row of data || []) {
     const code = String((row as any).batch_code || "");
-    const match = code.match(/-B(\d+)$/);
+    const match = code.match(/^B(\d+)/);
     if (match) {
       const n = Number(match[1]);
       if (!Number.isNaN(n)) max = Math.max(max, n);
@@ -37,35 +35,37 @@ const getNextBatchNumber = async (prefix: string): Promise<number> => {
   return max + 1;
 };
 
-const getOrCreateOpenBatch = async (coffeeType: string, batchDate: string) => {
-  // Normalize coffee type to title case for consistent matching
+/**
+ * Get or create a daily batch for a specific coffee type and date.
+ * One batch per coffee type per day — no capacity limit.
+ */
+const getOrCreateDailyBatch = async (coffeeType: string, batchDate: string) => {
   const normalizedType = coffeeType.charAt(0).toUpperCase() + coffeeType.slice(1).toLowerCase();
-  
+  const dateStr = batchDate.slice(0, 10);
+
+  // Check for existing batch for this type + date
   const { data: existing, error: existingError } = await supabase
     .from("inventory_batches")
     .select("*")
     .ilike("coffee_type", normalizedType)
-    .in("status", ["filling", "active"])
-    .lt("total_kilograms", BATCH_CAPACITY_KG)
-    .order("batch_date", { ascending: false })
-    .order("created_at", { ascending: false })
+    .eq("batch_date", dateStr)
     .limit(1)
     .maybeSingle();
 
-  if (existingError) throw existingError;
+  if (existingError && existingError.code !== 'PGRST116') throw existingError;
   if (existing) return existing;
 
   const prefix = getBatchPrefix(normalizedType);
-  const nextNumber = await getNextBatchNumber(prefix);
-  const batchCode = `${prefix}-B${String(nextNumber).padStart(3, "0")}`;
+  const nextNumber = await getNextBatchNumber();
+  const batchCode = `B${String(nextNumber).padStart(3, "0")}-${dateStr}-${prefix}`;
 
   const { data: created, error: createError } = await supabase
     .from("inventory_batches")
     .insert({
       batch_code: batchCode,
       coffee_type: normalizedType,
-      batch_date: batchDate,
-      status: "filling",
+      batch_date: dateStr,
+      status: "active",
     })
     .select("*")
     .single();
@@ -88,7 +88,7 @@ export const addCoffeeRecordToBatches = async (record: CoffeeRecordForBatch) => 
   }
 
   const batchDate = (record.date || new Date().toISOString().split("T")[0]).slice(0, 10);
-  const batch = await getOrCreateOpenBatch(record.coffee_type, batchDate);
+  const batch = await getOrCreateDailyBatch(record.coffee_type, batchDate);
 
   const kg = Number(record.kilograms || 0);
   if (kg <= 0) return { added: false, kilograms: 0 };
@@ -113,7 +113,6 @@ export const addCoffeeRecordToBatches = async (record: CoffeeRecordForBatch) => 
     .update({
       total_kilograms: newTotal,
       remaining_kilograms: newRemaining,
-      status: newTotal >= BATCH_CAPACITY_KG ? "active" : "filling",
     })
     .eq("id", (batch as any).id);
 

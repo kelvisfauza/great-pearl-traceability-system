@@ -74,7 +74,7 @@ const InventoryBatchView = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Stock Overview</h2>
-          <p className="text-sm text-muted-foreground">Coffee currently in store, grouped into 5-ton (5,000kg) batches</p>
+          <p className="text-sm text-muted-foreground">Coffee in store, grouped into daily batches per coffee type (FIFO)</p>
         </div>
         <ResyncButton onResyncComplete={fetchBatches} />
       </div>
@@ -149,8 +149,8 @@ const InventoryBatchView = () => {
         <Card>
           <CardContent className="pt-4">
             <div>
-              <p className="text-2xl font-bold">{summary.utilizationPercent.toFixed(1)}%</p>
-              <p className="text-xs text-muted-foreground">Capacity Used</p>
+              <p className="text-2xl font-bold">{summary.utilizationPercent.toFixed(0)}%</p>
+              <p className="text-xs text-muted-foreground">Stock Remaining</p>
             </div>
           </CardContent>
         </Card>

@@ -51,8 +51,8 @@ const MigrationButton = ({ onMigrationComplete }: MigrationButtonProps) => {
           <DialogHeader>
             <DialogTitle>Import Existing Inventory</DialogTitle>
             <DialogDescription>
-              This will migrate your existing coffee inventory records into the new 20,000kg batch system.
-              Records will be grouped by coffee type and organized into batches using FIFO order.
+              This will re-import your coffee inventory records into daily batches (one batch per coffee type per day).
+              Existing batches will be cleared and rebuilt. FIFO order is maintained.
             </DialogDescription>
           </DialogHeader>
 
