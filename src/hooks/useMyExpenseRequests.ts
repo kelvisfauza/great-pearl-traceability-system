@@ -88,7 +88,7 @@ export const useMyExpenseRequests = () => {
     // Determine who rejected it based on approval timestamps and status
     let rejectedBy = 'Unknown';
     if (!request.finance_approved_at && !request.admin_approved_at) {
-      rejectedBy = 'Finance or Admin';
+      rejectedBy = 'Finance'; // Finance is the first step
     } else if (request.finance_approved_at && !request.admin_approved_at) {
       rejectedBy = 'Admin';
     } else if (!request.finance_approved_at && request.admin_approved_at) {
