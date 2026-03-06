@@ -1,63 +1,100 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Package, TrendingDown, Users, Calendar, CheckCircle2, AlertCircle } from "lucide-react";
+import { ChevronDown, Package, TrendingDown, Users, Calendar, CheckCircle2, AlertCircle, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { BatchWithDetails, BatchSource } from "@/hooks/useInventoryBatches";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSupplierDisplay, SupplierRef } from "@/utils/supplierDisplay";
+
 interface BatchCardProps {
   batch: BatchWithDetails;
+}
+
+interface SourcePriceInfo {
+  kilograms: number;
+  price_per_kg: number;
+  total_cost: number;
 }
 
 const BatchCard = ({ batch }: BatchCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [supplierMap, setSupplierMap] = useState<Record<string, SupplierRef>>({});
+  const [priceInfo, setPriceInfo] = useState<{ avgPrice: number; totalCost: number } | null>(null);
   
-  // Fetch supplier codes for sources
+  // Fetch supplier codes and price info for sources
   useEffect(() => {
-    const fetchSupplierCodes = async () => {
+    const fetchDetails = async () => {
       if (batch.sources.length === 0) return;
       
-      // Get coffee record IDs to look up supplier_ids
       const recordIds = batch.sources.map(s => s.coffee_record_id);
       
       const { data: records } = await supabase
         .from('coffee_records')
-        .select('id, supplier_id')
+        .select('id, supplier_id, kilograms')
         .in('id', recordIds);
       
       if (!records || records.length === 0) return;
       
+      // Fetch supplier info
       const supplierIds = records.map(r => r.supplier_id).filter(Boolean);
-      if (supplierIds.length === 0) return;
-      
-      const { data: suppliers } = await supabase
-        .from('suppliers')
-        .select('id, name, code')
-        .in('id', supplierIds);
-      
-      if (!suppliers) return;
-      
-      // Create lookup: coffee_record_id -> supplier
-      const recordToSupplier: Record<string, SupplierRef> = {};
-      for (const record of records) {
-        if (record.supplier_id) {
-          const supplier = suppliers.find(s => s.id === record.supplier_id);
-          if (supplier) {
-            recordToSupplier[record.id] = { id: supplier.id, name: supplier.name, code: supplier.code || '' };
+      if (supplierIds.length > 0) {
+        const { data: suppliers } = await supabase
+          .from('suppliers')
+          .select('id, name, code')
+          .in('id', supplierIds);
+        
+        if (suppliers) {
+          const recordToSupplier: Record<string, SupplierRef> = {};
+          for (const record of records) {
+            if (record.supplier_id) {
+              const supplier = suppliers.find(s => s.id === record.supplier_id);
+              if (supplier) {
+                recordToSupplier[record.id] = { id: supplier.id, name: supplier.name, code: supplier.code || '' };
+              }
+            }
           }
+          setSupplierMap(recordToSupplier);
         }
       }
-      setSupplierMap(recordToSupplier);
     };
     
     if (isOpen) {
-      fetchSupplierCodes();
+      fetchDetails();
     }
   }, [isOpen, batch.sources]);
+
+  // Fetch average price from supplier_payments for this batch's coffee records
+  useEffect(() => {
+    const fetchPriceInfo = async () => {
+      if (batch.sources.length === 0) return;
+      
+      const recordIds = batch.sources.map(s => s.coffee_record_id);
+      
+      // Get price info from supplier_payments linked to these coffee records
+      const { data: payments } = await supabase
+        .from('supplier_payments')
+        .select('coffee_record_id, amount, kilograms')
+        .in('coffee_record_id', recordIds);
+      
+      if (payments && payments.length > 0) {
+        let totalCost = 0;
+        let totalKg = 0;
+        for (const p of payments) {
+          totalCost += p.amount || 0;
+          totalKg += p.kilograms || 0;
+        }
+        const avgPrice = totalKg > 0 ? totalCost / totalKg : 0;
+        setPriceInfo({ avgPrice, totalCost });
+      } else {
+        // Fallback: try coffee_records for any price data
+        setPriceInfo(null);
+      }
+    };
+    
+    fetchPriceInfo();
+  }, [batch.sources]);
   
   const getSupplierDisplay = (source: BatchSource) => {
     const supplier = supplierMap[source.coffee_record_id];
@@ -146,20 +183,33 @@ const BatchCard = ({ batch }: BatchCardProps) => {
                 </div>
               </div>
               
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-6">
+                {/* Volume info */}
                 <div className="text-right">
-                  <div className="flex items-center gap-2 justify-end">
-                    <p className={`text-lg font-bold ${isDepleted ? 'text-red-400' : isLowStock ? 'text-yellow-400' : 'text-green-400'}`}>
-                      {batch.remaining_kilograms.toLocaleString()} kg
-                    </p>
-                    <span className="text-muted-foreground text-sm">remaining</span>
-                  </div>
-                  {soldKg > 0 && (
-                    <p className="text-xs text-red-400">
-                      {soldKg.toLocaleString()} kg sold
-                    </p>
-                  )}
+                  <p className="text-sm font-bold text-foreground">
+                    {batch.total_kilograms.toLocaleString()} kg
+                  </p>
+                  <p className="text-xs text-muted-foreground">total volume</p>
                 </div>
+
+                {/* Remaining */}
+                <div className="text-right">
+                  <p className={`text-sm font-bold ${isDepleted ? 'text-red-400' : isLowStock ? 'text-yellow-400' : 'text-green-400'}`}>
+                    {batch.remaining_kilograms.toLocaleString()} kg
+                  </p>
+                  <p className="text-xs text-muted-foreground">remaining</p>
+                </div>
+
+                {/* Average price */}
+                {priceInfo && priceInfo.avgPrice > 0 && (
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-foreground">
+                      {Math.round(priceInfo.avgPrice).toLocaleString()} /kg
+                    </p>
+                    <p className="text-xs text-muted-foreground">avg price</p>
+                  </div>
+                )}
+
                 <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
               </div>
             </div>
@@ -169,8 +219,11 @@ const BatchCard = ({ batch }: BatchCardProps) => {
               <div>
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-green-400">Remaining: {batch.remaining_kilograms.toLocaleString()} kg ({percentRemaining.toFixed(0)}%)</span>
+                  {soldKg > 0 && (
+                    <span className="text-red-400">Sold: {soldKg.toLocaleString()} kg ({percentSold.toFixed(0)}%)</span>
+                  )}
                 </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-2 bg-muted rounded-full overflow-hidden flex">
                   <div 
                     className={`h-full transition-all ${
                       isDepleted ? 'bg-red-500' : 
@@ -179,23 +232,14 @@ const BatchCard = ({ batch }: BatchCardProps) => {
                     }`}
                     style={{ width: `${Math.max(percentRemaining, 0)}%` }}
                   />
-                </div>
-              </div>
-              
-              {/* Sold bar (red) - only show if something was sold */}
-              {soldKg > 0 && (
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-red-400">Sold: {soldKg.toLocaleString()} kg ({percentSold.toFixed(0)}%)</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  {soldKg > 0 && (
                     <div 
-                      className="h-full bg-red-500 transition-all"
+                      className="h-full bg-red-500/50 transition-all"
                       style={{ width: `${Math.max(percentSold, 0)}%` }}
                     />
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </CardHeader>
         </CollapsibleTrigger>
@@ -203,7 +247,7 @@ const BatchCard = ({ batch }: BatchCardProps) => {
         <CollapsibleContent>
           <CardContent className="pt-0 space-y-4">
             {/* Batch Info */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-3 bg-muted/30 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-3 bg-muted/30 rounded-lg">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <div>
@@ -212,13 +256,26 @@ const BatchCard = ({ batch }: BatchCardProps) => {
                 </div>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total Received</p>
+                <p className="text-xs text-muted-foreground">Total Volume</p>
                 <p className="text-sm font-medium">{batch.total_kilograms.toLocaleString()} kg</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total Sold</p>
-                <p className="text-sm font-medium">{(batch.total_kilograms - batch.remaining_kilograms).toLocaleString()} kg</p>
+                <p className="text-xs text-muted-foreground">Remaining</p>
+                <p className="text-sm font-medium">{batch.remaining_kilograms.toLocaleString()} kg</p>
               </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Sold</p>
+                <p className="text-sm font-medium">{soldKg.toLocaleString()} kg</p>
+              </div>
+              {priceInfo && priceInfo.avgPrice > 0 && (
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Avg Price/kg</p>
+                    <p className="text-sm font-medium">UGX {Math.round(priceInfo.avgPrice).toLocaleString()}</p>
+                  </div>
+                </div>
+              )}
               {batch.sold_out_at && (
                 <div>
                   <p className="text-xs text-muted-foreground">Sold Out On</p>
