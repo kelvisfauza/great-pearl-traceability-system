@@ -27,7 +27,8 @@ import {
   RefreshCw,
   Loader2,
   Calculator,
-  Edit3
+  Edit3,
+  Search
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useQualityControl } from "@/hooks/useQualityControl";
@@ -196,6 +197,9 @@ const QualityControl = () => {
   // Search state for pending assessments
   const [pendingSearch, setPendingSearch] = useState<string>('');
   
+  // Search state for quality assessments
+  const [assessmentSearch, setAssessmentSearch] = useState<string>('');
+  
   // Filter assessments by date
   const filteredAssessments = useMemo(() => {
     if (selectedDate === 'all') return qualityAssessments;
@@ -207,11 +211,26 @@ const QualityControl = () => {
       targetDate = customDate;
     }
     
-    return qualityAssessments.filter(assessment => {
+    let filtered = qualityAssessments.filter(assessment => {
       const assessmentDate = new Date(assessment.date_assessed || assessment.created_at).toISOString().split('T')[0];
-      return assessmentDate === targetDate;
+      return selectedDate === 'all' || assessmentDate === targetDate;
     });
-  }, [qualityAssessments, selectedDate, customDate]);
+
+    // Apply search filter
+    if (assessmentSearch.trim()) {
+      const searchLower = assessmentSearch.toLowerCase().trim();
+      filtered = filtered.filter(assessment => {
+        return (
+          assessment.batch_number?.toLowerCase().includes(searchLower) ||
+          assessment.supplier_name?.toLowerCase().includes(searchLower) ||
+          (assessment as any).supplier_code?.toLowerCase().includes(searchLower) ||
+          assessment.status?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+
+    return filtered;
+  }, [qualityAssessments, selectedDate, customDate, assessmentSearch]);
 
   // Filter pending records by search
   const filteredPendingRecords = useMemo(() => {
@@ -1216,33 +1235,44 @@ const QualityControl = () => {
           <TabsContent value="assessments">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Quality Assessments</CardTitle>
-                    <CardDescription>Completed and submitted quality assessments</CardDescription>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Quality Assessments</CardTitle>
+                      <CardDescription>Completed and submitted quality assessments</CardDescription>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <Select value={selectedDate} onValueChange={setSelectedDate}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Select date" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="today">Today</SelectItem>
+                          <SelectItem value="custom">Custom Date</SelectItem>
+                          <SelectItem value="all">All Dates</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {selectedDate === 'custom' && (
+                        <input
+                          type="date"
+                          value={customDate}
+                          onChange={(e) => setCustomDate(e.target.value)}
+                          className="px-3 py-2 border rounded-md"
+                        />
+                      )}
+                      <Badge variant="outline" className="ml-2">
+                        {filteredAssessments.length} assessment{filteredAssessments.length !== 1 ? 's' : ''}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex gap-2 items-center">
-                    <Select value={selectedDate} onValueChange={setSelectedDate}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select date" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="today">Today</SelectItem>
-                        <SelectItem value="custom">Custom Date</SelectItem>
-                        <SelectItem value="all">All Dates</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {selectedDate === 'custom' && (
-                      <input
-                        type="date"
-                        value={customDate}
-                        onChange={(e) => setCustomDate(e.target.value)}
-                        className="px-3 py-2 border rounded-md"
-                      />
-                    )}
-                    <Badge variant="outline" className="ml-2">
-                      {filteredAssessments.length} assessment{filteredAssessments.length !== 1 ? 's' : ''}
-                    </Badge>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by batch number, supplier, or status..."
+                      value={assessmentSearch}
+                      onChange={(e) => setAssessmentSearch(e.target.value)}
+                      className="pl-9"
+                    />
                   </div>
                 </div>
               </CardHeader>
