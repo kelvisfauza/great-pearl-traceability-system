@@ -90,8 +90,6 @@ const BatchCard = ({ batch }: BatchCardProps) => {
       );
     }
     switch (batch.status) {
-      case 'filling':
-        return <Badge variant="secondary" className="bg-blue-500/20 text-blue-400 border-blue-500/30">Filling ({batch.total_kilograms.toLocaleString()}/5,000 kg)</Badge>;
       case 'active':
         return <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30">Available</Badge>;
       case 'selling':
