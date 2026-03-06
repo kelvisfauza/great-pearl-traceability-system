@@ -417,7 +417,7 @@ export const useUnifiedApprovalRequests = () => {
         let payoutError = '';
         
         if (isFinalApproval && isMoMo) {
-          const phoneToNotify = currentWithdrawal.disbursement_phone || currentWithdrawal.phone_number || currentWithdrawal.employee_phone;
+          const phoneToNotify = currentWithdrawal.disbursement_phone || currentWithdrawal.phone_number || (currentWithdrawal as any).employee_phone;
           if (phoneToNotify) {
             let payoutPhone = phoneToNotify.replace(/\D/g, '');
             if (payoutPhone.startsWith('0')) payoutPhone = '256' + payoutPhone.slice(1);
