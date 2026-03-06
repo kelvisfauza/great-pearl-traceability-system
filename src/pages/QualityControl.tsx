@@ -210,11 +210,26 @@ const QualityControl = () => {
       targetDate = customDate;
     }
     
-    return qualityAssessments.filter(assessment => {
+    let filtered = qualityAssessments.filter(assessment => {
       const assessmentDate = new Date(assessment.date_assessed || assessment.created_at).toISOString().split('T')[0];
-      return assessmentDate === targetDate;
+      return selectedDate === 'all' || assessmentDate === targetDate;
     });
-  }, [qualityAssessments, selectedDate, customDate]);
+
+    // Apply search filter
+    if (assessmentSearch.trim()) {
+      const searchLower = assessmentSearch.toLowerCase().trim();
+      filtered = filtered.filter(assessment => {
+        return (
+          assessment.batch_number?.toLowerCase().includes(searchLower) ||
+          assessment.supplier_name?.toLowerCase().includes(searchLower) ||
+          (assessment as any).supplier_code?.toLowerCase().includes(searchLower) ||
+          assessment.status?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+
+    return filtered;
+  }, [qualityAssessments, selectedDate, customDate, assessmentSearch]);
 
   // Filter pending records by search
   const filteredPendingRecords = useMemo(() => {
