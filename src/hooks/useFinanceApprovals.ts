@@ -218,7 +218,7 @@ export const useFinanceApprovals = () => {
 
         if (requesterEmployee?.phone) {
           const message = approve
-            ? `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been APPROVED by Finance.${data.type === 'Salary Advance' ? ' The employee has been notified and the advance is now active.' : ' You will receive payment shortly.'}`
+            ? `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been approved by Finance. It is now pending final Admin approval.`
             : `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been REJECTED by Finance. Reason: ${rejectionReason}`;
 
           await sendApprovalRequestSMS(
