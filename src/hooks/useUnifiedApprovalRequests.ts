@@ -105,7 +105,7 @@ export const useUnifiedApprovalRequests = () => {
         reportDatabaseError(error, 'fetch approval_requests', 'approval_requests');
       }
 
-      // 2.5. Fetch pending withdrawal requests for admin approval
+      // 2.5. Fetch pending withdrawal requests for admin approval (after Finance has approved)
       try {
         const { data: withdrawalRequests, error: withdrawalError } = await supabase
           .from('withdrawal_requests')
