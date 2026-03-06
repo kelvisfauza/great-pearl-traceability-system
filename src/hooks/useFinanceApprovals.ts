@@ -40,7 +40,6 @@ export const useFinanceApprovals = () => {
       const { data, error } = await supabase
         .from('approval_requests')
         .select('*')
-        .eq('admin_approved', true)
         .is('finance_approved', null)
         .eq('status', 'Pending Finance')
         .order('created_at', { ascending: false });
