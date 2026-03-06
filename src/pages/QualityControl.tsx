@@ -196,6 +196,9 @@ const QualityControl = () => {
   // Search state for pending assessments
   const [pendingSearch, setPendingSearch] = useState<string>('');
   
+  // Search state for quality assessments
+  const [assessmentSearch, setAssessmentSearch] = useState<string>('');
+  
   // Filter assessments by date
   const filteredAssessments = useMemo(() => {
     if (selectedDate === 'all') return qualityAssessments;
