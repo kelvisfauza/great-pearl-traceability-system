@@ -61,13 +61,13 @@ export const useMyExpenseRequests = () => {
   const getApprovalStatus = (request: MyExpenseRequest) => {
     if (request.status === 'Rejected') return 'Rejected';
     if (request.status === 'Approved') return 'Fully Approved';
+    if (request.status === 'Finance Approved') return 'Finance Approved - Awaiting Admin';
     
-    const financeApproved = !!request.finance_approved_at;
-    const adminApproved = !!request.admin_approved_at;
+    const financeReviewed = !!(request as any).finance_reviewed || !!request.finance_approved_at;
+    const adminFinal = !!(request as any).admin_final_approval || !!request.admin_approved_at;
     
-    if (financeApproved && adminApproved) return 'Fully Approved';
-    if (financeApproved && !adminApproved) return 'Finance Approved - Awaiting Admin';
-    if (!financeApproved && adminApproved) return 'Admin Approved - Awaiting Finance';
+    if (financeReviewed && adminFinal) return 'Fully Approved';
+    if (financeReviewed && !adminFinal) return 'Finance Approved - Awaiting Admin';
     return 'Pending - Awaiting Finance Review';
   };
 
