@@ -128,6 +128,31 @@ const SalesForm = () => {
 
   const handleSave = async () => {
     if (!validateForm()) return;
+
+    // Check for duplicate transaction
+    const localDate = `${formData.date.getFullYear()}-${String(formData.date.getMonth() + 1).padStart(2, '0')}-${String(formData.date.getDate()).padStart(2, '0')}`;
+    try {
+      const { data: duplicates } = await supabase
+        .from('sales_transactions')
+        .select('id, date, customer, weight, unit_price')
+        .eq('date', localDate)
+        .eq('customer', formData.customer)
+        .eq('coffee_type', formData.coffeeType)
+        .eq('weight', formData.weight);
+
+      if (duplicates && duplicates.length > 0) {
+        const match = duplicates[0];
+        toast({
+          title: "Duplicate Transaction Detected",
+          description: `A sale of ${formData.weight} kg ${formData.coffeeType} to ${formData.customer} on ${format(formData.date, 'MMM dd, yyyy')} already exists (Price: UGX ${Number(match.unit_price).toLocaleString()}/kg). Please check the sales history.`,
+          variant: "destructive",
+          duration: 8000,
+        });
+        return;
+      }
+    } catch (err) {
+      console.error('Error checking duplicates:', err);
+    }
     
     // Check if trying to sell more than available inventory
     if (formData.weight > availableInventory) {
@@ -152,8 +177,6 @@ const SalesForm = () => {
     setLoading(true);
     try {
       // Create sales transaction
-      // Format date in local timezone to prevent UTC conversion shifting the date
-      const localDate = `${formData.date.getFullYear()}-${String(formData.date.getMonth() + 1).padStart(2, '0')}-${String(formData.date.getDate()).padStart(2, '0')}`;
       const transactionData = {
         date: localDate,
         customer: formData.customer,
@@ -175,9 +198,9 @@ const SalesForm = () => {
         await uploadGRNFile(formData.grnFile, savedTransaction.id);
       }
 
-      // Reset form with current date (will automatically be today's date)
+      // Reset form with current date
       setFormData({
-        date: new Date(), // This ensures it's always today's date when saving
+        date: new Date(),
         customer: '',
         coffeeType: '',
         moisture: '',
