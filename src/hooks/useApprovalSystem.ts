@@ -81,9 +81,9 @@ export const useApprovalSystem = () => {
           throw new Error(`Failed to fetch approvers: ${approversError.message}`);
         }
 
-        // Filter for ONLY users with Administrator or Super Admin role
+        // Filter for Finance department staff (they review first now)
         const approvers = allEmployees?.filter(emp => 
-          ['Administrator', 'Super Admin'].includes(emp.role)
+          emp.department === 'Finance' || ['Administrator', 'Super Admin'].includes(emp.role)
         );
 
         console.log('👥 All active employees with phones:', allEmployees?.length || 0);
