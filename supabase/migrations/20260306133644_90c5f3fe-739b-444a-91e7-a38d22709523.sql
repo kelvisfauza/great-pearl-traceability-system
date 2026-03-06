@@ -1,0 +1,1 @@
+UPDATE public.quality_assessments SET final_price = 13000, suggested_price = 13000 WHERE id = '5f60babe-9e71-4c10-a421-d94c1c40fb2d';
