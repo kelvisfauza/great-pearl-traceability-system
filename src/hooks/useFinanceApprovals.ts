@@ -205,10 +205,8 @@ export const useFinanceApprovals = () => {
 
       if (error) throw error;
 
-      // If approved and it's a salary advance, activate it
-      if (approve && request?.type === 'Salary Advance') {
-        await activateSalaryAdvance(data);
-      }
+      // Salary advance activation now happens after Admin approval (final step)
+      // No longer activate on finance approval
 
       // Send SMS notification to requester (the HR who submitted the advance request)
       try {
