@@ -397,6 +397,9 @@ export const WithdrawalRequestsManager: React.FC = () => {
       const updateData: any = {
         finance_approved_at: new Date().toISOString(),
         finance_approved_by: employee?.name || employee?.email || 'Finance',
+        finance_reviewed: true,
+        finance_review_at: new Date().toISOString(),
+        finance_review_by: employee?.name || employee?.email || 'Finance',
         updated_at: new Date().toISOString(),
         // Finance is the first step - move to admin approval queue
         status: 'pending_approval',
@@ -437,7 +440,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
       toast({
         title: "Finance Approved",
-        description: `UGX ${selectedRequest.amount.toLocaleString()} approved by Finance. Now pending Admin approval.`,
+        description: `UGX ${selectedRequest.amount.toLocaleString()} approved by Finance. Now awaiting final Admin approval.`,
       });
 
       setShowApproveDialog(false);

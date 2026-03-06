@@ -58,6 +58,7 @@ export const useUnifiedApprovalRequests = () => {
           .select('*')
           // Fetch requests pending any Admin approval stage (after Finance has approved)
           .in('status', [
+            'Finance Approved',
             'Pending Admin',
             'Pending Admin Approval',
             'Pending Admin 2',
@@ -582,6 +583,10 @@ export const useUnifiedApprovalRequests = () => {
               updateData.admin_approved = true;
               updateData.admin_approved_by = adminName;
               updateData.admin_approved_at = new Date().toISOString();
+              // New columns
+              updateData.admin_final_approval = true;
+              updateData.admin_final_approval_at = new Date().toISOString();
+              updateData.admin_final_approval_by = adminName;
               updateData.status = 'Approved';
               updateData.approval_stage = 'approved';
               console.log('✅ 3-tier: Admin 2 approved - FULLY APPROVED');
@@ -591,6 +596,10 @@ export const useUnifiedApprovalRequests = () => {
             updateData.admin_approved = true;
             updateData.admin_approved_by = adminName;
             updateData.admin_approved_at = new Date().toISOString();
+            // New columns
+            updateData.admin_final_approval = true;
+            updateData.admin_final_approval_at = new Date().toISOString();
+            updateData.admin_final_approval_by = adminName;
             updateData.status = 'Approved';
             updateData.approval_stage = 'approved';
             console.log('✅ 2-tier: Admin approved - FULLY APPROVED');

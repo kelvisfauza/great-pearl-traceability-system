@@ -139,6 +139,9 @@ export const useEnhancedExpenseManagement = () => {
           updateData.admin_approved = true;
           updateData.admin_approved_at = new Date().toISOString();
           updateData.admin_approved_by = approvedBy;
+          updateData.admin_final_approval = true;
+          updateData.admin_final_approval_at = new Date().toISOString();
+          updateData.admin_final_approval_by = approvedBy;
           updateData.status = 'Approved'; // Admin is the final step
           console.log('✅ Admin approved - FULLY APPROVED');
         } else if (approvalType === 'admin1') {
@@ -151,6 +154,9 @@ export const useEnhancedExpenseManagement = () => {
           updateData.admin_approved_2 = true;
           updateData.admin_approved_2_at = new Date().toISOString();
           updateData.admin_approved_2_by = approvedBy;
+          updateData.admin_final_approval = true;
+          updateData.admin_final_approval_at = new Date().toISOString();
+          updateData.admin_final_approval_by = approvedBy;
           updateData.status = 'Approved'; // Final step
           console.log('✅ Admin 2 approved - FULLY APPROVED');
         }

@@ -61,24 +61,23 @@ export const useMyExpenseRequests = () => {
   const getApprovalStatus = (request: MyExpenseRequest) => {
     if (request.status === 'Rejected') return 'Rejected';
     if (request.status === 'Approved') return 'Fully Approved';
+    if (request.status === 'Finance Approved') return 'Finance Approved - Awaiting Admin';
     
-    const financeApproved = !!request.finance_approved_at;
-    const adminApproved = !!request.admin_approved_at;
+    const financeReviewed = !!(request as any).finance_reviewed || !!request.finance_approved_at;
+    const adminFinal = !!(request as any).admin_final_approval || !!request.admin_approved_at;
     
-    if (financeApproved && adminApproved) return 'Fully Approved';
-    if (financeApproved && !adminApproved) return 'Finance Approved - Awaiting Admin';
-    if (!financeApproved && adminApproved) return 'Admin Approved - Awaiting Finance';
+    if (financeReviewed && adminFinal) return 'Fully Approved';
+    if (financeReviewed && !adminFinal) return 'Finance Approved - Awaiting Admin';
     return 'Pending - Awaiting Finance Review';
   };
 
   const getStatusColor = (request: MyExpenseRequest) => {
     if (request.status === 'Rejected') return 'text-red-600 bg-red-50';
     if (request.status === 'Approved') return 'text-green-600 bg-green-50';
+    if (request.status === 'Finance Approved') return 'text-blue-600 bg-blue-50';
     
-    const financeApproved = !!request.finance_approved_at;
-    const adminApproved = !!request.admin_approved_at;
-    
-    if (financeApproved || adminApproved) return 'text-blue-600 bg-blue-50';
+    const financeReviewed = !!(request as any).finance_reviewed || !!request.finance_approved_at;
+    if (financeReviewed) return 'text-blue-600 bg-blue-50';
     return 'text-yellow-600 bg-yellow-50';
   };
 

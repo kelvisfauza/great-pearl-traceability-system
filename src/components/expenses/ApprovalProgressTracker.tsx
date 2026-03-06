@@ -13,8 +13,12 @@ interface ApprovalProgressTrackerProps {
   requiresThreeApprovals: boolean;
   financeApprovedAt?: string | null;
   financeApprovedBy?: string | null;
+  financeReviewAt?: string | null;
+  financeReviewBy?: string | null;
   adminApprovedAt?: string | null;
   adminApprovedBy?: string | null;
+  adminFinalApprovalAt?: string | null;
+  adminFinalApprovalBy?: string | null;
   adminApproved1At?: string | null;
   adminApproved1By?: string | null;
   adminApproved2At?: string | null;
@@ -26,8 +30,12 @@ const ApprovalProgressTracker = ({
   requiresThreeApprovals,
   financeApprovedAt,
   financeApprovedBy,
+  financeReviewAt,
+  financeReviewBy,
   adminApprovedAt,
   adminApprovedBy,
+  adminFinalApprovalAt,
+  adminFinalApprovalBy,
   adminApproved1At,
   adminApproved1By,
   adminApproved2At,
@@ -36,14 +44,20 @@ const ApprovalProgressTracker = ({
 }: ApprovalProgressTrackerProps) => {
   if (status === 'Rejected' || status === 'Withdrawn') return null;
 
+  // Use new columns with fallback to legacy columns
+  const effectiveFinanceAt = financeReviewAt || financeApprovedAt;
+  const effectiveFinanceBy = financeReviewBy || financeApprovedBy;
+  const effectiveAdminAt = adminFinalApprovalAt || adminApprovedAt;
+  const effectiveAdminBy = adminFinalApprovalBy || adminApprovedBy;
+
   const steps: ApprovalStep[] = requiresThreeApprovals
     ? [
         {
           label: 'Finance',
           icon: <DollarSign className="h-3.5 w-3.5" />,
-          approved: !!financeApprovedAt,
-          approvedBy: financeApprovedBy,
-          approvedAt: financeApprovedAt,
+          approved: !!effectiveFinanceAt,
+          approvedBy: effectiveFinanceBy,
+          approvedAt: effectiveFinanceAt,
         },
         {
           label: 'Admin 1',
@@ -64,16 +78,16 @@ const ApprovalProgressTracker = ({
         {
           label: 'Finance',
           icon: <DollarSign className="h-3.5 w-3.5" />,
-          approved: !!financeApprovedAt,
-          approvedBy: financeApprovedBy,
-          approvedAt: financeApprovedAt,
+          approved: !!effectiveFinanceAt,
+          approvedBy: effectiveFinanceBy,
+          approvedAt: effectiveFinanceAt,
         },
         {
           label: 'Admin',
           icon: <Shield className="h-3.5 w-3.5" />,
-          approved: !!adminApprovedAt,
-          approvedBy: adminApprovedBy,
-          approvedAt: adminApprovedAt,
+          approved: !!effectiveAdminAt,
+          approvedBy: effectiveAdminBy,
+          approvedAt: effectiveAdminAt,
         },
       ];
 
