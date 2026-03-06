@@ -449,7 +449,7 @@ export const useUnifiedApprovalRequests = () => {
 
         if (status === 'Approved') {
           if (requiresThreeApprovals) {
-            // 3-tier flow: need 2 admin approvals before finance
+            // 3-tier flow: need 2 admin approvals (Admin is final step after Finance)
             if (!currentReq.admin_approved_1) {
               // First admin approval
               updateData.admin_approved_1 = true;
@@ -464,25 +464,25 @@ export const useUnifiedApprovalRequests = () => {
               if (currentReq.admin_approved_1_by === adminName) {
                 return { blocked: true, reason: 'You already approved this request as Admin 1. A different administrator must provide the second approval.' };
               }
-              // Second admin approval
+              // Second admin approval - FINAL step
               updateData.admin_approved_2 = true;
               updateData.admin_approved_2_at = new Date().toISOString();
               updateData.admin_approved_2_by = adminName;
               updateData.admin_approved = true;
               updateData.admin_approved_by = adminName;
               updateData.admin_approved_at = new Date().toISOString();
-              updateData.status = 'Pending Finance';
-              updateData.approval_stage = 'pending_finance';
-              console.log('✅ 3-tier: Admin 2 approved, moving to Finance');
+              updateData.status = 'Approved';
+              updateData.approval_stage = 'approved';
+              console.log('✅ 3-tier: Admin 2 approved - FULLY APPROVED');
             }
           } else {
-            // Standard 2-tier: single admin approval then finance
+            // Standard 2-tier: single admin approval (FINAL step after Finance)
             updateData.admin_approved = true;
             updateData.admin_approved_by = adminName;
             updateData.admin_approved_at = new Date().toISOString();
-            updateData.status = 'Pending Finance';
-            updateData.approval_stage = 'pending_finance';
-            console.log('✅ 2-tier: Admin approved, moving to Finance');
+            updateData.status = 'Approved';
+            updateData.approval_stage = 'approved';
+            console.log('✅ 2-tier: Admin approved - FULLY APPROVED');
           }
         } else {
           // Rejected by admin
