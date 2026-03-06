@@ -44,14 +44,20 @@ const ApprovalProgressTracker = ({
 }: ApprovalProgressTrackerProps) => {
   if (status === 'Rejected' || status === 'Withdrawn') return null;
 
+  // Use new columns with fallback to legacy columns
+  const effectiveFinanceAt = financeReviewAt || financeApprovedAt;
+  const effectiveFinanceBy = financeReviewBy || financeApprovedBy;
+  const effectiveAdminAt = adminFinalApprovalAt || adminApprovedAt;
+  const effectiveAdminBy = adminFinalApprovalBy || adminApprovedBy;
+
   const steps: ApprovalStep[] = requiresThreeApprovals
     ? [
         {
           label: 'Finance',
           icon: <DollarSign className="h-3.5 w-3.5" />,
-          approved: !!financeApprovedAt,
-          approvedBy: financeApprovedBy,
-          approvedAt: financeApprovedAt,
+          approved: !!effectiveFinanceAt,
+          approvedBy: effectiveFinanceBy,
+          approvedAt: effectiveFinanceAt,
         },
         {
           label: 'Admin 1',
@@ -72,16 +78,16 @@ const ApprovalProgressTracker = ({
         {
           label: 'Finance',
           icon: <DollarSign className="h-3.5 w-3.5" />,
-          approved: !!financeApprovedAt,
-          approvedBy: financeApprovedBy,
-          approvedAt: financeApprovedAt,
+          approved: !!effectiveFinanceAt,
+          approvedBy: effectiveFinanceBy,
+          approvedAt: effectiveFinanceAt,
         },
         {
           label: 'Admin',
           icon: <Shield className="h-3.5 w-3.5" />,
-          approved: !!adminApprovedAt,
-          approvedBy: adminApprovedBy,
-          approvedAt: adminApprovedAt,
+          approved: !!effectiveAdminAt,
+          approvedBy: effectiveAdminBy,
+          approvedAt: effectiveAdminAt,
         },
       ];
 

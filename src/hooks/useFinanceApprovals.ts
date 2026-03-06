@@ -179,6 +179,11 @@ export const useFinanceApprovals = () => {
       const request = requests.find(r => r.id === requestId);
       
       const updateData: any = {
+        // New columns
+        finance_reviewed: approve,
+        finance_review_at: new Date().toISOString(),
+        finance_review_by: employee?.name || employee?.email || 'Finance',
+        // Legacy columns for backward compat
         finance_approved: approve,
         finance_approved_by: employee?.name || employee?.email || 'Finance',
         finance_approved_at: new Date().toISOString(),
@@ -186,8 +191,8 @@ export const useFinanceApprovals = () => {
       };
 
       if (approve) {
-        updateData.status = 'Pending Admin';
-        updateData.approval_stage = 'pending_admin';
+        updateData.status = 'Finance Approved';
+        updateData.approval_stage = 'finance_approved';
       } else {
         updateData.status = 'Rejected';
         updateData.rejection_reason = rejectionReason || 'Rejected by Finance';
