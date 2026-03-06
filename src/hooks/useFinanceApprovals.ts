@@ -186,7 +186,8 @@ export const useFinanceApprovals = () => {
       };
 
       if (approve) {
-        updateData.status = 'Approved';
+        updateData.status = 'Pending Admin';
+        updateData.approval_stage = 'pending_admin';
       } else {
         updateData.status = 'Rejected';
         updateData.rejection_reason = rejectionReason || 'Rejected by Finance';
