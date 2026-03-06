@@ -1,0 +1,1 @@
+UPDATE withdrawal_requests SET status = 'pending_approval', approved_at = NULL, approved_by = NULL, payout_status = 'pending' WHERE id = '8cad14a6-212f-43a1-a2fb-e8e4105e99d9' AND status = 'approved' AND admin_approved_1_at IS NULL;
