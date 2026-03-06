@@ -246,7 +246,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
       toast({
         title: "Withdrawal Request Submitted!",
-        description: `Reference: ${ref}. Your request for UGX ${withdrawalAmount.toLocaleString()} has been submitted for admin approval.`,
+        description: `Reference: ${ref}. Your request for UGX ${withdrawalAmount.toLocaleString()} has been submitted for Finance review.`,
         duration: 8000,
       });
     } catch (error) {
