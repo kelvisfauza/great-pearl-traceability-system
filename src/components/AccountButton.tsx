@@ -241,7 +241,7 @@ export const AccountButton = () => {
             <span
               role="button"
               className="ml-1 cursor-pointer text-muted-foreground hover:text-foreground"
-              onClick={(e) => { e.stopPropagation(); setBalanceHidden(h => !h); }}
+              onClick={(e) => { e.stopPropagation(); setBalanceHidden(h => { const next = !h; localStorage.setItem('balanceHidden', String(next)); return next; }); }}
             >
               {balanceHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
             </span>
