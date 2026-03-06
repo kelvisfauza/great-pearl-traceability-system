@@ -68,7 +68,7 @@ export const useMyExpenseRequests = () => {
     if (financeApproved && adminApproved) return 'Fully Approved';
     if (financeApproved && !adminApproved) return 'Finance Approved - Awaiting Admin';
     if (!financeApproved && adminApproved) return 'Admin Approved - Awaiting Finance';
-    return 'Pending - Awaiting Finance & Admin';
+    return 'Pending - Awaiting Finance Review';
   };
 
   const getStatusColor = (request: MyExpenseRequest) => {
