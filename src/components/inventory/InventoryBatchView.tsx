@@ -76,7 +76,10 @@ const InventoryBatchView = () => {
           <h2 className="text-lg font-semibold">Stock Overview</h2>
           <p className="text-sm text-muted-foreground">Coffee in store, grouped into daily batches per coffee type (FIFO)</p>
         </div>
-        <ResyncButton onResyncComplete={fetchBatches} />
+        <div className="flex items-center gap-2">
+          <MigrationButton onMigrationComplete={fetchBatches} />
+          <ResyncButton onResyncComplete={fetchBatches} />
+        </div>
       </div>
 
       {/* Summary Cards */}
