@@ -27,7 +27,8 @@ import {
   RefreshCw,
   Loader2,
   Calculator,
-  Edit3
+  Edit3,
+  Search
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useQualityControl } from "@/hooks/useQualityControl";
