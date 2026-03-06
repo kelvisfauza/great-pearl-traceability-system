@@ -50,15 +50,14 @@ export const useUnifiedApprovalRequests = () => {
       
       const allRequests: UnifiedApprovalRequest[] = [];
 
-      // 1. Fetch Supabase approval requests - ONLY pending for Admin approval
-      // Requests with 'Pending Finance' status should NOT appear here - they go to Finance portal
+      // 1. Fetch Supabase approval requests - ONLY pending for Admin approval (final step)
+      // Requests with 'Pending Finance' status should NOT appear here - they go to Finance portal first
       try {
         const { data: supabaseRequests, error } = await supabase
           .from('approval_requests')
           .select('*')
-          // Fetch requests pending any Admin approval stage
+          // Fetch requests pending any Admin approval stage (after Finance has approved)
           .in('status', [
-            'Pending',
             'Pending Admin',
             'Pending Admin Approval',
             'Pending Admin 2',
