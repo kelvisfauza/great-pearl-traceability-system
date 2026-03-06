@@ -536,7 +536,7 @@ export const useUnifiedApprovalRequests = () => {
         }
 
         await fetchAllRequests(true);
-        return { payoutSuccess, payoutError, isFinalApproval };
+        return true;
       }
 
       if (request.source === 'supabase') {
