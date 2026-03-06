@@ -374,6 +374,8 @@ export const useUnifiedApprovalRequests = () => {
               }
               wUpdateData.admin_approved_2_at = new Date().toISOString();
               wUpdateData.admin_approved_2_by = adminName;
+              wUpdateData.approved_at = new Date().toISOString();
+              wUpdateData.approved_by = adminName;
               wUpdateData.status = 'approved';
               wUpdateData.payout_status = 'pending';
               console.log('✅ Withdrawal: Admin 2 approved (final), ready for payout');
@@ -382,6 +384,8 @@ export const useUnifiedApprovalRequests = () => {
             // 1 admin approval needed (Admin is final step)
             wUpdateData.admin_approved_1_at = new Date().toISOString();
             wUpdateData.admin_approved_1_by = adminName;
+            wUpdateData.approved_at = new Date().toISOString();
+            wUpdateData.approved_by = adminName;
             wUpdateData.status = 'approved';
             wUpdateData.payout_status = 'pending';
             console.log('✅ Withdrawal: Admin approved (final), ready for payout');
