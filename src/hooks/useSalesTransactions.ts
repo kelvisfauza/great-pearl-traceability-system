@@ -31,7 +31,7 @@ export const useSalesTransactions = () => {
       const { data, error } = await supabase
         .from('sales_transactions')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('date', { ascending: false });
 
       if (error) throw error;
       setTransactions(data || []);
