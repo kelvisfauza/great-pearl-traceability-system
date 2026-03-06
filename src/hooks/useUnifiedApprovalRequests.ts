@@ -361,7 +361,7 @@ export const useUnifiedApprovalRequests = () => {
 
         if (status === 'Approved') {
           if (reqThreeApprovals) {
-            // 2 admin approvals needed for high-value withdrawals
+            // 2 admin approvals needed for high-value withdrawals (Admin is final step)
             if (!currentWithdrawal.admin_approved_1_at) {
               wUpdateData.admin_approved_1_at = new Date().toISOString();
               wUpdateData.admin_approved_1_by = adminName;
@@ -373,15 +373,17 @@ export const useUnifiedApprovalRequests = () => {
               }
               wUpdateData.admin_approved_2_at = new Date().toISOString();
               wUpdateData.admin_approved_2_by = adminName;
-              wUpdateData.status = 'pending_finance';
-              console.log('✅ Withdrawal: Admin 2 approved, moving to Finance');
+              wUpdateData.status = 'approved';
+              wUpdateData.payout_status = 'pending';
+              console.log('✅ Withdrawal: Admin 2 approved (final), ready for payout');
             }
           } else {
-            // 1 admin approval needed
+            // 1 admin approval needed (Admin is final step)
             wUpdateData.admin_approved_1_at = new Date().toISOString();
             wUpdateData.admin_approved_1_by = adminName;
-            wUpdateData.status = 'pending_finance';
-            console.log('✅ Withdrawal: Admin approved, moving to Finance');
+            wUpdateData.status = 'approved';
+            wUpdateData.payout_status = 'pending';
+            console.log('✅ Withdrawal: Admin approved (final), ready for payout');
           }
         } else {
           wUpdateData.status = 'rejected';
