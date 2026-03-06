@@ -45,7 +45,9 @@ export const AccountButton = () => {
   const [showDeposit, setShowDeposit] = useState(false);
   const [showSendMoney, setShowSendMoney] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
-  const [balanceHidden, setBalanceHidden] = useState(false);
+  const [balanceHidden, setBalanceHidden] = useState(() => {
+    return localStorage.getItem('balanceHidden') === 'true';
+  });
   const [activeLoanTotal, setActiveLoanTotal] = useState(0);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [ledgerUserId, setLedgerUserId] = useState<string | null>(null);
@@ -239,7 +241,7 @@ export const AccountButton = () => {
             <span
               role="button"
               className="ml-1 cursor-pointer text-muted-foreground hover:text-foreground"
-              onClick={(e) => { e.stopPropagation(); setBalanceHidden(h => !h); }}
+              onClick={(e) => { e.stopPropagation(); setBalanceHidden(h => { const next = !h; localStorage.setItem('balanceHidden', String(next)); return next; }); }}
             >
               {balanceHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
             </span>
