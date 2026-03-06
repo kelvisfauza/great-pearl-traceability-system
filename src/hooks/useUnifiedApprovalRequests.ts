@@ -50,15 +50,14 @@ export const useUnifiedApprovalRequests = () => {
       
       const allRequests: UnifiedApprovalRequest[] = [];
 
-      // 1. Fetch Supabase approval requests - ONLY pending for Admin approval
-      // Requests with 'Pending Finance' status should NOT appear here - they go to Finance portal
+      // 1. Fetch Supabase approval requests - ONLY pending for Admin approval (final step)
+      // Requests with 'Pending Finance' status should NOT appear here - they go to Finance portal first
       try {
         const { data: supabaseRequests, error } = await supabase
           .from('approval_requests')
           .select('*')
-          // Fetch requests pending any Admin approval stage
+          // Fetch requests pending any Admin approval stage (after Finance has approved)
           .in('status', [
-            'Pending',
             'Pending Admin',
             'Pending Admin Approval',
             'Pending Admin 2',
@@ -106,7 +105,7 @@ export const useUnifiedApprovalRequests = () => {
         reportDatabaseError(error, 'fetch approval_requests', 'approval_requests');
       }
 
-      // 2.5. Fetch pending withdrawal requests for admin approval
+      // 2.5. Fetch pending withdrawal requests for admin approval (after Finance has approved)
       try {
         const { data: withdrawalRequests, error: withdrawalError } = await supabase
           .from('withdrawal_requests')
@@ -362,7 +361,7 @@ export const useUnifiedApprovalRequests = () => {
 
         if (status === 'Approved') {
           if (reqThreeApprovals) {
-            // 2 admin approvals needed for high-value withdrawals
+            // 2 admin approvals needed for high-value withdrawals (Admin is final step)
             if (!currentWithdrawal.admin_approved_1_at) {
               wUpdateData.admin_approved_1_at = new Date().toISOString();
               wUpdateData.admin_approved_1_by = adminName;
@@ -374,15 +373,17 @@ export const useUnifiedApprovalRequests = () => {
               }
               wUpdateData.admin_approved_2_at = new Date().toISOString();
               wUpdateData.admin_approved_2_by = adminName;
-              wUpdateData.status = 'pending_finance';
-              console.log('✅ Withdrawal: Admin 2 approved, moving to Finance');
+              wUpdateData.status = 'approved';
+              wUpdateData.payout_status = 'pending';
+              console.log('✅ Withdrawal: Admin 2 approved (final), ready for payout');
             }
           } else {
-            // 1 admin approval needed
+            // 1 admin approval needed (Admin is final step)
             wUpdateData.admin_approved_1_at = new Date().toISOString();
             wUpdateData.admin_approved_1_by = adminName;
-            wUpdateData.status = 'pending_finance';
-            console.log('✅ Withdrawal: Admin approved, moving to Finance');
+            wUpdateData.status = 'approved';
+            wUpdateData.payout_status = 'pending';
+            console.log('✅ Withdrawal: Admin approved (final), ready for payout');
           }
         } else {
           wUpdateData.status = 'rejected';
@@ -412,7 +413,7 @@ export const useUnifiedApprovalRequests = () => {
 
           if (recipientEmp?.phone) {
             const msg = status === 'Approved'
-              ? `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has received admin approval from ${adminName}. ${wUpdateData.status === 'pending_finance' ? 'It is now pending final Finance approval.' : 'Awaiting more admin approvals.'} Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`
+              ? `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has received final admin approval from ${adminName}. ${wUpdateData.status === 'approved' ? 'Your funds will be disbursed shortly.' : 'Awaiting more admin approvals.'} Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`
               : `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`;
 
             await supabase.functions.invoke('send-sms', {
@@ -448,7 +449,7 @@ export const useUnifiedApprovalRequests = () => {
 
         if (status === 'Approved') {
           if (requiresThreeApprovals) {
-            // 3-tier flow: need 2 admin approvals before finance
+            // 3-tier flow: need 2 admin approvals (Admin is final step after Finance)
             if (!currentReq.admin_approved_1) {
               // First admin approval
               updateData.admin_approved_1 = true;
@@ -463,25 +464,25 @@ export const useUnifiedApprovalRequests = () => {
               if (currentReq.admin_approved_1_by === adminName) {
                 return { blocked: true, reason: 'You already approved this request as Admin 1. A different administrator must provide the second approval.' };
               }
-              // Second admin approval
+              // Second admin approval - FINAL step
               updateData.admin_approved_2 = true;
               updateData.admin_approved_2_at = new Date().toISOString();
               updateData.admin_approved_2_by = adminName;
               updateData.admin_approved = true;
               updateData.admin_approved_by = adminName;
               updateData.admin_approved_at = new Date().toISOString();
-              updateData.status = 'Pending Finance';
-              updateData.approval_stage = 'pending_finance';
-              console.log('✅ 3-tier: Admin 2 approved, moving to Finance');
+              updateData.status = 'Approved';
+              updateData.approval_stage = 'approved';
+              console.log('✅ 3-tier: Admin 2 approved - FULLY APPROVED');
             }
           } else {
-            // Standard 2-tier: single admin approval then finance
+            // Standard 2-tier: single admin approval (FINAL step after Finance)
             updateData.admin_approved = true;
             updateData.admin_approved_by = adminName;
             updateData.admin_approved_at = new Date().toISOString();
-            updateData.status = 'Pending Finance';
-            updateData.approval_stage = 'pending_finance';
-            console.log('✅ 2-tier: Admin approved, moving to Finance');
+            updateData.status = 'Approved';
+            updateData.approval_stage = 'approved';
+            console.log('✅ 2-tier: Admin approved - FULLY APPROVED');
           }
         } else {
           // Rejected by admin
@@ -518,7 +519,7 @@ export const useUnifiedApprovalRequests = () => {
             let message = '';
             
             if (status === 'Approved') {
-              message = `Dear ${recipientEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been approved by ${adminName}. Awaiting final Finance approval. Great Pearl Coffee.`;
+              message = `Dear ${recipientEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been FULLY APPROVED by ${adminName}. Great Pearl Coffee.`;
             } else {
               message = `Dear ${recipientEmployee.name}, your ${request.requestType} request for UGX ${typeof request.amount === 'number' ? request.amount.toLocaleString() : request.amount} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Great Pearl Coffee.`;
             }

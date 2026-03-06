@@ -176,6 +176,9 @@ export type Database = {
           admin_approved_at: string | null
           admin_approved_by: string | null
           admin_comments: string | null
+          admin_final_approval: boolean | null
+          admin_final_approval_at: string | null
+          admin_final_approval_by: string | null
           amount: number
           approval_stage: string | null
           created_at: string
@@ -191,6 +194,9 @@ export type Database = {
           finance_approved: boolean | null
           finance_approved_at: string | null
           finance_approved_by: string | null
+          finance_review_at: string | null
+          finance_review_by: string | null
+          finance_reviewed: boolean | null
           id: string
           payment_method: string | null
           priority: string
@@ -216,6 +222,9 @@ export type Database = {
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           admin_comments?: string | null
+          admin_final_approval?: boolean | null
+          admin_final_approval_at?: string | null
+          admin_final_approval_by?: string | null
           amount: number
           approval_stage?: string | null
           created_at?: string
@@ -231,6 +240,9 @@ export type Database = {
           finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
+          finance_review_at?: string | null
+          finance_review_by?: string | null
+          finance_reviewed?: boolean | null
           id?: string
           payment_method?: string | null
           priority?: string
@@ -256,6 +268,9 @@ export type Database = {
           admin_approved_at?: string | null
           admin_approved_by?: string | null
           admin_comments?: string | null
+          admin_final_approval?: boolean | null
+          admin_final_approval_at?: string | null
+          admin_final_approval_by?: string | null
           amount?: number
           approval_stage?: string | null
           created_at?: string
@@ -271,6 +286,9 @@ export type Database = {
           finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
+          finance_review_at?: string | null
+          finance_review_by?: string | null
+          finance_reviewed?: boolean | null
           id?: string
           payment_method?: string | null
           priority?: string
@@ -4700,6 +4718,9 @@ export type Database = {
           admin_approved_3_by: string | null
           admin_approved_at: string | null
           admin_approved_by: string | null
+          admin_final_approval: boolean | null
+          admin_final_approval_at: string | null
+          admin_final_approval_by: string | null
           amount: number
           approval_stage: string
           approved_at: string | null
@@ -4711,6 +4732,9 @@ export type Database = {
           finance_approved: boolean | null
           finance_approved_at: string | null
           finance_approved_by: string | null
+          finance_review_at: string | null
+          finance_review_by: string | null
+          finance_reviewed: boolean | null
           id: string
           payment_channel: string | null
           payment_slip_generated: boolean | null
@@ -4740,6 +4764,9 @@ export type Database = {
           admin_approved_3_by?: string | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
+          admin_final_approval?: boolean | null
+          admin_final_approval_at?: string | null
+          admin_final_approval_by?: string | null
           amount: number
           approval_stage?: string
           approved_at?: string | null
@@ -4751,6 +4778,9 @@ export type Database = {
           finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
+          finance_review_at?: string | null
+          finance_review_by?: string | null
+          finance_reviewed?: boolean | null
           id?: string
           payment_channel?: string | null
           payment_slip_generated?: boolean | null
@@ -4780,6 +4810,9 @@ export type Database = {
           admin_approved_3_by?: string | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
+          admin_final_approval?: boolean | null
+          admin_final_approval_at?: string | null
+          admin_final_approval_by?: string | null
           amount?: number
           approval_stage?: string
           approved_at?: string | null
@@ -4791,6 +4824,9 @@ export type Database = {
           finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
+          finance_review_at?: string | null
+          finance_review_by?: string | null
+          finance_reviewed?: boolean | null
           id?: string
           payment_channel?: string | null
           payment_slip_generated?: boolean | null

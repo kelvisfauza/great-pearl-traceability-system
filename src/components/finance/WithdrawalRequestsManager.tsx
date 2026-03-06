@@ -393,13 +393,13 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
     setProcessing(selectedRequest.id);
     try {
-      const isMoMo = selectedRequest.channel === 'MOBILE_MONEY' || (selectedRequest.channel !== 'CASH' && selectedRequest.channel !== 'BANK');
+      const requiresThree = selectedRequest.requires_three_approvals;
       const updateData: any = {
         finance_approved_at: new Date().toISOString(),
         finance_approved_by: employee?.name || employee?.email || 'Finance',
         updated_at: new Date().toISOString(),
-        // CRITICAL: Lock for payout immediately to prevent cron double-send
-        ...(isMoMo ? { payout_status: 'processing', payout_attempted_at: new Date().toISOString() } : {})
+        // Finance is the first step - move to admin approval queue
+        status: 'pending_approval',
       };
 
       if (paymentVoucher) {
@@ -413,68 +413,8 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
       if (error) throw error;
 
-      const phoneToNotify = selectedRequest.disbursement_phone || selectedRequest.phone_number || selectedRequest.employee_phone;
-      const isMobileMoney = selectedRequest.channel === 'MOBILE_MONEY' || (selectedRequest.channel !== 'CASH' && selectedRequest.channel !== 'BANK');
-
-      let payoutRef = '';
-      let payoutSuccess = false;
-      let payoutError = '';
-
-      if (isMobileMoney && phoneToNotify) {
-        const result = await attemptPayout(selectedRequest);
-        payoutSuccess = result.success;
-        payoutRef = result.ref;
-        payoutError = result.error || '';
-
-        // Always update payout_status with clear result
-        if (payoutSuccess) {
-          await supabase.from('withdrawal_requests').update({
-            payout_status: 'sent',
-            payout_ref: payoutRef,
-            payout_attempted_at: new Date().toISOString(),
-            payout_error: null
-          }).eq('id', selectedRequest.id);
-
-          // Deduct from tracked GosentePay balance
-          const { data: currentBal } = await supabase
-            .from('gosentepay_balance')
-            .select('balance')
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (currentBal) {
-            const newBal = currentBal.balance - selectedRequest.amount;
-            await supabase.from('gosentepay_balance').update({
-              balance: newBal,
-              last_updated_by: employee?.name || 'Finance',
-              last_transaction_ref: payoutRef,
-              last_transaction_type: 'payout_deduction',
-              updated_at: new Date().toISOString()
-            }).order('updated_at', { ascending: false }).limit(1);
-
-            await supabase.from('gosentepay_balance_log').insert({
-              previous_balance: currentBal.balance,
-              new_balance: newBal,
-              change_amount: -selectedRequest.amount,
-              change_type: 'payout_deduction',
-              reference: payoutRef,
-              notes: `Payout to ${phoneToNotify}`,
-              created_by: employee?.name || 'Finance'
-            });
-          }
-        } else {
-          await supabase.from('withdrawal_requests').update({
-            payout_status: 'failed',
-            payout_error: payoutError,
-            payout_attempted_at: new Date().toISOString()
-          }).eq('id', selectedRequest.id);
-        }
-      }
-
-      // Send SMS to employee's SYSTEM phone (not disbursement number)
-      let smsPhone = selectedRequest.employee_phone || phoneToNotify;
-      // Try to get system phone from employees table
+      // Send SMS to employee's SYSTEM phone
+      let smsPhone = selectedRequest.employee_phone || selectedRequest.phone_number;
       if (selectedRequest.user_id) {
         const { data: emp } = await supabase
           .from('employees')
@@ -485,18 +425,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
       }
 
       if (smsPhone) {
-        let message = '';
-        const disbursementPhone = selectedRequest.disbursement_phone || selectedRequest.phone_number;
-        if (isMobileMoney) {
-          if (payoutSuccess) {
-            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${disbursementPhone}. Ref: ${payoutRef}. Great Pearl Coffee.`;
-          } else {
-            message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Mobile Money disbursement is being processed to ${disbursementPhone}. Ref: ${selectedRequest.request_ref}. Contact Finance if not received. Great Pearl Coffee.`;
-          }
-        } else {
-          message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been APPROVED. Please collect your CASH from the Finance office. Ref: ${selectedRequest.request_ref}. Great Pearl Coffee.`;
-        }
-
+        const message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been approved by Finance and is now pending final Admin approval. Ref: ${selectedRequest.request_ref}. Great Pearl Coffee.`;
         try {
           await supabase.functions.invoke('send-sms', {
             body: { phone: smsPhone, message }
@@ -506,21 +435,10 @@ export const WithdrawalRequestsManager: React.FC = () => {
         }
       }
 
-      // Show clear toast based on result
-      if (isMobileMoney && !payoutSuccess) {
-        toast({
-          title: "Approved - But Payout FAILED",
-          description: `UGX ${selectedRequest.amount.toLocaleString()} approved but GosentePay failed: ${payoutError}. You can retry from the Failed Payouts section below.`,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Withdrawal Approved by Finance",
-          description: isMobileMoney && payoutSuccess
-            ? `UGX ${selectedRequest.amount.toLocaleString()} sent to ${selectedRequest.phone_number} via Mobile Money.`
-            : `UGX ${selectedRequest.amount.toLocaleString()} approved for cash collection by ${selectedRequest.employee_name}.`,
-        });
-      }
+      toast({
+        title: "Finance Approved",
+        description: `UGX ${selectedRequest.amount.toLocaleString()} approved by Finance. Now pending Admin approval.`,
+      });
 
       setShowApproveDialog(false);
       setPaymentVoucher('');

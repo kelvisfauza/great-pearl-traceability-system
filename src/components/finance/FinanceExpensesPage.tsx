@@ -27,8 +27,8 @@ export const FinanceExpensesPage = () => {
       <Alert>
         <ShieldAlert className="h-4 w-4" />
         <AlertDescription>
-          <strong>Separation of Duties Policy:</strong> Finance can only approve requests that have been pre-approved by Admin.
-          All requests shown below have already passed Admin approval.
+          <strong>Approval Workflow:</strong> Finance reviews and approves requests first.
+          Once Finance approves, requests move to Admin for final approval.
         </AlertDescription>
       </Alert>
 

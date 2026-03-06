@@ -40,7 +40,6 @@ export const useFinanceApprovals = () => {
       const { data, error } = await supabase
         .from('approval_requests')
         .select('*')
-        .eq('admin_approved', true)
         .is('finance_approved', null)
         .eq('status', 'Pending Finance')
         .order('created_at', { ascending: false });
@@ -187,7 +186,8 @@ export const useFinanceApprovals = () => {
       };
 
       if (approve) {
-        updateData.status = 'Approved';
+        updateData.status = 'Pending Admin';
+        updateData.approval_stage = 'pending_admin';
       } else {
         updateData.status = 'Rejected';
         updateData.rejection_reason = rejectionReason || 'Rejected by Finance';
@@ -205,10 +205,8 @@ export const useFinanceApprovals = () => {
 
       if (error) throw error;
 
-      // If approved and it's a salary advance, activate it
-      if (approve && request?.type === 'Salary Advance') {
-        await activateSalaryAdvance(data);
-      }
+      // Salary advance activation now happens after Admin approval (final step)
+      // No longer activate on finance approval
 
       // Send SMS notification to requester (the HR who submitted the advance request)
       try {
@@ -220,7 +218,7 @@ export const useFinanceApprovals = () => {
 
         if (requesterEmployee?.phone) {
           const message = approve
-            ? `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been APPROVED by Finance.${data.type === 'Salary Advance' ? ' The employee has been notified and the advance is now active.' : ' You will receive payment shortly.'}`
+            ? `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been approved by Finance. It is now pending final Admin approval.`
             : `Your ${data.type} request for UGX ${data.amount.toLocaleString()} has been REJECTED by Finance. Reason: ${rejectionReason}`;
 
           await sendApprovalRequestSMS(
@@ -236,8 +234,8 @@ export const useFinanceApprovals = () => {
       }
 
       toast({
-        title: approve ? "Request Approved" : "Request Rejected",
-        description: `Request has been ${approve ? 'approved' : 'rejected'} successfully${approve && request?.type === 'Salary Advance' ? '. Salary advance has been activated.' : ''}`
+        title: approve ? "Request Approved by Finance" : "Request Rejected",
+        description: `Request has been ${approve ? 'approved by Finance and sent to Admin for final approval' : 'rejected'} successfully`
       });
 
       await fetchRequests();

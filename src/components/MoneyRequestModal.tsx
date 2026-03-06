@@ -110,7 +110,7 @@ export const MoneyRequestModal: React.FC<MoneyRequestModalProps> = ({
           reason,
           request_type: requestType,
           requested_by: user?.email || 'Unknown',
-          approval_stage: 'pending_admin',
+          approval_stage: 'pending_finance',
           status: 'pending',
           admin_approved: false,
           finance_approved: false,

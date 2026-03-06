@@ -68,7 +68,7 @@ export const useMyExpenseRequests = () => {
     if (financeApproved && adminApproved) return 'Fully Approved';
     if (financeApproved && !adminApproved) return 'Finance Approved - Awaiting Admin';
     if (!financeApproved && adminApproved) return 'Admin Approved - Awaiting Finance';
-    return 'Pending - Awaiting Finance & Admin';
+    return 'Pending - Awaiting Finance Review';
   };
 
   const getStatusColor = (request: MyExpenseRequest) => {
@@ -88,7 +88,7 @@ export const useMyExpenseRequests = () => {
     // Determine who rejected it based on approval timestamps and status
     let rejectedBy = 'Unknown';
     if (!request.finance_approved_at && !request.admin_approved_at) {
-      rejectedBy = 'Finance or Admin';
+      rejectedBy = 'Finance'; // Finance is the first step
     } else if (request.finance_approved_at && !request.admin_approved_at) {
       rejectedBy = 'Admin';
     } else if (!request.finance_approved_at && request.admin_approved_at) {

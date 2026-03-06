@@ -32,7 +32,7 @@ export const useApprovalSystem = () => {
         requestedby: employee?.email || 'Unknown User',
         daterequested: new Date().toLocaleDateString(),
         priority: details.priority || 'High',
-        status: 'Pending Admin', // ✅ NEW: Requests start pending admin approval
+        status: 'Pending Finance', // Finance approves first, then Admin
         admin_approved: false,
         finance_approved: false,
         details: JSON.stringify(details), // Stringify details for Supabase
@@ -81,9 +81,9 @@ export const useApprovalSystem = () => {
           throw new Error(`Failed to fetch approvers: ${approversError.message}`);
         }
 
-        // Filter for ONLY users with Administrator or Super Admin role
+        // Filter for Finance department staff (they review first now)
         const approvers = allEmployees?.filter(emp => 
-          ['Administrator', 'Super Admin'].includes(emp.role)
+          emp.department === 'Finance' || ['Administrator', 'Super Admin'].includes(emp.role)
         );
 
         console.log('👥 All active employees with phones:', allEmployees?.length || 0);
@@ -152,7 +152,7 @@ export const useApprovalSystem = () => {
 
       toast({
         title: "Approval Request Created",
-        description: "Request has been submitted for admin approval"
+        description: "Request has been submitted for Finance review"
       });
 
       return true;
