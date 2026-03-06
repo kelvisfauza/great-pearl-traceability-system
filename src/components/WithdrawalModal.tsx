@@ -226,7 +226,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           amount: withdrawalAmount,
           phone_number: channel === 'MOBILE_MONEY' ? mobileNumber : (employee?.phone || ''),
           channel: channel,
-          status: 'pending_approval',
+          status: 'pending_finance',
           request_ref: ref,
           requester_name: employee?.name || user?.email || '',
           requester_email: user?.email || employee?.email || '',
