@@ -200,39 +200,30 @@ export const WithdrawalRequestsManager: React.FC = () => {
     if (payoutPhone.startsWith('0')) payoutPhone = '256' + payoutPhone.slice(1);
     if (!payoutPhone.startsWith('256')) payoutPhone = '256' + payoutPhone;
 
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        console.log(`GosentePay payout attempt ${attempt}: ${payoutPhone}, UGX ${request.amount}`);
-        const { data: payoutData, error: payoutError } = await supabase.functions.invoke('gosentepay-payout', {
-          body: {
-            phone: payoutPhone,
-            amount: request.amount,
-            ref: request.request_ref || `WD-${request.id.slice(0, 8)}`,
-            employeeName: request.employee_name
-          }
-        });
+    // Single attempt only — no retries to avoid rate limiting and duplicate charges
+    try {
+      console.log(`GosentePay payout: ${payoutPhone}, UGX ${request.amount}`);
+      const { data: payoutData, error: payoutError } = await supabase.functions.invoke('gosentepay-payout', {
+        body: {
+          phone: payoutPhone,
+          amount: request.amount,
+          ref: request.request_ref || `WD-${request.id.slice(0, 8)}`,
+          employeeName: request.employee_name
+        }
+      });
 
-        if (payoutError) {
-          console.error(`Payout attempt ${attempt} error:`, payoutError);
-          if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
-          return { success: false, ref: '', error: payoutError.message || 'Edge function error' };
-        }
-        
-        if (payoutData?.status === 'success') {
-          return { success: true, ref: payoutData.ref || request.request_ref };
-        }
-        
-        const errorMsg = payoutData?.message || payoutData?.details?.data?.message || 'Transfer rejected by provider';
-        console.error(`Payout attempt ${attempt} failed:`, payoutData);
-        if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
-        return { success: false, ref: '', error: errorMsg };
-      } catch (payoutErr: any) {
-        console.error(`Payout attempt ${attempt} exception:`, payoutErr);
-        if (attempt < 2) { await new Promise(r => setTimeout(r, 1000)); continue; }
-        return { success: false, ref: '', error: payoutErr.message || 'Unknown error' };
+      if (payoutError) {
+        return { success: false, ref: '', error: payoutError.message || 'Edge function error' };
       }
+      
+      if (payoutData?.status === 'success') {
+        return { success: true, ref: payoutData.ref || request.request_ref };
+      }
+      
+      return { success: false, ref: '', error: payoutData?.message || payoutData?.details?.data?.message || 'Transfer rejected by provider' };
+    } catch (payoutErr: any) {
+      return { success: false, ref: '', error: payoutErr.message || 'Unknown error' };
     }
-    return { success: false, ref: '', error: 'All attempts failed' };
   };
 
   const handleRetryPayout = async (request: WithdrawalRequest) => {
