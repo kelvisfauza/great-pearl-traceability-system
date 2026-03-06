@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-type BatchStatus = 'filling' | 'active' | 'selling' | 'sold_out';
+type BatchStatus = 'active' | 'selling' | 'sold_out';
 
 export interface InventoryBatch {
   id: string;
@@ -52,18 +52,14 @@ export const useInventoryBatches = () => {
     try {
       setLoading(true);
       
-      // Fetch all batches including sold_out
       const { data: batchData, error: batchError } = await supabase
         .from('inventory_batches')
         .select('*')
-        .order('status', { ascending: true }) // filling, active, selling, sold_out
+        .order('batch_date', { ascending: false })
         .order('batch_code', { ascending: true });
 
       if (batchError) throw batchError;
-      
-      console.log('Fetched batches:', batchData?.length, 'sold_out:', batchData?.filter(b => b.status === 'sold_out').length);
 
-      // Fetch sources and sales for each batch
       const batchesWithDetails: BatchWithDetails[] = await Promise.all(
         (batchData || []).map(async (batch) => {
           const [sourcesRes, salesRes] = await Promise.all([
@@ -101,55 +97,59 @@ export const useInventoryBatches = () => {
     }
   };
 
-  // Create or get today's batch for a coffee type
-  const getOrCreateBatch = async (coffeeType: string): Promise<InventoryBatch | null> => {
-    const today = new Date().toISOString().split('T')[0];
-    // Normalize coffee type to title case for consistent matching
+  /**
+   * Get or create today's batch for a coffee type.
+   * Daily batching: one batch per coffee type per day, no capacity limit.
+   */
+  const getOrCreateBatch = async (coffeeType: string, dateOverride?: string): Promise<InventoryBatch | null> => {
+    const batchDate = dateOverride || new Date().toISOString().split('T')[0];
     const normalizedType = coffeeType.charAt(0).toUpperCase() + coffeeType.slice(1).toLowerCase();
     
-    // Check for existing filling batch for this coffee type (case-insensitive, any date with capacity)
+    // Check for existing batch for this coffee type on this date
     const { data: existingBatchData, error: fetchError } = await supabase
       .from('inventory_batches')
       .select('*')
       .ilike('coffee_type', normalizedType)
-      .in('status', ['filling', 'active'])
-      .lt('total_kilograms', 5000)
-      .order('batch_date', { ascending: false })
-      .order('created_at', { ascending: false })
+      .eq('batch_date', batchDate)
       .limit(1)
       .maybeSingle();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('Error fetching batch:', fetchError);
+      return null;
+    }
 
     if (existingBatchData) {
       return { ...existingBatchData, status: existingBatchData.status as BatchStatus } as InventoryBatch;
     }
 
-    // Create new batch with sequential numbering
+    // Create new batch with sequential + date naming: B001-2026-03-06-ROB
     const prefix = normalizedType.substring(0, 3).toUpperCase();
     
-    // Get next batch number
+    // Get next sequential number
     const { data: existingBatches } = await supabase
       .from('inventory_batches')
       .select('batch_code')
-      .like('batch_code', `${prefix}-B%`);
+      .like('batch_code', 'B%');
     
     let maxNum = 0;
     for (const row of existingBatches || []) {
-      const match = String(row.batch_code || '').match(/-B(\d+)$/);
+      const match = String(row.batch_code || '').match(/^B(\d+)/);
       if (match) {
         const n = parseInt(match[1], 10);
         if (!isNaN(n)) maxNum = Math.max(maxNum, n);
       }
     }
     
-    const batchCode = `${prefix}-B${String(maxNum + 1).padStart(3, '0')}`;
+    const batchCode = `B${String(maxNum + 1).padStart(3, '0')}-${batchDate}-${prefix}`;
     
     const { data: newBatchData, error: createError } = await supabase
       .from('inventory_batches')
       .insert({
         batch_code: batchCode,
         coffee_type: normalizedType,
-        batch_date: today,
-        status: 'filling'
+        batch_date: batchDate,
+        status: 'active'
       })
       .select()
       .single();
@@ -162,7 +162,7 @@ export const useInventoryBatches = () => {
     return newBatchData ? { ...newBatchData, status: newBatchData.status as BatchStatus } as InventoryBatch : null;
   };
 
-  // Add coffee purchase to a batch
+  // Add coffee purchase to a batch (daily grouping)
   const addToBatch = async (
     coffeeRecordId: string,
     coffeeType: string,
@@ -171,7 +171,7 @@ export const useInventoryBatches = () => {
     purchaseDate: string
   ): Promise<boolean> => {
     try {
-      const batch = await getOrCreateBatch(coffeeType);
+      const batch = await getOrCreateBatch(coffeeType, purchaseDate);
       if (!batch) return false;
 
       // Add source record
@@ -187,16 +187,14 @@ export const useInventoryBatches = () => {
 
       if (sourceError) throw sourceError;
 
-      // Update batch totals
+      // Update batch totals (no capacity limit)
       const newTotal = batch.total_kilograms + kilograms;
-      const newStatus = newTotal >= 5000 ? 'active' : 'filling';
 
       const { error: updateError } = await supabase
         .from('inventory_batches')
         .update({
           total_kilograms: newTotal,
-          remaining_kilograms: batch.remaining_kilograms + kilograms,
-          status: newStatus
+          remaining_kilograms: batch.remaining_kilograms + kilograms
         })
         .eq('id', batch.id);
 
@@ -215,7 +213,7 @@ export const useInventoryBatches = () => {
     }
   };
 
-  // Process a sale using FIFO
+  // Process a sale using FIFO (oldest batch first)
   const processSale = async (
     coffeeType: string,
     kilograms: number,
@@ -223,13 +221,12 @@ export const useInventoryBatches = () => {
     saleTransactionId?: string
   ): Promise<boolean> => {
     try {
-      // Get batches with remaining stock, oldest first (FIFO)
       const { data: availableBatches, error: fetchError } = await supabase
         .from('inventory_batches')
         .select('*')
-        .eq('coffee_type', coffeeType)
+        .ilike('coffee_type', `%${coffeeType}%`)
         .gt('remaining_kilograms', 0)
-        .in('status', ['filling', 'active', 'selling'])
+        .neq('status', 'sold_out')
         .order('batch_date', { ascending: true })
         .order('created_at', { ascending: true });
 
@@ -243,7 +240,6 @@ export const useInventoryBatches = () => {
         return false;
       }
 
-      // Check total available
       const totalAvailable = availableBatches.reduce((sum, b) => sum + b.remaining_kilograms, 0);
       if (totalAvailable < kilograms) {
         toast({
@@ -254,7 +250,6 @@ export const useInventoryBatches = () => {
         return false;
       }
 
-      // Deduct from batches FIFO
       let remainingToDeduct = kilograms;
       const today = new Date().toISOString().split('T')[0];
 
@@ -265,7 +260,6 @@ export const useInventoryBatches = () => {
         const newRemaining = batch.remaining_kilograms - deductFromThisBatch;
         const newStatus = newRemaining === 0 ? 'sold_out' : 'selling';
 
-        // Record the sale
         const { error: saleError } = await supabase
           .from('inventory_batch_sales')
           .insert({
@@ -278,7 +272,6 @@ export const useInventoryBatches = () => {
 
         if (saleError) throw saleError;
 
-        // Update batch
         const { error: updateError } = await supabase
           .from('inventory_batches')
           .update({
@@ -310,26 +303,24 @@ export const useInventoryBatches = () => {
     }
   };
 
-  // Get summary stats
   const getSummary = () => {
     const activeBatches = batches.filter(b => b.status !== 'sold_out');
     const soldOutBatches = batches.filter(b => b.status === 'sold_out');
     const totalRemaining = activeBatches.reduce((sum, b) => sum + b.remaining_kilograms, 0);
-    const totalCapacity = activeBatches.reduce((sum, b) => sum + b.target_capacity, 0);
+    const totalReceived = activeBatches.reduce((sum, b) => sum + b.total_kilograms, 0);
 
     return {
       activeBatches: activeBatches.length,
       soldOutBatches: soldOutBatches.length,
       totalRemaining,
-      totalCapacity,
-      utilizationPercent: totalCapacity > 0 ? (totalRemaining / totalCapacity) * 100 : 0
+      totalReceived,
+      utilizationPercent: totalReceived > 0 ? (totalRemaining / totalReceived) * 100 : 0
     };
   };
 
   useEffect(() => {
     fetchBatches();
 
-    // Subscribe to realtime updates
     const channel = supabase
       .channel('inventory-batches-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory_batches' }, fetchBatches)
