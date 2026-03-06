@@ -152,7 +152,7 @@ export const useApprovalSystem = () => {
 
       toast({
         title: "Approval Request Created",
-        description: "Request has been submitted for admin approval"
+        description: "Request has been submitted for Finance review"
       });
 
       return true;
