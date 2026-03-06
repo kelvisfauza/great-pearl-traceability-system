@@ -357,7 +357,7 @@ const ApprovalCenter = () => {
                       {Number(request.amount) > 50000 && request.status !== 'Pending Admin 2' && (
                         <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
                           <p className="text-xs text-blue-600 dark:text-blue-400">
-                            ⚡ 3-tier approval: This request needs 2 admin approvals + Finance approval
+                            ⚡ 3-tier approval: This request needs Finance review + 2 admin approvals (final step)
                           </p>
                         </div>
                       )}
