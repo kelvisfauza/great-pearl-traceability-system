@@ -413,7 +413,7 @@ export const useUnifiedApprovalRequests = () => {
 
           if (recipientEmp?.phone) {
             const msg = status === 'Approved'
-              ? `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has received admin approval from ${adminName}. ${wUpdateData.status === 'pending_finance' ? 'It is now pending final Finance approval.' : 'Awaiting more admin approvals.'} Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`
+              ? `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has received final admin approval from ${adminName}. ${wUpdateData.status === 'approved' ? 'Your funds will be disbursed shortly.' : 'Awaiting more admin approvals.'} Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`
               : `Dear ${recipientEmp.name}, your withdrawal request for UGX ${currentWithdrawal.amount.toLocaleString()} has been REJECTED by ${adminName}. Reason: ${rejectionReason || 'Not specified'}. Ref: ${currentWithdrawal.request_ref}. Great Pearl Coffee.`;
 
             await supabase.functions.invoke('send-sms', {
