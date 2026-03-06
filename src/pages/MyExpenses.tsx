@@ -902,7 +902,11 @@ const MyExpenses = () => {
                           <ApprovalProgressTracker
                             requiresThreeApprovals={!!request.requires_three_approvals}
                             financeApprovedAt={request.finance_approved_at}
+                            financeReviewAt={(request as any).finance_review_at}
+                            financeReviewBy={(request as any).finance_review_by}
                             adminApprovedAt={request.admin_approved_at}
+                            adminFinalApprovalAt={(request as any).admin_final_approval_at}
+                            adminFinalApprovalBy={(request as any).admin_final_approval_by}
                             adminApproved1At={request.admin_approved_1_at}
                             adminApproved1By={request.admin_approved_1_by}
                             adminApproved2At={request.admin_approved_2_at}

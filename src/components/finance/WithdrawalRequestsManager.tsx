@@ -437,7 +437,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
       toast({
         title: "Finance Approved",
-        description: `UGX ${selectedRequest.amount.toLocaleString()} approved by Finance. Now pending Admin approval.`,
+        description: `UGX ${selectedRequest.amount.toLocaleString()} approved by Finance. Now awaiting final Admin approval.`,
       });
 
       setShowApproveDialog(false);
