@@ -388,9 +388,6 @@ export const WithdrawalRequestsManager: React.FC = () => {
       const updateData: any = {
         finance_approved_at: new Date().toISOString(),
         finance_approved_by: employee?.name || employee?.email || 'Finance',
-        finance_reviewed: true,
-        finance_review_at: new Date().toISOString(),
-        finance_review_by: employee?.name || employee?.email || 'Finance',
         updated_at: new Date().toISOString(),
         // Finance is the first step - move to admin approval queue
         status: 'pending_approval',

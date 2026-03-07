@@ -361,6 +361,10 @@ export const useUnifiedApprovalRequests = () => {
         const wUpdateData: any = { updated_at: new Date().toISOString() };
 
         if (status === 'Approved') {
+          // CRITICAL: Enforce Finance-First approval order
+          if (!currentWithdrawal.finance_approved_at) {
+            return { blocked: true, reason: 'This withdrawal has not yet been approved by Finance. Finance must review and approve first before Admin can approve.' };
+          }
           if (reqThreeApprovals) {
             // 2 admin approvals needed for high-value withdrawals (Admin is final step)
             if (!currentWithdrawal.admin_approved_1_at) {
