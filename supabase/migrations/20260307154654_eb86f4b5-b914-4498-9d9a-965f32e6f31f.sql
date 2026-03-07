@@ -1,0 +1,1 @@
+UPDATE withdrawal_requests SET admin_approved_1_at = NOW(), admin_approved_1_by = 'Manual (Admin override)' WHERE id = 'c9072d7e-3d6e-47b0-a4a9-b32c44d0a653' AND status = 'approved';
