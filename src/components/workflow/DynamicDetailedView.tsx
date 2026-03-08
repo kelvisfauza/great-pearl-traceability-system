@@ -737,11 +737,65 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
           <XCircle className="h-4 w-4 mr-2" />
           Reject Request
         </Button>
-        <Button onClick={onApprove} className="bg-green-600 hover:bg-green-700">
+        <Button onClick={() => setConfirmOpen(true)} className="bg-green-600 hover:bg-green-700">
           <CheckCircle className="h-4 w-4 mr-2" />
           Approve Request
         </Button>
       </div>
+
+      {/* Disbursement Confirmation Dialog */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              {isWithdrawalRequest ? 'Confirm Disbursement Approval' : 'Confirm Approval'}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm">
+                {isWithdrawalRequest ? (
+                  <>
+                    <p className="font-medium text-foreground">
+                      You are about to approve a withdrawal of <span className="text-amber-600 font-bold">UGX {requestAmount.toLocaleString()}</span> for {request.requestedBy}.
+                    </p>
+                    <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-2">
+                      <p className="font-semibold text-destructive">⚠️ This action will immediately trigger a Mobile Money disbursement.</p>
+                      <p className="text-destructive/80">Once approved, money will be sent to the recipient's phone number instantly. <strong>This cannot be undone or reversed.</strong></p>
+                    </div>
+                    <p className="text-muted-foreground">
+                      Are you absolutely sure you want to proceed with this disbursement?
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium text-foreground">
+                      You are about to approve <span className="font-bold">{request.title}</span> for <span className="text-amber-600 font-bold">UGX {requestAmount.toLocaleString()}</span>.
+                    </p>
+                    <p className="text-muted-foreground">
+                      This will authorize the requested funds for disbursement. Please confirm you have reviewed all details.
+                    </p>
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmOpen(false);
+                onApprove();
+              }}
+              className={isWithdrawalRequest 
+                ? "bg-amber-600 hover:bg-amber-700 text-white" 
+                : "bg-green-600 hover:bg-green-700 text-white"
+              }
+            >
+              {isWithdrawalRequest ? '💸 Yes, Disburse Now' : '✅ Yes, Approve'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
