@@ -372,7 +372,107 @@ export const useUnifiedApprovalRequests = () => {
           return { blocked: true, reason: 'This withdrawal has already been submitted for disbursement. It cannot be approved again.' };
         }
 
-        // GUARD: Block if already fully approved
+        // Handle RETRY for failed payouts — skip approval logic, go straight to payout
+        if (status === 'Approved' && currentWithdrawal.status === 'approved' && currentWithdrawal.payout_status === 'failed') {
+          console.log('🔄 Retrying failed payout for withdrawal:', withdrawalId);
+          const isMoMo = currentWithdrawal.channel === 'MOBILE_MONEY' || (currentWithdrawal.channel !== 'CASH' && currentWithdrawal.channel !== 'BANK');
+          
+          if (!isMoMo) {
+            return { blocked: true, reason: 'This is not a Mobile Money withdrawal. Manual disbursement is required.' };
+          }
+
+          // Set to processing
+          await supabase.from('withdrawal_requests').update({
+            payout_status: 'processing',
+            payout_attempted_at: new Date().toISOString(),
+            payout_error: null,
+            updated_at: new Date().toISOString()
+          }).eq('id', withdrawalId);
+
+          const phoneToNotify = currentWithdrawal.disbursement_phone || currentWithdrawal.phone_number;
+          let payoutPhone = (phoneToNotify || '').replace(/\D/g, '');
+          if (payoutPhone.startsWith('0')) payoutPhone = '256' + payoutPhone.slice(1);
+          if (!payoutPhone.startsWith('256')) payoutPhone = '256' + payoutPhone;
+
+          try {
+            const { data: payoutData, error: payoutErr } = await supabase.functions.invoke('gosentepay-payout', {
+              body: {
+                phone: payoutPhone,
+                amount: currentWithdrawal.amount,
+                ref: currentWithdrawal.request_ref || `WD-${currentWithdrawal.id.slice(0, 8)}`,
+                employeeName: currentWithdrawal.requester_name || request.requestedBy || 'Employee'
+              }
+            });
+
+            if (payoutErr) {
+              await supabase.from('withdrawal_requests').update({
+                payout_status: 'failed',
+                payout_error: payoutErr.message || 'Retry failed',
+                payout_attempted_at: new Date().toISOString()
+              }).eq('id', withdrawalId);
+              return { blocked: true, reason: `Payout retry failed: ${payoutErr.message || 'Unknown error'}. Check GosentePay account settings.` };
+            }
+
+            if (payoutData?.status === 'success') {
+              await supabase.from('withdrawal_requests').update({
+                payout_status: 'sent',
+                payout_ref: payoutData.ref,
+                payout_attempted_at: new Date().toISOString(),
+                payout_error: null
+              }).eq('id', withdrawalId);
+
+              // Deduct from tracked GosentePay balance
+              const adminName = employee?.name || employee?.email || 'Admin';
+              const { data: currentBal } = await supabase
+                .from('gosentepay_balance')
+                .select('balance')
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (currentBal) {
+                const newBal = currentBal.balance - currentWithdrawal.amount;
+                await supabase.from('gosentepay_balance').update({
+                  balance: newBal,
+                  last_updated_by: adminName,
+                  last_transaction_ref: payoutData.ref,
+                  last_transaction_type: 'payout_deduction',
+                  updated_at: new Date().toISOString()
+                }).order('updated_at', { ascending: false }).limit(1);
+
+                await supabase.from('gosentepay_balance_log').insert({
+                  previous_balance: currentBal.balance,
+                  new_balance: newBal,
+                  change_amount: -currentWithdrawal.amount,
+                  change_type: 'payout_deduction',
+                  reference: payoutData.ref,
+                  notes: `Retry payout to ${phoneToNotify}`,
+                  created_by: adminName
+                });
+              }
+
+              await fetchAllRequests(true);
+              return true;
+            } else {
+              const errMsg = payoutData?.message || 'Transfer rejected';
+              await supabase.from('withdrawal_requests').update({
+                payout_status: 'failed',
+                payout_error: errMsg,
+                payout_attempted_at: new Date().toISOString()
+              }).eq('id', withdrawalId);
+              return { blocked: true, reason: `Payout retry failed: ${errMsg}. Please check GosentePay dashboard.` };
+            }
+          } catch (err: any) {
+            await supabase.from('withdrawal_requests').update({
+              payout_status: 'failed',
+              payout_error: err?.message || 'Exception during retry',
+              payout_attempted_at: new Date().toISOString()
+            }).eq('id', withdrawalId);
+            return { blocked: true, reason: `Payout retry error: ${err?.message || 'Unknown'}` };
+          }
+        }
+
+        // GUARD: Block if already fully approved (non-failed)
         if (status === 'Approved' && currentWithdrawal.status === 'approved') {
           console.warn('⛔ Withdrawal already approved:', withdrawalId);
           return { blocked: true, reason: 'This withdrawal has already been approved. Refresh to see the latest status.' };
