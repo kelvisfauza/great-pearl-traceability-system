@@ -98,7 +98,7 @@ const ApprovalCenter = () => {
             await supabase.functions.invoke('send-sms', {
               body: {
                 phone: phoneNumber,
-                message: `Dear ${recipientName}, your withdrawal of UGX ${amount.toLocaleString()} could not be sent via Mobile Money. We have issued CASH instead, ready for collection at the office. Please come and collect your payment. - Great Pearl Coffee`,
+                message: `Dear ${recipientName}, MoMo payout of UGX ${amount.toLocaleString()} failed. Cash has been prepared for you. Please collect from the office.`,
                 userName: recipientName,
                 messageType: 'withdrawal_cash_fallback'
               }
