@@ -68,8 +68,11 @@ const ApprovalCenter = () => {
     setProcessingId(request.id);
     try {
       const withdrawalId = request.details?.withdrawal_id || request.id;
+      const recipientName = request.details?.requester_name || request.requestedBy || 'Employee';
+      const phoneNumber = request.details?.disbursement_phone || request.details?.phone_number || '';
+      const amount = Number(request.amount);
       
-      // Update the withdrawal to cash, clear payout error, mark as completed
+      // Update the withdrawal to cash, clear payout error, mark as sent
       const { error } = await supabase
         .from('withdrawal_requests')
         .update({
@@ -87,7 +90,25 @@ const ApprovalCenter = () => {
         toast({ title: 'Error', description: 'Failed to switch to cash payment', variant: 'destructive' });
         console.error('Pay cash error:', error);
       } else {
-        toast({ title: 'Switched to Cash', description: `UGX ${Number(request.amount).toLocaleString()} marked as cash payment. Please hand over the cash to ${request.details?.requester_name || request.requestedBy}.` });
+        toast({ title: 'Switched to Cash', description: `UGX ${amount.toLocaleString()} marked as cash payment. Please hand over the cash to ${recipientName}.` });
+        
+        // Send SMS notification to the user about cash payment
+        if (phoneNumber) {
+          try {
+            await supabase.functions.invoke('send-sms', {
+              body: {
+                phone: phoneNumber,
+                message: `Dear ${recipientName}, your withdrawal of UGX ${amount.toLocaleString()} could not be sent via Mobile Money. We have issued CASH instead, ready for collection at the office. Please come and collect your payment. - Great Pearl Coffee`,
+                userName: recipientName,
+                messageType: 'withdrawal_cash_fallback'
+              }
+            });
+            console.log('Cash fallback SMS sent to', phoneNumber);
+          } catch (smsErr) {
+            console.error('Failed to send cash fallback SMS:', smsErr);
+          }
+        }
+        
         await fetchRequests(true);
       }
     } catch (err) {
