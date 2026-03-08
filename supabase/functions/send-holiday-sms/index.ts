@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     }
 
     // Build plain-text SMS message (no emojis for carrier compatibility)
-    const message = `Happy ${holiday.name} from Kajon Coffee! ${holiday.greeting_message.replace(/[^\x20-\x7E]/g, '')} Wishing you a wonderful day!`
+    const message = `Happy ${holiday.name} from Great Pearl Coffee! ${holiday.greeting_message.replace(/[^\x20-\x7E]/g, '')} Wishing you a wonderful day!`
 
     // Gather all recipients
     // 1. Active employees with phones
