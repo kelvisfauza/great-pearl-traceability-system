@@ -344,6 +344,25 @@ const ApprovalCenter = () => {
                         </div>
                       </div>
 
+                      {/* Failed payout banner */}
+                      {request.details?.is_failed_payout && (
+                        <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-800 rounded-lg">
+                          <div className="flex items-center gap-2 text-sm">
+                            <AlertTriangle className="h-4 w-4 text-red-600" />
+                            <span className="font-medium text-red-800 dark:text-red-200">
+                              Payout Failed — Money was NOT sent
+                            </span>
+                          </div>
+                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                            Error: {request.details?.payout_error || 'Unknown error'} 
+                            {request.details?.payout_attempted_at && ` • Last attempt: ${new Date(request.details.payout_attempted_at).toLocaleString()}`}
+                          </p>
+                          <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                            Phone: {request.details?.disbursement_phone || request.details?.phone_number || 'N/A'}
+                          </p>
+                        </div>
+                      )}
+
                       {/* 3-tier approval progress indicator */}
                       {request.status === 'Pending Admin 2' && (
                         <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
@@ -359,7 +378,7 @@ const ApprovalCenter = () => {
                         </div>
                       )}
 
-                      {Number(request.amount) > 50000 && request.status !== 'Pending Admin 2' && (
+                      {Number(request.amount) > 50000 && request.status !== 'Pending Admin 2' && !request.details?.is_failed_payout && (
                         <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
                           <p className="text-xs text-blue-600 dark:text-blue-400">
                             ⚡ 3-tier approval: This request needs Finance review + 2 admin approvals (final step)
@@ -376,27 +395,40 @@ const ApprovalCenter = () => {
                       )}
 
                       <div className="flex items-center gap-3">
-                        <Button
-                          onClick={() => handleApproval(request)}
-                          disabled={processingId === request.id}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          {request.status === 'Pending Admin 2' ? 'Approve (Admin 2)' : 
-                           Number(request.amount) > 50000 ? 'Approve (Admin 1)' : 'Approve'}
-                        </Button>
-                        <Button
-                          onClick={() => handleRejection(request)}
-                          disabled={processingId === request.id}
-                          variant="destructive"
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reject
-                        </Button>
+                        {request.details?.is_failed_payout ? (
+                          <Button
+                            onClick={() => handleApproval(request)}
+                            disabled={processingId === request.id}
+                            className="bg-orange-600 hover:bg-orange-700"
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Retry Payout
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              onClick={() => handleApproval(request)}
+                              disabled={processingId === request.id}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              {request.status === 'Pending Admin 2' ? 'Approve (Admin 2)' : 
+                               Number(request.amount) > 50000 ? 'Approve (Admin 1)' : 'Approve'}
+                            </Button>
+                            <Button
+                              onClick={() => handleRejection(request)}
+                              disabled={processingId === request.id}
+                              variant="destructive"
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Reject
+                            </Button>
+                          </>
+                        )}
                         {processingId === request.id && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                            Processing...
+                            {request.details?.is_failed_payout ? 'Retrying payout...' : 'Processing...'}
                           </div>
                         )}
                       </div>
