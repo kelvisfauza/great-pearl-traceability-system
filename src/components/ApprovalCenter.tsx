@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye, FileText, TrendingUp, AlertTriangle, Package, Settings } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye, FileText, TrendingUp, AlertTriangle, Package, Settings, Banknote } from 'lucide-react';
 import { useUnifiedApprovalRequests, UnifiedApprovalRequest } from '@/hooks/useUnifiedApprovalRequests';
 import { useToast } from '@/hooks/use-toast';
 import { useProcurementRecommendations } from '@/hooks/useProcurementRecommendations';
@@ -57,6 +58,40 @@ const ApprovalCenter = () => {
       }
     } catch (error) {
       console.error('Error processing approval:', error);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handlePayCash = async (request: UnifiedApprovalRequest) => {
+    if (processingId) return;
+    setProcessingId(request.id);
+    try {
+      const withdrawalId = request.details?.withdrawal_id || request.id;
+      
+      // Update the withdrawal to cash, clear payout error, mark as completed
+      const { error } = await supabase
+        .from('withdrawal_requests')
+        .update({
+          channel: 'CASH',
+          disbursement_method: 'CASH',
+          payout_status: 'sent',
+          payout_error: null,
+          payout_ref: `CASH-${Date.now()}`,
+          payout_attempted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', withdrawalId);
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to switch to cash payment', variant: 'destructive' });
+        console.error('Pay cash error:', error);
+      } else {
+        toast({ title: 'Switched to Cash', description: `UGX ${Number(request.amount).toLocaleString()} marked as cash payment. Please hand over the cash to ${request.details?.requester_name || request.requestedBy}.` });
+        await fetchRequests(true);
+      }
+    } catch (err) {
+      console.error('Pay cash error:', err);
     } finally {
       setProcessingId(null);
     }
@@ -396,14 +431,25 @@ const ApprovalCenter = () => {
 
                       <div className="flex items-center gap-3">
                         {request.details?.is_failed_payout ? (
-                          <Button
-                            onClick={() => handleApproval(request)}
-                            disabled={processingId === request.id}
-                            className="bg-orange-600 hover:bg-orange-700"
-                          >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Retry Payout
-                          </Button>
+                          <>
+                            <Button
+                              onClick={() => handleApproval(request)}
+                              disabled={processingId === request.id}
+                              className="bg-orange-600 hover:bg-orange-700"
+                            >
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Retry Payout
+                            </Button>
+                            <Button
+                              onClick={() => handlePayCash(request)}
+                              disabled={processingId === request.id}
+                              variant="outline"
+                              className="border-green-600 text-green-700 hover:bg-green-50"
+                            >
+                              <Banknote className="h-4 w-4 mr-2" />
+                              Pay Cash Instead
+                            </Button>
+                          </>
                         ) : (
                           <>
                             <Button
