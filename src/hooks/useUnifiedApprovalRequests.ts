@@ -107,11 +107,12 @@ export const useUnifiedApprovalRequests = () => {
       }
 
       // 2.5. Fetch pending withdrawal requests for admin approval (after Finance has approved)
+      // Also fetch approved withdrawals with failed payout status for retry
       try {
         const { data: withdrawalRequests, error: withdrawalError } = await supabase
           .from('withdrawal_requests')
           .select('*')
-          .in('status', ['pending_approval', 'pending_admin_2', 'pending_admin_3'])
+          .or('status.in.(pending_approval,pending_admin_2,pending_admin_3),and(status.eq.approved,payout_status.eq.failed)')
           .order('created_at', { ascending: false });
 
         if (!withdrawalError && withdrawalRequests) {
@@ -133,6 +134,7 @@ export const useUnifiedApprovalRequests = () => {
                 }
               }
 
+              const isFailedPayout = req.status === 'approved' && req.payout_status === 'failed';
               const adminCount = req.requires_three_approvals ? 3 : 1;
               const approvedAdmins = [req.admin_approved_1_at, req.admin_approved_2_at, req.admin_approved_3_at].filter(Boolean).length;
               
@@ -141,14 +143,18 @@ export const useUnifiedApprovalRequests = () => {
                 type: 'general' as const,
                 source: 'supabase' as const,
                 department: 'Wallet',
-                requestType: 'Withdrawal Request',
-                title: `Withdrawal - UGX ${req.amount.toLocaleString()}`,
-                description: `${empName} requests withdrawal of UGX ${req.amount.toLocaleString()} via ${req.channel === 'CASH' ? 'Cash' : 'Mobile Money'}`,
+                requestType: isFailedPayout ? 'Failed Payout - Retry' : 'Withdrawal Request',
+                title: isFailedPayout 
+                  ? `⚠️ Failed Payout - UGX ${req.amount.toLocaleString()}`
+                  : `Withdrawal - UGX ${req.amount.toLocaleString()}`,
+                description: isFailedPayout
+                  ? `Payout to ${empName} FAILED: ${req.payout_error || 'Unknown error'}. Tap Retry to re-attempt disbursement.`
+                  : `${empName} requests withdrawal of UGX ${req.amount.toLocaleString()} via ${req.channel === 'CASH' ? 'Cash' : 'Mobile Money'}`,
                 amount: req.amount,
                 requestedBy: empEmail,
                 dateRequested: new Date(req.created_at).toLocaleDateString(),
-                priority: req.amount > 100000 ? 'High' : 'Medium',
-                status: req.status === 'pending_admin_2' ? 'Pending Admin 2' : req.status === 'pending_admin_3' ? 'Pending Admin 3' : 'Pending',
+                priority: isFailedPayout ? 'High' : (req.amount > 100000 ? 'High' : 'Medium'),
+                status: isFailedPayout ? 'Payout Failed' : (req.status === 'pending_admin_2' ? 'Pending Admin 2' : req.status === 'pending_admin_3' ? 'Pending Admin 3' : 'Pending'),
                 details: {
                   withdrawal_id: req.id,
                   phone_number: req.disbursement_phone || req.phone_number,
@@ -167,6 +173,9 @@ export const useUnifiedApprovalRequests = () => {
                   approved_admins: approvedAdmins,
                   required_admins: adminCount,
                   is_withdrawal: true,
+                  is_failed_payout: isFailedPayout,
+                  payout_error: req.payout_error,
+                  payout_attempted_at: req.payout_attempted_at,
                 },
                 createdAt: req.created_at,
                 updatedAt: req.updated_at,
