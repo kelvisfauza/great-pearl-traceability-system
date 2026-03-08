@@ -62,6 +62,40 @@ const ApprovalCenter = () => {
     }
   };
 
+  const handlePayCash = async (request: UnifiedApprovalRequest) => {
+    if (processingId) return;
+    setProcessingId(request.id);
+    try {
+      const withdrawalId = request.details?.withdrawal_id || request.id;
+      
+      // Update the withdrawal to cash, clear payout error, mark as completed
+      const { error } = await supabase
+        .from('withdrawal_requests')
+        .update({
+          channel: 'CASH',
+          disbursement_method: 'CASH',
+          payout_status: 'sent',
+          payout_error: null,
+          payout_ref: `CASH-${Date.now()}`,
+          payout_attempted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', withdrawalId);
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to switch to cash payment', variant: 'destructive' });
+        console.error('Pay cash error:', error);
+      } else {
+        toast({ title: 'Switched to Cash', description: `UGX ${Number(request.amount).toLocaleString()} marked as cash payment. Please hand over the cash to ${request.details?.requester_name || request.requestedBy}.` });
+        await fetchRequests(true);
+      }
+    } catch (err) {
+      console.error('Pay cash error:', err);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const handleRejection = (request: UnifiedApprovalRequest) => {
     setSelectedRequest(request);
     setRejectionModalOpen(true);
