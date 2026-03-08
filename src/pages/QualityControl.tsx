@@ -202,19 +202,22 @@ const QualityControl = () => {
   
   // Filter assessments by date
   const filteredAssessments = useMemo(() => {
-    if (selectedDate === 'all') return qualityAssessments;
-    
-    const today = new Date().toISOString().split('T')[0];
-    let targetDate = today;
-    
-    if (selectedDate === 'custom' && customDate) {
-      targetDate = customDate;
+    let filtered = qualityAssessments;
+
+    // Apply date filter
+    if (selectedDate !== 'all') {
+      const today = new Date().toISOString().split('T')[0];
+      let targetDate = today;
+      
+      if (selectedDate === 'custom' && customDate) {
+        targetDate = customDate;
+      }
+      
+      filtered = filtered.filter(assessment => {
+        const assessmentDate = new Date(assessment.date_assessed || assessment.created_at).toISOString().split('T')[0];
+        return assessmentDate === targetDate;
+      });
     }
-    
-    let filtered = qualityAssessments.filter(assessment => {
-      const assessmentDate = new Date(assessment.date_assessed || assessment.created_at).toISOString().split('T')[0];
-      return selectedDate === 'all' || assessmentDate === targetDate;
-    });
 
     // Apply search filter
     if (assessmentSearch.trim()) {
