@@ -357,6 +357,18 @@ export const useUnifiedApprovalRequests = () => {
           return false;
         }
 
+        // GUARD: Block double-trigger — if payout is already processing/sent, abort
+        if (status === 'Approved' && currentWithdrawal.payout_status && ['processing', 'sent'].includes(currentWithdrawal.payout_status)) {
+          console.warn('⛔ Payout already in progress or sent for withdrawal:', withdrawalId);
+          return { blocked: true, reason: 'This withdrawal has already been submitted for disbursement. It cannot be approved again.' };
+        }
+
+        // GUARD: Block if already fully approved
+        if (status === 'Approved' && currentWithdrawal.status === 'approved') {
+          console.warn('⛔ Withdrawal already approved:', withdrawalId);
+          return { blocked: true, reason: 'This withdrawal has already been approved. Refresh to see the latest status.' };
+        }
+
         const reqThreeApprovals = currentWithdrawal.requires_three_approvals;
         const wUpdateData: any = { updated_at: new Date().toISOString() };
 
