@@ -52,6 +52,7 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
   onPrint,
   className
 }) => {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [walletData, setWalletData] = useState<{
     balance: number;
     frozenPending: number;
