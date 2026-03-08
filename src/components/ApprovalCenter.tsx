@@ -43,6 +43,11 @@ const ApprovalCenter = () => {
   }, [processingId, fetchRequests]);
 
   const handleApproval = async (request: UnifiedApprovalRequest) => {
+    // Prevent double-click: if already processing any request, block
+    if (processingId) {
+      console.warn('⛔ Already processing a request, ignoring duplicate click');
+      return;
+    }
     setProcessingId(request.id);
     try {
       const result = await updateRequestStatus(request, 'Approved');
