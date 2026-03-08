@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye, FileText, TrendingUp, AlertTriangle, Package, Settings } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Clock, User, Calendar, DollarSign, Eye, FileText, TrendingUp, AlertTriangle, Package, Settings, Banknote } from 'lucide-react';
 import { useUnifiedApprovalRequests, UnifiedApprovalRequest } from '@/hooks/useUnifiedApprovalRequests';
 import { useToast } from '@/hooks/use-toast';
 import { useProcurementRecommendations } from '@/hooks/useProcurementRecommendations';
