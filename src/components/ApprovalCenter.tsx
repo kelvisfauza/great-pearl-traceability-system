@@ -439,6 +439,15 @@ const ApprovalCenter = () => {
                             <RefreshCw className="h-4 w-4 mr-2" />
                             Retry Payout
                           </Button>
+                          <Button
+                            onClick={() => handlePayCash(request)}
+                            disabled={processingId === request.id}
+                            variant="outline"
+                            className="border-green-600 text-green-700 hover:bg-green-50"
+                          >
+                            <Banknote className="h-4 w-4 mr-2" />
+                            Pay Cash Instead
+                          </Button>
                         ) : (
                           <>
                             <Button
