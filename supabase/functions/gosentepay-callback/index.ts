@@ -6,6 +6,33 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * Verify the callback is authentic by checking a shared secret token.
+ * GosentePay should include this token in the request headers or body.
+ */
+function verifyCallbackAuthenticity(req: Request, body: any): boolean {
+  const webhookSecret = Deno.env.get("GOSENTEPAY_WEBHOOK_SECRET");
+  
+  // If no webhook secret is configured, reject all callbacks for safety
+  if (!webhookSecret) {
+    console.error("GOSENTEPAY_WEBHOOK_SECRET not configured - rejecting callback");
+    return false;
+  }
+
+  // Check for secret in header first (preferred)
+  const headerSecret = req.headers.get("X-Webhook-Secret") || req.headers.get("x-webhook-secret");
+  if (headerSecret === webhookSecret) {
+    return true;
+  }
+
+  // Fallback: check for secret in body (some providers send it this way)
+  if (body?.webhook_secret === webhookSecret || body?.secret_key === webhookSecret) {
+    return true;
+  }
+
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -14,6 +41,15 @@ serve(async (req) => {
   try {
     const body = await req.json();
     console.log("GosentePay callback received:", JSON.stringify(body));
+
+    // Verify callback authenticity
+    if (!verifyCallbackAuthenticity(req, body)) {
+      console.error("Callback authentication failed - invalid or missing webhook secret");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const ref = body.ref;
     const status = body.status;
@@ -41,10 +77,19 @@ serve(async (req) => {
       .single();
 
     if (fetchError || !transaction) {
-      console.error("Transaction not found for ref:", ref, fetchError);
+      console.error("Transaction not found for ref:", ref);
       return new Response(
         JSON.stringify({ error: "Transaction not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Prevent duplicate processing
+    if (transaction.status === "completed" || transaction.status === "failed") {
+      console.log(`Transaction ${ref} already processed with status: ${transaction.status}`);
+      return new Response(
+        JSON.stringify({ received: true, already_processed: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -66,7 +111,9 @@ serve(async (req) => {
     }
 
     if (isSuccess) {
-      const depositAmount = Number(amount) || transaction.amount;
+      // Use the amount from the original transaction record, not from the callback body
+      // This prevents amount manipulation attacks
+      const depositAmount = transaction.amount;
 
       // Check if this is a loan repayment
       if (transaction.transaction_type === 'loan_repayment' && transaction.withdrawal_id) {
@@ -81,7 +128,7 @@ serve(async (req) => {
           .single();
 
         if (loanErr || !loan) {
-          console.error("Loan not found:", loanId, loanErr);
+          console.error("Loan not found:", loanId);
         } else {
           const newBalance = Math.max(0, (loan.remaining_balance || 0) - depositAmount);
           const newPaidAmount = (loan.paid_amount || 0) + depositAmount;
@@ -150,7 +197,6 @@ serve(async (req) => {
               transaction_ref: ref,
               phone: phone,
               currency: body.currency || "UGX",
-              deposit_rate: body.deposit_rate,
               provider: "gosentepay",
             }),
           });
@@ -162,7 +208,7 @@ serve(async (req) => {
         }
       }
     } else {
-      console.log(`Deposit failed for ref ${ref}, phone ${phone}, status: ${status}`);
+      console.log(`Deposit failed for ref ${ref}, status: ${status}`);
     }
 
     return new Response(
