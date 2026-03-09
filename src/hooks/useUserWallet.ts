@@ -164,7 +164,7 @@ export const useUserWallet = () => {
           user_id: unifiedUserId,
           amount,
           phone_number: phoneNumber,
-          channel,
+          payment_channel: channel,
           request_ref: requestRef,
           printed_at: new Date().toISOString(),
           status: 'completed',
