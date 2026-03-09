@@ -619,7 +619,7 @@ export const useUnifiedApprovalRequests = () => {
                 });
               }
             } else {
-              await supabase.from('withdrawal_requests').update({
+              await supabase.from('money_requests').update({
                 payout_status: 'failed',
                 payout_error: payoutError,
                 payout_attempted_at: new Date().toISOString()
