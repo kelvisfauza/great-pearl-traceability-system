@@ -383,7 +383,7 @@ export const useUnifiedApprovalRequests = () => {
           }
 
           // Set to processing
-          await supabase.from('withdrawal_requests').update({
+          await supabase.from('money_requests').update({
             payout_status: 'processing',
             payout_attempted_at: new Date().toISOString(),
             payout_error: null,
