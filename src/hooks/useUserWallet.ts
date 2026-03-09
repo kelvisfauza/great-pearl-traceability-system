@@ -7,8 +7,6 @@ interface WalletData {
   balance: number;
   pendingWithdrawals: number;
   availableToRequest: number;
-  dailySalaryAmount: number;
-  monthlySalary: number;
   employeeName: string;
 }
 
