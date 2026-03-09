@@ -108,10 +108,10 @@ const AdminLoanTracker = () => {
       const message = `GREAT PEARL: Your loan installment of UGX ${remaining.toLocaleString()} was due on ${dueDate}. Please make payment to avoid penalties. Contact Finance for help.`;
       
       await supabase.from('sms_notification_queue').insert({
-        phone_number: loan.employee_phone,
+        recipient_phone: loan.employee_phone,
+        recipient_email: loan.employee_email || 'system@greatpearl.com',
         message,
         notification_type: 'loan_reminder',
-        priority: 'high',
       });
       toast.success(`SMS reminder queued for ${loan.employee_name}`);
     } catch (err) {
