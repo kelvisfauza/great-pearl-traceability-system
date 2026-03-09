@@ -220,7 +220,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       
       // Create withdrawal request with pending_approval status
       const { error: insertError } = await supabase
-        .from('withdrawal_requests')
+        .from('withdrawal_requests' as any)
         .insert({
           user_id: user?.id || '',
           amount: withdrawalAmount,
