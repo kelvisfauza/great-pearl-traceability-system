@@ -322,12 +322,6 @@ export const useUnifiedEmployees = () => {
     );
   };
 
-  // Calculate daily salary for an employee
-  const calculateDailySalary = (monthlySalary: number) => {
-    const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    return Math.round((monthlySalary / daysInMonth) * 100) / 100; // Round to 2 decimal places
-  };
 
   useEffect(() => {
     fetchEmployees();
@@ -341,7 +335,7 @@ export const useUnifiedEmployees = () => {
     deleteEmployee,
     searchEmployees,
     getEmployeeByEmail,
-    calculateDailySalary,
+    
     refetch: fetchEmployees,
     // Stats for debugging
     stats: {

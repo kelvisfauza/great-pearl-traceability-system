@@ -7,8 +7,6 @@ interface WalletData {
   balance: number;
   pendingWithdrawals: number;
   availableToRequest: number;
-  dailySalaryAmount: number;
-  monthlySalary: number;
   employeeName: string;
 }
 
@@ -58,43 +56,23 @@ export const useUserWallet = () => {
       
       const userData = balanceData?.[0];
       if (userData) {
-        // Calculate daily salary based on employee's monthly salary
-        const monthlySalary = employee.salary || 0;
-        const now = new Date();
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const dailySalaryAmount = Math.round((monthlySalary / daysInMonth) * 100) / 100;
-
         const wallet: WalletData = {
           balance: Number(userData.wallet_balance) || 0,
           pendingWithdrawals: Number(userData.pending_withdrawals) || 0,
           availableToRequest: Number(userData.available_balance) || 0,
-          dailySalaryAmount,
-          monthlySalary,
           employeeName: userData.name || employee.name || 'Unknown'
         };
 
         setWalletData(wallet);
-        console.log('✅ Wallet loaded:', {
-          balance: wallet.balance,
-          monthlySalary: wallet.monthlySalary,
-          dailySalary: wallet.dailySalaryAmount
-        });
+        console.log('✅ Wallet loaded:', { balance: wallet.balance });
       } else {
-        // Set default wallet data
-        const monthlySalary = employee.salary || 0;
-        const now = new Date();
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const dailySalaryAmount = Math.round((monthlySalary / daysInMonth) * 100) / 100;
-
         setWalletData({
           balance: 0,
           pendingWithdrawals: 0,
           availableToRequest: 0,
-          dailySalaryAmount,
-          monthlySalary,
           employeeName: employee.name || 'Unknown'
         });
-        console.log('⚠️ No wallet data found, using defaults with daily salary:', dailySalaryAmount);
+        console.log('⚠️ No wallet data found, using defaults');
       }
       
       // Get unified user ID for withdrawal requests and realtime matching
@@ -137,17 +115,10 @@ export const useUserWallet = () => {
       console.error('❌ Error fetching wallet data:', error);
       
       // Provide default wallet data even on error
-      const monthlySalary = employee?.salary || 0;
-      const now = new Date();
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const dailySalaryAmount = Math.round((monthlySalary / daysInMonth) * 100) / 100;
-
       setWalletData({
         balance: 0,
         pendingWithdrawals: 0,
         availableToRequest: 0,
-        dailySalaryAmount,
-        monthlySalary,
         employeeName: employee?.name || 'Unknown'
       });
     } finally {
