@@ -456,7 +456,7 @@ export const useUnifiedApprovalRequests = () => {
               return true;
             } else {
               const errMsg = payoutData?.message || 'Transfer rejected';
-              await supabase.from('withdrawal_requests').update({
+              await supabase.from('money_requests').update({
                 payout_status: 'failed',
                 payout_error: errMsg,
                 payout_attempted_at: new Date().toISOString()
