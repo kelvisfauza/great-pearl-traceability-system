@@ -27,7 +27,7 @@ const AdminDashboard = () => {
         supabase.from("loans").select("id, employee_name, loan_amount, loan_type, created_at").eq("status", "pending_admin"),
       ]);
 
-      const totalStock = inventory.data?.reduce((sum, item) => sum + (item.total_kilograms || 0), 0) || 0;
+      const totalStock = inventory.data?.reduce((sum, item) => sum + (item.kilograms || 0), 0) || 0;
 
       return {
         activeEmployees: employees.count || 0,
