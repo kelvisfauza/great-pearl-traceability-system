@@ -33,7 +33,7 @@ serve(async (req) => {
       .from("withdrawal_requests")
       .select("*")
       .eq("status", "approved")
-      .eq("channel", "MOBILE_MONEY")
+      .eq("payment_channel", "MOBILE_MONEY")
       .eq("payout_status", "pending")
       .is("payout_attempted_at", null)  // CRITICAL: Only never-attempted records
       .not("finance_approved_at", "is", null)
