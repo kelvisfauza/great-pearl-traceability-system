@@ -121,9 +121,8 @@ serve(async (req) => {
 
         const innerData = payoutData.data || payoutData;
         const isSuccess =
-          ((innerData.status === 200 || innerData.status === 202 || innerData.code === 200 || innerData.code === 202) &&
-          (innerData.message?.toLowerCase().includes("accepted") || innerData.message?.toLowerCase().includes("success") || payoutData.status === "success"))
-          || (payoutResponse.ok && payoutData.txRef);
+          (innerData.status === 200 || innerData.status === 202 || innerData.code === 200 || innerData.code === 202) &&
+          (innerData.message?.toLowerCase().includes("accepted") || innerData.message?.toLowerCase().includes("success") || payoutData.status === "success");
 
         if (isSuccess) {
           const txRef = payoutData.txRef || withdrawal.request_ref;
