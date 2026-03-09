@@ -281,7 +281,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
           description: `UGX ${request.amount.toLocaleString()} sent to ${request.phone_number}. Ref: ${result.ref}`,
         });
       } else {
-        await supabase.from('withdrawal_requests').update({
+        await supabase.from('money_requests').update({
           payout_status: 'failed',
           payout_error: result.error || 'Transfer failed',
           payout_attempted_at: new Date().toISOString()
