@@ -697,7 +697,7 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                           DEPOSIT: 'Deposit',
                           WITHDRAWAL: 'Withdrawal',
                           ADJUSTMENT: 'Adjustment',
-                          DAILY_SALARY: 'Daily Salary',
+                          
                         };
                         return (
                           <div key={idx} className="text-xs p-2 border-t grid grid-cols-4 gap-2 items-center">
