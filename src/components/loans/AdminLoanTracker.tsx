@@ -40,7 +40,7 @@ const AdminLoanTracker = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from('loan_repayments')
-        .select('*, loans!inner(employee_name, employee_phone, loan_type, loan_amount, remaining_balance, status)')
+        .select('*, loans!inner(employee_name, employee_email, employee_phone, loan_type, loan_amount, remaining_balance, status)')
         .order('due_date', { ascending: true });
       return data || [];
     },
