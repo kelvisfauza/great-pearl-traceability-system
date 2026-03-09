@@ -113,7 +113,7 @@ export const useUnifiedApprovalRequests = () => {
         const { data: withdrawalRequests, error: withdrawalError } = await supabase
           .from('withdrawal_requests')
           .select('*')
-          .or('status.in.(pending_approval,pending_admin_2,pending_admin_3),and(status.eq.approved,payout_status.eq.failed)')
+          .or('status.in.(pending_approval,pending_admin_2,pending_admin_3,Finance Approved),and(status.eq.approved,payout_status.eq.failed)')
           .order('created_at', { ascending: false });
 
         if (!withdrawalError && withdrawalRequests) {
