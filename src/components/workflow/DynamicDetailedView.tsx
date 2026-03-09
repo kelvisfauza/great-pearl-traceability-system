@@ -697,7 +697,8 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                           DEPOSIT: 'Deposit',
                           WITHDRAWAL: 'Withdrawal',
                           ADJUSTMENT: 'Adjustment',
-                                                 return (
+                        };
+                        return (
                           <div key={idx} className="text-xs p-2 border-t grid grid-cols-4 gap-2 items-center">
                             <span className="text-muted-foreground">
                               {new Date(entry.created_at).toLocaleDateString()}
