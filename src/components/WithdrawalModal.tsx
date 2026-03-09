@@ -218,21 +218,19 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       const withdrawalAmount = parseFloat(amount);
       const ref = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
       
-      // Create withdrawal request with pending_approval status
+      // Create withdrawal request in money_requests table (withdrawal_requests is a view)
       const { error: insertError } = await supabase
-        .from('withdrawal_requests' as any)
+        .from('money_requests')
         .insert({
           user_id: user?.id || '',
           amount: withdrawalAmount,
           phone_number: channel === 'MOBILE_MONEY' ? mobileNumber : (employee?.phone || ''),
           payment_channel: channel,
           status: 'pending_finance',
-          request_ref: ref,
-          requester_name: employee?.name || user?.email || '',
-          requester_email: user?.email || employee?.email || '',
+          request_type: 'withdrawal',
+          requested_by: user?.email || employee?.email || '',
+          reason: `Withdrawal via ${channel} - Ref: ${ref}`,
           requires_three_approvals: withdrawalAmount > 100000,
-          disbursement_method: channel,
-          disbursement_phone: channel === 'MOBILE_MONEY' ? mobileNumber : null,
           disbursement_bank_name: channel === 'BANK' ? bankName : null,
           disbursement_account_number: channel === 'BANK' ? accountNumber : null,
           disbursement_account_name: channel === 'BANK' ? accountName : null,
