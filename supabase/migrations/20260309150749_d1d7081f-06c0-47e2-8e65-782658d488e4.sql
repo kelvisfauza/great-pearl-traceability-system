@@ -1,0 +1,1 @@
+DELETE FROM ledger_entries WHERE entry_type = 'DAILY_SALARY';
