@@ -222,7 +222,7 @@ export const AccountButton = () => {
 
   const monthlyProgress = stats ? (stats.monthlyEarnings / stats.monthlyCap) * 100 : 0;
   const pendingAmount = account?.pending_withdrawals || 0;
-  // Use the wallet balance from get_user_balance_safe (already excludes DAILY_SALARY)
+  
   const walletBalance = account?.wallet_balance || 0;
   const availableLoyalty = Math.max(0, walletBalance - pendingAmount);
 

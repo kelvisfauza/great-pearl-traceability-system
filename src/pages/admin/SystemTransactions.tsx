@@ -41,7 +41,7 @@ const ENTRY_LABELS: Record<string, { label: string; color: string }> = {
   LOAN_DISBURSEMENT: { label: 'Loan Disbursement', color: 'bg-blue-100 text-blue-800' },
   LOAN_REPAYMENT: { label: 'Loan Repayment', color: 'bg-orange-100 text-orange-800' },
   LOAN_RECOVERY: { label: 'Loan Recovery', color: 'bg-red-100 text-red-800' },
-  DAILY_SALARY: { label: 'Daily Salary', color: 'bg-teal-100 text-teal-800' },
+  
 };
 
 const SystemTransactions = () => {

@@ -92,7 +92,7 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
 
         const allEntries = entries || [];
         
-        // Sum only the types visible in the user's loyalty wallet (excludes DAILY_SALARY, LOAN_DISBURSEMENT)
+        // Sum only the types visible in the user's loyalty wallet
         const balance = allEntries.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
 
         // Freeze all approval-stage withdrawals (including this current request)
@@ -697,7 +697,6 @@ export const DynamicDetailedView: React.FC<DynamicDetailedViewProps> = ({
                           DEPOSIT: 'Deposit',
                           WITHDRAWAL: 'Withdrawal',
                           ADJUSTMENT: 'Adjustment',
-                          DAILY_SALARY: 'Daily Salary',
                         };
                         return (
                           <div key={idx} className="text-xs p-2 border-t grid grid-cols-4 gap-2 items-center">
