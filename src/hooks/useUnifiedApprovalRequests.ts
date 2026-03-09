@@ -533,7 +533,7 @@ export const useUnifiedApprovalRequests = () => {
         }
 
         const { error: wError } = await supabase
-          .from('withdrawal_requests')
+          .from('money_requests')
           .update(wUpdateData)
           .eq('id', withdrawalId);
 
