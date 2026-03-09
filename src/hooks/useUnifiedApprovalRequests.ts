@@ -464,7 +464,7 @@ export const useUnifiedApprovalRequests = () => {
               return { blocked: true, reason: `Payout retry failed: ${errMsg}. Please check GosentePay dashboard.` };
             }
           } catch (err: any) {
-            await supabase.from('withdrawal_requests').update({
+            await supabase.from('money_requests').update({
               payout_status: 'failed',
               payout_error: err?.message || 'Exception during retry',
               payout_attempted_at: new Date().toISOString()
