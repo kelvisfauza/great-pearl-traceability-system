@@ -115,17 +115,10 @@ export const useUserWallet = () => {
       console.error('❌ Error fetching wallet data:', error);
       
       // Provide default wallet data even on error
-      const monthlySalary = employee?.salary || 0;
-      const now = new Date();
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const dailySalaryAmount = Math.round((monthlySalary / daysInMonth) * 100) / 100;
-
       setWalletData({
         balance: 0,
         pendingWithdrawals: 0,
         availableToRequest: 0,
-        dailySalaryAmount,
-        monthlySalary,
         employeeName: employee?.name || 'Unknown'
       });
     } finally {
