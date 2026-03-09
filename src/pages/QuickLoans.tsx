@@ -1662,6 +1662,12 @@ const QuickLoans = () => {
             )}
 
             {isAdmin() && (
+              <TabsContent value="loan-tracker">
+                <AdminLoanTracker />
+              </TabsContent>
+            )}
+
+            {isAdmin() && (
               <TabsContent value="employee-limits">
                 <Card>
                   <CardHeader>
