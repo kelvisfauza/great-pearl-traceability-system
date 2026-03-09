@@ -159,7 +159,7 @@ export const useUserWallet = () => {
       
       // Auto-complete: insert as 'completed' immediately
       const { error } = await supabase
-        .from('withdrawal_requests')
+        .from('withdrawal_requests' as any)
         .insert([{
           user_id: unifiedUserId,
           amount,

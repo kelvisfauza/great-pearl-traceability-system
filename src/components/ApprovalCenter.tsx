@@ -74,7 +74,7 @@ const ApprovalCenter = () => {
       
       // Update the withdrawal to cash, clear payout error, mark as sent
       const { error } = await supabase
-        .from('withdrawal_requests')
+        .from('withdrawal_requests' as any)
         .update({
           channel: 'CASH',
           disbursement_method: 'CASH',
