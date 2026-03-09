@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Banknote, Clock, Shield, Users, AlertTriangle, CheckCircle, XCircle, CreditCard, Download, Printer, Phone, Loader2, FileText, Eye, ShieldOff, Wallet } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
+import AdminLoanTracker from '@/components/loans/AdminLoanTracker';
 import { Textarea } from '@/components/ui/textarea';
 import LoanAdvertDialog from '@/components/loans/LoanAdvertDialog';
 import LoanReviewModal from '@/components/loans/LoanReviewModal';
@@ -1517,6 +1518,7 @@ const QuickLoans = () => {
             <TabsList>
               <TabsTrigger value="my-loans">My Loans</TabsTrigger>
               {isAdmin() && <TabsTrigger value="all-loans">All Loans (Admin)</TabsTrigger>}
+              {isAdmin() && <TabsTrigger value="loan-tracker">Loan Tracker</TabsTrigger>}
               {isAdmin() && <TabsTrigger value="employee-limits">Employee Limits</TabsTrigger>}
               <TabsTrigger value="repayments">Repayment Schedule</TabsTrigger>
               <TabsTrigger value="guaranteed">Guaranteed Loans</TabsTrigger>
@@ -1656,6 +1658,12 @@ const QuickLoans = () => {
                     </Table>
                   </CardContent>
                 </Card>
+              </TabsContent>
+            )}
+
+            {isAdmin() && (
+              <TabsContent value="loan-tracker">
+                <AdminLoanTracker />
               </TabsContent>
             )}
 
