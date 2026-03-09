@@ -1518,6 +1518,7 @@ const QuickLoans = () => {
             <TabsList>
               <TabsTrigger value="my-loans">My Loans</TabsTrigger>
               {isAdmin() && <TabsTrigger value="all-loans">All Loans (Admin)</TabsTrigger>}
+              {isAdmin() && <TabsTrigger value="loan-tracker">Loan Tracker</TabsTrigger>}
               {isAdmin() && <TabsTrigger value="employee-limits">Employee Limits</TabsTrigger>}
               <TabsTrigger value="repayments">Repayment Schedule</TabsTrigger>
               <TabsTrigger value="guaranteed">Guaranteed Loans</TabsTrigger>
