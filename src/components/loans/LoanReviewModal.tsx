@@ -92,7 +92,7 @@ const LoanReviewModal = ({ loan, open, onClose, onApprove, onReject, submitting 
           .limit(15);
         setBorrowerLedger(ledger || []);
 
-        // Compute loyalty wallet balance (same as dashboard - exclude DAILY_SALARY and LOAN entries)
+        // Compute loyalty wallet balance
         const { data: walletLedger } = await supabase
           .from('ledger_entries')
           .select('amount, entry_type')
