@@ -157,18 +157,18 @@ export const useUserWallet = () => {
       // Generate request reference
       const requestRef = `WR-${new Date().toISOString().split('T')[0]}-${Date.now().toString().slice(-4)}`;
       
-      // Auto-complete: insert as 'completed' immediately
+      // Insert into money_requests table (withdrawal_requests is a view)
       const { error } = await supabase
-        .from('withdrawal_requests' as any)
+        .from('money_requests')
         .insert([{
           user_id: unifiedUserId,
           amount,
           phone_number: phoneNumber,
           payment_channel: channel,
-          request_ref: requestRef,
-          printed_at: new Date().toISOString(),
+          request_type: 'withdrawal',
+          requested_by: walletOwnerEmail,
+          reason: `Withdrawal via ${channel} - Ref: ${requestRef}`,
           status: 'completed',
-          processed_at: new Date().toISOString()
         }]);
 
       if (error) throw error;
