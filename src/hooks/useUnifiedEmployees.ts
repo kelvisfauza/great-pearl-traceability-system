@@ -335,7 +335,7 @@ export const useUnifiedEmployees = () => {
     deleteEmployee,
     searchEmployees,
     getEmployeeByEmail,
-    calculateDailySalary,
+    
     refetch: fetchEmployees,
     // Stats for debugging
     stats: {
