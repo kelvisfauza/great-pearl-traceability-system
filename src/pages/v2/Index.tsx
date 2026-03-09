@@ -39,14 +39,14 @@ const V2Index = () => {
     },
   });
 
-  // Fetch total available stock from coffee_records (actual inventory source)
+  // Fetch total available stock - all active coffee records (purchases add, sold_out/rejected excluded)
   const { data: totalStock } = useQuery({
     queryKey: ["total-available-stock"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("coffee_records")
         .select("kilograms")
-        .eq("status", "inventory")
+        .not("status", "in", '("sold_out","rejected","QUALITY_REJECTED")')
         .gt("kilograms", 0);
       
       if (error) throw error;
