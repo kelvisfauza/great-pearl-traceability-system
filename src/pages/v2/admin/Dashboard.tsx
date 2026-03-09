@@ -23,11 +23,11 @@ const AdminDashboard = () => {
         supabase.from("employees").select("*", { count: "exact", head: true }).eq("status", "Active"),
         supabase.from("coffee_records").select("*", { count: "exact", head: true }).eq("status", "PENDING"),
         supabase.from("finance_coffee_lots").select("*", { count: "exact", head: true }).eq("finance_status", "READY_FOR_FINANCE"),
-        supabase.from("inventory_items").select("total_kilograms").eq("status", "available"),
+        supabase.from("coffee_records").select("kilograms").eq("status", "inventory").gt("kilograms", 0),
         supabase.from("loans").select("id, employee_name, loan_amount, loan_type, created_at").eq("status", "pending_admin"),
       ]);
 
-      const totalStock = inventory.data?.reduce((sum, item) => sum + (item.total_kilograms || 0), 0) || 0;
+      const totalStock = inventory.data?.reduce((sum, item) => sum + (item.kilograms || 0), 0) || 0;
 
       return {
         activeEmployees: employees.count || 0,

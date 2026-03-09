@@ -7815,149 +7815,6 @@ export type Database = {
           verification_method?: string | null
           withdrawal_request_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "withdrawal_approval_logs_withdrawal_request_id_fkey"
-            columns: ["withdrawal_request_id"]
-            isOneToOne: false
-            referencedRelation: "withdrawal_requests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      withdrawal_requests: {
-        Row: {
-          admin_approved_1_at: string | null
-          admin_approved_1_by: string | null
-          admin_approved_2_at: string | null
-          admin_approved_2_by: string | null
-          admin_approved_3_at: string | null
-          admin_approved_3_by: string | null
-          amount: number
-          approved_at: string | null
-          approved_by: string | null
-          channel: string | null
-          created_at: string
-          disbursement_account_name: string | null
-          disbursement_account_number: string | null
-          disbursement_bank_name: string | null
-          disbursement_method: string | null
-          disbursement_phone: string | null
-          failure_reason: string | null
-          finance_approved_at: string | null
-          finance_approved_by: string | null
-          id: string
-          payment_voucher: string | null
-          payout_attempted_at: string | null
-          payout_error: string | null
-          payout_ref: string | null
-          payout_status: string | null
-          phone_number: string
-          printed_at: string | null
-          processed_at: string | null
-          provider_fee: number | null
-          provider_ref: string | null
-          rejected_at: string | null
-          rejected_by: string | null
-          rejection_reason: string | null
-          request_ref: string | null
-          requester_email: string | null
-          requester_name: string | null
-          requires_three_approvals: boolean | null
-          status: string
-          transaction_id: string | null
-          transaction_reference: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          admin_approved_1_at?: string | null
-          admin_approved_1_by?: string | null
-          admin_approved_2_at?: string | null
-          admin_approved_2_by?: string | null
-          admin_approved_3_at?: string | null
-          admin_approved_3_by?: string | null
-          amount: number
-          approved_at?: string | null
-          approved_by?: string | null
-          channel?: string | null
-          created_at?: string
-          disbursement_account_name?: string | null
-          disbursement_account_number?: string | null
-          disbursement_bank_name?: string | null
-          disbursement_method?: string | null
-          disbursement_phone?: string | null
-          failure_reason?: string | null
-          finance_approved_at?: string | null
-          finance_approved_by?: string | null
-          id?: string
-          payment_voucher?: string | null
-          payout_attempted_at?: string | null
-          payout_error?: string | null
-          payout_ref?: string | null
-          payout_status?: string | null
-          phone_number: string
-          printed_at?: string | null
-          processed_at?: string | null
-          provider_fee?: number | null
-          provider_ref?: string | null
-          rejected_at?: string | null
-          rejected_by?: string | null
-          rejection_reason?: string | null
-          request_ref?: string | null
-          requester_email?: string | null
-          requester_name?: string | null
-          requires_three_approvals?: boolean | null
-          status?: string
-          transaction_id?: string | null
-          transaction_reference?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          admin_approved_1_at?: string | null
-          admin_approved_1_by?: string | null
-          admin_approved_2_at?: string | null
-          admin_approved_2_by?: string | null
-          admin_approved_3_at?: string | null
-          admin_approved_3_by?: string | null
-          amount?: number
-          approved_at?: string | null
-          approved_by?: string | null
-          channel?: string | null
-          created_at?: string
-          disbursement_account_name?: string | null
-          disbursement_account_number?: string | null
-          disbursement_bank_name?: string | null
-          disbursement_method?: string | null
-          disbursement_phone?: string | null
-          failure_reason?: string | null
-          finance_approved_at?: string | null
-          finance_approved_by?: string | null
-          id?: string
-          payment_voucher?: string | null
-          payout_attempted_at?: string | null
-          payout_error?: string | null
-          payout_ref?: string | null
-          payout_status?: string | null
-          phone_number?: string
-          printed_at?: string | null
-          processed_at?: string | null
-          provider_fee?: number | null
-          provider_ref?: string | null
-          rejected_at?: string | null
-          rejected_by?: string | null
-          rejection_reason?: string | null
-          request_ref?: string | null
-          requester_email?: string | null
-          requester_name?: string | null
-          requires_three_approvals?: boolean | null
-          status?: string
-          transaction_id?: string | null
-          transaction_reference?: string | null
-          updated_at?: string
-          user_id?: string
-        }
         Relationships: []
       }
       withdrawal_verification_codes: {
@@ -8000,15 +7857,7 @@ export type Database = {
           verified_at?: string | null
           withdrawal_request_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "withdrawal_verification_codes_withdrawal_request_id_fkey"
-            columns: ["withdrawal_request_id"]
-            isOneToOne: false
-            referencedRelation: "withdrawal_requests"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       workflow_steps: {
         Row: {
@@ -8060,7 +7909,61 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      withdrawal_requests: {
+        Row: {
+          admin_approved: boolean | null
+          admin_approved_1: boolean | null
+          admin_approved_1_at: string | null
+          admin_approved_1_by: string | null
+          admin_approved_2: boolean | null
+          admin_approved_2_at: string | null
+          admin_approved_2_by: string | null
+          admin_approved_3: boolean | null
+          admin_approved_3_at: string | null
+          admin_approved_3_by: string | null
+          admin_final_approval: boolean | null
+          admin_final_approval_at: string | null
+          admin_final_approval_by: string | null
+          amount: number | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          disbursement_account_name: string | null
+          disbursement_account_number: string | null
+          disbursement_bank_name: string | null
+          disbursement_method: string | null
+          disbursement_phone: string | null
+          finance_approved_at: string | null
+          finance_approved_by: string | null
+          finance_review_at: string | null
+          finance_review_by: string | null
+          finance_reviewed: boolean | null
+          id: string | null
+          paid_at: string | null
+          payment_channel: string | null
+          payout_attempted_at: string | null
+          payout_error: string | null
+          payout_ref: string | null
+          payout_reference: string | null
+          payout_status: string | null
+          phone_number: string | null
+          reason: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          request_type: string | null
+          requested_by: string | null
+          requester_email: string | null
+          requester_name: string | null
+          requires_three_approvals: boolean | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+          wallet_balance_at_approval: number | null
+          wallet_balance_verified: boolean | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_delete_all_system_data: { Args: never; Returns: Json }

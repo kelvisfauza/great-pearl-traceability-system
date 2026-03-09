@@ -39,17 +39,18 @@ const V2Index = () => {
     },
   });
 
-  // Fetch total available stock
+  // Fetch total available stock from coffee_records (actual inventory source)
   const { data: totalStock } = useQuery({
     queryKey: ["total-available-stock"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("inventory_items")
-        .select("total_kilograms")
-        .eq("status", "available");
+        .from("coffee_records")
+        .select("kilograms")
+        .eq("status", "inventory")
+        .gt("kilograms", 0);
       
       if (error) throw error;
-      const total = data?.reduce((sum, item) => sum + (item.total_kilograms || 0), 0) || 0;
+      const total = data?.reduce((sum, item) => sum + (item.kilograms || 0), 0) || 0;
       return Math.round(total).toLocaleString();
     },
   });
