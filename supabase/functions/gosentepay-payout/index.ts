@@ -113,9 +113,8 @@ serve(async (req) => {
     // Sometimes data.data is null but txRef is present with HTTP 200 — that's still a success
     const innerData = data.data || data;
     const isSuccess = 
-      ((innerData.status === 200 || innerData.status === 202 || innerData.code === 200 || innerData.code === 202) &&
-      (innerData.message?.toLowerCase().includes("accepted") || innerData.message?.toLowerCase().includes("success") || data.status === "success"))
-      || (response.ok && data.txRef);
+      (innerData.status === 200 || innerData.status === 202 || innerData.code === 200 || innerData.code === 202) &&
+      (innerData.message?.toLowerCase().includes("accepted") || innerData.message?.toLowerCase().includes("success") || data.status === "success");
 
     if (isSuccess) {
       const txRef = data.txRef || ref;
