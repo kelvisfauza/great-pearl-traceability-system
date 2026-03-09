@@ -231,7 +231,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
     setRetrying(request.id);
     try {
       // Mark as processing
-      await supabase.from('withdrawal_requests').update({
+      await supabase.from('money_requests').update({
         payout_status: 'processing',
         payout_attempted_at: new Date().toISOString(),
         payout_error: null
@@ -240,7 +240,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
       const result = await attemptPayout(request);
 
       if (result.success) {
-        await supabase.from('withdrawal_requests').update({
+        await supabase.from('money_requests').update({
           payout_status: 'sent',
           payout_ref: result.ref,
           payout_attempted_at: new Date().toISOString(),
@@ -281,7 +281,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
           description: `UGX ${request.amount.toLocaleString()} sent to ${request.phone_number}. Ref: ${result.ref}`,
         });
       } else {
-        await supabase.from('withdrawal_requests').update({
+        await supabase.from('money_requests').update({
           payout_status: 'failed',
           payout_error: result.error || 'Transfer failed',
           payout_attempted_at: new Date().toISOString()
@@ -298,7 +298,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
     } catch (err: any) {
       console.error('Retry payout error:', err);
       // CRITICAL: Always reset to 'failed' if exception occurs, never leave as 'processing'
-      await supabase.from('withdrawal_requests').update({
+      await supabase.from('money_requests').update({
         payout_status: 'failed',
         payout_error: err?.message || 'Exception during retry',
         payout_attempted_at: new Date().toISOString()

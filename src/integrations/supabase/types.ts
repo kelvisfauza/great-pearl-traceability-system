@@ -4725,10 +4725,12 @@ export type Database = {
           approval_stage: string
           approved_at: string | null
           approved_by: string | null
+          channel: string | null
           created_at: string
           disbursement_account_name: string | null
           disbursement_account_number: string | null
           disbursement_bank_name: string | null
+          disbursement_phone: string | null
           finance_approved: boolean | null
           finance_approved_at: string | null
           finance_approved_by: string | null
@@ -4739,9 +4741,14 @@ export type Database = {
           payment_channel: string | null
           payment_slip_generated: boolean | null
           payment_slip_number: string | null
+          payout_attempted_at: string | null
+          payout_error: string | null
+          payout_ref: string | null
+          payout_status: string | null
           phone_number: string | null
           reason: string
           rejection_reason: string | null
+          request_ref: string | null
           request_type: string
           requested_by: string
           requires_three_approvals: boolean | null
@@ -4771,10 +4778,12 @@ export type Database = {
           approval_stage?: string
           approved_at?: string | null
           approved_by?: string | null
+          channel?: string | null
           created_at?: string
           disbursement_account_name?: string | null
           disbursement_account_number?: string | null
           disbursement_bank_name?: string | null
+          disbursement_phone?: string | null
           finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
@@ -4785,9 +4794,14 @@ export type Database = {
           payment_channel?: string | null
           payment_slip_generated?: boolean | null
           payment_slip_number?: string | null
+          payout_attempted_at?: string | null
+          payout_error?: string | null
+          payout_ref?: string | null
+          payout_status?: string | null
           phone_number?: string | null
           reason: string
           rejection_reason?: string | null
+          request_ref?: string | null
           request_type?: string
           requested_by: string
           requires_three_approvals?: boolean | null
@@ -4817,10 +4831,12 @@ export type Database = {
           approval_stage?: string
           approved_at?: string | null
           approved_by?: string | null
+          channel?: string | null
           created_at?: string
           disbursement_account_name?: string | null
           disbursement_account_number?: string | null
           disbursement_bank_name?: string | null
+          disbursement_phone?: string | null
           finance_approved?: boolean | null
           finance_approved_at?: string | null
           finance_approved_by?: string | null
@@ -4831,9 +4847,14 @@ export type Database = {
           payment_channel?: string | null
           payment_slip_generated?: boolean | null
           payment_slip_number?: string | null
+          payout_attempted_at?: string | null
+          payout_error?: string | null
+          payout_ref?: string | null
+          payout_status?: string | null
           phone_number?: string | null
           reason?: string
           rejection_reason?: string | null
+          request_ref?: string | null
           request_type?: string
           requested_by?: string
           requires_three_approvals?: boolean | null
@@ -7927,6 +7948,7 @@ export type Database = {
           amount: number | null
           approved_at: string | null
           approved_by: string | null
+          channel: string | null
           created_at: string | null
           disbursement_account_name: string | null
           disbursement_account_number: string | null
@@ -7939,7 +7961,6 @@ export type Database = {
           finance_review_by: string | null
           finance_reviewed: boolean | null
           id: string | null
-          paid_at: string | null
           payment_channel: string | null
           payout_attempted_at: string | null
           payout_error: string | null
@@ -7948,9 +7969,8 @@ export type Database = {
           payout_status: string | null
           phone_number: string | null
           reason: string | null
-          rejected_at: string | null
-          rejected_by: string | null
           rejection_reason: string | null
+          request_ref: string | null
           request_type: string | null
           requested_by: string | null
           requester_email: string | null
