@@ -415,7 +415,7 @@ export const useUnifiedApprovalRequests = () => {
             }
 
             if (payoutData?.status === 'success') {
-              await supabase.from('withdrawal_requests').update({
+              await supabase.from('money_requests').update({
                 payout_status: 'sent',
                 payout_ref: payoutData.ref,
                 payout_attempted_at: new Date().toISOString(),
