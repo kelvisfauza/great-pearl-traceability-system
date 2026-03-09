@@ -240,7 +240,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
       const result = await attemptPayout(request);
 
       if (result.success) {
-        await supabase.from('withdrawal_requests').update({
+        await supabase.from('money_requests').update({
           payout_status: 'sent',
           payout_ref: result.ref,
           payout_attempted_at: new Date().toISOString(),
