@@ -515,7 +515,12 @@ export const useUnifiedApprovalRequests = () => {
 
         if (wError) {
           console.error('Withdrawal update error:', wError);
-          return false;
+          // Surface the actual DB error (e.g. insufficient balance) to the UI
+          const dbMsg = wError.message || 'Database update failed';
+          if (dbMsg.includes('Insufficient wallet balance')) {
+            return { blocked: true, reason: dbMsg };
+          }
+          return { blocked: true, reason: `Approval failed: ${dbMsg}` };
         }
 
         // Trigger GosentePay payout immediately on final admin approval
