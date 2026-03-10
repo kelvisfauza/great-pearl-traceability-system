@@ -159,7 +159,7 @@ export const useUnifiedApprovalRequests = () => {
                   withdrawal_id: req.id,
                   phone_number: req.disbursement_phone || req.phone_number,
                   disbursement_phone: req.disbursement_phone,
-                  channel: req.channel || req.disbursement_method,
+                  channel: req.channel || req.payment_channel || 'MOBILE_MONEY',
                   request_ref: req.request_ref,
                   requester_name: empName,
                   requester_email: empEmail,
