@@ -337,7 +337,8 @@ export const useUnifiedApprovalRequests = () => {
         // Handle RETRY for failed payouts — skip approval logic, go straight to payout
         if (status === 'Approved' && currentWithdrawal.status === 'approved' && currentWithdrawal.payout_status === 'failed') {
           console.log('🔄 Retrying failed payout for withdrawal:', withdrawalId);
-          const isMoMo = currentWithdrawal.channel === 'MOBILE_MONEY' || (currentWithdrawal.channel !== 'CASH' && currentWithdrawal.channel !== 'BANK');
+          const retryChannel = currentWithdrawal.channel || currentWithdrawal.payment_channel || 'MOBILE_MONEY';
+          const isMoMo = retryChannel === 'MOBILE_MONEY' || (retryChannel !== 'CASH' && retryChannel !== 'BANK');
           
           if (!isMoMo) {
             return { blocked: true, reason: 'This is not a Mobile Money withdrawal. Manual disbursement is required.' };
