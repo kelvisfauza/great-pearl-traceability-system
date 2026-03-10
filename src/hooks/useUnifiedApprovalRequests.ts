@@ -783,32 +783,8 @@ export const useUnifiedApprovalRequests = () => {
           // Firebase store report and payment record operations removed (migrated to Supabase)
         }
 
-      } else if (request.source === 'firebase') {
-        // Handle Firebase modification requests
-        const updateData: any = {
-          status: status === 'Approved' ? 'completed' : 'rejected',
-          completedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-
-        if (status === 'Rejected' && rejectionReason) {
-          updateData.rejectionReason = rejectionReason;
-          updateData.rejectionComments = rejectionComments || '';
-        }
-
-        await updateDoc(doc(db, 'modification_requests', request.id), updateData);
-
-        if (status === 'Approved') {
-          // Create announcement for completion
-          await createAnnouncement(
-            'Modification Request Completed',
-            `Modification request for batch ${request.batchNumber} has been completed`,
-            'Admin',
-            [request.targetDepartment || 'Finance'],
-            'Medium'
-          );
-        }
       }
+      // Firebase modification request handling removed (migrated to Supabase)
 
       // Track workflow step with error handling - only for non-store-report requests
       if (!request.requestType.includes('Store Report')) {
