@@ -350,7 +350,7 @@ export const useUnifiedApprovalRequests = () => {
         // Handle RETRY for failed payouts — skip approval logic, go straight to payout
         if (status === 'Approved' && currentWithdrawal.status === 'approved' && currentWithdrawal.payout_status === 'failed') {
           console.log('🔄 Retrying failed payout for withdrawal:', withdrawalId);
-          const retryChannel = currentWithdrawal.channel || currentWithdrawal.payment_channel || 'MOBILE_MONEY';
+          const retryChannel = currentWithdrawal.payment_channel || currentWithdrawal.channel || 'MOBILE_MONEY';
           const isMoMo = retryChannel === 'MOBILE_MONEY' || (retryChannel !== 'CASH' && retryChannel !== 'BANK');
           
           if (!isMoMo) {
