@@ -548,7 +548,7 @@ export const useUnifiedApprovalRequests = () => {
               }
             } catch (err: any) {
               console.error('Payout exception:', err);
-              payoutError = err.name === 'AbortError' ? 'Payout request timed out after 30 seconds' : (err.message || 'Unknown error');
+              payoutError = err.message || 'Unknown error';
             }
 
             // Update payout status based on result
