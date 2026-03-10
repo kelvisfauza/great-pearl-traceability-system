@@ -319,18 +319,16 @@ export const WithdrawalRequestsManager: React.FC = () => {
       
       // Update ALL relevant fields so the database accurately reflects cash disbursement
       const { error } = await supabase
-        .from('withdrawal_requests')
+        .from('money_requests')
         .update({
-          status: 'disbursed',              // Mark as fully disbursed
-          channel: 'CASH',                   // Changed from MOBILE_MONEY to CASH
-          payout_status: 'cash_paid',        // Clear status showing cash was given
-          payout_error: null,                // Clear any previous errors
+          status: 'approved',
+          channel: 'CASH',
+          payout_status: 'sent',
+          payout_error: null,
           payout_ref: cashVoucher ? `CASH-${cashVoucher}` : `CASH-${Date.now()}`,
-          payment_voucher: cashVoucher || null,
-          processed_at: now,                 // When money was actually handed out
           payout_attempted_at: now,
           updated_at: now
-        })
+        } as any)
         .eq('id', cashRequest.id);
 
       if (error) throw error;
@@ -392,14 +390,12 @@ export const WithdrawalRequestsManager: React.FC = () => {
         updated_at: new Date().toISOString(),
         // Finance is the first step - move to admin approval queue
         status: 'pending_approval',
+        finance_approved: true,
+        finance_reviewed: true,
       };
 
-      if (paymentVoucher) {
-        updateData.payment_voucher = paymentVoucher;
-      }
-
       const { error } = await supabase
-        .from('withdrawal_requests')
+        .from('money_requests')
         .update(updateData)
         .eq('id', selectedRequest.id);
 
@@ -452,12 +448,12 @@ export const WithdrawalRequestsManager: React.FC = () => {
     setProcessing(selectedRequest.id);
     try {
       const { error } = await supabase
-        .from('withdrawal_requests')
+        .from('money_requests')
         .update({
           status: 'rejected',
           rejection_reason: rejectionReason,
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq('id', selectedRequest.id);
 
       if (error) throw error;

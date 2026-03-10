@@ -76,8 +76,8 @@ const ApprovalCenter = () => {
       const { error } = await supabase
         .from('money_requests')
         .update({
+          channel: 'CASH',
           payment_channel: 'CASH',
-          disbursement_method: 'CASH',
           payout_status: 'sent',
           payout_error: null,
           payout_ref: `CASH-${Date.now()}`,

@@ -479,8 +479,7 @@ export const useUnifiedApprovalRequests = () => {
         } else {
           wUpdateData.status = 'rejected';
           wUpdateData.rejection_reason = rejectionReason || 'Rejected by Administrator';
-          wUpdateData.rejected_by = adminName;
-          wUpdateData.rejected_at = new Date().toISOString();
+          wUpdateData.approved_by = adminName;
         }
 
         // Lock for payout immediately if this is the final approval
@@ -518,14 +517,21 @@ export const useUnifiedApprovalRequests = () => {
             // If it fails, Finance can manually retry from the Withdrawals page
             try {
               console.log(`GosentePay payout: ${payoutPhone}, UGX ${currentWithdrawal.amount}`);
+              
+              // Use AbortController to prevent hanging forever
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+              
               const { data: payoutData, error: payoutErr } = await supabase.functions.invoke('gosentepay-payout', {
                 body: {
                   phone: payoutPhone,
                   amount: currentWithdrawal.amount,
                   ref: currentWithdrawal.request_ref || `WD-${currentWithdrawal.id.slice(0, 8)}`,
-                  employeeName: (currentWithdrawal as any).employee_name || request.requestedBy || 'Employee'
+                  employeeName: request.details?.requester_name || request.requestedBy || 'Employee'
                 }
               });
+              
+              clearTimeout(timeoutId);
 
               if (payoutErr) {
                 console.error('Payout error:', payoutErr);
@@ -538,7 +544,7 @@ export const useUnifiedApprovalRequests = () => {
               }
             } catch (err: any) {
               console.error('Payout exception:', err);
-              payoutError = err.message || 'Unknown error';
+              payoutError = err.name === 'AbortError' ? 'Payout request timed out after 30 seconds' : (err.message || 'Unknown error');
             }
 
             // Update payout status based on result
