@@ -780,73 +780,7 @@ export const useUnifiedApprovalRequests = () => {
             }
           }
 
-          else if (request.requestType === 'Store Report Deletion' && request.details?.action === 'delete_store_report' && request.details?.reportId) {
-            try {
-              await deleteDoc(doc(db, 'store_reports', request.details.reportId));
-              console.log('Store report deleted successfully');
-            } catch (error) {
-              console.error('Error deleting store report:', error);
-            }
-          }
-          
-          else if (request.requestType === 'Store Report Edit' && request.details?.action === 'edit_store_report' && request.details?.reportId) {
-            try {
-              const { updatedData } = request.details;
-              await updateDoc(doc(db, 'store_reports', request.details.reportId), {
-                ...updatedData,
-                updated_at: new Date().toISOString()
-              });
-              console.log('Store report updated successfully');
-            } catch (error) {
-              console.error('Error updating store report:', error);
-            }
-          }
-          
-          else if (request.requestType === 'Salary Payment' && request.details?.employee_details) {
-            try {
-              await addDoc(collection(db, 'salary_payments'), {
-                month: request.details.month,
-                employee_count: request.details.employee_count,
-                total_pay: request.details.total_amount,
-                bonuses: request.details.bonuses || 0,
-                deductions: request.details.deductions || 0,
-                payment_method: request.details.payment_method,
-                employee_details: request.details.employee_details,
-                status: 'Approved',
-                processed_by: 'Admin',
-                processed_date: new Date().toISOString(),
-                notes: request.details.notes || '',
-                created_at: new Date().toISOString()
-              });
-              console.log('Salary payment record created');
-            } catch (error) {
-              console.error('Error creating salary payment record:', error);
-            }
-          }
-          
-          else if (request.requestType === 'Bank Transfer' && request.details?.paymentId) {
-            try {
-              await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
-                status: 'Paid',
-                method: 'Bank Transfer',
-                updated_at: new Date().toISOString()
-              });
-              
-              await addDoc(collection(db, 'daily_tasks'), {
-                task_type: 'Payment Approved',
-                description: `Bank transfer approved: ${request.details?.supplier} - UGX ${request.details?.amount?.toLocaleString()}`,
-                amount: request.details?.amount,
-                batch_number: request.details?.batchNumber,
-                completed_by: 'Operations Manager',
-                completed_at: new Date().toISOString(),
-                date: new Date().toISOString().split('T')[0],
-                department: 'Finance',
-                created_at: new Date().toISOString()
-              });
-            } catch (error) {
-              console.error('Error updating payment record:', error);
-            }
-          }
+          // Firebase store report and payment record operations removed (migrated to Supabase)
         }
 
       } else if (request.source === 'firebase') {
