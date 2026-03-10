@@ -450,12 +450,12 @@ export const WithdrawalRequestsManager: React.FC = () => {
     setProcessing(selectedRequest.id);
     try {
       const { error } = await supabase
-        .from('withdrawal_requests')
+        .from('money_requests')
         .update({
           status: 'rejected',
           rejection_reason: rejectionReason,
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq('id', selectedRequest.id);
 
       if (error) throw error;
