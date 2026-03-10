@@ -1,7 +1,5 @@
 // @ts-nocheck - withdrawal_requests table has columns not yet in generated types
 import { useState, useEffect, useCallback } from 'react';
-import { collection, getDocs, query, orderBy, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkflowTracking } from './useWorkflowTracking';
@@ -111,7 +109,7 @@ export const useUnifiedApprovalRequests = () => {
       // Also fetch approved withdrawals with failed payout status for retry
       try {
         const { data: withdrawalRequests, error: withdrawalError } = await supabase
-          .from('withdrawal_requests')
+          .from('money_requests')
           .select('*')
           .or('status.in.(pending_approval,pending_admin_2,pending_admin_3,Finance Approved),and(status.eq.approved,payout_status.eq.failed)')
           .order('created_at', { ascending: false });
@@ -267,45 +265,7 @@ export const useUnifiedApprovalRequests = () => {
         reportDatabaseError(error, 'fetch edit_requests', 'edit_requests');
       }
 
-      // 4. Fetch Firebase modification requests
-      try {
-        const modQuery = query(collection(db, 'modification_requests'), orderBy('createdAt', 'desc'));
-        const modSnapshot = await getDocs(modQuery);
-        const modRequests = modSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as any[];
-
-        const pendingModRequests = modRequests.filter(req => req.status === 'pending');
-        const transformedMod = pendingModRequests.map(req => ({
-          id: req.id,
-          type: 'modification' as const,
-          source: 'firebase' as const,
-          department: req.targetDepartment || 'Finance',
-          requestType: 'Modification Request',
-          title: `Modification Request - Batch ${req.batchNumber || 'N/A'}`,
-          description: `${req.reason || 'No reason provided'}: ${req.comments || 'No comments'}`,
-          amount: '0',
-          requestedBy: req.requestedBy || 'Unknown',
-          dateRequested: req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'Unknown',
-          priority: 'Medium',
-          status: 'Pending',
-          details: req,
-          createdAt: req.createdAt || new Date().toISOString(),
-          updatedAt: req.updatedAt || req.createdAt || new Date().toISOString(),
-          batchNumber: req.batchNumber,
-          targetDepartment: req.targetDepartment,
-          reason: req.reason,
-          comments: req.comments,
-          originalPaymentId: req.originalPaymentId,
-          qualityAssessmentId: req.qualityAssessmentId
-        }));
-        allRequests.push(...transformedMod);
-        console.log('Fetched Firebase modification requests:', transformedMod.length);
-      } catch (error) {
-        console.error('Error fetching modification requests:', error);
-        reportDatabaseError(error, 'fetch modification_requests', 'modification_requests');
-      }
+      // 4. Firebase modification requests removed (migrated to Supabase)
 
       // Sort all requests by creation date (newest first)
       allRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -357,7 +317,7 @@ export const useUnifiedApprovalRequests = () => {
         
         // Fetch current withdrawal state
         const { data: currentWithdrawal, error: wFetchError } = await supabase
-          .from('withdrawal_requests')
+          .from('money_requests')
           .select('*')
           .eq('id', withdrawalId)
           .single();
@@ -820,101 +780,11 @@ export const useUnifiedApprovalRequests = () => {
             }
           }
 
-          else if (request.requestType === 'Store Report Deletion' && request.details?.action === 'delete_store_report' && request.details?.reportId) {
-            try {
-              await deleteDoc(doc(db, 'store_reports', request.details.reportId));
-              console.log('Store report deleted successfully');
-            } catch (error) {
-              console.error('Error deleting store report:', error);
-            }
-          }
-          
-          else if (request.requestType === 'Store Report Edit' && request.details?.action === 'edit_store_report' && request.details?.reportId) {
-            try {
-              const { updatedData } = request.details;
-              await updateDoc(doc(db, 'store_reports', request.details.reportId), {
-                ...updatedData,
-                updated_at: new Date().toISOString()
-              });
-              console.log('Store report updated successfully');
-            } catch (error) {
-              console.error('Error updating store report:', error);
-            }
-          }
-          
-          else if (request.requestType === 'Salary Payment' && request.details?.employee_details) {
-            try {
-              await addDoc(collection(db, 'salary_payments'), {
-                month: request.details.month,
-                employee_count: request.details.employee_count,
-                total_pay: request.details.total_amount,
-                bonuses: request.details.bonuses || 0,
-                deductions: request.details.deductions || 0,
-                payment_method: request.details.payment_method,
-                employee_details: request.details.employee_details,
-                status: 'Approved',
-                processed_by: 'Admin',
-                processed_date: new Date().toISOString(),
-                notes: request.details.notes || '',
-                created_at: new Date().toISOString()
-              });
-              console.log('Salary payment record created');
-            } catch (error) {
-              console.error('Error creating salary payment record:', error);
-            }
-          }
-          
-          else if (request.requestType === 'Bank Transfer' && request.details?.paymentId) {
-            try {
-              await updateDoc(doc(db, 'payment_records', request.details.paymentId), {
-                status: 'Paid',
-                method: 'Bank Transfer',
-                updated_at: new Date().toISOString()
-              });
-              
-              await addDoc(collection(db, 'daily_tasks'), {
-                task_type: 'Payment Approved',
-                description: `Bank transfer approved: ${request.details?.supplier} - UGX ${request.details?.amount?.toLocaleString()}`,
-                amount: request.details?.amount,
-                batch_number: request.details?.batchNumber,
-                completed_by: 'Operations Manager',
-                completed_at: new Date().toISOString(),
-                date: new Date().toISOString().split('T')[0],
-                department: 'Finance',
-                created_at: new Date().toISOString()
-              });
-            } catch (error) {
-              console.error('Error updating payment record:', error);
-            }
-          }
+          // Firebase store report and payment record operations removed (migrated to Supabase)
         }
 
-      } else if (request.source === 'firebase') {
-        // Handle Firebase modification requests
-        const updateData: any = {
-          status: status === 'Approved' ? 'completed' : 'rejected',
-          completedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-
-        if (status === 'Rejected' && rejectionReason) {
-          updateData.rejectionReason = rejectionReason;
-          updateData.rejectionComments = rejectionComments || '';
-        }
-
-        await updateDoc(doc(db, 'modification_requests', request.id), updateData);
-
-        if (status === 'Approved') {
-          // Create announcement for completion
-          await createAnnouncement(
-            'Modification Request Completed',
-            `Modification request for batch ${request.batchNumber} has been completed`,
-            'Admin',
-            [request.targetDepartment || 'Finance'],
-            'Medium'
-          );
-        }
       }
+      // Firebase modification request handling removed (migrated to Supabase)
 
       // Track workflow step with error handling - only for non-store-report requests
       if (!request.requestType.includes('Store Report')) {
