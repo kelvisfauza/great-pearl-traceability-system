@@ -365,7 +365,7 @@ export const useUnifiedApprovalRequests = () => {
             updated_at: new Date().toISOString()
           }).eq('id', withdrawalId);
 
-          const phoneToNotify = currentWithdrawal.disbursement_phone || currentWithdrawal.phone_number;
+          const phoneToNotify = currentWithdrawal.phone_number || currentWithdrawal.disbursement_phone;
           let payoutPhone = (phoneToNotify || '').replace(/\D/g, '');
           if (payoutPhone.startsWith('0')) payoutPhone = '256' + payoutPhone.slice(1);
           if (!payoutPhone.startsWith('256')) payoutPhone = '256' + payoutPhone;
