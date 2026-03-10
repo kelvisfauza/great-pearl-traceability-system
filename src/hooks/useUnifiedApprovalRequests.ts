@@ -317,7 +317,7 @@ export const useUnifiedApprovalRequests = () => {
         
         // Fetch current withdrawal state
         const { data: currentWithdrawal, error: wFetchError } = await supabase
-          .from('withdrawal_requests')
+          .from('money_requests')
           .select('*')
           .eq('id', withdrawalId)
           .single();
