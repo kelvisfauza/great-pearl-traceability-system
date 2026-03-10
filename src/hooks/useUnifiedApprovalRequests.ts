@@ -558,7 +558,20 @@ export const useUnifiedApprovalRequests = () => {
 
               if (payoutErr) {
                 console.error('Payout error:', payoutErr);
-                payoutError = payoutErr.message || 'Edge function error';
+                // Try to extract the actual GosentePay rejection reason from the error context
+                let detailedError = payoutErr.message || 'Edge function error';
+                try {
+                  // FunctionsHttpError stores the response body; try to parse it
+                  const errContext = typeof payoutErr === 'object' && 'context' in payoutErr
+                    ? await (payoutErr as any).context?.json?.()
+                    : null;
+                  if (errContext?.message) {
+                    detailedError = errContext.message;
+                  } else if (errContext?.details?.data?.message) {
+                    detailedError = errContext.details.data.message;
+                  }
+                } catch { /* ignore parse errors */ }
+                payoutError = detailedError;
               } else if (payoutData?.status === 'success') {
                 payoutSuccess = true;
                 payoutRef = payoutData.ref || currentWithdrawal.request_ref;
