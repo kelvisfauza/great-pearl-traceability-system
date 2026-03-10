@@ -111,26 +111,27 @@ export const useUnifiedApprovalRequests = () => {
         const { data: withdrawalRequests, error: withdrawalError } = await supabase
           .from('money_requests')
           .select('*')
-          .or('status.in.(pending_approval,pending_admin_2,pending_admin_3,Finance Approved),and(status.eq.approved,payout_status.eq.failed)')
+          .eq('request_type', 'withdrawal')
+          .or('status.in.("pending_approval","pending_admin_2","pending_admin_3","Finance Approved"),and(status.eq.approved,payout_status.eq.failed)')
           .order('created_at', { ascending: false });
 
         if (!withdrawalError && withdrawalRequests) {
           // Enrich with employee names
           const enrichedWithdrawals = await Promise.all(
             (withdrawalRequests || []).map(async (req) => {
-              let empName = req.requester_name || req.user_id;
-              let empEmail = req.requester_email || req.user_id;
+              // money_requests table doesn't have requester_name/requester_email columns
+              // Must look up from employees table using requested_by (email) or user_id
+              let empName = req.requested_by || req.user_id;
+              let empEmail = req.requested_by || req.user_id;
               
-              if (!req.requester_name) {
-                const { data: empData } = await supabase
-                  .from('employees')
-                  .select('name, email')
-                  .or(`auth_user_id.eq.${req.user_id},email.eq.${req.user_id}`)
-                  .maybeSingle();
-                if (empData) {
-                  empName = empData.name;
-                  empEmail = empData.email;
-                }
+              const { data: empData } = await supabase
+                .from('employees')
+                .select('name, email')
+                .or(`email.eq.${req.requested_by},auth_user_id.eq.${req.user_id}`)
+                .maybeSingle();
+              if (empData) {
+                empName = empData.name;
+                empEmail = empData.email;
               }
 
               const isFailedPayout = req.status === 'approved' && req.payout_status === 'failed';
@@ -148,7 +149,7 @@ export const useUnifiedApprovalRequests = () => {
                   : `Withdrawal - UGX ${req.amount.toLocaleString()}`,
                 description: isFailedPayout
                   ? `Payout to ${empName} FAILED: ${req.payout_error || 'Unknown error'}. Tap Retry to re-attempt disbursement.`
-                  : `${empName} requests withdrawal of UGX ${req.amount.toLocaleString()} via ${req.channel === 'CASH' ? 'Cash' : 'Mobile Money'}`,
+                  : `${empName} requests withdrawal of UGX ${req.amount.toLocaleString()} via ${(req.channel || req.payment_channel) === 'CASH' ? 'Cash' : 'Mobile Money'}`,
                 amount: req.amount,
                 requestedBy: empEmail,
                 dateRequested: new Date(req.created_at).toLocaleDateString(),
@@ -158,7 +159,7 @@ export const useUnifiedApprovalRequests = () => {
                   withdrawal_id: req.id,
                   phone_number: req.disbursement_phone || req.phone_number,
                   disbursement_phone: req.disbursement_phone,
-                  channel: req.channel || req.disbursement_method,
+                  channel: req.channel || req.payment_channel || 'MOBILE_MONEY',
                   request_ref: req.request_ref,
                   requester_name: empName,
                   requester_email: empEmail,
@@ -336,7 +337,8 @@ export const useUnifiedApprovalRequests = () => {
         // Handle RETRY for failed payouts — skip approval logic, go straight to payout
         if (status === 'Approved' && currentWithdrawal.status === 'approved' && currentWithdrawal.payout_status === 'failed') {
           console.log('🔄 Retrying failed payout for withdrawal:', withdrawalId);
-          const isMoMo = currentWithdrawal.channel === 'MOBILE_MONEY' || (currentWithdrawal.channel !== 'CASH' && currentWithdrawal.channel !== 'BANK');
+          const retryChannel = currentWithdrawal.channel || currentWithdrawal.payment_channel || 'MOBILE_MONEY';
+          const isMoMo = retryChannel === 'MOBILE_MONEY' || (retryChannel !== 'CASH' && retryChannel !== 'BANK');
           
           if (!isMoMo) {
             return { blocked: true, reason: 'This is not a Mobile Money withdrawal. Manual disbursement is required.' };
@@ -484,7 +486,9 @@ export const useUnifiedApprovalRequests = () => {
 
         // Lock for payout immediately if this is the final approval
         const isFinalApproval = wUpdateData.status === 'approved';
-        const isMoMo = currentWithdrawal.channel === 'MOBILE_MONEY' || (currentWithdrawal.channel !== 'CASH' && currentWithdrawal.channel !== 'BANK');
+        // channel may be null on money_requests — fallback to payment_channel
+        const effectiveChannel = currentWithdrawal.channel || currentWithdrawal.payment_channel || 'MOBILE_MONEY';
+        const isMoMo = effectiveChannel === 'MOBILE_MONEY' || (effectiveChannel !== 'CASH' && effectiveChannel !== 'BANK');
         
         if (isFinalApproval && isMoMo) {
           wUpdateData.payout_status = 'processing';
@@ -518,11 +522,8 @@ export const useUnifiedApprovalRequests = () => {
             try {
               console.log(`GosentePay payout: ${payoutPhone}, UGX ${currentWithdrawal.amount}`);
               
-              // Use AbortController to prevent hanging forever
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
-              
-              const { data: payoutData, error: payoutErr } = await supabase.functions.invoke('gosentepay-payout', {
+              // Use Promise.race for a real 30s timeout (supabase.functions.invoke doesn't support AbortController)
+              const payoutPromise = supabase.functions.invoke('gosentepay-payout', {
                 body: {
                   phone: payoutPhone,
                   amount: currentWithdrawal.amount,
@@ -531,7 +532,11 @@ export const useUnifiedApprovalRequests = () => {
                 }
               });
               
-              clearTimeout(timeoutId);
+              const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+                setTimeout(() => resolve({ data: null, error: { message: 'Payout request timed out after 30 seconds' } }), 30000)
+              );
+              
+              const { data: payoutData, error: payoutErr } = await Promise.race([payoutPromise, timeoutPromise]);
 
               if (payoutErr) {
                 console.error('Payout error:', payoutErr);
@@ -544,7 +549,7 @@ export const useUnifiedApprovalRequests = () => {
               }
             } catch (err: any) {
               console.error('Payout exception:', err);
-              payoutError = err.name === 'AbortError' ? 'Payout request timed out after 30 seconds' : (err.message || 'Unknown error');
+              payoutError = err.message || 'Unknown error';
             }
 
             // Update payout status based on result

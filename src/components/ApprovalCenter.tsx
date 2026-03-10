@@ -55,9 +55,25 @@ const ApprovalCenter = () => {
       if (result && typeof result === 'object' && 'blocked' in result) {
         const amt = typeof request.amount === 'number' ? request.amount : parseFloat(String(request.amount)) || 0;
         setDelegateModal({ open: true, reason: result.reason, requestId: request.id, amount: amt, title: request.title });
+      } else if (result === true) {
+        toast({
+          title: "✅ Approved Successfully",
+          description: `${request.title} has been approved.`,
+        });
+      } else if (result === false) {
+        toast({
+          title: "Approval Failed",
+          description: "Could not process this approval. Please try again.",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing approval:', error);
+      toast({
+        title: "Approval Error",
+        description: error?.message || "An unexpected error occurred while approving.",
+        variant: "destructive",
+      });
     } finally {
       setProcessingId(null);
     }
