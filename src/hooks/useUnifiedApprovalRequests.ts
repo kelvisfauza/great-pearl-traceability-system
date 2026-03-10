@@ -521,11 +521,8 @@ export const useUnifiedApprovalRequests = () => {
             try {
               console.log(`GosentePay payout: ${payoutPhone}, UGX ${currentWithdrawal.amount}`);
               
-              // Use AbortController to prevent hanging forever
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
-              
-              const { data: payoutData, error: payoutErr } = await supabase.functions.invoke('gosentepay-payout', {
+              // Use Promise.race for a real 30s timeout (supabase.functions.invoke doesn't support AbortController)
+              const payoutPromise = supabase.functions.invoke('gosentepay-payout', {
                 body: {
                   phone: payoutPhone,
                   amount: currentWithdrawal.amount,
@@ -534,7 +531,11 @@ export const useUnifiedApprovalRequests = () => {
                 }
               });
               
-              clearTimeout(timeoutId);
+              const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+                setTimeout(() => resolve({ data: null, error: { message: 'Payout request timed out after 30 seconds' } }), 30000)
+              );
+              
+              const { data: payoutData, error: payoutErr } = await Promise.race([payoutPromise, timeoutPromise]);
 
               if (payoutErr) {
                 console.error('Payout error:', payoutErr);
