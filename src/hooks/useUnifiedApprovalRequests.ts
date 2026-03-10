@@ -485,7 +485,9 @@ export const useUnifiedApprovalRequests = () => {
 
         // Lock for payout immediately if this is the final approval
         const isFinalApproval = wUpdateData.status === 'approved';
-        const isMoMo = currentWithdrawal.channel === 'MOBILE_MONEY' || (currentWithdrawal.channel !== 'CASH' && currentWithdrawal.channel !== 'BANK');
+        // channel may be null on money_requests — fallback to payment_channel
+        const effectiveChannel = currentWithdrawal.channel || currentWithdrawal.payment_channel || 'MOBILE_MONEY';
+        const isMoMo = effectiveChannel === 'MOBILE_MONEY' || (effectiveChannel !== 'CASH' && effectiveChannel !== 'BANK');
         
         if (isFinalApproval && isMoMo) {
           wUpdateData.payout_status = 'processing';
