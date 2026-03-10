@@ -170,9 +170,9 @@ export const useUnifiedApprovalRequests = () => {
                 status: isFailedPayout ? 'Payout Failed' : (req.status === 'pending_admin_2' ? 'Pending Admin 2' : req.status === 'pending_admin_3' ? 'Pending Admin 3' : 'Pending'),
                 details: {
                   withdrawal_id: req.id,
-                  phone_number: req.disbursement_phone || req.phone_number,
-                  disbursement_phone: req.disbursement_phone,
-                  channel: req.channel || req.payment_channel || 'MOBILE_MONEY',
+                  phone_number: req.phone_number || req.disbursement_phone,
+                  disbursement_phone: req.phone_number || req.disbursement_phone,
+                  channel: req.payment_channel || req.channel || 'MOBILE_MONEY',
                   request_ref: req.request_ref,
                   requester_name: empName,
                   requester_email: empEmail,
