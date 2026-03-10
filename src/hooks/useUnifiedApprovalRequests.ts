@@ -162,7 +162,7 @@ export const useUnifiedApprovalRequests = () => {
                   : `Withdrawal - UGX ${req.amount.toLocaleString()}`,
                 description: isFailedPayout
                   ? `Payout to ${empName} FAILED: ${req.payout_error || 'Unknown error'}. Tap Retry to re-attempt disbursement.`
-                  : `${empName} requests withdrawal of UGX ${req.amount.toLocaleString()} via ${(req.channel || req.payment_channel) === 'CASH' ? 'Cash' : 'Mobile Money'}`,
+                  : `${empName} requests withdrawal of UGX ${req.amount.toLocaleString()} via ${(req.payment_channel || req.channel) === 'CASH' ? 'Cash' : 'Mobile Money'}`,
                 amount: req.amount,
                 requestedBy: empEmail,
                 dateRequested: new Date(req.created_at).toLocaleDateString(),
