@@ -479,8 +479,7 @@ export const useUnifiedApprovalRequests = () => {
         } else {
           wUpdateData.status = 'rejected';
           wUpdateData.rejection_reason = rejectionReason || 'Rejected by Administrator';
-          wUpdateData.rejected_by = adminName;
-          wUpdateData.rejected_at = new Date().toISOString();
+          wUpdateData.approved_by = adminName;
         }
 
         // Lock for payout immediately if this is the final approval
