@@ -108,12 +108,25 @@ export const useUnifiedApprovalRequests = () => {
       // 2.5. Fetch pending withdrawal requests for admin approval (after Finance has approved)
       // Also fetch approved withdrawals with failed payout status for retry
       try {
-        const { data: withdrawalRequests, error: withdrawalError } = await supabase
+        // Fetch withdrawals pending admin approval OR failed payouts for retry
+        // Use two separate queries to avoid complex .or() syntax issues with PostgREST
+        const { data: pendingWithdrawals, error: pendingError } = await supabase
           .from('money_requests')
           .select('*')
           .eq('request_type', 'withdrawal')
-          .or('status.in.("pending_approval","pending_admin_2","pending_admin_3","Finance Approved"),and(status.eq.approved,payout_status.eq.failed)')
+          .in('status', ['pending_approval', 'pending_admin_2', 'pending_admin_3', 'Finance Approved'])
           .order('created_at', { ascending: false });
+
+        const { data: failedPayouts, error: failedError } = await supabase
+          .from('money_requests')
+          .select('*')
+          .eq('request_type', 'withdrawal')
+          .eq('status', 'approved')
+          .eq('payout_status', 'failed')
+          .order('created_at', { ascending: false });
+
+        const withdrawalError = pendingError || failedError;
+        const withdrawalRequests = [...(pendingWithdrawals || []), ...(failedPayouts || [])];
 
         if (!withdrawalError && withdrawalRequests) {
           // Enrich with employee names
