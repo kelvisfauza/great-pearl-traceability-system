@@ -397,7 +397,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
       }
 
       const { error } = await supabase
-        .from('withdrawal_requests')
+        .from('money_requests')
         .update(updateData)
         .eq('id', selectedRequest.id);
 
