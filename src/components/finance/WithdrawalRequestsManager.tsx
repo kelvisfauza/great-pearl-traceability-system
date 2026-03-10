@@ -390,11 +390,9 @@ export const WithdrawalRequestsManager: React.FC = () => {
         updated_at: new Date().toISOString(),
         // Finance is the first step - move to admin approval queue
         status: 'pending_approval',
+        finance_approved: true,
+        finance_reviewed: true,
       };
-
-      if (paymentVoucher) {
-        updateData.payment_voucher = paymentVoucher;
-      }
 
       const { error } = await supabase
         .from('money_requests')
