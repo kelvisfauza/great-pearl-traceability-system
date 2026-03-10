@@ -109,7 +109,7 @@ export const useUnifiedApprovalRequests = () => {
       // Also fetch approved withdrawals with failed payout status for retry
       try {
         const { data: withdrawalRequests, error: withdrawalError } = await supabase
-          .from('withdrawal_requests')
+          .from('money_requests')
           .select('*')
           .or('status.in.(pending_approval,pending_admin_2,pending_admin_3,Finance Approved),and(status.eq.approved,payout_status.eq.failed)')
           .order('created_at', { ascending: false });
