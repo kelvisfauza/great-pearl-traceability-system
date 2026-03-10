@@ -119,19 +119,19 @@ export const useUnifiedApprovalRequests = () => {
           // Enrich with employee names
           const enrichedWithdrawals = await Promise.all(
             (withdrawalRequests || []).map(async (req) => {
-              let empName = req.requester_name || req.user_id;
-              let empEmail = req.requester_email || req.user_id;
+              // money_requests table doesn't have requester_name/requester_email columns
+              // Must look up from employees table using requested_by (email) or user_id
+              let empName = req.requested_by || req.user_id;
+              let empEmail = req.requested_by || req.user_id;
               
-              if (!req.requester_name) {
-                const { data: empData } = await supabase
-                  .from('employees')
-                  .select('name, email')
-                  .or(`auth_user_id.eq.${req.user_id},email.eq.${req.user_id}`)
-                  .maybeSingle();
-                if (empData) {
-                  empName = empData.name;
-                  empEmail = empData.email;
-                }
+              const { data: empData } = await supabase
+                .from('employees')
+                .select('name, email')
+                .or(`email.eq.${req.requested_by},auth_user_id.eq.${req.user_id}`)
+                .maybeSingle();
+              if (empData) {
+                empName = empData.name;
+                empEmail = empData.email;
               }
 
               const isFailedPayout = req.status === 'approved' && req.payout_status === 'failed';
