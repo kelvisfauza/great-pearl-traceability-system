@@ -265,45 +265,7 @@ export const useUnifiedApprovalRequests = () => {
         reportDatabaseError(error, 'fetch edit_requests', 'edit_requests');
       }
 
-      // 4. Fetch Firebase modification requests
-      try {
-        const modQuery = query(collection(db, 'modification_requests'), orderBy('createdAt', 'desc'));
-        const modSnapshot = await getDocs(modQuery);
-        const modRequests = modSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as any[];
-
-        const pendingModRequests = modRequests.filter(req => req.status === 'pending');
-        const transformedMod = pendingModRequests.map(req => ({
-          id: req.id,
-          type: 'modification' as const,
-          source: 'firebase' as const,
-          department: req.targetDepartment || 'Finance',
-          requestType: 'Modification Request',
-          title: `Modification Request - Batch ${req.batchNumber || 'N/A'}`,
-          description: `${req.reason || 'No reason provided'}: ${req.comments || 'No comments'}`,
-          amount: '0',
-          requestedBy: req.requestedBy || 'Unknown',
-          dateRequested: req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'Unknown',
-          priority: 'Medium',
-          status: 'Pending',
-          details: req,
-          createdAt: req.createdAt || new Date().toISOString(),
-          updatedAt: req.updatedAt || req.createdAt || new Date().toISOString(),
-          batchNumber: req.batchNumber,
-          targetDepartment: req.targetDepartment,
-          reason: req.reason,
-          comments: req.comments,
-          originalPaymentId: req.originalPaymentId,
-          qualityAssessmentId: req.qualityAssessmentId
-        }));
-        allRequests.push(...transformedMod);
-        console.log('Fetched Firebase modification requests:', transformedMod.length);
-      } catch (error) {
-        console.error('Error fetching modification requests:', error);
-        reportDatabaseError(error, 'fetch modification_requests', 'modification_requests');
-      }
+      // 4. Firebase modification requests removed (migrated to Supabase)
 
       // Sort all requests by creation date (newest first)
       allRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
