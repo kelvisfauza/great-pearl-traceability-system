@@ -108,12 +108,25 @@ export const useUnifiedApprovalRequests = () => {
       // 2.5. Fetch pending withdrawal requests for admin approval (after Finance has approved)
       // Also fetch approved withdrawals with failed payout status for retry
       try {
-        const { data: withdrawalRequests, error: withdrawalError } = await supabase
+        // Fetch withdrawals pending admin approval OR failed payouts for retry
+        // Use two separate queries to avoid complex .or() syntax issues with PostgREST
+        const { data: pendingWithdrawals, error: pendingError } = await supabase
           .from('money_requests')
           .select('*')
           .eq('request_type', 'withdrawal')
-          .or('status.in.("pending_approval","pending_admin_2","pending_admin_3","Finance Approved"),and(status.eq.approved,payout_status.eq.failed)')
+          .in('status', ['pending_approval', 'pending_admin_2', 'pending_admin_3', 'Finance Approved'])
           .order('created_at', { ascending: false });
+
+        const { data: failedPayouts, error: failedError } = await supabase
+          .from('money_requests')
+          .select('*')
+          .eq('request_type', 'withdrawal')
+          .eq('status', 'approved')
+          .eq('payout_status', 'failed')
+          .order('created_at', { ascending: false });
+
+        const withdrawalError = pendingError || failedError;
+        const withdrawalRequests = [...(pendingWithdrawals || []), ...(failedPayouts || [])];
 
         if (!withdrawalError && withdrawalRequests) {
           // Enrich with employee names
@@ -149,7 +162,7 @@ export const useUnifiedApprovalRequests = () => {
                   : `Withdrawal - UGX ${req.amount.toLocaleString()}`,
                 description: isFailedPayout
                   ? `Payout to ${empName} FAILED: ${req.payout_error || 'Unknown error'}. Tap Retry to re-attempt disbursement.`
-                  : `${empName} requests withdrawal of UGX ${req.amount.toLocaleString()} via ${(req.channel || req.payment_channel) === 'CASH' ? 'Cash' : 'Mobile Money'}`,
+                  : `${empName} requests withdrawal of UGX ${req.amount.toLocaleString()} via ${(req.payment_channel || req.channel) === 'CASH' ? 'Cash' : 'Mobile Money'}`,
                 amount: req.amount,
                 requestedBy: empEmail,
                 dateRequested: new Date(req.created_at).toLocaleDateString(),
@@ -157,9 +170,9 @@ export const useUnifiedApprovalRequests = () => {
                 status: isFailedPayout ? 'Payout Failed' : (req.status === 'pending_admin_2' ? 'Pending Admin 2' : req.status === 'pending_admin_3' ? 'Pending Admin 3' : 'Pending'),
                 details: {
                   withdrawal_id: req.id,
-                  phone_number: req.disbursement_phone || req.phone_number,
-                  disbursement_phone: req.disbursement_phone,
-                  channel: req.channel || req.payment_channel || 'MOBILE_MONEY',
+                  phone_number: req.phone_number || req.disbursement_phone,
+                  disbursement_phone: req.phone_number || req.disbursement_phone,
+                  channel: req.payment_channel || req.channel || 'MOBILE_MONEY',
                   request_ref: req.request_ref,
                   requester_name: empName,
                   requester_email: empEmail,
@@ -337,7 +350,7 @@ export const useUnifiedApprovalRequests = () => {
         // Handle RETRY for failed payouts — skip approval logic, go straight to payout
         if (status === 'Approved' && currentWithdrawal.status === 'approved' && currentWithdrawal.payout_status === 'failed') {
           console.log('🔄 Retrying failed payout for withdrawal:', withdrawalId);
-          const retryChannel = currentWithdrawal.channel || currentWithdrawal.payment_channel || 'MOBILE_MONEY';
+          const retryChannel = currentWithdrawal.payment_channel || currentWithdrawal.channel || 'MOBILE_MONEY';
           const isMoMo = retryChannel === 'MOBILE_MONEY' || (retryChannel !== 'CASH' && retryChannel !== 'BANK');
           
           if (!isMoMo) {
@@ -352,7 +365,7 @@ export const useUnifiedApprovalRequests = () => {
             updated_at: new Date().toISOString()
           }).eq('id', withdrawalId);
 
-          const phoneToNotify = currentWithdrawal.disbursement_phone || currentWithdrawal.phone_number;
+          const phoneToNotify = currentWithdrawal.phone_number || currentWithdrawal.disbursement_phone;
           let payoutPhone = (phoneToNotify || '').replace(/\D/g, '');
           if (payoutPhone.startsWith('0')) payoutPhone = '256' + payoutPhone.slice(1);
           if (!payoutPhone.startsWith('256')) payoutPhone = '256' + payoutPhone;
@@ -487,7 +500,7 @@ export const useUnifiedApprovalRequests = () => {
         // Lock for payout immediately if this is the final approval
         const isFinalApproval = wUpdateData.status === 'approved';
         // channel may be null on money_requests — fallback to payment_channel
-        const effectiveChannel = currentWithdrawal.channel || currentWithdrawal.payment_channel || 'MOBILE_MONEY';
+        const effectiveChannel = currentWithdrawal.payment_channel || currentWithdrawal.channel || 'MOBILE_MONEY';
         const isMoMo = effectiveChannel === 'MOBILE_MONEY' || (effectiveChannel !== 'CASH' && effectiveChannel !== 'BANK');
         
         if (isFinalApproval && isMoMo) {
@@ -511,7 +524,7 @@ export const useUnifiedApprovalRequests = () => {
         let payoutError = '';
         
         if (isFinalApproval && isMoMo) {
-          const phoneToNotify = currentWithdrawal.disbursement_phone || currentWithdrawal.phone_number || (currentWithdrawal as any).employee_phone;
+          const phoneToNotify = currentWithdrawal.phone_number || currentWithdrawal.disbursement_phone || (currentWithdrawal as any).employee_phone;
           if (phoneToNotify) {
             let payoutPhone = phoneToNotify.replace(/\D/g, '');
             if (payoutPhone.startsWith('0')) payoutPhone = '256' + payoutPhone.slice(1);
