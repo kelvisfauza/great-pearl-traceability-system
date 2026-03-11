@@ -1,0 +1,1 @@
+INSERT INTO sms_notification_queue (recipient_phone, recipient_email, message, notification_type, status) VALUES ('0760095666', 'applicant@gpc.com', 'Dear Thembo Exevia, your job application has been received under Ref: GPCJA002 and is currently PENDING review. Thank you for your interest in Great Pearl Coffee.', 'general', 'pending');
