@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
         let smsSuccess = false
         if (employee.phone) {
           try {
-            const smsMessage = `Dear ${allowance.employee_name}, your monthly ${typeLabel} of UGX ${allowance.amount.toLocaleString()} has been credited to your wallet. - Great Pearl Coffee`
+            const smsMessage = `Dear ${allowance.employee_name}, your monthly ${typeLabel} of UGX ${allowance.amount.toLocaleString()} has been credited to your wallet. - Great Agro Coffee`
 
             const { error: smsErr } = await supabase.functions.invoke('send-sms', {
               body: {

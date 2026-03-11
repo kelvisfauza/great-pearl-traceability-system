@@ -64,15 +64,15 @@ Deno.serve(async (req) => {
 
     if (reminder_type === 'sign_in') {
       // Every 20min from 8AM-9AM - ONLY those who haven't signed in yet
-      message = 'Great Pearl Coffee: You have not signed in for attendance today. Please sign in now. Thank you.'
+      message = 'Great Agro Coffee: You have not signed in for attendance today. Please sign in now. Thank you.'
       recipients = allPeople.filter(p => !signedInIds.has(p.id))
     } else if (reminder_type === 'late_warning') {
       // After 9AM - only those who still haven't signed in
-      message = 'Great Pearl Coffee: You have not signed in yet. You are now marked as late. Please sign in immediately.'
+      message = 'Great Agro Coffee: You have not signed in yet. You are now marked as late. Please sign in immediately.'
       recipients = allPeople.filter(p => !signedInIds.has(p.id))
     } else if (reminder_type === 'sign_out') {
       // 5:30 PM - remind those who signed in but haven't signed out
-      message = 'Great Pearl Coffee: Work hours are over. Please remember to sign out before leaving. Thank you.'
+      message = 'Great Agro Coffee: Work hours are over. Please remember to sign out before leaving. Thank you.'
       recipients = allPeople.filter(p => signedInIds.has(p.id) && !signedOutIds.has(p.id))
     } else {
       return new Response(

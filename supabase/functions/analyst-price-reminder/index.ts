@@ -96,7 +96,7 @@ serve(async (req) => {
     const smsResults = [];
     for (const analyst of analysts) {
       if (analyst.phone) {
-        const message = `Good morning ${analyst.name}! Please update today's coffee buying prices on the system. Login at www.greatpearlcoffeesystem.site, go to "Data Analyst" → "Set Prices" to update Arabica and Robusta prices. - Great Pearl Coffee`;
+        const message = `Good morning ${analyst.name}! Please update today's coffee buying prices on the system. Login at www.greatagrocoffeesystem.site, go to "Data Analyst" → "Set Prices" to update Arabica and Robusta prices. - Great Agro Coffee`;
         
         try {
           const { data: smsResponse, error: smsError } = await supabase.functions.invoke('send-sms', {

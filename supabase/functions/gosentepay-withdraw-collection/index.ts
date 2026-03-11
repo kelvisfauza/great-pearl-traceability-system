@@ -54,7 +54,7 @@ serve(async (req) => {
       secret_key: secretKey,
       currency: "UGX",
       amount: String(numAmount),
-      emailAddress: emailAddress || "system@greatpearlcoffee.com",
+      emailAddress: emailAddress || "system@greatagrocoffee.com",
       phone: finalPhone,
       reason: reason || "Withdraw collection",
     };

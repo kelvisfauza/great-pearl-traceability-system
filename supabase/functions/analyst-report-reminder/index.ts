@@ -98,7 +98,7 @@ serve(async (req) => {
     const smsResults = [];
     for (const analyst of analysts) {
       if (analyst.phone) {
-        const message = `Dear ${analyst.name}, please update the system by creating the daily market report for ${new Date().toLocaleDateString('en-UG', { weekday: 'long', month: 'short', day: 'numeric' })}. The team needs this report for tomorrow's planning. - Great Pearl Coffee`;
+        const message = `Dear ${analyst.name}, please update the system by creating the daily market report for ${new Date().toLocaleDateString('en-UG', { weekday: 'long', month: 'short', day: 'numeric' })}. The team needs this report for tomorrow's planning. - Great Agro Coffee`;
         
         try {
           // Call send-sms function

@@ -15,7 +15,7 @@ serve(async (req) => {
     const { phone } = await req.json()
     
     const testPhone = phone || '+256700729340'
-    const testMessage = 'TEST SMS: This is a test message from Great Pearl Coffee system. If you receive this, SMS service is working.'
+    const testMessage = 'TEST SMS: This is a test message from Great Agro Coffee system. If you receive this, SMS service is working.'
     
     console.log('Testing SMS to:', testPhone)
     

@@ -66,13 +66,13 @@ Deno.serve(async (req) => {
 
       let message = ''
       if (diffDays === 0) {
-        message = `GREAT PEARL COFFEE: Dear ${loan.employee_name}, your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is DUE TODAY (${dueDateFormatted}). Please clear it to avoid penalties. Pay via wallet or contact admin.`
+        message = `GREAT AGRO COFFEE: Dear ${loan.employee_name}, your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is DUE TODAY (${dueDateFormatted}). Please clear it to avoid penalties. Pay via wallet or contact admin.`
       } else if (diffDays === 1) {
-        message = `GREAT PEARL COFFEE: Dear ${loan.employee_name}, your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is due TOMORROW (${dueDateFormatted}). Please ensure funds are available in your wallet.`
+        message = `GREAT AGRO COFFEE: Dear ${loan.employee_name}, your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is due TOMORROW (${dueDateFormatted}). Please ensure funds are available in your wallet.`
       } else if (diffDays === 2) {
-        message = `GREAT PEARL COFFEE: Dear ${loan.employee_name}, reminder that your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is due in 2 days (${dueDateFormatted}). Prepare your payment.`
+        message = `GREAT AGRO COFFEE: Dear ${loan.employee_name}, reminder that your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is due in 2 days (${dueDateFormatted}). Prepare your payment.`
       } else if (diffDays === 3) {
-        message = `GREAT PEARL COFFEE: Dear ${loan.employee_name}, your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is due in 3 days (${dueDateFormatted}). Please prepare to clear this amount.`
+        message = `GREAT AGRO COFFEE: Dear ${loan.employee_name}, your loan installment ${inst.installment_number} of UGX ${remaining.toLocaleString()} is due in 3 days (${dueDateFormatted}). Please prepare to clear this amount.`
       }
 
       if (!message) continue
