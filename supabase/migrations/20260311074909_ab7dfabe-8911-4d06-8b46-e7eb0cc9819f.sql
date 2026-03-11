@@ -1,0 +1,1 @@
+INSERT INTO sms_notification_queue (recipient_phone, recipient_email, message, notification_type, status) VALUES ('0785208473', 'johnmasereka@greatpearlcoffee.com', 'Dear John Masereka, your withdrawal request of UGX 31,000 has been received and is pending finance review. You will be notified once approved. Great Pearl Coffee.', 'withdrawal_approved', 'pending');
