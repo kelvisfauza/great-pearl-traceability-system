@@ -11,7 +11,7 @@ const BusinessOverviewSection = ({ data, periodLabel }: { data: WholeBusinessDat
   return (
     <div className="space-y-4">
       <div className="text-center print:mb-4">
-        <h1 className="text-3xl font-bold text-foreground">Great Pearl Coffee</h1>
+        <h1 className="text-3xl font-bold text-foreground">Great Agro Coffee</h1>
         <p className="text-muted-foreground">Comprehensive Business Report</p>
         <p className="text-sm text-muted-foreground">
           Period: <span className="font-semibold">{periodLabel || "All Time"}</span>

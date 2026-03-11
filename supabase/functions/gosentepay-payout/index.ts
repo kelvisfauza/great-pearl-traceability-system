@@ -22,7 +22,7 @@ async function sendPayoutSMS(phone: string, employeeName: string, amount: number
     else if (smsPhone.startsWith("0")) smsPhone = "+256" + smsPhone.slice(1);
     else smsPhone = "+256" + smsPhone;
 
-    const message = `Dear ${employeeName}, your withdrawal of UGX ${amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${phone}. Ref: ${ref}. Great Pearl Coffee.`;
+    const message = `Dear ${employeeName}, your withdrawal of UGX ${amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${phone}. Ref: ${ref}. Great Agro Coffee.`;
 
     console.log("Sending payout SMS to:", smsPhone);
 
@@ -89,7 +89,7 @@ serve(async (req) => {
       secret_key: secretKey,
       currency: "UGX",
       amount: String(numAmount),
-      emailAddress: emailAddress || "system@greatpearlcoffee.com",
+      emailAddress: emailAddress || "system@greatagrocoffee.com",
       phone: cleanPhone,
       reason: ref ? `Wallet withdrawal - ${ref}` : "Wallet withdrawal",
     };

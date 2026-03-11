@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
       const departmentText = userDepartment ? `${userDepartment} ` : '';
       const loginLink = `${Deno.env.get('SUPABASE_URL')?.replace('/v1', '')}/functions/v1/sms-login-link?code=${verificationCode}&email=${encodeURIComponent(email)}&phone=${encodeURIComponent(phone)}`;
       
-      const smsMessage = `${userName.split(' ')[0]} - Pearl Coffee
+      const smsMessage = `${userName.split(' ')[0]} - Agro Coffee
 Code: ${verificationCode}
 LINK: ${loginLink}
 (Valid for 6 hours)`;

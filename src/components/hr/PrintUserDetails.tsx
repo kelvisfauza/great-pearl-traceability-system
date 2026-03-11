@@ -80,7 +80,7 @@ export default function PrintUserDetails({ employees }: PrintUserDetailsProps) {
         </head>
         <body>
           <div class="header">
-            <div class="company-name">Great Pearl Coffee Management System</div>
+            <div class="company-name">Great Agro Coffee Management System</div>
             <div class="document-title">Employee Details Report</div>
             <div>Generated on: ${new Date().toLocaleString()}</div>
           </div>
@@ -134,7 +134,7 @@ export default function PrintUserDetails({ employees }: PrintUserDetailsProps) {
           
           <div class="footer">
             <p>This document is confidential and intended for authorized personnel only.</p>
-            <p>Great Pearl Coffee Management System - Employee Information</p>
+            <p>Great Agro Coffee Management System - Employee Information</p>
           </div>
         </body>
       </html>

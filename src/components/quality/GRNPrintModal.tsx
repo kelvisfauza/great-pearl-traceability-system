@@ -146,14 +146,14 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
             <div className="grn-header-row">
               <div className="grn-logo-block">
                 <div className="grn-logo-wrapper">
-                  <img src="/lovable-uploads/great-pearl-coffee-logo.png" alt="Logo" className="grn-logo" />
+                  <img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Logo" className="grn-logo" />
                 </div>
               </div>
               <div className="grn-company-block">
-                <h1 className="grn-company-name">GREAT PEARL COFFEE FACTORY LTD</h1>
-                <p className="grn-motto">Delivering coffee from the heart of Rwenzori.</p>
+                <h1 className="grn-company-name">GREAT AGRO COFFEE LTD</h1>
+                <p className="grn-motto">Kasese, Uganda.</p>
                 <p className="grn-address">Fort Portal, Kabarole District, Western Uganda</p>
-                <p className="grn-contacts">Tel: +256 781 121 639 / +256 778 536 681 | Email: info@greatpearlcoffee.com</p>
+                <p className="grn-contacts">Tel: +256 781 121 639 / +256 778 536 681 | Email: info@greatagrocoffee.com</p>
               </div>
               {verificationCode && (
                 <div className="grn-qr-block">
@@ -328,10 +328,10 @@ const GRNPrintModal: React.FC<GRNPrintModalProps> = ({ open, onClose, grnData })
           <div className="grn-footer">
             <div className="grn-footer-left">
               <p>This is a system-generated document.</p>
-              <p>Great Pearl Coffee Factory Ltd — Management System</p>
+              <p>Great Agro Coffee Ltd — Management System</p>
             </div>
             <div className="grn-footer-right">
-              {verificationCode && <p>Verify: greatpearlcoffee.com/verify/{verificationCode}</p>}
+              {verificationCode && <p>Verify: greatagrocoffee.com/verify/{verificationCode}</p>}
               <p>Printed: {new Date().toLocaleDateString('en-GB')}</p>
             </div>
           </div>

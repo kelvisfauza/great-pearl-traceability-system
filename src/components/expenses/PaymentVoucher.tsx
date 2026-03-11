@@ -295,7 +295,7 @@ const PaymentVoucher: React.FC<PaymentVoucherProps> = ({
               <div className="logo-section">
                 <div className="logo-icon">☕</div>
                 <div className="company-info">
-                  <h1>GREAT PEARL COFFEE</h1>
+                  <h1>GREAT AGRO COFFEE</h1>
                   <p>Premium Coffee Trading & Export</p>
                 </div>
               </div>
@@ -369,7 +369,7 @@ const PaymentVoucher: React.FC<PaymentVoucherProps> = ({
 
             <div className="footer">
               <p>Generated on: {new Date().toLocaleString('en-UG')}</p>
-              <p>Great Pearl Coffee | www.greatpearlcoffeesystem.site | +256 778 536 681</p>
+              <p>Great Agro Coffee | www.greatagrocoffeesystem.site | +256 778 536 681</p>
             </div>
           </div>
         </div>

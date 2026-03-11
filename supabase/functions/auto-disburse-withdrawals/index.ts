@@ -110,7 +110,7 @@ serve(async (req) => {
             secret_key: gosentepaySecretKey,
             currency: "UGX",
             amount: String(withdrawal.amount),
-            emailAddress: "system@greatpearlcoffee.com",
+            emailAddress: "system@greatagrocoffee.com",
             phone: cleanPhone,
             reason: `Wallet withdrawal - ${withdrawal.request_ref || withdrawal.id}`,
           }),
@@ -183,7 +183,7 @@ serve(async (req) => {
             else if (smsPhone.startsWith("256")) smsPhone = "+" + smsPhone;
             else if (!smsPhone.startsWith("+")) smsPhone = "+256" + smsPhone;
 
-            const smsMessage = `Dear ${employeeName}, your withdrawal of UGX ${withdrawal.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${phone}. Ref: ${txRef}. Great Pearl Coffee.`;
+            const smsMessage = `Dear ${employeeName}, your withdrawal of UGX ${withdrawal.amount.toLocaleString()} has been APPROVED and sent to your Mobile Money number ${phone}. Ref: ${txRef}. Great Agro Coffee.`;
 
             try {
               const smsResp = await fetch("https://yoolasms.com/api/v1/send", {

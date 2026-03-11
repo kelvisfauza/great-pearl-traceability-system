@@ -92,7 +92,7 @@ export default function UserCreationForm() {
 
       // Send SMS with login credentials
       if (employeeData.phone) {
-        const smsMessage = `Welcome to Great Pearl Coffee! Your login credentials:
+        const smsMessage = `Welcome to Great Agro Coffee! Your login credentials:
 Email: ${employeeData.email}
 Password: ${employeeData.password}
 Please change your password on first login.`;

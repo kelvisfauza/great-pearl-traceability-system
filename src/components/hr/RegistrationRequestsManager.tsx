@@ -249,7 +249,7 @@ const RegistrationRequestsManager = () => {
         role: selectedRequest.modifiedRole || selectedRequest.role,
         approvedBy: employee.name,
         approvedDate: new Date().toLocaleDateString(),
-        companyName: "Great Pearl Coffee Company"
+        companyName: "Great Agro Coffee Company"
       };
 
       console.log('Generated credentials:', credentials);

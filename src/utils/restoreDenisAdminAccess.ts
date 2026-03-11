@@ -8,7 +8,7 @@ export const restoreDenisAdminAccess = async () => {
   console.log('🔄 Restoring Denis admin access...');
   
   try {
-    await updateEmployeePermissions('bwambaledenis@greatpearlcoffee.com', {
+    await updateEmployeePermissions('bwambaledenis@greatagrocoffee.com', {
       role: 'Super Admin',
       permissions: ['*'],
       department: 'Administration'

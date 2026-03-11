@@ -219,7 +219,7 @@ export const ComprehensiveSMSManager = () => {
       const { error } = await supabase.functions.invoke('send-sms', {
         body: {
           phone: phone.replace('+256', '0').replace('+', ''),
-          message: `${userName} - Pearl Coffee\nCode: ${code}\n(Manual delivery by IT Support)\n(5min only)`,
+          message: `${userName} - Agro Coffee\nCode: ${code}\n(Manual delivery by IT Support)\n(5min only)`,
           userName: userName,
           messageType: 'verification',
           triggeredBy: 'IT Support Manual Delivery',

@@ -50,16 +50,16 @@ const RobustaPrint = forwardRef<HTMLDivElement, RobustaPrintProps>(({ analysis, 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', borderBottom: '2px solid #166534', paddingBottom: '8px', marginBottom: '10px' }}>
         <img
-          src="/images/great-pearl-coffee-logo.png"
-          alt="Great Pearl Coffee"
+          src="/images/great-agro-coffee-logo.png"
+          alt="Great Agro Coffee"
           style={{ height: '50px', marginRight: '15px' }}
         />
         <div style={{ flex: 1 }}>
           <h1 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#166534' }}>
-            GREAT PEARL COFFEE
+            GREAT AGRO COFFEE
           </h1>
           <p style={{ margin: '2px 0', fontSize: '9px', color: '#666' }}>
-            Kasese, Uganda | www.greatpearlcoffee.com | +256 781 121 639
+            Kasese, Uganda | www.greatagrocoffee.com | +256 781 121 639
           </p>
         </div>
         <div style={{ textAlign: 'right' }}>

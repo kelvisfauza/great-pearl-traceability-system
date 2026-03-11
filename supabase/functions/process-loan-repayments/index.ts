@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
               await supabase.functions.invoke('send-sms', {
                 body: {
                   phone: loan.guarantor_phone,
-                  message: `Dear ${loan.guarantor_name}, UGX ${deductedFromGuarantor.toLocaleString()} has been deducted from your account to cover ${loan.employee_name}'s loan repayment (installment ${repayment.installment_number}). Borrower had insufficient funds. - Great Pearl Coffee`,
+                  message: `Dear ${loan.guarantor_name}, UGX ${deductedFromGuarantor.toLocaleString()} has been deducted from your account to cover ${loan.employee_name}'s loan repayment (installment ${repayment.installment_number}). Borrower had insufficient funds. - Great Agro Coffee`,
                   userName: loan.guarantor_name,
                   messageType: 'guarantor_recovery'
                 }
@@ -254,8 +254,8 @@ Deno.serve(async (req) => {
         // SMS to borrower
         const penaltyNote = grossPenalty > 0 ? ` (penalty: 20% x ${overdueWeeks} week(s) = UGX ${grossPenalty.toLocaleString()})` : ''
         const smsMessage = isFullyPaid
-          ? `Dear ${loan.employee_name}, your loan repayment of UGX ${totalCollected.toLocaleString()}${penaltyNote} (installment ${repayment.installment_number}) has been processed. Sources: ${deductionSources.join(', ')}. Remaining: UGX ${Math.max(0, newRemainingBalance).toLocaleString()}. - Great Pearl Coffee`
-          : `Dear ${loan.employee_name}, installment ${repayment.installment_number} of UGX ${amountDue.toLocaleString()} is ${overdueWeeks} week(s) OVERDUE${penaltyNote}. Recovered UGX ${totalCollected.toLocaleString()} from ${deductionSources.length > 0 ? deductionSources.join(', ') : 'no sources'}. Still owed: UGX ${remainingAmount.toLocaleString()}. Penalty increases each week (max 2 weeks). New loans BLOCKED. - Great Pearl Coffee`
+          ? `Dear ${loan.employee_name}, your loan repayment of UGX ${totalCollected.toLocaleString()}${penaltyNote} (installment ${repayment.installment_number}) has been processed. Sources: ${deductionSources.join(', ')}. Remaining: UGX ${Math.max(0, newRemainingBalance).toLocaleString()}. - Great Agro Coffee`
+          : `Dear ${loan.employee_name}, installment ${repayment.installment_number} of UGX ${amountDue.toLocaleString()} is ${overdueWeeks} week(s) OVERDUE${penaltyNote}. Recovered UGX ${totalCollected.toLocaleString()} from ${deductionSources.length > 0 ? deductionSources.join(', ') : 'no sources'}. Still owed: UGX ${remainingAmount.toLocaleString()}. Penalty increases each week (max 2 weeks). New loans BLOCKED. - Great Agro Coffee`
 
         await supabase.functions.invoke('send-sms', {
           body: {

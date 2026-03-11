@@ -179,7 +179,7 @@ export const useSupabaseErrorReporting = () => {
     if (severity !== 'high' && severity !== 'critical') return;
     
     const shortDesc = description.length > 80 ? description.substring(0, 80) + '...' : description;
-    const message = `Great Pearl IT Alert: ${title}. ${shortDesc}. Module: ${component}. Severity: ${severity.toUpperCase()}. Check IT Dashboard.`;
+    const message = `Great Agro IT Alert: ${title}. ${shortDesc}. Module: ${component}. Severity: ${severity.toUpperCase()}. Check IT Dashboard.`;
 
     for (const recipient of IT_ALERT_PHONES) {
       try {

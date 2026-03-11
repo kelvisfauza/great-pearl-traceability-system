@@ -98,7 +98,7 @@ export const useMaintenanceMode = () => {
         const { data: fauza } = await supabase
           .from('employees')
           .select('phone')
-          .eq('email', 'fauzakusa@greatpearlcoffee.com')
+          .eq('email', 'fauzakusa@greatagrocoffee.com')
           .single();
 
         if (fauza?.phone) {

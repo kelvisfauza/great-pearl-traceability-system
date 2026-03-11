@@ -105,11 +105,11 @@ const AdminLoanTracker = () => {
     try {
       const remaining = (repayment.amount_due || 0) - (repayment.amount_paid || 0);
       const dueDate = new Date(repayment.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-      const message = `GREAT PEARL: Your loan installment of UGX ${remaining.toLocaleString()} was due on ${dueDate}. Please make payment to avoid penalties. Contact Finance for help.`;
+      const message = `GREAT AGRO: Your loan installment of UGX ${remaining.toLocaleString()} was due on ${dueDate}. Please make payment to avoid penalties. Contact Finance for help.`;
       
       await supabase.from('sms_notification_queue').insert({
         recipient_phone: loan.employee_phone,
-        recipient_email: loan.employee_email || 'system@greatpearl.com',
+        recipient_email: loan.employee_email || 'system@greatagrocoffee.com',
         message,
         notification_type: 'loan_reminder',
       });

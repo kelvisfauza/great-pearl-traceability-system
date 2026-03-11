@@ -180,7 +180,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
         publicKey: {
           challenge: challenge,
           rp: {
-            name: 'Great Pearl Coffee Factory',
+            name: 'Great Agro Coffee',
             id: rpId
           },
           user: {
@@ -285,7 +285,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       const { error: smsError } = await supabase.functions.invoke('send-sms', {
         body: {
           phone: employee.phone,
-          message: `Your Great Pearl fingerprint registration code is: ${code}. Valid for 10 minutes. If you did not request this, contact your administrator immediately.`,
+          message: `Your Great Agro fingerprint registration code is: ${code}. Valid for 10 minutes. If you did not request this, contact your administrator immediately.`,
           userName: employee.name,
           messageType: 'verification_code'
         }
@@ -384,7 +384,7 @@ const BiometricVerification: React.FC<BiometricVerificationProps> = ({
       const { error: smsError } = await supabase.functions.invoke('send-sms', {
         body: {
           phone: employee.phone,
-          message: `Your Great Pearl verification code is: ${code}. Valid for 10 minutes.`,
+          message: `Your Great Agro verification code is: ${code}. Valid for 10 minutes.`,
           userName: employee.name,
           messageType: 'verification_code'
         }

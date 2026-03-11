@@ -101,7 +101,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 </style></head><body onload="window.print();">
 <div class="voucher">
   <div class="header">
-    <h1>Great Pearl Coffee Factory Ltd.</h1>
+    <h1>Great Agro Coffee Ltd.</h1>
     <h2>Employee Withdrawal Payment Voucher</h2>
     <div class="sub">P.O. Box XXXXX, Kampala, Uganda | Tel: +256-XXX-XXXXXX</div>
   </div>
@@ -157,7 +157,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       const { error } = await supabase.functions.invoke('send-sms', {
         body: {
           phone: employee.phone,
-          message: `Your Great Pearl withdrawal verification code is: ${code}. Do NOT share this code. It expires in 5 minutes.`,
+          message: `Your Great Agro withdrawal verification code is: ${code}. Do NOT share this code. It expires in 5 minutes.`,
           userName: employee.name,
           messageType: 'withdrawal_verification'
         }

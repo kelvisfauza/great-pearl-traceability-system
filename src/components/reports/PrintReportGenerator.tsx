@@ -298,11 +298,11 @@ const PrintReportGenerator = () => {
           </head>
           <body>
             <div class="company-header">
-              <div class="company-name">GREAT PEARL COFFEE FACTORY</div>
+              <div class="company-name">GREAT AGRO COFFEE</div>
               <div class="company-details">
                 Specialty Coffee Processing & Export<br>
-                Tel: +256 781 121 639 | Web: www.greatpearlcoffee.com<br>
-                Email: info@greatpearlcoffee.com<br>
+                Tel: +256 781 121 639 | Web: www.greatagrocoffee.com<br>
+                Email: info@greatagrocoffee.com<br>
                 Uganda Coffee Development Authority Licensed
               </div>
             </div>
@@ -528,7 +528,7 @@ const PrintReportGenerator = () => {
 
             <div class="footer">
               <p>Report generated on ${format(new Date(), 'MMMM dd, yyyy HH:mm')}</p>
-              <p>This report is confidential and proprietary to Great Pearl Coffee Factory</p>
+              <p>This report is confidential and proprietary to Great Agro Coffee</p>
             </div>
           </body>
         </html>

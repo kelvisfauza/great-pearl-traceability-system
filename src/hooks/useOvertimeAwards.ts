@@ -341,7 +341,7 @@ export const useOvertimeAwards = () => {
           .maybeSingle();
 
         if (employeeData?.phone) {
-          const smsMessage = `Great Pearl Coffee: Your overtime claim (Ref: ${awardData.reference_number}) has been completed and paid. Amount: UGX ${awardData.total_amount.toLocaleString()}. Thank you!`;
+          const smsMessage = `Great Agro Coffee: Your overtime claim (Ref: ${awardData.reference_number}) has been completed and paid. Amount: UGX ${awardData.total_amount.toLocaleString()}. Thank you!`;
           
           const smsResult = await smsService.sendSMS(employeeData.phone, smsMessage);
           

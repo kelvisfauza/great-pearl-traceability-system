@@ -107,7 +107,7 @@ serve(async (req) => {
         continue;
       }
 
-      const message = `Good morning ${emp.name}! You missed submitting your daily report for ${yesterdayDate}. Please submit it now at www.greatpearlcoffeesystem.site → "Daily Reports" → "New Report". - Great Pearl Coffee`;
+      const message = `Good morning ${emp.name}! You missed submitting your daily report for ${yesterdayDate}. Please submit it now at www.greatagrocoffeesystem.site → "Daily Reports" → "New Report". - Great Agro Coffee`;
 
       try {
         // Send SMS

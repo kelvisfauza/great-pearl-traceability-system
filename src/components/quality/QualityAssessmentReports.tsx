@@ -115,7 +115,7 @@ const QualityAssessmentReports = ({ assessments }: QualityAssessmentReportsProps
     const verificationCode = await createVerification({
       type: 'report',
       subtype: `Quality Assessment Report - ${filters.reportType}`,
-      issued_to_name: 'Great Pearl Coffee Factory',
+      issued_to_name: 'Great Agro Coffee',
       reference_no: `QAR-${Date.now()}`,
       meta: {
         reportType: filters.reportType,

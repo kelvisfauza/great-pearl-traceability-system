@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
 
       // Send SMS notification
       if (emp.phone) {
-        const message = `Great Pearl Coffee: UGX ${deductionAmount.toLocaleString()} deducted for ${netLateHours}hr(s) net late time last week (${lastMondayStr} to ${lastSaturdayStr}). Appeal via My Deductions.`
+        const message = `Great Agro Coffee: UGX ${deductionAmount.toLocaleString()} deducted for ${netLateHours}hr(s) net late time last week (${lastMondayStr} to ${lastSaturdayStr}). Appeal via My Deductions.`
         try {
           await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
             method: 'POST',

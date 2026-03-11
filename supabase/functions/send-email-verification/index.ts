@@ -80,7 +80,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       // Send email
       const { error: emailError } = await resend.emails.send({
-        from: "Great Pearl Coffee Factory <onboarding@resend.dev>",
+        from: "Great Agro Coffee <onboarding@resend.dev>",
         to: [email],
         subject: "Email Verification Code",
         html: `
@@ -93,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
             <p>This code will expire in 10 minutes.</p>
             <p>If you didn't request this code, please ignore this email.</p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-            <p style="color: #888; font-size: 12px;">Great Pearl Coffee Factory</p>
+            <p style="color: #888; font-size: 12px;">Great Agro Coffee</p>
           </div>
         `,
       });

@@ -97,7 +97,7 @@ export class SMSService {
         } else {
           // For other providers, send the formatted message
           const greeting = userName ? `Dear ${userName},` : 'Dear User,';
-          const message = `Great Pearl Coffee Factory - ${greeting} Please use code ${code} for logging in. This code expires in 5 minutes.`;
+          const message = `Great Agro Coffee - ${greeting} Please use code ${code} for logging in. This code expires in 5 minutes.`;
           
           const success = await provider.sendSMS(formattedPhone, message);
           

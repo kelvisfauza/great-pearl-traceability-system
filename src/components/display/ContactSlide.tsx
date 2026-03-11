@@ -5,8 +5,8 @@ const ContactSlide = () => {
     <div className="h-full flex flex-col items-center justify-center px-8 animate-fade-in">
       {/* Logo */}
       <img 
-        src="/lovable-uploads/great-pearl-coffee-logo.png" 
-        alt="Great Pearl Coffee" 
+        src="/lovable-uploads/great-agro-coffee-logo.png" 
+        alt="Great Agro Coffee" 
         className="h-32 w-auto mb-6 animate-pulse"
       />
       
@@ -32,7 +32,7 @@ const ContactSlide = () => {
           </div>
           <div>
             <p className="text-white/60 text-sm">Email Us</p>
-            <p className="text-2xl font-bold text-white">info@greatpearlcoffee.com</p>
+            <p className="text-2xl font-bold text-white">info@greatagrocoffee.com</p>
           </div>
         </div>
 
@@ -54,7 +54,7 @@ const ContactSlide = () => {
           </div>
           <div>
             <p className="text-white/60 text-sm">Website</p>
-            <p className="text-xl font-bold text-white">www.greatpearlcoffee.com</p>
+            <p className="text-xl font-bold text-white">www.greatagrocoffee.com</p>
           </div>
         </div>
       </div>

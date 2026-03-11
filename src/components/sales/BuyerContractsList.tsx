@@ -45,7 +45,7 @@ export const BuyerContractsList = ({
     delivery_period_start: '',
     delivery_period_end: '',
     delivery_terms: '',
-    seller_name: 'Great Pearl Coffee',
+    seller_name: 'Great Agro Coffee',
     notes: ''
   });
 
@@ -102,7 +102,7 @@ export const BuyerContractsList = ({
       delivery_period_start: '',
       delivery_period_end: '',
       delivery_terms: '',
-      seller_name: 'Great Pearl Coffee',
+      seller_name: 'Great Agro Coffee',
       notes: ''
     });
   };

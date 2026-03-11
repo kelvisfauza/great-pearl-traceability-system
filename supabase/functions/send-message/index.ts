@@ -21,7 +21,7 @@ async function sendEmailViaSendGrid(to: string, subject: string, message: string
     return { success: false, error: 'SendGrid API key not configured' }
   }
 
-  const fromEmail = from || 'noreply@greatpearlcoffee.com'
+  const fromEmail = from || 'noreply@greatagrocoffee.com'
 
   try {
     console.log(`📧 Sending email via SendGrid to: ${to}`)
@@ -176,7 +176,7 @@ async function sendSMSViaYoola(to: string, message: string): Promise<{ success: 
       body: JSON.stringify({
         to: formattedPhone,
         message: message,
-        sender_id: 'GreatPearl'
+        sender_id: 'GreatAgro'
       })
     })
 

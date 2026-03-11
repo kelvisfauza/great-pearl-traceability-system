@@ -103,7 +103,7 @@ serve(async (req) => {
         continue;
       }
 
-      const message = `Dear ${emp.name}, please submit your daily report for ${today} before 7 PM. Login at www.greatpearlcoffeesystem.site, go to "Daily Reports" and click "New Report". - Great Pearl Coffee`;
+      const message = `Dear ${emp.name}, please submit your daily report for ${today} before 7 PM. Login at www.greatagrocoffeesystem.site, go to "Daily Reports" and click "New Report". - Great Agro Coffee`;
 
       try {
         // Send SMS

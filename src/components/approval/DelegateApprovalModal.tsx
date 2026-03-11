@@ -71,7 +71,7 @@ export const DelegateApprovalModal: React.FC<DelegateApprovalModalProps> = ({
     setSending(admin.id);
     try {
       const typeLabel = requestType === 'money_request' ? 'Money Request' : 'Expense Request';
-      const message = `Hi ${admin.name}, you have been asked to review and approve a ${typeLabel} of UGX ${requestAmount.toLocaleString()}${requestTitle ? ` - "${requestTitle}"` : ''}. Please log in to the system to take action. Great Pearl Coffee.`;
+      const message = `Hi ${admin.name}, you have been asked to review and approve a ${typeLabel} of UGX ${requestAmount.toLocaleString()}${requestTitle ? ` - "${requestTitle}"` : ''}. Please log in to the system to take action. Great Agro Coffee.`;
 
       if (admin.phone) {
         await supabase.functions.invoke('send-sms', {

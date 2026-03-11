@@ -109,7 +109,7 @@ const TimeDeductionManager = () => {
       const phone = emp.phone;
       if (!phone) return false;
 
-      const message = `Dear ${emp.name}, your monthly salary for ${monthName} has been reduced by UGX ${deductionAmount.toLocaleString()} due to misuse of company time by ${hoursMissed} hours at UGX ${RATE_PER_HOUR.toLocaleString()}/hr. Contact HR for queries. Great Pearl Coffee.`;
+      const message = `Dear ${emp.name}, your monthly salary for ${monthName} has been reduced by UGX ${deductionAmount.toLocaleString()} due to misuse of company time by ${hoursMissed} hours at UGX ${RATE_PER_HOUR.toLocaleString()}/hr. Contact HR for queries. Great Agro Coffee.`;
 
       const { error } = await supabase.functions.invoke('send-sms', {
         body: {

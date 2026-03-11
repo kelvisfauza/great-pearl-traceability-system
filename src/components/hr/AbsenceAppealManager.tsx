@@ -117,7 +117,7 @@ const AbsenceAppealManager = () => {
       // Send refund SMS notification
       await sendAppealSms(
         appeal.employee_email,
-        `Great Pearl Coffee: Your absence appeal for ${appeal.deduction_date} has been APPROVED. UGX ${appeal.deduction_amount.toLocaleString()} has been refunded to your wallet.`
+        `Great Agro Coffee: Your absence appeal for ${appeal.deduction_date} has been APPROVED. UGX ${appeal.deduction_amount.toLocaleString()} has been refunded to your wallet.`
       );
 
       toast.success(`Appeal approved for ${appeal.employee_name}. UGX ${appeal.deduction_amount.toLocaleString()} refunded.`);
@@ -146,7 +146,7 @@ const AbsenceAppealManager = () => {
       // Send rejection SMS notification
       await sendAppealSms(
         appeal.employee_email,
-        `Great Pearl Coffee: Your absence appeal for ${appeal.deduction_date} has been REJECTED. The UGX ${appeal.deduction_amount.toLocaleString()} deduction stands. Contact HR for questions.`
+        `Great Agro Coffee: Your absence appeal for ${appeal.deduction_date} has been REJECTED. The UGX ${appeal.deduction_amount.toLocaleString()} deduction stands. Contact HR for questions.`
       );
 
       toast.success(`Appeal rejected for ${appeal.employee_name}`);

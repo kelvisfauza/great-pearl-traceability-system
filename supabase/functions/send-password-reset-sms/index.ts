@@ -78,7 +78,7 @@ serve(async (req) => {
     }
     
     // Send SMS with temporary password
-    const smsMessage = `Your temporary password is: ${tempPassword}\n\nPlease delete this message for security.\n\n- Great Pearl Coffee IT Department`;
+    const smsMessage = `Your temporary password is: ${tempPassword}\n\nPlease delete this message for security.\n\n- Great Agro Coffee IT Department`;
     
     const yedaSmsKey = Deno.env.get('YEDA_SMS_API_KEY');
     let smsSent = false;

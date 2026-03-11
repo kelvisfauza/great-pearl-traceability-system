@@ -103,7 +103,7 @@ const CoffeeMapSlide = () => {
       <div className="flex items-center gap-8 text-white/60 text-lg">
         <span className="flex items-center gap-2">
           <div className="w-4 h-4 bg-amber-500 rounded-full"></div>
-          Great Pearl HQ – Kasese
+          Great Agro HQ – Kasese
         </span>
         <span className="flex items-center gap-2">
           <div className="w-4 h-4 bg-green-500 rounded-full"></div>

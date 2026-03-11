@@ -102,8 +102,8 @@ export const printWholeBusinessReport = async (data: WholeBusinessData, periodLa
 </style></head>
 <body>
   <div class="header">
-    <div class="header-logo"><img src="/lovable-uploads/great-pearl-coffee-logo.png" alt="Logo" /></div>
-    <h1>Great Pearl Coffee Factory</h1>
+    <div class="header-logo"><img src="/lovable-uploads/great-agro-coffee-logo.png" alt="Logo" /></div>
+    <h1>Great Agro Coffee</h1>
     <h2>Comprehensive Business Report</h2>
     <div class="period">Period: <strong>${periodLabel}</strong> &nbsp;|&nbsp; Generated: ${format(new Date(), "PPpp")}</div>
   </div>
@@ -259,9 +259,9 @@ export const printWholeBusinessReport = async (data: WholeBusinessData, periodLa
   ${getVerificationHtml(code, qrUrl)}
 
   <div class="footer">
-    <p>Great Pearl Coffee Factory Ltd.</p>
-    <p>+256781121639 / +256778536681 | www.greatpearlcoffee.com</p>
-    <p style="margin-top:4px;font-size:8px;color:#999;">© ${new Date().getFullYear()} Great Pearl Coffee Factory. All rights reserved.</p>
+    <p>Great Agro Coffee Ltd.</p>
+    <p>+256781121639 / +256778536681 | www.greatagrocoffee.com</p>
+    <p style="margin-top:4px;font-size:8px;color:#999;">© ${new Date().getFullYear()} Great Agro Coffee. All rights reserved.</p>
   </div>
 
   <script>window.onload = function() { window.print(); };</script>

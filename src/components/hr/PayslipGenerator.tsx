@@ -79,7 +79,7 @@ const PayslipGenerator = ({ payslips, onGeneratePayslips, loading }: PayslipGene
       // Company Header
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('GREAT PEARL COFFEE FACTORY', pageWidth / 2, currentY, { align: 'center' });
+      pdf.text('GREAT AGRO COFFEE', pageWidth / 2, currentY, { align: 'center' });
       currentY += 8;
 
       pdf.setFontSize(10);
@@ -88,7 +88,7 @@ const PayslipGenerator = ({ payslips, onGeneratePayslips, loading }: PayslipGene
       currentY += 5;
       pdf.text('+256781121639 / +256778536681', pageWidth / 2, currentY, { align: 'center' });
       currentY += 5;
-      pdf.text('www.greatpearlcoffee.com | greatpearlcoffee@gmail.com', pageWidth / 2, currentY, { align: 'center' });
+      pdf.text('www.greatagrocoffee.com | greatagrocoffee@gmail.com', pageWidth / 2, currentY, { align: 'center' });
       currentY += 5;
       pdf.text('Uganda Coffee Development Authority Licensed', pageWidth / 2, currentY, { align: 'center' });
       currentY += 15;

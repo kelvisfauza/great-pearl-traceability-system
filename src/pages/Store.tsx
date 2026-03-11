@@ -479,7 +479,7 @@ const Store = () => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Coffee Records - ${filterDateFormatted} - Great Pearl Coffee Factory</title>
+          <title>Coffee Records - ${filterDateFormatted} - Great Agro Coffee</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
             .header { text-align: center; margin-bottom: 30px; }
@@ -494,7 +494,7 @@ const Store = () => {
         </head>
         <body>
           <div class="header">
-            <div class="company-name">GREAT PEARL COFFEE FACTORY</div>
+            <div class="company-name">GREAT AGRO COFFEE</div>
             <div class="report-date">Coffee Records Report - Generated on ${new Date().toLocaleDateString()}</div>
             <div class="filter-date">Records for: ${filterDateFormatted}</div>
           </div>

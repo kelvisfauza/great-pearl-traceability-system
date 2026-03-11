@@ -159,7 +159,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, employee }: AddEmplo
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="john@greatpearl.com"
+                placeholder="john@greatagrocoffee.com"
                 required
               />
             </div>

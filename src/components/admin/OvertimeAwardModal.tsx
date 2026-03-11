@@ -167,7 +167,7 @@ export const OvertimeAwardModal = ({ open, onOpenChange }: OvertimeAwardModalPro
         </head>
         <body>
           <div class="header">
-            <div class="company-name">Great Pearl Coffee</div>
+            <div class="company-name">Great Agro Coffee</div>
             <div class="document-title">Overtime Award Receipt</div>
           </div>
 
@@ -218,7 +218,7 @@ export const OvertimeAwardModal = ({ open, onOpenChange }: OvertimeAwardModalPro
           </div>
 
           <div class="footer">
-            <p>This is an official overtime award receipt from Great Pearl Coffee</p>
+            <p>This is an official overtime award receipt from Great Agro Coffee</p>
             <p>Generated on ${new Date().toLocaleString()}</p>
           </div>
         </body>

@@ -251,7 +251,7 @@ const QuickLoans = () => {
       await supabase.functions.invoke('send-sms', {
         body: {
           phone: loan.employee_phone,
-          message: `Dear ${loan.employee_name}, your guarantor ${employee.name} has revoked their guarantee for your loan. The loan has been cancelled. You may request a new loan with a different guarantor. - Great Pearl Coffee`,
+          message: `Dear ${loan.employee_name}, your guarantor ${employee.name} has revoked their guarantee for your loan. The loan has been cancelled. You may request a new loan with a different guarantor. - Great Agro Coffee`,
           userName: loan.employee_name,
           messageType: 'loan_guarantor_revoked'
         }
@@ -543,7 +543,7 @@ const QuickLoans = () => {
         await supabase.functions.invoke('send-sms', {
           body: {
             phone: loan.employee_phone,
-            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Repayment: UGX ${installmentAmount.toLocaleString()}/${scheduleLabel} for ${numInstallments} ${scheduleLabel}(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Pearl Coffee`,
+            message: `Dear ${loan.employee_name}, your loan of UGX ${loan.loan_amount.toLocaleString()} has been approved and disbursed to your wallet. Repayment: UGX ${installmentAmount.toLocaleString()}/${scheduleLabel} for ${numInstallments} ${scheduleLabel}(s). First deduction: ${repaymentDateStr}. Total repayable: UGX ${loan.total_repayable.toLocaleString()}. - Great Agro Coffee`,
             userName: loan.employee_name,
             messageType: 'loan_approved'
           }
@@ -992,7 +992,7 @@ const QuickLoans = () => {
       @media print { body { padding: 10px; } }
     </style></head><body>
       <div class="header">
-        <h1>GREAT PEARL COFFEE</h1>
+        <h1>GREAT AGRO COFFEE</h1>
         <h2>Loan Account Statement</h2>
         <div class="date">Statement Date: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
       </div>
@@ -1060,7 +1060,7 @@ const QuickLoans = () => {
 
       <div class="footer">
         This is a system-generated loan statement for ${loan.employee_name}. All amounts in Uganda Shillings (UGX).<br/>
-        GREAT PEARL COFFEE — Loan Management System — ${new Date().getFullYear()}
+        GREAT AGRO COFFEE — Loan Management System — ${new Date().getFullYear()}
       </div>
     </body></html>`);
     win.document.close();
@@ -1824,7 +1824,7 @@ const RepaymentSchedule = ({ myLoans }: { myLoans: any[] }) => {
       </style>
     </head><body>
       <div class="header">
-        <h2 style="margin:0 0 4px;color:#1a365d">GREAT PEARL COFFEE</h2>
+        <h2 style="margin:0 0 4px;color:#1a365d">GREAT AGRO COFFEE</h2>
         <h3 style="margin:0;font-weight:normal;color:#555">Loan Repayment Program</h3>
       </div>
 

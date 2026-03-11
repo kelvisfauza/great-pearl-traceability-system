@@ -337,7 +337,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
       const phoneToNotify = cashRequest.disbursement_phone || cashRequest.phone_number || cashRequest.employee_phone;
       if (phoneToNotify) {
         const voucherInfo = cashVoucher ? ` Voucher: ${cashVoucher}.` : '';
-        const message = `Dear ${cashRequest.employee_name}, your withdrawal of UGX ${cashRequest.amount.toLocaleString()} has been PAID in CASH at the Finance office.${voucherInfo} Ref: ${cashRequest.request_ref}. Great Pearl Coffee.`;
+        const message = `Dear ${cashRequest.employee_name}, your withdrawal of UGX ${cashRequest.amount.toLocaleString()} has been PAID in CASH at the Finance office.${voucherInfo} Ref: ${cashRequest.request_ref}. Great Agro Coffee.`;
         try {
           await supabase.functions.invoke('send-sms', {
             body: { phone: phoneToNotify, message }
@@ -413,7 +413,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
       }
 
       if (smsPhone) {
-        const message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been approved by Finance and is now pending final Admin approval. Ref: ${selectedRequest.request_ref}. Great Pearl Coffee.`;
+        const message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been approved by Finance and is now pending final Admin approval. Ref: ${selectedRequest.request_ref}. Great Agro Coffee.`;
         try {
           await supabase.functions.invoke('send-sms', {
             body: { phone: smsPhone, message }
@@ -460,7 +460,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
 
       const phoneToNotify = selectedRequest.phone_number || selectedRequest.employee_phone;
       if (phoneToNotify) {
-        const message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been REJECTED. Reason: ${rejectionReason}. Ref: ${selectedRequest.request_ref}. Great Pearl Coffee.`;
+        const message = `Dear ${selectedRequest.employee_name}, your withdrawal of UGX ${selectedRequest.amount.toLocaleString()} has been REJECTED. Reason: ${rejectionReason}. Ref: ${selectedRequest.request_ref}. Great Agro Coffee.`;
         try {
           await supabase.functions.invoke('send-sms', {
             body: { phone: phoneToNotify, message }
@@ -524,7 +524,7 @@ export const WithdrawalRequestsManager: React.FC = () => {
       <body onload="window.print()">
         <div>
           <div class="header">
-            <h1>GREAT PEARL COFFEE</h1>
+            <h1>GREAT AGRO COFFEE</h1>
             <p>PAYMENT SLIP</p>
             <p>Ref: ${request.request_ref}</p>
           </div>

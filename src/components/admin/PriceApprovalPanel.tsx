@@ -58,7 +58,7 @@ const PriceApprovalPanel: React.FC = () => {
       const allPhones = [...staffList.map(e => e.phone!), ...additionalRecipients];
 
       const date = new Date().toLocaleDateString('en-GB');
-      const message = `Great Pearl Coffee Price Update - ${date}\n\nArabica: UGX ${currentPrices.arabicaBuyingPrice.toLocaleString()}/kg (${currentPrices.arabicaOutturn}% outturn)\nRobusta: UGX ${currentPrices.robustaBuyingPrice.toLocaleString()}/kg (${currentPrices.robustaOutturn}% outturn)\nSorted: UGX ${(currentPrices.sortedPrice || 0).toLocaleString()}/kg\n\nUse these prices for today's purchases.`;
+      const message = `Great Agro Coffee Price Update - ${date}\n\nArabica: UGX ${currentPrices.arabicaBuyingPrice.toLocaleString()}/kg (${currentPrices.arabicaOutturn}% outturn)\nRobusta: UGX ${currentPrices.robustaBuyingPrice.toLocaleString()}/kg (${currentPrices.robustaOutturn}% outturn)\nSorted: UGX ${(currentPrices.sortedPrice || 0).toLocaleString()}/kg\n\nUse these prices for today's purchases.`;
 
       let sent = 0;
       for (let i = 0; i < allPhones.length; i++) {
@@ -203,7 +203,7 @@ await savePrices({
       
       // Format message with CORRECTION: prefix if it's a correction
       const correctionPrefix = request.is_correction ? 'CORRECTION: ' : '';
-      const message = `${correctionPrefix}Great Pearl Coffee Price Update - ${date}\n\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}% outturn)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}% outturn)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Use these prices for today's purchases.`;
+      const message = `${correctionPrefix}Great Agro Coffee Price Update - ${date}\n\nArabica: UGX ${request.arabica_buying_price.toLocaleString()}/kg (${request.arabica_outturn}% outturn)\nRobusta: UGX ${request.robusta_buying_price.toLocaleString()}/kg (${request.robusta_outturn}% outturn)\nSorted: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Use these prices for today's purchases.`;
 
       // Send to all recipients
       for (let i = 0; i < allPhones.length; i++) {
@@ -218,7 +218,7 @@ await savePrices({
           .not('phone', 'is', null);
 
         const supplierPhones = suppliers?.filter(s => s.phone).map(s => s.phone!) || [];
-        const supplierMessage = `${correctionPrefix}Great Pearl Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${request.arabica_outturn}%\nPrice: UGX ${request.arabica_buying_price.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${request.robusta_outturn}%\nPrice: UGX ${request.robusta_buying_price.toLocaleString()}/kg\n\n☕ SORTED: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Deliver your coffee now!`;
+        const supplierMessage = `${correctionPrefix}Great Agro Coffee - Price Update\nDate: ${date}\n\n☕ ARABICA:\nOutturn: ${request.arabica_outturn}%\nPrice: UGX ${request.arabica_buying_price.toLocaleString()}/kg\n\n☕ ROBUSTA:\nOutturn: ${request.robusta_outturn}%\nPrice: UGX ${request.robusta_buying_price.toLocaleString()}/kg\n\n☕ SORTED: UGX ${(request.sorted_price || 0).toLocaleString()}/kg\n\n${request.is_correction ? 'Please disregard previous prices. ' : ''}Deliver your coffee now!`;
 
         for (let i = 0; i < supplierPhones.length; i++) {
           await sendSmsWithDelay(supplierPhones[i], supplierMessage, 500);

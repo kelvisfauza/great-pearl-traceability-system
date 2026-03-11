@@ -29,7 +29,7 @@ const MessagingSettings = () => {
   // Test message states
   const [testEmail, setTestEmail] = useState('');
   const [testPhone, setTestPhone] = useState('');
-  const [testMessage, setTestMessage] = useState('This is a test message from Great Pearl Coffee System.');
+  const [testMessage, setTestMessage] = useState('This is a test message from Great Agro Coffee System.');
   const [sendingTest, setSendingTest] = useState<string | null>(null);
 
   useEffect(() => {
@@ -103,7 +103,7 @@ const MessagingSettings = () => {
         body: {
           channel,
           to,
-          subject: channel === 'email' ? 'Test Email from Great Pearl Coffee' : undefined,
+          subject: channel === 'email' ? 'Test Email from Great Agro Coffee' : undefined,
           message: testMessage
         }
       });

@@ -105,7 +105,7 @@ const LoanRepaymentSlip = ({ open, onClose, loanData }: LoanRepaymentSlipProps) 
 
         <div ref={slipRef}>
           <div className="header" style={{ textAlign: 'center', borderBottom: '2px solid', paddingBottom: 12, marginBottom: 16 }}>
-            <h1 style={{ fontSize: 18, marginBottom: 2 }}>GREAT PEARL COFFEE</h1>
+            <h1 style={{ fontSize: 18, marginBottom: 2 }}>GREAT AGRO COFFEE</h1>
             <h2 style={{ fontSize: 13, color: '#666', margin: 0 }}>Loan Repayment Statement</h2>
             <p style={{ fontSize: 11, color: '#999', margin: '4px 0 0' }}>Generated: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>

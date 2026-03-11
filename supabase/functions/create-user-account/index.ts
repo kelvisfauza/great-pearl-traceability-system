@@ -105,7 +105,7 @@ serve(async (req) => {
     // Send temporary password via SMS if phone provided
     if (phone) {
       try {
-        const smsMessage = `Great Pearl Coffee: Your account has been created. Email: ${email}, Temporary Password: ${tempPassword}. Please login at www.greatpearlcoffeesystem.site and change your password.`
+        const smsMessage = `Great Agro Coffee: Your account has been created. Email: ${email}, Temporary Password: ${tempPassword}. Please login at www.greatagrocoffeesystem.site and change your password.`
         
         // Call the send-sms function internally
         const smsResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-sms`, {

@@ -309,7 +309,7 @@ export const useChristmasVoucher = () => {
 
       // Send SMS notification
       if (employeeData?.phone) {
-        const smsMessage = `Great Pearl Coffee: Merry Christmas ${targetVoucher.employee_name}! 🎄 Your Christmas voucher (${targetVoucher.voucher_code}) of UGX ${targetVoucher.voucher_amount.toLocaleString()} has been approved and paid. Thank you for your dedication! 🎁`;
+        const smsMessage = `Great Agro Coffee: Merry Christmas ${targetVoucher.employee_name}! 🎄 Your Christmas voucher (${targetVoucher.voucher_code}) of UGX ${targetVoucher.voucher_amount.toLocaleString()} has been approved and paid. Thank you for your dedication! 🎁`;
         
         const smsResult = await smsService.sendSMS(employeeData.phone, smsMessage);
         
@@ -349,7 +349,7 @@ export const useChristmasVoucher = () => {
           .maybeSingle();
 
         if (employeeData?.phone) {
-          const smsMessage = `Great Pearl Coffee: Merry Christmas ${voucher.employee_name}! 🎄 Your Christmas voucher (${voucher.voucher_code}) of UGX ${voucher.voucher_amount.toLocaleString()} has been approved and paid. Thank you for your dedication! 🎁`;
+          const smsMessage = `Great Agro Coffee: Merry Christmas ${voucher.employee_name}! 🎄 Your Christmas voucher (${voucher.voucher_code}) of UGX ${voucher.voucher_amount.toLocaleString()} has been approved and paid. Thank you for your dedication! 🎁`;
           
           const smsResult = await smsService.sendSMS(employeeData.phone, smsMessage);
           

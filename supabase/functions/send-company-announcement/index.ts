@@ -77,7 +77,7 @@ serve(async (req) => {
         // Send SMS if requested and employee has phone number
         if (announcement.send_sms && employee.phone) {
           try {
-            const smsMessage = `${announcement.title}: ${announcement.message} - Great Pearl Coffee Management`;
+            const smsMessage = `${announcement.title}: ${announcement.message} - Great Agro Coffee Management`;
             
             // Format phone number
             let formattedPhone = employee.phone.toString().trim();

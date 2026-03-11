@@ -155,7 +155,7 @@ export const useSalaryAdvanceApprovals = () => {
         .single();
 
       if (employee?.phone) {
-        const message = `Dear ${employee.name}, your salary advance of UGX ${amount.toLocaleString()} has been APPROVED and DISBURSED. The minimum payment will be deducted from your future salary requests. Great Pearl Coffee.`;
+        const message = `Dear ${employee.name}, your salary advance of UGX ${amount.toLocaleString()} has been APPROVED and DISBURSED. The minimum payment will be deducted from your future salary requests. Great Agro Coffee.`;
 
         await supabase.functions.invoke('send-sms', {
           body: {

@@ -289,15 +289,15 @@ const SalaryAdvanceReceipt: React.FC<SalaryAdvanceReceiptProps> = ({
           }}>
             <div className="logo-section" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <img 
-                src="/lovable-uploads/great-pearl-coffee-logo.png" 
-                alt="Great Pearl Coffee" 
+                src="/lovable-uploads/great-agro-coffee-logo.png" 
+                alt="Great Agro Coffee" 
                 className="logo-img"
                 style={{ width: '70px', height: '70px', borderRadius: '8px', background: 'white', padding: '5px' }}
               />
               <div className="company-info">
-                <h1 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '4px' }}>Great Pearl Coffee Factory</h1>
-                <p style={{ fontSize: '11px', opacity: 0.9 }}>Delivering coffee from the heart of Rwenzori</p>
-                <p style={{ fontSize: '10px', opacity: 0.8 }}>info@greatpearlcoffee.com</p>
+                <h1 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '4px' }}>Great Agro Coffee</h1>
+                <p style={{ fontSize: '11px', opacity: 0.9 }}>Kasese, Uganda</p>
+                <p style={{ fontSize: '10px', opacity: 0.8 }}>info@greatagrocoffee.com</p>
               </div>
             </div>
             <div className="doc-badge" style={{ 

@@ -142,16 +142,16 @@ const AppSidebar = ({ isCollapsed, onToggle }: AppSidebarProps) => {
         {!isCollapsed ? (
           <div className="flex items-center gap-3">
             <img 
-              src="/lovable-uploads/great-pearl-coffee-logo.png" 
-              alt="Great Pearl Coffee" 
+              src="/lovable-uploads/great-agro-coffee-logo.png" 
+              alt="Great Agro Coffee" 
               className="w-8 h-8 rounded-lg object-contain"
             />
-            <span className="font-semibold text-sidebar-foreground text-sm">Great Pearl Coffee</span>
+            <span className="font-semibold text-sidebar-foreground text-sm">Great Agro Coffee</span>
           </div>
         ) : (
           <img 
-            src="/lovable-uploads/great-pearl-coffee-logo.png" 
-            alt="Great Pearl Coffee" 
+            src="/lovable-uploads/great-agro-coffee-logo.png" 
+            alt="Great Agro Coffee" 
             className="w-8 h-8 rounded-lg object-contain mx-auto"
           />
         )}

@@ -169,8 +169,8 @@ const PrintDispatchReports = ({ reports }: PrintDispatchReportsProps) => {
       </head>
       <body>
         <div class="print-header">
-          <div class="company-name">Great Pearl Coffee Factory Ltd.</div>
-          <div class="company-details">Delivering coffee from the heart of Rwenzori<br/>+256781121639 / +256778536681</div>
+          <div class="company-name">Great Agro Coffee Ltd.</div>
+          <div class="company-details">Kasese, Uganda<br/>+256781121639 / +256778536681</div>
           <div class="document-title">EUDR Dispatch Comparison Reports</div>
           <div class="document-info">Period: ${periodLabel} | Generated: ${format(now, 'dd MMM yyyy HH:mm')}</div>
         </div>

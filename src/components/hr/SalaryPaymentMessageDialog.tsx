@@ -76,7 +76,7 @@ const SalaryPaymentMessageDialog = ({
 
     setSending(true);
     try {
-      const message = `Dear ${employeeName}, your salary payment of UGX ${amountNumber.toLocaleString()} has been dispersed to your ${getPaymentModeText(paymentMode)}. Great Pearl Coffee.`;
+      const message = `Dear ${employeeName}, your salary payment of UGX ${amountNumber.toLocaleString()} has been dispersed to your ${getPaymentModeText(paymentMode)}. Great Agro Coffee.`;
       
       console.log("Sending salary payment SMS to:", employeePhone);
       console.log("Message:", message);
@@ -169,7 +169,7 @@ const SalaryPaymentMessageDialog = ({
               <p className="p-3 bg-muted rounded text-sm border">
                 Dear {employeeName}, your salary payment of UGX{" "}
                 {parseFloat(amount || "0").toLocaleString()} has been dispersed to
-                your {getPaymentModeText(paymentMode)}. Great Pearl Coffee.
+                your {getPaymentModeText(paymentMode)}. Great Agro Coffee.
               </p>
             </div>
           )}

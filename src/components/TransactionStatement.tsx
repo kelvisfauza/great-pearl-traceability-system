@@ -113,7 +113,7 @@ export const TransactionStatement: React.FC<TransactionStatementProps> = ({ open
       <style>body{font:13px/1.5 system-ui;margin:0;padding:20px}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px;border-bottom:2px solid #333;font-size:12px}@media print{.no-print{display:none}}</style>
     </head><body onload="window.print();">
       <div style="max-width:750px;margin:0 auto">
-        <h2 style="margin:0 0 4px">Great Pearl Coffee</h2>
+        <h2 style="margin:0 0 4px">Great Agro Coffee</h2>
         <h3 style="margin:0 0 16px;font-weight:normal;color:#555">Transaction Statement</h3>
         <div style="margin-bottom:12px;font-size:13px">
           <strong>Employee:</strong> ${employee?.name || user?.email || 'N/A'}<br/>
