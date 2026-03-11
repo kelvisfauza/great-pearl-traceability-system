@@ -42,9 +42,8 @@ const DashboardLayout = ({ children, title, subtitle, showMessageButton = true }
   usePresence(user?.id);
   useLoginTracker(user?.id || null, employee?.name, employee?.email, employee?.id);
 
-  // Check if user needs to update email to company domain
-  const email = user?.email?.toLowerCase() || "";
-  const needsEmailUpdate = email && !email.endsWith(COMPANY_DOMAIN) && employee?.role !== 'Super Admin';
+  // Email update check disabled - keeping existing @greatpearlcoffee.com emails for now
+  const needsEmailUpdate = false;
 
   const toggleMessaging = () => setIsMessagingOpen(!isMessagingOpen);
   const toggleNotifications = () => setIsNotificationOpen(!isNotificationOpen);
