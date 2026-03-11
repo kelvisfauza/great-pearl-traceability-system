@@ -108,7 +108,7 @@ const ForceEmailUpdate: React.FC = () => {
         <p className="mt-2 text-sm text-muted-foreground">
           You are currently logged in with{" "}
           <span className="font-mono text-foreground">{user?.email}</span>. <br />
-          To continue using the system, please update to your official Great Pearl
+          To continue using the system, please update to your official Great Agro
           email ending with{" "}
           <span className="font-semibold text-primary">
             {COMPANY_DOMAIN}

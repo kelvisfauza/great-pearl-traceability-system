@@ -157,7 +157,7 @@ export const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
       const { error } = await supabase.functions.invoke('send-sms', {
         body: {
           phone: employee.phone,
-          message: `Your Great Pearl withdrawal verification code is: ${code}. Do NOT share this code. It expires in 5 minutes.`,
+          message: `Your Great Agro withdrawal verification code is: ${code}. Do NOT share this code. It expires in 5 minutes.`,
           userName: employee.name,
           messageType: 'withdrawal_verification'
         }

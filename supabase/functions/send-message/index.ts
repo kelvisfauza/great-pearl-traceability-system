@@ -176,7 +176,7 @@ async function sendSMSViaYoola(to: string, message: string): Promise<{ success: 
       body: JSON.stringify({
         to: formattedPhone,
         message: message,
-        sender_id: 'GreatPearl'
+        sender_id: 'GreatAgro'
       })
     })
 
